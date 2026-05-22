@@ -148,7 +148,8 @@ The `data.id` value is read from query params when available, falling back defen
 Processing rules:
 
 - insert a `payment_events` row using `x-request-id` as the stable event key;
-- if the event already exists, return `{ received: true, duplicate: true }`;
+- if the event already exists and `processed_at` is filled, return `{ received: true, duplicate: true }`;
+- if the event already exists but `processed_at` is still null, retry processing instead of abandoning the webhook;
 - fetch the real payment from `GET /v1/payments/{id}`;
 - process only `status = approved`;
 - for non-approved statuses, set `processed_at` and return `payment_not_approved`;
@@ -164,11 +165,24 @@ Test coverage performed with temporary data and cleanup:
 - [x] POST without signature returns 401.
 - [x] Payload without payment ID returns 400.
 - [x] Duplicate event returns duplicate and does not reprocess.
+- [x] Event already registered with `processed_at = null` is retried.
 - [x] Pending payment does not call the confirmation RPC.
 - [x] Approved payment with valid `external_reference` confirms the order and emits a ticket.
 - [x] Approved payment with invalid `external_reference` is ignored.
 - [x] Mercado Pago API error returns a transient 500 and leaves the event unprocessed.
+- [x] Decimal conversion returns 1000, 1090, and 1099 cents for 10, 10.9, and 10.99.
+- [x] Stored webhook/payment metadata excludes access tokens, webhook secrets, signatures, and full headers.
 - [x] `payment_events` receives audit rows.
+
+Production validation for this route must include:
+
+```bash
+curl -i -X POST https://site-phi-seven-72.vercel.app/api/webhook/payment/mercado-pago
+```
+
+Expected result without Mercado Pago signature headers: `401 Unauthorized`, not `404`.
+
+Do not configure the Mercado Pago dashboard webhook until the production URL has been confirmed.
 
 This migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST RPC endpoint on 2026-05-22 14:06:35 -03. A validation-only call returned the expected `customer_id_required` error, confirming that `public.reserve_seats` is available and executable by the service role.
 

@@ -26,9 +26,9 @@ Step 5 final audit was completed on 2026-05-22. The temporary audit script was r
 
 Step 6 created the Mercado Pago payment webhook at `POST /api/webhook/payment/mercado-pago`. The route validates Mercado Pago `x-signature`/`x-request-id` with the configured webhook secret, records idempotency in `payment_events`, fetches the real payment from Mercado Pago, processes only `approved` payments, resolves the order from `ticket_order_<order_id>`, and calls `confirm_paid_ticket_order`. The webhook does not create checkout, generate QR images, send WhatsApp messages, or perform manual ticket/order updates outside the RPC.
 
-The next database steps will add RPCs for the remaining transactional operations:
+Step 6 final audit fixed the `payment_events` retry policy: an already processed event returns duplicate, but an existing event with `processed_at = null` is retried instead of abandoned. Complementary tests covered unsigned production-style rejection, retry of an unprocessed duplicate event, transient Mercado Pago API failure without `processed_at`, pending-payment ignore, approved-payment confirmation, invalid external reference ignore, cent conversion, and raw metadata secret hygiene.
 
-- Payment webhook integration that calls `confirm_paid_ticket_order`
+The next steps will connect the customer-facing payment creation and delivery flows around the transactional core.
 
 ## Next Steps
 
@@ -37,7 +37,7 @@ The next database steps will add RPCs for the remaining transactional operations
 3. RPC de reserva transacional de assentos - concluído e validado no Supabase real
 4. RPC de expiração de reservas - concluído e validado no Supabase real
 5. RPC de confirmação de pagamento e emissão de tickets - concluído e validado no Supabase real
-6. Webhook Mercado Pago para confirmação de pagamento - criado e testado
+6. Webhook Mercado Pago para confirmação de pagamento - criado, auditado e pronto para produção
 7. Webhook Z-API com persistência de clientes, conversas e mensagens
 8. Busca de eventos por artista, cidade e data
 9. Fluxo conversacional de sessão, setor e assento

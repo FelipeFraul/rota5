@@ -68,16 +68,35 @@ async function insertPaymentEvent(event: PaymentEventInsert) {
 
   if (error) {
     if (error.code === "23505") {
+      const { data: existingEvent, error: existingEventError } = await supabase
+        .from("payment_events")
+        .select("id, processed_at")
+        .eq("provider", event.provider)
+        .eq("event_key", event.event_key)
+        .single();
+
+      if (existingEventError) {
+        return {
+          ok: false as const,
+          duplicate: false as const,
+          retryable: false as const,
+          id: null,
+          error: existingEventError,
+        };
+      }
+
       return {
         ok: true as const,
-        duplicate: true as const,
-        id: null,
+        duplicate: Boolean(existingEvent.processed_at),
+        retryable: !existingEvent.processed_at,
+        id: existingEvent.id as string,
       };
     }
 
     return {
       ok: false as const,
       duplicate: false as const,
+      retryable: false as const,
       id: null,
       error,
     };
@@ -86,6 +105,7 @@ async function insertPaymentEvent(event: PaymentEventInsert) {
   return {
     ok: true as const,
     duplicate: false as const,
+    retryable: false as const,
     id: data.id as string,
   };
 }
@@ -199,10 +219,16 @@ export async function POST(request: Request) {
   }
 
   if (eventInsert.duplicate) {
-    logInfo("Ignored duplicate Mercado Pago payment event", {
+    logInfo("Ignored already processed Mercado Pago payment event", {
       providerPaymentId: paymentId,
     });
     return jsonOk({ received: true, duplicate: true });
+  }
+
+  if (eventInsert.retryable) {
+    logInfo("Retrying unprocessed Mercado Pago payment event", {
+      providerPaymentId: paymentId,
+    });
   }
 
   const paymentResult = await getMercadoPagoPayment(paymentId);
