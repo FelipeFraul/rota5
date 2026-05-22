@@ -16,6 +16,11 @@ export type TicketWhatsAppMessage = {
   raw_metadata: Record<string, unknown>;
 };
 
+type SaveWhatsAppMessageDuplicateResult = {
+  ok: false;
+  duplicate: true;
+};
+
 type SaveWhatsAppMessageInput = {
   conversationId: string;
   customerId: string;
@@ -79,8 +84,20 @@ export async function saveWhatsAppMessage({
     .single<TicketWhatsAppMessage>();
 
   if (error) {
+    if (
+      direction === "inbound" &&
+      providerMessageId &&
+      error.code === "23505"
+    ) {
+      return {
+        ok: false as const,
+        duplicate: true as const,
+      } satisfies SaveWhatsAppMessageDuplicateResult;
+    }
+
     return {
       ok: false as const,
+      duplicate: false as const,
       error,
     };
   }

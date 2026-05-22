@@ -13,12 +13,35 @@ type UpsertCustomerFromWhatsAppInput = {
   name?: string | null;
 };
 
+const GENERIC_WHATSAPP_NAMES = new Set([
+  "cliente",
+  "contato",
+  "unknown",
+  "desconhecido",
+  "sem nome",
+  "no name",
+]);
+
+function normalizeCustomerName(name?: string | null) {
+  const normalizedName = name?.trim() || null;
+
+  if (!normalizedName) {
+    return null;
+  }
+
+  if (GENERIC_WHATSAPP_NAMES.has(normalizedName.toLowerCase())) {
+    return null;
+  }
+
+  return normalizedName;
+}
+
 export async function upsertCustomerFromWhatsApp({
   phone,
   name,
 }: UpsertCustomerFromWhatsAppInput) {
   const supabase = getSupabaseAdmin();
-  const normalizedName = name?.trim() || null;
+  const normalizedName = normalizeCustomerName(name);
   const { data: existingCustomer, error: existingCustomerError } = await supabase
     .from("customers")
     .select("id, whatsapp_phone, name")

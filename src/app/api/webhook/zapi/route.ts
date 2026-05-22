@@ -326,7 +326,7 @@ export async function POST(request: Request) {
 
     if (!duplicateResult.ok) {
       logError("Failed to check duplicate Z-API message", {
-        code: duplicateResult.error.code,
+        code: duplicateResult.error?.code,
         providerMessageId: incoming.providerMessageId,
       });
       return jsonError("Internal Server Error", 500);
@@ -379,9 +379,16 @@ export async function POST(request: Request) {
   });
 
   if (!inboundResult.ok) {
+    if ("duplicate" in inboundResult && inboundResult.duplicate) {
+      logInfo("Ignored concurrent duplicate Z-API inbound message", {
+        providerMessageId: incoming.providerMessageId,
+      });
+      return jsonOk({ received: true, duplicate: true });
+    }
+
     logError("Failed to save inbound WhatsApp message", {
       conversationId: conversationResult.conversation.id,
-      code: inboundResult.error.code,
+      code: inboundResult.error?.code,
     });
     return jsonError("Internal Server Error", 500);
   }
@@ -431,7 +438,7 @@ export async function POST(request: Request) {
   if (!outboundResult.ok) {
     logError("Failed to save outbound WhatsApp message", {
       conversationId: conversationResult.conversation.id,
-      code: outboundResult.error.code,
+      code: outboundResult.error?.code,
     });
     return jsonError("Internal Server Error", 500);
   }

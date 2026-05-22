@@ -321,7 +321,44 @@ Z-API webhook test coverage used temporary Supabase data and mocked Z-API sendin
 - [x] Decorated phone input is stored and sent as digits only.
 - [x] Temporary test data cleanup returned empty.
 
-Current idempotency is basic and query-based. The base schema has `whatsapp_messages_provider_message_id_idx`, but not a partial unique index. A future migration should add a safe unique constraint for inbound provider message IDs if strong concurrent duplicate protection becomes necessary.
+Current production idempotency remains basic and query-based until the partial unique index migration below is applied to the real database. The base schema has `whatsapp_messages_provider_message_id_idx`, but that non-unique index does not protect against concurrent duplicate inserts.
+
+Final Step 8 audit:
+
+- local migration created: `supabase/migrations/20260522000500_add_whatsapp_inbound_message_id_unique_idx.sql`;
+- intended index:
+
+```sql
+create unique index if not exists whatsapp_messages_inbound_provider_message_id_unique
+on public.whatsapp_messages(provider_message_id)
+where direction = 'inbound'
+  and provider_message_id is not null;
+```
+
+- route code treats `23505` unique violations from inbound message insert as `{ received: true, duplicate: true }`;
+- `raw_metadata` stores only provider, message ID/type, and send status/error metadata;
+- failed Z-API sends after inbound persistence return HTTP 200 and save outbound metadata with `send_status = failed`;
+- `conversations.last_message_at` is updated for valid inbound processing;
+- `conversations.context` currently uses only the real `welcome` state;
+- the initial reply does not promise event search, seat selection, payment, checkout, QR Code, or ticket delivery;
+- no event search, reservation, checkout, QR, map, or gate validation was implemented in this step.
+
+The migration was not applied automatically because `npx supabase db push` failed with an unlinked project and `npx supabase link` requires `SUPABASE_ACCESS_TOKEN` or `supabase login`. Apply the SQL above in the Supabase SQL Editor before relying on strong concurrent inbound idempotency. The final audit script inferred that the partial unique index is not yet present in the real database, so the concurrent duplicate test is pending until manual application.
+
+Final Step 8 audit test coverage with mocked Z-API and temporary Supabase data:
+
+- [x] Missing secret returns 401.
+- [x] Group payload returns `ignored: true` with reason `group`.
+- [x] `fromMe` payload returns `ignored: true` with reason `from_me`.
+- [x] Missing phone returns `ignored: true` with reason `missing_phone`.
+- [x] Missing text returns `ignored: true` with reason `missing_text`.
+- [x] Valid message creates customer/conversation/inbound/outbound.
+- [x] Sequential duplicate does not send again.
+- [ ] Concurrent duplicate protection is pending real DB index application.
+- [x] Z-API send failure keeps HTTP 200 and stores outbound failure metadata.
+- [x] `raw_metadata` excludes raw payloads, headers, tokens, secrets, and full message text.
+- [x] Logs exclude full phone, body, and secrets.
+- [x] Temporary test data cleanup returned empty.
 
 This migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST RPC endpoint on 2026-05-22 14:06:35 -03. A validation-only call returned the expected `customer_id_required` error, confirming that `public.reserve_seats` is available and executable by the service role.
 
