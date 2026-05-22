@@ -40,7 +40,9 @@ Step 8 tests used temporary Supabase data and a mocked Z-API send call with clea
 
 Step 8 final audit added and applied `20260522000500_add_whatsapp_inbound_message_id_unique_idx.sql`, a partial unique index for inbound WhatsApp `provider_message_id` values. The webhook treats `23505` unique violations as duplicates. After manual application in Supabase, a real-database concurrent duplicate test confirmed that only one inbound, one outbound, and one Z-API send occur for simultaneous calls with the same provider message ID. Other audit checks passed: raw metadata is minimal, logs avoid full phone/body/secrets, failed Z-API sends return HTTP 200 after inbound persistence and save outbound failure metadata, and the conversation state remains limited to the real `welcome` state.
 
-The next steps will connect the customer-facing payment creation and delivery flows around the transactional core.
+Step 9 added the first real WhatsApp ticketing behavior: event search by simple artist, city, and date parsing. The router now handles generic help, artist/title searches, city phrases such as `shows em Sorocaba`, relative dates such as `hoje`, `amanhã`, weekdays, `fim de semana`, month names, and numeric dates. Results come only from published future events with scheduled or sales-open sessions, are returned as numbered options, and update conversation context to `showing_events` with a small `lastSearch` and `lastEvents` payload. Numeric replies while showing events return a controlled next-step message only; they do not select sessions, reserve seats, create checkout, or issue tickets. Tests used temporary Supabase data and mocked Z-API sending, covering generic help, artist/city/date/month search, draft/cancelled/past exclusions, no-result copy, context persistence, numeric follow-up, and cleanup.
+
+The next steps will connect session, sector, seat, reservation, and payment creation around the transactional core.
 
 ## Next Steps
 
@@ -52,8 +54,8 @@ The next steps will connect the customer-facing payment creation and delivery fl
 6. Webhook Mercado Pago para confirmação de pagamento - criado, auditado e pronto para produção
 7. Checkout Mercado Pago vinculado à reserva - criado, auditado e pronto para uso interno
 8. Webhook Z-API com persistência de clientes, conversas e mensagens - criado e testado
-9. Busca de eventos por artista, cidade e data - próximo passo
-10. Fluxo conversacional de sessão, setor e assento
+9. Busca de eventos por artista, cidade e data - criado e testado
+10. Fluxo conversacional de sessão, setor e assento - próximo passo
 11. Geração de mapa de assentos
 12. Envio de QR Code pelo WhatsApp
 13. Tela/API de validação de portaria

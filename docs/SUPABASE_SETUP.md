@@ -361,6 +361,69 @@ Final Step 8 audit test coverage with mocked Z-API and temporary Supabase data:
 - [x] Logs exclude full phone, body, and secrets.
 - [x] Temporary test data cleanup returned empty.
 
+## WhatsApp Event Search
+
+Step 9 adds the first real WhatsApp search behavior. The router parses simple event-search messages and calls `searchEvents` in `src/lib/tickets/services/events.ts`.
+
+Supported search inputs include:
+
+- artist/title terms, such as `Ana Castela`;
+- city phrases, such as `shows em Sorocaba` or `eventos em Campinas`;
+- relative dates, such as `hoje`, `amanhã`, weekday names, and `fim de semana`;
+- month names, such as `junho` or `julho`;
+- numeric dates, such as `10/06` and `10/06/2026`.
+
+Search rules:
+
+- include only `events.status = published`;
+- include only sessions with status `scheduled` or `sales_open`;
+- include only sessions with `starts_at >= now()` unless a future date range is parsed;
+- sort by `event_sessions.starts_at asc`;
+- limit WhatsApp results to five options;
+- return event title, artist, city/state, venue name, session ID, starts_at, and session status.
+
+Conversation context after results is intentionally small:
+
+```json
+{
+  "state": "showing_events",
+  "step": "showing_events",
+  "lastSearch": {
+    "artist": "Ana Castela",
+    "city": "Sorocaba",
+    "dateFrom": "2026-06-01T03:00:00.000Z",
+    "dateTo": "2026-07-01T03:00:00.000Z",
+    "originalText": "Ana Castela em junho"
+  },
+  "lastEvents": [
+    {
+      "option": 1,
+      "eventId": "...",
+      "sessionId": "...",
+      "title": "...",
+      "startsAt": "..."
+    }
+  ]
+}
+```
+
+Numeric replies while `state = showing_events` are acknowledged with a controlled message for the next step. This step does not choose a session, sector, or seat, does not reserve seats, does not create checkout, does not generate QR Codes, and does not validate gate entry.
+
+Step 9 test coverage used temporary Supabase data and mocked Z-API sending:
+
+- [x] Generic `oi` returns guidance.
+- [x] Artist search returns a published future event.
+- [x] City search filters by city.
+- [x] Weekday search filters by the expected date interval.
+- [x] Month search filters by the expected month.
+- [x] Draft events do not appear.
+- [x] Cancelled sessions do not appear.
+- [x] Past sessions do not appear.
+- [x] No-result search returns helpful copy.
+- [x] Result search saves `state = showing_events` and `lastEvents`.
+- [x] Numeric follow-up returns a controlled next-step message without reserving or charging.
+- [x] Temporary test data cleanup returned empty.
+
 This migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST RPC endpoint on 2026-05-22 14:06:35 -03. A validation-only call returned the expected `customer_id_required` error, confirming that `public.reserve_seats` is available and executable by the service role.
 
 The RPC was fully audited with temporary data on 2026-05-22 14:11:49 -03. The audit confirmed:
