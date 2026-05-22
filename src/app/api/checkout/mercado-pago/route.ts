@@ -260,6 +260,21 @@ export async function POST(request: Request) {
     return badRequest("reservation_items_not_found");
   }
 
+  const totalAmountCents = order.total_amount_cents + order.total_fee_cents;
+  const itemTotalAmountCents = reservationItems.reduce(
+    (total, item) => total + item.price_cents + item.fee_cents,
+    0,
+  );
+
+  if (itemTotalAmountCents !== totalAmountCents) {
+    logWarn("Rejected checkout with mismatched order and item totals", {
+      orderId,
+      orderTotalAmountCents: totalAmountCents,
+      itemTotalAmountCents,
+    });
+    return badRequest("checkout_amount_mismatch");
+  }
+
   const { data: session } = await supabase
     .from("event_sessions")
     .select("id, event_id")
@@ -325,8 +340,6 @@ export async function POST(request: Request) {
     });
     return jsonError("Internal Server Error", 500);
   }
-
-  const totalAmountCents = order.total_amount_cents + order.total_fee_cents;
 
   if (reusablePayment?.provider_preference_id && reusablePayment.checkout_url) {
     return jsonOk({

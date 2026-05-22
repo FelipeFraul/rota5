@@ -1,8 +1,11 @@
 export default function CheckoutSuccessPage() {
   return (
     <main>
-      <h1>Pagamento recebido</h1>
-      <p>Seu pagamento será confirmado e o ingresso será liberado pelo WhatsApp.</p>
+      <h1>Retorno do pagamento recebido</h1>
+      <p>
+        A confirmação final será feita após validação do Mercado Pago. O ingresso
+        será liberado somente depois do pagamento aprovado.
+      </p>
     </main>
   );
 }

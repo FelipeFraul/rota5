@@ -236,24 +236,42 @@ Processing rules:
 - require an active, non-expired reservation;
 - require at least one `reservation_items` row;
 - build Mercado Pago items from frozen `reservation_items.price_cents` and `fee_cents`;
+- block checkout with `checkout_amount_mismatch` if the item total differs from the order total plus fees;
 - set `external_reference` to `ticket_order_<order_id>` if missing;
 - set `notification_url` to `${APP_BASE_URL}/api/webhook/payment/mercado-pago`;
 - set preference expiration to `reservation.expires_at`;
 - create or reuse a pending `payments` row with `provider_preference_id`, `checkout_url`, amount, and minimal metadata.
 
+Checkout reuse policy:
+
+- reuse only after the order is still `pending_payment`, the reservation is still `active`, and `reservation.expires_at` is still in the future;
+- reuse only a pending Mercado Pago payment for the same order that has both `provider_preference_id` and `checkout_url`;
+- create a new Mercado Pago preference if there is no reusable pending payment;
+- block instead of reuse when the order is not payable, the reservation is expired/not active, reservation items are missing, or totals diverge.
+
 The route does not confirm payment, does not emit tickets, does not generate QR images, does not send WhatsApp messages, and does not alter seat state. The Mercado Pago webhook and `confirm_paid_ticket_order` remain responsible for payment confirmation and ticket issuance.
+
+The checkout return pages are intentionally informational only. `/checkout/success` does not state that a ticket was issued or that payment is approved; final confirmation still depends on the Mercado Pago webhook.
 
 Checkout test coverage used temporary Supabase data and mocked Mercado Pago preference creation:
 
 - [x] Missing `x-checkout-secret` returns 401.
+- [x] Wrong `x-checkout-secret` returns 401.
+- [x] Invalid JSON body returns 400.
 - [x] Missing `order_id` returns 400.
 - [x] Unknown order returns `order_not_found`.
 - [x] Paid/non-payable order does not create checkout.
 - [x] Expired reservation does not create checkout.
 - [x] Valid pending order creates a preference and persists a pending payment.
 - [x] Repeating the same order reuses the existing pending checkout.
+- [x] Repeating after reservation expiration does not reuse the checkout.
 - [x] `notification_url` points to `/api/webhook/payment/mercado-pago`.
+- [x] `external_reference` is `ticket_order_<order_id>`.
+- [x] Preference expiration uses `reservation.expires_at`.
+- [x] Item totals are checked against the order total plus fees.
 - [x] Checkout creation does not create tickets.
+
+The final Step 7 audit also confirmed that generated/payment metadata does not store access tokens, headers, secrets, or unnecessary personal data. Repository citation-artifact searches returned no matches. A controlled low-value Mercado Pago real checkout test is still pending; the current automated coverage mocks Mercado Pago preference creation to avoid creating live payment links during audit.
 
 This migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST RPC endpoint on 2026-05-22 14:06:35 -03. A validation-only call returned the expected `customer_id_required` error, confirming that `public.reserve_seats` is available and executable by the service role.
 

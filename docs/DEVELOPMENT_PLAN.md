@@ -32,6 +32,8 @@ Step 6 quality audit confirmed that `vercel.json` only declares the Next.js fram
 
 Step 7 created the protected Mercado Pago checkout endpoint at `POST /api/checkout/mercado-pago`. The route requires `x-checkout-secret` backed by `CHECKOUT_INTERNAL_SECRET`, validates a pending order and active non-expired reservation, builds preference items from frozen `reservation_items`, sets `external_reference = ticket_order_<order_id>`, points `notification_url` to the Mercado Pago webhook under `APP_BASE_URL`, expires the preference at `reservation.expires_at`, and persists/reuses a pending `payments` checkout record. It does not confirm payment, issue tickets, generate QR Codes, or send WhatsApp messages. Tests used Mercado Pago mocked locally and temporary Supabase data with cleanup.
 
+Step 7 final audit was completed on 2026-05-22. The audit added a defensive `checkout_amount_mismatch` guard so checkout creation is blocked if the sum of `reservation_items.price_cents + fee_cents` differs from `orders.total_amount_cents + total_fee_cents`. It also clarified the `/checkout/success` copy so the page says only that the user returned from payment and that final confirmation depends on Mercado Pago validation. Complementary tests covered missing/wrong `x-checkout-secret`, invalid body, paid order, expired reservation without checkout reuse, valid checkout creation, repeated checkout reuse while valid, preference fields, amount mismatch, and no ticket creation. Repository citation-artifact searches returned no matches. A real low-value Mercado Pago checkout validation is still pending for a controlled production/sandbox run.
+
 The next steps will connect the customer-facing payment creation and delivery flows around the transactional core.
 
 ## Next Steps
@@ -42,7 +44,7 @@ The next steps will connect the customer-facing payment creation and delivery fl
 4. RPC de expiração de reservas - concluído e validado no Supabase real
 5. RPC de confirmação de pagamento e emissão de tickets - concluído e validado no Supabase real
 6. Webhook Mercado Pago para confirmação de pagamento - criado, auditado e pronto para produção
-7. Checkout Mercado Pago vinculado à reserva - criado e testado
+7. Checkout Mercado Pago vinculado à reserva - criado, auditado e pronto para uso interno
 8. Webhook Z-API com persistência de clientes, conversas e mensagens
 9. Busca de eventos por artista, cidade e data
 10. Fluxo conversacional de sessão, setor e assento
