@@ -120,7 +120,55 @@ Use temporary data only, and remove it after testing if running against a produc
 - [x] Same `provider_payment_id` on another order is blocked.
 - [x] Two reservation items issue two tickets with matching `sold_ticket_id` values.
 - [x] Overpayment records the paid amount while preserving order totals.
-- [x] No Mercado Pago checkout/webhook, WhatsApp send, QR image, map, or gate validation exists yet.
+- [x] No Mercado Pago checkout, WhatsApp send, QR image, map, or gate validation exists yet.
+
+## Mercado Pago Webhook
+
+The payment webhook route is:
+
+`POST /api/webhook/payment/mercado-pago`
+
+Production URL:
+
+`https://site-phi-seven-72.vercel.app/api/webhook/payment/mercado-pago`
+
+Required production environment variables:
+
+- `MERCADO_PAGO_ACCESS_TOKEN`
+- `MERCADO_PAGO_WEBHOOK_SECRET`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+The route validates `x-signature` and `x-request-id` using the Mercado Pago webhook secret. The signature manifest follows Mercado Pago's documented format:
+
+`id:<data.id>;request-id:<x-request-id>;ts:<ts>;`
+
+The `data.id` value is read from query params when available, falling back defensively to the JSON payload. The webhook payload is never trusted for status, amount, or order state. It is used only to identify which payment must be fetched from Mercado Pago.
+
+Processing rules:
+
+- insert a `payment_events` row using `x-request-id` as the stable event key;
+- if the event already exists, return `{ received: true, duplicate: true }`;
+- fetch the real payment from `GET /v1/payments/{id}`;
+- process only `status = approved`;
+- for non-approved statuses, set `processed_at` and return `payment_not_approved`;
+- parse `external_reference` as `ticket_order_<order_id>`;
+- call `confirm_paid_ticket_order`;
+- after successful RPC confirmation, set `payment_events.processed_at`;
+- on Mercado Pago API/transient errors, do not set `processed_at`, so retries can happen.
+
+The webhook does not create checkout, does not generate QR images, does not send WhatsApp messages, and does not update tickets/orders manually. Ticket issuance remains centralized in `confirm_paid_ticket_order`.
+
+Test coverage performed with temporary data and cleanup:
+
+- [x] POST without signature returns 401.
+- [x] Payload without payment ID returns 400.
+- [x] Duplicate event returns duplicate and does not reprocess.
+- [x] Pending payment does not call the confirmation RPC.
+- [x] Approved payment with valid `external_reference` confirms the order and emits a ticket.
+- [x] Approved payment with invalid `external_reference` is ignored.
+- [x] Mercado Pago API error returns a transient 500 and leaves the event unprocessed.
+- [x] `payment_events` receives audit rows.
 
 This migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST RPC endpoint on 2026-05-22 14:06:35 -03. A validation-only call returned the expected `customer_id_required` error, confirming that `public.reserve_seats` is available and executable by the service role.
 
