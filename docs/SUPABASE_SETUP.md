@@ -460,19 +460,22 @@ Before listing sectors, the backend revalidates the selected option in Supabase:
 - the event still exists and `events.status = published`;
 - the session still exists for that event;
 - the session status is `scheduled` or `sales_open`;
-- `event_sessions.starts_at >= now()`.
+- `event_sessions.starts_at >= now()`;
+- the session/event venue, when present, is not inactive.
 
 If the option is stale, cancelled, or past, the user receives `Essa opção não está mais disponível. Faça uma nova busca.` and the context returns to `idle`.
 
 Available sectors are calculated by `listAvailableSections(sessionId)` in `src/lib/tickets/services/sections.ts`:
 
+- the venue for the section must be active;
 - `venue_sections.status = active`;
 - at least one `session_seats.status = available`;
+- the linked structural `seats.status = active`;
 - at least one `ticket_prices.status = active`;
 - price window is active: `sales_start_at is null or <= now()` and `sales_end_at is null or >= now()`;
 - prices and fees come only from `ticket_prices`, never from WhatsApp input or stale context.
 
-The WhatsApp reply shows each sector as a numbered option with available seat count and price/fee. If a sector has one ticket type, it shows that label directly. If it has multiple ticket types, the reply shows `A partir de` using the cheapest total price plus fee while still displaying price and fee separately.
+The WhatsApp reply shows each sector as a numbered option with available seat count and price/fee. Availability is counted from `session_seats` joined to active structural seats before ticket prices are grouped, so a sector with 10 available seats and 2 active ticket types remains `availableSeatsCount = 10`, not 20. If a sector has one ticket type, it shows that label directly. If it has multiple ticket types, the reply shows `A partir de` using the ticket type with the lowest total paid amount (`price_cents + fee_cents`), while still displaying price and fee separately. Ticket types are ordered by that total, then by label and type for deterministic output.
 
 The `showing_sections` context is intentionally lightweight:
 
@@ -518,6 +521,7 @@ Numeric replies while `state = showing_sections` are controlled only:
 - valid sector number: `Perfeito. No próximo passo vou te mostrar os assentos disponíveis desse setor.`;
 - invalid sector number: `Não encontrei essa opção. Responda com um número da lista.`;
 - no seat list, reservation, checkout, QR Code, map, or gate validation is performed in this step.
+- the next reservation step must revalidate selected section, seat, ticket price, and availability in the database before calling `reserve_seats`; `showing_sections` context is only a conversation guide.
 
 Step 10 test coverage used temporary Supabase data and the real compiled webhook route, with Z-API pointed to a non-real audit URL and full cleanup:
 
@@ -532,6 +536,22 @@ Step 10 test coverage used temporary Supabase data and the real compiled webhook
 - [x] Multiple ticket types show `A partir de` correctly.
 - [x] `showing_sections` context stays lightweight with `selectedEvent` and `lastSections`.
 - [x] Numeric reply while `showing_sections` is controlled and does not reserve.
+- [x] Temporary test data cleanup returned empty.
+
+Final Step 10 audit coverage:
+
+- [x] `showing_events` context is used only to identify `eventId` and `sessionId`; status, availability, and price are revalidated from Supabase.
+- [x] Event/session revalidation blocks missing, unpublished, cancelled, non-sales, past, or inactive-venue options.
+- [x] Sectors require active venue, active section, available session seat, active structural seat, and active price in the sales window.
+- [x] Inactive structural seats do not make a sector appear.
+- [x] Blocked structural seats do not make a sector appear.
+- [x] Inactive venues do not list sectors.
+- [x] 10 available seats with 2 active ticket prices still returns `availableSeatsCount = 10`.
+- [x] Ticket types are ordered deterministically by cheapest total, then label/type.
+- [x] `A partir de` uses the lowest `price_cents + fee_cents` total and displays price/tax separately.
+- [x] Invalid numeric replies in `showing_sections` are blocked without reserving.
+- [x] A session with no visible sectors returns a clear message and resets to `idle` with empty `lastSections`.
+- [x] `showing_sections` context remains lightweight and does not include seat lists or bulky objects.
 - [x] Temporary test data cleanup returned empty.
 
 This migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST RPC endpoint on 2026-05-22 14:06:35 -03. A validation-only call returned the expected `customer_id_required` error, confirming that `public.reserve_seats` is available and executable by the service role.

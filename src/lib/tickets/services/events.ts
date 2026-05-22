@@ -45,7 +45,7 @@ type EventRow = {
   city: string;
   state: string;
   venue_id: string | null;
-  venues: { name: string } | null;
+  venues: { name: string; status?: string } | null;
 };
 
 type SessionRow = {
@@ -54,7 +54,7 @@ type SessionRow = {
   venue_id: string | null;
   starts_at: string;
   status: string;
-  venues: { name: string } | null;
+  venues: { name: string; status?: string } | null;
 };
 
 type EventSessionValidationRow = {
@@ -68,9 +68,9 @@ type EventSessionValidationRow = {
     city: string;
     state: string;
     status: string;
-    venues: { name: string } | null;
+    venues: { name: string; status: string } | null;
   } | null;
-  venues: { name: string } | null;
+  venues: { name: string; status: string } | null;
 };
 
 function normalizeLimit(limit?: number) {
@@ -220,7 +220,7 @@ export async function getValidatedEventSession({
   const { data, error } = await supabase
     .from("event_sessions")
     .select(
-      "id, starts_at, status, venues(name), events(id, title, artist_name, city, state, status, venues(name))",
+      "id, starts_at, status, venues(name, status), events(id, title, artist_name, city, state, status, venues(name, status))",
     )
     .eq("id", sessionId)
     .eq("event_id", eventId)
@@ -237,7 +237,9 @@ export async function getValidatedEventSession({
   if (
     data.events.status !== "published" ||
     !ACTIVE_SESSION_STATUSES.includes(data.status) ||
-    data.starts_at < new Date().toISOString()
+    data.starts_at < new Date().toISOString() ||
+    data.venues?.status === "inactive" ||
+    data.events.venues?.status === "inactive"
   ) {
     return null;
   }

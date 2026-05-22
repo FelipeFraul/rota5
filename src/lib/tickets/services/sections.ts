@@ -23,6 +23,7 @@ export type AvailableSection = {
 
 type SessionSeatRow = {
   section_id: string;
+  seats: { status: string } | null;
 };
 
 type VenueSectionRow = {
@@ -30,6 +31,7 @@ type VenueSectionRow = {
   name: string;
   has_numbered_seats: boolean;
   sort_order: number;
+  venues: { status: string } | null;
 };
 
 type TicketPriceRow = {
@@ -60,6 +62,20 @@ function findCheapestTicketType(ticketTypes: AvailableSectionTicketType[]) {
   });
 }
 
+function sortTicketTypes(
+  left: AvailableSectionTicketType,
+  right: AvailableSectionTicketType,
+) {
+  const leftTotal = left.priceCents + left.feeCents;
+  const rightTotal = right.priceCents + right.feeCents;
+
+  return (
+    leftTotal - rightTotal ||
+    left.label.localeCompare(right.label) ||
+    left.ticketType.localeCompare(right.ticketType)
+  );
+}
+
 export async function listAvailableSections(
   sessionId: string,
 ): Promise<AvailableSection[]> {
@@ -67,9 +83,10 @@ export async function listAvailableSections(
   const nowIso = new Date().toISOString();
   const { data: sessionSeats, error: seatsError } = await supabase
     .from("session_seats")
-    .select("section_id")
+    .select("section_id, seats!inner(status)")
     .eq("session_id", sessionId)
     .eq("status", "available")
+    .eq("seats.status", "active")
     .returns<SessionSeatRow[]>();
 
   if (seatsError) {
@@ -93,9 +110,10 @@ export async function listAvailableSections(
 
   const { data: sections, error: sectionsError } = await supabase
     .from("venue_sections")
-    .select("id, name, has_numbered_seats, sort_order")
+    .select("id, name, has_numbered_seats, sort_order, venues!inner(status)")
     .in("id", sectionIds)
     .eq("status", "active")
+    .eq("venues.status", "active")
     .returns<VenueSectionRow[]>();
 
   if (sectionsError) {
@@ -143,6 +161,10 @@ export async function listAvailableSections(
     ticketTypesBySection.set(price.section_id, ticketTypes);
   }
 
+  const sectionSortOrderById = new Map(
+    (sections ?? []).map((section) => [section.id, section.sort_order]),
+  );
+
   return (sections ?? [])
     .flatMap((section) => {
       const ticketTypes = ticketTypesBySection.get(section.id) ?? [];
@@ -151,12 +173,7 @@ export async function listAvailableSections(
         return [];
       }
 
-      ticketTypes.sort((left, right) => {
-        const leftTotal = left.priceCents + left.feeCents;
-        const rightTotal = right.priceCents + right.feeCents;
-
-        return leftTotal - rightTotal || left.label.localeCompare(right.label);
-      });
+      ticketTypes.sort(sortTicketTypes);
 
       const cheapest = findCheapestTicketType(ticketTypes);
 
@@ -174,9 +191,8 @@ export async function listAvailableSections(
     })
     .sort(
       (left, right) =>
-        ((sections ?? []).find((section) => section.id === left.sectionId)
-          ?.sort_order ?? 0) -
-          ((sections ?? []).find((section) => section.id === right.sectionId)
-            ?.sort_order ?? 0) || left.sectionName.localeCompare(right.sectionName),
+        (sectionSortOrderById.get(left.sectionId) ?? 0) -
+          (sectionSortOrderById.get(right.sectionId) ?? 0) ||
+        left.sectionName.localeCompare(right.sectionName),
     );
 }
