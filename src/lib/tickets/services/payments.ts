@@ -2,6 +2,10 @@ import "server-only";
 
 const TICKET_ORDER_REFERENCE_PREFIX = "ticket_order_";
 
+export function buildOrderExternalReference(orderId: string) {
+  return `${TICKET_ORDER_REFERENCE_PREFIX}${orderId}`;
+}
+
 export function extractOrderIdFromExternalReference(
   externalReference: string | null | undefined,
 ): string | null {
@@ -38,4 +42,12 @@ export function decimalAmountToCents(amount: number | string | null | undefined)
   }
 
   return reais * 100 + cents;
+}
+
+export function centsToDecimalAmount(cents: number) {
+  if (!Number.isSafeInteger(cents) || cents < 0) {
+    return null;
+  }
+
+  return Number((cents / 100).toFixed(2));
 }

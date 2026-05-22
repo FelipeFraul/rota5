@@ -197,6 +197,64 @@ Final quality audit notes:
 - Transient Mercado Pago/API/RPC failures are not marked processed, allowing retry.
 - `npm audit` currently reports a moderate PostCSS advisory through `next`; the proposed fix requires `npm audit fix --force` and is not safe to apply automatically.
 
+## Mercado Pago Checkout
+
+The checkout creation route is:
+
+`POST /api/checkout/mercado-pago`
+
+Production URL:
+
+`https://site-phi-seven-72.vercel.app/api/checkout/mercado-pago`
+
+Required header:
+
+- `x-checkout-secret: <CHECKOUT_INTERNAL_SECRET>`
+
+Required environment variables:
+
+- `CHECKOUT_INTERNAL_SECRET`
+- `APP_BASE_URL`
+- `MERCADO_PAGO_ACCESS_TOKEN`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+Request body:
+
+```json
+{
+  "order_id": "uuid"
+}
+```
+
+The route is internal-only for now. Without the checkout secret it returns `401` and does not read or mutate order state.
+
+Processing rules:
+
+- load the order with the service role;
+- accept only `orders.status = pending_payment`;
+- require an active, non-expired reservation;
+- require at least one `reservation_items` row;
+- build Mercado Pago items from frozen `reservation_items.price_cents` and `fee_cents`;
+- set `external_reference` to `ticket_order_<order_id>` if missing;
+- set `notification_url` to `${APP_BASE_URL}/api/webhook/payment/mercado-pago`;
+- set preference expiration to `reservation.expires_at`;
+- create or reuse a pending `payments` row with `provider_preference_id`, `checkout_url`, amount, and minimal metadata.
+
+The route does not confirm payment, does not emit tickets, does not generate QR images, does not send WhatsApp messages, and does not alter seat state. The Mercado Pago webhook and `confirm_paid_ticket_order` remain responsible for payment confirmation and ticket issuance.
+
+Checkout test coverage used temporary Supabase data and mocked Mercado Pago preference creation:
+
+- [x] Missing `x-checkout-secret` returns 401.
+- [x] Missing `order_id` returns 400.
+- [x] Unknown order returns `order_not_found`.
+- [x] Paid/non-payable order does not create checkout.
+- [x] Expired reservation does not create checkout.
+- [x] Valid pending order creates a preference and persists a pending payment.
+- [x] Repeating the same order reuses the existing pending checkout.
+- [x] `notification_url` points to `/api/webhook/payment/mercado-pago`.
+- [x] Checkout creation does not create tickets.
+
 This migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST RPC endpoint on 2026-05-22 14:06:35 -03. A validation-only call returned the expected `customer_id_required` error, confirming that `public.reserve_seats` is available and executable by the service role.
 
 The RPC was fully audited with temporary data on 2026-05-22 14:11:49 -03. The audit confirmed:

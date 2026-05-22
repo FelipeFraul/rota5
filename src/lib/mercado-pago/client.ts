@@ -35,6 +35,49 @@ export type MercadoPagoPaymentResult =
         | "network_error";
     };
 
+export type MercadoPagoPreferenceItem = {
+  title: string;
+  quantity: number;
+  unit_price: number;
+  currency_id: "BRL";
+};
+
+export type MercadoPagoPreferenceInput = {
+  items: MercadoPagoPreferenceItem[];
+  external_reference: string;
+  notification_url: string;
+  back_urls?: {
+    success: string;
+    failure: string;
+    pending: string;
+  };
+  expires: true;
+  expiration_date_from: string;
+  expiration_date_to: string;
+  metadata?: Record<string, unknown>;
+};
+
+export type MercadoPagoPreference = {
+  id: string;
+  init_point?: string | null;
+  sandbox_init_point?: string | null;
+};
+
+export type MercadoPagoPreferenceResult =
+  | {
+      ok: true;
+      preference: MercadoPagoPreference;
+    }
+  | {
+      ok: false;
+      status: number | null;
+      code:
+        | "timeout"
+        | "http_error"
+        | "invalid_response"
+        | "network_error";
+    };
+
 export function createMercadoPagoBaseClient(): MercadoPagoBaseClient {
   const env = getEnv();
   const accessToken = env.MERCADO_PAGO_ACCESS_TOKEN;
@@ -95,6 +138,72 @@ export async function getMercadoPagoPayment(
     return {
       ok: true,
       payment: body as MercadoPagoPayment,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      status: null,
+      code:
+        error instanceof DOMException && error.name === "AbortError"
+          ? "timeout"
+          : "network_error",
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function createMercadoPagoPreference(
+  input: MercadoPagoPreferenceInput,
+): Promise<MercadoPagoPreferenceResult> {
+  const client = createMercadoPagoBaseClient();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(
+      `${MERCADO_PAGO_API_BASE_URL}/checkout/preferences`,
+      {
+        method: "POST",
+        headers: {
+          ...client.buildAuthHeaders(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(input),
+        signal: controller.signal,
+      },
+    );
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        code: "http_error",
+      };
+    }
+
+    const body = (await response.json()) as Partial<MercadoPagoPreference>;
+
+    if (
+      !body ||
+      typeof body !== "object" ||
+      typeof body.id !== "string" ||
+      (!body.init_point && !body.sandbox_init_point)
+    ) {
+      return {
+        ok: false,
+        status: response.status,
+        code: "invalid_response",
+      };
+    }
+
+    return {
+      ok: true,
+      preference: {
+        id: body.id,
+        init_point: body.init_point,
+        sandbox_init_point: body.sandbox_init_point,
+      },
     };
   } catch (error) {
     return {

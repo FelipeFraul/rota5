@@ -30,6 +30,8 @@ Step 6 final audit fixed the `payment_events` retry policy: an already processed
 
 Step 6 quality audit confirmed that `vercel.json` only declares the Next.js framework, ESLint still uses the Next/core-web-vitals and TypeScript presets while ignoring generated build artifacts, unsigned webhooks fail before body parsing, `payment_events.processed_at = null` remains retryable, definitive ignored payment events are marked processed, and the webhook does not perform manual updates to orders, reservations, seats, tickets, or payments. `npm audit` reports a moderate PostCSS advisory through `next`; the available fix requires `npm audit fix --force` and would downgrade/install a breaking Next version, so it was intentionally not applied in this step.
 
+Step 7 created the protected Mercado Pago checkout endpoint at `POST /api/checkout/mercado-pago`. The route requires `x-checkout-secret` backed by `CHECKOUT_INTERNAL_SECRET`, validates a pending order and active non-expired reservation, builds preference items from frozen `reservation_items`, sets `external_reference = ticket_order_<order_id>`, points `notification_url` to the Mercado Pago webhook under `APP_BASE_URL`, expires the preference at `reservation.expires_at`, and persists/reuses a pending `payments` checkout record. It does not confirm payment, issue tickets, generate QR Codes, or send WhatsApp messages. Tests used Mercado Pago mocked locally and temporary Supabase data with cleanup.
+
 The next steps will connect the customer-facing payment creation and delivery flows around the transactional core.
 
 ## Next Steps
@@ -40,11 +42,11 @@ The next steps will connect the customer-facing payment creation and delivery fl
 4. RPC de expiração de reservas - concluído e validado no Supabase real
 5. RPC de confirmação de pagamento e emissão de tickets - concluído e validado no Supabase real
 6. Webhook Mercado Pago para confirmação de pagamento - criado, auditado e pronto para produção
-7. Webhook Z-API com persistência de clientes, conversas e mensagens
-8. Busca de eventos por artista, cidade e data
-9. Fluxo conversacional de sessão, setor e assento
-10. Geração de mapa de assentos
-11. Checkout Mercado Pago vinculado à reserva
+7. Checkout Mercado Pago vinculado à reserva - criado e testado
+8. Webhook Z-API com persistência de clientes, conversas e mensagens
+9. Busca de eventos por artista, cidade e data
+10. Fluxo conversacional de sessão, setor e assento
+11. Geração de mapa de assentos
 12. Envio de QR Code pelo WhatsApp
 13. Tela/API de validação de portaria
 14. Testes de concorrência, expiração, pagamento duplicado e QR Code usado duas vezes

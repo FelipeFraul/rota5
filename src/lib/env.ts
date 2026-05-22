@@ -14,6 +14,9 @@ const envSchema = z.object({
   ZAPI_CLIENT_TOKEN: z.string().min(1, "ZAPI_CLIENT_TOKEN is required."),
   ZAPI_BASE_URL: z.string().url("ZAPI_BASE_URL must be a valid URL."),
   ZAPI_WEBHOOK_SECRET: z.string().min(1, "ZAPI_WEBHOOK_SECRET is required."),
+  CHECKOUT_INTERNAL_SECRET: z
+    .string()
+    .min(1, "CHECKOUT_INTERNAL_SECRET is required."),
   PAYMENT_PROVIDER: z.literal("mercado_pago"),
   MERCADO_PAGO_ACCESS_TOKEN: z
     .string()
