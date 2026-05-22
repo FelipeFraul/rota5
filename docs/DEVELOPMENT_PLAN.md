@@ -28,6 +28,8 @@ Step 6 created the Mercado Pago payment webhook at `POST /api/webhook/payment/me
 
 Step 6 final audit fixed the `payment_events` retry policy: an already processed event returns duplicate, but an existing event with `processed_at = null` is retried instead of abandoned. Complementary tests covered unsigned production-style rejection, retry of an unprocessed duplicate event, transient Mercado Pago API failure without `processed_at`, pending-payment ignore, approved-payment confirmation, invalid external reference ignore, cent conversion, and raw metadata secret hygiene. Production deployment was repaired by setting the Vercel project preset to Next.js/default output and confirming that `https://site-phi-seven-72.vercel.app/api/webhook/payment/mercado-pago` returns `401 Unauthorized` without signature headers instead of `404`.
 
+Step 6 quality audit confirmed that `vercel.json` only declares the Next.js framework, ESLint still uses the Next/core-web-vitals and TypeScript presets while ignoring generated build artifacts, unsigned webhooks fail before body parsing, `payment_events.processed_at = null` remains retryable, definitive ignored payment events are marked processed, and the webhook does not perform manual updates to orders, reservations, seats, tickets, or payments. `npm audit` reports a moderate PostCSS advisory through `next`; the available fix requires `npm audit fix --force` and would downgrade/install a breaking Next version, so it was intentionally not applied in this step.
+
 The next steps will connect the customer-facing payment creation and delivery flows around the transactional core.
 
 ## Next Steps

@@ -186,6 +186,17 @@ Production was validated on the final Step 6 audit after deploy `dpl_Fp8WM8m4331
 
 Do not configure the Mercado Pago dashboard webhook until the production URL has been confirmed.
 
+Final quality audit notes:
+
+- `vercel.json` is intentionally minimal and only sets `"framework": "nextjs"`.
+- Vercel project settings are Next.js, `npm run build`, and Next.js default output.
+- `eslint.config.mjs` keeps the default Next.js/TypeScript rule sets and only ignores generated artifacts such as `.next`, `.vercel`, `node_modules`, `out`, and `dist`.
+- Unsigned webhooks return `401` before parsing the body.
+- `payment_events` rows with `processed_at = null` are retryable; processed rows are treated as duplicate.
+- Definitive ignores such as non-approved payments, invalid references, and missing orders are marked processed without issuing tickets.
+- Transient Mercado Pago/API/RPC failures are not marked processed, allowing retry.
+- `npm audit` currently reports a moderate PostCSS advisory through `next`; the proposed fix requires `npm audit fix --force` and is not safe to apply automatically.
+
 This migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST RPC endpoint on 2026-05-22 14:06:35 -03. A validation-only call returned the expected `customer_id_required` error, confirming that `public.reserve_seats` is available and executable by the service role.
 
 The RPC was fully audited with temporary data on 2026-05-22 14:11:49 -03. The audit confirmed:
