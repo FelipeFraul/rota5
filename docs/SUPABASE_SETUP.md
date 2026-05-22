@@ -321,11 +321,12 @@ Z-API webhook test coverage used temporary Supabase data and mocked Z-API sendin
 - [x] Decorated phone input is stored and sent as digits only.
 - [x] Temporary test data cleanup returned empty.
 
-Current production idempotency remains basic and query-based until the partial unique index migration below is applied to the real database. The base schema has `whatsapp_messages_provider_message_id_idx`, but that non-unique index does not protect against concurrent duplicate inserts.
+Current production idempotency uses both an early duplicate lookup and the partial unique index below. The unique index is the source of truth for concurrent duplicate protection.
 
 Final Step 8 audit:
 
 - local migration created: `supabase/migrations/20260522000500_add_whatsapp_inbound_message_id_unique_idx.sql`;
+- migration applied manually in the Supabase SQL Editor and validated against the real database;
 - intended index:
 
 ```sql
@@ -343,7 +344,7 @@ where direction = 'inbound'
 - the initial reply does not promise event search, seat selection, payment, checkout, QR Code, or ticket delivery;
 - no event search, reservation, checkout, QR, map, or gate validation was implemented in this step.
 
-The migration was not applied automatically because `npx supabase db push` failed with an unlinked project and `npx supabase link` requires `SUPABASE_ACCESS_TOKEN` or `supabase login`. Apply the SQL above in the Supabase SQL Editor before relying on strong concurrent inbound idempotency. The final audit script inferred that the partial unique index is not yet present in the real database, so the concurrent duplicate test is pending until manual application.
+The migration was not applied automatically because `npx supabase db push` failed with an unlinked project and `npx supabase link` requires `SUPABASE_ACCESS_TOKEN` or `supabase login`. It was then applied manually in Supabase. Validation by behavior confirmed that duplicate inbound inserts fail with `23505`, and a concurrent webhook test confirmed exactly one inbound, one outbound, and one mocked Z-API send for two simultaneous calls with the same provider message ID.
 
 Final Step 8 audit test coverage with mocked Z-API and temporary Supabase data:
 
@@ -354,7 +355,7 @@ Final Step 8 audit test coverage with mocked Z-API and temporary Supabase data:
 - [x] Missing text returns `ignored: true` with reason `missing_text`.
 - [x] Valid message creates customer/conversation/inbound/outbound.
 - [x] Sequential duplicate does not send again.
-- [ ] Concurrent duplicate protection is pending real DB index application.
+- [x] Concurrent duplicate protection allows only one inbound, one outbound, and one send.
 - [x] Z-API send failure keeps HTTP 200 and stores outbound failure metadata.
 - [x] `raw_metadata` excludes raw payloads, headers, tokens, secrets, and full message text.
 - [x] Logs exclude full phone, body, and secrets.
