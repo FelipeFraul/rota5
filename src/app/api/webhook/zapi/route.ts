@@ -1,11 +1,22 @@
-import { getEnv } from "@/lib/env";
+import { timingSafeEqual } from "crypto";
 import {
-  badRequest,
+  jsonError,
   jsonOk,
   methodNotAllowed,
   unauthorized,
 } from "@/lib/http/responses";
-import { logInfo, logWarn } from "@/lib/logger";
+import { logError, logInfo, logWarn } from "@/lib/logger";
+import {
+  getOrCreateOpenConversation,
+  updateConversationAfterMessage,
+} from "@/lib/tickets/services/conversations";
+import { upsertCustomerFromWhatsApp } from "@/lib/tickets/services/customers";
+import {
+  findInboundMessageByProviderId,
+  saveWhatsAppMessage,
+} from "@/lib/tickets/services/messages";
+import { routeTicketMessage } from "@/lib/tickets/router";
+import { sendZapiText } from "@/lib/zapi/client";
 
 const MAX_WEBHOOK_BYTES = 256 * 1024;
 const SECRET_HEADER_NAMES = [
@@ -15,6 +26,15 @@ const SECRET_HEADER_NAMES = [
 ];
 
 type ZapiWebhookPayload = Record<string, unknown>;
+type ParsedIncomingMessage = {
+  phone: string | null;
+  contactName: string | null;
+  text: string | null;
+  providerMessageId: string | null;
+  fromMe: boolean;
+  isGroup: boolean;
+  messageType: "text" | "image" | "document" | "system";
+};
 
 function getHeaderSecret(request: Request): string | null {
   for (const headerName of SECRET_HEADER_NAMES) {
@@ -34,17 +54,28 @@ function getHeaderSecret(request: Request): string | null {
   return null;
 }
 
-function isGroupMessage(payload: ZapiWebhookPayload): boolean {
-  return Boolean(
-    payload.isGroup ||
-      payload.group ||
-      payload.chatType === "group" ||
-      String(payload.phone ?? payload.from ?? "").includes("@g.us"),
+function isSecretMatch(received: string | null, expected: string) {
+  if (!received) {
+    return false;
+  }
+
+  const receivedBuffer = Buffer.from(received);
+  const expectedBuffer = Buffer.from(expected);
+
+  return (
+    receivedBuffer.length === expectedBuffer.length &&
+    timingSafeEqual(receivedBuffer, expectedBuffer)
   );
 }
 
-function isFromMe(payload: ZapiWebhookPayload): boolean {
-  return Boolean(payload.fromMe || payload.owner || payload.isFromMe);
+function firstRecord(...values: unknown[]): Record<string, unknown> {
+  for (const value of values) {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      return value as Record<string, unknown>;
+    }
+  }
+
+  return {};
 }
 
 function firstString(...values: unknown[]): string | null {
@@ -52,37 +83,152 @@ function firstString(...values: unknown[]): string | null {
     if (typeof value === "string" && value.trim().length > 0) {
       return value.trim();
     }
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return String(value);
+    }
   }
 
   return null;
 }
 
-function extractIncomingMessage(payload: ZapiWebhookPayload) {
-  const message =
-    payload.message && typeof payload.message === "object"
-      ? (payload.message as Record<string, unknown>)
-      : {};
-  const text =
-    firstString(
-      payload.text,
-      payload.body,
-      payload.messageText,
-      message.text,
-      message.body,
-      message.message,
-    ) ?? "";
-  const phone = firstString(
+function normalizePhone(phone: string | null) {
+  const digits = phone?.replace(/\D/g, "") ?? "";
+
+  return digits.length > 0 ? digits : null;
+}
+
+function normalizeMessageType(messageType: string | null) {
+  const normalized = messageType?.toLowerCase();
+
+  if (normalized === "image" || normalized === "document") {
+    return normalized;
+  }
+
+  return "text";
+}
+
+function isTruthyFlag(value: unknown) {
+  return value === true || value === "true" || value === 1 || value === "1";
+}
+
+function extractIncomingMessage(
+  payload: ZapiWebhookPayload,
+): ParsedIncomingMessage {
+  const message = firstRecord(payload.message, payload.data, payload.key);
+  const contact = firstRecord(payload.contact, payload.sender, message.contact);
+  const chatId = firstString(
+    payload.chatId,
+    payload.chat_id,
+    payload.phone,
+    payload.from,
+    message.chatId,
+    message.remoteJid,
+  );
+  const rawPhone = firstString(
     payload.phone,
     payload.from,
     payload.sender,
     payload.senderPhone,
+    payload.sender_phone,
+    payload.participantPhone,
+    payload.participant,
+    contact.phone,
+    contact.number,
     message.phone,
     message.from,
+    message.remoteJid,
+    chatId,
+  );
+  const text = firstString(
+    payload.text,
+    payload.body,
+    payload.messageText,
+    payload.caption,
+    message.text,
+    message.body,
+    message.message,
+    message.caption,
+  );
+  const providerMessageId = firstString(
+    payload.messageId,
+    payload.message_id,
+    payload.id,
+    payload.providerMessageId,
+    message.messageId,
+    message.id,
+    message.keyId,
+  );
+  const contactName = firstString(
+    payload.contactName,
+    payload.senderName,
+    payload.name,
+    contact.name,
+    contact.pushName,
+    message.senderName,
+  );
+  const rawMessageType = firstString(
+    payload.messageType,
+    payload.type,
+    message.messageType,
+    message.type,
+  );
+  const fromMe = Boolean(
+    isTruthyFlag(payload.fromMe) ||
+      isTruthyFlag(payload.owner) ||
+      isTruthyFlag(payload.isFromMe) ||
+      isTruthyFlag(message.fromMe),
+  );
+  const isGroup = Boolean(
+    isTruthyFlag(payload.isGroup) ||
+      isTruthyFlag(payload.group) ||
+      payload.chatType === "group" ||
+      message.chatType === "group" ||
+      chatId?.includes("@g.us") ||
+      rawPhone?.includes("@g.us"),
   );
 
   return {
-    phone,
+    phone: normalizePhone(rawPhone),
+    contactName,
     text,
+    providerMessageId,
+    fromMe,
+    isGroup,
+    messageType: normalizeMessageType(rawMessageType),
+  };
+}
+
+function buildInboundMetadata({
+  providerMessageId,
+  messageType,
+}: {
+  providerMessageId: string | null;
+  messageType: string;
+}) {
+  return {
+    provider: "zapi",
+    provider_message_id: providerMessageId,
+    message_type: messageType,
+  };
+}
+
+function buildOutboundMetadata({
+  sendResult,
+}: {
+  sendResult: Awaited<ReturnType<typeof sendZapiText>>;
+}) {
+  if (sendResult.ok) {
+    return {
+      provider: "zapi",
+      send_status: "sent",
+    };
+  }
+
+  return {
+    provider: "zapi",
+    send_status: "failed",
+    error: sendResult.error,
   };
 }
 
@@ -92,7 +238,7 @@ async function readJsonPayload(request: Request) {
   if (contentLength && Number(contentLength) > MAX_WEBHOOK_BYTES) {
     return {
       ok: false as const,
-      response: badRequest("Payload too large"),
+      response: jsonError("Payload Too Large", 413),
     };
   }
 
@@ -101,28 +247,37 @@ async function readJsonPayload(request: Request) {
   if (new TextEncoder().encode(rawBody).byteLength > MAX_WEBHOOK_BYTES) {
     return {
       ok: false as const,
-      response: badRequest("Payload too large"),
+      response: jsonError("Payload Too Large", 413),
     };
   }
 
   try {
+    const payload = JSON.parse(rawBody) as unknown;
+
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      return {
+        ok: false as const,
+        response: jsonError("Bad Request", 400),
+      };
+    }
+
     return {
       ok: true as const,
-      payload: JSON.parse(rawBody) as ZapiWebhookPayload,
+      payload: payload as ZapiWebhookPayload,
     };
   } catch {
     return {
       ok: false as const,
-      response: badRequest("Invalid JSON payload"),
+      response: jsonError("Bad Request", 400),
     };
   }
 }
 
 export async function POST(request: Request) {
-  const env = getEnv();
+  const webhookSecret = process.env.ZAPI_WEBHOOK_SECRET;
   const headerSecret = getHeaderSecret(request);
 
-  if (headerSecret !== env.ZAPI_WEBHOOK_SECRET) {
+  if (!webhookSecret || !isSecretMatch(headerSecret, webhookSecret)) {
     logWarn("Rejected Z-API webhook with invalid secret");
     return unauthorized();
   }
@@ -133,33 +288,165 @@ export async function POST(request: Request) {
     return payloadResult.response;
   }
 
-  const payload = payloadResult.payload;
+  const incoming = extractIncomingMessage(payloadResult.payload);
 
-  if (isGroupMessage(payload)) {
-    logInfo("Ignored Z-API group message");
-    return jsonOk({ received: true });
+  if (incoming.isGroup) {
+    logInfo("Ignored Z-API group message", {
+      providerMessageId: incoming.providerMessageId,
+    });
+    return jsonOk({ received: true, ignored: true, reason: "group" });
   }
 
-  if (isFromMe(payload)) {
-    logInfo("Ignored Z-API self message");
-    return jsonOk({ received: true });
+  if (incoming.fromMe) {
+    logInfo("Ignored Z-API self message", {
+      providerMessageId: incoming.providerMessageId,
+    });
+    return jsonOk({ received: true, ignored: true, reason: "from_me" });
   }
 
-  const { phone, text } = extractIncomingMessage(payload);
-
-  if (!phone) {
-    logWarn("Received Z-API webhook without phone");
-    return jsonOk({ received: true });
+  if (!incoming.phone) {
+    logWarn("Received Z-API webhook without phone", {
+      providerMessageId: incoming.providerMessageId,
+    });
+    return jsonOk({ received: true, ignored: true, reason: "missing_phone" });
   }
 
-  logInfo("Received Z-API user message", {
-    phone,
-    hasText: text.length > 0,
+  if (!incoming.text) {
+    logWarn("Received Z-API webhook without text", {
+      phoneLast4: incoming.phone.slice(-4),
+      providerMessageId: incoming.providerMessageId,
+    });
+    return jsonOk({ received: true, ignored: true, reason: "missing_text" });
+  }
+
+  if (incoming.providerMessageId) {
+    const duplicateResult = await findInboundMessageByProviderId(
+      incoming.providerMessageId,
+    );
+
+    if (!duplicateResult.ok) {
+      logError("Failed to check duplicate Z-API message", {
+        code: duplicateResult.error.code,
+        providerMessageId: incoming.providerMessageId,
+      });
+      return jsonError("Internal Server Error", 500);
+    }
+
+    if (duplicateResult.message) {
+      logInfo("Ignored duplicate Z-API inbound message", {
+        providerMessageId: incoming.providerMessageId,
+      });
+      return jsonOk({ received: true, duplicate: true });
+    }
+  }
+
+  const customerResult = await upsertCustomerFromWhatsApp({
+    phone: incoming.phone,
+    name: incoming.contactName,
   });
 
-  // Future step: call routeTicketMessage({ phone, text }) from "@/lib/tickets/router".
+  if (!customerResult.ok) {
+    logError("Failed to upsert WhatsApp customer", {
+      phoneLast4: incoming.phone.slice(-4),
+      code: customerResult.error.code,
+    });
+    return jsonError("Internal Server Error", 500);
+  }
 
-  return jsonOk({ received: true });
+  const conversationResult = await getOrCreateOpenConversation({
+    customerId: customerResult.customer.id,
+  });
+
+  if (!conversationResult.ok) {
+    logError("Failed to load WhatsApp conversation", {
+      customerId: customerResult.customer.id,
+      code: conversationResult.error.code,
+    });
+    return jsonError("Internal Server Error", 500);
+  }
+
+  const inboundResult = await saveWhatsAppMessage({
+    conversationId: conversationResult.conversation.id,
+    customerId: customerResult.customer.id,
+    direction: "inbound",
+    messageType: incoming.messageType,
+    body: incoming.text,
+    providerMessageId: incoming.providerMessageId,
+    rawMetadata: buildInboundMetadata({
+      providerMessageId: incoming.providerMessageId,
+      messageType: incoming.messageType,
+    }),
+  });
+
+  if (!inboundResult.ok) {
+    logError("Failed to save inbound WhatsApp message", {
+      conversationId: conversationResult.conversation.id,
+      code: inboundResult.error.code,
+    });
+    return jsonError("Internal Server Error", 500);
+  }
+
+  const routeResult = await routeTicketMessage({
+    customer: customerResult.customer,
+    conversation: conversationResult.conversation,
+    text: incoming.text,
+  });
+
+  const conversationUpdateResult = await updateConversationAfterMessage({
+    conversationId: conversationResult.conversation.id,
+    context: routeResult.nextContext,
+  });
+
+  if (!conversationUpdateResult.ok) {
+    logError("Failed to update WhatsApp conversation context", {
+      conversationId: conversationResult.conversation.id,
+      code: conversationUpdateResult.error.code,
+    });
+    return jsonError("Internal Server Error", 500);
+  }
+
+  const sendResult = await sendZapiText({
+    phone: incoming.phone,
+    message: routeResult.reply,
+  });
+
+  if (!sendResult.ok) {
+    logWarn("Z-API reply failed after inbound message was persisted", {
+      conversationId: conversationResult.conversation.id,
+      phoneLast4: incoming.phone.slice(-4),
+      error: sendResult.error,
+    });
+  }
+
+  const outboundResult = await saveWhatsAppMessage({
+    conversationId: conversationResult.conversation.id,
+    customerId: customerResult.customer.id,
+    direction: "outbound",
+    messageType: "text",
+    body: routeResult.reply,
+    providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
+    rawMetadata: buildOutboundMetadata({ sendResult }),
+  });
+
+  if (!outboundResult.ok) {
+    logError("Failed to save outbound WhatsApp message", {
+      conversationId: conversationResult.conversation.id,
+      code: outboundResult.error.code,
+    });
+    return jsonError("Internal Server Error", 500);
+  }
+
+  logInfo("Processed Z-API inbound message", {
+    conversationId: conversationResult.conversation.id,
+    phoneLast4: incoming.phone.slice(-4),
+    providerMessageId: incoming.providerMessageId,
+    zapiSent: sendResult.ok,
+  });
+
+  return jsonOk({
+    received: true,
+    processed: true,
+  });
 }
 
 export function GET() {

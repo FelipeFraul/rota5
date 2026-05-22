@@ -273,6 +273,56 @@ Checkout test coverage used temporary Supabase data and mocked Mercado Pago pref
 
 The final Step 7 audit also confirmed that generated/payment metadata does not store access tokens, headers, secrets, or unnecessary personal data. Repository citation-artifact searches returned no matches. A controlled low-value Mercado Pago real checkout test is still pending; the current automated coverage mocks Mercado Pago preference creation to avoid creating live payment links during audit.
 
+## Z-API WhatsApp Webhook
+
+The WhatsApp webhook route is:
+
+`POST /api/webhook/zapi`
+
+Production URL:
+
+`https://site-phi-seven-72.vercel.app/api/webhook/zapi`
+
+Required header, using the same secret validation already used by the project:
+
+- `x-zapi-webhook-secret: <ZAPI_WEBHOOK_SECRET>`
+
+Accepted alternative headers are `x-webhook-secret` and `Authorization: Bearer <secret>`.
+
+Processing rules:
+
+- reject missing or invalid webhook secrets with `401 Unauthorized`;
+- reject oversized or invalid JSON payloads safely without logging the full body;
+- defensively extract phone, contact name, text, provider message ID, group/from-me flags, and message type from common Z-API payload shapes;
+- ignore group messages, messages sent by the account itself, payloads without phone, and payloads without text;
+- normalize WhatsApp phone numbers to digits only before persisting;
+- upsert `customers` by `whatsapp_phone`, updating `name` only when a non-empty new name is received;
+- create or reuse one `open` conversation for the customer;
+- save inbound WhatsApp messages with minimal metadata;
+- if an inbound `provider_message_id` already exists, return duplicate and do not route or send another reply;
+- call `routeTicketMessage` and update `conversations.context` with the router state;
+- send the reply through Z-API using `sendZapiText`;
+- save the outbound message even when Z-API sending fails, with minimal send-status metadata.
+
+The route returns HTTP 200 after a persisted inbound message even if the outbound Z-API send fails, avoiding infinite webhook retries for a message the system already received. Logs include safe identifiers such as `providerMessageId`, `conversationId`, and masked phone information, but not tokens, webhook secrets, full payloads, or full message bodies.
+
+The initial router reply is intentionally limited. It acknowledges receipt and prepares the conversation state for future steps, but it does not search real events, choose sessions/sectors/seats, create reservations, create checkout links, generate QR Codes, send tickets, or validate gate entry.
+
+Z-API webhook test coverage used temporary Supabase data and mocked Z-API sending:
+
+- [x] Missing secret returns 401.
+- [x] Group payload returns `ignored: true` with reason `group`.
+- [x] `fromMe` payload returns `ignored: true` with reason `from_me`.
+- [x] Missing phone returns `ignored: true` with reason `missing_phone`.
+- [x] Missing text returns `ignored: true` with reason `missing_text`.
+- [x] Valid message creates/updates customer, creates/reuses conversation, saves inbound, routes, saves outbound, and calls mocked Z-API.
+- [x] Duplicate inbound `provider_message_id` returns duplicate and does not send again.
+- [x] New non-empty contact name updates `customers.name`.
+- [x] Decorated phone input is stored and sent as digits only.
+- [x] Temporary test data cleanup returned empty.
+
+Current idempotency is basic and query-based. The base schema has `whatsapp_messages_provider_message_id_idx`, but not a partial unique index. A future migration should add a safe unique constraint for inbound provider message IDs if strong concurrent duplicate protection becomes necessary.
+
 This migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST RPC endpoint on 2026-05-22 14:06:35 -03. A validation-only call returned the expected `customer_id_required` error, confirming that `public.reserve_seats` is available and executable by the service role.
 
 The RPC was fully audited with temporary data on 2026-05-22 14:11:49 -03. The audit confirmed:

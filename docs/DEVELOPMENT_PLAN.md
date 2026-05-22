@@ -34,6 +34,10 @@ Step 7 created the protected Mercado Pago checkout endpoint at `POST /api/checko
 
 Step 7 final audit was completed on 2026-05-22. The audit added a defensive `checkout_amount_mismatch` guard so checkout creation is blocked if the sum of `reservation_items.price_cents + fee_cents` differs from `orders.total_amount_cents + total_fee_cents`. It also clarified the `/checkout/success` copy so the page says only that the user returned from payment and that final confirmation depends on Mercado Pago validation. Complementary tests covered missing/wrong `x-checkout-secret`, invalid body, paid order, expired reservation without checkout reuse, valid checkout creation, repeated checkout reuse while valid, preference fields, amount mismatch, and no ticket creation. Repository citation-artifact searches returned no matches. A real low-value Mercado Pago checkout validation is still pending for a controlled production/sandbox run.
 
+Step 8 evolved the Z-API webhook at `POST /api/webhook/zapi` into the first persisted WhatsApp conversation pipeline. The route still requires `ZAPI_WEBHOOK_SECRET`, rejects oversized/invalid payloads safely, ignores group/from-me/missing-phone/missing-text messages, normalizes WhatsApp phones to digits only, upserts `customers`, opens or reuses an `open` conversation, stores inbound and outbound `whatsapp_messages`, calls the initial `routeTicketMessage`, updates conversation context, and sends a text response through Z-API. The router intentionally does not search events, create reservations, create checkout links, generate QR Codes, or send tickets yet.
+
+Step 8 tests used temporary Supabase data and a mocked Z-API send call with cleanup. Coverage included unauthorized requests, group/from-me ignores, missing phone/text ignores, valid message persistence, duplicate `provider_message_id` idempotency, contact name update, and decorated phone normalization. Idempotency is currently query-based because the schema has an index but not a unique constraint on `whatsapp_messages.provider_message_id`; a future migration can add a partial unique index for stronger concurrent duplicate protection.
+
 The next steps will connect the customer-facing payment creation and delivery flows around the transactional core.
 
 ## Next Steps
@@ -45,8 +49,8 @@ The next steps will connect the customer-facing payment creation and delivery fl
 5. RPC de confirmação de pagamento e emissão de tickets - concluído e validado no Supabase real
 6. Webhook Mercado Pago para confirmação de pagamento - criado, auditado e pronto para produção
 7. Checkout Mercado Pago vinculado à reserva - criado, auditado e pronto para uso interno
-8. Webhook Z-API com persistência de clientes, conversas e mensagens
-9. Busca de eventos por artista, cidade e data
+8. Webhook Z-API com persistência de clientes, conversas e mensagens - criado e testado
+9. Busca de eventos por artista, cidade e data - próximo passo
 10. Fluxo conversacional de sessão, setor e assento
 11. Geração de mapa de assentos
 12. Envio de QR Code pelo WhatsApp

@@ -1,0 +1,92 @@
+import "server-only";
+
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+
+type WhatsAppMessageDirection = "inbound" | "outbound";
+type WhatsAppMessageType = "text" | "image" | "document" | "system";
+
+export type TicketWhatsAppMessage = {
+  id: string;
+  conversation_id: string | null;
+  customer_id: string | null;
+  direction: WhatsAppMessageDirection;
+  message_type: WhatsAppMessageType;
+  body: string | null;
+  provider_message_id: string | null;
+  raw_metadata: Record<string, unknown>;
+};
+
+type SaveWhatsAppMessageInput = {
+  conversationId: string;
+  customerId: string;
+  direction: WhatsAppMessageDirection;
+  messageType?: WhatsAppMessageType;
+  body?: string | null;
+  providerMessageId?: string | null;
+  rawMetadata?: Record<string, unknown>;
+};
+
+export async function findInboundMessageByProviderId(
+  providerMessageId: string,
+) {
+  const supabase = getSupabaseAdmin();
+  const { data: message, error } = await supabase
+    .from("whatsapp_messages")
+    .select(
+      "id, conversation_id, customer_id, direction, message_type, body, provider_message_id, raw_metadata",
+    )
+    .eq("direction", "inbound")
+    .eq("provider_message_id", providerMessageId)
+    .maybeSingle<TicketWhatsAppMessage>();
+
+  if (error) {
+    return {
+      ok: false as const,
+      error,
+    };
+  }
+
+  return {
+    ok: true as const,
+    message,
+  };
+}
+
+export async function saveWhatsAppMessage({
+  conversationId,
+  customerId,
+  direction,
+  messageType = "text",
+  body = null,
+  providerMessageId = null,
+  rawMetadata = {},
+}: SaveWhatsAppMessageInput) {
+  const supabase = getSupabaseAdmin();
+  const { data: message, error } = await supabase
+    .from("whatsapp_messages")
+    .insert({
+      conversation_id: conversationId,
+      customer_id: customerId,
+      direction,
+      message_type: messageType,
+      body,
+      provider_message_id: providerMessageId,
+      raw_metadata: rawMetadata,
+    })
+    .select(
+      "id, conversation_id, customer_id, direction, message_type, body, provider_message_id, raw_metadata",
+    )
+    .single<TicketWhatsAppMessage>();
+
+  if (error) {
+    return {
+      ok: false as const,
+      error,
+    };
+  }
+
+  return {
+    ok: true as const,
+    message,
+  };
+}

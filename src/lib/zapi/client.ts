@@ -47,7 +47,7 @@ export async function sendZapiText({
     if (!response.ok) {
       logWarn("Z-API text send failed", {
         status: response.status,
-        phone,
+        phoneLast4: phone.slice(-4),
       });
 
       return {
@@ -67,7 +67,7 @@ export async function sendZapiText({
   } catch (error) {
     logError("Z-API text send error", {
       error,
-      phone,
+      phoneLast4: phone.slice(-4),
     });
 
     return {
