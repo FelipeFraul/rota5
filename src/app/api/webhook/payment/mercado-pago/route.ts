@@ -160,6 +160,15 @@ function buildPaymentRawMetadata(payment: {
 
 export async function POST(request: Request) {
   const env = getEnv();
+
+  if (
+    !request.headers.get("x-signature") ||
+    !request.headers.get("x-request-id")
+  ) {
+    logWarn("Rejected Mercado Pago webhook without signature headers");
+    return unauthorized();
+  }
+
   const bodyResult = await readRawBody(request);
 
   if (!bodyResult.ok) {
