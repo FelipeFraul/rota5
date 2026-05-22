@@ -381,6 +381,14 @@ Search rules:
 - sort by `event_sessions.starts_at asc`;
 - limit WhatsApp results to five options;
 - return event title, artist, city/state, venue name, session ID, starts_at, and session status.
+- avoid raw SQL string concatenation with user input; event candidates are fetched with the Supabase query builder and matched with normalized text in application code.
+
+Date parsing rules:
+
+- `hoje`, `amanhã`, weekdays, and weekend ranges are calculated in `America/Sao_Paulo`;
+- if a weekday has already passed in the current week, the parser uses the next future occurrence;
+- month searches use the current year when the month is still upcoming, otherwise the next year;
+- numeric dates accept `dd/mm` and `dd/mm/yyyy`; `dd/mm` rolls to the next year if that day has already passed.
 
 Conversation context after results is intentionally small:
 
@@ -409,6 +417,12 @@ Conversation context after results is intentionally small:
 
 Numeric replies while `state = showing_events` are acknowledged with a controlled message for the next step. This step does not choose a session, sector, or seat, does not reserve seats, does not create checkout, does not generate QR Codes, and does not validate gate entry.
 
+Numeric selection rules:
+
+- a valid number in the current `lastEvents` list returns a controlled next-step message only;
+- a number outside the current list returns `Não encontrei essa opção. Responda com um número da lista.`;
+- a number without `state = showing_events` and valid `lastEvents` asks the user to search first.
+
 Step 9 test coverage used temporary Supabase data and mocked Z-API sending:
 
 - [x] Generic `oi` returns guidance.
@@ -423,6 +437,19 @@ Step 9 test coverage used temporary Supabase data and mocked Z-API sending:
 - [x] Result search saves `state = showing_events` and `lastEvents`.
 - [x] Numeric follow-up returns a controlled next-step message without reserving or charging.
 - [x] Temporary test data cleanup returned empty.
+
+Final Step 9 audit coverage:
+
+- [x] `Ana Castela em junho` treats `junho` as a date, not a city.
+- [x] `eventos em 10/06` treats `10/06` as a date, not a city.
+- [x] Artist/event names with removable-looking words, such as `Show do Milhão`, are preserved.
+- [x] Events with multiple future sessions show distinguishable numbered options and save both `eventId` and `sessionId`.
+- [x] Numeric selection outside the list is blocked without advancing state.
+- [x] Numeric selection without event-list context asks for a search first.
+- [x] Case-insensitive search works for lowercase and uppercase variants.
+- [x] `showing_events` context stays lightweight and excludes descriptions, prices, raw metadata, or large objects.
+- [x] Published/session/future filters exclude draft events, cancelled sessions, and past sessions.
+- [x] Temporary data cleanup returned empty.
 
 This migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST RPC endpoint on 2026-05-22 14:06:35 -03. A validation-only call returned the expected `customer_id_required` error, confirming that `public.reserve_seats` is available and executable by the service role.
 

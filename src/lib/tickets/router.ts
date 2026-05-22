@@ -13,28 +13,19 @@ import {
 } from "@/lib/tickets/services/events";
 
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
-const STOP_WORDS = new Set([
+const GENERIC_SEARCH_WORDS = new Set([
   "show",
   "shows",
   "evento",
   "eventos",
   "ingresso",
   "ingressos",
-  "quero",
-  "comprar",
-  "ver",
-  "tem",
-  "para",
-  "pra",
-  "por",
-  "favor",
-  "procuro",
-  "procurar",
-  "agenda",
   "em",
   "na",
   "no",
 ]);
+const LEADING_INTENT_PATTERN =
+  /^(?:quero\s+(?:comprar|ver)?|queria\s+(?:comprar|ver)?|comprar|ver|procuro|procurar|tem|ingressos?\s+(?:para|pra|do|da|de)?|eventos?\s+(?:de|do|da)?|shows?\s+(?:de|do|da)?)\s+/i;
 const GENERIC_MESSAGES = new Set([
   "oi",
   "ola",
@@ -274,17 +265,30 @@ function extractCity(text: string) {
 }
 
 function stripSearchNoise(text: string) {
-  return text
+  const cleaned = text
     .replace(/\b(?:em|na|no)\s+[a-zA-ZÀ-ÿ][a-zA-ZÀ-ÿ\s-]{1,40}$/i, "")
     .replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g, " ")
     .replace(
       /\b(hoje|amanh[ãa]|s[áa]bado|domingo|segunda(?:-feira)?|ter[cç]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|fim de semana|este fim de semana|janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b/gi,
       " ",
-    )
+    );
+  const withoutLeadingIntent = cleaned
+    .replace(LEADING_INTENT_PATTERN, "")
+    .replace(/\b(?:em|na|no)\s*$/i, "")
     .split(/\s+/)
-    .filter((word) => word && !STOP_WORDS.has(word.toLowerCase()))
+    .filter((word) => word)
     .join(" ")
     .trim();
+  const words = withoutLeadingIntent.split(/\s+/).filter(Boolean);
+
+  if (
+    words.length > 0 &&
+    words.every((word) => GENERIC_SEARCH_WORDS.has(word.toLowerCase()))
+  ) {
+    return undefined;
+  }
+
+  return withoutLeadingIntent || undefined;
 }
 
 export function parseEventSearchMessage(
@@ -353,6 +357,9 @@ function buildEventOptions(
     sessionId: event.sessionId,
     title: event.title,
     startsAt: event.startsAt,
+    city: event.city,
+    state: event.state,
+    ...(event.venueName ? { venueName: event.venueName } : {}),
   }));
 }
 
@@ -414,7 +421,34 @@ export async function routeTicketMessage({
     };
   }
 
-  if (parsedSearch.isGeneric || parsedSearch.numericSelection) {
+  if (
+    parsedSearch.numericSelection &&
+    previousState.state === "showing_events" &&
+    previousState.lastEvents?.length
+  ) {
+    return {
+      reply: TICKET_MESSAGES.numericInvalidOption,
+      nextContext: {
+        ...baseContext,
+        step: "showing_events",
+        state: "showing_events",
+      },
+    };
+  }
+
+  if (parsedSearch.numericSelection) {
+    return {
+      reply: TICKET_MESSAGES.numericWithoutContext,
+      nextContext: {
+        ...baseContext,
+        step: "idle",
+        state: "idle",
+        lastEvents: [],
+      },
+    };
+  }
+
+  if (parsedSearch.isGeneric) {
     return {
       reply: TICKET_MESSAGES.genericHelp,
       nextContext: {

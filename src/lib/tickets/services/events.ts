@@ -3,7 +3,7 @@ import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 const DEFAULT_EVENT_SEARCH_LIMIT = 5;
-const MAX_EVENT_CANDIDATES = 50;
+const MAX_EVENT_CANDIDATES = 100;
 const ACTIVE_SESSION_STATUSES = ["scheduled", "sales_open"];
 
 export type SearchEventsInput = {
@@ -53,6 +53,38 @@ function normalizeLimit(limit?: number) {
   return Math.min(limit, DEFAULT_EVENT_SEARCH_LIMIT);
 }
 
+function normalizeSearchValue(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim();
+}
+
+function eventMatchesArtist(event: EventRow, artistTerm: string) {
+  const normalizedTerm = normalizeSearchValue(artistTerm);
+
+  if (!normalizedTerm) {
+    return true;
+  }
+
+  const haystack = normalizeSearchValue(
+    `${event.artist_name} ${event.title} ${event.city} ${event.state}`,
+  );
+
+  return haystack.includes(normalizedTerm);
+}
+
+function eventMatchesCity(event: EventRow, cityTerm: string) {
+  const normalizedTerm = normalizeSearchValue(cityTerm);
+
+  if (!normalizedTerm) {
+    return true;
+  }
+
+  return normalizeSearchValue(event.city) === normalizedTerm;
+}
+
 export async function searchEvents({
   artist,
   city,
@@ -62,24 +94,13 @@ export async function searchEvents({
 }: SearchEventsInput): Promise<TicketEventSearchResult[]> {
   const supabase = getSupabaseAdmin();
   const resultLimit = normalizeLimit(limit);
-  let eventQuery = supabase
+  const eventQuery = supabase
     .from("events")
     .select("id, title, artist_name, city, state, venue_id, venues(name)")
     .eq("status", "published");
 
   const artistTerm = artist?.trim();
   const cityTerm = city?.trim();
-
-  if (artistTerm) {
-    const escapedTerm = artistTerm.replace(/[%_]/g, "\\$&");
-    eventQuery = eventQuery.or(
-      `artist_name.ilike.%${escapedTerm}%,title.ilike.%${escapedTerm}%,search_text.ilike.%${escapedTerm.toLowerCase()}%`,
-    );
-  }
-
-  if (cityTerm) {
-    eventQuery = eventQuery.ilike("city", cityTerm);
-  }
 
   const { data: events, error: eventsError } = await eventQuery
     .limit(MAX_EVENT_CANDIDATES)
@@ -89,11 +110,17 @@ export async function searchEvents({
     throw eventsError;
   }
 
-  if (!events || events.length === 0) {
+  const filteredEvents = (events ?? []).filter(
+    (event) =>
+      (!artistTerm || eventMatchesArtist(event, artistTerm)) &&
+      (!cityTerm || eventMatchesCity(event, cityTerm)),
+  );
+
+  if (filteredEvents.length === 0) {
     return [];
   }
 
-  const eventsById = new Map(events.map((event) => [event.id, event]));
+  const eventsById = new Map(filteredEvents.map((event) => [event.id, event]));
   let sessionQuery = supabase
     .from("event_sessions")
     .select("id, event_id, venue_id, starts_at, status, venues(name)")

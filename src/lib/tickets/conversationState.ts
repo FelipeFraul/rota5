@@ -14,6 +14,9 @@ export type TicketConversationEventOption = {
   sessionId: string;
   title: string;
   startsAt: string;
+  city: string;
+  state: string;
+  venueName?: string;
 };
 
 export type TicketConversationState = {
