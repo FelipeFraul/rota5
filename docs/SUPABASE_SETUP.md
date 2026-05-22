@@ -182,6 +182,8 @@ curl -i -X POST https://site-phi-seven-72.vercel.app/api/webhook/payment/mercado
 
 Expected result without Mercado Pago signature headers: `401 Unauthorized`, not `404`.
 
+Production was validated on the final Step 6 audit after deploy `dpl_Fp8WM8m433161qPx4ePWpi9EysNF`: the route exists in Vercel, is matched as `/api/webhook/payment/mercado-pago`, and returns `401 Unauthorized` for an unsigned POST.
+
 Do not configure the Mercado Pago dashboard webhook until the production URL has been confirmed.
 
 This migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST RPC endpoint on 2026-05-22 14:06:35 -03. A validation-only call returned the expected `customer_id_required` error, confirming that `public.reserve_seats` is available and executable by the service role.
