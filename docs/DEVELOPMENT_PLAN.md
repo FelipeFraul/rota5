@@ -44,6 +44,8 @@ Step 9 added the first real WhatsApp ticketing behavior: event search by simple 
 
 Step 9 final audit hardened parser behavior so words like `show`, `tem`, and `quero` do not destroy real artist or event names such as `Show do Milhão`. It also confirmed that month/date phrases are not treated as cities, São Paulo timezone is used for date ranges, weekdays point to the next matching future day, month searches use the current year if still upcoming and next year if already past, multiple sessions are shown as distinct numbered options, invalid numeric selections are blocked, and numeric replies without a valid event-list context ask the user to search first. Event matching now avoids raw SQL string concatenation with user input and uses normalized in-memory matching over safely fetched published event candidates.
 
+Step 10 adds event/session selection from the `showing_events` context and lists available sectors for the selected session. Numeric selection now revalidates the event/session in Supabase before showing anything: the event must still be `published`, the session must still be `scheduled` or `sales_open`, and `starts_at` must still be in the future. Available sectors are calculated from active venue sections, available `session_seats`, and active `ticket_prices` inside the current sales window. The reply shows numbered sectors with available seat count and price/fee display, then stores a lightweight `showing_sections` context with `selectedEvent` and `lastSections`. A numeric reply while showing sectors returns a controlled next-step message only; it does not list seats, reserve seats, create checkout, generate QR Codes, or issue tickets.
+
 The next steps will connect session, sector, seat, reservation, and payment creation around the transactional core.
 
 ## Next Steps
@@ -57,8 +59,9 @@ The next steps will connect session, sector, seat, reservation, and payment crea
 7. Checkout Mercado Pago vinculado à reserva - criado, auditado e pronto para uso interno
 8. Webhook Z-API com persistência de clientes, conversas e mensagens - criado e testado
 9. Busca de eventos por artista, cidade e data - criado e testado
-10. Fluxo conversacional de sessão, setor e assento - próximo passo
-11. Geração de mapa de assentos
-12. Envio de QR Code pelo WhatsApp
-13. Tela/API de validação de portaria
-14. Testes de concorrência, expiração, pagamento duplicado e QR Code usado duas vezes
+10. Seleção de evento e listagem de setores por WhatsApp - criado e testado
+11. Escolha de assento e reserva transacional pelo WhatsApp - próximo passo
+12. Geração de mapa de assentos
+13. Envio de QR Code pelo WhatsApp
+14. Tela/API de validação de portaria
+15. Testes de concorrência, expiração, pagamento duplicado e QR Code usado duas vezes

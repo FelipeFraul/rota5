@@ -451,6 +451,89 @@ Final Step 9 audit coverage:
 - [x] Published/session/future filters exclude draft events, cancelled sessions, and past sessions.
 - [x] Temporary data cleanup returned empty.
 
+## WhatsApp Sector Listing
+
+Step 10 turns a valid numeric event selection into a sector list for the selected session. This step starts only when `conversation.context.state = showing_events` and the number exists in the current `lastEvents` list.
+
+Before listing sectors, the backend revalidates the selected option in Supabase:
+
+- the event still exists and `events.status = published`;
+- the session still exists for that event;
+- the session status is `scheduled` or `sales_open`;
+- `event_sessions.starts_at >= now()`.
+
+If the option is stale, cancelled, or past, the user receives `Essa opção não está mais disponível. Faça uma nova busca.` and the context returns to `idle`.
+
+Available sectors are calculated by `listAvailableSections(sessionId)` in `src/lib/tickets/services/sections.ts`:
+
+- `venue_sections.status = active`;
+- at least one `session_seats.status = available`;
+- at least one `ticket_prices.status = active`;
+- price window is active: `sales_start_at is null or <= now()` and `sales_end_at is null or >= now()`;
+- prices and fees come only from `ticket_prices`, never from WhatsApp input or stale context.
+
+The WhatsApp reply shows each sector as a numbered option with available seat count and price/fee. If a sector has one ticket type, it shows that label directly. If it has multiple ticket types, the reply shows `A partir de` using the cheapest total price plus fee while still displaying price and fee separately.
+
+The `showing_sections` context is intentionally lightweight:
+
+```json
+{
+  "state": "showing_sections",
+  "step": "showing_sections",
+  "selectedEvent": {
+    "eventId": "...",
+    "sessionId": "...",
+    "title": "...",
+    "startsAt": "...",
+    "city": "...",
+    "state": "...",
+    "venueName": "..."
+  },
+  "lastSections": [
+    {
+      "option": 1,
+      "sectionId": "...",
+      "sectionName": "Pista Premium",
+      "hasNumberedSeats": true,
+      "availableSeatsCount": 120,
+      "minPriceCents": 12000,
+      "minFeeCents": 1200,
+      "ticketTypes": [
+        {
+          "ticketPriceId": "...",
+          "ticketType": "full",
+          "label": "Inteira",
+          "priceCents": 12000,
+          "feeCents": 1200,
+          "currency": "BRL"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Numeric replies while `state = showing_sections` are controlled only:
+
+- valid sector number: `Perfeito. No próximo passo vou te mostrar os assentos disponíveis desse setor.`;
+- invalid sector number: `Não encontrei essa opção. Responda com um número da lista.`;
+- no seat list, reservation, checkout, QR Code, map, or gate validation is performed in this step.
+
+Step 10 test coverage used temporary Supabase data and the real compiled webhook route, with Z-API pointed to a non-real audit URL and full cleanup:
+
+- [x] Valid event selection lists available sectors and moves context to `showing_sections`.
+- [x] Number outside the event list is blocked and does not advance context.
+- [x] Cancelled session after search is blocked.
+- [x] Past session is blocked.
+- [x] Active sector with available seats and active price appears.
+- [x] Sector without available seats does not appear.
+- [x] Sector without active price does not appear.
+- [x] Price outside `sales_start_at`/`sales_end_at` does not appear.
+- [x] Multiple ticket types show `A partir de` correctly.
+- [x] `showing_sections` context stays lightweight with `selectedEvent` and `lastSections`.
+- [x] Numeric reply while `showing_sections` is controlled and does not reserve.
+- [x] Temporary test data cleanup returned empty.
+
 This migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST RPC endpoint on 2026-05-22 14:06:35 -03. A validation-only call returned the expected `customer_id_required` error, confirming that `public.reserve_seats` is available and executable by the service role.
 
 The RPC was fully audited with temporary data on 2026-05-22 14:11:49 -03. The audit confirmed:

@@ -7,6 +7,10 @@ export const TICKET_MESSAGES = {
     "Não encontrei essa opção. Responda com um número da lista.",
   numericWithoutContext:
     "Me diga primeiro qual evento você procura. Você pode mandar o nome do artista, cidade ou data.",
-  numericSelectionPending:
-    "Perfeito. No próximo passo vou te mostrar as sessões e setores desse evento.",
+  eventOptionUnavailable:
+    "Essa opção não está mais disponível. Faça uma nova busca.",
+  noSectionsAvailable:
+    "Não encontrei setores disponíveis para essa sessão no momento. Faça uma nova busca ou tente outro evento.",
+  sectionSelectionPending:
+    "Perfeito. No próximo passo vou te mostrar os assentos disponíveis desse setor.",
 } as const;

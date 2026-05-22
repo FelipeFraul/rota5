@@ -26,6 +26,18 @@ export type TicketEventSearchResult = {
   sessionStatus: string;
 };
 
+export type ValidatedEventSession = {
+  eventId: string;
+  title: string;
+  artistName: string;
+  city: string;
+  state: string;
+  venueName: string | null;
+  sessionId: string;
+  startsAt: string;
+  sessionStatus: string;
+};
+
 type EventRow = {
   id: string;
   title: string;
@@ -42,6 +54,22 @@ type SessionRow = {
   venue_id: string | null;
   starts_at: string;
   status: string;
+  venues: { name: string } | null;
+};
+
+type EventSessionValidationRow = {
+  id: string;
+  starts_at: string;
+  status: string;
+  events: {
+    id: string;
+    title: string;
+    artist_name: string;
+    city: string;
+    state: string;
+    status: string;
+    venues: { name: string } | null;
+  } | null;
   venues: { name: string } | null;
 };
 
@@ -179,4 +207,50 @@ export async function getEventById(eventId: string) {
   }
 
   return data;
+}
+
+export async function getValidatedEventSession({
+  eventId,
+  sessionId,
+}: {
+  eventId: string;
+  sessionId: string;
+}): Promise<ValidatedEventSession | null> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("event_sessions")
+    .select(
+      "id, starts_at, status, venues(name), events(id, title, artist_name, city, state, status, venues(name))",
+    )
+    .eq("id", sessionId)
+    .eq("event_id", eventId)
+    .maybeSingle<EventSessionValidationRow>();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data?.events) {
+    return null;
+  }
+
+  if (
+    data.events.status !== "published" ||
+    !ACTIVE_SESSION_STATUSES.includes(data.status) ||
+    data.starts_at < new Date().toISOString()
+  ) {
+    return null;
+  }
+
+  return {
+    eventId: data.events.id,
+    title: data.events.title,
+    artistName: data.events.artist_name,
+    city: data.events.city,
+    state: data.events.state,
+    venueName: data.venues?.name ?? data.events.venues?.name ?? null,
+    sessionId: data.id,
+    startsAt: data.starts_at,
+    sessionStatus: data.status,
+  };
 }

@@ -4,13 +4,20 @@ import {
   buildInitialConversationState,
   type TicketConversationEventOption,
   type TicketConversationSearch,
+  type TicketConversationSectionOption,
+  type TicketConversationSelectedEvent,
   type TicketConversationState,
 } from "@/lib/tickets/conversationState";
 import { TICKET_MESSAGES } from "@/lib/tickets/messages";
 import {
+  getValidatedEventSession,
   searchEvents,
   type TicketEventSearchResult,
 } from "@/lib/tickets/services/events";
+import {
+  listAvailableSections,
+  type AvailableSection,
+} from "@/lib/tickets/services/sections";
 
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 const GENERIC_SEARCH_WORDS = new Set([
@@ -348,6 +355,13 @@ function formatEventDate(startsAt: string) {
     .replace(",", " às");
 }
 
+function formatCurrencyFromCents(cents: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(cents / 100);
+}
+
 function buildEventOptions(
   events: TicketEventSearchResult[],
 ): TicketConversationEventOption[] {
@@ -381,6 +395,74 @@ function formatEventsReply(events: TicketEventSearchResult[]) {
   ].join("\n");
 }
 
+function buildSelectedEvent(
+  event: TicketEventSearchResult,
+): TicketConversationSelectedEvent {
+  return {
+    eventId: event.eventId,
+    sessionId: event.sessionId,
+    title: event.title,
+    startsAt: event.startsAt,
+    city: event.city,
+    state: event.state,
+    ...(event.venueName ? { venueName: event.venueName } : {}),
+  };
+}
+
+function buildSectionOptions(
+  sections: AvailableSection[],
+): TicketConversationSectionOption[] {
+  return sections.map((section, index) => ({
+    option: index + 1,
+    sectionId: section.sectionId,
+    sectionName: section.sectionName,
+    hasNumberedSeats: section.hasNumberedSeats,
+    availableSeatsCount: section.availableSeatsCount,
+    minPriceCents: section.minPriceCents,
+    minFeeCents: section.minFeeCents,
+    ticketTypes: section.ticketTypes,
+  }));
+}
+
+function formatSectionPrice(section: AvailableSection) {
+  if (section.ticketTypes.length === 1) {
+    const ticketType = section.ticketTypes[0];
+
+    return `${ticketType.label}: ${formatCurrencyFromCents(ticketType.priceCents)} + ${formatCurrencyFromCents(ticketType.feeCents)} taxa`;
+  }
+
+  return `A partir de: ${formatCurrencyFromCents(section.minPriceCents)} + ${formatCurrencyFromCents(section.minFeeCents)} taxa`;
+}
+
+function formatSectionsReply({
+  selectedEvent,
+  sections,
+}: {
+  selectedEvent: TicketConversationSelectedEvent;
+  sections: AvailableSection[];
+}) {
+  const sectionLines = sections.flatMap((section, index) => [
+    `${index + 1}. ${section.sectionName}`,
+    `Disponíveis: ${section.availableSeatsCount}`,
+    formatSectionPrice(section),
+    "",
+  ]);
+
+  return [
+    "Você escolheu:",
+    "",
+    selectedEvent.title,
+    `Local: ${selectedEvent.city}/${selectedEvent.state}`,
+    `Data: ${formatEventDate(selectedEvent.startsAt)}`,
+    `Casa: ${selectedEvent.venueName ?? "A confirmar"}`,
+    "",
+    "Setores disponíveis:",
+    "",
+    ...sectionLines,
+    "Responda com o número do setor para continuar.",
+  ].join("\n");
+}
+
 function getConversationState(
   context: Record<string, unknown>,
 ): Partial<TicketConversationState> {
@@ -411,12 +493,65 @@ export async function routeTicketMessage({
       (event) => event.option === parsedSearch.numericSelection,
     )
   ) {
+    const selectedContextEvent = previousState.lastEvents.find(
+      (event) => event.option === parsedSearch.numericSelection,
+    );
+
+    if (!selectedContextEvent) {
+      return {
+        reply: TICKET_MESSAGES.numericInvalidOption,
+        nextContext: {
+          ...baseContext,
+          step: "showing_events",
+          state: "showing_events",
+        },
+      };
+    }
+
+    const selectedSession = await getValidatedEventSession({
+      eventId: selectedContextEvent.eventId,
+      sessionId: selectedContextEvent.sessionId,
+    });
+
+    if (!selectedSession) {
+      return {
+        reply: TICKET_MESSAGES.eventOptionUnavailable,
+        nextContext: {
+          ...baseContext,
+          step: "idle",
+          state: "idle",
+          lastEvents: [],
+          lastSections: [],
+          selectedEvent: undefined,
+        },
+      };
+    }
+
+    const selectedEvent = buildSelectedEvent(selectedSession);
+    const sections = await listAvailableSections(selectedSession.sessionId);
+
+    if (sections.length === 0) {
+      return {
+        reply: TICKET_MESSAGES.noSectionsAvailable,
+        nextContext: {
+          ...baseContext,
+          step: "idle",
+          state: "idle",
+          selectedEvent,
+          lastEvents: [],
+          lastSections: [],
+        },
+      };
+    }
+
     return {
-      reply: TICKET_MESSAGES.numericSelectionPending,
+      reply: formatSectionsReply({ selectedEvent, sections }),
       nextContext: {
         ...baseContext,
-        step: "showing_events",
-        state: "showing_events",
+        step: "showing_sections",
+        state: "showing_sections",
+        selectedEvent,
+        lastSections: buildSectionOptions(sections),
       },
     };
   }
@@ -437,6 +572,26 @@ export async function routeTicketMessage({
   }
 
   if (parsedSearch.numericSelection) {
+    if (
+      previousState.state === "showing_sections" &&
+      previousState.lastSections?.length
+    ) {
+      const selectedSection = previousState.lastSections.find(
+        (section) => section.option === parsedSearch.numericSelection,
+      );
+
+      return {
+        reply: selectedSection
+          ? TICKET_MESSAGES.sectionSelectionPending
+          : TICKET_MESSAGES.numericInvalidOption,
+        nextContext: {
+          ...baseContext,
+          step: "showing_sections",
+          state: "showing_sections",
+        },
+      };
+    }
+
     return {
       reply: TICKET_MESSAGES.numericWithoutContext,
       nextContext: {
@@ -444,6 +599,8 @@ export async function routeTicketMessage({
         step: "idle",
         state: "idle",
         lastEvents: [],
+        lastSections: [],
+        selectedEvent: undefined,
       },
     };
   }
