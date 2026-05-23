@@ -1169,7 +1169,7 @@ admin_users_menu
 admin_reports_menu
 ```
 
-Only the gate submenu option `1. Check-in neste telefone` performs a real action in this step: it creates a temporary gate session for the same WhatsApp phone that is authenticated in the admin flow and replies in that same conversation with the scanner link. Other submenu actions currently respond with `Essa função será ativada em breve.` and do not create, edit, cancel, resend, report, or mutate real business data.
+The gate submenu option `1. Check-in neste telefone` creates a temporary gate session for the same WhatsApp phone that is authenticated in the admin flow and replies in that same conversation with the scanner link. The `Eventos` submenu is also operational for `root` and `admin` roles; other administrative areas still return controlled construction messages until their workflows are implemented.
 
 The current admin menu path is:
 
@@ -1180,6 +1180,54 @@ admin
 ```
 
 The old direct `portaria telefone` command is not the menu guidance for check-in. The operational admin flow keeps the user in the same WhatsApp conversation after authentication and does not ask the admin to send a link to any fixed number.
+
+### WhatsApp Admin Events Module
+
+The `Admin > Eventos` module is backend-only and available only to roles with `manage_events` (`root` and `admin`). `operator`, `gate`, and `support` receive the controlled unavailable message and cannot enter the event flows.
+
+Implemented event actions:
+
+- list events, five per page, with status, city/state, session count, and next session;
+- show event details with sessions and sections;
+- create event with title, artist, city, UF, venue, first session date/time, and initial status;
+- reuse an existing venue by name/city/UF or create a new active venue;
+- edit event title, artist, city/UF, venue, and status;
+- pause/publish/cancel event by status change only, never physical deletion;
+- list, create, edit date/status, open/close sales, and cancel event sessions;
+- list, create, and edit venue sections;
+- create structural seats by manual list or simple range;
+- block/unblock structural seats by status;
+- create missing `session_seats` for a selected session and section/all sections;
+- list, create, edit, activate, and deactivate ticket prices/lots.
+
+All mutating paths require confirmation before writing. Normal writes require `CONFIRMAR`; event and session cancellation require explicit cancellation text. The module does not alter payments, orders, reservations, tickets, ticket validation, or Mercado Pago state. Existing sold/reserved session seats are not overwritten when creating missing `session_seats`.
+
+Supported admin event states include:
+
+```text
+admin_events_menu
+admin_events_list
+admin_event_detail
+admin_event_create_collecting
+admin_event_create_confirm
+admin_event_edit_menu
+admin_event_edit_collecting
+admin_event_edit_confirm
+admin_event_status_select
+admin_event_status_confirm
+admin_event_sessions_menu
+admin_event_session_create_collecting
+admin_event_session_edit_collecting
+admin_event_sections_menu
+admin_event_section_create_collecting
+admin_event_seats_create_collecting
+admin_event_session_seats_confirm
+admin_event_prices_menu
+admin_event_price_create_collecting
+admin_event_price_edit_collecting
+```
+
+Input is parsed and validated server-side. Dates use the Brazilian format `DD/MM/YYYY HH:mm`; money values are converted to cents before storage; slugs are normalized; seat lists accept comma-separated codes or simple ranges. Errors returned to WhatsApp are controlled and do not expose SQL details.
 
 ### Gate Page And Scanner
 

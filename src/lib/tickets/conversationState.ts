@@ -8,6 +8,26 @@ export type TicketConversationStep =
   | "admin_gate_menu"
   | "admin_users_menu"
   | "admin_reports_menu"
+  | "admin_events_list"
+  | "admin_event_detail"
+  | "admin_event_create_collecting"
+  | "admin_event_create_confirm"
+  | "admin_event_edit_select"
+  | "admin_event_edit_menu"
+  | "admin_event_edit_collecting"
+  | "admin_event_edit_confirm"
+  | "admin_event_status_select"
+  | "admin_event_status_confirm"
+  | "admin_event_sessions_menu"
+  | "admin_event_session_create_collecting"
+  | "admin_event_session_edit_collecting"
+  | "admin_event_sections_menu"
+  | "admin_event_section_create_collecting"
+  | "admin_event_seats_create_collecting"
+  | "admin_event_session_seats_confirm"
+  | "admin_event_prices_menu"
+  | "admin_event_price_create_collecting"
+  | "admin_event_price_edit_collecting"
   | "showing_events"
   | "showing_sections"
   | "showing_seats"
@@ -103,11 +123,28 @@ export type TicketConversationAdmin = {
   expiresAt?: string;
 };
 
+export type TicketConversationAdminEvents = {
+  page?: number;
+  lastEvents?: Array<{
+    option: number;
+    eventId: string;
+    title: string;
+  }>;
+  selectedEventId?: string;
+  selectedSessionId?: string;
+  selectedSectionId?: string;
+  selectedPriceId?: string;
+  mode?: string;
+  field?: string;
+  draft?: Record<string, unknown>;
+};
+
 export type TicketConversationState = {
   step: TicketConversationStep;
   state: TicketConversationStep;
   lastInboundText?: string;
   admin?: TicketConversationAdmin;
+  adminEvents?: TicketConversationAdminEvents;
   lastSearch?: TicketConversationSearch;
   lastEvents?: TicketConversationEventOption[];
   selectedEvent?: TicketConversationSelectedEvent;
