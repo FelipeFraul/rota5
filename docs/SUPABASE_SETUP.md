@@ -1257,24 +1257,15 @@ Temporary Supabase data was created and removed after validation. The audit conf
 - [x] concurrent scans of the same ticket produce exactly one `allowed` and one `already_used`;
 - [x] validation events are created with `gate_session_id`;
 - [x] anon cannot execute `public.validate_ticket_entry`;
+- [x] the SQL migration revokes execution from `authenticated` and `public`, leaving only `service_role`;
+- [x] revoked or expired gate sessions are blocked before ticket validation is attempted;
+- [x] invalid signed ticket tokens return a safe `not_found` result and do not update tickets;
+- [x] the scanner UI increments `Validados` only for API responses with `allowed = true`; `not_found`, `cancelled`, `already_used`, and request errors increment `Recusados`;
+- [x] scan code and UI do not log full gate tokens, ticket tokens, phone numbers, or secrets;
 - [x] responses do not expose customer/order/payment/phone/document/email/`qr_token_hash`;
 - [x] cleanup removed temporary data.
 
 Not in scope for Step 16: advanced admin dashboard, event/session-specific wrong-event enforcement, cancellation/swap flows, reports, PDF/image tickets, and advanced camera UX.
-
-This migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST RPC endpoint on 2026-05-22 14:06:35 -03. A validation-only call returned the expected `customer_id_required` error, confirming that `public.reserve_seats` is available and executable by the service role.
-
-The RPC was fully audited with temporary data on 2026-05-22 14:11:49 -03. The audit confirmed:
-
-- valid reservation creates reservation, reservation item, order, and marks the session seat as reserved;
-- repeated reservation of the same seat fails with `seat_not_available`;
-- duplicated seat IDs fail with `duplicate_seat_ids`;
-- cancelled session fails with `session_not_available`;
-- missing active price fails with `ticket_price_not_found`;
-- conversation from another customer fails with `conversation_not_found`;
-- mixed available/unavailable multi-seat request fails atomically and leaves the available seat unchanged;
-- concurrent same-seat requests result in exactly one success and one `seat_not_available` failure;
-- temporary audit data was removed.
 
 The migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST API on 2026-05-22 13:59:00 -03. The 18 expected tables exist in the real Supabase project.
 
