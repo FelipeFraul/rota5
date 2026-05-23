@@ -1145,7 +1145,122 @@ Step 15 does not:
 - generate PDF/image tickets;
 - cancel or swap tickets.
 
-Step 16 will implement the transactional validation boundary for actual ticket use.
+## Step 16 - Real Gate Validation And One-Time Ticket Use
+
+Step 16 replaces the placeholder scan behavior with real ticket validation.
+
+### Migration And RPC
+
+Migration:
+
+```text
+supabase/migrations/20260522000700_create_validate_ticket_entry_rpc.sql
+```
+
+Changes:
+
+- adds `ticket_validation_events.gate_session_id`;
+- adds `ticket_validation_events_gate_session_id_idx`;
+- creates `public.validate_ticket_entry(...)`;
+- revokes execution from `public`, `anon`, and `authenticated`;
+- grants execution only to `service_role`.
+
+RPC signature:
+
+```sql
+public.validate_ticket_entry(
+  p_ticket_id uuid,
+  p_ticket_code text,
+  p_gate_session_id uuid default null,
+  p_gate_label text default null,
+  p_validator_identifier text default null,
+  p_metadata jsonb default '{}'::jsonb
+)
+```
+
+The RPC locks the matching ticket with `FOR UPDATE`. Results:
+
+- `allowed`: ticket was `issued`, is updated to `used`, and `used_at` is set.
+- `already_used`: ticket was already used; `used_at` is returned and not changed.
+- `cancelled`: ticket was cancelled.
+- `not_found`: no matching `id + ticket_code`.
+- `denied`: any other unexpected ticket status.
+
+Every known-ticket attempt inserts a `ticket_validation_events` row with `ticket_id`, `ticket_code`, `gate_session_id`, result, gate label, validator identifier, and minimal metadata. Invalid signed ticket tokens cannot call the RPC because there is no ticket id; the backend records a `not_found` event directly with `gate_session_id` and minimal metadata.
+
+The RPC response intentionally excludes phone, document, email, customer id, order id, payment id, `qr_token_hash`, and raw metadata.
+
+### Scan Endpoint
+
+Route:
+
+```text
+POST /api/gate/session/scan
+```
+
+Input:
+
+```json
+{
+  "gateSessionToken": "...",
+  "ticketToken": "..."
+}
+```
+
+Flow:
+
+1. validate the temporary gate session token;
+2. reject expired, revoked, malformed, or missing gate sessions;
+3. extract the ticket token from either a raw token or a `/tickets/{token}` URL;
+4. validate the signed ticket token;
+5. call `public.validate_ticket_entry`;
+6. return the minimal gate result.
+
+Example allowed response:
+
+```json
+{
+  "allowed": true,
+  "result": "allowed",
+  "message": "Entrada liberada.",
+  "ticket": {
+    "ticketId": "...",
+    "ticketCode": "TCK-...",
+    "status": "used",
+    "usedAt": "...",
+    "eventTitle": "...",
+    "startsAt": "...",
+    "sectionName": "...",
+    "seatCode": "A03"
+  }
+}
+```
+
+### Scanner UI
+
+`/gate/session/[token]` now shows real validation counters:
+
+- `Validados`;
+- `Recusados`.
+
+The scanner extracts ticket tokens from full `/tickets/{token}` URLs or raw token values, calls the scan endpoint, and shows allowed/denied feedback with ticket code, section, and seat when available. Camera reads have a 3-second same-content debounce to reduce repeated scans; the RPC still provides the concurrency-safe source of truth.
+
+### Step 16 Audit
+
+Temporary Supabase data was created and removed after validation. The audit confirmed:
+
+- [x] migration applied: RPC exists and `ticket_validation_events.gate_session_id` exists;
+- [x] issued ticket returns `allowed`, updates `tickets.status = used`, and fills `used_at`;
+- [x] second scan returns `already_used` and does not change `used_at`;
+- [x] cancelled ticket returns `cancelled`;
+- [x] unknown ticket id/code returns `not_found`;
+- [x] concurrent scans of the same ticket produce exactly one `allowed` and one `already_used`;
+- [x] validation events are created with `gate_session_id`;
+- [x] anon cannot execute `public.validate_ticket_entry`;
+- [x] responses do not expose customer/order/payment/phone/document/email/`qr_token_hash`;
+- [x] cleanup removed temporary data.
+
+Not in scope for Step 16: advanced admin dashboard, event/session-specific wrong-event enforcement, cancellation/swap flows, reports, PDF/image tickets, and advanced camera UX.
 
 This migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST RPC endpoint on 2026-05-22 14:06:35 -03. A validation-only call returned the expected `customer_id_required` error, confirming that `public.reserve_seats` is available and executable by the service role.
 

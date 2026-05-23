@@ -3,7 +3,7 @@ import {
   jsonOk,
   methodNotAllowed,
 } from "@/lib/http/responses";
-import { validateGateSessionToken } from "@/lib/tickets/services/gateSessions";
+import { validateGateScan } from "@/lib/tickets/services/gateValidation";
 
 type ScanPayload = {
   gateSessionToken?: unknown;
@@ -45,22 +45,9 @@ export async function POST(request: Request) {
     return badRequest("Bad request");
   }
 
-  const gateSession = await validateGateSessionToken(payload.gateSessionToken);
+  const result = await validateGateScan(payload);
 
-  if (!gateSession.valid) {
-    return jsonOk({
-      received: false,
-      validationPending: true,
-      reason: gateSession.reason,
-      message: "Sessão de portaria inválida ou expirada.",
-    });
-  }
-
-  return jsonOk({
-    received: true,
-    validationPending: true,
-    message: "Leitura recebida. A validação real será ativada no próximo passo.",
-  });
+  return jsonOk(result);
 }
 
 export function GET() {
@@ -78,4 +65,3 @@ export function PATCH() {
 export function DELETE() {
   return methodNotAllowed(["POST"]);
 }
-

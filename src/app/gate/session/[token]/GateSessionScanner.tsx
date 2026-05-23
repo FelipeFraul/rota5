@@ -67,14 +67,15 @@ export function GateSessionScanner({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const lastScanRef = useRef<string | null>(null);
+  const lastScanAtRef = useRef(0);
   const [validation, setValidation] =
     useState<GateSessionValidation>(initialValidation);
   const [loading, setLoading] = useState(false);
   const [cameraStatus, setCameraStatus] = useState("Aguardando câmera...");
   const [lastResult, setLastResult] = useState("Nenhuma leitura ainda.");
   const [manualCode, setManualCode] = useState("");
-  const [readsCount, setReadsCount] = useState(0);
-  const [errorsCount, setErrorsCount] = useState(0);
+  const [allowedCount, setAllowedCount] = useState(0);
+  const [deniedCount, setDeniedCount] = useState(0);
 
   useEffect(() => {
     if (!initialValidation.valid) {
@@ -123,7 +124,37 @@ export function GateSessionScanner({
     let cancelled = false;
     let animationFrame = 0;
 
-    async function submitScan(ticketToken: string) {
+    function extractTicketToken(rawValue: string) {
+      const value = rawValue.trim();
+
+      try {
+        const parsedUrl = new URL(value);
+        const match = parsedUrl.pathname.match(/\/tickets\/([^/]+)\/?$/);
+
+        if (match?.[1]) {
+          return decodeURIComponent(match[1]);
+        }
+      } catch {
+        // Not a URL; use the raw QR value as the ticket token.
+      }
+
+      return value;
+    }
+
+    async function submitScan(rawTicketToken: string) {
+      const ticketToken = extractTicketToken(rawTicketToken);
+      const now = Date.now();
+
+      if (
+        ticketToken === lastScanRef.current &&
+        now - lastScanAtRef.current < 3_000
+      ) {
+        return;
+      }
+
+      lastScanRef.current = ticketToken;
+      lastScanAtRef.current = now;
+
       try {
         const response = await fetch("/api/gate/session/scan", {
           method: "POST",
@@ -136,20 +167,35 @@ export function GateSessionScanner({
           }),
         });
         const result = (await response.json()) as {
-          received?: boolean;
+          allowed?: boolean;
           message?: string;
+          result?: string;
+          ticket?: {
+            ticketCode?: string;
+            sectionName?: string | null;
+            seatCode?: string | null;
+          };
         };
 
-        if (result.received) {
-          setReadsCount((count) => count + 1);
-          setLastResult(result.message ?? "Leitura recebida.");
+        if (result.allowed) {
+          setAllowedCount((count) => count + 1);
+          setLastResult(
+            [
+              result.message ?? "Entrada liberada.",
+              result.ticket?.ticketCode ? `Código: ${result.ticket.ticketCode}` : null,
+              result.ticket?.sectionName ? `Setor: ${result.ticket.sectionName}` : null,
+              result.ticket?.seatCode ? `Assento: ${result.ticket.seatCode}` : null,
+            ]
+              .filter(Boolean)
+              .join("\n"),
+          );
           return;
         }
 
-        setErrorsCount((count) => count + 1);
-        setLastResult(result.message ?? "Leitura recusada pela sessão.");
+        setDeniedCount((count) => count + 1);
+        setLastResult(result.message ?? "Entrada recusada.");
       } catch {
-        setErrorsCount((count) => count + 1);
+        setDeniedCount((count) => count + 1);
         setLastResult("Não foi possível registrar a leitura.");
       }
     }
@@ -230,7 +276,6 @@ export function GateSessionScanner({
       return;
     }
 
-    lastScanRef.current = value;
     setManualCode("");
 
     try {
@@ -245,20 +290,34 @@ export function GateSessionScanner({
         }),
       });
       const result = (await response.json()) as {
-        received?: boolean;
+        allowed?: boolean;
         message?: string;
+        ticket?: {
+          ticketCode?: string;
+          sectionName?: string | null;
+          seatCode?: string | null;
+        };
       };
 
-      if (result.received) {
-        setReadsCount((count) => count + 1);
-        setLastResult(result.message ?? "Leitura recebida.");
+      if (result.allowed) {
+        setAllowedCount((count) => count + 1);
+        setLastResult(
+          [
+            result.message ?? "Entrada liberada.",
+            result.ticket?.ticketCode ? `Código: ${result.ticket.ticketCode}` : null,
+            result.ticket?.sectionName ? `Setor: ${result.ticket.sectionName}` : null,
+            result.ticket?.seatCode ? `Assento: ${result.ticket.seatCode}` : null,
+          ]
+            .filter(Boolean)
+            .join("\n"),
+        );
         return;
       }
 
-      setErrorsCount((count) => count + 1);
-      setLastResult(result.message ?? "Leitura recusada pela sessão.");
+      setDeniedCount((count) => count + 1);
+      setLastResult(result.message ?? "Entrada recusada.");
     } catch {
-      setErrorsCount((count) => count + 1);
+      setDeniedCount((count) => count + 1);
       setLastResult("Não foi possível registrar a leitura.");
     }
   }
@@ -295,12 +354,12 @@ export function GateSessionScanner({
 
       <section className="gate-counters" aria-label="Contadores de leitura">
         <div>
-          <strong>{readsCount}</strong>
-          <span>Leituras</span>
+          <strong>{allowedCount}</strong>
+          <span>Validados</span>
         </div>
         <div>
-          <strong>{errorsCount}</strong>
-          <span>Erros</span>
+          <strong>{deniedCount}</strong>
+          <span>Recusados</span>
         </div>
       </section>
 
@@ -328,8 +387,7 @@ export function GateSessionScanner({
         <h2>Último resultado</h2>
         <p>{lastResult}</p>
         <small>
-          Neste passo a leitura é preparatória. A validação real de uso único
-          será ativada no próximo passo.
+          A validação marca o ingresso como usado uma única vez.
         </small>
       </section>
     </main>

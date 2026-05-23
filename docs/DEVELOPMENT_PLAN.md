@@ -66,6 +66,8 @@ Step 15 creates the temporary gate access layer. A new `gate_sessions` table sto
 
 Step 15 final audit confirmed that only normalized admin phones can create portaria sessions, non-admin commands do not create sessions, `GATE_SESSION_SECRET` and positive TTL are required without public prefixes, tokens use a minimal HMAC payload, APIs return only minimal gate-session data, scanner UI is client-safe with manual fallback and neutral counters, and the scan placeholder does not touch tickets, reservations, orders, payments, or session seats. Complementary production checks covered invalid gate pages, invalid validate responses, Z-API `401` without secret, scan placeholder safety, and temporary Supabase data cleanup.
 
+Step 16 implements real gate validation and one-time ticket use. The `public.validate_ticket_entry` RPC was added with a `FOR UPDATE` lock on the ticket, records `ticket_validation_events`, marks `issued` tickets as `used`, returns `already_used` for subsequent scans without changing `used_at`, and rejects cancelled/not-found tickets. `ticket_validation_events` now has `gate_session_id` for gate-session auditability. `/api/gate/session/scan` validates the gate session token, extracts ticket tokens from either `/tickets/{token}` URLs or raw token values, validates the signed ticket token, calls the RPC, and returns safe minimal results for the scanner UI. The portaria page now shows real `Validados` and `Recusados` counters and debounces repeated camera reads. Step 16 was validated in the real Supabase project with temporary data covering allowed, already-used, cancelled, not-found, concurrent scans, validation events, anon denial, and cleanup.
+
 The next steps will connect session, sector, seat, reservation, and payment creation around the transactional core.
 
 ## Next Steps
@@ -85,5 +87,5 @@ The next steps will connect session, sector, seat, reservation, and payment crea
 13. Geração de checkout Mercado Pago pelo WhatsApp - criado e testado
 14. Envio de URL/QR de ingresso pelo WhatsApp após pagamento - criado e testado
 15. Sessão temporária de portaria e scanner preparatório - criado e validado no Supabase real
-16. Validação transacional de portaria e uso único do ingresso
+16. Validação transacional de portaria e uso único do ingresso - criado e validado no Supabase real
 17. Testes de concorrência, expiração, pagamento duplicado e QR Code usado duas vezes

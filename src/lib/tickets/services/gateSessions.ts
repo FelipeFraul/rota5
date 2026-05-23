@@ -46,6 +46,7 @@ export type ValidateGateSessionResult =
         validatorPhoneLast4: string;
         expiresAt: string;
         status: "active";
+        validatorIdentifier: string;
       };
     }
   | {
@@ -198,6 +199,7 @@ export async function validateGateSessionToken(
       validatorPhoneLast4: data.validator_phone.slice(-4),
       expiresAt: data.expires_at,
       status: "active",
+      validatorIdentifier: `whatsapp_last4:${data.validator_phone.slice(-4)}`,
     },
   };
 }
