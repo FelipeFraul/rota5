@@ -289,6 +289,19 @@ Role permissions currently used for menu visibility:
 
 This step does not implement CRUD events, courtesies, reports, cancellation, swaps, or destructive admin actions. Menu entries that are not implemented return a controlled “in construction” response.
 
+Final pre-secret audit notes:
+
+- `admin_users` and `admin_sessions` were confirmed in the real Supabase project after applying the migration.
+- Behavioral constraint checks confirmed invalid admin phones, invalid roles, invalid statuses, invalid session statuses, and duplicate admin phones are blocked.
+- The migration SQL defines the expected indexes for admin user/session phone, status, role, expiration, and admin user id lookups.
+- The migration SQL defines the `set_admin_users_updated_at` trigger for `admin_users.updated_at`.
+- Without `ADMIN_AUTH_SECRET_HASH`, passphrase verification returns false and admin login remains fail-closed.
+- The admin passphrase hash format is `pbkdf2_sha256$iterations$salt$hash`; production must use a new passphrase that has never been shared outside the secret manager.
+- The repository must not contain a real passphrase or real hash. Searches for sensitive terms should show only code/docs describing the mechanism and the redaction marker.
+- Unauthorized `admin`, `adm`, and `administrador` messages receive a neutral buyer-facing response and do not enter event search.
+- While the conversation is in `admin_auth_pending`, inbound passphrase messages are stored as `[ADMIN_AUTH_REDACTED]` and metadata is limited to `{ redacted: true, reason: "admin_auth" }` plus provider/message type identifiers.
+- Production should be redeployed after adding `ADMIN_AUTH_SECRET_HASH`.
+
 Request body:
 
 ```json
