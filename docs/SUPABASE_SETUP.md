@@ -1158,6 +1158,8 @@ The signature is HMAC SHA-256 over the base64url payload using `GATE_SESSION_SEC
 
 Authenticated WhatsApp admins receive a permission-filtered main menu and can enter submenus for Events, Orders/Tickets, Courtesies, Gate, Admin Users, and Reports according to their role. Each submenu has `Voltar` and `Sair`; `menu` returns to the main menu, `voltar` returns one level, and `sair`/`logout`/`encerrar` revokes the active admin session. Admin navigation also accepts unique area names from any admin submenu; for example, typing `evento` while viewing gate options switches back to the event area.
 
+Numbers are always interpreted relative to the current screen only. An admin inside `Portaria`, `Eventos`, or any nested event flow cannot jump to another main area by typing that area's main-menu number; to switch areas, the admin must type the area word such as `evento`, `ingresso`, `cortesia`, `portaria`, `administrador`, or `relatorio`.
+
 The submenu states are:
 
 ```text

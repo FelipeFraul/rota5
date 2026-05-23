@@ -82,6 +82,8 @@ Step 20 audit used temporary real Supabase data with the `TEST_ADMIN_EVENTS_FLOW
 
 Step 20 final operational audit then exercised the real Z-API webhook/router with a local Z-API mock and real temporary Supabase data using `TEST_ADMIN_EVENTS_WHATSAPP_FLOW`. It validated role permissions through real admin sessions, event creation/cancellation/editing/status changes, session creation/edit/open/close/cancel flows, section and seat creation/duplicates, `session_seats` creation/duplicates, price creation with comma and dot decimals, negative price/tax rejection, duplicate ticket type rejection, price edit/deactivate/activate, `menu`/`voltar`/`sair`/`cancelar` navigation, buyer search/section/seat/reservation on the admin-created catalog, and complete cleanup. The audit fixed wording around “pause” to say the event returns to `draft`, preserved event-list mode while searching, and made `CANCELAR` safe in deep collection states.
 
+Admin navigation now treats numbers as local to the current screen. Switching to another main admin area from a submenu or nested event state requires typing the area word, such as `evento`, `portaria`, or `relatorio`; numeric options no longer act as cross-menu shortcuts outside the main admin menu.
+
 ## Next Steps
 
 1. Fundação do projeto

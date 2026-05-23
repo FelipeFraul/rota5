@@ -3295,6 +3295,36 @@ export async function routeTicketMessage({
       };
     }
 
+    if (previousState.state !== "admin_menu" && typedMainMenuOption) {
+      const targetSubmenu = getAdminSubmenuByMainOption(typedMainMenuOption);
+
+      if (!targetSubmenu || !canAccessAdminMenu(adminUser.role, targetSubmenu)) {
+        return {
+          reply: ADMIN_MENU_UNAVAILABLE_MESSAGE,
+          nextContext: {
+            ...baseContext,
+            admin: buildAdminContext({
+              adminUserId: adminUser.id,
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          },
+        };
+      }
+
+      return {
+        reply: renderAdminSubmenu(targetSubmenu),
+        nextContext: adminReplyContext({
+          state: targetSubmenu.state,
+          role: adminUser.role,
+          sessionId: adminSession.id,
+          adminUserId: adminUser.id,
+          expiresAt: adminSession.expires_at,
+        }),
+      };
+    }
+
     if (
       baseContext.state === "admin_events_menu" ||
       baseContext.state === "admin_events_list" ||
