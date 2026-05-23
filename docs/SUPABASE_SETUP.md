@@ -1025,11 +1025,12 @@ Creates `public.gate_sessions` with:
 
 The raw gate session token is never stored. Only `token_hash = sha256(raw signed token)` is persisted.
 
-Supabase CLI status for this migration:
+Supabase status for this migration:
 
 - `npx supabase db push` was attempted and failed because this checkout has no Supabase project ref.
 - `npx supabase projects list` was attempted and failed because no `SUPABASE_ACCESS_TOKEN` is available.
-- The migration is committed locally and must be applied to the real Supabase project through SQL Editor or a linked Supabase CLI before admin-created gate sessions can work in production.
+- The migration was then applied manually in the real Supabase project.
+- Follow-up validation with temporary data confirmed that `gate_sessions` exists, active sessions can be inserted with `token_hash` only, phone constraints reject non-digit validator/admin phones, revoked status is stored/queryable, and cleanup removed all temporary rows.
 
 ### Environment
 
