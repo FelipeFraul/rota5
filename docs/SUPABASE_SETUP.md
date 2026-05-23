@@ -1156,14 +1156,14 @@ The signature is HMAC SHA-256 over the base64url payload using `GATE_SESSION_SEC
 
 ### WhatsApp Admin Flow
 
-Authenticated WhatsApp admins with `manage_gate` permission can open the admin menu, choose `Portaria`, then choose `Check-in`. The backend creates a temporary gate session for the same WhatsApp phone that is authenticated in the admin flow and replies in that same conversation with the scanner link.
+Authenticated WhatsApp admins with `manage_gate` permission can open the admin menu, choose `Portaria`, then choose `Check-in`. The backend creates a temporary gate session for the same WhatsApp phone that is authenticated in the admin flow and replies in that same conversation with the scanner link. Admin navigation also accepts unique area names from any admin submenu; for example, typing `evento` while viewing check-in options switches back to the event area.
 
 The current admin menu path is:
 
 ```text
 admin
 4. Portaria
-1. Check-in neste telefone
+1. Abrir leitor neste telefone
 ```
 
 The old direct `portaria telefone` command is not the menu guidance for check-in. The operational admin flow keeps the user in the same WhatsApp conversation after authentication and does not ask the admin to send a link to any fixed number.

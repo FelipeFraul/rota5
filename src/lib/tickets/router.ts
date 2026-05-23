@@ -56,6 +56,7 @@ import {
   isAdminLogoutCommand,
   isAuthorizedAdminPhone,
   isReservedAdminCommand,
+  normalizeAdminText,
   revokeActiveAdminSessions,
   type AdminRole,
   verifyAdminPassphrase,
@@ -699,16 +700,68 @@ function buildAdminMenuOptionReply(role: AdminRole, option: number) {
 
 function buildAdminGateMenu() {
   return [
-    "Portaria",
+    "Check-in",
     "",
     "Escolha uma opção:",
     "",
-    "1. Check-in neste telefone",
+    "1. Abrir leitor neste telefone",
     "2. Enviar acesso para outro validador (em construção)",
-    "3. Voltar ao menu administrativo",
+    "3. Menu principal",
     "",
-    "Responda com o número da opção.",
+    "Responda com o número ou com o nome de outra área, como Eventos.",
   ].join("\n");
+}
+
+function parseAdminMainMenuOption(text: string, role: AdminRole) {
+  const normalized = normalizeAdminText(text);
+  const aliases: Record<number, string[]> = {
+    1: ["evento", "eventos"],
+    2: ["ingresso", "ingressos", "pedido", "pedidos"],
+    3: ["cortesia", "cortesias"],
+    4: ["portaria"],
+    5: ["administrador", "administradores", "admins"],
+    6: ["relatorio", "relatorios"],
+    7: ["sair", "logout", "encerrar"],
+  };
+
+  const option = Object.entries(aliases).find(([, optionAliases]) =>
+    optionAliases.includes(normalized),
+  )?.[0];
+
+  if (!option) {
+    return null;
+  }
+
+  const numericOption = Number(option);
+
+  return getAdminMenuOptions(role).some(
+    (menuOption) => menuOption.option === numericOption,
+  )
+    ? numericOption
+    : null;
+}
+
+function parseAdminGateMenuOption(text: string) {
+  const normalized = normalizeAdminText(text);
+  const aliases: Record<number, string[]> = {
+    1: [
+      "abrir leitor",
+      "leitor",
+      "checkin",
+      "check-in",
+      "qr",
+      "qrcode",
+      "scanner",
+    ],
+    2: ["outro validador", "validador", "enviar acesso"],
+    3: ["menu", "menu principal", "voltar", "principal"],
+  };
+
+  const option = Object.entries(aliases).find(([, optionAliases]) =>
+    optionAliases.includes(normalized),
+  )?.[0];
+
+  return option ? Number(option) : null;
 }
 
 function buildGateCheckInReply({
@@ -1021,7 +1074,12 @@ export async function routeTicketMessage({
     };
   }
 
-  if (reservedAdminCommand) {
+  if (
+    reservedAdminCommand &&
+    previousState.state !== "admin_menu" &&
+    previousState.state !== "admin_gate_menu" &&
+    !previousState.admin?.sessionId
+  ) {
     if (!(await isAuthorizedAdminPhone(customer.whatsapp_phone))) {
       return {
         reply: TICKET_MESSAGES.adminReservedNeutral,
@@ -1114,8 +1172,10 @@ export async function routeTicketMessage({
     const numericOption = text.trim().match(/^\d+$/)
       ? Number(text.trim())
       : null;
+    const mainMenuOption =
+      numericOption ?? parseAdminMainMenuOption(text, adminUserResult.adminUser.role);
 
-    if (numericOption === 7) {
+    if (mainMenuOption === 7) {
       await revokeActiveAdminSessions(customer.whatsapp_phone);
 
       return {
@@ -1128,6 +1188,36 @@ export async function routeTicketMessage({
     }
 
     if (previousState.state === "admin_gate_menu") {
+      const typedMainMenuOption = numericOption
+        ? null
+        : parseAdminMainMenuOption(text, adminUserResult.adminUser.role);
+
+      if (typedMainMenuOption) {
+        const nextState =
+          typedMainMenuOption === 4 &&
+          hasAdminPermission(adminUserResult.adminUser.role, "manage_gate")
+            ? "admin_gate_menu"
+            : "admin_menu";
+
+        return {
+          reply: buildAdminMenuOptionReply(
+            adminUserResult.adminUser.role,
+            typedMainMenuOption,
+          ),
+          nextContext: {
+            ...baseContext,
+            step: nextState,
+            state: nextState,
+            admin: buildAdminContext({
+              adminUserId: adminUserResult.adminUser.id,
+              role: adminUserResult.adminUser.role,
+              sessionId: sessionResult.adminSession.id,
+              expiresAt: sessionResult.adminSession.expires_at,
+            }),
+          },
+        };
+      }
+
       if (!hasAdminPermission(adminUserResult.adminUser.role, "manage_gate")) {
         return {
           reply: TICKET_MESSAGES.adminOptionUnavailable,
@@ -1145,7 +1235,9 @@ export async function routeTicketMessage({
         };
       }
 
-      if (numericOption === 1) {
+      const gateMenuOption = numericOption ?? parseAdminGateMenuOption(text);
+
+      if (gateMenuOption === 1) {
         const gateSessionResult = await createGateSession({
           validatorPhone: customer.whatsapp_phone,
           createdByAdminPhone: customer.whatsapp_phone,
@@ -1188,7 +1280,7 @@ export async function routeTicketMessage({
         };
       }
 
-      if (numericOption === 2) {
+      if (gateMenuOption === 2) {
         return {
           reply: TICKET_MESSAGES.adminOptionUnavailable,
           nextContext: {
@@ -1205,7 +1297,7 @@ export async function routeTicketMessage({
         };
       }
 
-      if (numericOption === 3) {
+      if (gateMenuOption === 3) {
         return {
           reply: formatAdminMenu(adminUserResult.adminUser.role),
           nextContext: {
@@ -1224,7 +1316,7 @@ export async function routeTicketMessage({
 
       return {
         reply:
-          numericOption === null
+          gateMenuOption === null
             ? buildAdminGateMenu()
             : TICKET_MESSAGES.gateAdminOptionInvalid,
         nextContext: {
@@ -1243,18 +1335,18 @@ export async function routeTicketMessage({
 
     return {
       reply:
-        numericOption === null
+        mainMenuOption === null
           ? formatAdminMenu(adminUserResult.adminUser.role)
-          : buildAdminMenuOptionReply(adminUserResult.adminUser.role, numericOption),
+          : buildAdminMenuOptionReply(adminUserResult.adminUser.role, mainMenuOption),
       nextContext: {
         ...baseContext,
         step:
-          numericOption === 4 &&
+          mainMenuOption === 4 &&
           hasAdminPermission(adminUserResult.adminUser.role, "manage_gate")
             ? "admin_gate_menu"
             : "admin_menu",
         state:
-          numericOption === 4 &&
+          mainMenuOption === 4 &&
           hasAdminPermission(adminUserResult.adminUser.role, "manage_gate")
             ? "admin_gate_menu"
             : "admin_menu",
