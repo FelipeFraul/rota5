@@ -72,6 +72,8 @@ Step 17 closed the MVP with an end-to-end controlled audit in the real Supabase 
 
 MVP limitations that remain explicit: no cancellation or ticket swap flow, no manual ticket resend, no event/session `wrong_event` gate filter, no advanced admin panel, no reports, no QR visual/PDF, scanner support depends on browser camera/`BarcodeDetector` with manual fallback, and a controlled low-value real Mercado Pago payment run is still recommended before public operation.
 
+Step 18 prepares that real low-value Mercado Pago test. `docs/REAL_PAYMENT_TEST.md` now defines the controlled runbook using the `TEST_REAL_PAYMENT_MVP` prefix, a low value such as `R$ 1,00`, manual Mercado Pago payment, WhatsApp buyer/validator/admin numbers under control, webhook checks on the stable production alias, ticket delivery checks, gate validation checks, and cleanup order. No seed or cleanup script was added yet; the first real-money test should be manual through Supabase SQL Editor so no broad service-role script is committed before the operational process is proven. The complete env list for local/prod full-cycle execution is documented in `docs/SUPABASE_SETUP.md`.
+
 ## Next Steps
 
 1. Fundação do projeto
@@ -91,4 +93,5 @@ MVP limitations that remain explicit: no cancellation or ticket swap flow, no ma
 15. Sessão temporária de portaria e scanner preparatório - criado e validado no Supabase real
 16. Validação transacional de portaria e uso único do ingresso - criado e validado no Supabase real
 17. Auditoria geral e teste ponta a ponta do MVP - concluído e validado no Supabase real
-18. Próximas evoluções: cancelamento/troca, reenvio manual, filtro wrong_event, relatórios, QR visual/PDF e painel admin
+18. Preparação do teste real Mercado Pago de baixo valor - documentado
+19. Próximas evoluções: cancelamento/troca, reenvio manual, filtro wrong_event, relatórios, QR visual/PDF e painel admin

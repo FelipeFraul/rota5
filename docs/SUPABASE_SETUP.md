@@ -1394,6 +1394,67 @@ Static checks confirmed:
 - Scanner camera support depends on browser capabilities; manual fallback remains available.
 - A controlled low-value real Mercado Pago payment run is still recommended before public operation.
 
+## Step 18 - Real Low-Value Mercado Pago Test Preparation
+
+Step 18 prepares the first real controlled Mercado Pago payment test without adding product features.
+
+Checklist:
+
+```text
+docs/REAL_PAYMENT_TEST.md
+```
+
+The test must use the `TEST_REAL_PAYMENT_MVP` prefix and a low value such as `R$ 1,00`, or the smallest value Mercado Pago allows. Payment must be manual and controlled through the Mercado Pago checkout link; scripts must not automate payment.
+
+### Complete Local/Production Env List
+
+To run the full cycle locally or in production, configure:
+
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `APP_BASE_URL`
+- `ZAPI_BASE_URL`
+- `ZAPI_INSTANCE_ID`
+- `ZAPI_INSTANCE_TOKEN`
+- `ZAPI_CLIENT_TOKEN`
+- `ZAPI_WEBHOOK_SECRET`
+- `MERCADO_PAGO_ACCESS_TOKEN`
+- `MERCADO_PAGO_WEBHOOK_SECRET`
+- `NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY`
+- `CHECKOUT_INTERNAL_SECRET`
+- `TICKET_QR_SECRET`
+- `GATE_SESSION_SECRET`
+- `GATE_SESSION_TTL_MINUTES`
+- `GATE_ADMIN_SECRET`
+- `ADMIN_WHATSAPP_PHONES`
+- `TICKET_RESERVATION_TTL_MINUTES`
+
+`ZAPI_INSTANCE_TOKEN` is the token env name used by the codebase. If external Z-API documentation or an operational checklist says `ZAPI_TOKEN`, map that value into `ZAPI_INSTANCE_TOKEN`.
+
+No secret env should use `NEXT_PUBLIC_`. The only public key in the list is `NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY`, which is intentionally browser-safe.
+
+`.env.example` contains names only and no real values. `.env` remains gitignored and must not be committed.
+
+### Real Payment Preconditions
+
+- Mercado Pago webhook URL must be:
+
+```text
+https://site-phi-seven-72.vercel.app/api/webhook/payment/mercado-pago
+```
+
+- `MERCADO_PAGO_WEBHOOK_SECRET` in Vercel Production must match the Mercado Pago panel.
+- Use the stable production alias, not a preview URL.
+- Use only a controlled WhatsApp buyer number and controlled validator/admin numbers.
+- Confirm cleanup plan before starting.
+
+### Script Decision
+
+No seed/cleanup script was added in Step 18. The first real-money run should use manual SQL Editor setup and manual cleanup following `docs/REAL_PAYMENT_TEST.md`, so no script with service-role access is committed before the operational process is proven.
+
+Future scripts can be added after the first manual test if the cleanup rules and test dataset shape are stable.
+
 The migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST API on 2026-05-22 13:59:00 -03. The 18 expected tables exist in the real Supabase project.
 
 Supabase CLI status:
