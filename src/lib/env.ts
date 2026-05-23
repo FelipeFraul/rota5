@@ -41,6 +41,13 @@ const envSchema = z.object({
     .string()
     .min(1, "SEAT_MAP_STORAGE_BUCKET is required."),
   GATE_ADMIN_SECRET: z.string().min(1, "GATE_ADMIN_SECRET is required."),
+  GATE_SESSION_SECRET: z
+    .string()
+    .min(32, "GATE_SESSION_SECRET must have at least 32 characters."),
+  GATE_SESSION_TTL_MINUTES: z.coerce
+    .number("GATE_SESSION_TTL_MINUTES must be a number.")
+    .int("GATE_SESSION_TTL_MINUTES must be an integer.")
+    .positive("GATE_SESSION_TTL_MINUTES must be positive."),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

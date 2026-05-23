@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getEnv } from "@/lib/env";
 import {
   buildInitialConversationState,
   type TicketConversationEventOption,
@@ -39,6 +40,11 @@ import {
   type ReserveSelectedSeatResult,
   type ReserveSelectedSeatSuccess,
 } from "@/lib/tickets/services/reservations";
+import {
+  createGateSession,
+  normalizeGatePhone,
+} from "@/lib/tickets/services/gateSessions";
+import { sendZapiText } from "@/lib/zapi/client";
 
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 const GENERIC_SEARCH_WORDS = new Set([
@@ -88,6 +94,7 @@ const SIMPLE_PAYMENT_CONTINUATIONS = new Set([
   "bora",
   "vamos",
 ]);
+const GATE_COMMAND_PATTERN = /^portaria(?:\s+(.+))?$/i;
 const WEEKDAY_OFFSETS: Record<string, number> = {
   domingo: 0,
   segunda: 1,
@@ -406,6 +413,19 @@ function formatTime(startsAt: string) {
   }).format(new Date(startsAt));
 }
 
+function formatDateTime(startsAt: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: SAO_PAULO_TIME_ZONE,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+    .format(new Date(startsAt))
+    .replace(",", " às");
+}
+
 function formatCurrencyFromCents(cents: number) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -603,6 +623,94 @@ function isSimpleReservationReply(text: string) {
   return SIMPLE_PAYMENT_CONTINUATIONS.has(normalized);
 }
 
+function getAdminPhones() {
+  const env = getEnv();
+
+  return env.ADMIN_WHATSAPP_PHONES.split(",")
+    .map((phone) => normalizeGatePhone(phone))
+    .filter((phone): phone is string => Boolean(phone));
+}
+
+function isAdminPhone(phone: string) {
+  const normalizedPhone = normalizeGatePhone(phone);
+
+  return Boolean(
+    normalizedPhone && getAdminPhones().some((adminPhone) => adminPhone === normalizedPhone),
+  );
+}
+
+function parseGateCommand(text: string) {
+  const match = text.trim().match(GATE_COMMAND_PATTERN);
+
+  if (!match) {
+    return null;
+  }
+
+  const rest = match[1]?.trim();
+
+  if (!rest) {
+    return {
+      valid: false as const,
+    };
+  }
+
+  const phoneMatch = rest.match(/(?:\+?\d[\d\s().-]{7,}\d)/);
+  const validatorPhone = normalizeGatePhone(phoneMatch?.[0]);
+
+  if (!validatorPhone) {
+    return {
+      valid: false as const,
+    };
+  }
+
+  const gateLabel =
+    rest
+      .slice((phoneMatch?.index ?? 0) + (phoneMatch?.[0].length ?? 0))
+      .trim()
+      .replace(/\s+/g, " ") || null;
+
+  return {
+    valid: true as const,
+    validatorPhone,
+    gateLabel,
+  };
+}
+
+function buildGateValidatorMessage(gateUrl: string) {
+  return [
+    "Você recebeu acesso temporário à portaria.",
+    "",
+    "Abra o link abaixo no celular para validar ingressos:",
+    gateUrl,
+    "",
+    "Este acesso é temporário e deve ser usado apenas pela equipe autorizada.",
+  ].join("\n");
+}
+
+function buildGateAdminReply({
+  validatorPhone,
+  gateLabel,
+  expiresAt,
+  sent,
+}: {
+  validatorPhone: string;
+  gateLabel: string | null;
+  expiresAt: string;
+  sent: boolean;
+}) {
+  return [
+    "Acesso de portaria criado.",
+    "",
+    `Validador: ${validatorPhone}`,
+    `Portaria: ${gateLabel ?? "Entrada"}`,
+    `Validade: até ${formatDateTime(expiresAt)}`,
+    "",
+    sent
+      ? "O link foi enviado ao validador."
+      : "Não consegui enviar o link ao validador. Crie um novo acesso ou tente novamente.",
+  ].join("\n");
+}
+
 function buildReservationContext(
   reservation: ReserveSelectedSeatSuccess,
 ): TicketConversationReservation {
@@ -760,6 +868,67 @@ export async function routeTicketMessage({
     ...previousState,
     updatedAt: new Date().toISOString(),
   };
+  const gateCommand = parseGateCommand(text);
+
+  if (gateCommand && isAdminPhone(customer.whatsapp_phone)) {
+    if (!gateCommand.valid) {
+      return {
+        reply: TICKET_MESSAGES.gateAdminInvalidCommand,
+        nextContext: {
+          ...baseContext,
+          step: previousState.step ?? "idle",
+          state: previousState.state ?? "idle",
+        },
+      };
+    }
+
+    const gateSessionResult = await createGateSession({
+      validatorPhone: gateCommand.validatorPhone,
+      createdByAdminPhone: customer.whatsapp_phone,
+      gateLabel: gateCommand.gateLabel,
+    });
+
+    if (!gateSessionResult.ok) {
+      return {
+        reply: TICKET_MESSAGES.gateAdminCreateError,
+        nextContext: {
+          ...baseContext,
+          step: previousState.step ?? "idle",
+          state: previousState.state ?? "idle",
+        },
+      };
+    }
+
+    const sendResult = await sendZapiText({
+      phone: gateCommand.validatorPhone,
+      message: buildGateValidatorMessage(gateSessionResult.gateUrl),
+    });
+
+    return {
+      reply: buildGateAdminReply({
+        validatorPhone: gateCommand.validatorPhone,
+        gateLabel: gateCommand.gateLabel,
+        expiresAt: gateSessionResult.gateSession.expires_at,
+        sent: sendResult.ok,
+      }),
+      nextContext: {
+        ...baseContext,
+        step: previousState.step ?? "idle",
+        state: previousState.state ?? "idle",
+      },
+    };
+  }
+
+  if (gateCommand && !isAdminPhone(customer.whatsapp_phone)) {
+    return {
+      reply: TICKET_MESSAGES.genericHelp,
+      nextContext: {
+        ...baseContext,
+        step: "idle",
+        state: "idle",
+      },
+    };
+  }
 
   if (
     previousState.state === "payment_pending" &&

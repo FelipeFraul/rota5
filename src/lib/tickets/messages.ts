@@ -38,4 +38,8 @@ export const TICKET_MESSAGES = {
     "Sua reserva não está mais disponível. Faça uma nova busca para escolher outro assento.",
   checkoutGenericError:
     "Não consegui gerar o link de pagamento agora. Tente novamente em instantes.",
+  gateAdminInvalidCommand:
+    "Para criar acesso de portaria, envie: portaria 15999999999 entrada principal",
+  gateAdminCreateError:
+    "Não consegui criar o acesso de portaria agora. Tente novamente em instantes.",
 } as const;

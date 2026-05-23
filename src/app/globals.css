@@ -17,3 +17,162 @@ main {
   min-height: 100vh;
   padding: 48px;
 }
+
+.gate-shell {
+  width: min(100%, 760px);
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.gate-header {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.gate-header h1 {
+  margin: 4px 0 8px;
+  font-size: 32px;
+}
+
+.gate-header p {
+  margin: 4px 0;
+  color: #4b5563;
+}
+
+.gate-kicker {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gate-status {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.gate-counters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.gate-counters div {
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.gate-counters strong {
+  display: block;
+  font-size: 36px;
+}
+
+.gate-counters span {
+  color: #4b5563;
+}
+
+.gate-scanner {
+  overflow: hidden;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #111827;
+  color: #f9fafb;
+}
+
+.gate-scanner video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: #111827;
+}
+
+.gate-scanner p,
+.gate-result,
+.gate-manual {
+  padding: 16px;
+}
+
+.gate-manual {
+  margin-top: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.gate-manual label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.gate-manual div {
+  display: flex;
+  gap: 8px;
+}
+
+.gate-manual input {
+  min-width: 0;
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+}
+
+.gate-manual button {
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: #111827;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.gate-result {
+  margin-top: 16px;
+  border-radius: 8px;
+  background: #f3f4f6;
+}
+
+.gate-result h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.gate-result p {
+  margin: 0 0 8px;
+}
+
+.gate-result small {
+  color: #6b7280;
+}
+
+@media (max-width: 640px) {
+  main,
+  .gate-shell {
+    padding: 20px;
+  }
+
+  .gate-header {
+    display: block;
+  }
+
+  .gate-status {
+    display: inline-block;
+    margin-top: 12px;
+  }
+
+  .gate-manual div {
+    display: grid;
+  }
+}

@@ -999,6 +999,139 @@ Final Step 14 audit additionally confirmed:
 - [x] Logs and metadata do not contain `TICKET_QR_SECRET` or full signed ticket URLs.
 - [x] Multi-ticket WhatsApp messages remain organized and do not claim gate validation.
 
+## Step 15 - Gate Sessions And Scanner Shell
+
+Step 15 creates the temporary gate access structure without validating tickets definitively yet.
+
+### Database
+
+Migration:
+
+```text
+supabase/migrations/20260522000600_create_gate_sessions.sql
+```
+
+Creates `public.gate_sessions` with:
+
+- optional `event_id` and `session_id` scope;
+- `gate_label`;
+- normalized digit-only `validator_phone`;
+- optional `validator_name`;
+- unique `token_hash`;
+- `status` in `active`, `revoked`, `expired`;
+- `expires_at`;
+- normalized digit-only `created_by_admin_phone`;
+- `created_at` and `updated_at` maintained by the existing `public.set_updated_at()` trigger.
+
+The raw gate session token is never stored. Only `token_hash = sha256(raw signed token)` is persisted.
+
+Supabase CLI status for this migration:
+
+- `npx supabase db push` was attempted and failed because this checkout has no Supabase project ref.
+- `npx supabase projects list` was attempted and failed because no `SUPABASE_ACCESS_TOKEN` is available.
+- The migration is committed locally and must be applied to the real Supabase project through SQL Editor or a linked Supabase CLI before admin-created gate sessions can work in production.
+
+### Environment
+
+New environment variables:
+
+```text
+GATE_SESSION_SECRET=
+GATE_SESSION_TTL_MINUTES=480
+```
+
+`GATE_SESSION_SECRET` signs temporary portaria links and is separate from `GATE_ADMIN_SECRET`. It must have at least 32 characters and must not be public. `GATE_SESSION_TTL_MINUTES` controls the default lifetime; current production configuration uses 480 minutes.
+
+### Gate Token Strategy
+
+The gate session URL is:
+
+```text
+APP_BASE_URL/gate/session/{payload.signature}
+```
+
+Payload:
+
+```json
+{
+  "gid": "gate_session_id",
+  "phone": "validator_phone",
+  "exp": "expires_at"
+}
+```
+
+The signature is HMAC SHA-256 over the base64url payload using `GATE_SESSION_SECRET`, checked with constant-time comparison. The token payload intentionally excludes admin phone, secrets, event details, and bulky metadata.
+
+### WhatsApp Admin Command
+
+Admins are the normalized phones in `ADMIN_WHATSAPP_PHONES`.
+
+Supported commands:
+
+```text
+portaria 15999999999
+portaria 15999999999 entrada principal
+```
+
+If the sender is authorized, the router creates a gate session, sends the temporary link to the validator with Z-API, and replies to the admin with the validator phone, gate label, expiration, and send status. If a non-admin sends a `portaria ...` command, no session is created and no security detail is exposed.
+
+### Gate Page And Scanner
+
+Page:
+
+```text
+/gate/session/[token]
+```
+
+The page validates the gate session through:
+
+```text
+POST /api/gate/session/validate
+```
+
+The valid response contains only minimal public data: session id, gate label, validator phone last 4 digits, expiration, and status. It does not return full phone, token hash, admin phone, or secrets.
+
+The scanner UI is a client component. It uses browser camera APIs and `BarcodeDetector` when available, with a manual fallback input. Counters are neutral in this step:
+
+- `Leituras`;
+- `Erros`.
+
+They are local UI counters only and are not final validation counters.
+
+### Placeholder Scan Endpoint
+
+Route:
+
+```text
+POST /api/gate/session/scan
+```
+
+This endpoint validates only the gate session and returns:
+
+```json
+{
+  "received": true,
+  "validationPending": true,
+  "message": "Leitura recebida. A validação real será ativada no próximo passo."
+}
+```
+
+It does not validate ticket ownership, does not mark the ticket used, does not insert validation events, and does not update `tickets`.
+
+### Explicit Non-Scope For Step 15
+
+Step 15 does not:
+
+- update `tickets.status`;
+- fill `tickets.used_at`;
+- mark an ingresso as valid or used;
+- implement final one-time gate validation;
+- create a gate operator dashboard;
+- generate PDF/image tickets;
+- cancel or swap tickets.
+
+Step 16 will implement the transactional validation boundary for actual ticket use.
+
 This migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST RPC endpoint on 2026-05-22 14:06:35 -03. A validation-only call returned the expected `customer_id_required` error, confirming that `public.reserve_seats` is available and executable by the service role.
 
 The RPC was fully audited with temporary data on 2026-05-22 14:11:49 -03. The audit confirmed:
