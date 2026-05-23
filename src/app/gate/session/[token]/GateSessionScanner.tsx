@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type GateSessionScannerProps = {
   token: string;
@@ -68,6 +68,7 @@ export function GateSessionScanner({
   const streamRef = useRef<MediaStream | null>(null);
   const lastScanRef = useRef<string | null>(null);
   const lastScanAtRef = useRef(0);
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [validation, setValidation] =
     useState<GateSessionValidation>(initialValidation);
   const [loading, setLoading] = useState(false);
@@ -76,6 +77,51 @@ export function GateSessionScanner({
   const [manualCode, setManualCode] = useState("");
   const [allowedCount, setAllowedCount] = useState(0);
   const [deniedCount, setDeniedCount] = useState(0);
+  const [lastAction, setLastAction] = useState<"allowed" | "denied" | null>(null);
+
+  const triggerCounterFeedback = useCallback((action: "allowed" | "denied") => {
+    setLastAction(action);
+
+    if (feedbackTimerRef.current) {
+      clearTimeout(feedbackTimerRef.current);
+    }
+
+    feedbackTimerRef.current = setTimeout(() => {
+      setLastAction(null);
+      feedbackTimerRef.current = null;
+    }, 900);
+  }, []);
+
+  const registerAllowedResult = useCallback(
+    (result: {
+      message?: string;
+      ticket?: {
+        ticketCode?: string;
+        sectionName?: string | null;
+        seatCode?: string | null;
+      };
+    }) => {
+      setAllowedCount((count) => count + 1);
+      triggerCounterFeedback("allowed");
+      setLastResult(
+        [
+          result.message ?? "Entrada liberada.",
+          result.ticket?.ticketCode ? `Código: ${result.ticket.ticketCode}` : null,
+          result.ticket?.sectionName ? `Setor: ${result.ticket.sectionName}` : null,
+          result.ticket?.seatCode ? `Assento: ${result.ticket.seatCode}` : null,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      );
+    },
+    [triggerCounterFeedback],
+  );
+
+  const registerDeniedResult = useCallback((message: string) => {
+    setDeniedCount((count) => count + 1);
+    triggerCounterFeedback("denied");
+    setLastResult(message);
+  }, [triggerCounterFeedback]);
 
   useEffect(() => {
     if (!initialValidation.valid) {
@@ -113,6 +159,9 @@ export function GateSessionScanner({
 
     return () => {
       cancelled = true;
+      if (feedbackTimerRef.current) {
+        clearTimeout(feedbackTimerRef.current);
+      }
     };
   }, [initialValidation.valid, token]);
 
@@ -178,25 +227,13 @@ export function GateSessionScanner({
         };
 
         if (result.allowed) {
-          setAllowedCount((count) => count + 1);
-          setLastResult(
-            [
-              result.message ?? "Entrada liberada.",
-              result.ticket?.ticketCode ? `Código: ${result.ticket.ticketCode}` : null,
-              result.ticket?.sectionName ? `Setor: ${result.ticket.sectionName}` : null,
-              result.ticket?.seatCode ? `Assento: ${result.ticket.seatCode}` : null,
-            ]
-              .filter(Boolean)
-              .join("\n"),
-          );
+          registerAllowedResult(result);
           return;
         }
 
-        setDeniedCount((count) => count + 1);
-        setLastResult(result.message ?? "Entrada recusada.");
+        registerDeniedResult(result.message ?? "Entrada recusada.");
       } catch {
-        setDeniedCount((count) => count + 1);
-        setLastResult("Não foi possível registrar a leitura.");
+        registerDeniedResult("Não foi possível registrar a leitura.");
       }
     }
 
@@ -267,7 +304,7 @@ export function GateSessionScanner({
       window.cancelAnimationFrame(animationFrame);
       streamRef.current?.getTracks().forEach((track) => track.stop());
     };
-  }, [token, validation]);
+  }, [registerAllowedResult, registerDeniedResult, token, validation]);
 
   async function submitManualCode() {
     const value = manualCode.trim();
@@ -300,25 +337,13 @@ export function GateSessionScanner({
       };
 
       if (result.allowed) {
-        setAllowedCount((count) => count + 1);
-        setLastResult(
-          [
-            result.message ?? "Entrada liberada.",
-            result.ticket?.ticketCode ? `Código: ${result.ticket.ticketCode}` : null,
-            result.ticket?.sectionName ? `Setor: ${result.ticket.sectionName}` : null,
-            result.ticket?.seatCode ? `Assento: ${result.ticket.seatCode}` : null,
-          ]
-            .filter(Boolean)
-            .join("\n"),
-        );
+        registerAllowedResult(result);
         return;
       }
 
-      setDeniedCount((count) => count + 1);
-      setLastResult(result.message ?? "Entrada recusada.");
+      registerDeniedResult(result.message ?? "Entrada recusada.");
     } catch {
-      setDeniedCount((count) => count + 1);
-      setLastResult("Não foi possível registrar a leitura.");
+      registerDeniedResult("Não foi possível registrar a leitura.");
     }
   }
 
@@ -353,11 +378,11 @@ export function GateSessionScanner({
       </section>
 
       <section className="gate-counters" aria-label="Contadores de leitura">
-        <div>
+        <div className={lastAction === "allowed" ? "is-validating" : undefined}>
           <strong>{allowedCount}</strong>
           <span>Validados</span>
         </div>
-        <div>
+        <div className={lastAction === "denied" ? "is-denying" : undefined}>
           <strong>{deniedCount}</strong>
           <span>Recusados</span>
         </div>
@@ -383,7 +408,15 @@ export function GateSessionScanner({
         </div>
       </section>
 
-      <section className="gate-result">
+      <section
+        className={[
+          "gate-result",
+          lastAction === "allowed" ? "is-validating" : null,
+          lastAction === "denied" ? "is-denying" : null,
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
         <h2>Último resultado</h2>
         <p>{lastResult}</p>
         <small>
