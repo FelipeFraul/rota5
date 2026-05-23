@@ -48,7 +48,6 @@ import {
   isTicketType,
   listAdminEvents,
   normalizeSlug,
-  parseInitialEventSections,
   parseBrazilianDateTime,
   updateAdminEvent,
   type AdminEventDetails,
@@ -1146,6 +1145,9 @@ function getInitialSectionsFromDraft(draft: Record<string, unknown>) {
     }
 
     const item = section as Record<string, unknown>;
+    const ticketType = isTicketType(String(item.ticketType ?? ""))
+      ? (String(item.ticketType) as AdminTicketType)
+      : "full";
     return [
       {
         name: String(item.name ?? ""),
@@ -1153,6 +1155,10 @@ function getInitialSectionsFromDraft(draft: Record<string, unknown>) {
         hasNumberedSeats: item.hasNumberedSeats === true,
         capacity: typeof item.capacity === "number" ? item.capacity : null,
         createInventorySeats: item.createInventorySeats === true,
+        ticketType,
+        label: String(item.label ?? item.name ?? ""),
+        priceCents: typeof item.priceCents === "number" ? item.priceCents : 0,
+        feeCents: typeof item.feeCents === "number" ? item.feeCents : 0,
       },
     ];
   });
@@ -1177,9 +1183,50 @@ function renderInitialSectionsSummary(draft: Record<string, unknown>) {
         `- ${section.name}`,
         section.hasNumberedSeats ? "assento marcado" : "sem assento marcado",
         section.capacity ? `capacidade ${section.capacity}` : "capacidade a definir",
+        `valor ${formatCurrencyFromCents(section.priceCents)}`,
+        `taxa ${formatCurrencyFromCents(section.feeCents)}`,
       ].join(" | "),
     ),
   ];
+}
+
+function parseInitialEntryDefinition(value: string, options: { numbered: boolean }) {
+  const parts = value.split("|").map((part) => part.trim());
+
+  if (parts.length < 3) {
+    return null;
+  }
+
+  const [nameRaw, capacityRaw, priceRaw, feeRaw = "0"] = parts;
+  const name = nameRaw?.trim();
+  const capacity = Number(capacityRaw?.replace(/\D/g, ""));
+  const priceCents = parseMoneyToCents(priceRaw ?? "");
+  const feeCents = parseMoneyToCents(feeRaw);
+  const slug = normalizeSlug(name ?? "");
+
+  if (
+    !name ||
+    !slug ||
+    !Number.isInteger(capacity) ||
+    capacity <= 0 ||
+    capacity > 5000 ||
+    priceCents === null ||
+    feeCents === null
+  ) {
+    return null;
+  }
+
+  return {
+    name,
+    slug,
+    hasNumberedSeats: options.numbered,
+    capacity,
+    createInventorySeats: !options.numbered,
+    ticketType: "full" as const,
+    label: name,
+    priceCents,
+    feeCents,
+  };
 }
 
 function renderAdminEventListReply({
@@ -1309,12 +1356,11 @@ function renderCreateEventPrompt(field?: string) {
     status: "Qual status inicial?\n1. Rascunho\n2. Publicado",
     entryModel:
       "Como serão as entradas/lugares?\n1. Entrada única sem assento marcado\n2. Vários setores/tipos sem assento marcado\n3. Setores com assentos marcados",
-    singleEntryName: "Qual o nome dessa entrada? Ex: Entrada Geral",
-    singleEntryCapacity: "Qual a quantidade/capacidade dessa entrada?",
-    multipleEntrySections:
-      "Envie os setores/tipos e capacidades.\nEx: Pista: 500, Camarote: 100",
-    numberedEntrySections:
-      "Envie os setores com assentos marcados.\nEx: Pista Premium: 300, Camarote: 80\nOs assentos serão cadastrados depois em Setores e assentos.",
+    singleEntryDetails:
+      "Envie a entrada com capacidade e valor.\nFormato: nome | capacidade | valor | taxa opcional\nEx: Entrada Geral | 500 | 120,00 | 12,00",
+    entryCount: "Quantos tipos/setores de ingresso serão cadastrados agora?",
+    entryItem:
+      "Envie o tipo/setor com capacidade e valor.\nFormato: nome | capacidade | valor | taxa opcional\nEx: Pista | 500 | 120,00 | 12,00",
   };
 
   return withAdminNavigationHint(prompts[field ?? "title"]);
@@ -1716,10 +1762,9 @@ async function handleAdminEventsFlow({
       startsAt: "status",
       status: "entryModel",
       entryModel: null,
-      singleEntryName: "singleEntryCapacity",
-      singleEntryCapacity: null,
-      multipleEntrySections: null,
-      numberedEntrySections: null,
+      singleEntryDetails: null,
+      entryCount: null,
+      entryItem: null,
     };
 
     if (field === "state") {
@@ -1786,9 +1831,9 @@ async function handleAdminEventsFlow({
       const option = text.trim();
       if (option === "1") {
         draft.entryModel = "single_general";
-        draft.field = "singleEntryName";
+        draft.field = "singleEntryDetails";
         return {
-          reply: renderCreateEventPrompt("singleEntryName"),
+          reply: renderCreateEventPrompt("singleEntryDetails"),
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
           }),
@@ -1796,9 +1841,9 @@ async function handleAdminEventsFlow({
       }
       if (option === "2") {
         draft.entryModel = "multiple_general";
-        draft.field = "multipleEntrySections";
+        draft.field = "entryCount";
         return {
-          reply: renderCreateEventPrompt("multipleEntrySections"),
+          reply: renderCreateEventPrompt("entryCount"),
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
           }),
@@ -1806,9 +1851,9 @@ async function handleAdminEventsFlow({
       }
       if (option === "3") {
         draft.entryModel = "numbered";
-        draft.field = "numberedEntrySections";
+        draft.field = "entryCount";
         return {
-          reply: renderCreateEventPrompt("numberedEntrySections"),
+          reply: renderCreateEventPrompt("entryCount"),
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
           }),
@@ -1821,44 +1866,81 @@ async function handleAdminEventsFlow({
           draft,
         }),
       };
-    } else if (field === "singleEntryCapacity") {
-      const capacity = Number(text.trim().replace(/\D/g, ""));
-      const name = String(draft.singleEntryName ?? "").trim();
-      if (!name || !Number.isInteger(capacity) || capacity <= 0 || capacity > 5000) {
+    } else if (field === "singleEntryDetails") {
+      const section = parseInitialEntryDefinition(text, { numbered: false });
+      if (!section) {
         return {
-          reply: "Capacidade inválida. Envie um número entre 1 e 5000.",
+          reply:
+            "Não consegui entender. Envie assim: Entrada Geral | 500 | 120,00 | 12,00",
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
           }),
         };
       }
-      draft.initialSections = [
-        {
-          name,
-          slug: normalizeSlug(name),
-          hasNumberedSeats: false,
-          capacity,
-          createInventorySeats: true,
-        },
-      ];
-    } else if (field === "multipleEntrySections" || field === "numberedEntrySections") {
-      const numbered = field === "numberedEntrySections";
-      const sections = parseInitialEventSections(text, { numbered });
-      const totalCapacity =
-        sections?.reduce((sum, section) => sum + (section.capacity ?? 0), 0) ?? 0;
-
-      if (!sections || sections.length > 20 || totalCapacity > 5000) {
+      draft.initialSections = [section];
+    } else if (field === "entryCount") {
+      const count = Number(text.trim().replace(/\D/g, ""));
+      if (!Number.isInteger(count) || count < 1 || count > 20) {
         return {
-          reply: numbered
-            ? "Não consegui entender os setores. Envie como: Pista Premium: 300, Camarote: 80"
-            : "Não consegui entender os setores/tipos. Envie como: Pista: 500, Camarote: 100",
+          reply: "Quantidade inválida. Envie um número de 1 a 20.",
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+      draft.expectedEntryCount = count;
+      draft.currentEntryIndex = 1;
+      draft.initialSections = [];
+      draft.field = "entryItem";
+      return {
+        reply: [
+          `Envie o tipo/setor 1 de ${count}.`,
+          "",
+          renderCreateEventPrompt("entryItem"),
+        ].join("\n"),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+          draft,
+        }),
+      };
+    } else if (field === "entryItem") {
+      const expectedCount = Number(draft.expectedEntryCount ?? 0);
+      const currentIndex = Number(draft.currentEntryIndex ?? 1);
+      const numbered = draft.entryModel === "numbered";
+      const section = parseInitialEntryDefinition(text, { numbered });
+      const currentSections = getInitialSectionsFromDraft(draft);
+      const totalCapacity = currentSections.reduce(
+        (sum, item) => sum + (item.capacity ?? 0),
+        section?.capacity ?? 0,
+      );
+
+      if (!section || totalCapacity > 5000) {
+        return {
+          reply:
+            "Não consegui entender. Envie assim: Pista | 500 | 120,00 | 12,00",
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
           }),
         };
       }
 
-      draft.initialSections = sections;
+      draft.initialSections = [...currentSections, section];
+
+      if (currentIndex < expectedCount) {
+        draft.currentEntryIndex = currentIndex + 1;
+        draft.field = "entryItem";
+        return {
+          reply: [
+            `Entrada cadastrada: ${section.name}.`,
+            "",
+            `Envie o tipo/setor ${currentIndex + 1} de ${expectedCount}.`,
+            "",
+            renderCreateEventPrompt("entryItem"),
+          ].join("\n"),
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
     } else {
       const value = text.trim();
       if (!value) {
@@ -1967,6 +2049,7 @@ async function handleAdminEventsFlow({
       reply: [
         "Evento criado.",
         `Setores/entradas criados: ${result.createdSectionsCount}`,
+        `Preços/lotes criados: ${result.createdPricesCount}`,
         result.createdSeatsCount
           ? `Unidades de entrada disponíveis criadas: ${result.createdSeatsCount}`
           : "Assentos marcados ainda precisam ser cadastrados no menu Setores e assentos.",

@@ -22,6 +22,10 @@ export type AdminInitialEventSectionInput = {
   hasNumberedSeats: boolean;
   capacity: number | null;
   createInventorySeats: boolean;
+  ticketType: AdminTicketType;
+  label: string;
+  priceCents: number;
+  feeCents: number;
 };
 
 export type AdminEventSummary = {
@@ -244,6 +248,10 @@ export function parseInitialEventSections(value: string, options: { numbered: bo
       hasNumberedSeats: options.numbered,
       capacity: options.numbered ? capacity : capacity ?? null,
       createInventorySeats: !options.numbered,
+      ticketType: "full",
+      label: name,
+      priceCents: 0,
+      feeCents: 0,
     });
   }
 
@@ -547,6 +555,7 @@ export async function createAdminEvent(input: {
     venueId: venue.venueId,
     createdSectionsCount: initialSectionsResult.createdSectionsCount,
     createdSeatsCount: initialSectionsResult.createdSeatsCount,
+    createdPricesCount: initialSectionsResult.createdPricesCount,
   };
 }
 
@@ -584,6 +593,7 @@ async function createInitialEventSections(input: {
   const supabase = getSupabaseAdmin();
   let createdSectionsCount = 0;
   let createdSeatsCount = 0;
+  let createdPricesCount = 0;
 
   for (const section of input.sections) {
     const slug = await getUniqueSectionSlug(input.venueId, section.slug);
@@ -605,6 +615,25 @@ async function createInitialEventSections(input: {
     }
 
     createdSectionsCount += 1;
+
+    const { error: priceError } = await supabase.from("ticket_prices").insert({
+      session_id: input.sessionId,
+      section_id: createdSection.id,
+      ticket_type: section.ticketType,
+      label: section.label.trim(),
+      price_cents: section.priceCents,
+      fee_cents: section.feeCents,
+      currency: "BRL",
+      sales_start_at: null,
+      sales_end_at: null,
+      status: "active",
+    });
+
+    if (priceError) {
+      return { ok: false as const, error: priceError };
+    }
+
+    createdPricesCount += 1;
 
     if (!section.createInventorySeats || !section.capacity) {
       continue;
@@ -652,7 +681,7 @@ async function createInitialEventSections(input: {
     createdSeatsCount += sessionSeatRows.length;
   }
 
-  return { ok: true as const, createdSectionsCount, createdSeatsCount };
+  return { ok: true as const, createdSectionsCount, createdSeatsCount, createdPricesCount };
 }
 
 export async function updateAdminEvent(
