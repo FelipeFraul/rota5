@@ -14,6 +14,7 @@ export type AvailableSectionTicketType = {
 export type AvailableSection = {
   sectionId: string;
   sectionName: string;
+  venueId: string;
   hasNumberedSeats: boolean;
   availableSeatsCount: number;
   minPriceCents: number;
@@ -28,6 +29,7 @@ type SessionSeatRow = {
 
 type VenueSectionRow = {
   id: string;
+  venue_id: string;
   name: string;
   has_numbered_seats: boolean;
   sort_order: number;
@@ -78,6 +80,7 @@ function sortTicketTypes(
 
 export async function listAvailableSections(
   sessionId: string,
+  options: { venueId?: string | null } = {},
 ): Promise<AvailableSection[]> {
   const supabase = getSupabaseAdmin();
   const nowIso = new Date().toISOString();
@@ -110,7 +113,7 @@ export async function listAvailableSections(
 
   const { data: sections, error: sectionsError } = await supabase
     .from("venue_sections")
-    .select("id, name, has_numbered_seats, sort_order, venues!inner(status)")
+    .select("id, venue_id, name, has_numbered_seats, sort_order, venues!inner(status)")
     .in("id", sectionIds)
     .eq("status", "active")
     .eq("venues.status", "active")
@@ -120,7 +123,10 @@ export async function listAvailableSections(
     throw sectionsError;
   }
 
-  const activeSectionIds = (sections ?? []).map((section) => section.id);
+  const filteredSections = (sections ?? []).filter(
+    (section) => !options.venueId || section.venue_id === options.venueId,
+  );
+  const activeSectionIds = filteredSections.map((section) => section.id);
 
   if (activeSectionIds.length === 0) {
     return [];
@@ -162,10 +168,10 @@ export async function listAvailableSections(
   }
 
   const sectionSortOrderById = new Map(
-    (sections ?? []).map((section) => [section.id, section.sort_order]),
+    filteredSections.map((section) => [section.id, section.sort_order]),
   );
 
-  return (sections ?? [])
+  return filteredSections
     .flatMap((section) => {
       const ticketTypes = ticketTypesBySection.get(section.id) ?? [];
 
@@ -181,6 +187,7 @@ export async function listAvailableSections(
         {
           sectionId: section.id,
           sectionName: section.name,
+          venueId: section.venue_id,
           hasNumberedSeats: section.has_numbered_seats,
           availableSeatsCount: availableSeatsBySection.get(section.id) ?? 0,
           minPriceCents: cheapest.priceCents,
@@ -195,4 +202,18 @@ export async function listAvailableSections(
           (sectionSortOrderById.get(right.sectionId) ?? 0) ||
         left.sectionName.localeCompare(right.sectionName),
     );
+}
+
+export async function getAvailableSectionForSession({
+  sessionId,
+  sectionId,
+  venueId,
+}: {
+  sessionId: string;
+  sectionId: string;
+  venueId?: string | null;
+}): Promise<AvailableSection | null> {
+  const sections = await listAvailableSections(sessionId, { venueId });
+
+  return sections.find((section) => section.sectionId === sectionId) ?? null;
 }

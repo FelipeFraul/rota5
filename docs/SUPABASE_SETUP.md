@@ -554,6 +554,99 @@ Final Step 10 audit coverage:
 - [x] `showing_sections` context remains lightweight and does not include seat lists or bulky objects.
 - [x] Temporary test data cleanup returned empty.
 
+## WhatsApp Seat Listing
+
+Step 11 turns a valid numeric sector selection into a short list of available seats for that sector. This step starts only when `conversation.context.state = showing_sections` and the number exists in the current `lastSections` list.
+
+The context is still only a guide. Before showing seats, the backend revalidates:
+
+- the event exists and `events.status = published`;
+- the session exists for that event;
+- the session status is `scheduled` or `sales_open`;
+- `event_sessions.starts_at >= now()`;
+- the session/event venue is active;
+- the selected section belongs to the validated venue;
+- `venue_sections.status = active`;
+- the section has an active ticket price for the same session inside the current sales window;
+- the section still has availability.
+
+Available seats are calculated by `listAvailableSeats({ sessionId, sectionId })` in `src/lib/tickets/services/seats.ts`:
+
+- `session_seats.session_id = sessionId`;
+- `session_seats.section_id = sectionId`;
+- `session_seats.status = available`;
+- linked structural `seats.status = active`;
+- linked `venue_sections.status = active`;
+- linked venue status is active.
+
+Seats are ordered predictably by `row_label`, then numeric `seat_number` when possible, then textual `seat_number` and `seat_code`. WhatsApp output is limited to 20 seats. If more seats are available, the reply says `Mostrando os primeiros 20 assentos disponíveis.` A future seat-map step can offer a better large-inventory browsing experience.
+
+The `showing_seats` context is intentionally lightweight:
+
+```json
+{
+  "state": "showing_seats",
+  "step": "showing_seats",
+  "selectedEvent": {
+    "eventId": "...",
+    "sessionId": "...",
+    "title": "...",
+    "startsAt": "...",
+    "city": "...",
+    "state": "...",
+    "venueId": "...",
+    "venueName": "..."
+  },
+  "selectedSection": {
+    "sectionId": "...",
+    "sectionName": "Pista Premium",
+    "hasNumberedSeats": true,
+    "availableSeatsCount": 120
+  },
+  "lastSeats": [
+    {
+      "sessionSeatId": "...",
+      "seatId": "...",
+      "seatCode": "A03",
+      "rowLabel": "A",
+      "seatNumber": "03"
+    }
+  ]
+}
+```
+
+No price, checkout, full seat map, payload, or bulky Supabase object is used as a source of truth in this context. The next reservation step must revalidate seat, section, price, and availability again before calling `reserve_seats`.
+
+Numeric replies while `state = showing_sections` now behave as follows:
+
+- invalid sector number: `Não encontrei esse setor. Responda com um número da lista.`;
+- stale/unavailable sector: `Esse setor não está mais disponível. Escolha outro setor ou faça uma nova busca.`;
+- numbered sector with seats: list up to 20 seat codes and move to `showing_seats`;
+- unnumbered sector: `Esse setor não tem assento marcado. No próximo passo você poderá escolher a quantidade de ingressos.`
+
+Seat-code replies while `state = showing_seats` are controlled only:
+
+- valid code in `lastSeats`: acknowledge the seat and say reservation comes in the next step;
+- invalid code: `Não encontrei esse assento na lista. Escolha um dos códigos enviados.`;
+- no `reserve_seats`, reservation, checkout, QR Code, map, or gate validation is performed in this step.
+
+Step 11 test coverage used temporary Supabase data and the real compiled webhook route, with Z-API pointed to a non-real audit URL and full cleanup:
+
+- [x] Valid sector selection lists seats and moves context to `showing_seats`.
+- [x] Sector number outside the list is blocked.
+- [x] Cancelled session after sector listing is blocked.
+- [x] Inactive venue is blocked.
+- [x] Inactive section is blocked.
+- [x] `session_seats.available` plus `seats.active` seats appear.
+- [x] `session_seats.reserved`, `sold`, and `blocked` seats do not appear.
+- [x] `seats.inactive` and structural `seats.blocked` seats do not appear.
+- [x] The 20-seat WhatsApp limit is applied.
+- [x] `showing_seats` context stays lightweight.
+- [x] Valid seat-code reply is controlled and does not reserve.
+- [x] Seat code outside the list is blocked.
+- [x] Unnumbered sections use the controlled future-quantity message and do not reserve.
+- [x] Temporary test data cleanup returned empty.
+
 This migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST RPC endpoint on 2026-05-22 14:06:35 -03. A validation-only call returned the expected `customer_id_required` error, confirming that `public.reserve_seats` is available and executable by the service role.
 
 The RPC was fully audited with temporary data on 2026-05-22 14:11:49 -03. The audit confirmed:

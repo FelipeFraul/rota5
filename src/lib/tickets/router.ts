@@ -5,6 +5,8 @@ import {
   type TicketConversationEventOption,
   type TicketConversationSearch,
   type TicketConversationSectionOption,
+  type TicketConversationSeatOption,
+  type TicketConversationSelectedSection,
   type TicketConversationSelectedEvent,
   type TicketConversationState,
 } from "@/lib/tickets/conversationState";
@@ -15,9 +17,15 @@ import {
   type TicketEventSearchResult,
 } from "@/lib/tickets/services/events";
 import {
+  getAvailableSectionForSession,
   listAvailableSections,
   type AvailableSection,
 } from "@/lib/tickets/services/sections";
+import {
+  listAvailableSeats,
+  type AvailableSeat,
+  type AvailableSeatList,
+} from "@/lib/tickets/services/seats";
 
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 const GENERIC_SEARCH_WORDS = new Set([
@@ -373,6 +381,7 @@ function buildEventOptions(
     startsAt: event.startsAt,
     city: event.city,
     state: event.state,
+    venueId: event.venueId,
     ...(event.venueName ? { venueName: event.venueName } : {}),
   }));
 }
@@ -405,6 +414,7 @@ function buildSelectedEvent(
     startsAt: event.startsAt,
     city: event.city,
     state: event.state,
+    venueId: event.venueId,
     ...(event.venueName ? { venueName: event.venueName } : {}),
   };
 }
@@ -421,6 +431,27 @@ function buildSectionOptions(
     minPriceCents: section.minPriceCents,
     minFeeCents: section.minFeeCents,
     ticketTypes: section.ticketTypes,
+  }));
+}
+
+function buildSelectedSection(
+  section: AvailableSection,
+): TicketConversationSelectedSection {
+  return {
+    sectionId: section.sectionId,
+    sectionName: section.sectionName,
+    hasNumberedSeats: section.hasNumberedSeats,
+    availableSeatsCount: section.availableSeatsCount,
+  };
+}
+
+function buildSeatOptions(seats: AvailableSeat[]): TicketConversationSeatOption[] {
+  return seats.map((seat) => ({
+    sessionSeatId: seat.sessionSeatId,
+    seatId: seat.seatId,
+    seatCode: seat.seatCode,
+    rowLabel: seat.rowLabel,
+    seatNumber: seat.seatNumber,
   }));
 }
 
@@ -463,6 +494,46 @@ function formatSectionsReply({
   ].join("\n");
 }
 
+function groupSeatCodesByRow(seats: AvailableSeat[]) {
+  const rows = new Map<string, string[]>();
+
+  for (const seat of seats) {
+    const row = seat.rowLabel?.trim() || "Assentos";
+    rows.set(row, [...(rows.get(row) ?? []), seat.seatCode]);
+  }
+
+  return Array.from(rows.entries()).map(([row, seatCodes]) =>
+    row === "Assentos" ? seatCodes.join(", ") : `${row}: ${seatCodes.join(", ")}`,
+  );
+}
+
+function formatSeatsReply({
+  section,
+  seatList,
+}: {
+  section: AvailableSection;
+  seatList: AvailableSeatList;
+}) {
+  const intro = seatList.hasMore
+    ? [`Mostrando os primeiros ${seatList.limit} assentos disponíveis.`]
+    : [];
+
+  return [
+    `Setor escolhido: ${section.sectionName}`,
+    "",
+    "Assentos disponíveis:",
+    ...intro,
+    ...groupSeatCodesByRow(seatList.seats),
+    "",
+    "Responda com o código do assento desejado.",
+    "Exemplo: A03",
+  ].join("\n");
+}
+
+function normalizeSeatCode(value: string) {
+  return value.trim().replace(/\s+/g, "").toUpperCase();
+}
+
 function getConversationState(
   context: Record<string, unknown>,
 ): Partial<TicketConversationState> {
@@ -485,6 +556,27 @@ export async function routeTicketMessage({
     ...previousState,
     updatedAt: new Date().toISOString(),
   };
+
+  if (previousState.state === "showing_seats" && previousState.lastSeats?.length) {
+    const requestedSeatCode = normalizeSeatCode(text);
+    const selectedSeat = previousState.lastSeats.find(
+      (seat) => normalizeSeatCode(seat.seatCode) === requestedSeatCode,
+    );
+
+    return {
+      reply: selectedSeat
+        ? TICKET_MESSAGES.seatSelectionPending.replace(
+            "{{seatCode}}",
+            selectedSeat.seatCode,
+          )
+        : TICKET_MESSAGES.seatInvalidOption,
+      nextContext: {
+        ...baseContext,
+        step: "showing_seats",
+        state: "showing_seats",
+      },
+    };
+  }
 
   if (
     parsedSearch.numericSelection &&
@@ -528,7 +620,9 @@ export async function routeTicketMessage({
     }
 
     const selectedEvent = buildSelectedEvent(selectedSession);
-    const sections = await listAvailableSections(selectedSession.sessionId);
+    const sections = await listAvailableSections(selectedSession.sessionId, {
+      venueId: selectedSession.venueId,
+    });
 
     if (sections.length === 0) {
       return {
@@ -576,18 +670,114 @@ export async function routeTicketMessage({
       previousState.state === "showing_sections" &&
       previousState.lastSections?.length
     ) {
-      const selectedSection = previousState.lastSections.find(
+      const selectedContextSection = previousState.lastSections.find(
         (section) => section.option === parsedSearch.numericSelection,
       );
 
+      if (!selectedContextSection) {
+        return {
+          reply: TICKET_MESSAGES.sectionInvalidOption,
+          nextContext: {
+            ...baseContext,
+            step: "showing_sections",
+            state: "showing_sections",
+          },
+        };
+      }
+
+      if (!previousState.selectedEvent) {
+        return {
+          reply: TICKET_MESSAGES.sectionUnavailable,
+          nextContext: {
+            ...baseContext,
+            step: "idle",
+            state: "idle",
+            selectedSection: undefined,
+            lastSeats: [],
+          },
+        };
+      }
+
+      const selectedSession = await getValidatedEventSession({
+        eventId: previousState.selectedEvent.eventId,
+        sessionId: previousState.selectedEvent.sessionId,
+      });
+
+      if (!selectedSession) {
+        return {
+          reply: TICKET_MESSAGES.sectionUnavailable,
+          nextContext: {
+            ...baseContext,
+            step: "showing_sections",
+            state: "showing_sections",
+            selectedSection: undefined,
+            lastSeats: [],
+          },
+        };
+      }
+
+      const selectedSection = await getAvailableSectionForSession({
+        sessionId: selectedSession.sessionId,
+        sectionId: selectedContextSection.sectionId,
+        venueId: selectedSession.venueId,
+      });
+
+      if (!selectedSection) {
+        return {
+          reply: TICKET_MESSAGES.sectionUnavailable,
+          nextContext: {
+            ...baseContext,
+            step: "showing_sections",
+            state: "showing_sections",
+            selectedSection: undefined,
+            lastSeats: [],
+          },
+        };
+      }
+
+      const selectedSectionContext = buildSelectedSection(selectedSection);
+
+      if (!selectedSection.hasNumberedSeats) {
+        return {
+          reply: TICKET_MESSAGES.unnumberedSectionPending,
+          nextContext: {
+            ...baseContext,
+            step: "showing_seats",
+            state: "showing_seats",
+            selectedEvent: buildSelectedEvent(selectedSession),
+            selectedSection: selectedSectionContext,
+            lastSeats: [],
+          },
+        };
+      }
+
+      const seatList = await listAvailableSeats({
+        sessionId: selectedSession.sessionId,
+        sectionId: selectedSection.sectionId,
+      });
+
+      if (seatList.seats.length === 0) {
+        return {
+          reply: TICKET_MESSAGES.noSeatsAvailable,
+          nextContext: {
+            ...baseContext,
+            step: "showing_sections",
+            state: "showing_sections",
+            selectedSection: undefined,
+            lastSeats: [],
+          },
+        };
+      }
+
       return {
-        reply: selectedSection
-          ? TICKET_MESSAGES.sectionSelectionPending
-          : TICKET_MESSAGES.numericInvalidOption,
+        reply: formatSeatsReply({ section: selectedSection, seatList }),
         nextContext: {
           ...baseContext,
-          step: "showing_sections",
-          state: "showing_sections",
+          step: "showing_seats",
+          state: "showing_seats",
+          selectedEvent: buildSelectedEvent(selectedSession),
+          selectedSection: selectedSectionContext,
+          lastSeats: buildSeatOptions(seatList.seats),
         },
       };
     }

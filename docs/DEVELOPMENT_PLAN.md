@@ -48,6 +48,8 @@ Step 10 adds event/session selection from the `showing_events` context and lists
 
 Step 10 final audit tightened the availability rules: sectors are listed only when the venue is active, the section is active, the session seat is available, the structural seat is active, and the ticket price belongs to the same session/section and is active in the current sales window. `availableSeatsCount` is counted from seats before prices are joined, so multiple ticket types do not duplicate availability. Multiple ticket types are ordered by the lowest total paid amount (`price_cents + fee_cents`), then label/type, and the “A partir de” display uses that cheapest total while still showing price and fee separately. The context remains a guide, not a source of truth; the future reservation step must revalidate sector, seat, price, and availability before calling `reserve_seats`.
 
+Step 11 adds sector selection and available-seat listing. When the user chooses a sector from `showing_sections`, the router revalidates the selected event/session/venue and then revalidates the sector against active venue, active section, active price, and current availability before listing seats. Numbered sections return up to 20 available active seats ordered by row, numeric seat number, and seat code, then save lightweight `showing_seats` context with `selectedEvent`, `selectedSection`, and `lastSeats`. Reserved, sold, blocked, inactive, and structurally blocked seats are excluded. Seat-code replies are acknowledged only with a controlled message; no reservation, checkout, QR Code, map, or gate validation is created in this step. Unnumbered sections return a controlled quantity-future message and do not reserve.
+
 The next steps will connect session, sector, seat, reservation, and payment creation around the transactional core.
 
 ## Next Steps
@@ -62,8 +64,9 @@ The next steps will connect session, sector, seat, reservation, and payment crea
 8. Webhook Z-API com persistência de clientes, conversas e mensagens - criado e testado
 9. Busca de eventos por artista, cidade e data - criado e testado
 10. Seleção de evento e listagem de setores por WhatsApp - criado e testado
-11. Escolha de assento e reserva transacional pelo WhatsApp - próximo passo
-12. Geração de mapa de assentos
-13. Envio de QR Code pelo WhatsApp
-14. Tela/API de validação de portaria
-15. Testes de concorrência, expiração, pagamento duplicado e QR Code usado duas vezes
+11. Listagem de assentos disponíveis por setor - criado e testado
+12. Escolha de assento e reserva transacional pelo WhatsApp - próximo passo
+13. Geração de mapa de assentos
+14. Envio de QR Code pelo WhatsApp
+15. Tela/API de validação de portaria
+16. Testes de concorrência, expiração, pagamento duplicado e QR Code usado duas vezes

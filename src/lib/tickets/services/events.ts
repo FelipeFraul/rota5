@@ -21,6 +21,7 @@ export type TicketEventSearchResult = {
   city: string;
   state: string;
   venueName: string | null;
+  venueId: string | null;
   sessionId: string;
   startsAt: string;
   sessionStatus: string;
@@ -33,6 +34,7 @@ export type ValidatedEventSession = {
   city: string;
   state: string;
   venueName: string | null;
+  venueId: string | null;
   sessionId: string;
   startsAt: string;
   sessionStatus: string;
@@ -59,6 +61,7 @@ type SessionRow = {
 
 type EventSessionValidationRow = {
   id: string;
+  venue_id: string | null;
   starts_at: string;
   status: string;
   events: {
@@ -67,6 +70,7 @@ type EventSessionValidationRow = {
     artist_name: string;
     city: string;
     state: string;
+    venue_id: string | null;
     status: string;
     venues: { name: string; status: string } | null;
   } | null;
@@ -185,6 +189,7 @@ export async function searchEvents({
           city: event.city,
           state: event.state,
           venueName: session.venues?.name ?? event.venues?.name ?? null,
+          venueId: session.venue_id ?? event.venue_id,
           sessionId: session.id,
           startsAt: session.starts_at,
           sessionStatus: session.status,
@@ -220,7 +225,7 @@ export async function getValidatedEventSession({
   const { data, error } = await supabase
     .from("event_sessions")
     .select(
-      "id, starts_at, status, venues(name, status), events(id, title, artist_name, city, state, status, venues(name, status))",
+      "id, venue_id, starts_at, status, venues(name, status), events(id, title, artist_name, city, state, venue_id, status, venues(name, status))",
     )
     .eq("id", sessionId)
     .eq("event_id", eventId)
@@ -251,6 +256,7 @@ export async function getValidatedEventSession({
     city: data.events.city,
     state: data.events.state,
     venueName: data.venues?.name ?? data.events.venues?.name ?? null,
+    venueId: data.venue_id ?? data.events.venue_id,
     sessionId: data.id,
     startsAt: data.starts_at,
     sessionStatus: data.status,
