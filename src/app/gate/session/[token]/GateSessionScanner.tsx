@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 type GateSessionScannerProps = {
   token: string;
+  initialValidation: GateSessionValidation;
 };
 
 type GateSessionValidation =
@@ -59,14 +60,16 @@ function describeInvalidReason(reason?: string) {
   return "Não foi possível validar este acesso de portaria.";
 }
 
-export function GateSessionScanner({ token }: GateSessionScannerProps) {
+export function GateSessionScanner({
+  token,
+  initialValidation,
+}: GateSessionScannerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const lastScanRef = useRef<string | null>(null);
-  const [validation, setValidation] = useState<GateSessionValidation | null>(
-    null,
-  );
-  const [loading, setLoading] = useState(true);
+  const [validation, setValidation] =
+    useState<GateSessionValidation>(initialValidation);
+  const [loading, setLoading] = useState(false);
   const [cameraStatus, setCameraStatus] = useState("Aguardando câmera...");
   const [lastResult, setLastResult] = useState("Nenhuma leitura ainda.");
   const [manualCode, setManualCode] = useState("");
@@ -74,6 +77,10 @@ export function GateSessionScanner({ token }: GateSessionScannerProps) {
   const [errorsCount, setErrorsCount] = useState(0);
 
   useEffect(() => {
+    if (!initialValidation.valid) {
+      return;
+    }
+
     let cancelled = false;
 
     async function validateSession() {
@@ -106,7 +113,7 @@ export function GateSessionScanner({ token }: GateSessionScannerProps) {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [initialValidation.valid, token]);
 
   useEffect(() => {
     if (!validation?.valid) {
@@ -328,4 +335,3 @@ export function GateSessionScanner({ token }: GateSessionScannerProps) {
     </main>
   );
 }
-
