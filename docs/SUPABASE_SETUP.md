@@ -788,6 +788,101 @@ Step 12 test coverage used temporary Supabase data and the real compiled webhook
 - [x] The losing concurrent request does not receive a success message.
 - [x] Temporary test data cleanup returned empty.
 
+## WhatsApp Checkout Link
+
+Step 13 generates or reuses a Mercado Pago checkout link after a WhatsApp reservation exists. The core checkout logic now lives in `src/lib/tickets/services/checkout.ts`; the protected API route `POST /api/checkout/mercado-pago` and the WhatsApp router both call this same service, so validation and payment persistence do not diverge.
+
+Conversational triggers while `context.state = reservation_created` or `payment_pending` include:
+
+- `pagar`;
+- `pagamento`;
+- `link`;
+- `gerar link`;
+- `sim`;
+- `continuar`;
+- short/simple replies after the reservation.
+
+Before a checkout link is created or resent, the backend revalidates:
+
+- reservation exists;
+- `reservation.customer_id` matches the WhatsApp customer;
+- `reservation.status = active`;
+- `reservation.expires_at > now()`;
+- order exists and matches the context order ID;
+- `order.reservation_id = reservation.id`;
+- `order.customer_id` matches the WhatsApp customer;
+- `order.status = pending_payment`;
+- reservation has items;
+- each item still has a matching `session_seats` row with `status = reserved`;
+- each related `session_seats.current_reservation_id = reservation.id`.
+
+If any of those checks fail, the router replies that the reservation is no longer available and resets the context to `idle`. Expired reservations do not generate checkout links.
+
+The checkout service creates or reuses a `payments` row with:
+
+- `provider = mercado_pago`;
+- `provider_preference_id`;
+- `status = pending`;
+- `amount_cents` from the order total;
+- `currency = BRL`;
+- public `checkout_url`;
+- minimal `raw_metadata` containing provider/preference/external reference/notification URL/expiration.
+
+The WhatsApp context moves to `payment_pending`:
+
+```json
+{
+  "state": "payment_pending",
+  "step": "payment_pending",
+  "selectedEvent": { "eventId": "...", "sessionId": "...", "title": "..." },
+  "selectedSection": { "sectionId": "...", "sectionName": "..." },
+  "selectedSeat": { "seatId": "...", "seatCode": "A03" },
+  "reservation": {
+    "reservationId": "...",
+    "orderId": "...",
+    "expiresAt": "...",
+    "totalAmountCents": 12000,
+    "totalFeeCents": 1200,
+    "currency": "BRL"
+  },
+  "payment": {
+    "provider": "mercado_pago",
+    "checkoutUrl": "https://...",
+    "preferenceId": "...",
+    "amountCents": 13200,
+    "currency": "BRL"
+  }
+}
+```
+
+The checkout URL is safe to store because it is sent to the customer. No access token, webhook secret, service role key, payment event payload, QR token, or bulky Mercado Pago response is stored in conversation context.
+
+The user-facing response says the link was generated, shows event/sector/seat when available, shows the total amount, sends the public payment URL, and explains that the ticket will be emitted only after Mercado Pago confirmation. The webhook `confirm_paid_ticket_order` remains the only path that confirms payment and issues tickets.
+
+This step intentionally does not:
+
+- mark orders paid;
+- call `confirm_paid_ticket_order`;
+- create tickets;
+- generate QR Codes;
+- send ticket PDFs/images;
+- render maps;
+- perform gate validation;
+- cancel or swap reservations.
+
+Step 13 tests used temporary Supabase data and a mocked Mercado Pago preference endpoint, with full cleanup:
+
+- [x] `reservation_created` plus `pagar` revalidates reservation/order, creates checkout, persists pending payment, moves context to `payment_pending`, and replies with checkout URL.
+- [x] Expired reservation does not create checkout and resets context to `idle`.
+- [x] Non-`pending_payment` order does not create checkout.
+- [x] Session seat no longer reserved for the reservation does not create checkout.
+- [x] Repeating `pagar` for the same reservation reuses the existing checkout.
+- [x] `payment_pending` plus `link` resends the existing checkout while the reservation is active.
+- [x] Expired `payment_pending` does not resend the link.
+- [x] Checkout does not create tickets, QR Codes, a new reservation, or manual `session_seats` mutations.
+- [x] `POST /api/checkout/mercado-pago` remains protected: missing or wrong `x-checkout-secret` returns `401`.
+- [x] Temporary test data cleanup returned empty.
+
 This migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST RPC endpoint on 2026-05-22 14:06:35 -03. A validation-only call returned the expected `customer_id_required` error, confirming that `public.reserve_seats` is available and executable by the service role.
 
 The RPC was fully audited with temporary data on 2026-05-22 14:11:49 -03. The audit confirmed:

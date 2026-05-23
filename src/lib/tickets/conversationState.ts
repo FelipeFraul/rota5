@@ -3,7 +3,8 @@ export type TicketConversationStep =
   | "showing_events"
   | "showing_sections"
   | "showing_seats"
-  | "reservation_created";
+  | "reservation_created"
+  | "payment_pending";
 
 export type TicketConversationSearch = {
   artist?: string;
@@ -77,6 +78,14 @@ export type TicketConversationReservation = {
   currency: string;
 };
 
+export type TicketConversationPayment = {
+  provider: "mercado_pago";
+  checkoutUrl: string;
+  preferenceId: string;
+  amountCents: number;
+  currency: string;
+};
+
 export type TicketConversationState = {
   step: TicketConversationStep;
   state: TicketConversationStep;
@@ -87,6 +96,7 @@ export type TicketConversationState = {
   selectedSection?: TicketConversationSelectedSection;
   selectedSeat?: TicketConversationSelectedSeat;
   reservation?: TicketConversationReservation;
+  payment?: TicketConversationPayment;
   lastSections?: TicketConversationSectionOption[];
   lastSeats?: TicketConversationSeatOption[];
   updatedAt: string;

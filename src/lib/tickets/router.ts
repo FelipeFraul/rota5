@@ -7,12 +7,18 @@ import {
   type TicketConversationSectionOption,
   type TicketConversationSeatOption,
   type TicketConversationReservation,
+  type TicketConversationPayment,
   type TicketConversationSelectedSection,
   type TicketConversationSelectedEvent,
   type TicketConversationSelectedSeat,
   type TicketConversationState,
 } from "@/lib/tickets/conversationState";
 import { TICKET_MESSAGES } from "@/lib/tickets/messages";
+import {
+  createCheckoutForReservation,
+  type CheckoutForReservation,
+  type CreateCheckoutForReservationResult,
+} from "@/lib/tickets/services/checkout";
 import {
   getValidatedEventSession,
   searchEvents,
@@ -59,6 +65,28 @@ const GENERIC_MESSAGES = new Set([
   "menu",
   "inicio",
   "início",
+]);
+const PAYMENT_LINK_INTENTS = new Set([
+  "pagar",
+  "pagamento",
+  "link",
+  "gerar link",
+  "sim",
+  "continuar",
+  "ok",
+  "blz",
+  "beleza",
+]);
+const SIMPLE_PAYMENT_CONTINUATIONS = new Set([
+  "manda",
+  "mandar",
+  "envia",
+  "enviar",
+  "pode",
+  "pode ser",
+  "certo",
+  "bora",
+  "vamos",
 ]);
 const WEEKDAY_OFFSETS: Record<string, number> = {
   domingo: 0,
@@ -549,6 +577,32 @@ function normalizeSeatCode(value: string) {
   return value.trim().replace(/[\s-]+/g, "").toUpperCase();
 }
 
+function normalizeIntentText(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/\s+/g, " ");
+}
+
+function isPaymentLinkIntent(text: string) {
+  const normalized = normalizeIntentText(text);
+
+  return (
+    PAYMENT_LINK_INTENTS.has(normalized) ||
+    normalized.includes("pagar") ||
+    normalized.includes("pagamento") ||
+    normalized.includes("link")
+  );
+}
+
+function isSimpleReservationReply(text: string) {
+  const normalized = normalizeIntentText(text);
+
+  return SIMPLE_PAYMENT_CONTINUATIONS.has(normalized);
+}
+
 function buildReservationContext(
   reservation: ReserveSelectedSeatSuccess,
 ): TicketConversationReservation {
@@ -559,6 +613,18 @@ function buildReservationContext(
     totalAmountCents: reservation.totalAmountCents,
     totalFeeCents: reservation.totalFeeCents,
     currency: reservation.currency,
+  };
+}
+
+function buildPaymentContext(
+  checkout: CheckoutForReservation,
+): TicketConversationPayment {
+  return {
+    provider: checkout.provider,
+    checkoutUrl: checkout.checkoutUrl,
+    preferenceId: checkout.preferenceId,
+    amountCents: checkout.amountCents,
+    currency: checkout.currency,
   };
 }
 
@@ -596,6 +662,35 @@ function formatReservationReply({
   ].join("\n");
 }
 
+function formatPaymentLinkReply({
+  selectedEvent,
+  selectedSection,
+  selectedSeat,
+  checkout,
+}: {
+  selectedEvent?: TicketConversationSelectedEvent;
+  selectedSection?: TicketConversationSelectedSection;
+  selectedSeat?: TicketConversationSelectedSeat;
+  checkout: CheckoutForReservation;
+}) {
+  const lines = [
+    "Link de pagamento gerado!",
+    "",
+    ...(selectedEvent ? [`Evento: ${selectedEvent.title}`] : []),
+    ...(selectedSection ? [`Setor: ${selectedSection.sectionName}`] : []),
+    ...(selectedSeat ? [`Assento: ${selectedSeat.seatCode}`] : []),
+    `Total: ${formatCurrencyFromCents(checkout.amountCents)}`,
+    "",
+    "Pague por aqui:",
+    checkout.checkoutUrl,
+    "",
+    `Sua reserva é válida até ${formatTime(checkout.expiresAt)}.`,
+    "Após a confirmação do Mercado Pago, seu ingresso será emitido automaticamente.",
+  ];
+
+  return lines.join("\n");
+}
+
 function messageForReservationFailure(
   result: Extract<ReserveSelectedSeatResult, { ok: false }>,
 ) {
@@ -629,6 +724,22 @@ function messageForReservationFailure(
   return TICKET_MESSAGES.reservationGenericError;
 }
 
+function isUnavailableCheckoutFailure(
+  result: Extract<CreateCheckoutForReservationResult, { ok: false }>,
+) {
+  return (
+    result.reason === "order_not_found" ||
+    result.reason === "order_not_payable" ||
+    result.reason === "reservation_not_found" ||
+    result.reason === "reservation_not_payable" ||
+    result.reason === "reservation_expired" ||
+    result.reason === "customer_not_found" ||
+    result.reason === "reservation_items_not_found" ||
+    result.reason === "reservation_seats_not_reserved" ||
+    result.reason === "checkout_amount_mismatch"
+  );
+}
+
 function getConversationState(
   context: Record<string, unknown>,
 ): Partial<TicketConversationState> {
@@ -642,8 +753,6 @@ export async function routeTicketMessage({
   conversation,
   text,
 }: RouteTicketMessageInput): Promise<RouteTicketMessageOutput> {
-  void customer;
-
   const previousState = getConversationState(conversation.context);
   const parsedSearch = parseEventSearchMessage(text);
   const baseContext = {
@@ -652,13 +761,147 @@ export async function routeTicketMessage({
     updatedAt: new Date().toISOString(),
   };
 
-  if (previousState.state === "reservation_created") {
+  if (
+    previousState.state === "payment_pending" &&
+    previousState.reservation?.reservationId &&
+    previousState.reservation.orderId
+  ) {
+    if (!isPaymentLinkIntent(text) && !isSimpleReservationReply(text)) {
+      return {
+        reply: TICKET_MESSAGES.paymentLinkPrompt,
+        nextContext: {
+          ...baseContext,
+          step: "payment_pending",
+          state: "payment_pending",
+        },
+      };
+    }
+
+    const checkoutResult = await createCheckoutForReservation({
+      reservationId: previousState.reservation.reservationId,
+      orderId: previousState.reservation.orderId,
+      customerId: customer.id,
+    });
+
+    if (!checkoutResult.ok) {
+      return {
+        reply: isUnavailableCheckoutFailure(checkoutResult)
+          ? TICKET_MESSAGES.reservationUnavailableForPayment
+          : TICKET_MESSAGES.checkoutGenericError,
+        nextContext: {
+          ...baseContext,
+          step: "idle",
+          state: "idle",
+          reservation: undefined,
+          payment: undefined,
+          selectedSeat: undefined,
+          lastSeats: [],
+          lastSections: [],
+          lastEvents: [],
+        },
+      };
+    }
+
     return {
-      reply: TICKET_MESSAGES.reservationAlreadyCreated,
+      reply: formatPaymentLinkReply({
+        selectedEvent: previousState.selectedEvent,
+        selectedSection: previousState.selectedSection,
+        selectedSeat: previousState.selectedSeat,
+        checkout: checkoutResult.checkout,
+      }),
       nextContext: {
         ...baseContext,
-        step: "reservation_created",
-        state: "reservation_created",
+        step: "payment_pending",
+        state: "payment_pending",
+        reservation: {
+          reservationId: checkoutResult.checkout.reservationId,
+          orderId: checkoutResult.checkout.orderId,
+          expiresAt: checkoutResult.checkout.expiresAt,
+          totalAmountCents:
+            previousState.reservation?.totalAmountCents ??
+            checkoutResult.checkout.amountCents,
+          totalFeeCents: previousState.reservation?.totalFeeCents ?? 0,
+          currency: checkoutResult.checkout.currency,
+        },
+        payment: buildPaymentContext(checkoutResult.checkout),
+      },
+    };
+  }
+
+  if (previousState.state === "reservation_created") {
+    if (
+      !previousState.reservation?.reservationId ||
+      !previousState.reservation.orderId
+    ) {
+      return {
+        reply: TICKET_MESSAGES.reservationUnavailableForPayment,
+        nextContext: {
+          ...baseContext,
+          step: "idle",
+          state: "idle",
+          reservation: undefined,
+          selectedSeat: undefined,
+          lastSeats: [],
+        },
+      };
+    }
+
+    if (!isPaymentLinkIntent(text) && !isSimpleReservationReply(text)) {
+      return {
+        reply: TICKET_MESSAGES.paymentLinkPrompt,
+        nextContext: {
+          ...baseContext,
+          step: "reservation_created",
+          state: "reservation_created",
+        },
+      };
+    }
+
+    const checkoutResult = await createCheckoutForReservation({
+      reservationId: previousState.reservation.reservationId,
+      orderId: previousState.reservation.orderId,
+      customerId: customer.id,
+    });
+
+    if (!checkoutResult.ok) {
+      return {
+        reply: isUnavailableCheckoutFailure(checkoutResult)
+          ? TICKET_MESSAGES.reservationUnavailableForPayment
+          : TICKET_MESSAGES.checkoutGenericError,
+        nextContext: {
+          ...baseContext,
+          step: "idle",
+          state: "idle",
+          reservation: undefined,
+          payment: undefined,
+          selectedSeat: undefined,
+          lastSeats: [],
+          lastSections: [],
+          lastEvents: [],
+        },
+      };
+    }
+
+    return {
+      reply: formatPaymentLinkReply({
+        selectedEvent: previousState.selectedEvent,
+        selectedSection: previousState.selectedSection,
+        selectedSeat: previousState.selectedSeat,
+        checkout: checkoutResult.checkout,
+      }),
+      nextContext: {
+        ...baseContext,
+        step: "payment_pending",
+        state: "payment_pending",
+        reservation: {
+          reservationId: checkoutResult.checkout.reservationId,
+          orderId: checkoutResult.checkout.orderId,
+          expiresAt: checkoutResult.checkout.expiresAt,
+          totalAmountCents: previousState.reservation.totalAmountCents,
+          totalFeeCents: previousState.reservation.totalFeeCents,
+          currency: checkoutResult.checkout.currency,
+        },
+        payment: buildPaymentContext(checkoutResult.checkout),
       },
     };
   }

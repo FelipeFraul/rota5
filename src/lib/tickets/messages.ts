@@ -33,4 +33,9 @@ export const TICKET_MESSAGES = {
     "Não consegui reservar esse assento agora. Tente novamente em instantes.",
   reservationAlreadyCreated:
     "Você já tem uma reserva em andamento. No próximo passo vamos gerar o link de pagamento ou permitir cancelar/trocar.",
+  paymentLinkPrompt: "Para pagar sua reserva, responda PAGAR.",
+  reservationUnavailableForPayment:
+    "Sua reserva não está mais disponível. Faça uma nova busca para escolher outro assento.",
+  checkoutGenericError:
+    "Não consegui gerar o link de pagamento agora. Tente novamente em instantes.",
 } as const;

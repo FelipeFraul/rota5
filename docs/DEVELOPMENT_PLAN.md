@@ -54,6 +54,8 @@ Step 11 final audit tightened the seat listing boundary. `listAvailableSeats` no
 
 Step 12 adds real single-seat reservation from WhatsApp by calling only the audited `public.reserve_seats` RPC. When a user in `showing_seats` sends a listed seat code, the router normalizes the code, checks whether the customer already has an active non-expired reservation with a `pending_payment` order, revalidates event/session/venue/section/seat/active price in Supabase, calls `reserve_seats` with ticket type `full` and `TICKET_RESERVATION_TTL_MINUTES`, then stores lightweight `reservation_created` context with reservation/order IDs, expiration, totals, and selected seat. The step does not create checkout links, payments, tickets, QR Codes, maps, or gate validation. Duplicate reservation attempts are blocked both by `reservation_created` context and by the database reservation/order check, so a stale context or new conversation cannot silently create a second pending reservation.
 
+Step 13 connects the WhatsApp reservation flow to the existing Mercado Pago checkout. The checkout creation logic was extracted into `src/lib/tickets/services/checkout.ts`, so both `POST /api/checkout/mercado-pago` and the WhatsApp router use the same validation and Mercado Pago preference creation path. When a user in `reservation_created` or `payment_pending` asks to pay or resend the link, the backend revalidates the reservation/order, confirms reservation items still have `session_seats.status = reserved` with `current_reservation_id` pointing to the reservation, creates or reuses a pending Mercado Pago checkout, and stores lightweight `payment_pending` context with the public checkout URL. Payment is still confirmed only by the Mercado Pago webhook; this step does not issue tickets, generate QR Codes, send PDFs/images, render maps, or perform gate validation.
+
 The next steps will connect session, sector, seat, reservation, and payment creation around the transactional core.
 
 ## Next Steps
@@ -70,7 +72,7 @@ The next steps will connect session, sector, seat, reservation, and payment crea
 10. Seleção de evento e listagem de setores por WhatsApp - criado e testado
 11. Listagem de assentos disponíveis por setor - criado e testado
 12. Reserva transacional de assento pelo WhatsApp - criado e testado
-13. Geração de checkout Mercado Pago pelo WhatsApp - próximo passo
+13. Geração de checkout Mercado Pago pelo WhatsApp - criado e testado
 14. Geração de mapa de assentos
 15. Envio de QR Code pelo WhatsApp
 16. Tela/API de validação de portaria
