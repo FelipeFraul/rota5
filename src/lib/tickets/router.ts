@@ -1433,6 +1433,7 @@ function getSelectedAdminEventId(
 async function showAdminEventDetails(
   baseContext: TicketConversationState,
   eventId: string,
+  prefix?: string,
 ) {
   const details = await getAdminEventDetails(eventId);
 
@@ -1444,7 +1445,7 @@ async function showAdminEventDetails(
   }
 
   return {
-    reply: renderAdminEventDetails(details.event),
+    reply: prefix ? `${prefix}\n\n${renderAdminEventDetails(details.event)}` : renderAdminEventDetails(details.event),
     nextContext: withAdminEventsContext(baseContext, "admin_event_detail", {
       selectedEventId: eventId,
     }),
@@ -2153,7 +2154,11 @@ async function handleAdminEventsFlow({
 
     const result = await updateAdminEvent(eventId, values);
     return result.ok
-      ? showAdminEventDetails(baseContext, eventId)
+      ? showAdminEventDetails(
+          baseContext,
+          eventId,
+          field === "status" && draft.status === "cancelled" ? "EVENTO CANCELADO!" : undefined,
+        )
       : {
           reply: "Não consegui salvar a alteração.",
           nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
@@ -2235,7 +2240,11 @@ async function handleAdminEventsFlow({
 
     const result = await updateAdminEvent(eventId, { status: status as AdminEventStatus });
     return result.ok
-      ? showAdminEventDetails(baseContext, eventId)
+      ? showAdminEventDetails(
+          baseContext,
+          eventId,
+          status === "cancelled" ? "EVENTO CANCELADO!" : undefined,
+        )
       : {
           reply: "Não consegui alterar o status.",
           nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
