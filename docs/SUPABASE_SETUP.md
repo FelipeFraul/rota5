@@ -883,6 +883,29 @@ Step 13 tests used temporary Supabase data and a mocked Mercado Pago preference 
 - [x] `POST /api/checkout/mercado-pago` remains protected: missing or wrong `x-checkout-secret` returns `401`.
 - [x] Temporary test data cleanup returned empty.
 
+Final Step 13 audit coverage:
+
+- [x] `createCheckoutForReservation` is the only checkout core used by both WhatsApp and `POST /api/checkout/mercado-pago`.
+- [x] `sim` outside `reservation_created` or `payment_pending` does not generate checkout.
+- [x] Expired `payment_pending` does not resend an old link and resets context safely.
+- [x] `paid`, `expired`, `cancelled`, or other non-`pending_payment` orders cannot create a new pending payment.
+- [x] A pending Mercado Pago payment belonging to another order is not reused.
+- [x] A reservation with multiple items is blocked if any related `session_seat` is not still reserved for that reservation.
+- [x] Divergence between frozen item totals and order total blocks checkout.
+- [x] Mercado Pago preference failure returns a safe message and does not create tickets, mark orders paid, create QR Codes, or alter seat reservations.
+- [x] `payment_pending` context contains only selected event/section/seat, reservation, and public payment link metadata; it does not store tokens, secrets, raw responses, QR data, or raw payloads.
+- [x] Payment messages do not say the ticket is already emitted, guaranteed, or confirmed; they state that issuance depends on Mercado Pago confirmation.
+- [x] Temporary scripts and data were removed after the audit.
+
+Policy after audit:
+
+- Reuse checkout only when the reservation is still `active`, not expired, the order is still `pending_payment`, and an existing `payments` row for the same order has `provider = mercado_pago`, `status = pending`, `provider_preference_id`, and `checkout_url`.
+- Create a new Mercado Pago preference only when no reusable pending checkout exists for that same order.
+- Block checkout when the reservation is expired/stale, order is not payable, reservation items are missing or no longer reserved, or totals do not match.
+- Payment is confirmed only by the Mercado Pago webhook and `confirm_paid_ticket_order`.
+- QR Code, ticket delivery, PDF/image generation, map rendering, gate validation, cancellation, and reservation swap remain out of scope for this step.
+- A controlled low-value real Mercado Pago checkout/payment test is still pending; audit tests used a mocked Mercado Pago preference endpoint to avoid creating real payment links.
+
 This migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST RPC endpoint on 2026-05-22 14:06:35 -03. A validation-only call returned the expected `customer_id_required` error, confirming that `public.reserve_seats` is available and executable by the service role.
 
 The RPC was fully audited with temporary data on 2026-05-22 14:11:49 -03. The audit confirmed:
