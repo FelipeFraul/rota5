@@ -1202,7 +1202,42 @@ Implemented event actions:
 - create missing `session_seats` for a selected session and section/all sections;
 - list, create, edit, activate, and deactivate ticket prices/lots.
 
+Event menu behavior:
+
+- `1. Listar eventos`: shows up to 5 events per page, ordered by the next future session and then creation time. It includes status, city/UF, session count, and next future session. `mais` advances only when there is another page; otherwise the admin receives a safe end-of-pagination message. Selecting an item shows details, sessions, sections, and action options.
+- `2. Criar evento`: collects title, artist, city, UF, venue, first session date/time, and initial status (`draft` or `published`). It reuses an existing venue by name/city/UF or creates an active venue. `published` creates the first session as `sales_open`; `draft` creates it as `scheduled`. No sections, seats, session seats, or prices are created by this flow. If first-session creation fails, the event remains as `draft`; no physical rollback delete is performed.
+- `3. Editar evento`: edits title, artist, city/UF, venue, or status after a confirmation summary. Venue creation/reuse happens only after confirmation. Setting status to `cancelled` requires `CANCELAR EVENTO`.
+- `4. Pausar/ativar evento`: the schema has no `paused` status. “Pausar vendas” means returning the event to `draft`, which removes it from buyer search/sales because the sales flow only uses `published` events. `draft` can be published, and cancellation is a status change only. `cancelled` and `finished` are not reactivated from this menu.
+- `5. Sessões e datas`: lists sessions with date/time, status, local, section count, and price count. Creating a session accepts only `scheduled` or `sales_open` and does not create `session_seats`. Opening/closing sales uses `scheduled`, `sales_open`, or `sales_closed`. Cancelling a session requires `CANCELAR SESSÃO`. Changing session date/time is blocked when reservations or tickets already exist.
+- `6. Setores e assentos`: lists sections with slug, capacity, numbered-seat flag, status, structural seat count, and session-seat count. It creates sections with normalized unique slugs, edits safe fields, creates manual/range structural seats only for numbered sections, blocks/inactivates seats only when they are not reserved or sold in any session, and creates missing `session_seats` as `available` without touching existing `reserved`, `sold`, or `blocked` rows.
+- `7. Preços e lotes`: lists prices for all sessions with session, section, ticket type, label, price, fee, sale window, and status. It creates active `BRL` prices with optional sale start/end dates, converts decimal strings such as `10,90` and `10.90` to cents, maps `promo/courtesy` aliases to schema values, respects the unique `(session_id, section_id, ticket_type)` constraint, edits label/price/fee/window/status, and never deletes a price.
+
 All mutating paths require confirmation before writing. Normal writes require `CONFIRMAR`; event and session cancellation require explicit cancellation text. The module does not alter payments, orders, reservations, tickets, ticket validation, or Mercado Pago state. Existing sold/reserved session seats are not overwritten when creating missing `session_seats`.
+
+Backend service organization:
+
+- `src/lib/tickets/services/adminEvents.ts`: shared event catalog types, event create/list/detail/update, venue reuse, and shared parse helpers.
+- `src/lib/tickets/services/adminSessions.ts`: session create/update and session usage/catalog count helpers.
+- `src/lib/tickets/services/adminSections.ts`: section list/create/update and section usage helpers.
+- `src/lib/tickets/services/adminSeats.ts`: structural seat parsing/create/update and missing `session_seats` helpers.
+- `src/lib/tickets/services/adminPrices.ts`: price list/create/update and money parser export.
+
+Parser helpers used by the module:
+
+- `parseBrazilianDateTime`
+- `parseMoneyToCents`
+- `normalizeSlug`
+- `parseSeatCodes`
+- `parseSeatRange`
+- `parseSeatCodesOrRange`
+
+Menu/message renderers in the router include:
+
+- `renderAdminEventsMenu`
+- `renderAdminEventDetails`
+- `renderAdminSessionsMenu`
+- `renderAdminSectionsMenu`
+- `renderAdminPricesMenu`
 
 Supported admin event states include:
 
@@ -1233,6 +1268,27 @@ Input is parsed and validated server-side. Dates use the Brazilian format `DD/MM
 
 The final module audit created and removed real temporary data with prefix `TEST_ADMIN_EVENTS_FLOW`. It confirmed that catalog writes stay scoped to venue/event/session/section/seat/session-seat/price tables, that `session_seats` are only inserted as `available`, that duplicate structural records are blocked by existing constraints, that `10,90` and `10.90` both parse to `1090` cents, and that a fully configured published event is visible to the normal buyer search path. Cleanup confirmed no remaining `TEST_ADMIN_EVENTS_FLOW` event or venue rows.
 
+The latest real Supabase A-P audit for `TEST_ADMIN_EVENTS_FLOW` passed:
+
+- A: non-event roles are blocked from Events;
+- B: `root` and `admin` are allowed into Events;
+- C: complete event creation creates venue, event, and first session after confirmation;
+- D: cancelled event creation writes nothing;
+- E: event listing shows the created event;
+- F: event title/artist/city edits persist only after confirmation;
+- G: `published -> draft -> published` status changes do not delete the event;
+- H: session creation creates an `event_sessions` row;
+- I: session open/close/cancel status changes do not delete tickets;
+- J: section creation succeeds and duplicate slug is blocked;
+- K: batch seat creation creates structural seats and duplicate seats are blocked;
+- L: `session_seats` creation creates only missing rows and preserves `reserved`;
+- M: price creation stores active BRL cents correctly;
+- N: price edits do not mutate existing frozen `reservation_items`;
+- O: a fully configured catalog is visible to the buyer sales path;
+- P: cleanup removed temporary rows.
+
+Cleanup removed temporary or prefix-linked rows from `tickets`, `reservation_items`, `reservations`, `whatsapp_messages`, `conversations`, `customers`, `ticket_prices`, `session_seats`, `seats`, `venue_sections`, `event_sessions`, `events`, `venues`, and temporary `admin_users`.
+
 A second operational audit exercised the real `/api/webhook/zapi` route against a local Z-API mock using temporary data with prefix `TEST_ADMIN_EVENTS_WHATSAPP_FLOW`. It confirmed:
 
 - `root` and `admin` can enter `Eventos`; `operator`, `gate`, and `support` are blocked by the real menu flow;
@@ -1241,6 +1297,17 @@ A second operational audit exercised the real `/api/webhook/zapi` route against 
 - returning an event to `draft` is the supported “remove from publication” action because the schema does not have `paused`;
 - a buyer can find and reserve from a catalog created through the admin conversation when the event is `published`, the session is `sales_open`, seats/session seats are available, and price is active;
 - cleanup removed the temporary catalog, WhatsApp, customer, admin, reservation, and order data.
+
+Current limitations and operational cautions:
+
+- There is no physical event/session/section/seat/price deletion flow. Operational removal is by status (`draft`, `cancelled`, `inactive`, `sales_closed`) and requires confirmation where sensitive.
+- There is no automatic refund, customer notification, or ticket invalidation when cancelling events or sessions. Those are future operational modules.
+- Editing event text, city, or venue after sales is allowed with confirmation, but operators should treat it as an operational change that may affect customer-facing ticket information.
+- Changing session date/time is blocked in this WhatsApp flow once reservations or tickets exist.
+- Changing a section from numbered to unnumbered is blocked when reservations, tickets, or busy session seats exist.
+- Blocking/inactivating structural seats is blocked when those seats are reserved or sold in any session.
+- Price edits affect new reservations only; existing `reservation_items` keep frozen price and fee values.
+- The module does not implement reports, courtesy generation, cancellation/refund workflows, manual resend, or advanced admin panel screens.
 
 ### Gate Page And Scanner
 
