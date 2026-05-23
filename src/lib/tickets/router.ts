@@ -691,17 +691,43 @@ function buildAdminMenuOptionReply(role: AdminRole, option: number) {
     selectedOption.permission === "manage_gate" &&
     hasAdminPermission(role, "manage_gate")
   ) {
-    return [
-      "Portaria já está disponível.",
-      "",
-      "Para criar um acesso temporário, responda aqui com:",
-      "portaria TELEFONE_DO_VALIDADOR entrada principal",
-      "",
-      "O telefone informado deve ser o do validador que receberá o link da portaria.",
-    ].join("\n");
+    return buildAdminGateMenu();
   }
 
   return TICKET_MESSAGES.adminOptionUnavailable;
+}
+
+function buildAdminGateMenu() {
+  return [
+    "Portaria",
+    "",
+    "Escolha uma opção:",
+    "",
+    "1. Check-in neste telefone",
+    "2. Enviar acesso para outro validador (em construção)",
+    "3. Voltar ao menu administrativo",
+    "",
+    "Responda com o número da opção.",
+  ].join("\n");
+}
+
+function buildGateCheckInReply({
+  gateUrl,
+  expiresAt,
+}: {
+  gateUrl: string;
+  expiresAt: string;
+}) {
+  return [
+    "Acesso de check-in criado.",
+    "",
+    "Abra o link abaixo neste celular para ler QR Codes:",
+    gateUrl,
+    "",
+    `Validade: até ${formatDateTime(expiresAt)}`,
+    "",
+    "Esse link é temporário e deve ser usado apenas pela equipe autorizada.",
+  ].join("\n");
 }
 
 function parseGateCommand(text: string) {
@@ -1038,6 +1064,7 @@ export async function routeTicketMessage({
 
   if (
     previousState.state === "admin_menu" ||
+    previousState.state === "admin_gate_menu" ||
     previousState.admin?.sessionId
   ) {
     if (isAdminLogoutCommand(text)) {
@@ -1100,6 +1127,120 @@ export async function routeTicketMessage({
       };
     }
 
+    if (previousState.state === "admin_gate_menu") {
+      if (!hasAdminPermission(adminUserResult.adminUser.role, "manage_gate")) {
+        return {
+          reply: TICKET_MESSAGES.adminOptionUnavailable,
+          nextContext: {
+            ...baseContext,
+            step: "admin_menu",
+            state: "admin_menu",
+            admin: buildAdminContext({
+              adminUserId: adminUserResult.adminUser.id,
+              role: adminUserResult.adminUser.role,
+              sessionId: sessionResult.adminSession.id,
+              expiresAt: sessionResult.adminSession.expires_at,
+            }),
+          },
+        };
+      }
+
+      if (numericOption === 1) {
+        const gateSessionResult = await createGateSession({
+          validatorPhone: customer.whatsapp_phone,
+          createdByAdminPhone: customer.whatsapp_phone,
+          gateLabel: "Check-in",
+        });
+
+        if (!gateSessionResult.ok) {
+          return {
+            reply: TICKET_MESSAGES.gateAdminCreateError,
+            nextContext: {
+              ...baseContext,
+              step: "admin_gate_menu",
+              state: "admin_gate_menu",
+              admin: buildAdminContext({
+                adminUserId: adminUserResult.adminUser.id,
+                role: adminUserResult.adminUser.role,
+                sessionId: sessionResult.adminSession.id,
+                expiresAt: sessionResult.adminSession.expires_at,
+              }),
+            },
+          };
+        }
+
+        return {
+          reply: buildGateCheckInReply({
+            gateUrl: gateSessionResult.gateUrl,
+            expiresAt: gateSessionResult.gateSession.expires_at,
+          }),
+          nextContext: {
+            ...baseContext,
+            step: "admin_gate_menu",
+            state: "admin_gate_menu",
+            admin: buildAdminContext({
+              adminUserId: adminUserResult.adminUser.id,
+              role: adminUserResult.adminUser.role,
+              sessionId: sessionResult.adminSession.id,
+              expiresAt: sessionResult.adminSession.expires_at,
+            }),
+          },
+        };
+      }
+
+      if (numericOption === 2) {
+        return {
+          reply: TICKET_MESSAGES.adminOptionUnavailable,
+          nextContext: {
+            ...baseContext,
+            step: "admin_gate_menu",
+            state: "admin_gate_menu",
+            admin: buildAdminContext({
+              adminUserId: adminUserResult.adminUser.id,
+              role: adminUserResult.adminUser.role,
+              sessionId: sessionResult.adminSession.id,
+              expiresAt: sessionResult.adminSession.expires_at,
+            }),
+          },
+        };
+      }
+
+      if (numericOption === 3) {
+        return {
+          reply: formatAdminMenu(adminUserResult.adminUser.role),
+          nextContext: {
+            ...baseContext,
+            step: "admin_menu",
+            state: "admin_menu",
+            admin: buildAdminContext({
+              adminUserId: adminUserResult.adminUser.id,
+              role: adminUserResult.adminUser.role,
+              sessionId: sessionResult.adminSession.id,
+              expiresAt: sessionResult.adminSession.expires_at,
+            }),
+          },
+        };
+      }
+
+      return {
+        reply:
+          numericOption === null
+            ? buildAdminGateMenu()
+            : TICKET_MESSAGES.gateAdminOptionInvalid,
+        nextContext: {
+          ...baseContext,
+          step: "admin_gate_menu",
+          state: "admin_gate_menu",
+          admin: buildAdminContext({
+            adminUserId: adminUserResult.adminUser.id,
+            role: adminUserResult.adminUser.role,
+            sessionId: sessionResult.adminSession.id,
+            expiresAt: sessionResult.adminSession.expires_at,
+          }),
+        },
+      };
+    }
+
     return {
       reply:
         numericOption === null
@@ -1107,8 +1248,16 @@ export async function routeTicketMessage({
           : buildAdminMenuOptionReply(adminUserResult.adminUser.role, numericOption),
       nextContext: {
         ...baseContext,
-        step: "admin_menu",
-        state: "admin_menu",
+        step:
+          numericOption === 4 &&
+          hasAdminPermission(adminUserResult.adminUser.role, "manage_gate")
+            ? "admin_gate_menu"
+            : "admin_menu",
+        state:
+          numericOption === 4 &&
+          hasAdminPermission(adminUserResult.adminUser.role, "manage_gate")
+            ? "admin_gate_menu"
+            : "admin_menu",
         admin: buildAdminContext({
           adminUserId: adminUserResult.adminUser.id,
           role: adminUserResult.adminUser.role,

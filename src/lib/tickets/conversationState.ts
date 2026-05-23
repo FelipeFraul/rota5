@@ -2,6 +2,7 @@ export type TicketConversationStep =
   | "idle"
   | "admin_auth_pending"
   | "admin_menu"
+  | "admin_gate_menu"
   | "showing_events"
   | "showing_sections"
   | "showing_seats"

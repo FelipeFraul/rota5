@@ -1154,18 +1154,19 @@ Payload:
 
 The signature is HMAC SHA-256 over the base64url payload using `GATE_SESSION_SECRET`, checked with constant-time comparison. The token payload intentionally excludes admin phone, secrets, event details, and bulky metadata.
 
-### WhatsApp Admin Command
+### WhatsApp Admin Flow
 
-Admins are the normalized phones in `ADMIN_WHATSAPP_PHONES`.
+Authenticated WhatsApp admins with `manage_gate` permission can open the admin menu, choose `Portaria`, then choose `Check-in`. The backend creates a temporary gate session for the same WhatsApp phone that is authenticated in the admin flow and replies in that same conversation with the scanner link.
 
-Supported commands:
+The current admin menu path is:
 
 ```text
-portaria 15999999999
-portaria 15999999999 entrada principal
+admin
+4. Portaria
+1. Check-in neste telefone
 ```
 
-If the sender is authorized, the router creates a gate session, sends the temporary link to the validator with Z-API, and replies to the admin with the validator phone, gate label, expiration, and send status. If Z-API fails after the session is created, the backend revokes that newly created session and tells the admin that the link was not sent. If a non-admin sends a `portaria ...` command, no session is created and no security detail is exposed.
+The old direct `portaria telefone` command is not the menu guidance for check-in. The operational admin flow keeps the user in the same WhatsApp conversation after authentication and does not ask the admin to send a link to any fixed number.
 
 ### Gate Page And Scanner
 
@@ -1213,7 +1214,7 @@ It does not validate ticket ownership, does not mark the ticket used, does not i
 ### Final Step 15 Audit
 
 - [x] `portaria TELEFONE [label]` is gated by normalized `ADMIN_WHATSAPP_PHONES`.
-- [x] The local admin phone `15997503836` is recognized by normalization; production has `ADMIN_WHATSAPP_PHONES` configured as encrypted Vercel env.
+- [x] Configured admin phones are recognized by normalization; production has the admin phone envs configured as encrypted Vercel variables.
 - [x] `GATE_SESSION_SECRET` and `GATE_SESSION_TTL_MINUTES` are present in `src/lib/env.ts`, `.env.example`, and Vercel Production; neither uses `NEXT_PUBLIC_`, and the secret has no default fallback.
 - [x] Gate tokens use `base64url(payload).signature`, HMAC SHA-256, constant-time signature comparison, and payload fields only `gid`, `phone`, and `exp`.
 - [x] `gate_sessions.token_hash` stores only SHA-256 token hashes, is unique, and is not returned by public endpoints.
