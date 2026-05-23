@@ -219,6 +219,76 @@ Required environment variables:
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
+## WhatsApp Admin Foundation
+
+The WhatsApp admin foundation migration is:
+
+`supabase/migrations/20260522000800_create_admin_users_and_sessions.sql`
+
+It creates:
+
+- `public.admin_users`
+- `public.admin_sessions`
+
+`admin_users` stores normalized admin phones, role, status, optional name, creator phone, and last login time. `admin_sessions` stores temporary backend admin sessions with status, expiration, and minimal non-sensitive metadata. No admin passphrase, raw token, or secret is stored in either table.
+
+Apply the migration through Supabase CLI if the project is linked, or paste the SQL into the Supabase SQL Editor. Verification query:
+
+```sql
+select table_name
+from information_schema.tables
+where table_schema = 'public'
+  and table_name in ('admin_users', 'admin_sessions')
+order by table_name;
+```
+
+Expected result: 2 rows.
+
+Important indexes and constraints:
+
+- `admin_users.phone` is unique, digits-only, and non-empty.
+- `admin_users.role` is restricted to `root`, `admin`, `operator`, `gate`, `support`.
+- `admin_users.status` is restricted to `active`, `disabled`.
+- `admin_sessions.phone` is digits-only and non-empty.
+- `admin_sessions.status` is restricted to `active`, `expired`, `revoked`.
+- `admin_sessions.expires_at > created_at`.
+- indexes exist for phone/status/role/expiration lookups.
+
+Backend-only environment variables:
+
+- `ADMIN_ROOT_WHATSAPP_PHONES`: comma-separated normalized root phones.
+- `ADMIN_AUTH_SECRET_HASH`: PBKDF2-SHA256 hash of the admin passphrase.
+- `ADMIN_SESSION_TTL_MINUTES`: temporary admin session TTL; default documented value is 60.
+
+None of these variables may use a `NEXT_PUBLIC_` prefix. `.env.example` intentionally contains only empty placeholders, never a real passphrase or hash.
+
+Generate the passphrase hash locally without committing the passphrase:
+
+```bash
+node -e "const crypto=require('crypto');const p=process.argv[1];const salt=crypto.randomBytes(16).toString('hex');const i=210000;const h=crypto.pbkdf2Sync(p,salt,i,32,'sha256').toString('hex');console.log('pbkdf2_sha256$'+i+'$'+salt+'$'+h)" 'TYPE_THE_PASSPHRASE_HERE'
+```
+
+Set only the resulting hash in `ADMIN_AUTH_SECRET_HASH`. Do not place the passphrase itself in `.env`, `.env.example`, docs, GitHub, logs, or database rows.
+
+Admin WhatsApp behavior:
+
+- `admin`, `adm`, and `administrador` are reserved and intercepted before event search.
+- Unauthorized phones receive a neutral message and never see admin wording.
+- A configured root phone sending `admin` is bootstrapped into `admin_users` with role `root` if missing.
+- The next inbound message while `admin_auth_pending` is saved as `[ADMIN_AUTH_REDACTED]`.
+- A valid passphrase creates an `admin_sessions` row and shows a permission-filtered menu.
+- `sair`, `logout`, or `encerrar` revokes active admin sessions while inside the admin flow.
+
+Role permissions currently used for menu visibility:
+
+- `root`: admins, events, tickets, courtesies, gate, reports.
+- `admin`: events, tickets, courtesies, gate, reports.
+- `operator`: gate, tickets, reports.
+- `gate`: gate.
+- `support`: tickets.
+
+This step does not implement CRUD events, courtesies, reports, cancellation, swaps, or destructive admin actions. Menu entries that are not implemented return a controlled “in construction” response.
+
 Request body:
 
 ```json

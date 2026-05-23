@@ -16,6 +16,7 @@ import {
   saveWhatsAppMessage,
 } from "@/lib/tickets/services/messages";
 import { routeTicketMessage } from "@/lib/tickets/router";
+import { ADMIN_AUTH_REDACTED_BODY } from "@/lib/tickets/services/adminAuth";
 import { sendZapiText } from "@/lib/zapi/client";
 
 const MAX_WEBHOOK_BYTES = 256 * 1024;
@@ -237,15 +238,22 @@ function extractIncomingMessage(
 function buildInboundMetadata({
   providerMessageId,
   messageType,
+  redacted = false,
 }: {
   providerMessageId: string | null;
   messageType: string;
+  redacted?: boolean;
 }) {
   return {
     provider: "zapi",
     provider_message_id: providerMessageId,
     message_type: messageType,
+    ...(redacted ? { redacted: true, reason: "admin_auth" } : {}),
   };
+}
+
+function shouldRedactInboundTextForAdminAuth(context: Record<string, unknown>) {
+  return context?.state === "admin_auth_pending";
 }
 
 function buildOutboundMetadata({
@@ -410,16 +418,21 @@ export async function POST(request: Request) {
     return jsonError("Internal Server Error", 500);
   }
 
+  const redactInboundText = shouldRedactInboundTextForAdminAuth(
+    conversationResult.conversation.context,
+  );
+
   const inboundResult = await saveWhatsAppMessage({
     conversationId: conversationResult.conversation.id,
     customerId: customerResult.customer.id,
     direction: "inbound",
     messageType: incoming.messageType,
-    body: incoming.text,
+    body: redactInboundText ? ADMIN_AUTH_REDACTED_BODY : incoming.text,
     providerMessageId: incoming.providerMessageId,
     rawMetadata: buildInboundMetadata({
       providerMessageId: incoming.providerMessageId,
       messageType: incoming.messageType,
+      redacted: redactInboundText,
     }),
   });
 

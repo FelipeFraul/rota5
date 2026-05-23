@@ -1,5 +1,7 @@
 export type TicketConversationStep =
   | "idle"
+  | "admin_auth_pending"
+  | "admin_menu"
   | "showing_events"
   | "showing_sections"
   | "showing_seats"
@@ -86,10 +88,20 @@ export type TicketConversationPayment = {
   currency: string;
 };
 
+export type TicketAdminRole = "root" | "admin" | "operator" | "gate" | "support";
+
+export type TicketConversationAdmin = {
+  adminUserId?: string;
+  role?: TicketAdminRole;
+  sessionId?: string;
+  expiresAt?: string;
+};
+
 export type TicketConversationState = {
   step: TicketConversationStep;
   state: TicketConversationStep;
   lastInboundText?: string;
+  admin?: TicketConversationAdmin;
   lastSearch?: TicketConversationSearch;
   lastEvents?: TicketConversationEventOption[];
   selectedEvent?: TicketConversationSelectedEvent;

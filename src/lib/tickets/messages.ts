@@ -42,4 +42,15 @@ export const TICKET_MESSAGES = {
     "Para criar acesso de portaria, envie: portaria 15999999999 entrada principal",
   gateAdminCreateError:
     "Não consegui criar o acesso de portaria agora. Tente novamente em instantes.",
+  adminReservedNeutral:
+    "Não consegui entender sua mensagem.\nMe diga o nome do evento, artista, cidade ou data que você procura.",
+  adminAuthPrompt: "Envie a palavra-chave de acesso administrativo.",
+  adminAuthInvalid: "Palavra-chave inválida.",
+  adminSessionExpired:
+    "Sua sessão administrativa expirou. Envie admin para autenticar novamente.",
+  adminLogout: "Sessão administrativa encerrada.",
+  adminGenericError:
+    "Não consegui acessar o menu administrativo agora. Tente novamente em instantes.",
+  adminOptionUnavailable:
+    "Essa opção administrativa ainda está em construção.",
 } as const;

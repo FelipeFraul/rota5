@@ -45,6 +45,21 @@ import {
   normalizeGatePhone,
   revokeGateSession,
 } from "@/lib/tickets/services/gateSessions";
+import {
+  createAdminSession,
+  ensureAdminUserForPhone,
+  formatAdminMenu,
+  getActiveAdminSession,
+  getAdminMenuOptions,
+  getAdminUserByPhone,
+  hasAdminPermission,
+  isAdminLogoutCommand,
+  isAuthorizedAdminPhone,
+  isReservedAdminCommand,
+  revokeActiveAdminSessions,
+  type AdminRole,
+  verifyAdminPassphrase,
+} from "@/lib/tickets/services/adminAuth";
 import { sendZapiText } from "@/lib/zapi/client";
 
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
@@ -640,6 +655,53 @@ function isAdminPhone(phone: string) {
   );
 }
 
+function buildAdminContext({
+  adminUserId,
+  role,
+  sessionId,
+  expiresAt,
+}: {
+  adminUserId?: string;
+  role?: AdminRole;
+  sessionId?: string;
+  expiresAt?: string;
+}) {
+  return {
+    ...(adminUserId ? { adminUserId } : {}),
+    ...(role ? { role } : {}),
+    ...(sessionId ? { sessionId } : {}),
+    ...(expiresAt ? { expiresAt } : {}),
+  };
+}
+
+function buildAdminMenuOptionReply(role: AdminRole, option: number) {
+  const selectedOption = getAdminMenuOptions(role).find(
+    (menuOption) => menuOption.option === option,
+  );
+
+  if (!selectedOption) {
+    return "Não encontrei essa opção administrativa. Responda com um número do menu.";
+  }
+
+  if (selectedOption.option === 7) {
+    return TICKET_MESSAGES.adminLogout;
+  }
+
+  if (
+    selectedOption.permission === "manage_gate" &&
+    hasAdminPermission(role, "manage_gate")
+  ) {
+    return [
+      "Portaria já está disponível.",
+      "",
+      "Para criar um acesso temporário, envie:",
+      "portaria 15999999999 entrada principal",
+    ].join("\n");
+  }
+
+  return TICKET_MESSAGES.adminOptionUnavailable;
+}
+
 function parseGateCommand(text: string) {
   const match = text.trim().match(GATE_COMMAND_PATTERN);
 
@@ -863,13 +925,197 @@ export async function routeTicketMessage({
   text,
 }: RouteTicketMessageInput): Promise<RouteTicketMessageOutput> {
   const previousState = getConversationState(conversation.context);
-  const parsedSearch = parseEventSearchMessage(text);
   const baseContext = {
     ...buildInitialConversationState(),
     ...previousState,
     updatedAt: new Date().toISOString(),
   };
   const gateCommand = parseGateCommand(text);
+  const reservedAdminCommand = isReservedAdminCommand(text);
+
+  if (previousState.state === "admin_auth_pending") {
+    const adminUserResult = await ensureAdminUserForPhone(customer.whatsapp_phone);
+
+    if (!adminUserResult.ok) {
+      return {
+        reply: TICKET_MESSAGES.adminReservedNeutral,
+        nextContext: {
+          ...baseContext,
+          step: "idle",
+          state: "idle",
+          admin: undefined,
+        },
+      };
+    }
+
+    if (!verifyAdminPassphrase(text)) {
+      return {
+        reply: TICKET_MESSAGES.adminAuthInvalid,
+        nextContext: {
+          ...baseContext,
+          step: "admin_auth_pending",
+          state: "admin_auth_pending",
+          admin: buildAdminContext({
+            adminUserId: adminUserResult.adminUser.id,
+            role: adminUserResult.adminUser.role,
+          }),
+        },
+      };
+    }
+
+    const sessionResult = await createAdminSession(adminUserResult.adminUser);
+
+    if (!sessionResult.ok) {
+      return {
+        reply: TICKET_MESSAGES.adminGenericError,
+        nextContext: {
+          ...baseContext,
+          step: "idle",
+          state: "idle",
+          admin: undefined,
+        },
+      };
+    }
+
+    return {
+      reply: formatAdminMenu(adminUserResult.adminUser.role),
+      nextContext: {
+        ...baseContext,
+        step: "admin_menu",
+        state: "admin_menu",
+        admin: buildAdminContext({
+          adminUserId: adminUserResult.adminUser.id,
+          role: adminUserResult.adminUser.role,
+          sessionId: sessionResult.adminSession.id,
+          expiresAt: sessionResult.adminSession.expires_at,
+        }),
+      },
+    };
+  }
+
+  if (reservedAdminCommand) {
+    if (!(await isAuthorizedAdminPhone(customer.whatsapp_phone))) {
+      return {
+        reply: TICKET_MESSAGES.adminReservedNeutral,
+        nextContext: {
+          ...baseContext,
+          step: "idle",
+          state: "idle",
+          admin: undefined,
+        },
+      };
+    }
+
+    const adminUserResult = await ensureAdminUserForPhone(customer.whatsapp_phone);
+
+    if (!adminUserResult.ok) {
+      return {
+        reply: TICKET_MESSAGES.adminReservedNeutral,
+        nextContext: {
+          ...baseContext,
+          step: "idle",
+          state: "idle",
+          admin: undefined,
+        },
+      };
+    }
+
+    return {
+      reply: TICKET_MESSAGES.adminAuthPrompt,
+      nextContext: {
+        ...baseContext,
+        step: "admin_auth_pending",
+        state: "admin_auth_pending",
+        admin: buildAdminContext({
+          adminUserId: adminUserResult.adminUser.id,
+          role: adminUserResult.adminUser.role,
+        }),
+      },
+    };
+  }
+
+  if (
+    previousState.state === "admin_menu" ||
+    previousState.admin?.sessionId
+  ) {
+    if (isAdminLogoutCommand(text)) {
+      await revokeActiveAdminSessions(customer.whatsapp_phone);
+
+      return {
+        reply: TICKET_MESSAGES.adminLogout,
+        nextContext: {
+          ...buildInitialConversationState(),
+          updatedAt: new Date().toISOString(),
+        },
+      };
+    }
+
+    const sessionResult = await getActiveAdminSession(customer.whatsapp_phone);
+
+    if (!sessionResult.ok || !sessionResult.adminSession) {
+      return {
+        reply: TICKET_MESSAGES.adminSessionExpired,
+        nextContext: {
+          ...baseContext,
+          step: "idle",
+          state: "idle",
+          admin: undefined,
+        },
+      };
+    }
+
+    const adminUserResult = await getAdminUserByPhone(customer.whatsapp_phone);
+
+    if (
+      !adminUserResult.ok ||
+      !adminUserResult.adminUser ||
+      adminUserResult.adminUser.status !== "active"
+    ) {
+      return {
+        reply: TICKET_MESSAGES.adminReservedNeutral,
+        nextContext: {
+          ...baseContext,
+          step: "idle",
+          state: "idle",
+          admin: undefined,
+        },
+      };
+    }
+
+    const numericOption = text.trim().match(/^\d+$/)
+      ? Number(text.trim())
+      : null;
+
+    if (numericOption === 7) {
+      await revokeActiveAdminSessions(customer.whatsapp_phone);
+
+      return {
+        reply: TICKET_MESSAGES.adminLogout,
+        nextContext: {
+          ...buildInitialConversationState(),
+          updatedAt: new Date().toISOString(),
+        },
+      };
+    }
+
+    return {
+      reply:
+        numericOption === null
+          ? formatAdminMenu(adminUserResult.adminUser.role)
+          : buildAdminMenuOptionReply(adminUserResult.adminUser.role, numericOption),
+      nextContext: {
+        ...baseContext,
+        step: "admin_menu",
+        state: "admin_menu",
+        admin: buildAdminContext({
+          adminUserId: adminUserResult.adminUser.id,
+          role: adminUserResult.adminUser.role,
+          sessionId: sessionResult.adminSession.id,
+          expiresAt: sessionResult.adminSession.expires_at,
+        }),
+      },
+    };
+  }
 
   if (gateCommand && isAdminPhone(customer.whatsapp_phone)) {
     if (!gateCommand.valid) {
@@ -926,7 +1172,7 @@ export async function routeTicketMessage({
 
   if (gateCommand && !isAdminPhone(customer.whatsapp_phone)) {
     return {
-      reply: TICKET_MESSAGES.genericHelp,
+      reply: TICKET_MESSAGES.adminReservedNeutral,
       nextContext: {
         ...baseContext,
         step: "idle",
@@ -934,6 +1180,8 @@ export async function routeTicketMessage({
       },
     };
   }
+
+  const parsedSearch = parseEventSearchMessage(text);
 
   if (
     previousState.state === "payment_pending" &&

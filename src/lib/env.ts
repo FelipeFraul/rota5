@@ -30,6 +30,13 @@ const envSchema = z.object({
   ADMIN_WHATSAPP_PHONES: z
     .string()
     .min(1, "ADMIN_WHATSAPP_PHONES is required."),
+  ADMIN_ROOT_WHATSAPP_PHONES: z.string().optional(),
+  ADMIN_AUTH_SECRET_HASH: z.string().optional(),
+  ADMIN_SESSION_TTL_MINUTES: z.coerce
+    .number("ADMIN_SESSION_TTL_MINUTES must be a number.")
+    .int("ADMIN_SESSION_TTL_MINUTES must be an integer.")
+    .positive("ADMIN_SESSION_TTL_MINUTES must be positive.")
+    .optional(),
   TICKET_RESERVATION_TTL_MINUTES: z.coerce
     .number("TICKET_RESERVATION_TTL_MINUTES must be a number.")
     .int("TICKET_RESERVATION_TTL_MINUTES must be an integer.")
