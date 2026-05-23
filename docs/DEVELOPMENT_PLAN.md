@@ -60,6 +60,8 @@ Step 13 final audit confirmed there is a single checkout core used by both the p
 
 Step 14 adds post-payment WhatsApp ticket delivery. The existing RPC still stores only `tickets.qr_token_hash` and does not return or preserve a raw QR token, so the delivery flow now uses deterministic signed ticket URLs instead of storing token plaintext. Each URL is `/tickets/{payload.signature}`, where the payload contains `ticket_id` and `ticket_code`, and the signature is an HMAC SHA-256 with `TICKET_QR_SECRET`. The Mercado Pago webhook now calls ticket delivery only after `confirm_paid_ticket_order` succeeds and skips delivery when the RPC reports an idempotent already-paid order. Delivery failures after ticket issuance are logged safely and do not roll back payment or tickets; manual resend remains a future step.
 
+Step 14 final audit confirmed the signed token fails closed without `TICKET_QR_SECRET`, uses a minimal payload, validates signatures with constant-time comparison, and does not store token plaintext. The public ticket page now only receives display-safe ticket data and loads only `issued` tickets; invalid, tampered, or missing-ticket tokens show the safe invalid page. The page is not a gate validation surface and does not mark tickets as used. Complementary tests covered tampered payloads/signatures, nonexistent tickets, public data hygiene, customer-phone delivery from the database, duplicate webhook suppression, RPC-idempotent suppression, Z-API failure after issuance, log/metadata hygiene, and multi-ticket message formatting.
+
 The next steps will connect session, sector, seat, reservation, and payment creation around the transactional core.
 
 ## Next Steps

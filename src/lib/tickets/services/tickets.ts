@@ -49,6 +49,19 @@ export type TicketForDelivery = {
   seatCode: string;
 };
 
+export type PublicTicketView = Pick<
+  TicketForDelivery,
+  | "ticketCode"
+  | "eventTitle"
+  | "artistName"
+  | "city"
+  | "state"
+  | "venueName"
+  | "startsAt"
+  | "sectionName"
+  | "seatCode"
+>;
+
 export type SignedTicketTokenPayload = {
   tid: string;
   code: string;
@@ -99,6 +112,20 @@ function mapTicketRow(row: TicketRow): TicketForDelivery | null {
     startsAt: row.event_sessions.starts_at,
     sectionName: row.venue_sections?.name ?? "Setor",
     seatCode: row.reservation_items?.seat_code ?? "A confirmar",
+  };
+}
+
+function toPublicTicketView(ticket: TicketForDelivery): PublicTicketView {
+  return {
+    ticketCode: ticket.ticketCode,
+    eventTitle: ticket.eventTitle,
+    artistName: ticket.artistName,
+    city: ticket.city,
+    state: ticket.state,
+    venueName: ticket.venueName,
+    startsAt: ticket.startsAt,
+    sectionName: ticket.sectionName,
+    seatCode: ticket.seatCode,
   };
 }
 
@@ -183,7 +210,7 @@ export async function getTicketsForOrder(
 
 export async function getTicketBySignedToken(
   token: string,
-): Promise<TicketForDelivery | null> {
+): Promise<PublicTicketView | null> {
   const payload = verifySignedTicketToken(token);
 
   if (!payload) {
@@ -198,11 +225,14 @@ export async function getTicketBySignedToken(
     )
     .eq("id", payload.tid)
     .eq("ticket_code", payload.code)
+    .eq("status", "issued")
     .maybeSingle<TicketRow>();
 
   if (error || !data) {
     return null;
   }
 
-  return mapTicketRow(data);
+  const ticket = mapTicketRow(data);
+
+  return ticket ? toPublicTicketView(ticket) : null;
 }

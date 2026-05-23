@@ -953,7 +953,9 @@ After the Mercado Pago webhook verifies signature, fetches the real approved pay
 
 The message includes event, date, venue/city/state, section, seat, ticket code, and the signed ticket URL. It says the ticket will be validated at the entrance. It does not mark the ticket as used and does not implement gate validation.
 
-The page `src/app/tickets/[token]/page.tsx` validates the signed token, loads the ticket, and shows a simple safe ticket page. It does not mark the ticket used and is not a gate validation panel.
+The page `src/app/tickets/[token]/page.tsx` validates the signed token, loads only `issued` tickets, and shows a simple safe ticket page. The page receives only display-safe fields: event, date, venue/city/state, section, seat, and ticket code. It does not receive or render phone, document, email, order id, payment id, customer id, `qr_token_hash`, or raw metadata. It does not mark the ticket used and is not a gate validation panel.
+
+Invalid tokens are handled as a safe invalid-ticket page. This includes malformed tokens, payload tampering, signature tampering, and well-formed tokens for nonexistent tickets. The signature check uses HMAC SHA-256 with `TICKET_QR_SECRET` and constant-time comparison. `TICKET_QR_SECRET` is required server-side and must not have a production default.
 
 ### Idempotency and failure policy
 
@@ -983,6 +985,19 @@ Step 14 tests used temporary Supabase data with Mercado Pago and Z-API mocked:
 - [x] `/tickets/[token]` builds successfully.
 - [x] Payment event metadata does not store QR secret or Mercado Pago access token.
 - [x] Temporary test data cleanup returned empty.
+
+Final Step 14 audit additionally confirmed:
+
+- [x] Tampered payload tokens are invalid.
+- [x] Tampered signature tokens are invalid.
+- [x] Well-formed tokens for nonexistent tickets are invalid.
+- [x] The public ticket page does not expose phone, document, payment id, order id, customer id, or `qr_token_hash`.
+- [x] Delivery uses `customers.whatsapp_phone` from the paid order/customer relationship, not Mercado Pago payload phone data.
+- [x] Duplicate processed webhook events do not resend tickets.
+- [x] RPC `idempotent = true` does not resend tickets automatically.
+- [x] Z-API failure after ticket issuance does not undo payment/tickets and does not force infinite Mercado Pago retries.
+- [x] Logs and metadata do not contain `TICKET_QR_SECRET` or full signed ticket URLs.
+- [x] Multi-ticket WhatsApp messages remain organized and do not claim gate validation.
 
 This migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST RPC endpoint on 2026-05-22 14:06:35 -03. A validation-only call returned the expected `customer_id_required` error, confirming that `public.reserve_seats` is available and executable by the service role.
 
