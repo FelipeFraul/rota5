@@ -48,6 +48,7 @@ import {
   isTicketType,
   listAdminEvents,
   normalizeSlug,
+  parseInitialEventSections,
   parseBrazilianDateTime,
   updateAdminEvent,
   type AdminEventDetails,
@@ -202,6 +203,7 @@ type RouteTicketMessageInput = {
     context: Record<string, unknown>;
   };
   text: string;
+  mediaUrl?: string | null;
 };
 
 type RouteTicketMessageOutput = {
@@ -1102,6 +1104,69 @@ function isCancelText(text: string) {
   return normalized === "cancelar" || normalized === "voltar";
 }
 
+function normalizeEventImageUrl(value: string | null | undefined) {
+  const trimmed = value?.trim();
+
+  if (!trimmed || trimmed.length > 2000) {
+    return null;
+  }
+
+  try {
+    const url = new URL(trimmed);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+function getInitialSectionsFromDraft(draft: Record<string, unknown>) {
+  const rawSections = draft.initialSections;
+  if (!Array.isArray(rawSections)) {
+    return [];
+  }
+
+  return rawSections.flatMap((section) => {
+    if (!section || typeof section !== "object") {
+      return [];
+    }
+
+    const item = section as Record<string, unknown>;
+    return [
+      {
+        name: String(item.name ?? ""),
+        slug: String(item.slug ?? ""),
+        hasNumberedSeats: item.hasNumberedSeats === true,
+        capacity: typeof item.capacity === "number" ? item.capacity : null,
+        createInventorySeats: item.createInventorySeats === true,
+      },
+    ];
+  });
+}
+
+function renderInitialSectionsSummary(draft: Record<string, unknown>) {
+  const sections = getInitialSectionsFromDraft(draft);
+  if (!sections.length) {
+    return ["Estrutura de entradas: não definida"];
+  }
+
+  return [
+    `Estrutura: ${
+      draft.entryModel === "single_general"
+        ? "entrada única sem assento marcado"
+        : draft.entryModel === "multiple_general"
+          ? "vários tipos/setores sem assento marcado"
+          : "setores com assentos marcados"
+    }`,
+    ...sections.map((section) =>
+      [
+        `- ${section.name}`,
+        section.hasNumberedSeats ? "assento marcado" : "sem assento marcado",
+        section.capacity ? `capacidade ${section.capacity}` : "capacidade a definir",
+      ].join(" | "),
+    ),
+  ];
+}
+
 function renderAdminEventListReply({
   events,
   hasMore,
@@ -1148,6 +1213,7 @@ function renderAdminEventDetails(event: AdminEventDetails) {
     `Evento: ${event.title}`,
     `ID curto: ${event.eventId.slice(0, 8)}`,
     `Status: ${event.status}`,
+    `Foto: ${event.imageUrl ? "cadastrada" : "ausente"}`,
     `Cidade: ${event.city}/${event.state}`,
     `Local: ${event.venueName ?? "não definido"}`,
     "",
@@ -1222,8 +1288,18 @@ function renderCreateEventPrompt(field?: string) {
     city: "Em qual cidade?",
     state: "Qual UF? Ex: SP",
     venueName: "Qual o nome do local/teatro/arena?",
+    imageUrl:
+      "Envie a foto do evento agora ou cole uma URL pública https://...\nPara salvar como rascunho sem foto, responda PULAR. Para publicar, a foto é obrigatória.",
     startsAt: "Qual a data e horário da primeira sessão? Ex: 10/06/2026 22:00",
     status: "Qual status inicial?\n1. Rascunho\n2. Publicado",
+    entryModel:
+      "Como serão as entradas/lugares?\n1. Entrada única sem assento marcado\n2. Vários setores/tipos sem assento marcado\n3. Setores com assentos marcados",
+    singleEntryName: "Qual o nome dessa entrada? Ex: Entrada Geral",
+    singleEntryCapacity: "Qual a quantidade/capacidade dessa entrada?",
+    multipleEntrySections:
+      "Envie os setores/tipos e capacidades.\nEx: Pista: 500, Camarote: 100",
+    numberedEntrySections:
+      "Envie os setores com assentos marcados.\nEx: Pista Premium: 300, Camarote: 80\nOs assentos serão cadastrados depois em Setores e assentos.",
   };
 
   return prompts[field ?? "title"];
@@ -1237,8 +1313,11 @@ function renderCreateEventSummary(draft: Record<string, unknown>) {
     `Artista: ${draft.artistName}`,
     `Cidade/UF: ${draft.city}/${draft.state}`,
     `Local: ${draft.venueName}`,
+    `Foto: ${draft.imageUrl ? "cadastrada" : "ausente"}`,
     `Primeira sessão: ${formatDateTime(String(draft.startsAt))}`,
     `Status: ${draft.status}`,
+    "",
+    ...renderInitialSectionsSummary(draft),
     "",
     "Responda CONFIRMAR para criar ou CANCELAR para abandonar.",
   ].join("\n");
@@ -1251,6 +1330,7 @@ function renderEditEventSummary(draft: Record<string, unknown>) {
     artist_name: "Artista",
     city_state: "Cidade/UF",
     venue: "Local",
+    image_url: "Foto do evento",
     status: "Status",
   };
   const value =
@@ -1258,6 +1338,8 @@ function renderEditEventSummary(draft: Record<string, unknown>) {
       ? `${draft.city}/${draft.state}`
       : field === "venue"
         ? draft.venueName
+        : field === "image_url"
+          ? draft.imageUrl
         : field === "status"
           ? draft.status
           : field === "title"
@@ -1372,9 +1454,11 @@ async function showAdminEventDetails(
 async function handleAdminEventsFlow({
   baseContext,
   text,
+  mediaUrl,
 }: {
   baseContext: TicketConversationState;
   text: string;
+  mediaUrl?: string | null;
 }): Promise<RouteTicketMessageOutput | null> {
   const adminEvents = getAdminEventsContext(baseContext);
   const normalized = normalizeAdminText(text);
@@ -1497,8 +1581,9 @@ async function handleAdminEventsFlow({
           "2. Artista",
           "3. Cidade/UF",
           "4. Local",
-          "5. Status",
-          "6. Voltar",
+          "5. Foto do evento",
+          "6. Status",
+          "7. Voltar",
           "",
           "Responda com o número do campo.",
         ].join("\n"),
@@ -1558,8 +1643,9 @@ async function handleAdminEventsFlow({
           "2. Artista",
           "3. Cidade/UF",
           "4. Local",
-          "5. Status",
-          "6. Voltar",
+          "5. Foto do evento",
+          "6. Status",
+          "7. Voltar",
         ].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
           selectedEventId: eventId,
@@ -1609,9 +1695,15 @@ async function handleAdminEventsFlow({
       artistName: "city",
       city: "state",
       state: "venueName",
-      venueName: "startsAt",
+      venueName: "imageUrl",
+      imageUrl: "startsAt",
       startsAt: "status",
-      status: null,
+      status: "entryModel",
+      entryModel: null,
+      singleEntryName: "singleEntryCapacity",
+      singleEntryCapacity: null,
+      multipleEntrySections: null,
+      numberedEntrySections: null,
     };
 
     if (field === "state") {
@@ -1636,6 +1728,23 @@ async function handleAdminEventsFlow({
         };
       }
       draft[field] = startsAt;
+    } else if (field === "imageUrl") {
+      const normalized = normalizeAdminText(text);
+      if (["pular", "sem", "nenhum"].includes(normalized)) {
+        draft[field] = null;
+      } else {
+        const imageUrl = normalizeEventImageUrl(mediaUrl ?? text);
+        if (!imageUrl) {
+          return {
+            reply:
+              "Não consegui identificar a foto. Envie uma imagem pelo WhatsApp ou cole uma URL pública https://...",
+            nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+              draft,
+            }),
+          };
+        }
+        draft[field] = imageUrl;
+      }
     } else if (field === "status") {
       const status = text.trim() === "2" ? "published" : text.trim() === "1" ? "draft" : null;
       if (!status) {
@@ -1646,7 +1755,94 @@ async function handleAdminEventsFlow({
           }),
         };
       }
+      if (status === "published" && !draft.imageUrl) {
+        draft.field = "imageUrl";
+        return {
+          reply:
+            "Para publicar, a foto do evento é obrigatória. Envie a foto agora ou cole uma URL pública https://...",
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
       draft[field] = status;
+    } else if (field === "entryModel") {
+      const option = text.trim();
+      if (option === "1") {
+        draft.entryModel = "single_general";
+        draft.field = "singleEntryName";
+        return {
+          reply: renderCreateEventPrompt("singleEntryName"),
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+      if (option === "2") {
+        draft.entryModel = "multiple_general";
+        draft.field = "multipleEntrySections";
+        return {
+          reply: renderCreateEventPrompt("multipleEntrySections"),
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+      if (option === "3") {
+        draft.entryModel = "numbered";
+        draft.field = "numberedEntrySections";
+        return {
+          reply: renderCreateEventPrompt("numberedEntrySections"),
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+
+      return {
+        reply: renderCreateEventPrompt("entryModel"),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+          draft,
+        }),
+      };
+    } else if (field === "singleEntryCapacity") {
+      const capacity = Number(text.trim().replace(/\D/g, ""));
+      const name = String(draft.singleEntryName ?? "").trim();
+      if (!name || !Number.isInteger(capacity) || capacity <= 0 || capacity > 5000) {
+        return {
+          reply: "Capacidade inválida. Envie um número entre 1 e 5000.",
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+      draft.initialSections = [
+        {
+          name,
+          slug: normalizeSlug(name),
+          hasNumberedSeats: false,
+          capacity,
+          createInventorySeats: true,
+        },
+      ];
+    } else if (field === "multipleEntrySections" || field === "numberedEntrySections") {
+      const numbered = field === "numberedEntrySections";
+      const sections = parseInitialEventSections(text, { numbered });
+      const totalCapacity =
+        sections?.reduce((sum, section) => sum + (section.capacity ?? 0), 0) ?? 0;
+
+      if (!sections || sections.length > 20 || totalCapacity > 5000) {
+        return {
+          reply: numbered
+            ? "Não consegui entender os setores. Envie como: Pista Premium: 300, Camarote: 80"
+            : "Não consegui entender os setores/tipos. Envie como: Pista: 500, Camarote: 100",
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+
+      draft.initialSections = sections;
     } else {
       const value = text.trim();
       if (!value) {
@@ -1701,8 +1897,10 @@ async function handleAdminEventsFlow({
     const city = String(draft.city ?? "").trim();
     const state = String(draft.state ?? "").trim().toUpperCase();
     const venueName = String(draft.venueName ?? "").trim();
+    const imageUrl = normalizeEventImageUrl(String(draft.imageUrl ?? ""));
     const startsAt = String(draft.startsAt ?? "");
     const status = String(draft.status ?? "");
+    const initialSections = getInitialSectionsFromDraft(draft);
 
     if (
       !title ||
@@ -1713,10 +1911,17 @@ async function handleAdminEventsFlow({
       !startsAt ||
       new Date(startsAt).getTime() <= Date.now() ||
       !isEventStatus(status) ||
-      !["draft", "published"].includes(status)
+      !["draft", "published"].includes(status) ||
+      (status === "published" && !imageUrl) ||
+      initialSections.length === 0
     ) {
       return {
-        reply: "Os dados do evento ficaram incompletos ou inválidos. Comece a criação novamente.",
+        reply:
+          status === "published" && !imageUrl
+            ? "Para publicar o evento, cadastre a foto antes. Comece a criação novamente."
+            : initialSections.length === 0
+              ? "Antes de confirmar, defina a estrutura de entradas/lugares. Comece a criação novamente."
+              : "Os dados do evento ficaram incompletos ou inválidos. Comece a criação novamente.",
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
       };
     }
@@ -1727,8 +1932,10 @@ async function handleAdminEventsFlow({
       city,
       state,
       venueName,
+      imageUrl,
       startsAt,
       status,
+      initialSections,
     });
 
     if (!result.ok) {
@@ -1743,8 +1950,12 @@ async function handleAdminEventsFlow({
     return {
       reply: [
         "Evento criado.",
+        `Setores/entradas criados: ${result.createdSectionsCount}`,
+        result.createdSeatsCount
+          ? `Unidades de entrada disponíveis criadas: ${result.createdSeatsCount}`
+          : "Assentos marcados ainda precisam ser cadastrados no menu Setores e assentos.",
         "",
-        "Agora você pode cadastrar setores, assentos e preços.",
+        "Agora você pode cadastrar ou revisar assentos e preços.",
       ].join("\n"),
       nextContext: withAdminEventsContext(baseContext, "admin_event_detail", {
         selectedEventId: result.eventId,
@@ -1758,11 +1969,12 @@ async function handleAdminEventsFlow({
       2: "artist_name",
       3: "city_state",
       4: "venue",
-      5: "status",
+      5: "image_url",
+      6: "status",
     };
     const field = numericOption ? fieldByOption[numericOption] : null;
 
-    if (!field || numericOption === 6) {
+    if (!field || numericOption === 7) {
       return showAdminEventDetails(baseContext, adminEvents.selectedEventId ?? "");
     }
 
@@ -1772,6 +1984,8 @@ async function handleAdminEventsFlow({
           ? "Envie a nova cidade/UF. Ex: Sorocaba/SP"
           : field === "venue"
             ? "Envie o novo nome do local."
+            : field === "image_url"
+              ? "Envie a nova foto do evento ou cole uma URL pública https://..."
             : field === "status"
               ? "Envie o novo status: draft, published, cancelled ou finished."
               : "Envie o novo valor.",
@@ -1820,6 +2034,15 @@ async function handleAdminEventsFlow({
         };
       }
       value = { field, status };
+    } else if (field === "image_url") {
+      const imageUrl = normalizeEventImageUrl(mediaUrl ?? text);
+      if (!imageUrl) {
+        return {
+          reply: "Foto inválida. Envie uma imagem pelo WhatsApp ou cole uma URL pública https://...",
+          nextContext: withAdminEventsContext(baseContext, "admin_event_edit_collecting", adminEvents),
+        };
+      }
+      value = { field, imageUrl };
     } else {
       if (!text.trim()) {
         return {
@@ -1899,7 +2122,24 @@ async function handleAdminEventsFlow({
       }
     } else if (field === "status") {
       const status = String(draft.status ?? "");
-      if (isEventStatus(status)) values = { status };
+      if (isEventStatus(status)) {
+        if (status === "published") {
+          const details = await getAdminEventDetails(eventId);
+          if (!details.ok || !details.event.imageUrl) {
+            return {
+              reply:
+                "Antes de publicar, cadastre a foto do evento em Editar evento > Foto do evento.",
+              nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
+                selectedEventId: eventId,
+              }),
+            };
+          }
+        }
+        values = { status };
+      }
+    } else if (field === "image_url") {
+      const imageUrl = normalizeEventImageUrl(String(draft.imageUrl ?? ""));
+      if (imageUrl) values = { image_url: imageUrl };
     }
 
     if (!values) {
@@ -1949,6 +2189,14 @@ async function handleAdminEventsFlow({
     if (!targetStatus) {
       return {
         reply: renderAdminEventStatusMenu(details.event),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_status_select", adminEvents),
+      };
+    }
+
+    if (targetStatus === "published" && !details.event.imageUrl) {
+      return {
+        reply:
+          "Antes de publicar, cadastre a foto do evento em Editar evento > Foto do evento.",
         nextContext: withAdminEventsContext(baseContext, "admin_event_status_select", adminEvents),
       };
     }
@@ -3482,6 +3730,7 @@ export async function routeTicketMessage({
   customer,
   conversation,
   text,
+  mediaUrl,
 }: RouteTicketMessageInput): Promise<RouteTicketMessageOutput> {
   const previousState = getConversationState(conversation.context);
   const baseContext = {
@@ -3760,7 +4009,7 @@ export async function routeTicketMessage({
         return endAdminSession();
       }
 
-      const eventFlowResult = await handleAdminEventsFlow({ baseContext, text });
+      const eventFlowResult = await handleAdminEventsFlow({ baseContext, text, mediaUrl });
 
       if (eventFlowResult) {
         return eventFlowResult;

@@ -36,6 +36,7 @@ type ParsedIncomingMessage = {
   fromMe: boolean;
   isGroup: boolean;
   messageType: "text" | "image" | "document" | "system";
+  mediaUrl: string | null;
 };
 
 function getHeaderSecret(request: Request): string | null {
@@ -112,6 +113,21 @@ function firstString(...values: unknown[]): string | null {
   return null;
 }
 
+function firstUrl(...values: unknown[]): string | null {
+  const value = firstString(...values);
+
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 function limitedKeys(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return [];
@@ -186,6 +202,23 @@ function extractIncomingMessage(
     imagePayload.caption,
     documentPayload.caption,
   );
+  const mediaUrl = firstUrl(
+    payload.imageUrl,
+    payload.image_url,
+    payload.mediaUrl,
+    payload.media_url,
+    payload.url,
+    message.imageUrl,
+    message.image_url,
+    message.mediaUrl,
+    message.media_url,
+    message.url,
+    imagePayload.imageUrl,
+    imagePayload.image_url,
+    imagePayload.mediaUrl,
+    imagePayload.media_url,
+    imagePayload.url,
+  );
   const providerMessageId = firstString(
     payload.messageId,
     payload.message_id,
@@ -232,6 +265,7 @@ function extractIncomingMessage(
     fromMe,
     isGroup,
     messageType: normalizeMessageType(rawMessageType),
+    mediaUrl,
   };
 }
 
@@ -355,7 +389,7 @@ export async function POST(request: Request) {
     return jsonOk({ received: true, ignored: true, reason: "missing_phone" });
   }
 
-  if (!incoming.text) {
+  if (!incoming.text && !incoming.mediaUrl) {
     const message = firstRecord(
       payloadResult.payload.message,
       payloadResult.payload.data,
@@ -454,7 +488,8 @@ export async function POST(request: Request) {
   const routeResult = await routeTicketMessage({
     customer: customerResult.customer,
     conversation: conversationResult.conversation,
-    text: incoming.text,
+    text: incoming.text ?? incoming.mediaUrl ?? "",
+    mediaUrl: incoming.mediaUrl,
   });
 
   const conversationUpdateResult = await updateConversationAfterMessage({

@@ -16,6 +16,14 @@ export type AdminSeatStatus = "active" | "inactive" | "blocked";
 export type AdminTicketPriceStatus = "active" | "inactive";
 export type AdminTicketType = "full" | "half" | "promotional" | "free";
 
+export type AdminInitialEventSectionInput = {
+  name: string;
+  slug: string;
+  hasNumberedSeats: boolean;
+  capacity: number | null;
+  createInventorySeats: boolean;
+};
+
 export type AdminEventSummary = {
   eventId: string;
   title: string;
@@ -23,6 +31,7 @@ export type AdminEventSummary = {
   city: string;
   state: string;
   status: AdminEventStatus;
+  imageUrl: string | null;
   venueId: string | null;
   venueName: string | null;
   createdAt: string;
@@ -56,6 +65,7 @@ type EventRow = {
   city: string;
   state: string;
   status: AdminEventStatus;
+  image_url: string | null;
   venue_id: string | null;
   created_at: string;
   venues?: {
@@ -198,6 +208,48 @@ export function parseSeatCodesOrRange(value: string) {
   return value.includes(",") ? parseSeatCodes(value) : parseSeatRange(value) ?? parseSeatCodes(value);
 }
 
+export function parseInitialEventSections(value: string, options: { numbered: boolean }) {
+  const parts = value
+    .split(/\n|,/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const sections: AdminInitialEventSectionInput[] = [];
+  const usedSlugs = new Set<string>();
+
+  for (const part of parts) {
+    const [nameRaw, capacityRaw] = part.split(":").map((item) => item.trim());
+    const name = nameRaw?.trim();
+    const capacity = capacityRaw ? Number(capacityRaw.replace(/\D/g, "")) : null;
+    const slugBase = normalizeSlug(name ?? "");
+
+    if (!name || !slugBase) {
+      return null;
+    }
+
+    if (!options.numbered && (!Number.isInteger(capacity) || (capacity ?? 0) <= 0)) {
+      return null;
+    }
+
+    let slug = slugBase;
+    let suffix = 2;
+    while (usedSlugs.has(slug)) {
+      slug = `${slugBase}-${suffix}`;
+      suffix += 1;
+    }
+    usedSlugs.add(slug);
+
+    sections.push({
+      name,
+      slug,
+      hasNumberedSeats: options.numbered,
+      capacity: options.numbered ? capacity : capacity ?? null,
+      createInventorySeats: !options.numbered,
+    });
+  }
+
+  return sections.length ? sections : null;
+}
+
 export function isEventStatus(value: string): value is AdminEventStatus {
   return ["draft", "published", "cancelled", "finished"].includes(value);
 }
@@ -234,6 +286,7 @@ function toSummary(event: EventRow, sessions: SessionRow[]): AdminEventSummary {
     city: event.city,
     state: event.state,
     status: event.status,
+    imageUrl: event.image_url,
     venueId: event.venue_id,
     venueName: event.venues?.name ?? null,
     createdAt: event.created_at,
@@ -251,7 +304,7 @@ export async function listAdminEvents(input: {
   const supabase = getSupabaseAdmin();
   let query = supabase
     .from("events")
-    .select("id, title, artist_name, city, state, status, venue_id, created_at, venues(name)");
+    .select("id, title, artist_name, city, state, status, image_url, venue_id, created_at, venues(name)");
 
   if (input.search?.trim()) {
     query = query.ilike("search_text", `%${input.search.trim().toLowerCase()}%`);
@@ -306,7 +359,7 @@ export async function getAdminEventDetails(eventId: string) {
   const supabase = getSupabaseAdmin();
   const { data: event, error } = await supabase
     .from("events")
-    .select("id, title, artist_name, city, state, status, venue_id, created_at, venues(name)")
+    .select("id, title, artist_name, city, state, status, image_url, venue_id, created_at, venues(name)")
     .eq("id", eventId)
     .maybeSingle<EventRow>();
 
@@ -412,8 +465,10 @@ export async function createAdminEvent(input: {
   city: string;
   state: string;
   venueName: string;
+  imageUrl: string | null;
   startsAt: string;
   status: AdminEventStatus;
+  initialSections: AdminInitialEventSectionInput[];
 }) {
   const venue = await findOrCreateVenue({
     name: input.venueName,
@@ -433,6 +488,7 @@ export async function createAdminEvent(input: {
       artist_name: input.artistName.trim(),
       city: input.city.trim(),
       state: input.state.trim().toUpperCase(),
+      image_url: input.imageUrl,
       venue_id: venue.venueId,
       status: input.status,
     })
@@ -467,12 +523,136 @@ export async function createAdminEvent(input: {
     };
   }
 
+  const initialSectionsResult = await createInitialEventSections({
+    venueId: venue.venueId,
+    sessionId: session.id,
+    sections: input.initialSections,
+  });
+
+  if (!initialSectionsResult.ok) {
+    await supabase.from("events").update({ status: "draft" }).eq("id", event.id);
+
+    return {
+      ok: false as const,
+      error: initialSectionsResult.error,
+      eventId: event.id,
+      partialEventCreated: true as const,
+    };
+  }
+
   return {
     ok: true as const,
     eventId: event.id,
     sessionId: session.id,
     venueId: venue.venueId,
+    createdSectionsCount: initialSectionsResult.createdSectionsCount,
+    createdSeatsCount: initialSectionsResult.createdSeatsCount,
   };
+}
+
+function buildInventorySeatCode(sectionSlug: string, index: number) {
+  const prefix = sectionSlug.replace(/[^a-z0-9]/gi, "").toUpperCase() || "ENTRADA";
+  return `${prefix}-${String(index).padStart(4, "0")}`;
+}
+
+async function getUniqueSectionSlug(venueId: string, desiredSlug: string) {
+  const supabase = getSupabaseAdmin();
+  const { data } = await supabase
+    .from("venue_sections")
+    .select("slug")
+    .eq("venue_id", venueId)
+    .ilike("slug", `${desiredSlug}%`);
+  const existing = new Set(data?.map((section) => section.slug) ?? []);
+
+  if (!existing.has(desiredSlug)) {
+    return desiredSlug;
+  }
+
+  let suffix = 2;
+  while (existing.has(`${desiredSlug}-${suffix}`)) {
+    suffix += 1;
+  }
+
+  return `${desiredSlug}-${suffix}`;
+}
+
+async function createInitialEventSections(input: {
+  venueId: string;
+  sessionId: string;
+  sections: AdminInitialEventSectionInput[];
+}) {
+  const supabase = getSupabaseAdmin();
+  let createdSectionsCount = 0;
+  let createdSeatsCount = 0;
+
+  for (const section of input.sections) {
+    const slug = await getUniqueSectionSlug(input.venueId, section.slug);
+    const { data: createdSection, error: sectionError } = await supabase
+      .from("venue_sections")
+      .insert({
+        venue_id: input.venueId,
+        name: section.name.trim(),
+        slug,
+        has_numbered_seats: section.hasNumberedSeats,
+        capacity: section.capacity,
+        status: "active",
+      })
+      .select("id")
+      .single<{ id: string }>();
+
+    if (sectionError) {
+      return { ok: false as const, error: sectionError };
+    }
+
+    createdSectionsCount += 1;
+
+    if (!section.createInventorySeats || !section.capacity) {
+      continue;
+    }
+
+    const seatRows = Array.from({ length: section.capacity }, (_, index) => {
+      const seatNumber = index + 1;
+
+      return {
+        venue_id: input.venueId,
+        section_id: createdSection.id,
+        row_label: null,
+        seat_number: String(seatNumber),
+        seat_code: buildInventorySeatCode(slug, seatNumber),
+        status: "active",
+      };
+    });
+    const { data: createdSeats, error: seatsError } = await supabase
+      .from("seats")
+      .insert(seatRows)
+      .select("id, section_id");
+
+    if (seatsError) {
+      return { ok: false as const, error: seatsError };
+    }
+
+    const sessionSeatRows =
+      createdSeats?.map((seat) => ({
+        session_id: input.sessionId,
+        seat_id: seat.id,
+        section_id: seat.section_id,
+        status: "available",
+      })) ?? [];
+
+    if (sessionSeatRows.length) {
+      const { error: sessionSeatsError } = await supabase
+        .from("session_seats")
+        .insert(sessionSeatRows);
+
+      if (sessionSeatsError) {
+        return { ok: false as const, error: sessionSeatsError };
+      }
+    }
+
+    createdSeatsCount += sessionSeatRows.length;
+  }
+
+  return { ok: true as const, createdSectionsCount, createdSeatsCount };
 }
 
 export async function updateAdminEvent(
@@ -483,6 +663,7 @@ export async function updateAdminEvent(
     city: string;
     state: string;
     venue_id: string | null;
+    image_url: string | null;
     status: AdminEventStatus;
   }>,
 ) {
