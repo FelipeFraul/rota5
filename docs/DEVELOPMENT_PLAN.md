@@ -58,6 +58,8 @@ Step 13 connects the WhatsApp reservation flow to the existing Mercado Pago chec
 
 Step 13 final audit confirmed there is a single checkout core used by both the protected API route and WhatsApp flow, that payment intents only create links from `reservation_created` or `payment_pending`, and that stale/expired/non-payable reservations reset safely without reusing links. Complementary tests covered `sim` outside payment states, expired `payment_pending`, paid orders, a pending payment from another order, partially reserved reservation items, mismatched totals, Mercado Pago 500 responses, payment context secret hygiene, safe payment copy, and API `401` protection. Mercado Pago was mocked for these tests; a controlled low-value real checkout/payment run is still pending before public operation.
 
+Step 14 adds post-payment WhatsApp ticket delivery. The existing RPC still stores only `tickets.qr_token_hash` and does not return or preserve a raw QR token, so the delivery flow now uses deterministic signed ticket URLs instead of storing token plaintext. Each URL is `/tickets/{payload.signature}`, where the payload contains `ticket_id` and `ticket_code`, and the signature is an HMAC SHA-256 with `TICKET_QR_SECRET`. The Mercado Pago webhook now calls ticket delivery only after `confirm_paid_ticket_order` succeeds and skips delivery when the RPC reports an idempotent already-paid order. Delivery failures after ticket issuance are logged safely and do not roll back payment or tickets; manual resend remains a future step.
+
 The next steps will connect session, sector, seat, reservation, and payment creation around the transactional core.
 
 ## Next Steps
@@ -75,7 +77,7 @@ The next steps will connect session, sector, seat, reservation, and payment crea
 11. Listagem de assentos disponíveis por setor - criado e testado
 12. Reserva transacional de assento pelo WhatsApp - criado e testado
 13. Geração de checkout Mercado Pago pelo WhatsApp - criado e testado
-14. Geração de mapa de assentos
-15. Envio de QR Code pelo WhatsApp
+14. Envio de URL/QR de ingresso pelo WhatsApp após pagamento - criado e testado
+15. Geração de mapa de assentos
 16. Tela/API de validação de portaria
 17. Testes de concorrência, expiração, pagamento duplicado e QR Code usado duas vezes

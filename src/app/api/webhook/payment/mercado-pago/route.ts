@@ -21,6 +21,7 @@ import {
   decimalAmountToCents,
   extractOrderIdFromExternalReference,
 } from "@/lib/tickets/services/payments";
+import { deliverTicketsForOrder } from "@/lib/tickets/services/ticketDelivery";
 
 const MAX_WEBHOOK_BYTES = 256 * 1024;
 const PROVIDER = "mercado_pago";
@@ -31,6 +32,11 @@ type PaymentEventInsert = {
   event_type: string | null;
   provider_payment_id: string | null;
   raw_metadata: Record<string, unknown>;
+};
+
+type ConfirmPaidTicketOrderResult = {
+  idempotent?: boolean;
+  tickets_count?: number;
 };
 
 async function readRawBody(request: Request) {
@@ -318,14 +324,17 @@ export async function POST(request: Request) {
   }
 
   const supabase = getSupabaseAdmin();
-  const { error } = await supabase.rpc("confirm_paid_ticket_order", {
-    p_order_id: orderId,
-    p_provider: PROVIDER,
-    p_provider_payment_id: String(payment.id),
-    p_amount_cents: amountCents,
-    p_paid_at: payment.date_approved ?? new Date().toISOString(),
-    p_raw_metadata: buildPaymentRawMetadata(payment),
-  });
+  const { data: confirmation, error } = await supabase.rpc(
+    "confirm_paid_ticket_order",
+    {
+      p_order_id: orderId,
+      p_provider: PROVIDER,
+      p_provider_payment_id: String(payment.id),
+      p_amount_cents: amountCents,
+      p_paid_at: payment.date_approved ?? new Date().toISOString(),
+      p_raw_metadata: buildPaymentRawMetadata(payment),
+    },
+  );
 
   if (error) {
     logError("Failed to confirm paid ticket order from Mercado Pago webhook", {
@@ -337,11 +346,39 @@ export async function POST(request: Request) {
     return jsonError("Internal Server Error", 500);
   }
 
+  const confirmationResult = confirmation as ConfirmPaidTicketOrderResult | null;
+  const shouldDeliverTickets = confirmationResult?.idempotent !== true;
+  const deliveryResult = shouldDeliverTickets
+    ? await deliverTicketsForOrder(orderId)
+    : null;
+
+  if (deliveryResult && !deliveryResult.ok) {
+    logWarn("Ticket delivery could not be prepared after payment confirmation", {
+      providerPaymentId: paymentId,
+      orderId,
+      reason: deliveryResult.reason,
+    });
+  } else if (deliveryResult && !deliveryResult.sent) {
+    logWarn("Ticket delivery was not sent after payment confirmation", {
+      providerPaymentId: paymentId,
+      orderId,
+      reason: deliveryResult.reason,
+      ticketsCount: deliveryResult.ticketsCount,
+    });
+  } else if (!shouldDeliverTickets) {
+    logInfo("Skipped ticket delivery for idempotent paid order confirmation", {
+      providerPaymentId: paymentId,
+      orderId,
+    });
+  }
+
   await markPaymentEventProcessed(eventInsert.id);
 
   logInfo("Processed approved Mercado Pago payment", {
     providerPaymentId: paymentId,
     orderId,
+    ticketsDelivered:
+      deliveryResult?.ok && deliveryResult.sent ? deliveryResult.ticketsCount : 0,
   });
 
   return jsonOk({ received: true, processed: true });

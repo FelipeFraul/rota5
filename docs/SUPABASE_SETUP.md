@@ -906,6 +906,84 @@ Policy after audit:
 - QR Code, ticket delivery, PDF/image generation, map rendering, gate validation, cancellation, and reservation swap remain out of scope for this step.
 - A controlled low-value real Mercado Pago checkout/payment test is still pending; audit tests used a mocked Mercado Pago preference endpoint to avoid creating real payment links.
 
+## WhatsApp Ticket Delivery After Payment
+
+Step 14 sends ticket information to the customer by WhatsApp after Mercado Pago confirms an approved payment and `public.confirm_paid_ticket_order` succeeds.
+
+### QR/token strategy
+
+The current RPC intentionally does not store raw QR tokens. It writes only `tickets.qr_token_hash`:
+
+```sql
+encode(digest(gen_random_uuid()::text || clock_timestamp()::text || ri.id::text, 'sha256'), 'hex')
+```
+
+That means:
+
+- the RPC does not return a raw QR token;
+- the webhook cannot reconstruct a raw token from `qr_token_hash`;
+- re-sending a QR from that hash alone is impossible.
+
+Step 14 keeps `qr_token_hash` untouched and adds a practical signed URL strategy:
+
+```text
+APP_BASE_URL/tickets/{payload.signature}
+```
+
+The payload contains:
+
+```json
+{
+  "tid": "ticket_id",
+  "code": "ticket_code"
+}
+```
+
+The signature is HMAC SHA-256 over the base64url payload using `TICKET_QR_SECRET`. The raw secret is never logged, sent, or stored. The signed token is deterministic, so the system can resend the same ticket URL later without saving token plaintext.
+
+### Ticket delivery flow
+
+After the Mercado Pago webhook verifies signature, fetches the real approved payment, validates the external reference, and calls `confirm_paid_ticket_order`, it now:
+
+- checks the RPC response;
+- skips WhatsApp delivery when the RPC returns `idempotent = true`;
+- loads issued tickets for the paid order;
+- creates signed ticket URLs;
+- sends one WhatsApp text message with ticket details and links.
+
+The message includes event, date, venue/city/state, section, seat, ticket code, and the signed ticket URL. It says the ticket will be validated at the entrance. It does not mark the ticket as used and does not implement gate validation.
+
+The page `src/app/tickets/[token]/page.tsx` validates the signed token, loads the ticket, and shows a simple safe ticket page. It does not mark the ticket used and is not a gate validation panel.
+
+### Idempotency and failure policy
+
+- Already processed `payment_events` still return duplicate and do not resend tickets.
+- A new webhook for an order that is already paid can make the RPC return `idempotent = true`; in that case the webhook does not resend tickets automatically.
+- If tickets are issued but Z-API delivery fails, the webhook logs a safe warning and still returns success to avoid retrying financial confirmation indefinitely.
+- Manual resend of tickets is a future step.
+
+Step 14 does not:
+
+- implement gate validation;
+- mark tickets as used;
+- create PDF/image tickets;
+- send QR images;
+- implement cancellation or ticket swap;
+- store raw QR tokens.
+
+Step 14 tests used temporary Supabase data with Mercado Pago and Z-API mocked:
+
+- [x] Approved payment calls the RPC, creates tickets, and sends a WhatsApp message with ticket URL.
+- [x] Pending payment does not send a ticket.
+- [x] Duplicate processed payment event does not resend.
+- [x] Already-paid/idempotent order does not duplicate tickets and does not resend automatically.
+- [x] Two tickets in one order are listed in the WhatsApp message.
+- [x] Z-API failure after ticket issuance does not roll back tickets and returns a safe webhook response.
+- [x] Signed token validates, does not contain `TICKET_QR_SECRET`, and URL uses `APP_BASE_URL`.
+- [x] `/tickets/[token]` builds successfully.
+- [x] Payment event metadata does not store QR secret or Mercado Pago access token.
+- [x] Temporary test data cleanup returned empty.
+
 This migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST RPC endpoint on 2026-05-22 14:06:35 -03. A validation-only call returned the expected `customer_id_required` error, confirming that `public.reserve_seats` is available and executable by the service role.
 
 The RPC was fully audited with temporary data on 2026-05-22 14:11:49 -03. The audit confirmed:
