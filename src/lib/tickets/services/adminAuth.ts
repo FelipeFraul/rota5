@@ -245,6 +245,7 @@ export function formatAdminMenu(role: AdminRole) {
     ),
     "",
     "Responda com o número da opção.",
+    "Digite sair para encerrar. Em submenus, use voltar ou cancelar.",
   ].join("\n");
 }
 

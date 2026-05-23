@@ -849,6 +849,7 @@ function renderAdminSubmenu(config: AdminSubmenuConfig) {
     `${config.exitOption}. Sair`,
     "",
     "Responda com o número da opção.",
+    "Digite voltar para voltar ou cancelar para abandonar esta tela.",
   ].join("\n");
 }
 
@@ -900,7 +901,7 @@ function parseAdminMainMenuOption(text: string) {
 function parseAdminSubmenuOption(text: string) {
   const normalized = normalizeAdminText(text);
 
-  if (normalized === "voltar") {
+  if (normalized === "voltar" || normalized === "cancelar") {
     return "back" as const;
   }
 
@@ -1104,6 +1105,20 @@ function isCancelText(text: string) {
   return normalized === "cancelar" || normalized === "voltar";
 }
 
+function withAdminNavigationHint(reply: string) {
+  const normalized = normalizeAdminText(reply);
+
+  if (normalized.includes("voltar") && normalized.includes("cancelar")) {
+    return reply;
+  }
+
+  return [
+    reply,
+    "",
+    "Digite voltar para voltar ou cancelar para abandonar esta tela.",
+  ].join("\n");
+}
+
 function normalizeEventImageUrl(value: string | null | undefined) {
   const trimmed = value?.trim();
 
@@ -1183,10 +1198,10 @@ function renderAdminEventListReply({
   hasMore: boolean;
 }) {
   if (!events.length) {
-    return "Não encontrei eventos cadastrados.\n\nResponda voltar para retornar.";
+    return withAdminNavigationHint("Não encontrei eventos cadastrados.");
   }
 
-  return [
+  return withAdminNavigationHint([
     "Eventos encontrados:",
     "",
     ...events.map((event) =>
@@ -1205,11 +1220,11 @@ function renderAdminEventListReply({
     "",
     'Responda com o número para ver detalhes, "mais" para próxima página ou "voltar".',
     ...(hasMore ? [] : ["Não há mais páginas."]),
-  ].join("\n");
+  ].join("\n"));
 }
 
 function renderAdminEventDetails(event: AdminEventDetails) {
-  return [
+  return withAdminNavigationHint([
     `Evento: ${event.title}`,
     `ID curto: ${event.eventId.slice(0, 8)}`,
     `Status: ${event.status}`,
@@ -1238,7 +1253,7 @@ function renderAdminEventDetails(event: AdminEventDetails) {
     "5. Tirar da publicação/ativar",
     "6. Voltar",
     "7. Sair",
-  ].join("\n");
+  ].join("\n"));
 }
 
 function getAdminEventStatusActions(status: AdminEventStatus) {
@@ -1266,7 +1281,7 @@ function getAdminEventStatusActions(status: AdminEventStatus) {
 function renderAdminEventStatusMenu(event: AdminEventDetails) {
   const actions = getAdminEventStatusActions(event.status);
 
-  return [
+  return withAdminNavigationHint([
     `Evento: ${event.title}`,
     `Status atual: ${event.status}`,
     "",
@@ -1278,7 +1293,7 @@ function renderAdminEventStatusMenu(event: AdminEventDetails) {
             : "Este evento está finalizado. Alteração de publicação não está disponível por aqui.",
         ]),
     `${actions.length + 1}. Voltar`,
-  ].join("\n");
+  ].join("\n"));
 }
 
 function renderCreateEventPrompt(field?: string) {
@@ -1302,7 +1317,7 @@ function renderCreateEventPrompt(field?: string) {
       "Envie os setores com assentos marcados.\nEx: Pista Premium: 300, Camarote: 80\nOs assentos serão cadastrados depois em Setores e assentos.",
   };
 
-  return prompts[field ?? "title"];
+  return withAdminNavigationHint(prompts[field ?? "title"]);
 }
 
 function renderCreateEventSummary(draft: Record<string, unknown>) {
@@ -2276,7 +2291,7 @@ async function showAdminEventSessionsMenu(
 }
 
 function renderAdminSessionsMenu(eventTitle: string) {
-  return [
+  return withAdminNavigationHint([
     `Sessões e datas - ${eventTitle}`,
     "",
     "1. Listar sessões",
@@ -2286,7 +2301,7 @@ function renderAdminSessionsMenu(eventTitle: string) {
     "5. Cancelar sessão",
     "6. Voltar",
     "7. Sair",
-  ].join("\n");
+  ].join("\n"));
 }
 
 async function showAdminEventSectionsMenu(
@@ -2311,7 +2326,7 @@ async function showAdminEventSectionsMenu(
 }
 
 function renderAdminSectionsMenu(eventTitle: string) {
-  return [
+  return withAdminNavigationHint([
     `Setores e assentos - ${eventTitle}`,
     "",
     "1. Listar setores",
@@ -2322,7 +2337,7 @@ function renderAdminSectionsMenu(eventTitle: string) {
     "6. Criar assentos da sessão",
     "7. Voltar",
     "8. Sair",
-  ].join("\n");
+  ].join("\n"));
 }
 
 async function showAdminEventPricesMenu(
@@ -2347,7 +2362,7 @@ async function showAdminEventPricesMenu(
 }
 
 function renderAdminPricesMenu(eventTitle: string) {
-  return [
+  return withAdminNavigationHint([
     `Preços e lotes - ${eventTitle}`,
     "",
     "1. Listar preços",
@@ -2356,7 +2371,7 @@ function renderAdminPricesMenu(eventTitle: string) {
     "4. Ativar/desativar preço",
     "5. Voltar",
     "6. Sair",
-  ].join("\n");
+  ].join("\n"));
 }
 
 async function renderSessionsList(eventId: string) {
@@ -2525,6 +2540,18 @@ async function handleAdminEventOperationalSubmenus({
   if (!eventId) return null;
 
   if (isCancelText(text)) {
+    if (baseContext.state === "admin_event_sessions_menu") {
+      return showAdminEventDetails(baseContext, eventId);
+    }
+
+    if (baseContext.state === "admin_event_sections_menu") {
+      return showAdminEventDetails(baseContext, eventId);
+    }
+
+    if (baseContext.state === "admin_event_prices_menu") {
+      return showAdminEventDetails(baseContext, eventId);
+    }
+
     if (
       baseContext.state === "admin_event_session_create_collecting" ||
       baseContext.state === "admin_event_session_edit_collecting"
@@ -4021,7 +4048,10 @@ export async function routeTicketMessage({
       const eventFlowResult = await handleAdminEventsFlow({ baseContext, text, mediaUrl });
 
       if (eventFlowResult) {
-        return eventFlowResult;
+        return {
+          ...eventFlowResult,
+          reply: withAdminNavigationHint(eventFlowResult.reply),
+        };
       }
     }
 
