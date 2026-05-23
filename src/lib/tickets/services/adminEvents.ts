@@ -138,11 +138,18 @@ export function parseBrazilianDateTime(value: string) {
 }
 
 export function parseMoneyToCents(value: string) {
-  const normalized = value
+  const withoutCurrency = value
     .trim()
     .replace(/^r\$\s*/i, "")
-    .replace(/\./g, "")
-    .replace(",", ".");
+    .replace(/\s+/g, "");
+  const hasComma = withoutCurrency.includes(",");
+  const hasDot = withoutCurrency.includes(".");
+  const normalized =
+    hasComma && hasDot
+      ? withoutCurrency.replace(/\./g, "").replace(",", ".")
+      : hasComma
+        ? withoutCurrency.replace(",", ".")
+        : withoutCurrency;
   const amount = Number(normalized);
 
   if (!Number.isFinite(amount) || amount < 0) {

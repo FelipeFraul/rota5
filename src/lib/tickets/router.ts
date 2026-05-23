@@ -3261,6 +3261,16 @@ export async function routeTicketMessage({
       baseContext.state === "admin_events_list" ||
       baseContext.state.startsWith("admin_event_")
     ) {
+      const isEventFlowExitOption =
+        (baseContext.state === "admin_event_detail" && numericOption === 7) ||
+        (baseContext.state === "admin_event_sessions_menu" && numericOption === 7) ||
+        (baseContext.state === "admin_event_sections_menu" && numericOption === 8) ||
+        (baseContext.state === "admin_event_prices_menu" && numericOption === 6);
+
+      if (isEventFlowExitOption) {
+        return endAdminSession();
+      }
+
       const eventFlowResult = await handleAdminEventsFlow({ baseContext, text });
 
       if (eventFlowResult) {

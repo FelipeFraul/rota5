@@ -78,6 +78,8 @@ Step 19 adds the secure backend foundation for WhatsApp admin access. The reserv
 
 Step 20 implements the WhatsApp `Admin > Eventos` module for `root` and `admin` roles. The event submenu can list event pages, show event details, create events with venue reuse and first session, edit event title/artist/city/venue/status, pause/publish/cancel events without physical deletion, manage sessions, manage venue sections and seats, create missing `session_seats`, and create/edit/activate ticket prices. Mutating flows collect structured input, show a summary, and require `CONFIRMAR`; cancellation-sensitive paths require explicit text such as `CANCELAR EVENTO` or `CANCELAR SESSÃO`. The module uses Supabase query builder services, not raw SQL or frontend secrets, and does not touch payments, orders, reservations, tickets, or gate validation outside the catalog tables needed for event administration. Roles without `manage_events` remain blocked.
 
+Step 20 audit used temporary real Supabase data with the `TEST_ADMIN_EVENTS_FLOW` prefix to validate venue reuse, event/session creation, event edits, draft/published status transitions, session edit/cancel status changes, section creation/editing, duplicate slug protection, manual seat creation, duplicate seat protection, seat blocking, `session_seats` creation as `available`, duplicate `session_seats` protection, price creation/edit/deactivation, duplicate price protection, buyer-flow discoverability for a published/sales-open/available/active-price catalog, and cleanup. The audit also fixed money parsing so both `10,90` and `10.90` become `1090` cents, and fixed numeric `Sair` options inside event submenus so they revoke the admin session instead of falling through.
+
 ## Next Steps
 
 1. Fundação do projeto

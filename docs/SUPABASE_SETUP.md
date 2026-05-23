@@ -1229,6 +1229,8 @@ admin_event_price_edit_collecting
 
 Input is parsed and validated server-side. Dates use the Brazilian format `DD/MM/YYYY HH:mm`; money values are converted to cents before storage; slugs are normalized; seat lists accept comma-separated codes or simple ranges. Errors returned to WhatsApp are controlled and do not expose SQL details.
 
+The final module audit created and removed real temporary data with prefix `TEST_ADMIN_EVENTS_FLOW`. It confirmed that catalog writes stay scoped to venue/event/session/section/seat/session-seat/price tables, that `session_seats` are only inserted as `available`, that duplicate structural records are blocked by existing constraints, that `10,90` and `10.90` both parse to `1090` cents, and that a fully configured published event is visible to the normal buyer search path. Cleanup confirmed no remaining `TEST_ADMIN_EVENTS_FLOW` event or venue rows.
+
 ### Gate Page And Scanner
 
 Page:
