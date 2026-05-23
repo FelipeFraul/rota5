@@ -24,6 +24,7 @@ const SECRET_HEADER_NAMES = [
   "x-webhook-secret",
   "authorization",
 ];
+const SECRET_QUERY_NAMES = ["zapi_webhook_secret", "webhook_secret"];
 
 type ZapiWebhookPayload = Record<string, unknown>;
 type ParsedIncomingMessage = {
@@ -52,6 +53,24 @@ function getHeaderSecret(request: Request): string | null {
   }
 
   return null;
+}
+
+function getQuerySecret(request: Request): string | null {
+  const url = new URL(request.url);
+
+  for (const queryName of SECRET_QUERY_NAMES) {
+    const value = url.searchParams.get(queryName)?.trim();
+
+    if (value) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function getRequestSecret(request: Request): string | null {
+  return getHeaderSecret(request) ?? getQuerySecret(request);
 }
 
 function isSecretMatch(received: string | null, expected: string) {
@@ -275,9 +294,9 @@ async function readJsonPayload(request: Request) {
 
 export async function POST(request: Request) {
   const webhookSecret = process.env.ZAPI_WEBHOOK_SECRET;
-  const headerSecret = getHeaderSecret(request);
+  const requestSecret = getRequestSecret(request);
 
-  if (!webhookSecret || !isSecretMatch(headerSecret, webhookSecret)) {
+  if (!webhookSecret || !isSecretMatch(requestSecret, webhookSecret)) {
     logWarn("Rejected Z-API webhook with invalid secret");
     return unauthorized();
   }

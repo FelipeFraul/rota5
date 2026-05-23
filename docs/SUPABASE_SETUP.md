@@ -279,15 +279,23 @@ The WhatsApp webhook route is:
 
 `POST /api/webhook/zapi`
 
-Production URL:
+Production URL when the provider can send custom headers:
 
 `https://site-phi-seven-72.vercel.app/api/webhook/zapi`
 
-Required header, using the same secret validation already used by the project:
+Preferred header:
 
 - `x-zapi-webhook-secret: <ZAPI_WEBHOOK_SECRET>`
 
 Accepted alternative headers are `x-webhook-secret` and `Authorization: Bearer <secret>`.
+
+If the Z-API panel does not support custom headers, configure the receive-message webhook URL with the secret query parameter:
+
+```text
+https://site-phi-seven-72.vercel.app/api/webhook/zapi?zapi_webhook_secret=<ZAPI_WEBHOOK_SECRET>
+```
+
+The fallback query parameter is accepted only for the Z-API webhook compatibility case. Do not paste this URL in public issues, logs, screenshots, or documentation with the real secret value.
 
 Processing rules:
 
