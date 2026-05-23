@@ -125,6 +125,7 @@ export type TicketConversationAdmin = {
 
 export type TicketConversationAdminEvents = {
   page?: number;
+  hasMore?: boolean;
   lastEvents?: Array<{
     option: number;
     eventId: string;

@@ -42,36 +42,47 @@ import {
 } from "@/lib/tickets/services/reservations";
 import {
   createAdminEvent,
-  createAdminPrice,
-  createAdminSeats,
-  createAdminSection,
-  createAdminSession as createEventAdminSession,
-  createMissingSessionSeats,
   findOrCreateVenue,
   getAdminEventDetails,
   isEventStatus,
-  isSessionStatus,
   isTicketType,
   listAdminEvents,
-  listAdminPrices,
-  listAdminSections,
   normalizeSlug,
   parseBrazilianDateTime,
-  parseMoneyToCents,
-  parseSeatCodesOrRange,
   updateAdminEvent,
-  updateAdminPrice,
-  updateAdminSeatStatuses,
-  updateAdminSection,
-  updateAdminSession,
   type AdminEventDetails,
   type AdminEventStatus,
-  type AdminSectionStatus,
-  type AdminSeatStatus,
-  type AdminSessionStatus,
-  type AdminTicketPriceStatus,
   type AdminTicketType,
 } from "@/lib/tickets/services/adminEvents";
+import {
+  createAdminPrice,
+  listAdminPrices,
+  parseMoneyToCents,
+  updateAdminPrice,
+  type AdminTicketPriceStatus,
+} from "@/lib/tickets/services/adminPrices";
+import {
+  createAdminSeats,
+  createMissingSessionSeats,
+  getAdminSeatOperationalUsage,
+  parseSeatCodesOrRange,
+  updateAdminSeatStatuses,
+  type AdminSeatStatus,
+} from "@/lib/tickets/services/adminSeats";
+import {
+  createAdminSection,
+  getAdminSectionUsage,
+  listAdminSections,
+  updateAdminSection,
+  type AdminSectionStatus,
+} from "@/lib/tickets/services/adminSections";
+import {
+  createAdminSession as createEventAdminSession,
+  getAdminSessionCatalogCounts,
+  getAdminSessionUsage,
+  updateAdminSession,
+  type AdminSessionStatus,
+} from "@/lib/tickets/services/adminSessions";
 import {
   createGateSession,
   normalizeGatePhone,
@@ -839,6 +850,10 @@ function renderAdminSubmenu(config: AdminSubmenuConfig) {
   ].join("\n");
 }
 
+function renderAdminEventsMenu() {
+  return renderAdminSubmenu(ADMIN_SUBMENUS.admin_events_menu);
+}
+
 function getAdminSubmenuByMainOption(option: number) {
   return Object.values(ADMIN_SUBMENUS).find(
     (submenu) => submenu.mainOption === option,
@@ -1160,6 +1175,46 @@ function renderAdminEventDetails(event: AdminEventDetails) {
   ].join("\n");
 }
 
+function getAdminEventStatusActions(status: AdminEventStatus) {
+  if (status === "published") {
+    return [
+      {
+        option: 1,
+        status: "draft" as const,
+        label: "Voltar para rascunho / tirar da publicação",
+      },
+      { option: 2, status: "cancelled" as const, label: "Cancelar evento" },
+    ];
+  }
+
+  if (status === "draft") {
+    return [
+      { option: 1, status: "published" as const, label: "Ativar/publicar" },
+      { option: 2, status: "cancelled" as const, label: "Cancelar evento" },
+    ];
+  }
+
+  return [];
+}
+
+function renderAdminEventStatusMenu(event: AdminEventDetails) {
+  const actions = getAdminEventStatusActions(event.status);
+
+  return [
+    `Evento: ${event.title}`,
+    `Status atual: ${event.status}`,
+    "",
+    ...(actions.length
+      ? actions.map((action) => `${action.option}. ${action.label}`)
+      : [
+          event.status === "cancelled"
+            ? "Este evento está cancelado. Reativação não está disponível por aqui."
+            : "Este evento está finalizado. Alteração de publicação não está disponível por aqui.",
+        ]),
+    `${actions.length + 1}. Voltar`,
+  ].join("\n");
+}
+
 function renderCreateEventPrompt(field?: string) {
   const prompts: Record<string, string> = {
     title: "Qual o nome/título do evento?",
@@ -1186,6 +1241,40 @@ function renderCreateEventSummary(draft: Record<string, unknown>) {
     `Status: ${draft.status}`,
     "",
     "Responda CONFIRMAR para criar ou CANCELAR para abandonar.",
+  ].join("\n");
+}
+
+function renderEditEventSummary(draft: Record<string, unknown>) {
+  const field = String(draft.field ?? "");
+  const labelByField: Record<string, string> = {
+    title: "Título",
+    artist_name: "Artista",
+    city_state: "Cidade/UF",
+    venue: "Local",
+    status: "Status",
+  };
+  const value =
+    field === "city_state"
+      ? `${draft.city}/${draft.state}`
+      : field === "venue"
+        ? draft.venueName
+        : field === "status"
+          ? draft.status
+          : field === "title"
+            ? draft.title
+            : field === "artist_name"
+              ? draft.artist_name
+              : "";
+
+  return [
+    "Confirmar alteração do evento?",
+    "",
+    `Campo: ${labelByField[field] ?? field}`,
+    `Novo valor: ${value}`,
+    "",
+    field === "status" && draft.status === "cancelled"
+      ? "Digite CANCELAR EVENTO para confirmar o cancelamento. Não haverá exclusão física nem estorno automático."
+      : "Responda CONFIRMAR ou CANCELAR.",
   ].join("\n");
 }
 
@@ -1233,6 +1322,7 @@ async function buildAdminEventsListContext(
     nextContext: withAdminEventsContext(baseContext, "admin_events_list", {
       ...getAdminEventsContext(baseContext),
       page: result.page,
+      hasMore: result.hasMore,
       lastEvents: events.map((event) => ({
         option: event.option,
         eventId: event.eventId,
@@ -1304,7 +1394,7 @@ async function handleAdminEventsFlow({
 
   if (normalized === "menu" || normalized === "voltar") {
     return {
-      reply: renderAdminSubmenu(ADMIN_SUBMENUS.admin_events_menu),
+      reply: renderAdminEventsMenu(),
       nextContext: withAdminEventsContext(baseContext, "admin_events_menu", adminEvents),
     };
   }
@@ -1362,13 +1452,24 @@ async function handleAdminEventsFlow({
     }
 
     return {
-      reply: renderAdminSubmenu(ADMIN_SUBMENUS.admin_events_menu),
+      reply: renderAdminEventsMenu(),
       nextContext: withAdminEventsContext(baseContext, "admin_events_menu", adminEvents),
     };
   }
 
   if (baseContext.state === "admin_events_list") {
     if (normalized === "mais") {
+      if (adminEvents.hasMore === false) {
+        return {
+          reply: [
+            "Não há mais páginas de eventos.",
+            "",
+            'Responda com o número para ver detalhes ou "voltar".',
+          ].join("\n"),
+          nextContext: withAdminEventsContext(baseContext, "admin_events_list", adminEvents),
+        };
+      }
+
       return buildAdminEventsListContext(baseContext, (adminEvents.page ?? 0) + 1);
     }
 
@@ -1418,15 +1519,7 @@ async function handleAdminEventsFlow({
       }
 
       return {
-        reply: [
-          `Evento: ${details.event.title}`,
-          `Status atual: ${details.event.status}`,
-          "",
-          "1. Voltar para rascunho / tirar da publicação",
-          "2. Ativar/publicar",
-          "3. Cancelar evento",
-          "4. Voltar",
-        ].join("\n"),
+        reply: renderAdminEventStatusMenu(details.event),
         nextContext: withAdminEventsContext(baseContext, "admin_event_status_select", {
           selectedEventId: eventId,
         }),
@@ -1453,7 +1546,7 @@ async function handleAdminEventsFlow({
 
     if (!eventId) {
       return {
-        reply: renderAdminSubmenu(ADMIN_SUBMENUS.admin_events_menu),
+        reply: renderAdminEventsMenu(),
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
       };
     }
@@ -1478,13 +1571,17 @@ async function handleAdminEventsFlow({
     if (numericOption === 3) return showAdminEventSectionsMenu(baseContext, eventId);
     if (numericOption === 4) return showAdminEventPricesMenu(baseContext, eventId);
     if (numericOption === 5) {
+      const details = await getAdminEventDetails(eventId);
+
+      if (!details.ok) {
+        return {
+          reply: "Não encontrei esse evento.",
+          nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
+        };
+      }
+
       return {
-        reply: [
-          "1. Voltar para rascunho / tirar da publicação",
-          "2. Ativar/publicar",
-          "3. Cancelar evento",
-          "4. Voltar",
-        ].join("\n"),
+        reply: renderAdminEventStatusMenu(details.event),
         nextContext: withAdminEventsContext(baseContext, "admin_event_status_select", {
           selectedEventId: eventId,
         }),
@@ -1599,19 +1696,46 @@ async function handleAdminEventsFlow({
     }
 
     const draft = adminEvents.draft ?? {};
+    const title = String(draft.title ?? "").trim();
+    const artistName = String(draft.artistName ?? "").trim();
+    const city = String(draft.city ?? "").trim();
+    const state = String(draft.state ?? "").trim().toUpperCase();
+    const venueName = String(draft.venueName ?? "").trim();
+    const startsAt = String(draft.startsAt ?? "");
+    const status = String(draft.status ?? "");
+
+    if (
+      !title ||
+      !artistName ||
+      !city ||
+      !/^[A-Z]{2}$/.test(state) ||
+      !venueName ||
+      !startsAt ||
+      new Date(startsAt).getTime() <= Date.now() ||
+      !isEventStatus(status) ||
+      !["draft", "published"].includes(status)
+    ) {
+      return {
+        reply: "Os dados do evento ficaram incompletos ou inválidos. Comece a criação novamente.",
+        nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
+      };
+    }
+
     const result = await createAdminEvent({
-      title: String(draft.title),
-      artistName: String(draft.artistName),
-      city: String(draft.city),
-      state: String(draft.state),
-      venueName: String(draft.venueName),
-      startsAt: String(draft.startsAt),
-      status: String(draft.status) as AdminEventStatus,
+      title,
+      artistName,
+      city,
+      state,
+      venueName,
+      startsAt,
+      status,
     });
 
     if (!result.ok) {
       return {
-        reply: "Não consegui criar o evento agora. Verifique os dados e tente novamente.",
+        reply: result.partialEventCreated
+          ? "O evento foi salvo como rascunho, mas não consegui criar a sessão inicial. Entre em Sessões e datas para cadastrar a sessão antes de publicar."
+          : "Não consegui criar o evento agora. Verifique os dados e tente novamente.",
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
       };
     }
@@ -1664,7 +1788,7 @@ async function handleAdminEventsFlow({
 
     if (!eventId || !field) {
       return {
-        reply: renderAdminSubmenu(ADMIN_SUBMENUS.admin_events_menu),
+        reply: renderAdminEventsMenu(),
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
       };
     }
@@ -1678,26 +1802,15 @@ async function handleAdminEventsFlow({
           nextContext: withAdminEventsContext(baseContext, "admin_event_edit_collecting", adminEvents),
         };
       }
-      value = { city, state: state.toUpperCase() };
+      value = { field, city, state: state.toUpperCase() };
     } else if (field === "venue") {
-      const details = await getAdminEventDetails(eventId);
-      if (!details.ok) {
-        return null;
-      }
-      const venue = await findOrCreateVenue({
-        name: text,
-        city: details.event.city,
-        state: details.event.state,
-      });
-      if (!venue.ok) {
+      if (!text.trim()) {
         return {
-          reply: "Não consegui preparar esse local agora.",
-          nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
-            selectedEventId: eventId,
-          }),
+          reply: "Valor vazio. Envie novamente.",
+          nextContext: withAdminEventsContext(baseContext, "admin_event_edit_collecting", adminEvents),
         };
       }
-      value = { venue_id: venue.venueId };
+      value = { field, venueName: text.trim() };
     } else if (field === "status") {
       const status = normalizeAdminText(text);
       if (!isEventStatus(status)) {
@@ -1706,7 +1819,7 @@ async function handleAdminEventsFlow({
           nextContext: withAdminEventsContext(baseContext, "admin_event_edit_collecting", adminEvents),
         };
       }
-      value = { status };
+      value = { field, status };
     } else {
       if (!text.trim()) {
         return {
@@ -1714,17 +1827,11 @@ async function handleAdminEventsFlow({
           nextContext: withAdminEventsContext(baseContext, "admin_event_edit_collecting", adminEvents),
         };
       }
-      value = { [field]: text.trim() };
+      value = { field, [field]: text.trim() };
     }
 
     return {
-      reply: [
-        "Confirmar alteração?",
-        "",
-        JSON.stringify(value),
-        "",
-        "Responda CONFIRMAR ou CANCELAR.",
-      ].join("\n"),
+      reply: renderEditEventSummary(value),
       nextContext: withAdminEventsContext(baseContext, "admin_event_edit_confirm", {
         selectedEventId: eventId,
         draft: value,
@@ -1737,13 +1844,74 @@ async function handleAdminEventsFlow({
     if (!eventId || isCancelText(text)) {
       return showAdminEventDetails(baseContext, eventId ?? "");
     }
-    if (!isConfirmText(text)) {
+    const draft = adminEvents.draft ?? {};
+    const field = String(draft.field ?? "");
+    const confirmed =
+      field === "status" && draft.status === "cancelled"
+        ? normalizeAdminText(text) === "cancelar evento"
+        : isConfirmText(text);
+
+    if (!confirmed) {
       return {
-        reply: "Responda CONFIRMAR ou CANCELAR.",
+        reply:
+          field === "status" && draft.status === "cancelled"
+            ? "Digite CANCELAR EVENTO para confirmar ou CANCELAR para abandonar."
+            : "Responda CONFIRMAR ou CANCELAR.",
         nextContext: withAdminEventsContext(baseContext, "admin_event_edit_confirm", adminEvents),
       };
     }
-    const result = await updateAdminEvent(eventId, adminEvents.draft ?? {});
+
+    let values: Parameters<typeof updateAdminEvent>[1] | null = null;
+
+    if (field === "title") {
+      const title = String(draft.title ?? "").trim();
+      if (title) values = { title };
+    } else if (field === "artist_name") {
+      const artistName = String(draft.artist_name ?? "").trim();
+      if (artistName) values = { artist_name: artistName };
+    } else if (field === "city_state") {
+      const city = String(draft.city ?? "").trim();
+      const state = String(draft.state ?? "").trim().toUpperCase();
+      if (city && /^[A-Z]{2}$/.test(state)) values = { city, state };
+    } else if (field === "venue") {
+      const venueName = String(draft.venueName ?? "").trim();
+      const details = await getAdminEventDetails(eventId);
+
+      if (!details.ok || !venueName) {
+        values = null;
+      } else {
+        const venue = await findOrCreateVenue({
+          name: venueName,
+          city: details.event.city,
+          state: details.event.state,
+        });
+
+        if (!venue.ok) {
+          return {
+            reply: "Não consegui preparar esse local agora.",
+            nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
+              selectedEventId: eventId,
+            }),
+          };
+        }
+
+        values = { venue_id: venue.venueId };
+      }
+    } else if (field === "status") {
+      const status = String(draft.status ?? "");
+      if (isEventStatus(status)) values = { status };
+    }
+
+    if (!values) {
+      return {
+        reply: "Os dados da alteração ficaram inválidos. Comece a edição novamente.",
+        nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
+          selectedEventId: eventId,
+        }),
+      };
+    }
+
+    const result = await updateAdminEvent(eventId, values);
     return result.ok
       ? showAdminEventDetails(baseContext, eventId)
       : {
@@ -1756,21 +1924,31 @@ async function handleAdminEventsFlow({
 
   if (baseContext.state === "admin_event_status_select") {
     const eventId = adminEvents.selectedEventId;
-    if (!eventId || numericOption === 4) {
+    if (!eventId) {
       return showAdminEventDetails(baseContext, eventId ?? "");
     }
+    const details = await getAdminEventDetails(eventId);
+
+    if (!details.ok) {
+      return {
+        reply: "Não encontrei esse evento.",
+        nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
+      };
+    }
+
+    const actions = getAdminEventStatusActions(details.event.status);
+    const backOption = actions.length + 1;
+
+    if (numericOption === backOption) {
+      return showAdminEventDetails(baseContext, eventId);
+    }
+
     const targetStatus =
-      numericOption === 1
-        ? "draft"
-        : numericOption === 2
-          ? "published"
-          : numericOption === 3
-            ? "cancelled"
-            : null;
+      actions.find((action) => action.option === numericOption)?.status ?? null;
 
     if (!targetStatus) {
       return {
-        reply: "Escolha 1, 2, 3 ou 4.",
+        reply: renderAdminEventStatusMenu(details.event),
         nextContext: withAdminEventsContext(baseContext, "admin_event_status_select", adminEvents),
       };
     }
@@ -1833,21 +2011,25 @@ async function showAdminEventSessionsMenu(
   }
 
   return {
-    reply: [
-      `Sessões e datas - ${details.event.title}`,
-      "",
-      "1. Listar sessões",
-      "2. Criar sessão",
-      "3. Editar data/hora de sessão",
-      "4. Pausar/abrir vendas da sessão",
-      "5. Cancelar sessão",
-      "6. Voltar",
-      "7. Sair",
-    ].join("\n"),
+    reply: renderAdminSessionsMenu(details.event.title),
     nextContext: withAdminEventsContext(baseContext, "admin_event_sessions_menu", {
       selectedEventId: eventId,
     }),
   };
+}
+
+function renderAdminSessionsMenu(eventTitle: string) {
+  return [
+    `Sessões e datas - ${eventTitle}`,
+    "",
+    "1. Listar sessões",
+    "2. Criar sessão",
+    "3. Editar data/hora de sessão",
+    "4. Pausar/abrir vendas da sessão",
+    "5. Cancelar sessão",
+    "6. Voltar",
+    "7. Sair",
+  ].join("\n");
 }
 
 async function showAdminEventSectionsMenu(
@@ -1864,22 +2046,26 @@ async function showAdminEventSectionsMenu(
   }
 
   return {
-    reply: [
-      `Setores e assentos - ${details.event.title}`,
-      "",
-      "1. Listar setores",
-      "2. Criar setor",
-      "3. Editar setor",
-      "4. Cadastrar assentos em lote",
-      "5. Bloquear/desbloquear assentos",
-      "6. Criar assentos da sessão",
-      "7. Voltar",
-      "8. Sair",
-    ].join("\n"),
+    reply: renderAdminSectionsMenu(details.event.title),
     nextContext: withAdminEventsContext(baseContext, "admin_event_sections_menu", {
       selectedEventId: eventId,
     }),
   };
+}
+
+function renderAdminSectionsMenu(eventTitle: string) {
+  return [
+    `Setores e assentos - ${eventTitle}`,
+    "",
+    "1. Listar setores",
+    "2. Criar setor",
+    "3. Editar setor",
+    "4. Cadastrar assentos em lote",
+    "5. Bloquear/desbloquear assentos",
+    "6. Criar assentos da sessão",
+    "7. Voltar",
+    "8. Sair",
+  ].join("\n");
 }
 
 async function showAdminEventPricesMenu(
@@ -1896,25 +2082,30 @@ async function showAdminEventPricesMenu(
   }
 
   return {
-    reply: [
-      `Preços e lotes - ${details.event.title}`,
-      "",
-      "1. Listar preços",
-      "2. Criar preço/lote",
-      "3. Editar preço/lote",
-      "4. Ativar/desativar preço",
-      "5. Voltar",
-      "6. Sair",
-    ].join("\n"),
+    reply: renderAdminPricesMenu(details.event.title),
     nextContext: withAdminEventsContext(baseContext, "admin_event_prices_menu", {
       selectedEventId: eventId,
     }),
   };
 }
 
+function renderAdminPricesMenu(eventTitle: string) {
+  return [
+    `Preços e lotes - ${eventTitle}`,
+    "",
+    "1. Listar preços",
+    "2. Criar preço/lote",
+    "3. Editar preço/lote",
+    "4. Ativar/desativar preço",
+    "5. Voltar",
+    "6. Sair",
+  ].join("\n");
+}
+
 async function renderSessionsList(eventId: string) {
   const details = await getAdminEventDetails(eventId);
   if (!details.ok) return "Não encontrei esse evento.";
+  const counts = await getAdminSessionCatalogCounts(details.event.sessions);
 
   return [
     `Sessões de ${details.event.title}:`,
@@ -1922,7 +2113,13 @@ async function renderSessionsList(eventId: string) {
     ...(details.event.sessions.length
       ? details.event.sessions.map(
           (session, index) =>
-            `${index + 1}. ${formatDateTime(session.startsAt)} - ${session.status}`,
+            [
+              `${index + 1}. ${formatDateTime(session.startsAt)} - ${session.status}`,
+              `   Local: ${session.venueName ?? details.event.venueName ?? "não definido"}`,
+              counts.ok
+                ? `   Setores: ${counts.getSectionsCount(session.venueId)} | Preços: ${counts.getPricesCount(session.sessionId)}`
+                : "   Setores/preços: não consegui calcular agora",
+            ].join("\n"),
         )
       : ["Nenhuma sessão cadastrada."]),
   ].join("\n");
@@ -1957,52 +2154,89 @@ async function renderSectionsList(eventId: string, sessionId?: string) {
 async function getAdminPriceListForEvent(eventId: string) {
   const details = await getAdminEventDetails(eventId);
   if (!details.ok) return { ok: false as const, reply: "Não encontrei esse evento." };
-  const firstSession = details.event.sessions[0];
-  if (!firstSession) {
+  if (!details.event.sessions.length) {
     return { ok: false as const, reply: "Esse evento ainda não tem sessões." };
   }
-  const result = await listAdminPrices({ sessionId: firstSession.sessionId });
-  if (!result.ok) return { ok: false as const, reply: "Não consegui listar preços." };
-  const prices = result.prices.map((price, index) => {
-    const rawSection = price.venue_sections as
-      | { name?: string }
-      | Array<{ name?: string }>
-      | null
-      | undefined;
-    const sectionName = Array.isArray(rawSection)
-      ? rawSection[0]?.name
-      : rawSection?.name;
+  const priceGroups = await Promise.all(
+    details.event.sessions.map(async (session) => {
+      const result = await listAdminPrices({ sessionId: session.sessionId });
+      return { session, result };
+    }),
+  );
+  const failed = priceGroups.find((group) => !group.result.ok);
+  if (failed) return { ok: false as const, reply: "Não consegui listar preços." };
+  let option = 1;
+  const prices = priceGroups.flatMap(({ session, result }) =>
+    (result.ok ? result.prices : []).map((price) => {
+      const rawSection = price.venue_sections as
+        | { name?: string }
+        | Array<{ name?: string }>
+        | null
+        | undefined;
+      const sectionName = Array.isArray(rawSection)
+        ? rawSection[0]?.name
+        : rawSection?.name;
 
-    return {
-      option: index + 1,
-      priceId: String(price.id),
-      sectionName: sectionName ?? String(price.section_id),
-      label: String(price.label),
-      ticketType: String(price.ticket_type),
-      priceCents: Number(price.price_cents),
-      feeCents: Number(price.fee_cents),
-      status: String(price.status),
-    };
-  });
+      return {
+        option: option++,
+        priceId: String(price.id),
+        sessionId: session.sessionId,
+        sessionStartsAt: session.startsAt,
+        sectionName: sectionName ?? String(price.section_id),
+        label: String(price.label),
+        ticketType: String(price.ticket_type),
+        priceCents: Number(price.price_cents),
+        feeCents: Number(price.fee_cents),
+        salesStartAt: price.sales_start_at ? String(price.sales_start_at) : null,
+        salesEndAt: price.sales_end_at ? String(price.sales_end_at) : null,
+        status: String(price.status),
+      };
+    }),
+  );
 
   return {
     ok: true as const,
     prices,
     reply: [
-    `Preços da sessão ${formatDateTime(firstSession.startsAt)}:`,
+    `Preços de ${details.event.title}:`,
     "",
     ...(prices.length
       ? prices.map((price) =>
           [
             `${price.option}. ${price.label} (${price.ticketType})`,
+            `   Sessão: ${formatDateTime(price.sessionStartsAt)}`,
             `   Setor: ${price.sectionName}`,
             `   Valor: ${formatCurrencyFromCents(price.priceCents)} + ${formatCurrencyFromCents(price.feeCents)} taxa`,
+            `   Janela: ${price.salesStartAt ? formatDateTime(price.salesStartAt) : "início livre"} até ${price.salesEndAt ? formatDateTime(price.salesEndAt) : "fim livre"}`,
             `   Status: ${price.status}`,
           ].join("\n"),
         )
       : ["Nenhum preço cadastrado."]),
   ].join("\n"),
   };
+}
+
+function parseOptionalAdminDateTime(value: string | undefined) {
+  const normalized = normalizeAdminText(value ?? "");
+  if (!normalized || normalized === "-" || normalized === "nenhum" || normalized === "sem") {
+    return { ok: true as const, value: null };
+  }
+
+  const parsed = parseBrazilianDateTime(value ?? "");
+  return parsed ? { ok: true as const, value: parsed } : { ok: false as const };
+}
+
+function parseAdminTicketType(value: string) {
+  const normalized = normalizeAdminText(value);
+  const aliases: Record<string, AdminTicketType> = {
+    promo: "promotional",
+    promocional: "promotional",
+    courtesy: "free",
+    cortesia: "free",
+  };
+  const ticketType = aliases[normalized] ?? normalized;
+
+  return isTicketType(ticketType) ? ticketType : null;
 }
 
 function getDraftArray<T>(draft: Record<string, unknown> | undefined, key: string) {
@@ -2066,7 +2300,8 @@ async function handleAdminEventOperationalSubmenus({
     }
     if (numericOption === 2) {
       return {
-        reply: "Envie data/hora e status da nova sessão. Ex: 10/06/2026 22:00 | sales_open",
+        reply:
+          "Envie data/hora e status da nova sessão. Ex: 10/06/2026 22:00 | sales_open\nStatus inicial permitido: scheduled ou sales_open.",
         nextContext: withAdminEventsContext(baseContext, "admin_event_session_create_collecting", adminEvents),
       };
     }
@@ -2089,7 +2324,8 @@ async function handleAdminEventOperationalSubmenus({
           await renderSessionsList(eventId),
           "",
           "Envie: número da sessão | status. Ex: 1 | sales_open",
-          "Status: scheduled, sales_open, sales_closed, cancelled ou finished.",
+          "Status: scheduled, sales_open ou sales_closed.",
+          "Para cancelar, use a opção Cancelar sessão.",
         ].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_session_edit_collecting", {
           ...adminEvents,
@@ -2149,9 +2385,13 @@ async function handleAdminEventOperationalSubmenus({
     const statusText = normalizeAdminText(statusTextRaw ?? "scheduled");
     const details = await getAdminEventDetails(eventId);
     if (!details.ok) return null;
-    if (!startsAt || new Date(startsAt).getTime() <= Date.now() || !isSessionStatus(statusText)) {
+    if (
+      !startsAt ||
+      new Date(startsAt).getTime() <= Date.now() ||
+      !["scheduled", "sales_open"].includes(statusText)
+    ) {
       return {
-        reply: "Dados inválidos. Use: 10/06/2026 22:00 | sales_open",
+        reply: "Dados inválidos. Use: 10/06/2026 22:00 | sales_open ou scheduled.",
         nextContext: withAdminEventsContext(baseContext, "admin_event_session_create_collecting", adminEvents),
       };
     }
@@ -2288,6 +2528,30 @@ async function handleAdminEventOperationalSubmenus({
           ),
         };
       }
+      const usage = await getAdminSessionUsage(session.sessionId);
+      if (!usage.ok) {
+        return {
+          reply: "Não consegui verificar reservas/ingressos dessa sessão agora.",
+          nextContext: withAdminEventsContext(
+            baseContext,
+            "admin_event_session_edit_collecting",
+            adminEvents,
+          ),
+        };
+      }
+      if (usage.hasUsage) {
+        return {
+          reply: [
+            "Essa sessão já tem reservas ou ingressos vinculados.",
+            "Para evitar quebrar ingressos emitidos, a alteração de data/hora está bloqueada neste fluxo.",
+            "",
+            "Ajuste operacional manual deve ser tratado em um passo específico.",
+          ].join("\n"),
+          nextContext: withAdminEventsContext(baseContext, "admin_event_sessions_menu", {
+            selectedEventId: eventId,
+          }),
+        };
+      }
 
       return {
         reply: [
@@ -2310,9 +2574,10 @@ async function handleAdminEventOperationalSubmenus({
     }
 
     const status = normalizeAdminText(valueRaw);
-    if (!isSessionStatus(status)) {
+    if (!["scheduled", "sales_open", "sales_closed"].includes(status)) {
       return {
-        reply: "Status inválido. Use scheduled, sales_open, sales_closed, cancelled ou finished.",
+        reply:
+          "Status inválido. Use scheduled, sales_open ou sales_closed. Para cancelar, use a opção Cancelar sessão.",
         nextContext: withAdminEventsContext(
           baseContext,
           "admin_event_session_edit_collecting",
@@ -2360,8 +2625,8 @@ async function handleAdminEventOperationalSubmenus({
         reply: [
           await renderSectionsList(eventId),
           "",
-          "Envie: número do setor | nome | capacidade | status.",
-          "Ex: 1 | Pista Premium | 500 | active",
+          "Envie: número do setor | nome | capacidade | status | numerado sim/não.",
+          "Ex: 1 | Pista Premium | 500 | active | sim",
         ].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_section_create_collecting", {
           ...adminEvents,
@@ -2413,6 +2678,7 @@ async function handleAdminEventOperationalSubmenus({
           ),
         };
       }
+      const hasNumberedSeats = adminEvents.draft?.hasNumberedSeats;
       const result = await updateAdminSection(String(adminEvents.draft?.sectionId), {
         name: String(adminEvents.draft?.name),
         capacity:
@@ -2420,6 +2686,9 @@ async function handleAdminEventOperationalSubmenus({
             ? null
             : Number(adminEvents.draft?.capacity),
         status: String(adminEvents.draft?.status) as AdminSectionStatus,
+        ...(typeof hasNumberedSeats === "boolean"
+          ? { has_numbered_seats: hasNumberedSeats }
+          : {}),
       });
 
       return {
@@ -2472,26 +2741,60 @@ async function handleAdminEventOperationalSubmenus({
     if (!details.ok || !details.event.venueId) return null;
 
     if (adminEvents.mode === "edit_section") {
-      const [sectionNumberRaw, nameRaw, capacityRaw, statusRaw] = text
+      const [sectionNumberRaw, nameRaw, capacityRaw, statusRaw, numberedRaw] = text
         .split("|")
         .map((part) => part.trim());
       const section = selectSectionByOption(details.event, sectionNumberRaw ?? "");
       const capacity = capacityRaw ? Number(capacityRaw) : null;
       const status = normalizeAdminText(statusRaw ?? "");
+      const numberedText = normalizeAdminText(numberedRaw ?? "");
+      const hasNumberedSeats =
+        numberedText === ""
+          ? section?.hasNumberedSeats
+          : ["sim", "s", "yes"].includes(numberedText)
+            ? true
+            : ["nao", "n", "no"].includes(numberedText)
+              ? false
+              : null;
       if (
         !section ||
         !nameRaw ||
         (capacity !== null && (!Number.isInteger(capacity) || capacity <= 0)) ||
-        !["active", "inactive"].includes(status)
+        !["active", "inactive"].includes(status) ||
+        hasNumberedSeats === null
       ) {
         return {
-          reply: "Dados inválidos. Use: 1 | Pista Premium | 500 | active",
+          reply: "Dados inválidos. Use: 1 | Pista Premium | 500 | active | sim",
           nextContext: withAdminEventsContext(
             baseContext,
             "admin_event_section_create_collecting",
             adminEvents,
           ),
         };
+      }
+      if (section.hasNumberedSeats !== hasNumberedSeats) {
+        const usage = await getAdminSectionUsage(section.sectionId);
+        if (!usage.ok) {
+          return {
+            reply: "Não consegui verificar reservas/ingressos desse setor agora.",
+            nextContext: withAdminEventsContext(
+              baseContext,
+              "admin_event_section_create_collecting",
+              adminEvents,
+            ),
+          };
+        }
+        if (usage.hasUsage) {
+          return {
+            reply: [
+              "Esse setor já tem reservas, ingressos ou assentos de sessão ocupados.",
+              "Para evitar quebrar vendas existentes, a alteração de assento marcado foi bloqueada neste fluxo.",
+            ].join("\n"),
+            nextContext: withAdminEventsContext(baseContext, "admin_event_sections_menu", {
+              selectedEventId: eventId,
+            }),
+          };
+        }
       }
 
       return {
@@ -2501,6 +2804,7 @@ async function handleAdminEventOperationalSubmenus({
           `Novo nome: ${nameRaw}`,
           `Capacidade: ${capacity ?? "não definida"}`,
           `Status: ${status}`,
+          `Assento marcado: ${hasNumberedSeats ? "sim" : "não"}`,
           "",
           "Responda CONFIRMAR ou CANCELAR.",
         ].join("\n"),
@@ -2515,6 +2819,7 @@ async function handleAdminEventOperationalSubmenus({
               name: nameRaw,
               capacity,
               status,
+              hasNumberedSeats,
             },
           },
         ),
@@ -2523,8 +2828,14 @@ async function handleAdminEventOperationalSubmenus({
 
     const [nameRaw, capacityRaw, numberedRaw] = text.split("|").map((part) => part.trim());
     const capacity = capacityRaw ? Number(capacityRaw) : null;
-    const hasNumberedSeats = normalizeAdminText(numberedRaw ?? "sim") !== "nao";
-    if (!nameRaw || (capacity !== null && (!Number.isInteger(capacity) || capacity <= 0))) {
+    const numberedText = normalizeAdminText(numberedRaw ?? "sim");
+    const hasNumberedSeats = ["nao", "n", "no"].includes(numberedText) ? false : true;
+    const slug = normalizeSlug(nameRaw ?? "");
+    if (
+      !nameRaw ||
+      !slug ||
+      (capacity !== null && (!Number.isInteger(capacity) || capacity <= 0))
+    ) {
       return {
         reply: "Dados inválidos. Use: Pista Premium | 500 | sim",
         nextContext: withAdminEventsContext(baseContext, "admin_event_section_create_collecting", adminEvents),
@@ -2534,7 +2845,7 @@ async function handleAdminEventOperationalSubmenus({
       reply: [
         "Confirmar criação do setor?",
         `Nome: ${nameRaw}`,
-        `Slug: ${normalizeSlug(nameRaw)}`,
+        `Slug: ${slug}`,
         `Capacidade: ${capacity ?? "não definida"}`,
         `Assento marcado: ${hasNumberedSeats ? "sim" : "não"}`,
         "",
@@ -2548,7 +2859,7 @@ async function handleAdminEventOperationalSubmenus({
           mode: "confirm_create_section",
           draft: {
             name: nameRaw,
-            slug: normalizeSlug(nameRaw),
+            slug,
             capacity,
             hasNumberedSeats,
           },
@@ -2638,6 +2949,33 @@ async function handleAdminEventOperationalSubmenus({
           ),
         };
       }
+      if (["inactive", "blocked"].includes(status)) {
+        const usage = await getAdminSeatOperationalUsage({
+          sectionId: section.sectionId,
+          seatCodes,
+        });
+        if (!usage.ok) {
+          return {
+            reply: "Não consegui verificar reservas/vendas desses assentos agora.",
+            nextContext: withAdminEventsContext(
+              baseContext,
+              "admin_event_seats_create_collecting",
+              adminEvents,
+            ),
+          };
+        }
+        if (usage.hasBusySeats) {
+          return {
+            reply: [
+              "Um ou mais assentos informados estão reservados ou vendidos em alguma sessão.",
+              "A alteração estrutural foi bloqueada para não afetar vendas existentes.",
+            ].join("\n"),
+            nextContext: withAdminEventsContext(baseContext, "admin_event_sections_menu", {
+              selectedEventId: eventId,
+            }),
+          };
+        }
+      }
 
       return {
         reply: [
@@ -2668,6 +3006,14 @@ async function handleAdminEventOperationalSubmenus({
       return {
         reply: "Dados inválidos. Use: 1 | A01,A02,A03",
         nextContext: withAdminEventsContext(baseContext, "admin_event_seats_create_collecting", adminEvents),
+      };
+    }
+    if (!section.hasNumberedSeats) {
+      return {
+        reply: "Esse setor não usa assento marcado. Altere o setor com cuidado antes de cadastrar assentos.",
+        nextContext: withAdminEventsContext(baseContext, "admin_event_sections_menu", {
+          selectedEventId: eventId,
+        }),
       };
     }
     return {
@@ -2759,7 +3105,11 @@ async function handleAdminEventOperationalSubmenus({
     }
     if (numericOption === 2) {
       return {
-        reply: "Envie: sessão | setor | tipo | label | preço | taxa. Ex: 1 | 1 | full | Inteira | 120,00 | 12,00",
+        reply: [
+          "Envie: sessão | setor | tipo | label | preço | taxa | início opcional | fim opcional.",
+          "Ex: 1 | 1 | full | Inteira | 120,00 | 12,00 | - | -",
+          "Tipos: full, half, promotional/free. Também aceito promo/courtesy como apelidos.",
+        ].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_price_create_collecting", adminEvents),
       };
     }
@@ -2769,8 +3119,8 @@ async function handleAdminEventOperationalSubmenus({
         reply: [
           list.reply,
           "",
-          "Envie: número do preço | label | preço | taxa.",
-          "Ex: 1 | Inteira 2 lote | 140,00 | 14,00",
+          "Envie: número do preço | label | preço | taxa | início opcional | fim opcional.",
+          "Ex: 1 | Inteira 2 lote | 140,00 | 14,00 | - | -",
         ].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_price_edit_collecting", {
           ...adminEvents,
@@ -2822,6 +3172,18 @@ async function handleAdminEventOperationalSubmenus({
           adminEvents.draft?.feeCents === undefined
             ? undefined
             : Number(adminEvents.draft.feeCents),
+        sales_start_at:
+          adminEvents.draft?.salesStartAt === undefined
+            ? undefined
+            : adminEvents.draft.salesStartAt === null
+              ? null
+              : String(adminEvents.draft.salesStartAt),
+        sales_end_at:
+          adminEvents.draft?.salesEndAt === undefined
+            ? undefined
+            : adminEvents.draft.salesEndAt === null
+              ? null
+              : String(adminEvents.draft.salesEndAt),
         status: adminEvents.draft?.status
           ? (String(adminEvents.draft.status) as AdminTicketPriceStatus)
           : undefined,
@@ -2845,7 +3207,7 @@ async function handleAdminEventOperationalSubmenus({
       feeCents: number;
       status: string;
     }>(adminEvents.draft, "lastPrices");
-    const [priceNumberRaw, valueOneRaw, valueTwoRaw, valueThreeRaw] = text
+    const [priceNumberRaw, valueOneRaw, valueTwoRaw, valueThreeRaw, salesStartRaw, salesEndRaw] = text
       .split("|")
       .map((part) => part.trim());
     const price = lastPrices.find((item) => item.option === Number(priceNumberRaw));
@@ -2893,9 +3255,20 @@ async function handleAdminEventOperationalSubmenus({
 
     const priceCents = parseMoneyToCents(valueTwoRaw ?? "");
     const feeCents = parseMoneyToCents(valueThreeRaw ?? "");
-    if (!valueOneRaw || priceCents === null || feeCents === null) {
+    const salesStart = parseOptionalAdminDateTime(salesStartRaw);
+    const salesEnd = parseOptionalAdminDateTime(salesEndRaw);
+    if (
+      !valueOneRaw ||
+      priceCents === null ||
+      feeCents === null ||
+      !salesStart.ok ||
+      !salesEnd.ok ||
+      (salesStart.value &&
+        salesEnd.value &&
+        new Date(salesStart.value).getTime() >= new Date(salesEnd.value).getTime())
+    ) {
       return {
-        reply: "Dados inválidos. Use: 1 | Inteira 2 lote | 140,00 | 14,00",
+        reply: "Dados inválidos. Use: 1 | Inteira 2 lote | 140,00 | 14,00 | - | -",
         nextContext: withAdminEventsContext(
           baseContext,
           "admin_event_price_edit_collecting",
@@ -2911,6 +3284,10 @@ async function handleAdminEventOperationalSubmenus({
         `Novo label: ${valueOneRaw}`,
         `Novo valor: ${formatCurrencyFromCents(priceCents)}`,
         `Nova taxa: ${formatCurrencyFromCents(feeCents)}`,
+        `Início: ${salesStart.value ? formatDateTime(salesStart.value) : "livre"}`,
+        `Fim: ${salesEnd.value ? formatDateTime(salesEnd.value) : "livre"}`,
+        "",
+        "Reservas já criadas mantêm o valor congelado. A alteração afeta novas reservas.",
         "",
         "Responda CONFIRMAR ou CANCELAR.",
       ].join("\n"),
@@ -2922,6 +3299,8 @@ async function handleAdminEventOperationalSubmenus({
           label: valueOneRaw,
           priceCents,
           feeCents,
+          salesStartAt: salesStart.value,
+          salesEndAt: salesEnd.value,
         },
       }),
     };
@@ -2949,8 +3328,14 @@ async function handleAdminEventOperationalSubmenus({
         label: String(adminEvents.draft?.label),
         priceCents: Number(adminEvents.draft?.priceCents),
         feeCents: Number(adminEvents.draft?.feeCents),
-        salesStartAt: null,
-        salesEndAt: null,
+        salesStartAt:
+          typeof adminEvents.draft?.salesStartAt === "string"
+            ? adminEvents.draft.salesStartAt
+            : null,
+        salesEndAt:
+          typeof adminEvents.draft?.salesEndAt === "string"
+            ? adminEvents.draft.salesEndAt
+            : null,
       });
       return {
         reply: result.ok
@@ -2964,24 +3349,40 @@ async function handleAdminEventOperationalSubmenus({
 
     const details = await getAdminEventDetails(eventId);
     if (!details.ok) return null;
-    const [sessionRaw, sectionRaw, ticketTypeRaw, label, priceRaw, feeRaw] = text
+    const [
+      sessionRaw,
+      sectionRaw,
+      ticketTypeRaw,
+      label,
+      priceRaw,
+      feeRaw,
+      salesStartRaw,
+      salesEndRaw,
+    ] = text
       .split("|")
       .map((part) => part.trim());
     const session = details.event.sessions[Number(sessionRaw) - 1];
     const section = details.event.sections[Number(sectionRaw) - 1];
-    const ticketType = normalizeAdminText(ticketTypeRaw ?? "");
+    const ticketType = parseAdminTicketType(ticketTypeRaw ?? "");
     const priceCents = parseMoneyToCents(priceRaw ?? "");
     const feeCents = parseMoneyToCents(feeRaw ?? "0");
+    const salesStart = parseOptionalAdminDateTime(salesStartRaw);
+    const salesEnd = parseOptionalAdminDateTime(salesEndRaw);
     if (
       !session ||
       !section ||
-      !isTicketType(ticketType) ||
+      !ticketType ||
       !label ||
       priceCents === null ||
-      feeCents === null
+      feeCents === null ||
+      !salesStart.ok ||
+      !salesEnd.ok ||
+      (salesStart.value &&
+        salesEnd.value &&
+        new Date(salesStart.value).getTime() >= new Date(salesEnd.value).getTime())
     ) {
       return {
-        reply: "Dados inválidos. Use: 1 | 1 | full | Inteira | 120,00 | 12,00",
+        reply: "Dados inválidos. Use: 1 | 1 | full | Inteira | 120,00 | 12,00 | - | -",
         nextContext: withAdminEventsContext(baseContext, "admin_event_price_create_collecting", adminEvents),
       };
     }
@@ -2994,6 +3395,9 @@ async function handleAdminEventOperationalSubmenus({
         `Label: ${label}`,
         `Preço: ${formatCurrencyFromCents(priceCents)}`,
         `Taxa: ${formatCurrencyFromCents(feeCents)}`,
+        "Moeda: BRL",
+        `Início: ${salesStart.value ? formatDateTime(salesStart.value) : "livre"}`,
+        `Fim: ${salesEnd.value ? formatDateTime(salesEnd.value) : "livre"}`,
         "",
         "Responda CONFIRMAR ou CANCELAR.",
       ].join("\n"),
@@ -3007,6 +3411,8 @@ async function handleAdminEventOperationalSubmenus({
           label,
           priceCents,
           feeCents,
+          salesStartAt: salesStart.value,
+          salesEndAt: salesEnd.value,
         },
       }),
     };

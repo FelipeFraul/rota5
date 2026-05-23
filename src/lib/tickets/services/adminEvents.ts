@@ -225,7 +225,6 @@ function toSummary(event: EventRow, sessions: SessionRow[]): AdminEventSummary {
     );
   const futureSession =
     eventSessions.find((session) => new Date(session.starts_at).getTime() >= Date.now()) ??
-    eventSessions[0] ??
     null;
 
   return {
@@ -373,10 +372,12 @@ export async function findOrCreateVenue(input: {
   const supabase = getSupabaseAdmin();
   const { data: existing, error: findError } = await supabase
     .from("venues")
-    .select("id, name, city, state, status")
+    .select("id, name, city, state, status, created_at")
     .ilike("name", input.name.trim())
     .ilike("city", input.city.trim())
     .ilike("state", input.state.trim().toUpperCase())
+    .order("created_at", { ascending: true })
+    .limit(1)
     .maybeSingle<{ id: string; name: string }>();
 
   if (findError) {
@@ -456,7 +457,14 @@ export async function createAdminEvent(input: {
     .single<{ id: string }>();
 
   if (sessionError) {
-    return { ok: false as const, error: sessionError };
+    await supabase.from("events").update({ status: "draft" }).eq("id", event.id);
+
+    return {
+      ok: false as const,
+      error: sessionError,
+      eventId: event.id,
+      partialEventCreated: true as const,
+    };
   }
 
   return {
@@ -503,6 +511,85 @@ export async function createAdminSession(input: {
     .single<{ id: string }>();
 
   return error ? { ok: false as const, error } : { ok: true as const, sessionId: data.id };
+}
+
+export async function getAdminSessionUsage(sessionId: string) {
+  const supabase = getSupabaseAdmin();
+  const [
+    { count: reservationsCount, error: reservationsError },
+    { count: ticketsCount, error: ticketsError },
+  ] = await Promise.all([
+    supabase
+      .from("reservations")
+      .select("id", { count: "exact", head: true })
+      .eq("session_id", sessionId),
+    supabase
+      .from("tickets")
+      .select("id", { count: "exact", head: true })
+      .eq("session_id", sessionId),
+  ]);
+
+  const error = reservationsError ?? ticketsError;
+  if (error) {
+    return { ok: false as const, error };
+  }
+
+  return {
+    ok: true as const,
+    reservationsCount: reservationsCount ?? 0,
+    ticketsCount: ticketsCount ?? 0,
+    hasUsage: (reservationsCount ?? 0) > 0 || (ticketsCount ?? 0) > 0,
+  };
+}
+
+export async function getAdminSessionCatalogCounts(
+  sessions: Array<{ sessionId: string; venueId: string | null }>,
+) {
+  const supabase = getSupabaseAdmin();
+  const sessionIds = sessions.map((session) => session.sessionId);
+  const venueIds = Array.from(
+    new Set(sessions.map((session) => session.venueId).filter(Boolean)),
+  ) as string[];
+
+  const [
+    { data: prices, error: pricesError },
+    { data: sections, error: sectionsError },
+  ] = await Promise.all([
+    sessionIds.length
+      ? supabase.from("ticket_prices").select("session_id").in("session_id", sessionIds)
+      : Promise.resolve({ data: [] as Array<{ session_id: string }>, error: null }),
+    venueIds.length
+      ? supabase.from("venue_sections").select("venue_id").in("venue_id", venueIds)
+      : Promise.resolve({ data: [] as Array<{ venue_id: string }>, error: null }),
+  ]);
+
+  const error = pricesError ?? sectionsError;
+  if (error) {
+    return { ok: false as const, error };
+  }
+
+  const priceCountBySession = new Map<string, number>();
+  for (const price of prices ?? []) {
+    priceCountBySession.set(
+      price.session_id,
+      (priceCountBySession.get(price.session_id) ?? 0) + 1,
+    );
+  }
+
+  const sectionCountByVenue = new Map<string, number>();
+  for (const section of sections ?? []) {
+    sectionCountByVenue.set(
+      section.venue_id,
+      (sectionCountByVenue.get(section.venue_id) ?? 0) + 1,
+    );
+  }
+
+  return {
+    ok: true as const,
+    getPricesCount: (sessionId: string) => priceCountBySession.get(sessionId) ?? 0,
+    getSectionsCount: (venueId: string | null) =>
+      venueId ? (sectionCountByVenue.get(venueId) ?? 0) : 0,
+  };
 }
 
 export async function updateAdminSession(
@@ -618,6 +705,45 @@ export async function updateAdminSection(
   return error ? { ok: false as const, error } : { ok: true as const };
 }
 
+export async function getAdminSectionUsage(sectionId: string) {
+  const supabase = getSupabaseAdmin();
+  const [
+    { count: reservationItemsCount, error: reservationItemsError },
+    { count: ticketsCount, error: ticketsError },
+    { count: busySessionSeatsCount, error: sessionSeatsError },
+  ] = await Promise.all([
+    supabase
+      .from("reservation_items")
+      .select("id", { count: "exact", head: true })
+      .eq("section_id", sectionId),
+    supabase
+      .from("tickets")
+      .select("id", { count: "exact", head: true })
+      .eq("section_id", sectionId),
+    supabase
+      .from("session_seats")
+      .select("id", { count: "exact", head: true })
+      .eq("section_id", sectionId)
+      .in("status", ["reserved", "sold"]),
+  ]);
+
+  const error = reservationItemsError ?? ticketsError ?? sessionSeatsError;
+  if (error) {
+    return { ok: false as const, error };
+  }
+
+  return {
+    ok: true as const,
+    reservationItemsCount: reservationItemsCount ?? 0,
+    ticketsCount: ticketsCount ?? 0,
+    busySessionSeatsCount: busySessionSeatsCount ?? 0,
+    hasUsage:
+      (reservationItemsCount ?? 0) > 0 ||
+      (ticketsCount ?? 0) > 0 ||
+      (busySessionSeatsCount ?? 0) > 0,
+  };
+}
+
 export async function createAdminSeats(input: {
   venueId: string;
   sectionId: string;
@@ -658,6 +784,41 @@ export async function createAdminSeats(input: {
         createdCount: rows.length,
         skippedCount: input.seatCodes.length - rows.length,
       };
+}
+
+export async function getAdminSeatOperationalUsage(input: {
+  sectionId: string;
+  seatCodes: string[];
+}) {
+  const supabase = getSupabaseAdmin();
+  const { data: seats, error: seatsError } = await supabase
+    .from("seats")
+    .select("id")
+    .eq("section_id", input.sectionId)
+    .in("seat_code", input.seatCodes);
+
+  if (seatsError) {
+    return { ok: false as const, error: seatsError };
+  }
+
+  const seatIds = seats?.map((seat) => seat.id) ?? [];
+  const { count, error } = seatIds.length
+    ? await supabase
+        .from("session_seats")
+        .select("id", { count: "exact", head: true })
+        .in("seat_id", seatIds)
+        .in("status", ["reserved", "sold"])
+    : { count: 0, error: null };
+
+  if (error) {
+    return { ok: false as const, error };
+  }
+
+  return {
+    ok: true as const,
+    busyCount: count ?? 0,
+    hasBusySeats: (count ?? 0) > 0,
+  };
 }
 
 export async function updateAdminSeatStatuses(input: {
