@@ -111,6 +111,14 @@ function firstString(...values: unknown[]): string | null {
   return null;
 }
 
+function limitedKeys(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return [];
+  }
+
+  return Object.keys(value as Record<string, unknown>).slice(0, 20);
+}
+
 function normalizePhone(phone: string | null) {
   const digits = phone?.replace(/\D/g, "") ?? "";
 
@@ -136,6 +144,9 @@ function extractIncomingMessage(
 ): ParsedIncomingMessage {
   const message = firstRecord(payload.message, payload.data, payload.key);
   const contact = firstRecord(payload.contact, payload.sender, message.contact);
+  const textPayload = firstRecord(payload.text, message.text);
+  const imagePayload = firstRecord(payload.image, message.image);
+  const documentPayload = firstRecord(payload.document, message.document);
   const chatId = firstString(
     payload.chatId,
     payload.chat_id,
@@ -161,6 +172,9 @@ function extractIncomingMessage(
   );
   const text = firstString(
     payload.text,
+    textPayload.message,
+    textPayload.body,
+    textPayload.text,
     payload.body,
     payload.messageText,
     payload.caption,
@@ -168,6 +182,8 @@ function extractIncomingMessage(
     message.body,
     message.message,
     message.caption,
+    imagePayload.caption,
+    documentPayload.caption,
   );
   const providerMessageId = firstString(
     payload.messageId,
@@ -326,14 +342,24 @@ export async function POST(request: Request) {
   if (!incoming.phone) {
     logWarn("Received Z-API webhook without phone", {
       providerMessageId: incoming.providerMessageId,
+      payloadKeys: limitedKeys(payloadResult.payload),
     });
     return jsonOk({ received: true, ignored: true, reason: "missing_phone" });
   }
 
   if (!incoming.text) {
+    const message = firstRecord(
+      payloadResult.payload.message,
+      payloadResult.payload.data,
+      payloadResult.payload.key,
+    );
+
     logWarn("Received Z-API webhook without text", {
       phoneLast4: incoming.phone.slice(-4),
       providerMessageId: incoming.providerMessageId,
+      payloadKeys: limitedKeys(payloadResult.payload),
+      messageKeys: limitedKeys(message),
+      textKeys: limitedKeys(firstRecord(payloadResult.payload.text, message.text)),
     });
     return jsonOk({ received: true, ignored: true, reason: "missing_text" });
   }
