@@ -3,7 +3,7 @@ import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 const DEFAULT_AVAILABLE_SEATS_LIMIT = 20;
-const MAX_AVAILABLE_SEATS_CANDIDATES = 500;
+const AVAILABLE_SEATS_QUERY_LIMIT_MULTIPLIER = 5;
 
 export type AvailableSeat = {
   sessionSeatId: string;
@@ -27,6 +27,7 @@ type SessionSeatRow = {
   seat_id: string;
   seats: {
     seat_code: string;
+    section_id: string;
     row_label: string | null;
     seat_number: string;
     map_x: number | string | null;
@@ -98,19 +99,21 @@ export async function listAvailableSeats({
 }): Promise<AvailableSeatList> {
   const supabase = getSupabaseAdmin();
   const normalizedLimit = normalizeLimit(limit);
+  const candidateLimit = normalizedLimit * AVAILABLE_SEATS_QUERY_LIMIT_MULTIPLIER;
   const { data, error, count } = await supabase
     .from("session_seats")
     .select(
-      "id, seat_id, seats!inner(seat_code, row_label, seat_number, map_x, map_y), venue_sections!inner(status, venues!inner(status))",
+      "id, seat_id, seats!inner(seat_code, section_id, row_label, seat_number, map_x, map_y), venue_sections!inner(status, venues!inner(status))",
       { count: "exact" },
     )
     .eq("session_id", sessionId)
     .eq("section_id", sectionId)
     .eq("status", "available")
     .eq("seats.status", "active")
+    .eq("seats.section_id", sectionId)
     .eq("venue_sections.status", "active")
     .eq("venue_sections.venues.status", "active")
-    .limit(MAX_AVAILABLE_SEATS_CANDIDATES)
+    .limit(candidateLimit)
     .returns<SessionSeatRow[]>();
 
   if (error) {

@@ -50,6 +50,8 @@ Step 10 final audit tightened the availability rules: sectors are listed only wh
 
 Step 11 adds sector selection and available-seat listing. When the user chooses a sector from `showing_sections`, the router revalidates the selected event/session/venue and then revalidates the sector against active venue, active section, active price, and current availability before listing seats. Numbered sections return up to 20 available active seats ordered by row, numeric seat number, and seat code, then save lightweight `showing_seats` context with `selectedEvent`, `selectedSection`, and `lastSeats`. Reserved, sold, blocked, inactive, and structurally blocked seats are excluded. Seat-code replies are acknowledged only with a controlled message; no reservation, checkout, QR Code, map, or gate validation is created in this step. Unnumbered sections return a controlled quantity-future message and do not reserve.
 
+Step 11 final audit tightened the seat listing boundary. `listAvailableSeats` now explicitly requires the structural seat to belong to the selected section, hides seats from other sessions or sections, normalizes seat-code replies by removing spaces/hyphens and uppercasing, and keeps unnumbered sections in a non-ambiguous `showing_sections` state with no `lastSeats`. The WhatsApp response and context expose at most 20 seats; the database read uses a bounded candidate window to support natural row/number ordering without loading the full seat inventory. Tests confirmed that valid seat-code replies create no reservations, orders, checkout, tickets, or `session_seats` mutations.
+
 The next steps will connect session, sector, seat, reservation, and payment creation around the transactional core.
 
 ## Next Steps

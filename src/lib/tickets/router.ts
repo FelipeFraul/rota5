@@ -531,7 +531,7 @@ function formatSeatsReply({
 }
 
 function normalizeSeatCode(value: string) {
-  return value.trim().replace(/\s+/g, "").toUpperCase();
+  return value.trim().replace(/[\s-]+/g, "").toUpperCase();
 }
 
 function getConversationState(
@@ -742,8 +742,8 @@ export async function routeTicketMessage({
           reply: TICKET_MESSAGES.unnumberedSectionPending,
           nextContext: {
             ...baseContext,
-            step: "showing_seats",
-            state: "showing_seats",
+            step: "showing_sections",
+            state: "showing_sections",
             selectedEvent: buildSelectedEvent(selectedSession),
             selectedSection: selectedSectionContext,
             lastSeats: [],

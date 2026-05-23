@@ -574,12 +574,14 @@ Available seats are calculated by `listAvailableSeats({ sessionId, sectionId })`
 
 - `session_seats.session_id = sessionId`;
 - `session_seats.section_id = sectionId`;
+- `session_seats.seat_id` is joined to `seats.id`;
+- structural `seats.section_id = sectionId`;
 - `session_seats.status = available`;
 - linked structural `seats.status = active`;
 - linked `venue_sections.status = active`;
 - linked venue status is active.
 
-Seats are ordered predictably by `row_label`, then numeric `seat_number` when possible, then textual `seat_number` and `seat_code`. WhatsApp output is limited to 20 seats. If more seats are available, the reply says `Mostrando os primeiros 20 assentos disponíveis.` A future seat-map step can offer a better large-inventory browsing experience.
+Seats are ordered predictably by `row_label`, then numeric `seat_number` when possible, then textual `seat_number` and `seat_code`, so `A10` does not sort before `A2` when `seat_number` is numeric. WhatsApp output and `lastSeats` context are limited to 20 seats. If more seats are available, the reply says `Mostrando os primeiros 20 assentos disponíveis.` The database read uses a bounded candidate window rather than loading the full inventory, so the router can apply natural ordering without pulling every seat in large sections. A future seat-map step can offer a better large-inventory browsing experience.
 
 The `showing_seats` context is intentionally lightweight:
 
@@ -624,11 +626,15 @@ Numeric replies while `state = showing_sections` now behave as follows:
 - numbered sector with seats: list up to 20 seat codes and move to `showing_seats`;
 - unnumbered sector: `Esse setor não tem assento marcado. No próximo passo você poderá escolher a quantidade de ingressos.`
 
+Unnumbered sectors intentionally stay in `showing_sections` with `selectedSection` and empty `lastSeats`; they do not enter `showing_seats` with an empty seat list, avoiding an ambiguous state.
+
 Seat-code replies while `state = showing_seats` are controlled only:
 
 - valid code in `lastSeats`: acknowledge the seat and say reservation comes in the next step;
 - invalid code: `Não encontrei esse assento na lista. Escolha um dos códigos enviados.`;
 - no `reserve_seats`, reservation, checkout, QR Code, map, or gate validation is performed in this step.
+
+Seat-code comparison is normalized by removing spaces and hyphens and converting to uppercase. Examples accepted for `A03`: `a03`, `A 03`, and `A-03`.
 
 Step 11 test coverage used temporary Supabase data and the real compiled webhook route, with Z-API pointed to a non-real audit URL and full cleanup:
 
@@ -645,6 +651,25 @@ Step 11 test coverage used temporary Supabase data and the real compiled webhook
 - [x] Valid seat-code reply is controlled and does not reserve.
 - [x] Seat code outside the list is blocked.
 - [x] Unnumbered sections use the controlled future-quantity message and do not reserve.
+- [x] Temporary test data cleanup returned empty.
+
+Final Step 11 audit coverage:
+
+- [x] `lastSeats` is only a conversation guide; it is not treated as definitive availability.
+- [x] The next reservation step is documented as requiring full revalidation before `reserve_seats`.
+- [x] Seat listing is bound to selected session and selected section, including structural `seats.section_id`.
+- [x] Seats from another section do not appear.
+- [x] Seats from another session do not appear.
+- [x] `reserved`, `sold`, `blocked`, `inactive`, and structurally blocked seats do not appear.
+- [x] Event/session/venue/section/price/availability are revalidated before listing seats.
+- [x] Natural ordering keeps `A1`, `A2`, `A10` in the expected order.
+- [x] Output and context expose at most 20 seats and include the limit notice when more are available.
+- [x] The query uses a bounded candidate window instead of loading a full large section inventory before slicing.
+- [x] Unnumbered sections remain non-ambiguous and do not enter `showing_seats` with an empty list.
+- [x] `a03`, `A 03`, and `A-03` match `A03`.
+- [x] Valid seat-code replies do not create reservations, orders, checkout, tickets, or `session_seats` updates.
+- [x] Invalid seat-code replies are blocked without advancing.
+- [x] `showing_seats` context stays lightweight and excludes map fields, payloads, prices as source of truth, and bulky objects.
 - [x] Temporary test data cleanup returned empty.
 
 This migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST RPC endpoint on 2026-05-22 14:06:35 -03. A validation-only call returned the expected `customer_id_required` error, confirming that `public.reserve_seats` is available and executable by the service role.
