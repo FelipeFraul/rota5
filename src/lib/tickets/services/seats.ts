@@ -22,6 +22,15 @@ export type AvailableSeatList = {
   hasMore: boolean;
 };
 
+export type ValidatedSeatForReservation = {
+  sessionSeatId: string;
+  seatId: string;
+  sectionId: string;
+  seatCode: string;
+  rowLabel?: string | null;
+  seatNumber: string;
+};
+
 type SessionSeatRow = {
   id: string;
   seat_id: string;
@@ -34,6 +43,11 @@ type SessionSeatRow = {
     map_y: number | string | null;
   } | null;
   venue_sections: { status: string; venues: { status: string } | null } | null;
+};
+
+type ValidationSessionSeatRow = SessionSeatRow & {
+  section_id: string;
+  status: string;
 };
 
 function normalizeLimit(limit?: number) {
@@ -148,5 +162,48 @@ export async function listAvailableSeats({
     totalAvailableCount,
     limit: normalizedLimit,
     hasMore: totalAvailableCount > seats.length,
+  };
+}
+
+export async function getValidatedSeatForReservation({
+  sessionId,
+  sectionId,
+  seatId,
+}: {
+  sessionId: string;
+  sectionId: string;
+  seatId: string;
+}): Promise<ValidatedSeatForReservation | null> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("session_seats")
+    .select(
+      "id, seat_id, section_id, status, seats!inner(seat_code, section_id, row_label, seat_number, map_x, map_y), venue_sections!inner(status, venues!inner(status))",
+    )
+    .eq("session_id", sessionId)
+    .eq("section_id", sectionId)
+    .eq("seat_id", seatId)
+    .eq("status", "available")
+    .eq("seats.status", "active")
+    .eq("seats.section_id", sectionId)
+    .eq("venue_sections.status", "active")
+    .eq("venue_sections.venues.status", "active")
+    .maybeSingle<ValidationSessionSeatRow>();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data?.seats) {
+    return null;
+  }
+
+  return {
+    sessionSeatId: data.id,
+    seatId: data.seat_id,
+    sectionId: data.section_id,
+    seatCode: data.seats.seat_code,
+    rowLabel: data.seats.row_label,
+    seatNumber: data.seats.seat_number,
   };
 }

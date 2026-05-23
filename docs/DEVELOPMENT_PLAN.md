@@ -52,6 +52,8 @@ Step 11 adds sector selection and available-seat listing. When the user chooses 
 
 Step 11 final audit tightened the seat listing boundary. `listAvailableSeats` now explicitly requires the structural seat to belong to the selected section, hides seats from other sessions or sections, normalizes seat-code replies by removing spaces/hyphens and uppercasing, and keeps unnumbered sections in a non-ambiguous `showing_sections` state with no `lastSeats`. The WhatsApp response and context expose at most 20 seats; the database read uses a bounded candidate window to support natural row/number ordering without loading the full seat inventory. Tests confirmed that valid seat-code replies create no reservations, orders, checkout, tickets, or `session_seats` mutations.
 
+Step 12 adds real single-seat reservation from WhatsApp by calling only the audited `public.reserve_seats` RPC. When a user in `showing_seats` sends a listed seat code, the router normalizes the code, revalidates event/session/venue/section/seat/active price in Supabase, calls `reserve_seats` with ticket type `full` and `TICKET_RESERVATION_TTL_MINUTES`, then stores lightweight `reservation_created` context with reservation/order IDs, expiration, totals, and selected seat. The step does not create checkout links, payments, tickets, QR Codes, maps, or gate validation. Duplicate reservation attempts while the context is already `reservation_created` are blocked until the future payment/cancel/swap step exists.
+
 The next steps will connect session, sector, seat, reservation, and payment creation around the transactional core.
 
 ## Next Steps
@@ -67,8 +69,9 @@ The next steps will connect session, sector, seat, reservation, and payment crea
 9. Busca de eventos por artista, cidade e data - criado e testado
 10. Seleção de evento e listagem de setores por WhatsApp - criado e testado
 11. Listagem de assentos disponíveis por setor - criado e testado
-12. Escolha de assento e reserva transacional pelo WhatsApp - próximo passo
-13. Geração de mapa de assentos
-14. Envio de QR Code pelo WhatsApp
-15. Tela/API de validação de portaria
-16. Testes de concorrência, expiração, pagamento duplicado e QR Code usado duas vezes
+12. Reserva transacional de assento pelo WhatsApp - criado e testado
+13. Geração de checkout Mercado Pago pelo WhatsApp - próximo passo
+14. Geração de mapa de assentos
+15. Envio de QR Code pelo WhatsApp
+16. Tela/API de validação de portaria
+17. Testes de concorrência, expiração, pagamento duplicado e QR Code usado duas vezes

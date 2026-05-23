@@ -19,8 +19,18 @@ export const TICKET_MESSAGES = {
     "Não encontrei assentos disponíveis nesse setor no momento. Escolha outro setor ou faça uma nova busca.",
   unnumberedSectionPending:
     "Esse setor não tem assento marcado. No próximo passo você poderá escolher a quantidade de ingressos.",
-  seatSelectionPending:
-    "Recebi o assento {{seatCode}}. A reserva será implementada no próximo passo.",
   seatInvalidOption:
     "Não encontrei esse assento na lista. Escolha um dos códigos enviados.",
+  seatUnavailable:
+    "Esse assento não está mais disponível. Escolha outro assento ou faça uma nova busca.",
+  seatJustBecameUnavailable:
+    "Esse assento acabou de ficar indisponível. Escolha outro assento.",
+  sectionPriceUnavailable:
+    "Não encontrei preço ativo para esse setor no momento. Escolha outro setor ou tente mais tarde.",
+  sessionUnavailable:
+    "Essa sessão não está mais disponível. Faça uma nova busca.",
+  reservationGenericError:
+    "Não consegui reservar esse assento agora. Tente novamente em instantes.",
+  reservationAlreadyCreated:
+    "Você já tem uma reserva em andamento. No próximo passo vamos gerar o link de pagamento ou permitir cancelar/trocar.",
 } as const;

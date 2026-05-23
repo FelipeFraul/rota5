@@ -6,8 +6,10 @@ import {
   type TicketConversationSearch,
   type TicketConversationSectionOption,
   type TicketConversationSeatOption,
+  type TicketConversationReservation,
   type TicketConversationSelectedSection,
   type TicketConversationSelectedEvent,
+  type TicketConversationSelectedSeat,
   type TicketConversationState,
 } from "@/lib/tickets/conversationState";
 import { TICKET_MESSAGES } from "@/lib/tickets/messages";
@@ -26,6 +28,11 @@ import {
   type AvailableSeat,
   type AvailableSeatList,
 } from "@/lib/tickets/services/seats";
+import {
+  reserveSelectedSeat,
+  type ReserveSelectedSeatResult,
+  type ReserveSelectedSeatSuccess,
+} from "@/lib/tickets/services/reservations";
 
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 const GENERIC_SEARCH_WORDS = new Set([
@@ -363,6 +370,14 @@ function formatEventDate(startsAt: string) {
     .replace(",", " às");
 }
 
+function formatTime(startsAt: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: SAO_PAULO_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(startsAt));
+}
+
 function formatCurrencyFromCents(cents: number) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -534,6 +549,75 @@ function normalizeSeatCode(value: string) {
   return value.trim().replace(/[\s-]+/g, "").toUpperCase();
 }
 
+function buildReservationContext(
+  reservation: ReserveSelectedSeatSuccess,
+): TicketConversationReservation {
+  return {
+    reservationId: reservation.reservationId,
+    orderId: reservation.orderId,
+    expiresAt: reservation.expiresAt,
+    totalAmountCents: reservation.totalAmountCents,
+    totalFeeCents: reservation.totalFeeCents,
+    currency: reservation.currency,
+  };
+}
+
+function buildSelectedSeatContext(
+  seat: TicketConversationSeatOption,
+): TicketConversationSelectedSeat {
+  return {
+    seatId: seat.seatId,
+    seatCode: seat.seatCode,
+  };
+}
+
+function formatReservationReply({
+  selectedEvent,
+  selectedSection,
+  selectedSeat,
+  reservation,
+}: {
+  selectedEvent: TicketConversationSelectedEvent;
+  selectedSection: TicketConversationSelectedSection;
+  selectedSeat: TicketConversationSelectedSeat;
+  reservation: ReserveSelectedSeatSuccess;
+}) {
+  return [
+    "Assento reservado por alguns minutos!",
+    "",
+    `Evento: ${selectedEvent.title}`,
+    `Setor: ${selectedSection.sectionName}`,
+    `Assento: ${selectedSeat.seatCode}`,
+    "",
+    `Valor: ${formatCurrencyFromCents(reservation.totalAmountCents)} + ${formatCurrencyFromCents(reservation.totalFeeCents)} taxa`,
+    `Reserva válida até: ${formatTime(reservation.expiresAt)}`,
+    "",
+    "No próximo passo você receberá o link de pagamento.",
+  ].join("\n");
+}
+
+function messageForReservationFailure(
+  result: Extract<ReserveSelectedSeatResult, { ok: false }>,
+) {
+  if (result.reason === "seat_not_available") {
+    return TICKET_MESSAGES.seatJustBecameUnavailable;
+  }
+
+  if (result.reason === "seat_unavailable") {
+    return TICKET_MESSAGES.seatUnavailable;
+  }
+
+  if (result.reason === "ticket_price_not_found") {
+    return TICKET_MESSAGES.sectionPriceUnavailable;
+  }
+
+  if (result.reason === "session_not_available") {
+    return TICKET_MESSAGES.sessionUnavailable;
+  }
+
+  return TICKET_MESSAGES.reservationGenericError;
+}
+
 function getConversationState(
   context: Record<string, unknown>,
 ): Partial<TicketConversationState> {
@@ -557,23 +641,89 @@ export async function routeTicketMessage({
     updatedAt: new Date().toISOString(),
   };
 
+  if (previousState.state === "reservation_created") {
+    return {
+      reply: TICKET_MESSAGES.reservationAlreadyCreated,
+      nextContext: {
+        ...baseContext,
+        step: "reservation_created",
+        state: "reservation_created",
+      },
+    };
+  }
+
   if (previousState.state === "showing_seats" && previousState.lastSeats?.length) {
     const requestedSeatCode = normalizeSeatCode(text);
     const selectedSeat = previousState.lastSeats.find(
       (seat) => normalizeSeatCode(seat.seatCode) === requestedSeatCode,
     );
 
+    if (!selectedSeat) {
+      return {
+        reply: TICKET_MESSAGES.seatInvalidOption,
+        nextContext: {
+          ...baseContext,
+          step: "showing_seats",
+          state: "showing_seats",
+        },
+      };
+    }
+
+    if (!previousState.selectedEvent || !previousState.selectedSection) {
+      return {
+        reply: TICKET_MESSAGES.seatUnavailable,
+        nextContext: {
+          ...baseContext,
+          step: "showing_sections",
+          state: "showing_sections",
+          selectedSeat: undefined,
+          reservation: undefined,
+        },
+      };
+    }
+
+    const reservationResult = await reserveSelectedSeat({
+      customerId: customer.id,
+      conversationId: conversation.id,
+      eventId: previousState.selectedEvent.eventId,
+      sessionId: previousState.selectedEvent.sessionId,
+      sectionId: previousState.selectedSection.sectionId,
+      seatId: selectedSeat.seatId,
+      ticketType: "full",
+    });
+
+    if (!reservationResult.ok) {
+      return {
+        reply: messageForReservationFailure(reservationResult),
+        nextContext: {
+          ...baseContext,
+          step: "showing_seats",
+          state: "showing_seats",
+          selectedSeat: undefined,
+          reservation: undefined,
+        },
+      };
+    }
+
+    const selectedSeatContext = buildSelectedSeatContext(selectedSeat);
+    const reservationContext = buildReservationContext(
+      reservationResult.reservation,
+    );
+
     return {
-      reply: selectedSeat
-        ? TICKET_MESSAGES.seatSelectionPending.replace(
-            "{{seatCode}}",
-            selectedSeat.seatCode,
-          )
-        : TICKET_MESSAGES.seatInvalidOption,
+      reply: formatReservationReply({
+        selectedEvent: previousState.selectedEvent,
+        selectedSection: previousState.selectedSection,
+        selectedSeat: selectedSeatContext,
+        reservation: reservationResult.reservation,
+      }),
       nextContext: {
         ...baseContext,
-        step: "showing_seats",
-        state: "showing_seats",
+        step: "reservation_created",
+        state: "reservation_created",
+        selectedSeat: selectedSeatContext,
+        reservation: reservationContext,
+        lastSeats: [],
       },
     };
   }
@@ -791,6 +941,8 @@ export async function routeTicketMessage({
         lastEvents: [],
         lastSections: [],
         selectedEvent: undefined,
+        selectedSeat: undefined,
+        reservation: undefined,
       },
     };
   }

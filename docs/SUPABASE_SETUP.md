@@ -672,6 +672,110 @@ Final Step 11 audit coverage:
 - [x] `showing_seats` context stays lightweight and excludes map fields, payloads, prices as source of truth, and bulky objects.
 - [x] Temporary test data cleanup returned empty.
 
+## WhatsApp Seat Reservation
+
+Step 12 turns a valid seat-code reply in `showing_seats` into a real temporary reservation by calling the existing audited RPC `public.reserve_seats`. No manual reservation writes are performed in the application code.
+
+Before calling the RPC, the backend revalidates:
+
+- event exists and `events.status = published`;
+- session exists for the event, is future, and status is `scheduled` or `sales_open`;
+- venue is active;
+- section is active, belongs to the validated venue, has active price, and still has availability;
+- seat exists, belongs to the selected section, and `seats.status = active`;
+- session seat exists for the selected session and seat;
+- `session_seats.status = available`;
+- ticket price for the selected session/section/type is active and inside the sales window.
+
+The reservation service is `reserveSelectedSeat` in `src/lib/tickets/services/reservations.ts`. It calls:
+
+```ts
+supabase.rpc("reserve_seats", {
+  p_customer_id,
+  p_conversation_id,
+  p_session_id,
+  p_seat_ids: [seatId],
+  p_ticket_type: "full",
+  p_ttl_minutes: TICKET_RESERVATION_TTL_MINUTES
+})
+```
+
+Ticket type defaults to `full` in this step. Half-price and promotional ticket selection will come later. If there is no active `full` price for the selected section, the user receives a safe message and no reservation is created.
+
+After success, the conversation context moves to `reservation_created`:
+
+```json
+{
+  "state": "reservation_created",
+  "step": "reservation_created",
+  "selectedEvent": {
+    "eventId": "...",
+    "sessionId": "...",
+    "title": "...",
+    "startsAt": "...",
+    "city": "...",
+    "state": "...",
+    "venueId": "...",
+    "venueName": "..."
+  },
+  "selectedSection": {
+    "sectionId": "...",
+    "sectionName": "Pista Premium",
+    "hasNumberedSeats": true,
+    "availableSeatsCount": 120
+  },
+  "selectedSeat": {
+    "seatId": "...",
+    "seatCode": "A03"
+  },
+  "reservation": {
+    "reservationId": "...",
+    "orderId": "...",
+    "expiresAt": "...",
+    "totalAmountCents": 12000,
+    "totalFeeCents": 1200,
+    "currency": "BRL"
+  }
+}
+```
+
+The response tells the user that the seat is reserved temporarily, shows event/sector/seat, price plus fee, expiration time, and says the payment link will come in the next step. It does not say the ticket is guaranteed.
+
+Known reservation errors are mapped to safe user messages:
+
+- `seat_not_available`: `Esse assento acabou de ficar indisponível. Escolha outro assento.`
+- missing or stale seat before RPC: `Esse assento não está mais disponível. Escolha outro assento ou faça uma nova busca.`
+- `ticket_price_not_found`: `Não encontrei preço ativo para esse setor no momento. Escolha outro setor ou tente mais tarde.`
+- `session_not_available`: `Essa sessão não está mais disponível. Faça uma nova busca.`
+- generic failures: `Não consegui reservar esse assento agora. Tente novamente em instantes.`
+
+If the context is already `reservation_created`, new seat messages do not create another reservation. The user receives a controlled message saying the next step will generate payment or allow cancel/swap.
+
+This step intentionally does not:
+
+- call Mercado Pago checkout;
+- create `payments`;
+- create tickets;
+- generate QR Codes;
+- send payment links;
+- render maps;
+- perform gate validation.
+
+Step 12 test coverage used temporary Supabase data and the real compiled webhook route, with Z-API pointed to a non-real audit URL and full cleanup:
+
+- [x] Valid seat code calls `reserve_seats`, creates active reservation and pending order, and marks the session seat reserved.
+- [x] Code outside `lastSeats` does not call the RPC and does not reserve.
+- [x] `a03`, `A 03`, and `A-03` normalize and reserve.
+- [x] Seat changed to reserved between listing and choice is blocked.
+- [x] Cancelled session is blocked.
+- [x] Inactive seat is blocked.
+- [x] Missing active `full` price returns a friendly message.
+- [x] `seat_not_available` returns a friendly message.
+- [x] No payment or ticket is created in this step.
+- [x] `reservation_created` context blocks another automatic reservation.
+- [x] Concurrent same-seat attempts result in exactly one reservation winner.
+- [x] Temporary test data cleanup returned empty.
+
 This migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST RPC endpoint on 2026-05-22 14:06:35 -03. A validation-only call returned the expected `customer_id_required` error, confirming that `public.reserve_seats` is available and executable by the service role.
 
 The RPC was fully audited with temporary data on 2026-05-22 14:11:49 -03. The audit confirmed:

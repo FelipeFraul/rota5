@@ -2,7 +2,8 @@ export type TicketConversationStep =
   | "idle"
   | "showing_events"
   | "showing_sections"
-  | "showing_seats";
+  | "showing_seats"
+  | "reservation_created";
 
 export type TicketConversationSearch = {
   artist?: string;
@@ -62,6 +63,20 @@ export type TicketConversationSeatOption = {
   seatNumber: string;
 };
 
+export type TicketConversationSelectedSeat = {
+  seatId: string;
+  seatCode: string;
+};
+
+export type TicketConversationReservation = {
+  reservationId: string;
+  orderId: string;
+  expiresAt: string;
+  totalAmountCents: number;
+  totalFeeCents: number;
+  currency: string;
+};
+
 export type TicketConversationState = {
   step: TicketConversationStep;
   state: TicketConversationStep;
@@ -70,6 +85,8 @@ export type TicketConversationState = {
   lastEvents?: TicketConversationEventOption[];
   selectedEvent?: TicketConversationSelectedEvent;
   selectedSection?: TicketConversationSelectedSection;
+  selectedSeat?: TicketConversationSelectedSeat;
+  reservation?: TicketConversationReservation;
   lastSections?: TicketConversationSectionOption[];
   lastSeats?: TicketConversationSeatOption[];
   updatedAt: string;
