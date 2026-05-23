@@ -676,6 +676,14 @@ Final Step 11 audit coverage:
 
 Step 12 turns a valid seat-code reply in `showing_seats` into a real temporary reservation by calling the existing audited RPC `public.reserve_seats`. No manual reservation writes are performed in the application code.
 
+Before attempting a new reservation, the backend checks whether the same customer already has a reservation with:
+
+- `reservations.status = active`;
+- `reservations.expires_at > now()`;
+- a linked `orders.status = pending_payment`.
+
+If that record exists, the router does not call `reserve_seats`, moves the conversation back into a safe `reservation_created` state with the active reservation/order IDs, and replies that the user already has a reservation in progress. This protects stale contexts, repeated messages, and new open conversations from creating multiple unpaid reservations automatically.
+
 Before calling the RPC, the backend revalidates:
 
 - event exists and `events.status = published`;
@@ -743,13 +751,15 @@ The response tells the user that the seat is reserved temporarily, shows event/s
 
 Known reservation errors are mapped to safe user messages:
 
+- active pending reservation already exists: `Você já tem uma reserva em andamento. No próximo passo vamos gerar o link de pagamento ou permitir cancelar/trocar.`
 - `seat_not_available`: `Esse assento acabou de ficar indisponível. Escolha outro assento.`
 - missing or stale seat before RPC: `Esse assento não está mais disponível. Escolha outro assento ou faça uma nova busca.`
 - `ticket_price_not_found`: `Não encontrei preço ativo para esse setor no momento. Escolha outro setor ou tente mais tarde.`
 - `session_not_available`: `Essa sessão não está mais disponível. Faça uma nova busca.`
+- `customer_not_found` or `conversation_not_found`: generic retry-safe message without exposing SQL details.
 - generic failures: `Não consegui reservar esse assento agora. Tente novamente em instantes.`
 
-If the context is already `reservation_created`, new seat messages do not create another reservation. The user receives a controlled message saying the next step will generate payment or allow cancel/swap.
+If the context is already `reservation_created`, new seat messages do not create another reservation. The user receives a controlled message saying the next step will generate payment or allow cancel/swap. The database-level active-reservation check provides the same protection even when the context is stale or absent.
 
 This step intentionally does not:
 
@@ -772,8 +782,10 @@ Step 12 test coverage used temporary Supabase data and the real compiled webhook
 - [x] Missing active `full` price returns a friendly message.
 - [x] `seat_not_available` returns a friendly message.
 - [x] No payment or ticket is created in this step.
+- [x] Existing active reservation plus pending order blocks another automatic reservation.
 - [x] `reservation_created` context blocks another automatic reservation.
 - [x] Concurrent same-seat attempts result in exactly one reservation winner.
+- [x] The losing concurrent request does not receive a success message.
 - [x] Temporary test data cleanup returned empty.
 
 This migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST RPC endpoint on 2026-05-22 14:06:35 -03. A validation-only call returned the expected `customer_id_required` error, confirming that `public.reserve_seats` is available and executable by the service role.

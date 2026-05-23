@@ -35,10 +35,24 @@ export type ReserveSelectedSeatSuccess = {
   }>;
 };
 
+export type ActivePendingReservation = {
+  reservationId: string;
+  orderId: string;
+  expiresAt: string;
+  totalAmountCents: number;
+  totalFeeCents: number;
+  currency: string;
+};
+
 export type ReserveSelectedSeatResult =
   | {
       ok: true;
       reservation: ReserveSelectedSeatSuccess;
+    }
+  | {
+      ok: false;
+      reason: "active_reservation_exists";
+      reservation: ActivePendingReservation;
     }
   | {
       ok: false;
@@ -47,6 +61,8 @@ export type ReserveSelectedSeatResult =
         | "seat_not_available"
         | "ticket_price_not_found"
         | "session_not_available"
+        | "customer_not_found"
+        | "conversation_not_found"
         | "reservation_failed";
       error?: unknown;
     };
@@ -55,6 +71,10 @@ type ReserveSelectedSeatFailureReason = Extract<
   ReserveSelectedSeatResult,
   { ok: false }
 >["reason"];
+type ReserveSeatsRpcFailureReason = Exclude<
+  ReserveSelectedSeatFailureReason,
+  "active_reservation_exists"
+>;
 
 type ReserveSeatsRpcResponse = {
   reservation_id: string;
@@ -67,6 +87,24 @@ type ReserveSeatsRpcResponse = {
   items?: ReserveSelectedSeatSuccess["items"];
 };
 
+type ActivePendingReservationRow = {
+  id: string;
+  expires_at: string;
+  total_amount_cents: number;
+  total_fee_cents: number;
+  currency: string;
+  orders:
+    | {
+        id: string;
+        status: string;
+      }
+    | {
+        id: string;
+        status: string;
+      }[]
+    | null;
+};
+
 function getPostgresErrorMessage(error: unknown) {
   if (error && typeof error === "object" && "message" in error) {
     return String((error as { message?: unknown }).message ?? "");
@@ -75,7 +113,7 @@ function getPostgresErrorMessage(error: unknown) {
   return "";
 }
 
-function mapReserveError(error: unknown): ReserveSelectedSeatFailureReason {
+function mapReserveError(error: unknown): ReserveSeatsRpcFailureReason {
   const message = getPostgresErrorMessage(error);
 
   if (message.includes("seat_not_available")) {
@@ -93,7 +131,38 @@ function mapReserveError(error: unknown): ReserveSelectedSeatFailureReason {
     return "session_not_available";
   }
 
+  if (message.includes("customer_not_found")) {
+    return "customer_not_found";
+  }
+
+  if (message.includes("conversation_not_found")) {
+    return "conversation_not_found";
+  }
+
   return "reservation_failed";
+}
+
+function firstOrder(row: ActivePendingReservationRow) {
+  return Array.isArray(row.orders) ? row.orders[0] : row.orders;
+}
+
+function mapActivePendingReservation(
+  row: ActivePendingReservationRow,
+): ActivePendingReservation | null {
+  const order = firstOrder(row);
+
+  if (!order?.id || order.status !== "pending_payment") {
+    return null;
+  }
+
+  return {
+    reservationId: row.id,
+    orderId: order.id,
+    expiresAt: row.expires_at,
+    totalAmountCents: row.total_amount_cents,
+    totalFeeCents: row.total_fee_cents,
+    currency: row.currency,
+  };
 }
 
 function mapRpcResponse(data: ReserveSeatsRpcResponse): ReserveSelectedSeatSuccess {
@@ -109,6 +178,33 @@ function mapRpcResponse(data: ReserveSeatsRpcResponse): ReserveSelectedSeatSucce
   };
 }
 
+export async function findActivePendingReservationForCustomer(
+  customerId: string,
+): Promise<ActivePendingReservation | null> {
+  const supabase = getSupabaseAdmin();
+  const nowIso = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("reservations")
+    .select(
+      "id, expires_at, total_amount_cents, total_fee_cents, currency, orders!inner(id, status)",
+    )
+    .eq("customer_id", customerId)
+    .eq("status", "active")
+    .gt("expires_at", nowIso)
+    .eq("orders.status", "pending_payment")
+    .order("expires_at", { ascending: true })
+    .limit(1)
+    .returns<ActivePendingReservationRow[]>();
+
+  if (error) {
+    throw error;
+  }
+
+  const row = data?.[0];
+
+  return row ? mapActivePendingReservation(row) : null;
+}
+
 export async function reserveSelectedSeat({
   customerId,
   conversationId,
@@ -118,6 +214,17 @@ export async function reserveSelectedSeat({
   seatId,
   ticketType = "full",
 }: ReserveSelectedSeatInput): Promise<ReserveSelectedSeatResult> {
+  const activeReservation =
+    await findActivePendingReservationForCustomer(customerId);
+
+  if (activeReservation) {
+    return {
+      ok: false,
+      reason: "active_reservation_exists",
+      reservation: activeReservation,
+    };
+  }
+
   const selectedSession = await getValidatedEventSession({ eventId, sessionId });
 
   if (!selectedSession) {

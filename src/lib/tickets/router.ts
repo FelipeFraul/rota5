@@ -599,6 +599,10 @@ function formatReservationReply({
 function messageForReservationFailure(
   result: Extract<ReserveSelectedSeatResult, { ok: false }>,
 ) {
+  if (result.reason === "active_reservation_exists") {
+    return TICKET_MESSAGES.reservationAlreadyCreated;
+  }
+
   if (result.reason === "seat_not_available") {
     return TICKET_MESSAGES.seatJustBecameUnavailable;
   }
@@ -613,6 +617,13 @@ function messageForReservationFailure(
 
   if (result.reason === "session_not_available") {
     return TICKET_MESSAGES.sessionUnavailable;
+  }
+
+  if (
+    result.reason === "customer_not_found" ||
+    result.reason === "conversation_not_found"
+  ) {
+    return TICKET_MESSAGES.reservationGenericError;
   }
 
   return TICKET_MESSAGES.reservationGenericError;
@@ -693,6 +704,20 @@ export async function routeTicketMessage({
     });
 
     if (!reservationResult.ok) {
+      if (reservationResult.reason === "active_reservation_exists") {
+        return {
+          reply: messageForReservationFailure(reservationResult),
+          nextContext: {
+            ...baseContext,
+            step: "reservation_created",
+            state: "reservation_created",
+            reservation: reservationResult.reservation,
+            selectedSeat: undefined,
+            lastSeats: [],
+          },
+        };
+      }
+
       return {
         reply: messageForReservationFailure(reservationResult),
         nextContext: {
