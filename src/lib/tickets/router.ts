@@ -43,6 +43,7 @@ import {
 import {
   createGateSession,
   normalizeGatePhone,
+  revokeGateSession,
 } from "@/lib/tickets/services/gateSessions";
 import { sendZapiText } from "@/lib/zapi/client";
 
@@ -903,6 +904,10 @@ export async function routeTicketMessage({
       phone: gateCommand.validatorPhone,
       message: buildGateValidatorMessage(gateSessionResult.gateUrl),
     });
+
+    if (!sendResult.ok) {
+      await revokeGateSession(gateSessionResult.gateSession.id);
+    }
 
     return {
       reply: buildGateAdminReply({

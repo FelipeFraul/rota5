@@ -1074,7 +1074,7 @@ portaria 15999999999
 portaria 15999999999 entrada principal
 ```
 
-If the sender is authorized, the router creates a gate session, sends the temporary link to the validator with Z-API, and replies to the admin with the validator phone, gate label, expiration, and send status. If a non-admin sends a `portaria ...` command, no session is created and no security detail is exposed.
+If the sender is authorized, the router creates a gate session, sends the temporary link to the validator with Z-API, and replies to the admin with the validator phone, gate label, expiration, and send status. If Z-API fails after the session is created, the backend revokes that newly created session and tells the admin that the link was not sent. If a non-admin sends a `portaria ...` command, no session is created and no security detail is exposed.
 
 ### Gate Page And Scanner
 
@@ -1118,6 +1118,20 @@ This endpoint validates only the gate session and returns:
 ```
 
 It does not validate ticket ownership, does not mark the ticket used, does not insert validation events, and does not update `tickets`.
+
+### Final Step 15 Audit
+
+- [x] `portaria TELEFONE [label]` is gated by normalized `ADMIN_WHATSAPP_PHONES`.
+- [x] The local admin phone `15997503836` is recognized by normalization; production has `ADMIN_WHATSAPP_PHONES` configured as encrypted Vercel env.
+- [x] `GATE_SESSION_SECRET` and `GATE_SESSION_TTL_MINUTES` are present in `src/lib/env.ts`, `.env.example`, and Vercel Production; neither uses `NEXT_PUBLIC_`, and the secret has no default fallback.
+- [x] Gate tokens use `base64url(payload).signature`, HMAC SHA-256, constant-time signature comparison, and payload fields only `gid`, `phone`, and `exp`.
+- [x] `gate_sessions.token_hash` stores only SHA-256 token hashes, is unique, and is not returned by public endpoints.
+- [x] `POST /api/gate/session/validate` returns only session id, gate label, validator phone last four digits, expiration, and active status.
+- [x] `POST /api/gate/session/scan` remains a placeholder and does not touch tickets, ticket validation events, orders, payments, session seats, or reservations.
+- [x] `/gate/session/[token]` renders invalid/expired/revoked access safely, does not log the token, and does not expose full phone or `token_hash`.
+- [x] The scanner is a client component, guards `navigator.mediaDevices` and `window.BarcodeDetector`, has manual fallback, and uses neutral labels `Leituras` and `Erros`.
+- [x] If validator-link delivery fails, the session is revoked and the admin receives a safe failure message.
+- [x] Temporary Supabase audit rows were removed.
 
 ### Explicit Non-Scope For Step 15
 

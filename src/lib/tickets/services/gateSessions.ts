@@ -202,3 +202,24 @@ export async function validateGateSessionToken(
   };
 }
 
+export async function revokeGateSession(gateSessionId: string) {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from("gate_sessions")
+    .update({
+      status: "revoked",
+    })
+    .eq("id", gateSessionId)
+    .eq("status", "active");
+
+  if (error) {
+    return {
+      ok: false as const,
+      error,
+    };
+  }
+
+  return {
+    ok: true as const,
+  };
+}
