@@ -1267,6 +1267,133 @@ Temporary Supabase data was created and removed after validation. The audit conf
 
 Not in scope for Step 16: advanced admin dashboard, event/session-specific wrong-event enforcement, cancellation/swap flows, reports, PDF/image tickets, and advanced camera UX.
 
+## Step 17 - MVP Closure Audit
+
+Step 17 performed a controlled end-to-end MVP audit without adding product features.
+
+### Real Supabase Inventory
+
+The real Supabase project was checked through safe REST operations and operational RPC calls. The following tables were present:
+
+- `customers`
+- `conversations`
+- `whatsapp_messages`
+- `venues`
+- `venue_sections`
+- `seats`
+- `events`
+- `event_sessions`
+- `session_seats`
+- `ticket_prices`
+- `reservations`
+- `reservation_items`
+- `orders`
+- `payments`
+- `payment_events`
+- `tickets`
+- `ticket_validation_events`
+- `seat_map_renders`
+- `gate_sessions`
+
+The following RPCs were present and executable by service role:
+
+- `public.reserve_seats`
+- `public.expire_reservations`
+- `public.confirm_paid_ticket_order`
+- `public.validate_ticket_entry`
+
+Important indexes are defined in the applied migrations:
+
+- partial unique inbound WhatsApp provider message id: `whatsapp_messages_inbound_provider_message_id_unique`;
+- partial unique Mercado Pago provider payment id: `payments_provider_payment_id_unique_idx`;
+- unique gate token hash: `gate_sessions.token_hash`;
+- gate validation event index: `ticket_validation_events_gate_session_id_idx`.
+
+### Environment Audit
+
+Vercel Production contains the required encrypted server-side envs:
+
+- Supabase keys;
+- Z-API instance/base/webhook keys;
+- Mercado Pago access/webhook/public key;
+- checkout internal secret;
+- app base URL;
+- ticket QR secret;
+- gate session/admin secrets and TTLs;
+- admin WhatsApp phones;
+- reservation TTL.
+
+No secret env uses a `NEXT_PUBLIC_` prefix. `NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY` is intentionally public. `.env` is gitignored and not tracked. `.env.example` contains names only and no real secret values.
+
+Local `.env` currently contains the earlier core Supabase/Z-API/Mercado Pago keys, but does not include every final-step key such as `APP_BASE_URL`, `CHECKOUT_INTERNAL_SECRET`, `TICKET_QR_SECRET`, `GATE_SESSION_SECRET`, `GATE_SESSION_TTL_MINUTES`, `GATE_ADMIN_SECRET`, and `TICKET_RESERVATION_TTL_MINUTES`. Pull/update local envs before running full server-side flows locally.
+
+The Z-API token env used by the code is `ZAPI_INSTANCE_TOKEN`; any external checklist item named `ZAPI_TOKEN` should be treated as the same provider token and mapped to `ZAPI_INSTANCE_TOKEN`.
+
+### Production Route Audit
+
+Production checks on `https://site-phi-seven-72.vercel.app`:
+
+- `/api/health` returns `200` and `status: ok`;
+- `/api/webhook/zapi` without secret returns `401`;
+- `/api/webhook/payment/mercado-pago` without signature returns `401`;
+- `/api/checkout/mercado-pago` without `x-checkout-secret` returns `401`;
+- `/api/gate/session/validate` with invalid token returns safe `valid: false`;
+- `/api/gate/session/scan` with invalid payload returns safe `gate_session_invalid`;
+- `/tickets/test-invalid-token` renders the safe invalid ticket page;
+- `/gate/session/token-invalido` renders the safe invalid gate page.
+
+### Controlled E2E Audit
+
+Temporary data used the prefix `TEST_E2E_TICKETING_MVP` and was removed at the end.
+
+The audit confirmed:
+
+- published event fixture is searchable;
+- `reserve_seats` creates an active reservation, pending order, reservation item, and reserved session seat;
+- `confirm_paid_ticket_order` marks reservation/order paid, issues one ticket, and turns the session seat sold;
+- a gate session can validate the ticket with `validate_ticket_entry`;
+- first scan returns `allowed`, second scan returns `already_used`;
+- validation events are recorded with `gate_session_id`;
+- cleanup leaves zero temporary customers, tickets, and gate sessions.
+
+Critical concurrency was rechecked:
+
+- two same-seat reservation attempts produce exactly one success;
+- two approved-payment confirmations for the same order do not duplicate tickets;
+- two simultaneous gate scans produce one `allowed` and one `already_used`.
+
+### Security Audit
+
+Static checks confirmed:
+
+- no service role key is used in frontend components;
+- webhook/checkout routes keep their required secrets/signatures;
+- logs pass through the project logger, which redacts sensitive key names and masks phone-like fields;
+- ticket and gate token paths do not log full tokens;
+- Z-API raw metadata remains minimal;
+- Mercado Pago event metadata stores request/payment/event identifiers, not full headers or access tokens;
+- `tickets.status` and `tickets.used_at` are changed only by `public.validate_ticket_entry`;
+- `session_seats` operational status is changed by reservation/payment/expiration RPCs, not by frontend or webhook helper code.
+
+### Validation Commands
+
+- `npm run lint`: passed.
+- `npm run typecheck`: passed.
+- `npm run build`: passed.
+- `npm audit`: reports two moderate PostCSS advisories through `next`. The available fix requires `npm audit fix --force` and would install a breaking Next version, so it was not applied.
+
+### Remaining MVP Limitations
+
+- No cancellation flow.
+- No ticket swap flow.
+- No manual ticket resend.
+- No event/session `wrong_event` gate filter yet.
+- No advanced admin panel.
+- No reports.
+- No QR visual/PDF ticket.
+- Scanner camera support depends on browser capabilities; manual fallback remains available.
+- A controlled low-value real Mercado Pago payment run is still recommended before public operation.
+
 The migration was applied manually through the Supabase SQL Editor and verified through the Supabase REST API on 2026-05-22 13:59:00 -03. The 18 expected tables exist in the real Supabase project.
 
 Supabase CLI status:
