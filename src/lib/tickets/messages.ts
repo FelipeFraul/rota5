@@ -39,7 +39,7 @@ export const TICKET_MESSAGES = {
   checkoutGenericError:
     "Não consegui gerar o link de pagamento agora. Tente novamente em instantes.",
   gateAdminInvalidCommand:
-    "Para criar acesso de portaria, envie: portaria 15999999999 entrada principal",
+    "Para criar acesso de portaria, responda aqui com: portaria TELEFONE_DO_VALIDADOR entrada principal",
   gateAdminCreateError:
     "Não consegui criar o acesso de portaria agora. Tente novamente em instantes.",
   adminReservedNeutral:

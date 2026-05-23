@@ -694,8 +694,10 @@ function buildAdminMenuOptionReply(role: AdminRole, option: number) {
     return [
       "Portaria já está disponível.",
       "",
-      "Para criar um acesso temporário, envie:",
-      "portaria 15999999999 entrada principal",
+      "Para criar um acesso temporário, responda aqui com:",
+      "portaria TELEFONE_DO_VALIDADOR entrada principal",
+      "",
+      "O telefone informado deve ser o do validador que receberá o link da portaria.",
     ].join("\n");
   }
 
