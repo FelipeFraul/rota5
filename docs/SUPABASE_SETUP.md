@@ -1156,14 +1156,27 @@ The signature is HMAC SHA-256 over the base64url payload using `GATE_SESSION_SEC
 
 ### WhatsApp Admin Flow
 
-Authenticated WhatsApp admins with `manage_gate` permission can open the admin menu, choose `Portaria`, then choose `Check-in`. The backend creates a temporary gate session for the same WhatsApp phone that is authenticated in the admin flow and replies in that same conversation with the scanner link. Admin navigation also accepts unique area names from any admin submenu; for example, typing `evento` while viewing check-in options switches back to the event area.
+Authenticated WhatsApp admins receive a permission-filtered main menu and can enter submenus for Events, Orders/Tickets, Courtesies, Gate, Admin Users, and Reports according to their role. Each submenu has `Voltar` and `Sair`; `menu` returns to the main menu, `voltar` returns one level, and `sair`/`logout`/`encerrar` revokes the active admin session. Admin navigation also accepts unique area names from any admin submenu; for example, typing `evento` while viewing gate options switches back to the event area.
+
+The submenu states are:
+
+```text
+admin_events_menu
+admin_orders_menu
+admin_courtesies_menu
+admin_gate_menu
+admin_users_menu
+admin_reports_menu
+```
+
+Only the gate submenu option `1. Check-in neste telefone` performs a real action in this step: it creates a temporary gate session for the same WhatsApp phone that is authenticated in the admin flow and replies in that same conversation with the scanner link. Other submenu actions currently respond with `Essa função será ativada em breve.` and do not create, edit, cancel, resend, report, or mutate real business data.
 
 The current admin menu path is:
 
 ```text
 admin
 4. Portaria
-1. Abrir leitor neste telefone
+1. Check-in neste telefone
 ```
 
 The old direct `portaria telefone` command is not the menu guidance for check-in. The operational admin flow keeps the user in the same WhatsApp conversation after authentication and does not ask the admin to send a link to any fixed number.

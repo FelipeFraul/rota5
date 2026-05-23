@@ -50,7 +50,6 @@ import {
   ensureAdminUserForPhone,
   formatAdminMenu,
   getActiveAdminSession,
-  getAdminMenuOptions,
   getAdminUserByPhone,
   hasAdminPermission,
   isAdminLogoutCommand,
@@ -59,6 +58,7 @@ import {
   normalizeAdminText,
   revokeActiveAdminSessions,
   type AdminRole,
+  type AdminPermission,
   verifyAdminPassphrase,
 } from "@/lib/tickets/services/adminAuth";
 import { sendZapiText } from "@/lib/zapi/client";
@@ -112,6 +112,9 @@ const SIMPLE_PAYMENT_CONTINUATIONS = new Set([
   "vamos",
 ]);
 const GATE_COMMAND_PATTERN = /^portaria(?:\s+(.+))?$/i;
+const ADMIN_MENU_UNAVAILABLE_MESSAGE =
+  "Essa opção não está disponível para o seu nível de acesso.";
+const ADMIN_CONSTRUCTION_MESSAGE = "Essa função será ativada em breve.";
 const WEEKDAY_OFFSETS: Record<string, number> = {
   domingo: 0,
   segunda: 1,
@@ -675,44 +678,152 @@ function buildAdminContext({
   };
 }
 
-function buildAdminMenuOptionReply(role: AdminRole, option: number) {
-  const selectedOption = getAdminMenuOptions(role).find(
-    (menuOption) => menuOption.option === option,
-  );
+type AdminSubmenuState =
+  | "admin_events_menu"
+  | "admin_orders_menu"
+  | "admin_courtesies_menu"
+  | "admin_gate_menu"
+  | "admin_users_menu"
+  | "admin_reports_menu";
 
-  if (!selectedOption) {
-    return "Não encontrei essa opção administrativa. Responda com um número do menu.";
-  }
+type AdminSubmenuConfig = {
+  title: string;
+  state: AdminSubmenuState;
+  mainOption: number;
+  permission: AdminPermission;
+  backOption: number;
+  exitOption: number;
+  options: string[];
+};
 
-  if (selectedOption.option === 7) {
-    return TICKET_MESSAGES.adminLogout;
-  }
+const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
+  admin_events_menu: {
+    title: "Eventos",
+    state: "admin_events_menu",
+    mainOption: 1,
+    permission: "manage_events",
+    backOption: 8,
+    exitOption: 9,
+    options: [
+      "Listar eventos",
+      "Criar evento",
+      "Editar evento",
+      "Pausar/ativar evento",
+      "Sessões e datas",
+      "Setores e assentos",
+      "Preços e lotes",
+    ],
+  },
+  admin_orders_menu: {
+    title: "Ingressos e pedidos",
+    state: "admin_orders_menu",
+    mainOption: 2,
+    permission: "manage_tickets",
+    backOption: 8,
+    exitOption: 9,
+    options: [
+      "Buscar pedido por telefone",
+      "Buscar pedido por código",
+      "Reenviar ingresso",
+      "Ver reservas ativas",
+      "Ver pagamentos pendentes",
+      "Cancelar reserva pendente",
+      "Consultar ticket",
+    ],
+  },
+  admin_courtesies_menu: {
+    title: "Cortesias",
+    state: "admin_courtesies_menu",
+    mainOption: 3,
+    permission: "manage_courtesies",
+    backOption: 6,
+    exitOption: 7,
+    options: [
+      "Gerar cortesia",
+      "Listar cortesias emitidas",
+      "Reenviar cortesia",
+      "Cancelar cortesia",
+      "Definir limite de cortesias",
+    ],
+  },
+  admin_gate_menu: {
+    title: "Portaria",
+    state: "admin_gate_menu",
+    mainOption: 4,
+    permission: "manage_gate",
+    backOption: 6,
+    exitOption: 7,
+    options: [
+      "Check-in neste telefone",
+      "Enviar acesso para outro validador",
+      "Ver acessos ativos",
+      "Revogar acesso de portaria",
+      "Contadores da portaria",
+    ],
+  },
+  admin_users_menu: {
+    title: "Administradores",
+    state: "admin_users_menu",
+    mainOption: 5,
+    permission: "manage_admins",
+    backOption: 6,
+    exitOption: 7,
+    options: [
+      "Listar administradores",
+      "Adicionar administrador",
+      "Alterar nível de administrador",
+      "Desativar administrador",
+      "Ver sessões administrativas",
+    ],
+  },
+  admin_reports_menu: {
+    title: "Relatórios",
+    state: "admin_reports_menu",
+    mainOption: 6,
+    permission: "view_reports",
+    backOption: 8,
+    exitOption: 9,
+    options: [
+      "Vendas por evento",
+      "Vendas por setor",
+      "Pagamentos pendentes",
+      "Reservas expiradas",
+      "Check-ins da portaria",
+      "Ingressos usados e não usados",
+      "Resumo geral",
+    ],
+  },
+};
 
-  if (
-    selectedOption.permission === "manage_gate" &&
-    hasAdminPermission(role, "manage_gate")
-  ) {
-    return buildAdminGateMenu();
-  }
-
-  return TICKET_MESSAGES.adminOptionUnavailable;
-}
-
-function buildAdminGateMenu() {
+function renderAdminSubmenu(config: AdminSubmenuConfig) {
   return [
-    "Check-in",
+    config.title,
     "",
-    "Escolha uma opção:",
+    ...config.options.map((label, index) => `${index + 1}. ${label}`),
+    `${config.backOption}. Voltar`,
+    `${config.exitOption}. Sair`,
     "",
-    "1. Abrir leitor neste telefone",
-    "2. Enviar acesso para outro validador (em construção)",
-    "3. Menu principal",
-    "",
-    "Responda com o número ou com o nome de outra área, como Eventos.",
+    "Responda com o número da opção.",
   ].join("\n");
 }
 
-function parseAdminMainMenuOption(text: string, role: AdminRole) {
+function getAdminSubmenuByMainOption(option: number) {
+  return Object.values(ADMIN_SUBMENUS).find(
+    (submenu) => submenu.mainOption === option,
+  );
+}
+
+function isAdminSubmenuState(
+  value: string | undefined,
+): value is AdminSubmenuState {
+  return Boolean(value && value in ADMIN_SUBMENUS);
+}
+
+function canAccessAdminMenu(role: AdminRole, submenu: AdminSubmenuConfig) {
+  return hasAdminPermission(role, submenu.permission);
+}
+
+function parseAdminMainMenuOption(text: string) {
   const normalized = normalizeAdminText(text);
   const aliases: Record<number, string[]> = {
     1: ["evento", "eventos"],
@@ -734,34 +845,25 @@ function parseAdminMainMenuOption(text: string, role: AdminRole) {
 
   const numericOption = Number(option);
 
-  return getAdminMenuOptions(role).some(
-    (menuOption) => menuOption.option === numericOption,
-  )
-    ? numericOption
-    : null;
+  return numericOption;
 }
 
-function parseAdminGateMenuOption(text: string) {
+function parseAdminSubmenuOption(text: string) {
   const normalized = normalizeAdminText(text);
-  const aliases: Record<number, string[]> = {
-    1: [
-      "abrir leitor",
-      "leitor",
-      "checkin",
-      "check-in",
-      "qr",
-      "qrcode",
-      "scanner",
-    ],
-    2: ["outro validador", "validador", "enviar acesso"],
-    3: ["menu", "menu principal", "voltar", "principal"],
-  };
 
-  const option = Object.entries(aliases).find(([, optionAliases]) =>
-    optionAliases.includes(normalized),
-  )?.[0];
+  if (normalized === "voltar") {
+    return "back" as const;
+  }
 
-  return option ? Number(option) : null;
+  if (normalized === "menu" || normalized === "menu principal") {
+    return "menu" as const;
+  }
+
+  if (normalized === "sair" || normalized === "logout" || normalized === "encerrar") {
+    return "exit" as const;
+  }
+
+  return text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
 }
 
 function buildGateCheckInReply({
@@ -1077,7 +1179,7 @@ export async function routeTicketMessage({
   if (
     reservedAdminCommand &&
     previousState.state !== "admin_menu" &&
-    previousState.state !== "admin_gate_menu" &&
+    !isAdminSubmenuState(previousState.state) &&
     !previousState.admin?.sessionId
   ) {
     if (!(await isAuthorizedAdminPhone(customer.whatsapp_phone))) {
@@ -1122,19 +1224,47 @@ export async function routeTicketMessage({
 
   if (
     previousState.state === "admin_menu" ||
-    previousState.state === "admin_gate_menu" ||
+    isAdminSubmenuState(previousState.state) ||
     previousState.admin?.sessionId
   ) {
-    if (isAdminLogoutCommand(text)) {
+    const adminReplyContext = ({
+      state,
+      role,
+      sessionId,
+      adminUserId,
+      expiresAt,
+    }: {
+      state: "admin_menu" | AdminSubmenuState;
+      role: AdminRole;
+      sessionId: string;
+      adminUserId: string;
+      expiresAt: string;
+    }) => ({
+      ...baseContext,
+      step: state,
+      state,
+      admin: buildAdminContext({
+        adminUserId,
+        role,
+        sessionId,
+        expiresAt,
+      }),
+    });
+
+    const endAdminSession = async () => {
       await revokeActiveAdminSessions(customer.whatsapp_phone);
 
       return {
-        reply: TICKET_MESSAGES.adminLogout,
+        reply: "Sessão administrativa encerrada com segurança.\n\nPara acessar novamente, envie admin.",
         nextContext: {
           ...buildInitialConversationState(),
           updatedAt: new Date().toISOString(),
         },
       };
+    };
+
+    if (isAdminLogoutCommand(text)) {
+      return endAdminSession();
     }
 
     const sessionResult = await getActiveAdminSession(customer.whatsapp_phone);
@@ -1169,75 +1299,162 @@ export async function routeTicketMessage({
       };
     }
 
+    const { adminUser } = adminUserResult;
+    const adminSession = sessionResult.adminSession;
     const numericOption = text.trim().match(/^\d+$/)
       ? Number(text.trim())
       : null;
-    const mainMenuOption =
-      numericOption ?? parseAdminMainMenuOption(text, adminUserResult.adminUser.role);
+    const typedMainMenuOption = numericOption
+      ? null
+      : parseAdminMainMenuOption(text);
 
-    if (mainMenuOption === 7) {
-      await revokeActiveAdminSessions(customer.whatsapp_phone);
+    if (numericOption === 7 || typedMainMenuOption === 7) {
+      return endAdminSession();
+    }
 
+    if (normalizeAdminText(text) === "menu") {
       return {
-        reply: TICKET_MESSAGES.adminLogout,
-        nextContext: {
-          ...buildInitialConversationState(),
-          updatedAt: new Date().toISOString(),
-        },
+        reply: formatAdminMenu(adminUser.role),
+        nextContext: adminReplyContext({
+          state: "admin_menu",
+          role: adminUser.role,
+          sessionId: adminSession.id,
+          adminUserId: adminUser.id,
+          expiresAt: adminSession.expires_at,
+        }),
       };
     }
 
-    if (previousState.state === "admin_gate_menu") {
-      const typedMainMenuOption = numericOption
-        ? null
-        : parseAdminMainMenuOption(text, adminUserResult.adminUser.role);
+    if (previousState.state === "admin_menu") {
+      const mainMenuOption = numericOption ?? typedMainMenuOption;
+
+      if (mainMenuOption === null) {
+        return {
+          reply: formatAdminMenu(adminUser.role),
+          nextContext: adminReplyContext({
+            state: "admin_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      const submenu = getAdminSubmenuByMainOption(mainMenuOption);
+
+      if (!submenu || !canAccessAdminMenu(adminUser.role, submenu)) {
+        return {
+          reply: ADMIN_MENU_UNAVAILABLE_MESSAGE,
+          nextContext: adminReplyContext({
+            state: "admin_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      return {
+        reply: renderAdminSubmenu(submenu),
+        nextContext: adminReplyContext({
+          state: submenu.state,
+          role: adminUser.role,
+          sessionId: adminSession.id,
+          adminUserId: adminUser.id,
+          expiresAt: adminSession.expires_at,
+        }),
+      };
+    }
+
+    if (isAdminSubmenuState(previousState.state)) {
+      const currentSubmenu = ADMIN_SUBMENUS[previousState.state];
+
+      if (!canAccessAdminMenu(adminUser.role, currentSubmenu)) {
+        return {
+          reply: ADMIN_MENU_UNAVAILABLE_MESSAGE,
+          nextContext: adminReplyContext({
+            state: "admin_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
 
       if (typedMainMenuOption) {
-        const nextState =
-          typedMainMenuOption === 4 &&
-          hasAdminPermission(adminUserResult.adminUser.role, "manage_gate")
-            ? "admin_gate_menu"
-            : "admin_menu";
+        if (typedMainMenuOption === 7) {
+          return endAdminSession();
+        }
+
+        const targetSubmenu = getAdminSubmenuByMainOption(typedMainMenuOption);
+
+        if (!targetSubmenu || !canAccessAdminMenu(adminUser.role, targetSubmenu)) {
+          return {
+            reply: ADMIN_MENU_UNAVAILABLE_MESSAGE,
+            nextContext: adminReplyContext({
+              state: previousState.state,
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
 
         return {
-          reply: buildAdminMenuOptionReply(
-            adminUserResult.adminUser.role,
-            typedMainMenuOption,
-          ),
-          nextContext: {
-            ...baseContext,
-            step: nextState,
-            state: nextState,
-            admin: buildAdminContext({
-              adminUserId: adminUserResult.adminUser.id,
-              role: adminUserResult.adminUser.role,
-              sessionId: sessionResult.adminSession.id,
-              expiresAt: sessionResult.adminSession.expires_at,
-            }),
-          },
+          reply: renderAdminSubmenu(targetSubmenu),
+          nextContext: adminReplyContext({
+            state: targetSubmenu.state,
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
         };
       }
 
-      if (!hasAdminPermission(adminUserResult.adminUser.role, "manage_gate")) {
+      const submenuOption = parseAdminSubmenuOption(text);
+
+      if (submenuOption === "menu" || submenuOption === "back") {
         return {
-          reply: TICKET_MESSAGES.adminOptionUnavailable,
-          nextContext: {
-            ...baseContext,
-            step: "admin_menu",
+          reply: formatAdminMenu(adminUser.role),
+          nextContext: adminReplyContext({
             state: "admin_menu",
-            admin: buildAdminContext({
-              adminUserId: adminUserResult.adminUser.id,
-              role: adminUserResult.adminUser.role,
-              sessionId: sessionResult.adminSession.id,
-              expiresAt: sessionResult.adminSession.expires_at,
-            }),
-          },
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
         };
       }
 
-      const gateMenuOption = numericOption ?? parseAdminGateMenuOption(text);
+      if (
+        submenuOption === "exit" ||
+        submenuOption === currentSubmenu.exitOption
+      ) {
+        return endAdminSession();
+      }
 
-      if (gateMenuOption === 1) {
+      if (submenuOption === currentSubmenu.backOption) {
+        return {
+          reply: formatAdminMenu(adminUser.role),
+          nextContext: adminReplyContext({
+            state: "admin_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (
+        previousState.state === "admin_gate_menu" &&
+        submenuOption === 1
+      ) {
         const gateSessionResult = await createGateSession({
           validatorPhone: customer.whatsapp_phone,
           createdByAdminPhone: customer.whatsapp_phone,
@@ -1247,17 +1464,13 @@ export async function routeTicketMessage({
         if (!gateSessionResult.ok) {
           return {
             reply: TICKET_MESSAGES.gateAdminCreateError,
-            nextContext: {
-              ...baseContext,
-              step: "admin_gate_menu",
+            nextContext: adminReplyContext({
               state: "admin_gate_menu",
-              admin: buildAdminContext({
-                adminUserId: adminUserResult.adminUser.id,
-                role: adminUserResult.adminUser.role,
-                sessionId: sessionResult.adminSession.id,
-                expiresAt: sessionResult.adminSession.expires_at,
-              }),
-            },
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
           };
         }
 
@@ -1266,97 +1479,54 @@ export async function routeTicketMessage({
             gateUrl: gateSessionResult.gateUrl,
             expiresAt: gateSessionResult.gateSession.expires_at,
           }),
-          nextContext: {
-            ...baseContext,
-            step: "admin_gate_menu",
+          nextContext: adminReplyContext({
             state: "admin_gate_menu",
-            admin: buildAdminContext({
-              adminUserId: adminUserResult.adminUser.id,
-              role: adminUserResult.adminUser.role,
-              sessionId: sessionResult.adminSession.id,
-              expiresAt: sessionResult.adminSession.expires_at,
-            }),
-          },
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
         };
       }
 
-      if (gateMenuOption === 2) {
+      if (
+        typeof submenuOption === "number" &&
+        submenuOption >= 1 &&
+        submenuOption <= currentSubmenu.options.length
+      ) {
         return {
-          reply: TICKET_MESSAGES.adminOptionUnavailable,
-          nextContext: {
-            ...baseContext,
-            step: "admin_gate_menu",
-            state: "admin_gate_menu",
-            admin: buildAdminContext({
-              adminUserId: adminUserResult.adminUser.id,
-              role: adminUserResult.adminUser.role,
-              sessionId: sessionResult.adminSession.id,
-              expiresAt: sessionResult.adminSession.expires_at,
-            }),
-          },
-        };
-      }
-
-      if (gateMenuOption === 3) {
-        return {
-          reply: formatAdminMenu(adminUserResult.adminUser.role),
-          nextContext: {
-            ...baseContext,
-            step: "admin_menu",
-            state: "admin_menu",
-            admin: buildAdminContext({
-              adminUserId: adminUserResult.adminUser.id,
-              role: adminUserResult.adminUser.role,
-              sessionId: sessionResult.adminSession.id,
-              expiresAt: sessionResult.adminSession.expires_at,
-            }),
-          },
+          reply: ADMIN_CONSTRUCTION_MESSAGE,
+          nextContext: adminReplyContext({
+            state: previousState.state,
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
         };
       }
 
       return {
-        reply:
-          gateMenuOption === null
-            ? buildAdminGateMenu()
-            : TICKET_MESSAGES.gateAdminOptionInvalid,
-        nextContext: {
-          ...baseContext,
-          step: "admin_gate_menu",
-          state: "admin_gate_menu",
-          admin: buildAdminContext({
-            adminUserId: adminUserResult.adminUser.id,
-            role: adminUserResult.adminUser.role,
-            sessionId: sessionResult.adminSession.id,
-            expiresAt: sessionResult.adminSession.expires_at,
-          }),
-        },
+        reply: renderAdminSubmenu(currentSubmenu),
+        nextContext: adminReplyContext({
+          state: previousState.state,
+          role: adminUser.role,
+          sessionId: adminSession.id,
+          adminUserId: adminUser.id,
+          expiresAt: adminSession.expires_at,
+        }),
       };
     }
 
     return {
-      reply:
-        mainMenuOption === null
-          ? formatAdminMenu(adminUserResult.adminUser.role)
-          : buildAdminMenuOptionReply(adminUserResult.adminUser.role, mainMenuOption),
-      nextContext: {
-        ...baseContext,
-        step:
-          mainMenuOption === 4 &&
-          hasAdminPermission(adminUserResult.adminUser.role, "manage_gate")
-            ? "admin_gate_menu"
-            : "admin_menu",
-        state:
-          mainMenuOption === 4 &&
-          hasAdminPermission(adminUserResult.adminUser.role, "manage_gate")
-            ? "admin_gate_menu"
-            : "admin_menu",
-        admin: buildAdminContext({
-          adminUserId: adminUserResult.adminUser.id,
-          role: adminUserResult.adminUser.role,
-          sessionId: sessionResult.adminSession.id,
-          expiresAt: sessionResult.adminSession.expires_at,
-        }),
-      },
+      reply: formatAdminMenu(adminUser.role),
+      nextContext: adminReplyContext({
+        state: "admin_menu",
+        role: adminUser.role,
+        sessionId: adminSession.id,
+        adminUserId: adminUser.id,
+        expiresAt: adminSession.expires_at,
+      }),
     };
   }
 
