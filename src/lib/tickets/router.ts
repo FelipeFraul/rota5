@@ -740,7 +740,7 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
       "Listar eventos",
       "Criar evento",
       "Editar evento",
-      "Pausar/ativar evento",
+      "Tirar da publicação/ativar evento",
       "Sessões e datas",
       "Setores e assentos",
       "Preços e lotes",
@@ -1154,7 +1154,7 @@ function renderAdminEventDetails(event: AdminEventDetails) {
     "2. Sessões e datas",
     "3. Setores e assentos",
     "4. Preços e lotes",
-    "5. Pausar/ativar",
+    "5. Tirar da publicação/ativar",
     "6. Voltar",
     "7. Sair",
   ].join("\n");
@@ -1231,6 +1231,7 @@ async function buildAdminEventsListContext(
       hasMore: result.hasMore,
     }),
     nextContext: withAdminEventsContext(baseContext, "admin_events_list", {
+      ...getAdminEventsContext(baseContext),
       page: result.page,
       lastEvents: events.map((event) => ({
         option: event.option,
@@ -1289,6 +1290,18 @@ async function handleAdminEventsFlow({
   const normalized = normalizeAdminText(text);
   const numericOption = text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
 
+  if (baseContext.state === "admin_events_menu" && normalized === "voltar") {
+    return {
+      reply: formatAdminMenu(baseContext.admin?.role as AdminRole),
+      nextContext: {
+        ...baseContext,
+        step: "admin_menu",
+        state: "admin_menu",
+        adminEvents: undefined,
+      },
+    };
+  }
+
   if (normalized === "menu" || normalized === "voltar") {
     return {
       reply: renderAdminSubmenu(ADMIN_SUBMENUS.admin_events_menu),
@@ -1326,7 +1339,7 @@ async function handleAdminEventsFlow({
             numericOption === 3
               ? "editar"
               : numericOption === 4
-                ? "pausar/ativar"
+                ? "tirar da publicação/ativar"
                 : numericOption === 5
                   ? "gerenciar sessões"
                   : numericOption === 6
@@ -1409,7 +1422,7 @@ async function handleAdminEventsFlow({
           `Evento: ${details.event.title}`,
           `Status atual: ${details.event.status}`,
           "",
-          "1. Pausar vendas",
+          "1. Voltar para rascunho / tirar da publicação",
           "2. Ativar/publicar",
           "3. Cancelar evento",
           "4. Voltar",
@@ -1467,7 +1480,7 @@ async function handleAdminEventsFlow({
     if (numericOption === 5) {
       return {
         reply: [
-          "1. Pausar vendas",
+          "1. Voltar para rascunho / tirar da publicação",
           "2. Ativar/publicar",
           "3. Cancelar evento",
           "4. Voltar",
@@ -1766,6 +1779,8 @@ async function handleAdminEventsFlow({
       reply:
         targetStatus === "cancelled"
           ? "Digite CANCELAR EVENTO para confirmar o cancelamento. Não haverá exclusão física nem estorno automático."
+          : targetStatus === "draft"
+            ? "Responda CONFIRMAR para voltar o evento para rascunho (draft) e tirá-lo da publicação."
           : `Responda CONFIRMAR para alterar o status para ${targetStatus}.`,
       nextContext: withAdminEventsContext(baseContext, "admin_event_status_confirm", {
         selectedEventId: eventId,
@@ -2017,6 +2032,30 @@ async function handleAdminEventOperationalSubmenus({
   const numericOption = text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
 
   if (!eventId) return null;
+
+  if (isCancelText(text)) {
+    if (
+      baseContext.state === "admin_event_session_create_collecting" ||
+      baseContext.state === "admin_event_session_edit_collecting"
+    ) {
+      return showAdminEventSessionsMenu(baseContext, eventId);
+    }
+
+    if (
+      baseContext.state === "admin_event_section_create_collecting" ||
+      baseContext.state === "admin_event_seats_create_collecting" ||
+      baseContext.state === "admin_event_session_seats_confirm"
+    ) {
+      return showAdminEventSectionsMenu(baseContext, eventId);
+    }
+
+    if (
+      baseContext.state === "admin_event_price_create_collecting" ||
+      baseContext.state === "admin_event_price_edit_collecting"
+    ) {
+      return showAdminEventPricesMenu(baseContext, eventId);
+    }
+  }
 
   if (baseContext.state === "admin_event_sessions_menu") {
     if (numericOption === 1) {
@@ -3261,7 +3300,21 @@ export async function routeTicketMessage({
       baseContext.state === "admin_events_list" ||
       baseContext.state.startsWith("admin_event_")
     ) {
+      if (baseContext.state === "admin_events_menu" && numericOption === 8) {
+        return {
+          reply: formatAdminMenu(adminUser.role),
+          nextContext: adminReplyContext({
+            state: "admin_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
       const isEventFlowExitOption =
+        (baseContext.state === "admin_events_menu" && numericOption === 9) ||
         (baseContext.state === "admin_event_detail" && numericOption === 7) ||
         (baseContext.state === "admin_event_sessions_menu" && numericOption === 7) ||
         (baseContext.state === "admin_event_sections_menu" && numericOption === 8) ||

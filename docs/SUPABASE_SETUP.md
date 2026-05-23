@@ -1192,7 +1192,7 @@ Implemented event actions:
 - create event with title, artist, city, UF, venue, first session date/time, and initial status;
 - reuse an existing venue by name/city/UF or create a new active venue;
 - edit event title, artist, city/UF, venue, and status;
-- pause/publish/cancel event by status change only, never physical deletion;
+- return event to `draft` to remove it from publication, publish, or cancel by status change only, never physical deletion;
 - list, create, edit date/status, open/close sales, and cancel event sessions;
 - list, create, and edit venue sections;
 - create structural seats by manual list or simple range;
@@ -1230,6 +1230,15 @@ admin_event_price_edit_collecting
 Input is parsed and validated server-side. Dates use the Brazilian format `DD/MM/YYYY HH:mm`; money values are converted to cents before storage; slugs are normalized; seat lists accept comma-separated codes or simple ranges. Errors returned to WhatsApp are controlled and do not expose SQL details.
 
 The final module audit created and removed real temporary data with prefix `TEST_ADMIN_EVENTS_FLOW`. It confirmed that catalog writes stay scoped to venue/event/session/section/seat/session-seat/price tables, that `session_seats` are only inserted as `available`, that duplicate structural records are blocked by existing constraints, that `10,90` and `10.90` both parse to `1090` cents, and that a fully configured published event is visible to the normal buyer search path. Cleanup confirmed no remaining `TEST_ADMIN_EVENTS_FLOW` event or venue rows.
+
+A second operational audit exercised the real `/api/webhook/zapi` route against a local Z-API mock using temporary data with prefix `TEST_ADMIN_EVENTS_WHATSAPP_FLOW`. It confirmed:
+
+- `root` and `admin` can enter `Eventos`; `operator`, `gate`, and `support` are blocked by the real menu flow;
+- create/edit/status/session/section/seat/session-seat/price flows work through persisted WhatsApp conversation context;
+- `CANCELAR`, `voltar`, `menu`, invalid numbers, and numeric `Sair` options leave the admin in safe states or revoke the session as expected;
+- returning an event to `draft` is the supported “remove from publication” action because the schema does not have `paused`;
+- a buyer can find and reserve from a catalog created through the admin conversation when the event is `published`, the session is `sales_open`, seats/session seats are available, and price is active;
+- cleanup removed the temporary catalog, WhatsApp, customer, admin, reservation, and order data.
 
 ### Gate Page And Scanner
 
