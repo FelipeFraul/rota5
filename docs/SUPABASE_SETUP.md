@@ -1795,8 +1795,9 @@ Use temporary data only, and remove it after testing if running against a produc
 - [x] Expired reservation without reservation items does not fail.
 - [x] Sold seats are not released.
 - [x] Blocked seats are not released.
-- [x] Production automation exists through Vercel Cron at `GET /api/cron/expire-reservations`.
-- [x] The cron route requires `Authorization: Bearer CRON_SECRET`.
+- [x] Production expiration runner exists at `GET /api/cron/expire-reservations`.
+- [x] The route requires `Authorization: Bearer CRON_SECRET`.
+- [x] Because Vercel Hobby only permits daily cron jobs, configure an external scheduler to call the route every minute, or use a Vercel plan with frequent cron support.
 - [x] Expired reservations trigger a WhatsApp notice to the buyer after seats are released.
 
 ## Reserve Seats Manual Test Checklist
