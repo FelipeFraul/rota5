@@ -18,7 +18,7 @@ export const TICKET_MESSAGES = {
   noSeatsAvailable:
     "Não encontrei assentos disponíveis nesse setor no momento. Escolha outro setor ou faça uma nova busca.",
   unnumberedSectionPending:
-    "Esse setor não tem assento marcado. No próximo passo você poderá escolher a quantidade de ingressos.",
+    "Quantos ingressos você quer? Responda somente com o número. Ex: 2",
   seatInvalidOption:
     "Não encontrei esse assento na lista. Escolha um dos códigos enviados.",
   seatUnavailable:

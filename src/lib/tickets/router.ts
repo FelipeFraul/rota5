@@ -36,6 +36,7 @@ import {
   type AvailableSeatList,
 } from "@/lib/tickets/services/seats";
 import {
+  reserveUnnumberedSectionTickets,
   reserveSelectedSeat,
   type ReserveSelectedSeatResult,
   type ReserveSelectedSeatSuccess,
@@ -650,38 +651,39 @@ function formatSectionPrice(section: AvailableSection) {
   if (section.ticketTypes.length === 1) {
     const ticketType = section.ticketTypes[0];
 
-    return `${ticketType.label}: ${formatCurrencyFromCents(ticketType.priceCents)} + ${formatCurrencyFromCents(ticketType.feeCents)} taxa`;
+    return `${formatCurrencyFromCents(ticketType.priceCents)} + ${formatCurrencyFromCents(ticketType.feeCents)} taxa`;
   }
 
   return `A partir de: ${formatCurrencyFromCents(section.minPriceCents)} + ${formatCurrencyFromCents(section.minFeeCents)} taxa`;
 }
 
 function formatSectionsReply({
-  selectedEvent,
   sections,
 }: {
-  selectedEvent: TicketConversationSelectedEvent;
   sections: AvailableSection[];
 }) {
   const sectionLines = sections.flatMap((section, index) => [
-    `${index + 1}. ${section.sectionName}`,
-    `Disponíveis: ${section.availableSeatsCount}`,
-    formatSectionPrice(section),
+    `> ${index + 1}. ${section.sectionName} - *${formatSectionPrice(section)}*`,
     "",
   ]);
 
   return [
-    "Você escolheu:",
-    "",
-    selectedEvent.title,
-    `Local: ${selectedEvent.city}/${selectedEvent.state}`,
-    `Data: ${formatEventDate(selectedEvent.startsAt)}`,
-    `Casa: ${selectedEvent.venueName ?? "A confirmar"}`,
-    "",
-    "Setores disponíveis:",
+    "*ESCOLHA SEU INGRESSO/SETOR*",
     "",
     ...sectionLines,
     "Responda com o número do setor para continuar.",
+  ].join("\n");
+}
+
+function formatQuantityPrompt(section: AvailableSection) {
+  return [
+    `*${section.sectionName.toLocaleUpperCase("pt-BR")}*`,
+    "",
+    `> 🎫 Valor: *${formatSectionPrice(section)}*`,
+    `> 📦 Disponíveis: ${section.availableSeatsCount}`,
+    "",
+    "Quantos ingressos você quer?",
+    "Responda somente com o número. Ex: 2",
   ].join("\n");
 }
 
@@ -749,6 +751,18 @@ function isSimpleReservationReply(text: string) {
   const normalized = normalizeIntentText(text);
 
   return SIMPLE_PAYMENT_CONTINUATIONS.has(normalized);
+}
+
+function parseTicketQuantity(text: string) {
+  const normalized = normalizeIntentText(text);
+
+  if (!/^\d+$/.test(normalized)) {
+    return null;
+  }
+
+  const quantity = Number(normalized);
+
+  return Number.isInteger(quantity) && quantity > 0 ? quantity : null;
 }
 
 function getAdminPhones() {
@@ -1112,20 +1126,24 @@ function formatReservationReply({
 }: {
   selectedEvent: TicketConversationSelectedEvent;
   selectedSection: TicketConversationSelectedSection;
-  selectedSeat: TicketConversationSelectedSeat;
+  selectedSeat?: TicketConversationSelectedSeat;
   reservation: ReserveSelectedSeatSuccess;
 }) {
+  const quantity = reservation.items.length || 1;
+
   return [
-    "Assento reservado por alguns minutos!",
+    "Reserva criada por alguns minutos!",
     "",
     `Evento: ${selectedEvent.title}`,
     `Setor: ${selectedSection.sectionName}`,
-    `Assento: ${selectedSeat.seatCode}`,
+    ...(selectedSeat ? [`Assento: ${selectedSeat.seatCode}`] : []),
+    `Quantidade: ${quantity}`,
     "",
     `Valor: ${formatCurrencyFromCents(reservation.totalAmountCents)} + ${formatCurrencyFromCents(reservation.totalFeeCents)} taxa`,
     `Reserva válida até: ${formatTime(reservation.expiresAt)}`,
     "",
-    "No próximo passo você receberá o link de pagamento.",
+    "Quer continuar com a compra?",
+    "Responda PAGAR para receber o link de pagamento.",
   ].join("\n");
 }
 
@@ -4006,6 +4024,10 @@ function messageForReservationFailure(
     return TICKET_MESSAGES.seatUnavailable;
   }
 
+  if (result.reason === "not_enough_seats") {
+    return "Não temos essa quantidade disponível nesse ingresso/setor. Envie uma quantidade menor.";
+  }
+
   if (result.reason === "ticket_price_not_found") {
     return TICKET_MESSAGES.sectionPriceUnavailable;
   }
@@ -4761,6 +4783,83 @@ export async function routeTicketMessage({
     };
   }
 
+  if (previousState.state === "selecting_quantity") {
+    const quantity = parseTicketQuantity(text);
+
+    if (!previousState.selectedEvent || !previousState.selectedSection) {
+      return {
+        reply: TICKET_MESSAGES.sectionUnavailable,
+        nextContext: {
+          ...baseContext,
+          step: "idle",
+          state: "idle",
+          selectedSection: undefined,
+          lastSeats: [],
+        },
+      };
+    }
+
+    if (!quantity) {
+      return {
+        reply: "Envie a quantidade de ingressos usando apenas números. Ex: 2",
+        nextContext: {
+          ...baseContext,
+          step: "selecting_quantity",
+          state: "selecting_quantity",
+        },
+      };
+    }
+
+    if (quantity > 10) {
+      return {
+        reply:
+          "Para esta compra, escolha até 10 ingressos por vez. Envie uma quantidade menor.",
+        nextContext: {
+          ...baseContext,
+          step: "selecting_quantity",
+          state: "selecting_quantity",
+        },
+      };
+    }
+
+    const reservationResult = await reserveUnnumberedSectionTickets({
+      customerId: customer.id,
+      conversationId: conversation.id,
+      eventId: previousState.selectedEvent.eventId,
+      sessionId: previousState.selectedEvent.sessionId,
+      sectionId: previousState.selectedSection.sectionId,
+      quantity,
+    });
+
+    if (!reservationResult.ok) {
+      return {
+        reply: messageForReservationFailure(reservationResult),
+        nextContext: {
+          ...baseContext,
+          step: "selecting_quantity",
+          state: "selecting_quantity",
+          selectedSeat: undefined,
+        },
+      };
+    }
+
+    return {
+      reply: formatReservationReply({
+        selectedEvent: previousState.selectedEvent,
+        selectedSection: previousState.selectedSection,
+        reservation: reservationResult.reservation,
+      }),
+      nextContext: {
+        ...baseContext,
+        step: "reservation_created",
+        state: "reservation_created",
+        selectedSeat: undefined,
+        reservation: buildReservationContext(reservationResult.reservation),
+        lastSeats: [],
+      },
+    };
+  }
+
   if (previousState.state === "showing_seats" && previousState.lastSeats?.length) {
     const requestedSeatCode = normalizeSeatCode(text);
     const selectedSeat = previousState.lastSeats.find(
@@ -4942,7 +5041,7 @@ export async function routeTicketMessage({
     }
 
     return {
-      reply: formatSectionsReply({ selectedEvent, sections }),
+      reply: formatSectionsReply({ sections }),
       nextContext: {
         ...baseContext,
         step: "showing_sections",
@@ -5042,11 +5141,11 @@ export async function routeTicketMessage({
 
       if (!selectedSection.hasNumberedSeats) {
         return {
-          reply: TICKET_MESSAGES.unnumberedSectionPending,
+          reply: formatQuantityPrompt(selectedSection),
           nextContext: {
             ...baseContext,
-            step: "showing_sections",
-            state: "showing_sections",
+            step: "selecting_quantity",
+            state: "selecting_quantity",
             selectedEvent: buildSelectedEvent(selectedSession),
             selectedSection: selectedSectionContext,
             lastSeats: [],

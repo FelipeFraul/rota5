@@ -30,6 +30,7 @@ export type TicketConversationStep =
   | "admin_event_price_edit_collecting"
   | "showing_events"
   | "showing_sections"
+  | "selecting_quantity"
   | "showing_seats"
   | "reservation_created"
   | "payment_pending";

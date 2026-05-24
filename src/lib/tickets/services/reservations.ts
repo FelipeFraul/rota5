@@ -4,7 +4,10 @@ import { getEnv } from "@/lib/env";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getValidatedEventSession } from "@/lib/tickets/services/events";
 import { getAvailableSectionForSession } from "@/lib/tickets/services/sections";
-import { getValidatedSeatForReservation } from "@/lib/tickets/services/seats";
+import {
+  getValidatedSeatForReservation,
+  listAvailableSeats,
+} from "@/lib/tickets/services/seats";
 
 export type ReserveSelectedSeatInput = {
   customerId: string;
@@ -13,6 +16,16 @@ export type ReserveSelectedSeatInput = {
   sessionId: string;
   sectionId: string;
   seatId: string;
+  ticketType?: string;
+};
+
+export type ReserveUnnumberedSectionInput = {
+  customerId: string;
+  conversationId: string;
+  eventId: string;
+  sessionId: string;
+  sectionId: string;
+  quantity: number;
   ticketType?: string;
 };
 
@@ -59,6 +72,7 @@ export type ReserveSelectedSeatResult =
       reason:
         | "seat_unavailable"
         | "seat_not_available"
+        | "not_enough_seats"
         | "ticket_price_not_found"
         | "session_not_available"
         | "customer_not_found"
@@ -258,6 +272,85 @@ export async function reserveSelectedSeat({
     p_conversation_id: conversationId,
     p_session_id: selectedSession.sessionId,
     p_seat_ids: [selectedSeat.seatId],
+    p_ticket_type: ticketType,
+    p_ttl_minutes: env.TICKET_RESERVATION_TTL_MINUTES,
+  });
+
+  if (error) {
+    return {
+      ok: false,
+      reason: mapReserveError(error),
+      error,
+    };
+  }
+
+  if (!data || typeof data !== "object") {
+    return { ok: false, reason: "reservation_failed" };
+  }
+
+  return {
+    ok: true,
+    reservation: mapRpcResponse(data as ReserveSeatsRpcResponse),
+  };
+}
+
+export async function reserveUnnumberedSectionTickets({
+  customerId,
+  conversationId,
+  eventId,
+  sessionId,
+  sectionId,
+  quantity,
+  ticketType = "full",
+}: ReserveUnnumberedSectionInput): Promise<ReserveSelectedSeatResult> {
+  const activeReservation =
+    await findActivePendingReservationForCustomer(customerId);
+
+  if (activeReservation) {
+    return {
+      ok: false,
+      reason: "active_reservation_exists",
+      reservation: activeReservation,
+    };
+  }
+
+  if (!Number.isInteger(quantity) || quantity <= 0) {
+    return { ok: false, reason: "seat_unavailable" };
+  }
+
+  const selectedSession = await getValidatedEventSession({ eventId, sessionId });
+
+  if (!selectedSession) {
+    return { ok: false, reason: "session_not_available" };
+  }
+
+  const selectedSection = await getAvailableSectionForSession({
+    sessionId: selectedSession.sessionId,
+    sectionId,
+    venueId: selectedSession.venueId,
+  });
+
+  if (!selectedSection || selectedSection.hasNumberedSeats) {
+    return { ok: false, reason: "seat_unavailable" };
+  }
+
+  const seatList = await listAvailableSeats({
+    sessionId: selectedSession.sessionId,
+    sectionId: selectedSection.sectionId,
+    limit: quantity,
+  });
+
+  if (seatList.seats.length < quantity) {
+    return { ok: false, reason: "not_enough_seats" };
+  }
+
+  const env = getEnv();
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.rpc("reserve_seats", {
+    p_customer_id: customerId,
+    p_conversation_id: conversationId,
+    p_session_id: selectedSession.sessionId,
+    p_seat_ids: seatList.seats.slice(0, quantity).map((seat) => seat.seatId),
     p_ticket_type: ticketType,
     p_ttl_minutes: env.TICKET_RESERVATION_TTL_MINUTES,
   });
