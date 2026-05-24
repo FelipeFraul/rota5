@@ -9,7 +9,7 @@ import { paySelfHostedCheckout } from "@/lib/tickets/services/checkout";
 
 const MAX_PAYMENT_BYTES = 32 * 1024;
 const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function extractOrderIdFromRequestUrl(request: Request) {
   const referer = request.headers.get("referer");
