@@ -1622,7 +1622,7 @@ async function handleAdminEventsFlow({
     };
   }
 
-  if (normalized === "menu" || normalized === "voltar") {
+  if (normalized === "menu") {
     return {
       reply: renderAdminEventsMenu(),
       nextContext: withAdminEventsContext(baseContext, "admin_events_menu", adminEvents),
@@ -1688,6 +1688,13 @@ async function handleAdminEventsFlow({
   }
 
   if (baseContext.state === "admin_events_list") {
+    if (isBackText(text) || isAbortText(text)) {
+      return {
+        reply: renderAdminEventsMenu(),
+        nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
+      };
+    }
+
     if (normalized === "mais") {
       if (adminEvents.hasMore === false) {
         return {
@@ -1821,6 +1828,10 @@ async function handleAdminEventsFlow({
     }
 
     if (numericOption === 6) {
+      return buildAdminEventsListContext(baseContext, adminEvents.page ?? 0);
+    }
+
+    if (isBackText(text) || isAbortText(text)) {
       return buildAdminEventsListContext(baseContext, adminEvents.page ?? 0);
     }
   }
