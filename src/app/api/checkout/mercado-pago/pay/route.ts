@@ -10,6 +10,24 @@ const MAX_PAYMENT_BYTES = 32 * 1024;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
 
+function extractOrderIdFromRequestUrl(request: Request) {
+  const referer = request.headers.get("referer");
+
+  if (!referer) {
+    return null;
+  }
+
+  try {
+    const url = new URL(referer);
+    const match = url.pathname.match(/\/checkout\/([^/]+)/);
+    const value = match?.[1] ? decodeURIComponent(match[1]) : null;
+
+    return value && UUID_PATTERN.test(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 async function readPaymentBody(request: Request) {
   const contentLength = request.headers.get("content-length");
 
@@ -72,6 +90,10 @@ export async function POST(request: Request) {
     installments,
   } = bodyResult.body;
   const orderId = typeof rawOrderId === "string" ? rawOrderId : "";
+  const fallbackOrderId = extractOrderIdFromRequestUrl(request);
+  const resolvedOrderId = UUID_PATTERN.test(orderId)
+    ? orderId
+    : fallbackOrderId ?? "";
   const method =
     typeof rawMethod === "string" ? rawMethod.toLowerCase().trim() : "";
   const parsedInstallments =
@@ -81,7 +103,7 @@ export async function POST(request: Request) {
         ? Number(installments)
         : undefined;
 
-  if (!UUID_PATTERN.test(orderId)) {
+  if (!UUID_PATTERN.test(resolvedOrderId)) {
     return badRequest("Pedido inválido.");
   }
 
@@ -94,7 +116,7 @@ export async function POST(request: Request) {
   }
 
   const result = await paySelfHostedCheckout({
-    orderId,
+    orderId: resolvedOrderId,
     method,
     email: typeof email === "string" ? email : "",
     identificationNumber:

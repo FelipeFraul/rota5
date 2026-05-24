@@ -174,6 +174,7 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
       const data = await submitPayment({
         method: "pix",
         orderId: order.orderId,
+        orderNumber: order.orderId,
         email,
         identificationNumber,
       });
@@ -241,6 +242,7 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
       const data = await submitPayment({
         method: "card",
         orderId: order.orderId,
+        orderNumber: order.orderId,
         email,
         identificationNumber,
         token: tokenResponse.id,
