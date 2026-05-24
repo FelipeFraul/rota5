@@ -17,6 +17,12 @@ export type MercadoPagoPayment = {
   transaction_amount?: number | string | null;
   date_approved?: string | null;
   currency_id?: string | null;
+  point_of_interaction?: {
+    transaction_data?: {
+      qr_code?: string | null;
+      ticket_url?: string | null;
+    } | null;
+  } | null;
 };
 
 export type MercadoPagoPaymentResult =
@@ -67,6 +73,39 @@ export type MercadoPagoPreferenceResult =
   | {
       ok: true;
       preference: MercadoPagoPreference;
+    }
+  | {
+      ok: false;
+      status: number | null;
+      code:
+        | "timeout"
+        | "http_error"
+        | "invalid_response"
+        | "network_error";
+    };
+
+export type MercadoPagoPaymentCreateInput = {
+  transaction_amount: number;
+  token?: string;
+  description: string;
+  installments?: number;
+  payment_method_id: string;
+  payer: {
+    email: string;
+    identification?: {
+      type: string;
+      number: string;
+    };
+  };
+  external_reference: string;
+  notification_url: string;
+  metadata?: Record<string, unknown>;
+};
+
+export type MercadoPagoPaymentCreateResult =
+  | {
+      ok: true;
+      payment: MercadoPagoPayment;
     }
   | {
       ok: false;
@@ -204,6 +243,62 @@ export async function createMercadoPagoPreference(
         init_point: body.init_point,
         sandbox_init_point: body.sandbox_init_point,
       },
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      status: null,
+      code:
+        error instanceof DOMException && error.name === "AbortError"
+          ? "timeout"
+          : "network_error",
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function createMercadoPagoPayment(
+  input: MercadoPagoPaymentCreateInput,
+  idempotencyKey: string,
+): Promise<MercadoPagoPaymentCreateResult> {
+  const client = createMercadoPagoBaseClient();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${MERCADO_PAGO_API_BASE_URL}/v1/payments`, {
+      method: "POST",
+      headers: {
+        ...client.buildAuthHeaders(),
+        "Content-Type": "application/json",
+        "X-Idempotency-Key": idempotencyKey,
+      },
+      body: JSON.stringify(input),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        code: "http_error",
+      };
+    }
+
+    const body = (await response.json()) as Partial<MercadoPagoPayment>;
+
+    if (!body || typeof body !== "object" || body.id == null) {
+      return {
+        ok: false,
+        status: response.status,
+        code: "invalid_response",
+      };
+    }
+
+    return {
+      ok: true,
+      payment: body as MercadoPagoPayment,
     };
   } catch (error) {
     return {
