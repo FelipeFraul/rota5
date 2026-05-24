@@ -58,7 +58,11 @@ export async function POST(request: Request) {
     return bodyResult.response;
   }
 
-  const rawOrderId = bodyResult.body.orderId ?? bodyResult.body.order_id;
+  const rawOrderId =
+    bodyResult.body.orderId ??
+    bodyResult.body.order_id ??
+    bodyResult.body.orderNumber ??
+    bodyResult.body.order_number;
   const rawMethod = bodyResult.body.method;
   const {
     email,
@@ -77,12 +81,16 @@ export async function POST(request: Request) {
         ? Number(installments)
         : undefined;
 
-  if (
-    !UUID_PATTERN.test(orderId) ||
-    (method !== "pix" && method !== "card") ||
-    (email != null && typeof email !== "string")
-  ) {
-    return badRequest("Dados de pagamento inválidos.");
+  if (!UUID_PATTERN.test(orderId)) {
+    return badRequest("Pedido inválido.");
+  }
+
+  if (method !== "pix" && method !== "card") {
+    return badRequest("Método de pagamento inválido.");
+  }
+
+  if (email != null && typeof email !== "string") {
+    return badRequest("E-mail inválido.");
   }
 
   const result = await paySelfHostedCheckout({
