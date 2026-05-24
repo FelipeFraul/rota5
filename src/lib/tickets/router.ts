@@ -1247,11 +1247,11 @@ function getPreviousCreateEventField(draft: Record<string, unknown>) {
     venueName: "state",
     imageUrl: "venueName",
     startsAt: "imageUrl",
-    status: "startsAt",
-    entryModel: "status",
+    entryModel: "startsAt",
     singleEntryDetails: "entryModel",
     entryCount: "entryModel",
     entryItem: "entryCount",
+    status: "entryModel",
   };
 
   return previousByField[field] ?? null;
@@ -1437,7 +1437,7 @@ function renderCreateEventPrompt(field?: string) {
     imageUrl:
       "Envie a foto do evento agora ou cole uma URL pública https://...\nPara salvar como rascunho sem foto, responda PULAR. Para publicar, a foto é obrigatória.",
     startsAt: "Qual a data e horário da primeira sessão? Ex: 10/06/2026 22:00",
-    status: "Qual status inicial?\n1. Rascunho\n2. Publicado",
+    status: "Agora escolha o status do evento.\n1. Rascunho\n2. Publicado",
     entryModel:
       "Como serão as entradas/lugares?\n1. Entrada única sem assento marcado\n2. Vários setores/tipos sem assento marcado\n3. Setores com assentos marcados",
     singleEntryDetails:
@@ -1872,8 +1872,8 @@ async function handleAdminEventsFlow({
       state: "venueName",
       venueName: "imageUrl",
       imageUrl: "startsAt",
-      startsAt: "status",
-      status: "entryModel",
+      startsAt: "entryModel",
+      status: null,
       entryModel: null,
       singleEntryDetails: null,
       entryCount: null,
@@ -1991,6 +1991,13 @@ async function handleAdminEventsFlow({
         };
       }
       draft.initialSections = [section];
+      draft.field = "status";
+      return {
+        reply: renderCreateEventPrompt("status"),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+          draft,
+        }),
+      };
     } else if (field === "entryCount") {
       const count = Number(text.trim().replace(/\D/g, ""));
       if (!Number.isInteger(count) || count < 1 || count > 20) {
@@ -2054,6 +2061,14 @@ async function handleAdminEventsFlow({
           }),
         };
       }
+
+      draft.field = "status";
+      return {
+        reply: renderCreateEventPrompt("status"),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+          draft,
+        }),
+      };
     } else {
       const value = text.trim();
       if (!value) {
