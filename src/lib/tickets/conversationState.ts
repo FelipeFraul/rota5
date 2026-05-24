@@ -47,6 +47,7 @@ export type TicketConversationEventOption = {
   eventId: string;
   sessionId: string;
   title: string;
+  artistName?: string;
   startsAt: string;
   city: string;
   state: string;

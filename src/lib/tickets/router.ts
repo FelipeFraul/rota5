@@ -494,6 +494,18 @@ function formatDateTime(startsAt: string) {
     .replace(",", " às");
 }
 
+function formatSearchSessionStatus(status: string) {
+  if (status === "sales_open") {
+    return "vendas abertas";
+  }
+
+  if (status === "scheduled") {
+    return "em breve";
+  }
+
+  return status;
+}
+
 function formatCurrencyFromCents(cents: number) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -509,6 +521,7 @@ function buildEventOptions(
     eventId: event.eventId,
     sessionId: event.sessionId,
     title: event.title,
+    artistName: event.artistName,
     startsAt: event.startsAt,
     city: event.city,
     state: event.state,
@@ -520,11 +533,7 @@ function buildEventOptions(
 
 function formatEventsReply(events: TicketEventSearchResult[]) {
   const lines = events.flatMap((event, index) => [
-    `${index + 1}. ${event.title}`,
-    `${event.artistName}`,
-    `Local: ${event.city}/${event.state}`,
-    `Data: ${formatEventDate(event.startsAt)}`,
-    `Casa: ${event.venueName ?? "A confirmar"}`,
+    formatSingleEventReply(event, index, events.length),
     "",
   ]);
 
@@ -532,30 +541,56 @@ function formatEventsReply(events: TicketEventSearchResult[]) {
     "Encontrei estes eventos:",
     "",
     ...lines,
-    "Responda com o número do evento para continuar.",
   ].join("\n");
 }
 
-function formatSingleEventReply(event: TicketEventSearchResult, index: number) {
+function formatSingleEventReply(
+  event: TicketEventSearchResult,
+  index: number,
+  totalEvents: number,
+) {
+  const title = event.title.toLocaleUpperCase("pt-BR");
+  const details = [
+    `> 🎤 Artista: ${event.artistName}`,
+    `> 📍 Cidade: ${event.city}/${event.state}`,
+    `> 🗓️ Data: ${formatEventDate(event.startsAt)}`,
+    `> 🏟️ Local: ${event.venueName ?? "A confirmar"}`,
+    `> 🎫 Status: ${formatSearchSessionStatus(event.sessionStatus)}`,
+  ];
+  const options =
+    totalEvents === 1
+      ? ["1. Comprar", "2. Saber mais", "3. Buscar outro evento"]
+      : [`${index + 1}. Comprar este evento`];
+
   return [
-    `${index + 1}. ${event.title}`,
-    `${event.artistName}`,
-    `Local: ${event.city}/${event.state}`,
-    `Data: ${formatEventDate(event.startsAt)}`,
-    `Casa: ${event.venueName ?? "A confirmar"}`,
+    `🎟️ - *${title}*`,
+    ...details,
     "",
-    "Responda com o número do evento para continuar.",
+    ...options,
   ].join("\n");
 }
 
 function buildEventSearchOutboundMessages(events: TicketEventSearchResult[]) {
   return events.map((event, index) => {
-    const caption = formatSingleEventReply(event, index);
+    const caption = formatSingleEventReply(event, index, events.length);
 
     return event.imageUrl
       ? ({ type: "image", imageUrl: event.imageUrl, caption } as const)
       : ({ type: "text", body: caption } as const);
   });
+}
+
+function formatSingleEventMoreInfo(event: TicketConversationEventOption) {
+  return [
+    `🎟️ - *${event.title.toLocaleUpperCase("pt-BR")}*`,
+    ...(event.artistName ? [`> 🎤 Artista: ${event.artistName}`] : []),
+    `> 📍 Cidade: ${event.city}/${event.state}`,
+    `> 🗓️ Data: ${formatEventDate(event.startsAt)}`,
+    `> 🏟️ Local: ${event.venueName ?? "A confirmar"}`,
+    "",
+    "1. Comprar",
+    "3. Buscar outro evento",
+  ].join("\n");
 }
 
 function buildSelectedEvent(
@@ -565,6 +600,7 @@ function buildSelectedEvent(
     eventId: event.eventId,
     sessionId: event.sessionId,
     title: event.title,
+    artistName: event.artistName,
     startsAt: event.startsAt,
     city: event.city,
     state: event.state,
@@ -4811,6 +4847,36 @@ export async function routeTicketMessage({
         selectedSeat: selectedSeatContext,
         reservation: reservationContext,
         lastSeats: [],
+      },
+    };
+  }
+
+  if (
+    parsedSearch.numericSelection &&
+    previousState.state === "showing_events" &&
+    previousState.lastEvents?.length === 1 &&
+    (parsedSearch.numericSelection === 2 || parsedSearch.numericSelection === 3)
+  ) {
+    if (parsedSearch.numericSelection === 2) {
+      return {
+        reply: formatSingleEventMoreInfo(previousState.lastEvents[0]),
+        nextContext: {
+          ...baseContext,
+          step: "showing_events",
+          state: "showing_events",
+        },
+      };
+    }
+
+    return {
+      reply: TICKET_MESSAGES.genericHelp,
+      nextContext: {
+        ...baseContext,
+        step: "idle",
+        state: "idle",
+        lastEvents: [],
+        lastSections: [],
+        selectedEvent: undefined,
       },
     };
   }
