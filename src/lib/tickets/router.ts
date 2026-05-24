@@ -1436,7 +1436,7 @@ function renderCreateEventPrompt(field?: string) {
     venueName: "Qual o nome do local/teatro/arena?",
     imageUrl:
       "Envie a foto do evento agora ou cole uma URL pública https://...\nPara salvar como rascunho sem foto, responda PULAR. Para publicar, a foto é obrigatória.",
-    startsAt: "Qual a data e horário da primeira sessão? Ex: 10/06/2026 22:00",
+    startsAt: "Qual a data e horário do evento? Ex: 10/06/2026 22:00",
     status: "Agora escolha o status do evento.\n1. Rascunho\n2. Publicado",
     entryModel:
       "Como serão as entradas/lugares?\n1. Entrada única sem assento marcado\n2. Vários setores/tipos sem assento marcado\n3. Setores com assentos marcados",
@@ -1459,7 +1459,7 @@ function renderCreateEventSummary(draft: Record<string, unknown>) {
     `Cidade/UF: ${draft.city}/${draft.state}`,
     `Local: ${draft.venueName}`,
     `Foto: ${draft.imageUrl ? "cadastrada" : "ausente"}`,
-    `Primeira sessão: ${formatDateTime(String(draft.startsAt))}`,
+    `Data: ${formatDateTime(String(draft.startsAt))}`,
     `Status: ${draft.status}`,
     "",
     ...renderInitialSectionsSummary(draft),
@@ -2178,7 +2178,7 @@ async function handleAdminEventsFlow({
     if (!result.ok) {
       return {
         reply: result.partialEventCreated
-          ? "O evento foi salvo como rascunho, mas não consegui criar a sessão inicial. Entre em Sessões e datas para cadastrar a sessão antes de publicar."
+          ? "O evento foi salvo como rascunho, mas não consegui criar a data. Entre em Sessões e datas para cadastrar a data antes de publicar."
           : "Não consegui criar o evento agora. Verifique os dados e tente novamente.",
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
       };
