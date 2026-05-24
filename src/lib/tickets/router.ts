@@ -509,6 +509,7 @@ function buildEventOptions(
     city: event.city,
     state: event.state,
     venueId: event.venueId,
+    ...(event.imageUrl ? { imageUrl: event.imageUrl } : {}),
     ...(event.venueName ? { venueName: event.venueName } : {}),
   }));
 }
@@ -520,6 +521,7 @@ function formatEventsReply(events: TicketEventSearchResult[]) {
     `Local: ${event.city}/${event.state}`,
     `Data: ${formatEventDate(event.startsAt)}`,
     `Casa: ${event.venueName ?? "A confirmar"}`,
+    ...(event.imageUrl ? [`Foto: ${event.imageUrl}`] : []),
     "",
   ]);
 
@@ -542,6 +544,7 @@ function buildSelectedEvent(
     city: event.city,
     state: event.state,
     venueId: event.venueId,
+    ...(event.imageUrl ? { imageUrl: event.imageUrl } : {}),
     ...(event.venueName ? { venueName: event.venueName } : {}),
   };
 }

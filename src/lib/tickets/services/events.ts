@@ -22,6 +22,7 @@ export type TicketEventSearchResult = {
   state: string;
   venueName: string | null;
   venueId: string | null;
+  imageUrl: string | null;
   sessionId: string;
   startsAt: string;
   sessionStatus: string;
@@ -35,6 +36,7 @@ export type ValidatedEventSession = {
   state: string;
   venueName: string | null;
   venueId: string | null;
+  imageUrl: string | null;
   sessionId: string;
   startsAt: string;
   sessionStatus: string;
@@ -46,6 +48,7 @@ type EventRow = {
   artist_name: string;
   city: string;
   state: string;
+  image_url: string | null;
   venue_id: string | null;
   venues: { name: string; status?: string } | null;
 };
@@ -70,6 +73,7 @@ type EventSessionValidationRow = {
     artist_name: string;
     city: string;
     state: string;
+    image_url: string | null;
     venue_id: string | null;
     status: string;
     venues: { name: string; status: string } | null;
@@ -128,7 +132,7 @@ export async function searchEvents({
   const resultLimit = normalizeLimit(limit);
   const eventQuery = supabase
     .from("events")
-    .select("id, title, artist_name, city, state, venue_id, venues(name)")
+    .select("id, title, artist_name, city, state, image_url, venue_id, venues(name)")
     .eq("status", "published");
 
   const artistTerm = artist?.trim();
@@ -190,6 +194,7 @@ export async function searchEvents({
           state: event.state,
           venueName: session.venues?.name ?? event.venues?.name ?? null,
           venueId: session.venue_id ?? event.venue_id,
+          imageUrl: event.image_url,
           sessionId: session.id,
           startsAt: session.starts_at,
           sessionStatus: session.status,
@@ -225,7 +230,7 @@ export async function getValidatedEventSession({
   const { data, error } = await supabase
     .from("event_sessions")
     .select(
-      "id, venue_id, starts_at, status, venues(name, status), events(id, title, artist_name, city, state, venue_id, status, venues(name, status))",
+      "id, venue_id, starts_at, status, venues(name, status), events(id, title, artist_name, city, state, image_url, venue_id, status, venues(name, status))",
     )
     .eq("id", sessionId)
     .eq("event_id", eventId)
@@ -257,6 +262,7 @@ export async function getValidatedEventSession({
     state: data.events.state,
     venueName: data.venues?.name ?? data.events.venues?.name ?? null,
     venueId: data.venue_id ?? data.events.venue_id,
+    imageUrl: data.events.image_url,
     sessionId: data.id,
     startsAt: data.starts_at,
     sessionStatus: data.status,
