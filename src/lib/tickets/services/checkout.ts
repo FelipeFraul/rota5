@@ -782,7 +782,8 @@ export async function paySelfHostedCheckout({
   if (
     (trimmedEmail && !isEmail(trimmedEmail)) ||
     !isEmail(normalizedEmail) ||
-    (cpf && cpf.length !== 11)
+    (method === "card" && cpf.length !== 11) ||
+    (method === "pix" && cpf.length > 0 && cpf.length !== 11)
   ) {
     return { ok: false, reason: "invalid_payment_input" };
   }

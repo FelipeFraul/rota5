@@ -193,6 +193,28 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
       return;
     }
 
+    if (!email.trim()) {
+      setMessage("Informe um e-mail para continuar com cartão.");
+      return;
+    }
+
+    if (onlyDigits(identificationNumber).length !== 11) {
+      setMessage("Informe o CPF do titular com 11 dígitos.");
+      return;
+    }
+
+    if (!cardholderName.trim()) {
+      setMessage("Informe o nome impresso no cartão.");
+      return;
+    }
+
+    const { month, year } = splitCardExpiration(expiration);
+
+    if (month.length !== 2 || year.length !== 4 || onlyDigits(securityCode).length < 3) {
+      setMessage("Confira validade e CVV do cartão.");
+      return;
+    }
+
     if (!paymentMethodId) {
       setMessage("Confira o número do cartão. Não identifiquei a bandeira.");
       return;
@@ -202,7 +224,6 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
     setMessage(null);
 
     try {
-      const { month, year } = splitCardExpiration(expiration);
       const tokenResponse = await mp.createCardToken({
         cardNumber: onlyDigits(cardNumber),
         cardholderName,

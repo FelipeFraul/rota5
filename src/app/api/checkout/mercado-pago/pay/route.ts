@@ -58,23 +58,31 @@ export async function POST(request: Request) {
     return bodyResult.response;
   }
 
+  const rawOrderId = bodyResult.body.orderId ?? bodyResult.body.order_id;
+  const rawMethod = bodyResult.body.method;
   const {
-    orderId,
-    method,
     email,
     identificationNumber,
     token,
     paymentMethodId,
     installments,
   } = bodyResult.body;
+  const orderId = typeof rawOrderId === "string" ? rawOrderId : "";
+  const method =
+    typeof rawMethod === "string" ? rawMethod.toLowerCase().trim() : "";
+  const parsedInstallments =
+    typeof installments === "number"
+      ? installments
+      : typeof installments === "string"
+        ? Number(installments)
+        : undefined;
 
   if (
-    typeof orderId !== "string" ||
     !UUID_PATTERN.test(orderId) ||
     (method !== "pix" && method !== "card") ||
     (email != null && typeof email !== "string")
   ) {
-    return badRequest("Bad Request");
+    return badRequest("Dados de pagamento inválidos.");
   }
 
   const result = await paySelfHostedCheckout({
@@ -86,7 +94,10 @@ export async function POST(request: Request) {
     token: typeof token === "string" ? token : undefined,
     paymentMethodId:
       typeof paymentMethodId === "string" ? paymentMethodId : undefined,
-    installments: typeof installments === "number" ? installments : undefined,
+    installments:
+      Number.isInteger(parsedInstallments) && parsedInstallments
+        ? parsedInstallments
+        : undefined,
   });
 
   if (!result.ok) {
