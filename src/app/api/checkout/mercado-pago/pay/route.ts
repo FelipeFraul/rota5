@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     typeof orderId !== "string" ||
     !UUID_PATTERN.test(orderId) ||
     (method !== "pix" && method !== "card") ||
-    typeof email !== "string"
+    (email != null && typeof email !== "string")
   ) {
     return badRequest("Bad Request");
   }
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
   const result = await paySelfHostedCheckout({
     orderId,
     method,
-    email,
+    email: typeof email === "string" ? email : "",
     identificationNumber:
       typeof identificationNumber === "string" ? identificationNumber : undefined,
     token: typeof token === "string" ? token : undefined,

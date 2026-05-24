@@ -1,6 +1,6 @@
 import "server-only";
 
-import { randomUUID } from "crypto";
+import { createHash } from "crypto";
 import { createMercadoPagoPayment } from "@/lib/mercado-pago/client";
 import { getEnv } from "@/lib/env";
 import { logError, logWarn } from "@/lib/logger";
@@ -48,6 +48,7 @@ type PendingPayment = {
   provider_preference_id: string | null;
   provider_payment_id?: string | null;
   checkout_url: string | null;
+  raw_metadata?: Record<string, unknown> | null;
 };
 
 type ReservedSessionSeat = {
@@ -260,6 +261,46 @@ function buildSafePaymentMetadata({
     checkout_url: checkoutUrl,
     checkout_type: "self_hosted",
   };
+}
+
+const ACTIVE_MERCADO_PAGO_ATTEMPT_STATUSES = new Set([
+  "pending",
+  "in_process",
+  "approved",
+  "authorized",
+]);
+
+function getCheckoutAttempt(metadata: Record<string, unknown> | null | undefined) {
+  const attempt = metadata?.checkout_attempt;
+
+  return attempt && typeof attempt === "object" && !Array.isArray(attempt)
+    ? (attempt as Record<string, unknown>)
+    : null;
+}
+
+function buildPaymentIdempotencyKey({
+  localPaymentId,
+  method,
+  token,
+}: {
+  localPaymentId: string;
+  method: "pix" | "card";
+  token?: string;
+}) {
+  if (method === "pix") {
+    return `${localPaymentId}:pix`;
+  }
+
+  const tokenHash = createHash("sha256")
+    .update(token ?? "")
+    .digest("hex")
+    .slice(0, 24);
+
+  return `${localPaymentId}:card:${tokenHash}`;
+}
+
+function buildTechnicalPayerEmail(orderId: string) {
+  return `pedido-${orderId.toLowerCase()}@example.com`;
 }
 
 async function validateReservationSeats({
@@ -734,10 +775,15 @@ export async function paySelfHostedCheckout({
     return { ok: false, reason: "order_not_payable" };
   }
 
-  const normalizedEmail = email.trim().toLowerCase();
+  const trimmedEmail = email.trim().toLowerCase();
+  const normalizedEmail = trimmedEmail || buildTechnicalPayerEmail(order.orderId);
   const cpf = onlyDigits(identificationNumber);
 
-  if (!isEmail(normalizedEmail) || (cpf && cpf.length !== 11)) {
+  if (
+    (trimmedEmail && !isEmail(trimmedEmail)) ||
+    !isEmail(normalizedEmail) ||
+    (cpf && cpf.length !== 11)
+  ) {
     return { ok: false, reason: "invalid_payment_input" };
   }
 
@@ -749,6 +795,63 @@ export async function paySelfHostedCheckout({
 
   if (amount == null || amount <= 0) {
     return { ok: false, reason: "invalid_amount" };
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data: pendingPayment, error: pendingPaymentError } = await supabase
+    .from("payments")
+    .select(
+      "id, provider_preference_id, provider_payment_id, checkout_url, raw_metadata",
+    )
+    .eq("order_id", order.orderId)
+    .eq("provider", PROVIDER)
+    .eq("provider_preference_id", checkoutResult.checkout.preferenceId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle<PendingPayment>();
+
+  if (pendingPaymentError || !pendingPayment) {
+    if (pendingPaymentError) {
+      logError("Failed to load self-hosted checkout payment", {
+        orderId,
+        code: pendingPaymentError.code,
+      });
+    }
+
+    return { ok: false, reason: "payment_persist_failed" };
+  }
+
+  const existingAttempt = getCheckoutAttempt(pendingPayment.raw_metadata);
+  const existingStatus =
+    typeof existingAttempt?.status === "string" ? existingAttempt.status : null;
+  const existingPaymentId =
+    typeof existingAttempt?.provider_payment_id === "string"
+      ? existingAttempt.provider_payment_id
+      : pendingPayment.provider_payment_id;
+  const existingMethod =
+    existingAttempt?.method === "pix" || existingAttempt?.method === "card"
+      ? existingAttempt.method
+      : null;
+
+  if (
+    existingPaymentId &&
+    existingStatus &&
+    ACTIVE_MERCADO_PAGO_ATTEMPT_STATUSES.has(existingStatus)
+  ) {
+    return {
+      ok: true,
+      status: existingStatus,
+      providerPaymentId: existingPaymentId,
+      qrCode:
+        existingMethod === "pix" && typeof existingAttempt?.qr_code === "string"
+          ? existingAttempt.qr_code
+          : null,
+      ticketUrl:
+        existingMethod === "pix" &&
+        typeof existingAttempt?.ticket_url === "string"
+          ? existingAttempt.ticket_url
+          : null,
+    };
   }
 
   const externalReference = buildOrderExternalReference(order.orderId);
@@ -781,7 +884,11 @@ export async function paySelfHostedCheckout({
         reservation_id: order.reservationId,
       },
     },
-    randomUUID(),
+    buildPaymentIdempotencyKey({
+      localPaymentId: pendingPayment.id,
+      method,
+      token,
+    }),
   );
 
   if (!paymentResult.ok) {
@@ -796,6 +903,9 @@ export async function paySelfHostedCheckout({
   const { payment } = paymentResult;
   const providerPaymentId = String(payment.id);
   const paymentStatus = mapMercadoPagoPaymentStatus(payment.status);
+  const qrCode = payment.point_of_interaction?.transaction_data?.qr_code ?? null;
+  const ticketUrl =
+    payment.point_of_interaction?.transaction_data?.ticket_url ?? null;
   const safeMetadata = {
     ...buildSafePaymentMetadata({
       orderId: order.orderId,
@@ -807,27 +917,13 @@ export async function paySelfHostedCheckout({
     external_reference: payment.external_reference,
     transaction_amount: payment.transaction_amount,
     currency_id: payment.currency_id,
-    pix_ticket_url:
-      payment.point_of_interaction?.transaction_data?.ticket_url ?? null,
+    checkout_attempt: {
+      method,
+      status: payment.status ?? paymentStatus,
+      provider_payment_id: providerPaymentId,
+      ...(method === "pix" ? { qr_code: qrCode, ticket_url: ticketUrl } : {}),
+    },
   };
-  const supabase = getSupabaseAdmin();
-  const { data: pendingPayment, error: pendingPaymentError } = await supabase
-    .from("payments")
-    .select("id")
-    .eq("order_id", order.orderId)
-    .eq("provider", PROVIDER)
-    .eq("provider_preference_id", checkoutResult.checkout.preferenceId)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle<{ id: string }>();
-
-  if (pendingPaymentError) {
-    logError("Failed to load self-hosted checkout payment", {
-      orderId,
-      code: pendingPaymentError.code,
-    });
-    return { ok: false, reason: "payment_persist_failed" };
-  }
 
   const paymentPayload = {
     provider_payment_id: providerPaymentId,
@@ -838,14 +934,10 @@ export async function paySelfHostedCheckout({
     raw_metadata: safeMetadata,
     updated_at: new Date().toISOString(),
   };
-  const persistResult = pendingPayment?.id
-    ? await supabase.from("payments").update(paymentPayload).eq("id", pendingPayment.id)
-    : await supabase.from("payments").insert({
-        order_id: order.orderId,
-        provider: PROVIDER,
-        provider_preference_id: checkoutResult.checkout.preferenceId,
-        ...paymentPayload,
-      });
+  const persistResult = await supabase
+    .from("payments")
+    .update(paymentPayload)
+    .eq("id", pendingPayment.id);
 
   if (persistResult.error) {
     logError("Failed to persist self-hosted checkout payment", {
@@ -859,7 +951,7 @@ export async function paySelfHostedCheckout({
     ok: true,
     status: payment.status ?? paymentStatus,
     providerPaymentId,
-    qrCode: payment.point_of_interaction?.transaction_data?.qr_code ?? null,
-    ticketUrl: payment.point_of_interaction?.transaction_data?.ticket_url ?? null,
+    qrCode,
+    ticketUrl,
   };
 }
