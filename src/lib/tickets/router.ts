@@ -207,6 +207,10 @@ type RouteTicketMessageInput = {
 
 type RouteTicketMessageOutput = {
   reply: string;
+  outboundMessages?: Array<
+    | { type: "text"; body: string }
+    | { type: "image"; imageUrl: string; caption: string }
+  >;
   nextContext: TicketConversationState;
 };
 
@@ -521,7 +525,6 @@ function formatEventsReply(events: TicketEventSearchResult[]) {
     `Local: ${event.city}/${event.state}`,
     `Data: ${formatEventDate(event.startsAt)}`,
     `Casa: ${event.venueName ?? "A confirmar"}`,
-    ...(event.imageUrl ? [`Foto: ${event.imageUrl}`] : []),
     "",
   ]);
 
@@ -531,6 +534,28 @@ function formatEventsReply(events: TicketEventSearchResult[]) {
     ...lines,
     "Responda com o número do evento para continuar.",
   ].join("\n");
+}
+
+function formatSingleEventReply(event: TicketEventSearchResult, index: number) {
+  return [
+    `${index + 1}. ${event.title}`,
+    `${event.artistName}`,
+    `Local: ${event.city}/${event.state}`,
+    `Data: ${formatEventDate(event.startsAt)}`,
+    `Casa: ${event.venueName ?? "A confirmar"}`,
+    "",
+    "Responda com o número do evento para continuar.",
+  ].join("\n");
+}
+
+function buildEventSearchOutboundMessages(events: TicketEventSearchResult[]) {
+  return events.map((event, index) => {
+    const caption = formatSingleEventReply(event, index);
+
+    return event.imageUrl
+      ? ({ type: "image", imageUrl: event.imageUrl, caption } as const)
+      : ({ type: "text", body: caption } as const);
+  });
 }
 
 function buildSelectedEvent(
@@ -5037,6 +5062,7 @@ export async function routeTicketMessage({
 
   return {
     reply: formatEventsReply(events),
+    outboundMessages: buildEventSearchOutboundMessages(events),
     nextContext: {
       ...baseContext,
       step: "showing_events",

@@ -52,6 +52,7 @@ export type TicketConversationEventOption = {
   state: string;
   venueId?: string | null;
   venueName?: string;
+  imageUrl?: string;
 };
 
 export type TicketConversationSelectedEvent = Omit<

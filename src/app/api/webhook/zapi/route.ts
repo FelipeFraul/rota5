@@ -17,7 +17,11 @@ import {
 } from "@/lib/tickets/services/messages";
 import { routeTicketMessage } from "@/lib/tickets/router";
 import { ADMIN_AUTH_REDACTED_BODY } from "@/lib/tickets/services/adminAuth";
-import { sendZapiText } from "@/lib/zapi/client";
+import {
+  sendZapiImage,
+  sendZapiText,
+  type SendZapiMessageResult,
+} from "@/lib/zapi/client";
 
 const MAX_WEBHOOK_BYTES = 256 * 1024;
 const SECRET_HEADER_NAMES = [
@@ -38,6 +42,9 @@ type ParsedIncomingMessage = {
   messageType: "text" | "image" | "document" | "system";
   mediaUrl: string | null;
 };
+type RouteOutboundMessage =
+  | { type: "text"; body: string }
+  | { type: "image"; imageUrl: string; caption: string };
 
 function getHeaderSecret(request: Request): string | null {
   for (const headerName of SECRET_HEADER_NAMES) {
@@ -292,21 +299,56 @@ function shouldRedactInboundTextForAdminAuth(context: Record<string, unknown>) {
 
 function buildOutboundMetadata({
   sendResult,
+  messageType,
 }: {
-  sendResult: Awaited<ReturnType<typeof sendZapiText>>;
+  sendResult: SendZapiMessageResult;
+  messageType: RouteOutboundMessage["type"];
 }) {
   if (sendResult.ok) {
     return {
       provider: "zapi",
+      message_type: messageType,
       send_status: "sent",
     };
   }
 
   return {
     provider: "zapi",
+    message_type: messageType,
     send_status: "failed",
     error: sendResult.error,
   };
+}
+
+function getOutboundMessages(
+  routeResult: Awaited<ReturnType<typeof routeTicketMessage>>,
+): RouteOutboundMessage[] {
+  if (routeResult.outboundMessages?.length) {
+    return routeResult.outboundMessages;
+  }
+
+  return [{ type: "text", body: routeResult.reply }];
+}
+
+async function sendOutboundMessage({
+  phone,
+  message,
+}: {
+  phone: string;
+  message: RouteOutboundMessage;
+}) {
+  if (message.type === "image") {
+    return sendZapiImage({
+      phone,
+      image: message.imageUrl,
+      caption: message.caption,
+    });
+  }
+
+  return sendZapiText({
+    phone,
+    message: message.body,
+  });
 }
 
 async function readJsonPayload(request: Request) {
@@ -505,42 +547,57 @@ export async function POST(request: Request) {
     return jsonError("Internal Server Error", 500);
   }
 
-  const sendResult = await sendZapiText({
-    phone: incoming.phone,
-    message: routeResult.reply,
-  });
+  const outboundMessages = getOutboundMessages(routeResult);
+  const sendResults: SendZapiMessageResult[] = [];
 
-  if (!sendResult.ok) {
-    logWarn("Z-API reply failed after inbound message was persisted", {
-      conversationId: conversationResult.conversation.id,
-      phoneLast4: incoming.phone.slice(-4),
-      error: sendResult.error,
+  for (const outboundMessage of outboundMessages) {
+    const sendResult = await sendOutboundMessage({
+      phone: incoming.phone,
+      message: outboundMessage,
     });
-  }
 
-  const outboundResult = await saveWhatsAppMessage({
-    conversationId: conversationResult.conversation.id,
-    customerId: customerResult.customer.id,
-    direction: "outbound",
-    messageType: "text",
-    body: routeResult.reply,
-    providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
-    rawMetadata: buildOutboundMetadata({ sendResult }),
-  });
+    sendResults.push(sendResult);
 
-  if (!outboundResult.ok) {
-    logError("Failed to save outbound WhatsApp message", {
+    if (!sendResult.ok) {
+      logWarn("Z-API reply failed after inbound message was persisted", {
+        conversationId: conversationResult.conversation.id,
+        phoneLast4: incoming.phone.slice(-4),
+        messageType: outboundMessage.type,
+        error: sendResult.error,
+      });
+    }
+
+    const outboundResult = await saveWhatsAppMessage({
       conversationId: conversationResult.conversation.id,
-      code: outboundResult.error?.code,
+      customerId: customerResult.customer.id,
+      direction: "outbound",
+      messageType: outboundMessage.type,
+      body:
+        outboundMessage.type === "image"
+          ? outboundMessage.caption
+          : outboundMessage.body,
+      providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
+      rawMetadata: buildOutboundMetadata({
+        sendResult,
+        messageType: outboundMessage.type,
+      }),
     });
-    return jsonError("Internal Server Error", 500);
+
+    if (!outboundResult.ok) {
+      logError("Failed to save outbound WhatsApp message", {
+        conversationId: conversationResult.conversation.id,
+        code: outboundResult.error?.code,
+      });
+      return jsonError("Internal Server Error", 500);
+    }
   }
 
   logInfo("Processed Z-API inbound message", {
     conversationId: conversationResult.conversation.id,
     phoneLast4: incoming.phone.slice(-4),
     providerMessageId: incoming.providerMessageId,
-    zapiSent: sendResult.ok,
+    zapiSent: sendResults.every((sendResult) => sendResult.ok),
+    outboundCount: outboundMessages.length,
   });
 
   return jsonOk({
