@@ -36,6 +36,7 @@ import {
   type AvailableSeatList,
 } from "@/lib/tickets/services/seats";
 import {
+  cancelPendingReservationForCustomer,
   reserveUnnumberedSectionTickets,
   reserveSelectedSeat,
   type ReserveSelectedSeatResult,
@@ -750,6 +751,43 @@ function isSimpleReservationReply(text: string) {
   const normalized = normalizeIntentText(text);
 
   return SIMPLE_PAYMENT_CONTINUATIONS.has(normalized);
+}
+
+function isBuyerReservationExitIntent(text: string) {
+  const normalized = normalizeIntentText(text);
+
+  return (
+    normalized === "sair" ||
+    normalized === "cancelar" ||
+    normalized === "encerrar" ||
+    normalized === "logout"
+  );
+}
+
+function isReservationContextExpired(
+  reservation?: TicketConversationReservation,
+) {
+  if (!reservation?.expiresAt) {
+    return false;
+  }
+
+  return new Date(reservation.expiresAt).getTime() <= Date.now();
+}
+
+function resetBuyerReservationContext(
+  baseContext: TicketConversationState,
+): TicketConversationState {
+  return {
+    ...baseContext,
+    step: "idle",
+    state: "idle",
+    reservation: undefined,
+    payment: undefined,
+    selectedSeat: undefined,
+    lastSeats: [],
+    lastSections: [],
+    lastEvents: [],
+  };
 }
 
 function parseTicketQuantity(text: string) {
@@ -4642,6 +4680,25 @@ export async function routeTicketMessage({
     previousState.reservation?.reservationId &&
     previousState.reservation.orderId
   ) {
+    if (
+      isBuyerReservationExitIntent(text) ||
+      isReservationContextExpired(previousState.reservation)
+    ) {
+      const cancelResult = await cancelPendingReservationForCustomer({
+        customerId: customer.id,
+        reservationId: previousState.reservation.reservationId,
+        orderId: previousState.reservation.orderId,
+      });
+
+      return {
+        reply:
+          cancelResult.ok && cancelResult.status === "cancelled"
+            ? TICKET_MESSAGES.reservationCancelled
+            : TICKET_MESSAGES.reservationExpired,
+        nextContext: resetBuyerReservationContext(baseContext),
+      };
+    }
+
     if (!isPaymentLinkIntent(text) && !isSimpleReservationReply(text)) {
       return {
         reply: TICKET_MESSAGES.paymentLinkPrompt,
@@ -4719,6 +4776,25 @@ export async function routeTicketMessage({
           selectedSeat: undefined,
           lastSeats: [],
         },
+      };
+    }
+
+    if (
+      isBuyerReservationExitIntent(text) ||
+      isReservationContextExpired(previousState.reservation)
+    ) {
+      const cancelResult = await cancelPendingReservationForCustomer({
+        customerId: customer.id,
+        reservationId: previousState.reservation.reservationId,
+        orderId: previousState.reservation.orderId,
+      });
+
+      return {
+        reply:
+          cancelResult.ok && cancelResult.status === "cancelled"
+            ? TICKET_MESSAGES.reservationCancelled
+            : TICKET_MESSAGES.reservationExpired,
+        nextContext: resetBuyerReservationContext(baseContext),
       };
     }
 

@@ -57,6 +57,10 @@ export type ActivePendingReservation = {
   currency: string;
 };
 
+export type CancelPendingReservationResult =
+  | { ok: true; status: "cancelled" | "expired"; releasedSeatsCount: number }
+  | { ok: false; reason: "not_found" | "cancel_failed"; error?: unknown };
+
 export type ReserveSelectedSeatResult =
   | {
       ok: true;
@@ -217,6 +221,123 @@ export async function findActivePendingReservationForCustomer(
   const row = data?.[0];
 
   return row ? mapActivePendingReservation(row) : null;
+}
+
+export async function cancelPendingReservationForCustomer({
+  customerId,
+  reservationId,
+  orderId,
+}: {
+  customerId: string;
+  reservationId: string;
+  orderId: string;
+}): Promise<CancelPendingReservationResult> {
+  const supabase = getSupabaseAdmin();
+  const { data: reservation, error: reservationError } = await supabase
+    .from("reservations")
+    .select("id, customer_id, status, expires_at")
+    .eq("id", reservationId)
+    .eq("customer_id", customerId)
+    .maybeSingle<{
+      id: string;
+      customer_id: string;
+      status: string;
+      expires_at: string;
+    }>();
+
+  if (reservationError) {
+    return { ok: false, reason: "cancel_failed", error: reservationError };
+  }
+
+  if (!reservation || reservation.status !== "active") {
+    return { ok: false, reason: "not_found" };
+  }
+
+  const { data: order, error: orderError } = await supabase
+    .from("orders")
+    .select("id, status")
+    .eq("id", orderId)
+    .eq("reservation_id", reservationId)
+    .eq("customer_id", customerId)
+    .maybeSingle<{ id: string; status: string }>();
+
+  if (orderError) {
+    return { ok: false, reason: "cancel_failed", error: orderError };
+  }
+
+  if (!order || !["draft", "pending_payment"].includes(order.status)) {
+    return { ok: false, reason: "not_found" };
+  }
+
+  if (new Date(reservation.expires_at).getTime() <= Date.now()) {
+    const { error } = await supabase.rpc("expire_reservations", { p_limit: 100 });
+
+    if (error) {
+      return { ok: false, reason: "cancel_failed", error };
+    }
+
+    return { ok: true, status: "expired", releasedSeatsCount: 0 };
+  }
+
+  const { data: reservationItems, error: itemsError } = await supabase
+    .from("reservation_items")
+    .select("session_seat_id")
+    .eq("reservation_id", reservationId)
+    .returns<Array<{ session_seat_id: string }>>();
+
+  if (itemsError) {
+    return { ok: false, reason: "cancel_failed", error: itemsError };
+  }
+
+  const sessionSeatIds = (reservationItems ?? []).map(
+    (item) => item.session_seat_id,
+  );
+  let releasedSeatsCount = 0;
+
+  if (sessionSeatIds.length > 0) {
+    const { data: releasedSeats, error: releaseError } = await supabase
+      .from("session_seats")
+      .update({
+        status: "available",
+        current_reservation_id: null,
+      })
+      .in("id", sessionSeatIds)
+      .eq("status", "reserved")
+      .eq("current_reservation_id", reservationId)
+      .select("id");
+
+    if (releaseError) {
+      return { ok: false, reason: "cancel_failed", error: releaseError };
+    }
+
+    releasedSeatsCount = releasedSeats?.length ?? 0;
+  }
+
+  const { error: reservationUpdateError } = await supabase
+    .from("reservations")
+    .update({ status: "cancelled" })
+    .eq("id", reservationId)
+    .eq("status", "active");
+
+  if (reservationUpdateError) {
+    return {
+      ok: false,
+      reason: "cancel_failed",
+      error: reservationUpdateError,
+    };
+  }
+
+  const { error: orderUpdateError } = await supabase
+    .from("orders")
+    .update({ status: "cancelled" })
+    .eq("id", orderId)
+    .in("status", ["draft", "pending_payment"]);
+
+  if (orderUpdateError) {
+    return { ok: false, reason: "cancel_failed", error: orderUpdateError };
+  }
+
+  return { ok: true, status: "cancelled", releasedSeatsCount };
 }
 
 export async function reserveSelectedSeat({

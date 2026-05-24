@@ -34,6 +34,10 @@ export const TICKET_MESSAGES = {
   reservationAlreadyCreated:
     "Você já tem uma reserva em andamento. No próximo passo vamos gerar o link de pagamento ou permitir cancelar/trocar.",
   paymentLinkPrompt: "Para pagar sua reserva, responda PAGAR.",
+  reservationCancelled:
+    "Reserva cancelada. Os ingressos foram liberados novamente.\n\nPara comprar, faça uma nova busca pelo evento.",
+  reservationExpired:
+    "O tempo limite da sua reserva acabou. Os ingressos foram liberados novamente.\n\nPara comprar, faça uma nova busca pelo evento.",
   reservationUnavailableForPayment:
     "Sua reserva não está mais disponível. Faça uma nova busca para escolher outro assento.",
   checkoutGenericError:
