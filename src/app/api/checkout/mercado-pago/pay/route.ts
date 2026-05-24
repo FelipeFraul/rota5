@@ -4,6 +4,7 @@ import {
   jsonOk,
   methodNotAllowed,
 } from "@/lib/http/responses";
+import { logWarn } from "@/lib/logger";
 import { paySelfHostedCheckout } from "@/lib/tickets/services/checkout";
 
 const MAX_PAYMENT_BYTES = 32 * 1024;
@@ -76,11 +77,16 @@ export async function POST(request: Request) {
     return bodyResult.response;
   }
 
+  const requestUrl = new URL(request.url);
   const rawOrderId =
     bodyResult.body.orderId ??
     bodyResult.body.order_id ??
     bodyResult.body.orderNumber ??
-    bodyResult.body.order_number;
+    bodyResult.body.order_number ??
+    requestUrl.searchParams.get("orderId") ??
+    requestUrl.searchParams.get("order_id") ??
+    requestUrl.searchParams.get("orderNumber") ??
+    requestUrl.searchParams.get("order_number");
   const rawMethod = bodyResult.body.method;
   const {
     email,
@@ -104,6 +110,15 @@ export async function POST(request: Request) {
         : undefined;
 
   if (!UUID_PATTERN.test(resolvedOrderId)) {
+    logWarn("Rejected checkout payment without valid order id", {
+      bodyKeys: Object.keys(bodyResult.body).slice(0, 12),
+      hasQueryOrderId:
+        requestUrl.searchParams.has("orderId") ||
+        requestUrl.searchParams.has("order_id") ||
+        requestUrl.searchParams.has("orderNumber") ||
+        requestUrl.searchParams.has("order_number"),
+      hasReferer: Boolean(request.headers.get("referer")),
+    });
     return badRequest("Pedido inválido.");
   }
 

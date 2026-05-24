@@ -147,11 +147,14 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
   }, [bin, mp]);
 
   async function submitPayment(payload: Record<string, unknown>) {
-    const response = await fetch("/api/checkout/mercado-pago/pay", {
+    const response = await fetch(
+      `/api/checkout/mercado-pago/pay?orderId=${encodeURIComponent(order.orderId)}`,
+      {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-    });
+      },
+    );
     const data = await response.json();
 
     if (!response.ok) {
