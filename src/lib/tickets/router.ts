@@ -1104,6 +1104,14 @@ function isCancelText(text: string) {
   return normalized === "cancelar" || normalized === "voltar";
 }
 
+function isBackText(text: string) {
+  return normalizeAdminText(text) === "voltar";
+}
+
+function isAbortText(text: string) {
+  return normalizeAdminText(text) === "cancelar";
+}
+
 function withAdminNavigationHint(reply: string) {
   const normalized = normalizeAdminText(reply);
 
@@ -1227,6 +1235,82 @@ function parseInitialEntryDefinition(value: string, options: { numbered: boolean
     priceCents,
     feeCents,
   };
+}
+
+function getPreviousCreateEventField(draft: Record<string, unknown>) {
+  const field = String(draft.field ?? "title");
+  const previousByField: Record<string, string | null> = {
+    title: null,
+    artistName: "title",
+    city: "artistName",
+    state: "city",
+    venueName: "state",
+    imageUrl: "venueName",
+    startsAt: "imageUrl",
+    status: "startsAt",
+    entryModel: "status",
+    singleEntryDetails: "entryModel",
+    entryCount: "entryModel",
+    entryItem: "entryCount",
+  };
+
+  return previousByField[field] ?? null;
+}
+
+function stepBackCreateEventDraft(draft: Record<string, unknown>) {
+  const currentField = String(draft.field ?? "title");
+  const nextDraft = { ...draft };
+
+  if (currentField === "entryItem") {
+    const sections = getInitialSectionsFromDraft(nextDraft);
+    if (sections.length > 0) {
+      nextDraft.initialSections = sections.slice(0, -1);
+      nextDraft.currentEntryIndex = sections.length;
+      nextDraft.field = "entryItem";
+      return nextDraft;
+    }
+  }
+
+  const previousField = getPreviousCreateEventField(nextDraft);
+  if (!previousField) {
+    return null;
+  }
+
+  nextDraft.field = previousField;
+
+  if (previousField === "entryModel") {
+    delete nextDraft.initialSections;
+    delete nextDraft.expectedEntryCount;
+    delete nextDraft.currentEntryIndex;
+  }
+
+  if (previousField === "entryCount") {
+    delete nextDraft.initialSections;
+    delete nextDraft.currentEntryIndex;
+  }
+
+  return nextDraft;
+}
+
+function getCreateEventConfirmBackDraft(draft: Record<string, unknown>) {
+  const nextDraft = { ...draft };
+  const sections = getInitialSectionsFromDraft(nextDraft);
+
+  if (nextDraft.entryModel === "single_general") {
+    delete nextDraft.initialSections;
+    nextDraft.field = "singleEntryDetails";
+    return nextDraft;
+  }
+
+  if (sections.length > 0) {
+    nextDraft.initialSections = sections.slice(0, -1);
+    nextDraft.currentEntryIndex = sections.length;
+    nextDraft.field = "entryItem";
+    return nextDraft;
+  }
+
+  nextDraft.field = "entryCount";
+  return nextDraft;
 }
 
 function renderAdminEventListReply({
@@ -1745,10 +1829,28 @@ async function handleAdminEventsFlow({
     const draft = { ...(adminEvents.draft ?? {}) };
     const field = String(draft.field ?? "title");
 
-    if (isCancelText(text)) {
+    if (isAbortText(text)) {
       return {
         reply: "Criação de evento cancelada.",
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
+      };
+    }
+
+    if (isBackText(text)) {
+      const previousDraft = stepBackCreateEventDraft(draft);
+
+      if (!previousDraft) {
+        return {
+          reply: renderAdminEventsMenu(),
+          nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
+        };
+      }
+
+      return {
+        reply: renderCreateEventPrompt(String(previousDraft.field ?? "title")),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+          draft: previousDraft,
+        }),
       };
     }
 
@@ -1975,7 +2077,18 @@ async function handleAdminEventsFlow({
   }
 
   if (baseContext.state === "admin_event_create_confirm") {
-    if (isCancelText(text)) {
+    if (isBackText(text)) {
+      const draft = getCreateEventConfirmBackDraft(adminEvents.draft ?? {});
+
+      return {
+        reply: renderCreateEventPrompt(String(draft.field ?? "title")),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+          draft,
+        }),
+      };
+    }
+
+    if (isAbortText(text)) {
       return {
         reply: "Criação de evento cancelada.",
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
