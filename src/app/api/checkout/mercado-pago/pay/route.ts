@@ -45,6 +45,20 @@ function pickValidOrderId(...values: unknown[]) {
   return "";
 }
 
+function summarizeOrderCandidate(value: unknown) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  return {
+    length: trimmed.length,
+    last4: trimmed.slice(-4),
+    valid: UUID_PATTERN.test(trimmed),
+  };
+}
+
 async function readPaymentBody(request: Request) {
   const contentLength = request.headers.get("content-length");
 
@@ -124,8 +138,16 @@ export async function POST(request: Request) {
         : undefined;
 
   if (!UUID_PATTERN.test(resolvedOrderId)) {
+    const queryOrderId =
+      requestUrl.searchParams.get("orderId") ??
+      requestUrl.searchParams.get("order_id") ??
+      requestUrl.searchParams.get("orderNumber") ??
+      requestUrl.searchParams.get("order_number");
+
     logWarn("Rejected checkout payment without valid order id", {
       bodyKeys: Object.keys(bodyResult.body).slice(0, 12),
+      bodyOrderId: summarizeOrderCandidate(bodyResult.body.orderId),
+      queryOrderId: summarizeOrderCandidate(queryOrderId),
       hasQueryOrderId:
         requestUrl.searchParams.has("orderId") ||
         requestUrl.searchParams.has("order_id") ||
