@@ -29,6 +29,22 @@ function extractOrderIdFromRequestUrl(request: Request) {
   }
 }
 
+function pickValidOrderId(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value !== "string") {
+      continue;
+    }
+
+    const trimmed = value.trim();
+
+    if (UUID_PATTERN.test(trimmed)) {
+      return trimmed;
+    }
+  }
+
+  return "";
+}
+
 async function readPaymentBody(request: Request) {
   const contentLength = request.headers.get("content-length");
 
@@ -78,15 +94,17 @@ export async function POST(request: Request) {
   }
 
   const requestUrl = new URL(request.url);
-  const rawOrderId =
-    bodyResult.body.orderId ??
-    bodyResult.body.order_id ??
-    bodyResult.body.orderNumber ??
-    bodyResult.body.order_number ??
-    requestUrl.searchParams.get("orderId") ??
-    requestUrl.searchParams.get("order_id") ??
-    requestUrl.searchParams.get("orderNumber") ??
-    requestUrl.searchParams.get("order_number");
+  const rawOrderId = pickValidOrderId(
+    bodyResult.body.orderId,
+    bodyResult.body.order_id,
+    bodyResult.body.orderNumber,
+    bodyResult.body.order_number,
+    requestUrl.searchParams.get("orderId"),
+    requestUrl.searchParams.get("order_id"),
+    requestUrl.searchParams.get("orderNumber"),
+    requestUrl.searchParams.get("order_number"),
+    extractOrderIdFromRequestUrl(request),
+  );
   const rawMethod = bodyResult.body.method;
   const {
     email,
@@ -95,11 +113,7 @@ export async function POST(request: Request) {
     paymentMethodId,
     installments,
   } = bodyResult.body;
-  const orderId = typeof rawOrderId === "string" ? rawOrderId : "";
-  const fallbackOrderId = extractOrderIdFromRequestUrl(request);
-  const resolvedOrderId = UUID_PATTERN.test(orderId)
-    ? orderId
-    : fallbackOrderId ?? "";
+  const resolvedOrderId = rawOrderId;
   const method =
     typeof rawMethod === "string" ? rawMethod.toLowerCase().trim() : "";
   const parsedInstallments =
