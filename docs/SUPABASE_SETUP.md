@@ -1647,6 +1647,7 @@ To run the full cycle locally or in production, configure:
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `APP_BASE_URL`
+- `CRON_SECRET`
 - `ZAPI_BASE_URL`
 - `ZAPI_INSTANCE_ID`
 - `ZAPI_INSTANCE_TOKEN`
@@ -1794,7 +1795,9 @@ Use temporary data only, and remove it after testing if running against a produc
 - [x] Expired reservation without reservation items does not fail.
 - [x] Sold seats are not released.
 - [x] Blocked seats are not released.
-- [x] No cron/job exists yet.
+- [x] Production automation exists through Vercel Cron at `GET /api/cron/expire-reservations`.
+- [x] The cron route requires `Authorization: Bearer CRON_SECRET`.
+- [x] Expired reservations trigger a WhatsApp notice to the buyer after seats are released.
 
 ## Reserve Seats Manual Test Checklist
 

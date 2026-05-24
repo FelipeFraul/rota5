@@ -680,7 +680,6 @@ function formatQuantityPrompt(section: AvailableSection) {
     `*${section.sectionName.toLocaleUpperCase("pt-BR")}*`,
     "",
     `> 🎫 Valor: *${formatSectionPrice(section)}*`,
-    `> 📦 Disponíveis: ${section.availableSeatsCount}`,
     "",
     "Quantos ingressos você quer?",
     "Responda somente com o número. Ex: 2",

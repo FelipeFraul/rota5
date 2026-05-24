@@ -86,6 +86,8 @@ Step 20 final operational audit then exercised the real Z-API webhook/router wit
 
 Admin navigation now treats numbers as local to the current screen. Switching to another main admin area from a submenu or nested event state requires typing the area word, such as `evento`, `portaria`, or `relatorio`; numeric options no longer act as cross-menu shortcuts outside the main admin menu.
 
+Reservation expiration is now automated through the protected Vercel Cron route `GET /api/cron/expire-reservations`, scheduled every minute. The route requires `Authorization: Bearer CRON_SECRET`, calls the audited `public.expire_reservations` RPC, releases expired reserved seats back to `available`, expires matching pending orders, sends the buyer a WhatsApp notice that the time limit ended, stores that outbound message, and resets the conversation context when it still points at the expired reservation. Buyer sector/quantity copy no longer displays the raw available count before asking quantity; final availability remains enforced by the reservation RPC.
+
 ## Next Steps
 
 1. Fundação do projeto
