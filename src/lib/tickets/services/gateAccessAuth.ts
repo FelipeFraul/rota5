@@ -6,6 +6,8 @@ const GATE_ACCESS_HASH_ALGORITHM = "pbkdf2_sha256";
 const GATE_ACCESS_HASH_ITERATIONS = 210_000;
 const GATE_ACCESS_HASH_KEY_LENGTH = 32;
 
+export const GATE_ACCESS_REDACTED_BODY = "[GATE_ACCESS_REDACTED]";
+
 function fixedTimeEqual(left: string, right: string) {
   const leftBuffer = Buffer.from(left);
   const rightBuffer = Buffer.from(right);

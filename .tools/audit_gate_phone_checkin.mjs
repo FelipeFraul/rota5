@@ -4,7 +4,7 @@ import { pbkdf2Sync, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 
-const PREFIX = "TEST_GATE_PHONE_CHECKIN";
+const PREFIX = "TEST_GATE_ACCESS_FLOW";
 const PORT = 3344;
 const ZAPI_PORT = 4570;
 const APP_BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -110,6 +110,22 @@ function assertNotIncludes(value, expected, label) {
 
 function maskPhone(phone) {
   return `****${String(phone).replace(/\D/g, "").slice(-4)}`;
+}
+
+function assertNotSensitive(value, label) {
+  assertNotIncludes(value, GATE_PASS, `${label} não contém palavra-chave`);
+  assertNotIncludes(value, "pbkdf2_sha256", `${label} não contém hash`);
+}
+
+function optionForLineContaining(text, expected) {
+  const line = String(text)
+    .split(/\r?\n/)
+    .find((candidate) => candidate.includes(expected));
+  const match = line?.match(/>?\s*(\d+)\./);
+
+  if (!match) throw new Error(`option not found for ${expected} in ${text}`);
+
+  return match[1];
 }
 
 function hashPassphrase(passphrase) {
@@ -246,7 +262,33 @@ async function createCatalog(adminUserId) {
     currency: "BRL",
     status: "active",
   });
-  return { eventId, sessionId };
+
+  const secondEventId = await dbInsert("events", {
+    title: `${PREFIX} Segundo Evento`,
+    artist_name: `${PREFIX} Artista 2`,
+    city: "Cidade Gate",
+    state: "SP",
+    venue_id: venueId,
+    status: "published",
+    created_by_admin_user_id: adminUserId,
+  });
+  const secondSessionId = await dbInsert("event_sessions", {
+    event_id: secondEventId,
+    venue_id: venueId,
+    starts_at: "2026-08-09T16:00:00.000Z",
+    status: "sales_open",
+  });
+  await dbInsert("ticket_prices", {
+    session_id: secondSessionId,
+    section_id: sectionId,
+    ticket_type: "full",
+    label: "Inteira",
+    price_cents: 1000,
+    fee_cents: 0,
+    currency: "BRL",
+    status: "active",
+  });
+  return { eventId, sessionId, secondEventId, secondSessionId };
 }
 
 async function createAdminUser(phone) {
@@ -349,7 +391,7 @@ async function sendMessage(phone, text) {
   };
 }
 
-async function validateGateSessionLink(gateUrl, expectedEventId) {
+async function validateGateSessionLink(gateUrl, expectedEventId, expectedEventTitle = PREFIX) {
   const token = gateUrl.match(/\/gate\/session\/([^/\s]+)/)?.[1];
   assert(Boolean(token), "link de check-in contém token");
 
@@ -360,6 +402,8 @@ async function validateGateSessionLink(gateUrl, expectedEventId) {
   });
   const body = await response.json();
   assert(response.ok && body.valid, "link temporário valida na API");
+  assertIncludes(body.gateSession.eventTitle, expectedEventTitle, "API da página retorna nome do evento");
+  assertNotSensitive(JSON.stringify(body), "payload de validação da página");
 
   const { data: session, error } = await service
     .from("gate_sessions")
@@ -369,7 +413,35 @@ async function validateGateSessionLink(gateUrl, expectedEventId) {
   if (error) throw error;
   assert(session.event_id === expectedEventId, "gate_session tem event_id preenchido");
   assert(session.status === "active", "gate_session fica active");
+
+  const pageResponse = await fetch(`${APP_BASE_URL}/gate/session/${token}`);
+  const pageHtml = await pageResponse.text();
+  assert(pageResponse.ok, "página de portaria abre");
+  assertIncludes(pageHtml, expectedEventTitle, "página mostra nome do evento");
+  assertNotSensitive(pageHtml, "página de portaria");
+  assertNotIncludes(pageHtml, session.validator_phone, "página não mostra telefone completo");
+
   return session;
+}
+
+async function assertInboundPassphrasesRedacted() {
+  const { data, error } = await service
+    .from("whatsapp_messages")
+    .select("body, raw_metadata")
+    .eq("direction", "inbound")
+    .in("body", [GATE_PASS, "errada"]);
+
+  if (error) throw error;
+  assert((data ?? []).length === 0, "palavras-chave de portaria não ficam no inbound");
+
+  const { count, error: redactedError } = await service
+    .from("whatsapp_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("direction", "inbound")
+    .eq("body", "[GATE_ACCESS_REDACTED]");
+
+  if (redactedError) throw redactedError;
+  assert((count ?? 0) >= 3, "inbounds de palavra-chave de portaria ficam redigidos");
 }
 
 async function verifyPermissions() {
@@ -412,12 +484,13 @@ async function main() {
   let zapiServer;
   const adminPhone = "559940000001";
   const validatorPhone = "559940000002";
+  const unknownGatePhone = "559940000003";
 
   try {
     await cleanup();
     await verifyPermissions();
     const adminUserId = await createAdminUser(adminPhone);
-    const { eventId } = await createCatalog(adminUserId);
+    const { eventId, secondEventId } = await createCatalog(adminUserId);
 
     zapiServer = await startZapiMock();
     nextChild = await startNextDev();
@@ -428,13 +501,19 @@ async function main() {
 
     const selfSelect = await sendMessage(adminPhone, "1");
     assertIncludes(selfSelect.text, "CHECK-IN NESTE TELEFONE", "check-in neste telefone pergunta evento");
-    const selfLink = await sendMessage(adminPhone, "1");
+    const selfLink = await sendMessage(adminPhone, `${PREFIX} Evento`);
     assertIncludes(selfLink.text, "/gate/session/", "check-in próprio gera link");
     assertNotIncludes(selfLink.text, GATE_PASS, "check-in próprio não mostra palavra-chave");
     await validateGateSessionLink(selfLink.text, eventId);
 
+    assertIncludes(
+      (await sendMessage(unknownGatePhone, "Portaria")).text,
+      "Não encontrei acesso de portaria ativo para este telefone.",
+      "telefone sem acesso ativo recebe resposta segura",
+    );
+
     assertIncludes((await sendMessage(adminPhone, "2")).text, "CHECK-IN", "cadastro de outro telefone pergunta evento");
-    assertIncludes((await sendMessage(adminPhone, "1")).text, "DEFINIR TELEFONE", "cadastro pede telefone");
+    assertIncludes((await sendMessage(adminPhone, `${PREFIX} Evento`)).text, "DEFINIR TELEFONE", "cadastro pede telefone");
     assertIncludes((await sendMessage(adminPhone, validatorPhone)).text, "PALAVRA CHAVE", "cadastro pede palavra-chave");
     const registered = await sendMessage(adminPhone, GATE_PASS);
     assertIncludes(registered.text, "NOVO TELEFONE CADASTRADO PARA CHECK-IN", "cadastro confirma novo telefone");
@@ -452,6 +531,15 @@ async function main() {
     assert(access.passphrase_hash !== GATE_PASS, "palavra-chave não salva em texto puro");
     assert(access.passphrase_hash.startsWith("pbkdf2_sha256$"), "palavra-chave salva como hash PBKDF2");
 
+    assertIncludes((await sendMessage(adminPhone, "2")).text, "CHECK-IN", "duplicidade inicia novo cadastro");
+    assertIncludes((await sendMessage(adminPhone, `${PREFIX} Evento`)).text, "DEFINIR TELEFONE", "duplicidade escolhe evento");
+    assertIncludes((await sendMessage(adminPhone, validatorPhone)).text, "PALAVRA CHAVE", "duplicidade pede palavra-chave");
+    assertIncludes(
+      (await sendMessage(adminPhone, GATE_PASS)).text,
+      "Este telefone já possui acesso de portaria para este evento.",
+      "bloqueia duplicidade por evento/telefone",
+    );
+
     const portariaPrompt = await sendMessage(validatorPhone, "Portaria");
     assertIncludes(portariaPrompt.text, "PALAVRA CHAVE DA PORTARIA", "validador precisa informar palavra-chave");
     assertNotIncludes(portariaPrompt.text, GATE_PASS, "prompt do validador não revela palavra-chave");
@@ -461,16 +549,39 @@ async function main() {
     assertIncludes(validatorLink.text, "/gate/session/", "senha correta gera link temporário");
     await validateGateSessionLink(validatorLink.text, eventId);
 
+    const secondAccessId = await dbInsert("gate_accesses", {
+      event_id: secondEventId,
+      phone: validatorPhone,
+      passphrase_hash: hashPassphrase(GATE_PASS),
+      status: "active",
+      created_by_admin_user_id: adminUserId,
+      created_by_admin_phone: adminPhone,
+    });
+    assert(Boolean(secondAccessId), "fixture cria segundo acesso de portaria");
+    const multiAccess = await sendMessage(validatorPhone, "Portaria");
+    assertIncludes(multiAccess.text, "Você tem acesso de portaria para estes eventos", "multiacesso lista eventos");
+    assertIncludes(multiAccess.text, `${PREFIX} Evento`, "multiacesso lista primeiro evento");
+    assertIncludes(multiAccess.text, `${PREFIX} Segundo Evento`, "multiacesso lista segundo evento");
+    const secondPrompt = await sendMessage(
+      validatorPhone,
+      optionForLineContaining(multiAccess.text, `${PREFIX} Segundo Evento`),
+    );
+    assertIncludes(secondPrompt.text, "PALAVRA CHAVE DA PORTARIA", "multiacesso pede palavra-chave após escolha");
+    const secondLink = await sendMessage(validatorPhone, GATE_PASS);
+    assertIncludes(secondLink.text, "/gate/session/", "multiacesso gera link");
+    await validateGateSessionLink(secondLink.text, secondEventId, `${PREFIX} Segundo Evento`);
+
     assertIncludes((await sendMessage(adminPhone, "3")).text, "PORTARIA - ESCOLHA O EVENTO", "ver acessos pede evento");
-    assertIncludes((await sendMessage(adminPhone, "1")).text, "VER TODOS OS ACESSOS", "ver acessos pede filtro");
+    assertIncludes((await sendMessage(adminPhone, `${PREFIX} Evento`)).text, "VER TODOS OS ACESSOS", "ver acessos pede filtro");
     const accessList = await sendMessage(adminPhone, "1");
     assertIncludes(accessList.text, "ACESSOS ATIVOS", "lista acessos ativos");
     assertIncludes(accessList.text, maskPhone(validatorPhone), "lista mostra telefone mascarado");
     assertNotIncludes(accessList.text, validatorPhone, "lista não mostra telefone completo");
     assertNotIncludes(accessList.text, GATE_PASS, "lista não mostra palavra-chave");
+    assertNotIncludes(accessList.text, "pbkdf2_sha256", "lista não mostra hash");
 
     assertIncludes((await sendMessage(adminPhone, "4")).text, "REVOGAR ACESSOS", "revogar pede evento");
-    const revokeList = await sendMessage(adminPhone, "1");
+    const revokeList = await sendMessage(adminPhone, `${PREFIX} Evento`);
     assertIncludes(revokeList.text, "Digite o número do acesso", "revogar lista acessos");
     const revokeConfirm = await sendMessage(adminPhone, "1");
     assertIncludes(revokeConfirm.text, "CONFIRMAR PAUSA DO ACESSO", "revogar pede confirmação");
@@ -489,8 +600,18 @@ async function main() {
     if (pausedError) throw pausedError;
     assert(paused.status === "paused", "revogar altera status para paused");
 
+    assertIncludes((await sendMessage(adminPhone, "3")).text, "PORTARIA - ESCOLHA O EVENTO", "ver pausados pede evento");
+    assertIncludes((await sendMessage(adminPhone, `${PREFIX} Evento`)).text, "VER TODOS OS ACESSOS", "ver pausados pede filtro");
+    const pausedList = await sendMessage(adminPhone, "2");
+    assertIncludes(pausedList.text, "ACESSOS PAUSADOS", "lista pausados");
+    assertIncludes(pausedList.text, maskPhone(validatorPhone), "lista pausados mostra telefone mascarado");
+    assertNotSensitive(pausedList.text, "lista pausados");
+
     const deniedAfterPause = await sendMessage(validatorPhone, "Portaria");
-    assertIncludes(deniedAfterPause.text, "Não encontrei acesso de portaria ativo", "acesso pausado não gera login");
+    assertIncludes(deniedAfterPause.text, "PALAVRA CHAVE DA PORTARIA", "acesso pausado não entra, mas outro evento ativo permanece");
+    assertIncludes(deniedAfterPause.text, `${PREFIX} Segundo Evento`, "login após pausa usa apenas evento ainda ativo");
+
+    await assertInboundPassphrasesRedacted();
 
     await cleanup();
     await verifyCleanup();

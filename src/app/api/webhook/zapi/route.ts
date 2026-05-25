@@ -17,6 +17,7 @@ import {
 } from "@/lib/tickets/services/messages";
 import { routeTicketMessage } from "@/lib/tickets/router";
 import { ADMIN_AUTH_REDACTED_BODY } from "@/lib/tickets/services/adminAuth";
+import { GATE_ACCESS_REDACTED_BODY } from "@/lib/tickets/services/gateAccessAuth";
 import {
   sendZapiImage,
   sendZapiText,
@@ -280,21 +281,40 @@ function buildInboundMetadata({
   providerMessageId,
   messageType,
   redacted = false,
+  redactionReason = "sensitive_input",
 }: {
   providerMessageId: string | null;
   messageType: string;
   redacted?: boolean;
+  redactionReason?: string;
 }) {
   return {
     provider: "zapi",
     provider_message_id: providerMessageId,
     message_type: messageType,
-    ...(redacted ? { redacted: true, reason: "admin_auth" } : {}),
+    ...(redacted ? { redacted: true, reason: redactionReason } : {}),
   };
 }
 
-function shouldRedactInboundTextForAdminAuth(context: Record<string, unknown>) {
-  return context?.state === "admin_auth_pending";
+function getInboundRedaction(context: Record<string, unknown>) {
+  if (context?.state === "admin_auth_pending") {
+    return {
+      body: ADMIN_AUTH_REDACTED_BODY,
+      reason: "admin_auth",
+    };
+  }
+
+  if (
+    context?.state === "admin_gate_password_collecting" ||
+    context?.state === "gate_access_passphrase_collecting"
+  ) {
+    return {
+      body: GATE_ACCESS_REDACTED_BODY,
+      reason: "gate_access_passphrase",
+    };
+  }
+
+  return null;
 }
 
 function buildOutboundMetadata({
@@ -494,7 +514,7 @@ export async function POST(request: Request) {
     return jsonError("Internal Server Error", 500);
   }
 
-  const redactInboundText = shouldRedactInboundTextForAdminAuth(
+  const inboundRedaction = getInboundRedaction(
     conversationResult.conversation.context,
   );
 
@@ -503,12 +523,13 @@ export async function POST(request: Request) {
     customerId: customerResult.customer.id,
     direction: "inbound",
     messageType: incoming.messageType,
-    body: redactInboundText ? ADMIN_AUTH_REDACTED_BODY : incoming.text,
+    body: inboundRedaction?.body ?? incoming.text,
     providerMessageId: incoming.providerMessageId,
     rawMetadata: buildInboundMetadata({
       providerMessageId: incoming.providerMessageId,
       messageType: incoming.messageType,
-      redacted: redactInboundText,
+      redacted: Boolean(inboundRedaction),
+      redactionReason: inboundRedaction?.reason,
     }),
   });
 
