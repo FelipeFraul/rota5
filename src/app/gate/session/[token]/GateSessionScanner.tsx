@@ -14,6 +14,7 @@ type GateSessionValidation =
         id: string;
         gateLabel: string | null;
         eventTitle: string | null;
+        sessionStartsAt: string | null;
         validatorPhoneLast4: string;
         expiresAt: string;
         status: "active";
@@ -419,6 +420,9 @@ export function GateSessionScanner({
         <div>
           <p className="gate-kicker">Portaria</p>
           <h1>{validation.gateSession.eventTitle ?? "Evento"}</h1>
+          {validation.gateSession.sessionStartsAt ? (
+            <p>Sessão: {formatDateTime(validation.gateSession.sessionStartsAt)}</p>
+          ) : null}
           <p>Validade: {formatDateTime(validation.gateSession.expiresAt)}</p>
           <p>Validador: final {validation.gateSession.validatorPhoneLast4}</p>
         </div>

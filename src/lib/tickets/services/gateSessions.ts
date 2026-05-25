@@ -59,6 +59,7 @@ export type ValidateGateSessionResult =
         id: string;
         gateLabel: string | null;
         eventTitle: string | null;
+        sessionStartsAt: string | null;
         validatorPhoneLast4: string;
         expiresAt: string;
         status: "active";
@@ -213,7 +214,9 @@ export async function validateGateSessionToken(
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("gate_sessions")
-    .select("id, gate_label, validator_phone, status, expires_at, token_hash, events(title)")
+    .select(
+      "id, gate_label, validator_phone, status, expires_at, token_hash, events(title), event_sessions(starts_at)",
+    )
     .eq("id", verified.gateSessionId)
     .eq("token_hash", tokenHash)
     .maybeSingle<
@@ -222,6 +225,7 @@ export async function validateGateSessionToken(
         "id" | "gate_label" | "validator_phone" | "status" | "expires_at" | "token_hash"
       > & {
         events: { title: string } | { title: string }[] | null;
+        event_sessions: { starts_at: string } | { starts_at: string }[] | null;
       }
     >();
 
@@ -261,6 +265,9 @@ export async function validateGateSessionToken(
       eventTitle: Array.isArray(data.events)
         ? data.events[0]?.title ?? null
         : data.events?.title ?? null,
+      sessionStartsAt: Array.isArray(data.event_sessions)
+        ? data.event_sessions[0]?.starts_at ?? null
+        : data.event_sessions?.starts_at ?? null,
       validatorPhoneLast4: data.validator_phone.slice(-4),
       expiresAt: data.expires_at,
       status: "active",

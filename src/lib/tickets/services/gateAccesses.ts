@@ -1,7 +1,10 @@
 import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { hashAdminPassphrase, verifyPassphraseHash } from "@/lib/tickets/services/adminAuth";
+import {
+  hashGateAccessPassphrase,
+  verifyGateAccessPassphrase,
+} from "@/lib/tickets/services/gateAccessAuth";
 import {
   createGateSession,
   normalizeGatePhone,
@@ -103,7 +106,7 @@ export async function createGateAccess(input: {
       session_id: input.sessionId ?? null,
       phone,
       name: input.name?.trim() || null,
-      passphrase_hash: hashAdminPassphrase(passphrase),
+      passphrase_hash: hashGateAccessPassphrase(passphrase),
       status: "active",
       created_by_admin_user_id: input.createdByAdminUserId ?? null,
       created_by_admin_phone: createdByAdminPhone,
@@ -252,7 +255,7 @@ export async function createGateSessionForGateAccess(input: {
   if (error) return { ok: false, reason: "not_found", error };
   if (!data) return { ok: false, reason: "not_found" };
 
-  if (!verifyPassphraseHash(input.passphrase.trim(), data.passphrase_hash)) {
+  if (!verifyGateAccessPassphrase(input.passphrase.trim(), data.passphrase_hash)) {
     return { ok: false, reason: "invalid_passphrase" };
   }
 

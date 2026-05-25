@@ -1739,7 +1739,7 @@ function buildGateValidatorRegisteredReply({
 
 function renderGateAccessSelection(accesses: AdminGateAccessListItem[]) {
   return [
-    "*PORTARIA - ESCOLHA O EVENTO*",
+    "*Você tem acesso de portaria para estes eventos:*",
     "",
     ...accesses.map(
       (access, index) => `> ${index + 1}. ${access.eventTitle ?? "Evento"}`,
@@ -1753,7 +1753,7 @@ function renderGateAccessSelectionFromContext(
   accesses: NonNullable<TicketConversationState["gateAccess"]>["lastAccesses"] = [],
 ) {
   return [
-    "*PORTARIA - ESCOLHA O EVENTO*",
+    "*Você tem acesso de portaria para estes eventos:*",
     "",
     ...accesses.map(
       (access) => `> ${access.option}. ${access.eventTitle ?? "Evento"}`,
@@ -6687,7 +6687,7 @@ export async function routeTicketMessage({
     if (!selectedAccessId) {
       return {
         reply:
-          "Não encontrei acesso de portaria ativo para este telefone. Confira se o número foi cadastrado pelo administrador.",
+          "Não encontrei acesso de portaria ativo para este telefone.",
         nextContext: {
           ...baseContext,
           step: "idle",
@@ -6708,7 +6708,7 @@ export async function routeTicketMessage({
         reply:
           gateSessionResult.reason === "invalid_passphrase"
             ? "Palavra-chave inválida."
-            : "Não encontrei acesso de portaria ativo para este telefone. Confira se o número foi cadastrado pelo administrador.",
+            : "Não encontrei acesso de portaria ativo para este telefone.",
         nextContext:
           gateSessionResult.reason === "invalid_passphrase"
             ? baseContext
@@ -8944,7 +8944,7 @@ export async function routeTicketMessage({
 
       return {
         reply:
-          "Não encontrei acesso de portaria ativo para este telefone. Confira se o número foi cadastrado pelo administrador.",
+          "Não encontrei acesso de portaria ativo para este telefone.",
         nextContext: {
           ...baseContext,
           step: "idle",
