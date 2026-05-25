@@ -1580,14 +1580,16 @@ function isAdminGateFlowState(
   | "admin_gate_password_collecting"
   | "admin_gate_access_event_select"
   | "admin_gate_accesses_filter"
-  | "admin_gate_revoke_select" {
+  | "admin_gate_revoke_select"
+  | "admin_gate_revoke_confirm" {
   return (
     state === "admin_gate_register_event_select" ||
     state === "admin_gate_validator_collecting" ||
     state === "admin_gate_password_collecting" ||
     state === "admin_gate_access_event_select" ||
     state === "admin_gate_accesses_filter" ||
-    state === "admin_gate_revoke_select"
+    state === "admin_gate_revoke_select" ||
+    state === "admin_gate_revoke_confirm"
   );
 }
 
@@ -1674,6 +1676,14 @@ function formatGateAccessStatus(status: AdminGateAccessListItem["status"]) {
   return status;
 }
 
+function maskGatePhone(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+
+  if (digits.length <= 4) return "****";
+
+  return `****${digits.slice(-4)}`;
+}
+
 function renderGateAccessesList({
   title,
   accesses,
@@ -1684,7 +1694,7 @@ function renderGateAccessesList({
   const blocks = accesses.map((access, index) =>
     [
       `${index + 1}. ${access.eventTitle ?? "Evento"}`,
-      `> Telefone: ${access.phone}`,
+      `> Telefone: ${maskGatePhone(access.phone)}`,
       access.name ? `> Nome: ${access.name}` : null,
       `> Status: ${formatGateAccessStatus(access.status)}`,
       `> Criado em: ${formatDateTime(access.createdAt)}`,
@@ -1697,6 +1707,33 @@ function renderGateAccessesList({
     `*${title}*`,
     "",
     blocks.length > 0 ? blocks.join("\n---\n") : "Nenhum acesso encontrado.",
+  ].join("\n");
+}
+
+function renderGateAccessRevokeConfirm(access: {
+  validatorPhone: string;
+  eventTitle?: string | null;
+}) {
+  return [
+    "*CONFIRMAR PAUSA DO ACESSO*",
+    "",
+    `> Telefone: ${maskGatePhone(access.validatorPhone)}`,
+    `> Evento: ${access.eventTitle ?? "Evento"}`,
+    "",
+    "Responda SIM para pausar este acesso de portaria.",
+    'Digite "Voltar" para voltar ou "Sair" para sair da área de admin.',
+  ].join("\n");
+}
+
+function renderGateAccessPausedReply(access: {
+  validatorPhone: string;
+  eventTitle?: string | null;
+}) {
+  return [
+    "*ACESSO DE PORTARIA PAUSADO*",
+    "",
+    `> Telefone: ${maskGatePhone(access.validatorPhone)}`,
+    `> Evento: ${access.eventTitle ?? "Evento"}`,
   ].join("\n");
 }
 
@@ -7642,7 +7679,7 @@ export async function routeTicketMessage({
           return {
             reply:
               gateAccessResult.reason === "already_registered"
-                ? "Esse telefone já está cadastrado para check-in."
+                ? "Este telefone já possui acesso de portaria para este evento."
                 : TICKET_MESSAGES.gateAdminCreateError,
             nextContext: adminReplyContext({
               state: "admin_gate_menu",
@@ -7729,7 +7766,7 @@ export async function routeTicketMessage({
 
         if (adminGate.mode === "revoke") {
           const result = await listGateAccesses({
-            filter: "active",
+            filter: "open",
             eventId,
           });
 
@@ -7774,6 +7811,7 @@ export async function routeTicketMessage({
                   gateAccessId: access.id,
                   validatorPhone: access.phone,
                   eventId: access.eventId,
+                  eventTitle: access.eventTitle,
                 })),
               },
             ),
@@ -7878,6 +7916,53 @@ export async function routeTicketMessage({
           };
         }
 
+        return {
+          reply: renderGateAccessRevokeConfirm(selected),
+          nextContext: withAdminGateContext(
+            baseContext,
+            "admin_gate_revoke_confirm",
+            {
+              ...adminGate,
+              pendingRevokeAccess: {
+                gateAccessId: selected.gateAccessId,
+                validatorPhone: selected.validatorPhone,
+                eventId: selected.eventId,
+                eventTitle: selected.eventTitle,
+              },
+            },
+          ),
+        };
+      }
+
+      if (baseContext.state === "admin_gate_revoke_confirm") {
+        const adminGate = baseContext.adminGate ?? {};
+        const selected = adminGate.pendingRevokeAccess;
+        const normalized = normalizeAdminText(text);
+
+        if (!selected) {
+          return {
+            reply: TICKET_MESSAGES.adminGenericError,
+            nextContext: adminReplyContext({
+              state: "admin_gate_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        if (normalized !== "sim" && normalized !== "s") {
+          return {
+            reply: renderGateAccessRevokeConfirm(selected),
+            nextContext: withAdminGateContext(
+              baseContext,
+              "admin_gate_revoke_confirm",
+              adminGate,
+            ),
+          };
+        }
+
         const revokeResult = await pauseGateAccess({
           accessId: selected.gateAccessId,
           eventId: selected.eventId,
@@ -7886,7 +7971,7 @@ export async function routeTicketMessage({
 
         return {
           reply: revokeResult.ok
-            ? `Acesso pausado para ${selected.validatorPhone}.`
+            ? renderGateAccessPausedReply(selected)
             : TICKET_MESSAGES.adminGenericError,
           nextContext: adminReplyContext({
             state: "admin_gate_menu",

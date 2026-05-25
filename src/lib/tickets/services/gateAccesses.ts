@@ -131,7 +131,7 @@ export async function createGateAccess(input: {
 
 export async function listGateAccesses(input: {
   eventId: string;
-  filter?: "active" | "paused" | "all";
+  filter?: "active" | "paused" | "open" | "all";
 }) {
   const supabase = getSupabaseAdmin();
   let query = supabase
@@ -146,7 +146,9 @@ export async function listGateAccesses(input: {
   if (input.filter === "active") {
     query = query.eq("status", "active");
   } else if (input.filter === "paused") {
-    query = query.in("status", ["paused", "revoked"]);
+    query = query.eq("status", "paused");
+  } else if (input.filter === "open") {
+    query = query.in("status", ["active", "paused"]);
   }
 
   const { data, error } = await query.returns<GateAccessWithEvent[]>();
@@ -199,7 +201,7 @@ export async function pauseGateAccess(input: {
       revoked_by_admin_user_id: input.revokedByAdminUserId ?? null,
     })
     .eq("id", input.accessId)
-    .eq("status", "active");
+    .in("status", ["active", "paused"]);
 
   if (input.eventId) {
     query = query.eq("event_id", input.eventId);

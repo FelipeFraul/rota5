@@ -108,6 +108,10 @@ function assertNotIncludes(value, expected, label) {
   );
 }
 
+function maskPhone(phone) {
+  return `****${String(phone).replace(/\D/g, "").slice(-4)}`;
+}
+
 function hashPassphrase(passphrase) {
   const salt = randomBytes(16).toString("hex");
   const digest = pbkdf2Sync(passphrase, salt, 210_000, 32, "sha256").toString("hex");
@@ -461,13 +465,21 @@ async function main() {
     assertIncludes((await sendMessage(adminPhone, "1")).text, "VER TODOS OS ACESSOS", "ver acessos pede filtro");
     const accessList = await sendMessage(adminPhone, "1");
     assertIncludes(accessList.text, "ACESSOS ATIVOS", "lista acessos ativos");
-    assertIncludes(accessList.text, validatorPhone, "lista mostra telefone");
+    assertIncludes(accessList.text, maskPhone(validatorPhone), "lista mostra telefone mascarado");
+    assertNotIncludes(accessList.text, validatorPhone, "lista não mostra telefone completo");
     assertNotIncludes(accessList.text, GATE_PASS, "lista não mostra palavra-chave");
 
     assertIncludes((await sendMessage(adminPhone, "4")).text, "REVOGAR ACESSOS", "revogar pede evento");
     const revokeList = await sendMessage(adminPhone, "1");
     assertIncludes(revokeList.text, "Digite o número do acesso", "revogar lista acessos");
-    assertIncludes((await sendMessage(adminPhone, "1")).text, "Acesso pausado", "revogar pausa acesso");
+    const revokeConfirm = await sendMessage(adminPhone, "1");
+    assertIncludes(revokeConfirm.text, "CONFIRMAR PAUSA DO ACESSO", "revogar pede confirmação");
+    assertIncludes(revokeConfirm.text, maskPhone(validatorPhone), "confirmação mostra telefone mascarado");
+    assertNotIncludes(revokeConfirm.text, validatorPhone, "confirmação não mostra telefone completo");
+    const revokeDone = await sendMessage(adminPhone, "SIM");
+    assertIncludes(revokeDone.text, "ACESSO DE PORTARIA PAUSADO", "revogar pausa acesso");
+    assertIncludes(revokeDone.text, maskPhone(validatorPhone), "pausa confirma telefone mascarado");
+    assertNotIncludes(revokeDone.text, validatorPhone, "pausa não mostra telefone completo");
 
     const { data: paused, error: pausedError } = await service
       .from("gate_accesses")

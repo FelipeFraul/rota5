@@ -22,6 +22,7 @@ export type TicketConversationStep =
   | "admin_gate_access_event_select"
   | "admin_gate_accesses_filter"
   | "admin_gate_revoke_select"
+  | "admin_gate_revoke_confirm"
   | "admin_users_menu"
   | "admin_users_add_type_select"
   | "admin_users_add_phone_collecting"
@@ -235,7 +236,14 @@ export type TicketConversationAdminGate = {
     gateAccessId: string;
     validatorPhone: string;
     eventId?: string;
+    eventTitle?: string | null;
   }>;
+  pendingRevokeAccess?: {
+    gateAccessId: string;
+    validatorPhone: string;
+    eventId?: string;
+    eventTitle?: string | null;
+  };
 };
 
 export type TicketConversationGateAccess = {

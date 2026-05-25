@@ -31,6 +31,10 @@ type BarcodeDetectorCtor = new (options?: {
   detect(source: CanvasImageSource): Promise<Array<{ rawValue: string }>>;
 };
 
+const ALLOWED_SCAN_PAUSE_MS = 4_000;
+const REPEATED_SCAN_COOLDOWN_MS = 3_000;
+const ALLOWED_REPEAT_COOLDOWN_MS = 10_000;
+
 declare global {
   interface Window {
     BarcodeDetector?: BarcodeDetectorCtor;
@@ -163,9 +167,9 @@ export function GateSessionScanner({
     ) => {
       lastAllowedTokenRef.current = ticketToken;
       lastAllowedAtRef.current = Date.now();
-      scanPausedUntilRef.current = Date.now() + 2_000;
+      scanPausedUntilRef.current = Date.now() + ALLOWED_SCAN_PAUSE_MS;
       setAccessOverlay(ticket ?? {});
-      setCameraStatus("Acesso liberado. Scanner pausado por 2 segundos.");
+      setCameraStatus("Acesso liberado. Scanner pausado temporariamente.");
 
       if (scanResumeTimerRef.current) {
         clearTimeout(scanResumeTimerRef.current);
@@ -176,7 +180,7 @@ export function GateSessionScanner({
         scanPausedUntilRef.current = 0;
         setCameraStatus("Scanner ativo. Aponte para o QR Code do ingresso.");
         scanResumeTimerRef.current = null;
-      }, 2_000);
+      }, ALLOWED_SCAN_PAUSE_MS);
     },
     [],
   );
@@ -196,14 +200,14 @@ export function GateSessionScanner({
 
       if (
         ticketToken === lastAllowedTokenRef.current &&
-        now - lastAllowedAtRef.current < 10_000
+        now - lastAllowedAtRef.current < ALLOWED_REPEAT_COOLDOWN_MS
       ) {
         return;
       }
 
       if (
         ticketToken === lastScanRef.current &&
-        now - lastScanAtRef.current < 3_000
+        now - lastScanAtRef.current < REPEATED_SCAN_COOLDOWN_MS
       ) {
         return;
       }
