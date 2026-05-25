@@ -1101,7 +1101,9 @@ QRCode images are generated as PNG at delivery time from the signed `/tickets/{p
 
 The Ponto 2 audit used temporary data in the real Supabase project with the `TEST_SEATMAP_QR_IMAGE` prefix, Z-API mocked locally, and Mercado Pago API calls mocked locally through `MERCADO_PAGO_API_BASE_URL`. It validated PNG map generation, green/gray availability, seat labels, `PALCO`, fallback without coordinates, updated availability after reservation, exact `ASSENTO INDISPONÍVEL` for unavailable seats, QRCode PNG generation after approved payment, separate ticket-data and QR image messages, correct multiple-ticket QR mapping, safe failure when Z-API image delivery fails, log/metadata hygiene, and cleanup. The Z-API payload uses `data:image/png;base64,...`, which is the documented Base64 format for `send-image`.
 
-A real controlled purchase additionally validated that the buyer receives the QRCode as an image in WhatsApp, not only as a link. WhatsApp/Z-API may display or download the image as JPG in the app even though the backend generates PNG before sending; this is acceptable while the QRCode remains readable and validatable. The remaining controlled real-delivery check for Ponto 2 is the seat map image, not the ticket QRCode image.
+A real controlled purchase additionally validated that the buyer receives the QRCode as an image in WhatsApp, not only as a link. WhatsApp/Z-API may display or download the image as JPG in the app even though the backend generates PNG before sending; this is acceptable while the QRCode remains readable and validatable.
+
+The remaining real-delivery check for Ponto 2 was closed with the `TEST_REAL_SEATMAP_IMAGE` prefix. A temporary published event, future sales-open session, numbered-seat section, six seats, and active full-price offer were created in the real Supabase project. The production Z-API webhook then sent the seat map image to a controlled WhatsApp number, marked one seat as reserved, sent a second map, and removed the temporary catalog. Both image sends were recorded as `message_type = image` with `send_status = sent`.
 
 ## Step 15 - Gate Sessions And Scanner Shell
 

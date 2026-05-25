@@ -177,10 +177,11 @@ function drawLegend(canvas: PngCanvas, x: number, y: number) {
 function drawSeat(canvas: PngCanvas, point: SeatPoint) {
   const fill = point.seat.isAvailable ? AVAILABLE_COLOR : UNAVAILABLE_COLOR;
   const label = point.seat.seatCode;
-  const textScale = label.length > 3 ? 2 : 3;
+  const textScale = label.length <= 2 ? 3 : 2;
+  const textY = point.y - Math.round((7 * textScale) / 2);
 
   canvas.fillCircle(point.x, point.y, 22, fill);
-  canvas.drawText(label, point.x, point.y - 6, {
+  canvas.drawText(label, point.x, textY, {
     scale: textScale,
     color: WHITE,
     align: "center",

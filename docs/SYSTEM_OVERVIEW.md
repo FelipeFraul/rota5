@@ -116,6 +116,8 @@ O mapa usa posições cadastradas no evento. Quando não houver posições, o si
 
 Quando uma compra é feita, a próxima visualização do mapa deve refletir o assento já ocupado.
 
+O envio real/controlado do mapa pelo WhatsApp foi validado com Z-API em produção: o sistema gerou a imagem, a Z-API aceitou o envio para o número controlado e um segundo mapa refletiu assento reservado como indisponível.
+
 Se o comprador informar assento inexistente, ocupado ou fora da lista enviada, a resposta deve ser:
 
 ```text
