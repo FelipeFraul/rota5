@@ -436,9 +436,12 @@ async function testSharedDraftCreation() {
   await sendMessage(ADMIN_PHONE, "SP");
   await sendMessage(ADMIN_PHONE, `${PREFIX} Teatro Compartilhado`);
   await sendMessage(ADMIN_PHONE, "pular");
-  await sendMessage(ADMIN_PHONE, "1 sessão, 2 datas");
-  await sendMessage(ADMIN_PHONE, "10/08/2026 20:00");
-  await sendMessage(ADMIN_PHONE, "11/08/2026 21:00");
+  await sendMessage(ADMIN_PHONE, "2");
+  await sendMessage(ADMIN_PHONE, "1");
+  await sendMessage(ADMIN_PHONE, "10/08/2026");
+  await sendMessage(ADMIN_PHONE, "20:00");
+  await sendMessage(ADMIN_PHONE, "11/08/2026");
+  await sendMessage(ADMIN_PHONE, "21:00");
   await sendMessage(ADMIN_PHONE, "2");
   await sendMessage(ADMIN_PHONE, "1");
   await sendMessage(ADMIN_PHONE, "100");
@@ -479,8 +482,10 @@ async function testNumberedPublishedCreation() {
   await sendMessage(ADMIN_PHONE, `${PREFIX} Teatro Numerado`);
   await sendMessage(ADMIN_PHONE, "https://example.com/test-admin-event.jpg");
   await sendMessage(ADMIN_PHONE, "1");
-  await sendMessage(ADMIN_PHONE, "1");
-  await sendMessage(ADMIN_PHONE, "12/08/2026 20:00");
+  await sendMessage(ADMIN_PHONE, "2");
+  await sendMessage(ADMIN_PHONE, "12/08/2026");
+  await sendMessage(ADMIN_PHONE, "20:00");
+  await sendMessage(ADMIN_PHONE, "22:00");
   await sendMessage(ADMIN_PHONE, "3");
   await sendMessage(ADMIN_PHONE, "1");
   await sendMessage(ADMIN_PHONE, "4");
@@ -501,19 +506,22 @@ async function testNumberedPublishedCreation() {
   assert(event.description === null, "description pulada fica null");
 
   const sessionIds = await dbSelectIds("event_sessions", "event_id", [event.id]);
-  assert(sessionIds.length === 1, "evento numerado criou 1 sessao");
+  assert(sessionIds.length === 2, "evento numerado criou 2 sessoes na mesma data");
   const { data: sessions, error: sessionError } = await supabase
     .from("event_sessions")
     .select("status")
     .eq("event_id", event.id);
   if (sessionError) throw sessionError;
-  assert(sessions?.[0]?.status === "sales_open", "evento publicado abre venda da sessao");
+  assert(
+    sessions?.every((session) => session.status === "sales_open"),
+    "evento publicado abre venda das sessoes",
+  );
 
   const sectionIds = await dbSelectIds("venue_sections", "venue_id", [event.venue_id]);
   const seatCount = await countRows("seats", "section_id", sectionIds);
   const sessionSeatCount = await countRows("session_seats", "session_id", sessionIds);
   assert(seatCount === 4, "evento numerado criou 4 assentos");
-  assert(sessionSeatCount === 4, "evento numerado criou 4 session_seats");
+  assert(sessionSeatCount === 8, "evento numerado criou session_seats por sessao");
 }
 
 async function testCancelCreationRollback() {

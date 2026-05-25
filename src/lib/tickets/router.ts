@@ -2511,6 +2511,52 @@ function parseCreateEventSessionQuantities(value: string) {
   };
 }
 
+function parseBrazilianEventDateOnly(value: string) {
+  const match = value.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return null;
+
+  const [, dayRaw, monthRaw, yearRaw] = match;
+  const day = Number(dayRaw);
+  const month = Number(monthRaw);
+  const year = Number(yearRaw);
+
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+  const isoDate = `${year.toString().padStart(4, "0")}-${month
+    .toString()
+    .padStart(2, "0")}-${day.toString().padStart(2, "0")}`;
+  const parsed = new Date(`${isoDate}T00:00:00-03:00`);
+
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() + 1 !== month ||
+    parsed.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return isoDate;
+}
+
+function parseBrazilianTimeOnly(value: string) {
+  const match = value.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+
+  const [, hourRaw, minuteRaw] = match;
+  const hour = Number(hourRaw);
+  const minute = Number(minuteRaw);
+
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+
+  return `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+}
+
+function buildSaoPauloDateTime(date: string, time: string) {
+  const parsed = new Date(`${date}T${time}:00-03:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
 function getPreviousCreateEventField(draft: Record<string, unknown>) {
   const field = String(draft.field ?? "title");
   const previousByField: Record<string, string | null> = {
@@ -2522,8 +2568,10 @@ function getPreviousCreateEventField(draft: Record<string, unknown>) {
     imageUrl: "venueName",
     dateCount: "imageUrl",
     sessionsPerDate: "dateCount",
+    sessionDateItem: "sessionsPerDate",
+    sessionTimeItem: "sessionDateItem",
     sessionItem: "sessionsPerDate",
-    entryModel: "sessionItem",
+    entryModel: "sessionDateItem",
     singleEntryDetails: "entryModel",
     entryCapacityMode: "entryModel",
     sharedEntryCapacity: "entryCapacityMode",
@@ -2633,6 +2681,33 @@ function stepBackCreateEventDraft(draft: Record<string, unknown>) {
     }
   }
 
+  if (currentField === "sessionTimeItem") {
+    const currentTimeIndex = Number(nextDraft.currentSessionTimeIndex ?? 1);
+    const sessionsStartsAt = getDraftArray<string>(nextDraft, "sessionsStartsAt");
+
+    if (currentTimeIndex > 1 && sessionsStartsAt.length > 0) {
+      nextDraft.sessionsStartsAt = sessionsStartsAt.slice(0, -1);
+      nextDraft.currentSessionTimeIndex = currentTimeIndex - 1;
+      nextDraft.field = "sessionTimeItem";
+      return nextDraft;
+    }
+
+    nextDraft.field = "sessionDateItem";
+    return nextDraft;
+  }
+
+  if (currentField === "sessionDateItem") {
+    const eventDates = getDraftArray<string>(nextDraft, "eventDates");
+    if (eventDates.length > 0) {
+      nextDraft.eventDates = eventDates.slice(0, -1);
+      nextDraft.currentSessionDateIndex = eventDates.length;
+      delete nextDraft.pendingSessionDate;
+      delete nextDraft.currentSessionTimeIndex;
+      nextDraft.field = "sessionDateItem";
+      return nextDraft;
+    }
+  }
+
   const previousField = getPreviousCreateEventField(nextDraft);
   if (!previousField) {
     return null;
@@ -2649,6 +2724,10 @@ function stepBackCreateEventDraft(draft: Record<string, unknown>) {
   if (previousField === "dateCount") {
     delete nextDraft.sessionsStartsAt;
     delete nextDraft.currentSessionIndex;
+    delete nextDraft.currentSessionDateIndex;
+    delete nextDraft.currentSessionTimeIndex;
+    delete nextDraft.eventDates;
+    delete nextDraft.pendingSessionDate;
     delete nextDraft.expectedSessionCount;
     delete nextDraft.expectedDateCount;
     delete nextDraft.sessionsPerDate;
@@ -2657,6 +2736,10 @@ function stepBackCreateEventDraft(draft: Record<string, unknown>) {
   if (previousField === "sessionsPerDate") {
     delete nextDraft.sessionsStartsAt;
     delete nextDraft.currentSessionIndex;
+    delete nextDraft.currentSessionDateIndex;
+    delete nextDraft.currentSessionTimeIndex;
+    delete nextDraft.eventDates;
+    delete nextDraft.pendingSessionDate;
     delete nextDraft.expectedSessionCount;
     delete nextDraft.sessionsPerDate;
   }
@@ -2838,9 +2921,10 @@ function renderCreateEventPrompt(field?: string) {
       "Qual o nome do local/teatro/arena?\n\nEscreva o nome ou responda 1 para ver os locais cadastrados.",
     imageUrl:
       "Envie a foto do evento agora ou cole uma URL pública https://...\nPara salvar como rascunho sem foto, responda PULAR. Para publicar, a foto é obrigatória.",
-    dateCount:
-      "Quantas datas esse evento terá?\n\nSe quiser, responda junto com as sessões por data. Ex: 1 sessão, 3 datas",
+    dateCount: "Quantas datas terá este evento?\nEx: 3",
     sessionsPerDate: "Quantas sessões por data esse evento terá?",
+    sessionDateItem: "Qual a data do evento? Ex: 10/06/2026",
+    sessionTimeItem: "Qual o horário desta sessão? Ex: 20:00",
     sessionItem: "Qual a data e horário da sessão? Ex: 10/06/2026 22:00",
     description:
       "Envie as informações gerais do evento.\n\nEx: abertura dos portões, classificação, observações importantes.\nSe não quiser adicionar agora, responda PULAR.",
@@ -3610,6 +3694,8 @@ async function handleAdminEventsFlow({
       imageUrl: "dateCount",
       dateCount: null,
       sessionsPerDate: null,
+      sessionDateItem: null,
+      sessionTimeItem: null,
       sessionItem: null,
       description: "status",
       status: null,
@@ -3712,7 +3798,6 @@ async function handleAdminEventsFlow({
     } else if (field === "dateCount") {
       const quantities = parseCreateEventSessionQuantities(text);
       const datesCount = quantities.datesCount;
-      const sessionsPerDate = quantities.sessionsPerDate;
 
       if (!Number.isInteger(datesCount) || !datesCount || datesCount < 1 || datesCount > 30) {
         return {
@@ -3724,45 +3809,10 @@ async function handleAdminEventsFlow({
       }
 
       draft.expectedDateCount = datesCount;
-
-      if (
-        !Number.isInteger(sessionsPerDate) ||
-        !sessionsPerDate ||
-        sessionsPerDate < 1 ||
-        sessionsPerDate > 10
-      ) {
-        draft.field = "sessionsPerDate";
-
-        return {
-          reply: renderCreateEventPrompt("sessionsPerDate"),
-          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
-            draft,
-          }),
-        };
-      }
-
-      const totalSessions = datesCount * sessionsPerDate;
-      if (totalSessions > 60) {
-        return {
-          reply: "Quantidade muito alta. Crie até 60 sessões por evento.",
-          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
-            draft,
-          }),
-        };
-      }
-
-      draft.sessionsPerDate = sessionsPerDate;
-      draft.expectedSessionCount = totalSessions;
-      draft.currentSessionIndex = 1;
-      draft.sessionsStartsAt = [];
-      draft.field = "sessionItem";
+      draft.field = "sessionsPerDate";
 
       return {
-        reply: [
-          `Sessão/data 1 de ${totalSessions}.`,
-          "",
-          renderCreateEventPrompt("sessionItem"),
-        ].join("\n"),
+        reply: renderCreateEventPrompt("sessionsPerDate"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
           draft,
         }),
@@ -3798,47 +3848,86 @@ async function handleAdminEventsFlow({
 
       draft.sessionsPerDate = sessionsPerDate;
       draft.expectedSessionCount = totalSessions;
-      draft.currentSessionIndex = 1;
+      draft.currentSessionDateIndex = 1;
+      draft.currentSessionTimeIndex = 1;
+      draft.eventDates = [];
       draft.sessionsStartsAt = [];
-      draft.field = "sessionItem";
+      draft.field = "sessionDateItem";
 
       return {
         reply: [
-          `Sessão/data 1 de ${totalSessions}.`,
+          `Data 1 de ${datesCount}.`,
           "",
-          renderCreateEventPrompt("sessionItem"),
+          renderCreateEventPrompt("sessionDateItem"),
         ].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
           draft,
         }),
       };
-    } else if (field === "sessionItem") {
-      const startsAt = parseBrazilianDateTime(text);
-      if (!startsAt || new Date(startsAt).getTime() <= Date.now()) {
+    } else if (field === "sessionDateItem") {
+      const date = parseBrazilianEventDateOnly(text);
+      const dateAtEndOfDay = date ? new Date(`${date}T23:59:59-03:00`) : null;
+
+      if (!date || !dateAtEndOfDay || dateAtEndOfDay.getTime() <= Date.now()) {
         return {
-          reply: "Data inválida ou no passado. Envie no formato 10/06/2026 22:00.",
+          reply: "Data inválida ou no passado. Envie no formato 10/06/2026.",
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
           }),
         };
       }
 
-      const expectedCount = Number(draft.expectedSessionCount ?? 0);
-      const currentIndex = Number(draft.currentSessionIndex ?? 1);
+      const currentDateIndex = Number(draft.currentSessionDateIndex ?? 1);
+      const eventDates = getDraftArray<string>(draft, "eventDates");
+      draft.eventDates = [...eventDates, date];
+      draft.pendingSessionDate = date;
+      draft.currentSessionTimeIndex = 1;
+      draft.field = "sessionTimeItem";
+
+      return {
+        reply: [
+          `Data cadastrada: ${text.trim()}.`,
+          "",
+          `Horário 1 de ${Number(draft.sessionsPerDate ?? 1)} da data ${currentDateIndex}.`,
+          "",
+          renderCreateEventPrompt("sessionTimeItem"),
+        ].join("\n"),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+          draft,
+        }),
+      };
+    } else if (field === "sessionTimeItem") {
+      const time = parseBrazilianTimeOnly(text);
+      const pendingDate = String(draft.pendingSessionDate ?? "");
+      const startsAt = time ? buildSaoPauloDateTime(pendingDate, time) : null;
+
+      if (!startsAt || new Date(startsAt).getTime() <= Date.now()) {
+        return {
+          reply: "Horário inválido ou no passado. Envie no formato 20:00.",
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+
+      const datesCount = Number(draft.expectedDateCount ?? 0);
+      const sessionsPerDate = Number(draft.sessionsPerDate ?? 0);
+      const currentDateIndex = Number(draft.currentSessionDateIndex ?? 1);
+      const currentTimeIndex = Number(draft.currentSessionTimeIndex ?? 1);
       const sessionsStartsAt = getDraftArray<string>(draft, "sessionsStartsAt");
       draft.sessionsStartsAt = [...sessionsStartsAt, startsAt];
 
-      if (currentIndex < expectedCount) {
-        draft.currentSessionIndex = currentIndex + 1;
-        draft.field = "sessionItem";
+      if (currentTimeIndex < sessionsPerDate) {
+        draft.currentSessionTimeIndex = currentTimeIndex + 1;
+        draft.field = "sessionTimeItem";
 
         return {
           reply: [
             `Sessão cadastrada: ${formatDateTime(startsAt)}.`,
             "",
-            `Sessão/data ${currentIndex + 1} de ${expectedCount}.`,
+            `Horário ${currentTimeIndex + 1} de ${sessionsPerDate} da data ${currentDateIndex}.`,
             "",
-            renderCreateEventPrompt("sessionItem"),
+            renderCreateEventPrompt("sessionTimeItem"),
           ].join("\n"),
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
@@ -3846,6 +3935,27 @@ async function handleAdminEventsFlow({
         };
       }
 
+      if (currentDateIndex < datesCount) {
+        draft.currentSessionDateIndex = currentDateIndex + 1;
+        draft.currentSessionTimeIndex = 1;
+        delete draft.pendingSessionDate;
+        draft.field = "sessionDateItem";
+
+        return {
+          reply: [
+            `Sessão cadastrada: ${formatDateTime(startsAt)}.`,
+            "",
+            `Data ${currentDateIndex + 1} de ${datesCount}.`,
+            "",
+            renderCreateEventPrompt("sessionDateItem"),
+          ].join("\n"),
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+
+      delete draft.pendingSessionDate;
       draft.field = "entryModel";
       return {
         reply: renderCreateEventPrompt("entryModel"),

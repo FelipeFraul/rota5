@@ -526,7 +526,8 @@ Status operacional:
 
 - o menu `MEUS EVENTOS` usa a numeração oficial e não mostra mais `Setores e assentos` como item principal;
 - `Listar meus eventos` filtra ativos, pausados, cancelados e todos, com até 5 eventos por página e comando `Mais`;
-- a criação guiada coleta foto, sessões/datas, modelo de entrada, carga, tipos/ofertas, assentos digitados quando houver, informações gerais, escolha entre rascunho/publicação e confirmação final;
+- a criação guiada coleta foto, quantidade de datas, quantidade de sessões por data, cada data e seus horários separados, modelo de entrada, carga, tipos/ofertas, assentos digitados quando houver, informações gerais, escolha entre rascunho/publicação e confirmação final;
+- `3 datas` com `1 sessão por data` cria 3 sessões; `1 data` com `2 sessões por data` cria 2 sessões no mesmo dia com horários distintos;
 - eventos só são gravados depois de `CONFIRMAR`; ao cancelar antes da confirmação, o rascunho da conversa é descartado e nenhum evento temporário é criado;
 - publicação exige foto; rascunho pode seguir sem foto.
 
