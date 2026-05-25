@@ -264,9 +264,9 @@ NOVO TELEFONE CADASTRADO PARA CHECK-IN
 O telefone cadastrado deve enviar uma mensagem com a palavra Portaria para o telefone 15 99642-6671
 ```
 
-Se tentar cadastrar o mesmo telefone novamente para o mesmo evento/acesso ativo, deve responder que o telefone já está cadastrado.
+Se tentar cadastrar o mesmo telefone novamente para o mesmo evento/acesso ativo ou pausado, deve responder que o telefone já está cadastrado.
 
-O cadastro do validador fica em `gate_accesses`, separado das sessões temporárias de leitura. A palavra-chave é mostrada ao admin apenas na mensagem final de cadastro, mas no banco é salva somente como hash PBKDF2. Quando o telefone cadastrado envia `Portaria`, o sistema pede a palavra-chave; se estiver correta, gera uma nova `gate_session` temporária para o evento cadastrado. Acesso pausado não gera link.
+O cadastro do validador fica em `gate_accesses`, separado das sessões temporárias de leitura. A palavra-chave é mostrada ao admin apenas na mensagem final de cadastro, mas no banco é salva somente como hash PBKDF2. Mensagens recebidas contendo palavra-chave de portaria são redigidas no histórico como `[GATE_ACCESS_REDACTED]`. Quando o telefone cadastrado envia `Portaria`, o sistema pede a palavra-chave; se houver mais de um acesso ativo, lista os eventos antes de pedir a palavra-chave; se estiver correta, gera uma nova `gate_session` temporária para o evento cadastrado. Acesso pausado não gera link.
 
 ### 4.3 Scanner
 
@@ -275,14 +275,16 @@ Quando o QRCode é lido:
 - primeira leitura válida libera o acesso;
 - leituras seguintes do mesmo QRCode são negadas como já utilizado.
 
-Para evitar várias leituras instantâneas, a página precisa travar/pausar a câmera após leitura positiva, mostrar acesso liberado e depois voltar à câmera.
+Para evitar várias leituras instantâneas, a página pausa a leitura após resposta `allowed = true`, mostra acesso liberado por alguns segundos e depois retoma a leitura. Leituras recusadas também passam por cooldown curto para evitar loop de leitura.
 
 ### 4.4 Página da portaria
 
 Na página de check-in:
 
 - abaixo de `Portaria` deve aparecer o nome do evento;
+- se houver sessão vinculada, deve aparecer data/hora da sessão;
 - não deve aparecer a palavra-chave.
+- não deve aparecer telefone completo, token, `token_hash`, hash de palavra-chave ou dados internos de admin.
 
 ## 5. Área admin pelo WhatsApp
 

@@ -1206,6 +1206,8 @@ Creates `public.gate_accesses` with:
 
 The migration revokes table access from `public`, `anon`, and `authenticated`, and grants table access to `service_role`. It was applied manually in the real Supabase project and audited with temporary data. Validation confirmed `service_role` can access `gate_accesses`, `anon` and `authenticated` are blocked, passphrases are stored as PBKDF2 hashes, duplicate active/paused access is blocked by the partial unique index, and cleanup removed temporary rows.
 
+Gate access passphrases use a dedicated backend helper in `src/lib/tickets/services/gateAccessAuth.ts`, separate from admin auth. The stored format includes algorithm, iteration count, salt, and digest. The raw validator passphrase is shown once to the admin in the final registration message, is never stored in the database, and inbound WhatsApp messages containing gate passphrases are stored as `[GATE_ACCESS_REDACTED]` with redaction metadata.
+
 Supabase status for this migration:
 
 - `npx supabase db push` was attempted and failed because this checkout has no Supabase project ref.
@@ -1263,9 +1265,9 @@ admin_reports_menu
 
 The gate submenu option `1. Check-in neste telefone` asks the admin to choose an event, then creates a temporary gate session for the same WhatsApp phone that is authenticated in the admin flow and replies in that same conversation with the scanner link. The session stores the selected `event_id`.
 
-The gate submenu option `2. Definir outro telefone para check-in` asks for event, validator phone, and passphrase. It creates a `gate_accesses` row and shows the passphrase once to the admin in the final confirmation. The passphrase is not stored in plain text. When the validator sends `Portaria`, the system asks for the passphrase and creates a new temporary `gate_session` only after a valid hash check.
+The gate submenu option `2. Definir outro telefone para check-in` asks for event, validator phone, and passphrase. It creates a `gate_accesses` row and shows the passphrase once to the admin in the final confirmation. The passphrase is not stored in plain text and the inbound message containing it is redacted. If the same event/phone already has an `active` or `paused` access, the flow returns `Este telefone já possui acesso de portaria para este evento.` and does not create a duplicate. When the validator sends `Portaria`, the system checks active `gate_accesses`: no access gets a neutral denial; one access asks for the passphrase; more than one access lists events first. A valid hash check creates a new temporary `gate_session`; a wrong passphrase returns only `Palavra-chave inválida.`
 
-The gate submenu option `3. Ver todos os acessos` asks for event and filter (`Ativos` or `Pausados`) and lists `gate_accesses` without showing passphrases. Option `4. Revogar acessos` asks for event, lists active accesses, and changes the selected access to `paused`; it does not delete the row.
+The gate submenu option `3. Ver todos os acessos` asks for event and filter (`Ativos` or `Pausados`) and lists `gate_accesses` with masked phone, optional name, status, and creation date. It never shows passphrases or hashes. Option `4. Revogar acessos` asks for event, lists active/paused accesses, asks for confirmation, and changes the selected access to `paused`; it does not delete the row or remove history.
 
 The `Eventos` submenu is also operational for `root` and `admin` roles; other administrative areas still return controlled construction messages until their workflows are implemented.
 
@@ -1419,7 +1421,7 @@ The page validates the gate session through:
 POST /api/gate/session/validate
 ```
 
-The valid response contains only minimal public data: session id, gate label, validator phone last 4 digits, expiration, and status. It does not return full phone, token hash, admin phone, or secrets.
+The valid response contains only minimal public data: session id, gate label, event title, optional session start date/time, validator phone last 4 digits, expiration, and status. It does not return full phone, token hash, admin phone, raw token, passphrase hash, or secrets.
 
 The scanner UI is a client component. It uses browser camera APIs and `BarcodeDetector` when available, with a manual fallback input. Counters are neutral in this step:
 
@@ -1427,6 +1429,8 @@ The scanner UI is a client component. It uses browser camera APIs and `BarcodeDe
 - `Erros`.
 
 They are local UI counters only and are not final validation counters.
+
+In the current scanner, allowed results display an access-liberated overlay and pause QR reading temporarily before resuming. Denied or invalid reads keep a short same-content cooldown so the camera does not loop endlessly on the same QRCode.
 
 ### Placeholder Scan Endpoint
 
