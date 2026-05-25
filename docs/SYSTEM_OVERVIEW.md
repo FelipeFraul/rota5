@@ -189,6 +189,8 @@ O comprador não deve receber apenas link; deve receber a imagem do QRCode.
 
 O QRCode é gerado no momento do envio a partir da URL assinada do ingresso. O sistema não salva o token bruto nem a imagem do QRCode no banco. Quando um pedido tiver mais de um ingresso, cada ingresso recebe seu próprio QRCode em mensagem separada. Se a imagem do QRCode falhar depois do pagamento aprovado, o pagamento e o ingresso não são desfeitos; o reenvio manual fica para outro fluxo.
 
+O sistema gera o QRCode como PNG antes de enviar para a Z-API. Em teste operacional real/controlado, o comprador recebeu a imagem do QRCode pelo WhatsApp. O aplicativo pode exibir ou baixar a imagem como JPG depois do envio, o que é aceitável desde que o QRCode continue legível e validável.
+
 Mensagem de QRCode:
 
 ```text
