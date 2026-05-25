@@ -155,7 +155,7 @@ export type TicketConversationPayment = {
   currency: string;
 };
 
-export type TicketAdminRole = "root" | "admin" | "operator" | "gate" | "support";
+export type TicketAdminRole = "root" | "admin" | "operator";
 
 export type TicketConversationAdmin = {
   adminUserId?: string;

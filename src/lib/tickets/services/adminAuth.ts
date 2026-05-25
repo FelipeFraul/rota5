@@ -15,7 +15,7 @@ const ADMIN_HASH_ALGORITHM = "pbkdf2_sha256";
 const ADMIN_HASH_ITERATIONS = 210_000;
 const ADMIN_HASH_KEY_LENGTH = 32;
 
-export type AdminRole = "root" | "admin" | "operator" | "gate" | "support";
+export type AdminRole = "root" | "admin" | "operator";
 export type AdminPermission =
   | "manage_admins"
   | "manage_events"
@@ -62,9 +62,22 @@ export const ADMIN_ROLE_PERMISSIONS: Record<AdminRole, AdminPermission[]> = {
     "view_reports",
   ],
   operator: ["manage_courtesies", "view_reports"],
-  gate: [],
-  support: [],
 };
+
+export function isAdminRole(value: string | null | undefined): value is AdminRole {
+  return value === "root" || value === "admin" || value === "operator";
+}
+
+export function getAdminProfileLabel(role: string) {
+  if (role === "root") return "Diretor";
+  if (role === "admin") return "Gerente";
+  if (role === "operator") return "Operador";
+  return "Perfil legado sem acesso administrativo";
+}
+
+export function getAdminPermissions(role: AdminRole): AdminPermission[] {
+  return ADMIN_ROLE_PERMISSIONS[role];
+}
 
 export function normalizeAdminPhone(phone: string | null | undefined) {
   const digits = phone?.replace(/\D/g, "") ?? "";
@@ -215,11 +228,15 @@ export function hashAdminAuthMetadata(value: string) {
 }
 
 export function hasAdminPermission(role: AdminRole, permission: AdminPermission) {
-  return ADMIN_ROLE_PERMISSIONS[role].includes(permission);
+  return getAdminPermissions(role).includes(permission);
+}
+
+export function canAccessAdminArea(role: AdminRole, permission: AdminPermission) {
+  return hasAdminPermission(role, permission);
 }
 
 export function getAdminMenuOptions(role: AdminRole) {
-  const permissions = ADMIN_ROLE_PERMISSIONS[role];
+  const permissions = getAdminPermissions(role);
   const options: Array<{
     option: number;
     label: string;
@@ -266,6 +283,7 @@ export function getAdminMenuOptions(role: AdminRole) {
 export function formatAdminMenu(role: AdminRole) {
   return [
     "Acesso administrativo liberado.",
+    `Perfil: ${getAdminProfileLabel(role)}`,
     "",
     "*MENU ADMIN*",
     "",
@@ -293,7 +311,7 @@ export async function getAdminUserByPhone(phone: string) {
     .from("admin_users")
     .select("id, phone, role, status, name, last_login_at, courtesy_send_limit, courtesy_receive_limit")
     .eq("phone", normalizedPhone)
-    .maybeSingle<AdminUser>();
+    .maybeSingle<Omit<AdminUser, "role"> & { role: string }>();
 
   if (error) {
     return {
@@ -305,7 +323,7 @@ export async function getAdminUserByPhone(phone: string) {
 
   return {
     ok: true as const,
-    adminUser,
+      adminUser: adminUser && isAdminRole(adminUser.role) ? { ...adminUser, role: adminUser.role } : null,
   };
 }
 

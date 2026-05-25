@@ -290,13 +290,13 @@ O admin entra pelo WhatsApp com palavra-chave.
 
 Os menus devem aparecer de acordo com o perfil do administrador.
 
-Perfis atuais em português:
+Perfis atuais em português, com valores internos estáveis no banco:
 
-- Diretor: acesso total ao sistema;
-- Gerente: gerencia eventos, ingressos, cortesias, portaria e relatórios; não gerencia administradores;
-- Operador: gerencia cortesias e relatórios.
+- Diretor (`root`): acesso total ao sistema;
+- Gerente (`admin`): gerencia eventos, ingressos, cortesias, portaria e relatórios; não gerencia administradores;
+- Operador (`operator`): gerencia cortesias e relatórios.
 
-O perfil `porteiro/gate` não deve existir como administrador. Porteiro é apenas um telefone cadastrado em `Portaria`.
+O perfil `porteiro/gate` não existe mais como administrador. Porteiro é apenas um telefone cadastrado em `Portaria` pela tabela `gate_accesses`.
 
 ### 5.1 Menu principal admin
 

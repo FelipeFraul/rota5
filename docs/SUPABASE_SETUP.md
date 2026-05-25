@@ -247,7 +247,7 @@ Expected result: 2 rows.
 Important indexes and constraints:
 
 - `admin_users.phone` is unique, digits-only, and non-empty.
-- `admin_users.role` is restricted to `root`, `admin`, `operator`, `gate`, `support`.
+- `admin_users.role` is restricted to internal values `root`, `admin`, and `operator`.
 - `admin_users.status` is restricted to `active`, `disabled`.
 - `admin_sessions.phone` is digits-only and non-empty.
 - `admin_sessions.status` is restricted to `active`, `expired`, `revoked`.
@@ -279,13 +279,21 @@ Admin WhatsApp behavior:
 - A valid passphrase creates an `admin_sessions` row and shows a permission-filtered menu.
 - `sair`, `logout`, or `encerrar` revokes active admin sessions while inside the admin flow.
 
-Role permissions currently used for menu visibility:
+Admin profile labels and permissions:
 
-- `root`: admins, events, tickets, courtesies, gate, reports.
-- `admin`: events, tickets, courtesies, gate, reports.
-- `operator`: gate, tickets, reports.
-- `gate`: gate.
-- `support`: tickets.
+- `root` is displayed as `Diretor` and can manage admins, events, tickets/orders, courtesies, gate, and reports.
+- `admin` is displayed as `Gerente` and can manage events, tickets/orders, courtesies, gate, and reports.
+- `operator` is displayed as `Operador` and can manage courtesies and reports only.
+
+The legacy `gate` and `support` roles are no longer valid admin profiles. External gate validators are not admin users; they are stored in `gate_accesses` and enter the scanner flow by sending `Portaria`.
+
+The role restriction migration is:
+
+```text
+supabase/migrations/20260525000400_restrict_admin_roles_to_profiles.sql
+```
+
+It fails deliberately if any `admin_users` row still has `gate` or `support`, then replaces the role constraint with `root/admin/operator` only. In the real Supabase project there were no legacy `gate` or `support` admins before applying it.
 
 This step does not implement CRUD events, courtesies, reports, cancellation, swaps, or destructive admin actions. Menu entries that are not implemented return a controlled “in construction” response.
 

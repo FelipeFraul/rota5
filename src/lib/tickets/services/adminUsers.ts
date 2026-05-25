@@ -3,6 +3,7 @@ import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   hashAdminPassphrase,
+  getAdminProfileLabel,
   normalizeAdminPhone,
   type AdminRole,
 } from "@/lib/tickets/services/adminAuth";
@@ -58,6 +59,8 @@ export function parseAdminRole(value: string): AdminRole | null {
 
   return null;
 }
+
+export { getAdminProfileLabel };
 
 export async function listAdminUsers() {
   const supabase = getSupabaseAdmin();

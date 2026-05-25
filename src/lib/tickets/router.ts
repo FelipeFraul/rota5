@@ -120,6 +120,7 @@ import {
 import {
   createAdminUser,
   disableAdminUser,
+  getAdminProfileLabel,
   listAdminUsers,
   parseAdminRole,
   resolveAdminUserId,
@@ -1900,12 +1901,7 @@ function renderAdminUserRolePrompt() {
 }
 
 function formatAdminRoleLabel(role: string) {
-  if (role === "root") return "Diretor";
-  if (role === "admin") return "Gerente";
-  if (role === "operator") return "Operador";
-  if (role === "gate") return "Porteiro";
-  if (role === "support") return "Suporte";
-  return role;
+  return getAdminProfileLabel(role);
 }
 
 function renderAdminUsersList(users: AdminUserListItem[]) {
