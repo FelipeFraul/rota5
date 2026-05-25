@@ -318,6 +318,8 @@ MENU ADMIN
 
 Cada perfil deve ver apenas os menus permitidos.
 
+O número exibido é sempre o número aceito. Quando um perfil não tem acesso a uma área, a área não aparece no menu, mas os números das áreas permitidas permanecem os números oficiais do menu principal.
+
 ### 5.2 Navegação
 
 Regra importante:
@@ -327,10 +329,32 @@ Regra importante:
 - `Sair` sai da área admin;
 - números devem funcionar para `Voltar` e `Sair` quando aparecem no menu;
 - textos também devem funcionar.
+- números são interpretados apenas pela tela atual;
+- para trocar de área a partir de um submenu, o admin deve digitar o nome da área.
 
 O caminho de volta deve ser igual ao caminho de ida. Exemplo: se o admin entrou em `Editar valores`, depois listou preços ou alterou valor, `Voltar` deve retornar para `VALORES DE VENDA`, não para detalhe do evento ou lista de eventos.
 
-Esse ponto precisa continuar sendo auditado em todos os subfluxos.
+Comandos de troca de área:
+
+- `evento`, `eventos` ou `meus eventos`;
+- `ingresso`, `ingressos`, `pedido` ou `pedidos`;
+- `cortesia` ou `cortesias`;
+- `portaria`, `check-in` ou `checkin`;
+- `administrador` ou `administradores`;
+- `relatorio`, `relatório`, `relatorios` ou `relatórios`.
+
+Se o perfil não tiver permissão para a área, a resposta é:
+
+```text
+Essa opção não está disponível para o seu nível de acesso.
+```
+
+`Cancelar` abandona o fluxo atual sem encerrar a sessão admin. `Sair`, `logout`, `encerrar` ou o número de `Sair` exibido na tela encerram a sessão com segurança.
+
+Auditoria operacional:
+
+- a navegação admin foi validada com Supabase real, Z-API mockada e prefixo `TEST_ADMIN_NAVIGATION_FLOW`;
+- a auditoria confirmou menu por perfil, número local à tela atual, troca por palavra com permissão, `Voltar` em fluxos profundos de eventos/valores/portaria, `Cancelar` sem encerrar sessão, `Sair` por texto e por número, bloqueio de sessão expirada, cliente comum sem impacto e cleanup completo.
 
 ## 6. Meus eventos
 

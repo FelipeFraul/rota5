@@ -1250,7 +1250,13 @@ The signature is HMAC SHA-256 over the base64url payload using `GATE_SESSION_SEC
 
 Authenticated WhatsApp admins receive a permission-filtered main menu and can enter submenus for Events, Orders/Tickets, Courtesies, Gate, Admin Users, and Reports according to their role. Each submenu has `Voltar` and `Sair`; `menu` returns to the main menu, `voltar` returns one level, and `sair`/`logout`/`encerrar` revokes the active admin session. Admin navigation also accepts unique area names from any admin submenu; for example, typing `evento` while viewing gate options switches back to the event area.
 
-Numbers are always interpreted relative to the current screen only. An admin inside `Portaria`, `Eventos`, or any nested event flow cannot jump to another main area by typing that area's main-menu number; to switch areas, the admin must type the area word such as `evento`, `ingresso`, `cortesia`, `portaria`, `administrador`, or `relatorio`.
+Numbers are always interpreted relative to the current screen only. An admin inside `Portaria`, `Eventos`, `Relatórios`, or any nested admin flow cannot jump to another main area by typing that area's main-menu number; to switch areas, the admin must type the area word such as `evento`, `meus eventos`, `ingresso`, `pedido`, `cortesia`, `portaria`, `check-in`, `administrador`, or `relatorio`. Area-word navigation uses the same permission checks as the main menu and replies with `Essa opção não está disponível para o seu nível de acesso.` when blocked.
+
+`Voltar` returns one screen in the current path. In event listing, choosing a filter moves to a real event list, so the next number selects an event instead of being interpreted as another filter. In `Admin > Eventos > Editar valores > Listar preços`, `Voltar` returns to `VALORES DE VENDA`. In `Admin > Portaria > Ver todos os acessos`, `Voltar` from an active/paused list returns to event selection. In `Admin > Portaria > Revogar acessos`, `Voltar` from the list returns to event selection, and `Voltar` from confirmation returns to the access list without pausing anything.
+
+`Cancelar` abandons the current admin subflow without ending the admin session. For example, cancelling event creation returns to `Meus eventos`, and cancelling gate-access viewing/revocation returns to `Portaria`. `Sair`, `logout`, `encerrar`, or the displayed numeric `Sair` option revoke the active admin session and clear the admin context.
+
+The admin navigation audit uses temporary real Supabase data with the `TEST_ADMIN_NAVIGATION_FLOW` prefix and a local Z-API mock. It validates menu filtering and numbering for Diretor/Gerente/Operador, local numeric handling, word-based area switching, deep `Voltar` paths in events/prices/gate, cancel-safe behavior, logout by text and number, expired sessions, ordinary buyer search, neutral response for non-admin `admin`, and cleanup.
 
 The submenu states are:
 

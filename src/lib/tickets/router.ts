@@ -1229,10 +1229,10 @@ function canAccessAdminMenu(role: AdminRole, submenu: AdminSubmenuConfig) {
 function parseAdminMainMenuOption(text: string) {
   const normalized = normalizeAdminText(text);
   const aliases: Record<number, string[]> = {
-    1: ["evento", "eventos"],
+    1: ["evento", "eventos", "meus eventos"],
     2: ["ingresso", "ingressos", "pedido", "pedidos"],
     3: ["cortesia", "cortesias"],
-    4: ["portaria"],
+    4: ["portaria", "check-in", "checkin"],
     5: ["administrador", "administradores", "admins"],
     6: ["relatorio", "relatorios"],
     7: ["sair", "logout", "encerrar"],
@@ -3314,7 +3314,23 @@ async function handleAdminEventsFlow({
         };
       }
 
-      return buildAdminEventsListContext(baseContext, scope, 0, null, statusFilter);
+      const list = await buildAdminEventsListContext(
+        baseContext,
+        scope,
+        0,
+        null,
+        statusFilter,
+      );
+      const adminEventsAfterFilter = { ...(list.nextContext.adminEvents ?? {}) };
+      delete adminEventsAfterFilter.mode;
+
+      return {
+        ...list,
+        nextContext: {
+          ...list.nextContext,
+          adminEvents: adminEventsAfterFilter,
+        },
+      };
     }
 
     if (normalized === "mais") {
@@ -7600,6 +7616,64 @@ export async function routeTicketMessage({
       if (submenuOption === "exit" || submenuOption === gateSubmenu.exitOption) {
         return endAdminSession();
       }
+      if (isBackText(text)) {
+        if (baseContext.state === "admin_gate_accesses_filter") {
+          return buildAdminGateEventSelect({
+            baseContext,
+            scope: buildAdminEventScope(adminUser),
+            title: "PORTARIA - ESCOLHA O EVENTO",
+          });
+        }
+
+        if (baseContext.state === "admin_gate_revoke_select") {
+          return buildAdminGateEventSelect({
+            baseContext,
+            scope: buildAdminEventScope(adminUser),
+            title: "REVOGAR ACESSOS - ESCOLHA O EVENTO",
+            mode: "revoke",
+          });
+        }
+
+        if (baseContext.state === "admin_gate_revoke_confirm") {
+          const adminGate = baseContext.adminGate ?? {};
+          const eventId = adminGate.selectedEventId;
+
+          if (eventId) {
+            const result = await listGateAccesses({
+              filter: "open",
+              eventId,
+            });
+
+            if (result.ok) {
+              return {
+                reply: [
+                  renderGateAccessesList({
+                    title: "REVOGAR ACESSOS",
+                    accesses: result.accesses,
+                  }),
+                  "",
+                  "Digite o número do acesso que deseja pausar.",
+                ].join("\n"),
+                nextContext: withAdminGateContext(
+                  baseContext,
+                  "admin_gate_revoke_select",
+                  {
+                    ...adminGate,
+                    pendingRevokeAccess: undefined,
+                    lastGateAccesses: result.accesses.map((access, index) => ({
+                      option: index + 1,
+                      gateAccessId: access.id,
+                      validatorPhone: access.phone,
+                      eventId: access.eventId,
+                      eventTitle: access.eventTitle,
+                    })),
+                  },
+                ),
+              };
+            }
+          }
+        }
+      }
       if (
         submenuOption === "menu" ||
         submenuOption === "back" ||
@@ -7888,13 +7962,17 @@ export async function routeTicketMessage({
                 }),
               )
             : TICKET_MESSAGES.adminGenericError,
-          nextContext: adminReplyContext({
-            state: "admin_gate_menu",
-            role: adminUser.role,
-            sessionId: adminSession.id,
-            adminUserId: adminUser.id,
-            expiresAt: adminSession.expires_at,
-          }),
+          nextContext: withAdminGateContext(
+            adminReplyContext({
+              state: "admin_gate_accesses_filter",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+            "admin_gate_accesses_filter",
+            adminGate,
+          ),
         };
       }
 
