@@ -34,11 +34,11 @@ import {
   type AvailableSection,
 } from "@/lib/tickets/services/sections";
 import {
-  buildSeatMapImageDataUrl,
   listSeatMap,
   type AvailableSeat,
   type SeatMap,
 } from "@/lib/tickets/services/seats";
+import { buildSeatMapPngDataUrl } from "@/lib/tickets/services/seatMapImage";
 import {
   cancelPendingReservationForCustomer,
   reserveUnnumberedSectionTickets,
@@ -880,18 +880,16 @@ function formatQuantityPrompt(
 }
 
 function formatSeatsReply({
-  section,
   seatMap,
   ticketType,
   quantity = 1,
 }: {
-  section: AvailableSection;
   seatMap: SeatMap;
   ticketType?: TicketConversationSectionTicketType;
   quantity?: number;
 }) {
   return [
-    `*MAPA DE ASSENTOS - ${section.sectionName.toLocaleUpperCase("pt-BR")}*`,
+    "*ESCOLHA SEUS ASSENTOS*",
     ...(ticketType
       ? [
           `> Ingresso: ${ticketType.label}`,
@@ -901,10 +899,11 @@ function formatSeatsReply({
     `> Verde: livre (${seatMap.totalAvailableCount})`,
     `> Cinza: ocupado (${seatMap.totalSeatsCount - seatMap.totalAvailableCount})`,
     "",
+    "Enviamos o mapa atualizado do setor.",
     quantity > 1
       ? `Responda com os ${quantity} códigos dos assentos desejados.`
       : "Responda com o código do assento desejado.",
-    quantity > 1 ? "Exemplo: A03 A04" : "Exemplo: A03",
+    quantity > 1 ? "Exemplo: A03,A04" : "Exemplo: A03",
   ].join("\n");
 }
 
@@ -9071,22 +9070,7 @@ export async function routeTicketMessage({
         };
       }
 
-      const sectionForReply: AvailableSection = {
-        sectionId: previousState.selectedSection.sectionId,
-        sectionName: previousState.selectedSection.sectionName,
-        venueId: previousState.selectedEvent.venueId ?? "",
-        hasNumberedSeats: true,
-        availableSeatsCount: seatMap.totalAvailableCount,
-        minPriceCents:
-          previousState.selectedSection.selectedTicketType?.priceCents ?? 0,
-        minFeeCents:
-          previousState.selectedSection.selectedTicketType?.feeCents ?? 0,
-        ticketTypes: previousState.selectedSection.selectedTicketType
-          ? [previousState.selectedSection.selectedTicketType]
-          : [],
-      };
       const seatsReply = formatSeatsReply({
-        section: sectionForReply,
         seatMap,
         ticketType: previousState.selectedSection.selectedTicketType,
         quantity,
@@ -9097,9 +9081,10 @@ export async function routeTicketMessage({
         outboundMessages: [
           {
             type: "image",
-            imageUrl: buildSeatMapImageDataUrl({
-              sectionName: previousState.selectedSection.sectionName,
+            imageUrl: buildSeatMapPngDataUrl({
               seatMap,
+              title: previousState.selectedSection.sectionName,
+              stageLabel: "PALCO",
             }),
             caption: seatsReply,
           },

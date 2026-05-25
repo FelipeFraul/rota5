@@ -103,7 +103,7 @@ Para setor com assento marcado:
 
 ### 3.5 Mapa de assentos
 
-O mapa é enviado como imagem.
+O mapa é enviado como imagem PNG pelo WhatsApp.
 
 Cores:
 
@@ -112,7 +112,7 @@ Cores:
 
 Todos os assentos devem mostrar letra e número.
 
-O mapa usa posições cadastradas no evento. Quando houver palco, o mapa mostra apenas o texto `PALCO`, sem fundo cinza.
+O mapa usa posições cadastradas no evento. Quando não houver posições, o sistema usa um fallback automático por fileira e número do assento. Quando houver palco, o mapa mostra apenas o texto `PALCO`, sem fundo cinza.
 
 Quando uma compra é feita, a próxima visualização do mapa deve refletir o assento já ocupado.
 
@@ -186,6 +186,8 @@ A mensagem de confirmação deve separar:
 2. imagem do QRCode na última mensagem.
 
 O comprador não deve receber apenas link; deve receber a imagem do QRCode.
+
+O QRCode é gerado no momento do envio a partir da URL assinada do ingresso. O sistema não salva o token bruto nem a imagem do QRCode no banco. Quando um pedido tiver mais de um ingresso, cada ingresso recebe seu próprio QRCode em mensagem separada. Se a imagem do QRCode falhar depois do pagamento aprovado, o pagamento e o ingresso não são desfeitos; o reenvio manual fica para outro fluxo.
 
 Mensagem de QRCode:
 

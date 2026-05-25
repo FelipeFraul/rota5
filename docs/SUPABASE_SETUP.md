@@ -1040,9 +1040,10 @@ After the Mercado Pago webhook verifies signature, fetches the real approved pay
 - skips WhatsApp delivery when the RPC returns `idempotent = true`;
 - loads issued tickets for the paid order;
 - creates signed ticket URLs;
-- sends one WhatsApp text message with ticket details and links.
+- sends one WhatsApp text message with ticket details;
+- sends one PNG QRCode image per issued ticket.
 
-The message includes event, date, venue/city/state, section, seat, ticket code, and the signed ticket URL. It says the ticket will be validated at the entrance. It does not mark the ticket as used and does not implement gate validation.
+The text message includes event, date, venue/city/state, section, seat, and ticket code. The QRCode image encodes the signed ticket URL and is sent in a separate WhatsApp image message with the entrance instruction. The delivery flow does not mark the ticket as used and does not implement gate validation.
 
 The page `src/app/tickets/[token]/page.tsx` validates the signed token, loads only `issued` tickets, and shows a simple safe ticket page. The page receives only display-safe fields: event, date, venue/city/state, section, seat, and ticket code. It does not receive or render phone, document, email, order id, payment id, customer id, `qr_token_hash`, or raw metadata. It does not mark the ticket used and is not a gate validation panel.
 
@@ -1060,7 +1061,6 @@ Step 14 does not:
 - implement gate validation;
 - mark tickets as used;
 - create PDF/image tickets;
-- send QR images;
 - implement cancellation or ticket swap;
 - store raw QR tokens.
 
@@ -1071,6 +1071,7 @@ Step 14 tests used temporary Supabase data with Mercado Pago and Z-API mocked:
 - [x] Duplicate processed payment event does not resend.
 - [x] Already-paid/idempotent order does not duplicate tickets and does not resend automatically.
 - [x] Two tickets in one order are listed in the WhatsApp message.
+- [x] Each issued ticket receives its own QRCode image message.
 - [x] Z-API failure after ticket issuance does not roll back tickets and returns a safe webhook response.
 - [x] Signed token validates, does not contain `TICKET_QR_SECRET`, and URL uses `APP_BASE_URL`.
 - [x] `/tickets/[token]` builds successfully.
@@ -1089,6 +1090,16 @@ Final Step 14 audit additionally confirmed:
 - [x] Z-API failure after ticket issuance does not undo payment/tickets and does not force infinite Mercado Pago retries.
 - [x] Logs and metadata do not contain `TICKET_QR_SECRET` or full signed ticket URLs.
 - [x] Multi-ticket WhatsApp messages remain organized and do not claim gate validation.
+
+### Seat map and QR image delivery audit
+
+Ponto 2 added backend PNG generation for the buyer seat map and QRCode image delivery for paid tickets.
+
+Seat maps are generated from `seats`, `session_seats`, and section data. `session_seats.status = available` renders green. `reserved`, `sold`, and `blocked` render gray. Structural seats that are not active are treated as unavailable for display. When seat coordinates exist, the renderer uses `map_x`/`map_y`; otherwise it falls back to grouping by row and ordering by seat number/code. The `PALCO` label is rendered as text only, without a gray background. Empty seat maps fail closed instead of sending a misleading blank image.
+
+QRCode images are generated at delivery time from the signed `/tickets/{payload.signature}` URL. The raw token and generated image are not stored in the database. Delivery logs use safe metadata and do not include the full signed URL or base64 image payload. If QR image delivery fails after payment confirmation, the payment and issued tickets remain valid and manual resend remains a future operational flow.
+
+The Ponto 2 audit used temporary data in the real Supabase project with the `TEST_SEATMAP_QR_IMAGE` prefix, Z-API mocked locally, and Mercado Pago API calls mocked locally through `MERCADO_PAGO_API_BASE_URL`. It validated PNG map generation, green/gray availability, seat labels, `PALCO`, fallback without coordinates, updated availability after reservation, exact `ASSENTO INDISPONÍVEL` for unavailable seats, QRCode PNG generation after approved payment, separate ticket-data and QR image messages, correct multiple-ticket QR mapping, safe failure when Z-API image delivery fails, log/metadata hygiene, and cleanup.
 
 ## Step 15 - Gate Sessions And Scanner Shell
 
@@ -1655,6 +1666,7 @@ To run the full cycle locally or in production, configure:
 - `ZAPI_WEBHOOK_SECRET`
 - `MERCADO_PAGO_ACCESS_TOKEN`
 - `MERCADO_PAGO_WEBHOOK_SECRET`
+- `MERCADO_PAGO_API_BASE_URL` only for local mocked audits; leave unset in production to use Mercado Pago's official API.
 - `NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY`
 - `CHECKOUT_INTERNAL_SECRET`
 - `TICKET_QR_SECRET`

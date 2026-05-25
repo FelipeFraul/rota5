@@ -2,7 +2,7 @@ import "server-only";
 
 import { getEnv } from "@/lib/env";
 
-const MERCADO_PAGO_API_BASE_URL = "https://api.mercadopago.com";
+const DEFAULT_MERCADO_PAGO_API_BASE_URL = "https://api.mercadopago.com";
 const REQUEST_TIMEOUT_MS = 10_000;
 
 export type MercadoPagoBaseClient = {
@@ -131,6 +131,10 @@ export function createMercadoPagoBaseClient(): MercadoPagoBaseClient {
   };
 }
 
+function getMercadoPagoApiBaseUrl() {
+  return getEnv().MERCADO_PAGO_API_BASE_URL ?? DEFAULT_MERCADO_PAGO_API_BASE_URL;
+}
+
 export async function getMercadoPagoPayment(
   paymentId: string | number,
 ): Promise<MercadoPagoPaymentResult> {
@@ -140,7 +144,7 @@ export async function getMercadoPagoPayment(
 
   try {
     const response = await fetch(
-      `${MERCADO_PAGO_API_BASE_URL}/v1/payments/${encodeURIComponent(
+      `${getMercadoPagoApiBaseUrl()}/v1/payments/${encodeURIComponent(
         String(paymentId),
       )}`,
       {
@@ -203,7 +207,7 @@ export async function createMercadoPagoPreference(
 
   try {
     const response = await fetch(
-      `${MERCADO_PAGO_API_BASE_URL}/checkout/preferences`,
+      `${getMercadoPagoApiBaseUrl()}/checkout/preferences`,
       {
         method: "POST",
         headers: {
@@ -269,7 +273,7 @@ export async function createMercadoPagoPayment(
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
-    const response = await fetch(`${MERCADO_PAGO_API_BASE_URL}/v1/payments`, {
+    const response = await fetch(`${getMercadoPagoApiBaseUrl()}/v1/payments`, {
       method: "POST",
       headers: {
         ...client.buildAuthHeaders(),

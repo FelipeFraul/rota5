@@ -24,6 +24,10 @@ const envSchema = z.object({
   MERCADO_PAGO_WEBHOOK_SECRET: z
     .string()
     .min(1, "MERCADO_PAGO_WEBHOOK_SECRET is required."),
+  MERCADO_PAGO_API_BASE_URL: z
+    .string()
+    .url("MERCADO_PAGO_API_BASE_URL must be a valid URL.")
+    .optional(),
   NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY: z
     .string()
     .min(1, "NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY is required."),

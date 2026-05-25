@@ -1,6 +1,5 @@
 import "server-only";
 
-import QRCode from "qrcode";
 import { logError, logInfo, logWarn } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { buildInitialConversationState } from "@/lib/tickets/conversationState";
@@ -11,6 +10,10 @@ import {
   getTicketsForOrder,
   type TicketForDelivery,
 } from "@/lib/tickets/services/tickets";
+import {
+  generateTicketQrImage,
+  ticketQrImageToDataUrl,
+} from "@/lib/tickets/services/ticketQrImage";
 import { sendZapiImage, sendZapiText } from "@/lib/zapi/client";
 
 type OrderCustomer = {
@@ -89,17 +92,6 @@ export function buildTicketDeliveryMessage(tickets: TicketForDelivery[]) {
     "*PAGAMENTO CONFIRMADO*",
     ticketBlocks.join("\n\n"),
   ].join("\n");
-}
-
-async function buildTicketQrImage(ticket: TicketForDelivery) {
-  const ticketUrl = buildTicketUrl(ticket);
-
-  return QRCode.toDataURL(ticketUrl, {
-    errorCorrectionLevel: "M",
-    margin: 2,
-    scale: 8,
-    type: "image/png",
-  });
 }
 
 async function getOrderCustomer(orderId: string) {
@@ -230,7 +222,13 @@ export async function deliverTicketsForOrder(
     let qrImage: string;
 
     try {
-      qrImage = await buildTicketQrImage(ticket);
+      const ticketUrl = buildTicketUrl(ticket);
+      const ticketQrImage = await generateTicketQrImage({
+        ticketUrl,
+        ticketCode: ticket.ticketCode,
+        eventTitle: ticket.eventTitle,
+      });
+      qrImage = ticketQrImageToDataUrl(ticketQrImage.buffer);
     } catch (error) {
       logError("Failed to generate ticket QR Code image", {
         orderId,
