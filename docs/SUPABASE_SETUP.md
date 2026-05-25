@@ -1180,6 +1180,24 @@ Creates `public.gate_sessions` with:
 
 The raw gate session token is never stored. Only `token_hash = sha256(raw signed token)` is persisted.
 
+Durable validator authorization is stored separately in:
+
+```text
+supabase/migrations/20260525000300_create_gate_accesses.sql
+```
+
+Creates `public.gate_accesses` with:
+
+- `event_id` and optional `session_id` scope;
+- normalized digit-only validator `phone`;
+- optional `name`;
+- `passphrase_hash`, never the raw passphrase;
+- `status` in `active`, `paused`, `revoked`;
+- creator admin references and audit timestamps;
+- partial uniqueness for one open `active`/`paused` access per event and phone.
+
+The migration revokes table access from `public`, `anon`, and `authenticated`, and grants table access to `service_role`. It was applied manually in the real Supabase project and audited with temporary data. Validation confirmed `service_role` can access `gate_accesses`, `anon` and `authenticated` are blocked, passphrases are stored as PBKDF2 hashes, duplicate active/paused access is blocked by the partial unique index, and cleanup removed temporary rows.
+
 Supabase status for this migration:
 
 - `npx supabase db push` was attempted and failed because this checkout has no Supabase project ref.
@@ -1235,7 +1253,13 @@ admin_users_menu
 admin_reports_menu
 ```
 
-The gate submenu option `1. Check-in neste telefone` creates a temporary gate session for the same WhatsApp phone that is authenticated in the admin flow and replies in that same conversation with the scanner link. The `Eventos` submenu is also operational for `root` and `admin` roles; other administrative areas still return controlled construction messages until their workflows are implemented.
+The gate submenu option `1. Check-in neste telefone` asks the admin to choose an event, then creates a temporary gate session for the same WhatsApp phone that is authenticated in the admin flow and replies in that same conversation with the scanner link. The session stores the selected `event_id`.
+
+The gate submenu option `2. Definir outro telefone para check-in` asks for event, validator phone, and passphrase. It creates a `gate_accesses` row and shows the passphrase once to the admin in the final confirmation. The passphrase is not stored in plain text. When the validator sends `Portaria`, the system asks for the passphrase and creates a new temporary `gate_session` only after a valid hash check.
+
+The gate submenu option `3. Ver todos os acessos` asks for event and filter (`Ativos` or `Pausados`) and lists `gate_accesses` without showing passphrases. Option `4. Revogar acessos` asks for event, lists active accesses, and changes the selected access to `paused`; it does not delete the row.
+
+The `Eventos` submenu is also operational for `root` and `admin` roles; other administrative areas still return controlled construction messages until their workflows are implemented.
 
 The current admin menu path is:
 

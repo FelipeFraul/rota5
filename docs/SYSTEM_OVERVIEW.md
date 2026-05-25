@@ -242,6 +242,8 @@ O link pode ser gerado:
 
 O validador não precisa ser administrador do sistema.
 
+No fluxo `Check-in neste telefone`, o admin autenticado escolhe o evento antes de receber o link. O sistema cria uma `gate_session` temporária vinculada ao `event_id` escolhido para o próprio telefone do admin. O link é assinado, temporário e não mostra palavra-chave.
+
 ### 4.2 Cadastro de outro telefone para check-in
 
 Fluxo desejado:
@@ -263,6 +265,8 @@ O telefone cadastrado deve enviar uma mensagem com a palavra Portaria para o tel
 ```
 
 Se tentar cadastrar o mesmo telefone novamente para o mesmo evento/acesso ativo, deve responder que o telefone já está cadastrado.
+
+O cadastro do validador fica em `gate_accesses`, separado das sessões temporárias de leitura. A palavra-chave é mostrada ao admin apenas na mensagem final de cadastro, mas no banco é salva somente como hash PBKDF2. Quando o telefone cadastrado envia `Portaria`, o sistema pede a palavra-chave; se estiver correta, gera uma nova `gate_session` temporária para o evento cadastrado. Acesso pausado não gera link.
 
 ### 4.3 Scanner
 

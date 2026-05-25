@@ -111,6 +111,7 @@ export async function createGateSession(input: {
   eventId?: string | null;
   sessionId?: string | null;
   ttlMinutes?: number;
+  replaceActiveSessions?: boolean;
 }): Promise<CreateGateSessionResult> {
   const env = getEnv();
   const validatorPhone = normalizeGatePhone(input.validatorPhone);
@@ -134,11 +135,25 @@ export async function createGateSession(input: {
   });
   const tokenHash = hashGateSessionToken(token);
   const supabase = getSupabaseAdmin();
+  const phoneVariants = getGatePhoneLookupVariants(validatorPhone);
+
+  if (input.replaceActiveSessions) {
+    const { error: revokeError } = await supabase
+      .from("gate_sessions")
+      .update({ status: "revoked" })
+      .in("validator_phone", phoneVariants)
+      .eq("status", "active")
+      .gt("expires_at", new Date().toISOString());
+
+    if (revokeError) {
+      return { ok: false, reason: "insert_failed", error: revokeError };
+    }
+  }
 
   const { count, error: duplicateError } = await supabase
     .from("gate_sessions")
     .select("id", { count: "exact", head: true })
-    .in("validator_phone", getGatePhoneLookupVariants(validatorPhone))
+    .in("validator_phone", phoneVariants)
     .eq("status", "active")
     .gt("expires_at", new Date().toISOString());
 

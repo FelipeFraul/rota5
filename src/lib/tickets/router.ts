@@ -128,12 +128,17 @@ import {
 } from "@/lib/tickets/services/adminUsers";
 import {
   createGateSession,
-  createGateSessionForRegisteredValidator,
-  listGateSessions,
   normalizeGatePhone,
   revokeGateSession,
-  type AdminGateSessionListItem,
 } from "@/lib/tickets/services/gateSessions";
+import {
+  createGateAccess,
+  createGateSessionForGateAccess,
+  findActiveGateAccessesForPhone,
+  listGateAccesses,
+  pauseGateAccess,
+  type AdminGateAccessListItem,
+} from "@/lib/tickets/services/gateAccesses";
 import {
   buildAdminReport,
   type AdminReportPeriod,
@@ -1585,6 +1590,15 @@ function isAdminGateFlowState(
   );
 }
 
+function isGateAccessFlowState(
+  state: string | undefined,
+): state is "gate_access_selecting" | "gate_access_passphrase_collecting" {
+  return (
+    state === "gate_access_selecting" ||
+    state === "gate_access_passphrase_collecting"
+  );
+}
+
 function isAdminReportsFlowState(
   state: string | undefined,
 ): state is AdminReportFlowState {
@@ -1652,28 +1666,27 @@ function renderGateAccessFilterMenu() {
   ].join("\n");
 }
 
-function formatGateSessionStatus(status: AdminGateSessionListItem["status"]) {
+function formatGateAccessStatus(status: AdminGateAccessListItem["status"]) {
   if (status === "active") return "ativo";
-  if (status === "revoked") return "pausado";
-  if (status === "expired") return "expirado";
+  if (status === "paused") return "pausado";
+  if (status === "revoked") return "revogado";
   return status;
 }
 
-function renderGateSessionsList({
+function renderGateAccessesList({
   title,
-  sessions,
+  accesses,
 }: {
   title: string;
-  sessions: AdminGateSessionListItem[];
+  accesses: AdminGateAccessListItem[];
 }) {
-  const blocks = sessions.map((session, index) =>
+  const blocks = accesses.map((access, index) =>
     [
-      `${index + 1}. ${session.gateLabel ?? "Portaria"}`,
-      `> Telefone: ${session.validatorPhone}`,
-      session.validatorName ? `> Nome: ${session.validatorName}` : null,
-      `> Status: ${formatGateSessionStatus(session.status)}`,
-      `> Validade: ${formatDateTime(session.expiresAt)}`,
-      `> Criado em: ${formatDateTime(session.createdAt)}`,
+      `${index + 1}. ${access.eventTitle ?? "Evento"}`,
+      `> Telefone: ${access.phone}`,
+      access.name ? `> Nome: ${access.name}` : null,
+      `> Status: ${formatGateAccessStatus(access.status)}`,
+      `> Criado em: ${formatDateTime(access.createdAt)}`,
     ]
       .filter(Boolean)
       .join("\n"),
@@ -1708,18 +1721,53 @@ function renderGateValidatorPasswordPrompt() {
 
 function buildGateValidatorRegisteredReply({
   validatorPhone,
-  gateLabel,
+  passphrase,
 }: {
   validatorPhone: string;
-  gateLabel: string;
+  passphrase: string;
 }) {
   return [
     "*NOVO TELEFONE CADASTRADO PARA CHECK-IN*",
     "",
     `> Telefone: ${validatorPhone}`,
-    `> Palavra chave: ${gateLabel}`,
+    `> Palavra chave: ${passphrase}`,
     "",
     "O telefone cadastrado deve enviar uma mensagem com a palavra Portaria para o telefone 15 99642-6671",
+  ].join("\n");
+}
+
+function renderGateAccessSelection(accesses: AdminGateAccessListItem[]) {
+  return [
+    "*PORTARIA - ESCOLHA O EVENTO*",
+    "",
+    ...accesses.map(
+      (access, index) => `> ${index + 1}. ${access.eventTitle ?? "Evento"}`,
+    ),
+    "",
+    "Responda com o número do evento para continuar.",
+  ].join("\n");
+}
+
+function renderGateAccessSelectionFromContext(
+  accesses: NonNullable<TicketConversationState["gateAccess"]>["lastAccesses"] = [],
+) {
+  return [
+    "*PORTARIA - ESCOLHA O EVENTO*",
+    "",
+    ...accesses.map(
+      (access) => `> ${access.option}. ${access.eventTitle ?? "Evento"}`,
+    ),
+    "",
+    "Responda com o número do evento para continuar.",
+  ].join("\n");
+}
+
+function renderGateAccessPassphrasePrompt(eventTitle?: string | null) {
+  return [
+    "*PALAVRA CHAVE DA PORTARIA*",
+    ...(eventTitle ? [`> Evento: ${eventTitle}`] : []),
+    "",
+    "Digite a palavra-chave cadastrada para liberar o check-in.",
   ].join("\n");
 }
 
@@ -6606,6 +6654,91 @@ export async function routeTicketMessage({
     };
   }
 
+  if (isGateAccessFlowState(previousState.state)) {
+    if (previousState.state === "gate_access_selecting") {
+      const option = text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
+      const selected = option
+        ? baseContext.gateAccess?.lastAccesses?.find(
+            (access) => access.option === option,
+          )
+        : null;
+
+      if (!selected) {
+        return {
+          reply: renderGateAccessSelectionFromContext(
+            baseContext.gateAccess?.lastAccesses,
+          ),
+          nextContext: baseContext,
+        };
+      }
+
+      return {
+        reply: renderGateAccessPassphrasePrompt(selected.eventTitle),
+        nextContext: {
+          ...baseContext,
+          step: "gate_access_passphrase_collecting",
+          state: "gate_access_passphrase_collecting",
+          gateAccess: {
+            ...baseContext.gateAccess,
+            selectedAccessId: selected.gateAccessId,
+          },
+        },
+      };
+    }
+
+    const selectedAccessId = baseContext.gateAccess?.selectedAccessId;
+
+    if (!selectedAccessId) {
+      return {
+        reply:
+          "Não encontrei acesso de portaria ativo para este telefone. Confira se o número foi cadastrado pelo administrador.",
+        nextContext: {
+          ...baseContext,
+          step: "idle",
+          state: "idle",
+          gateAccess: undefined,
+        },
+      };
+    }
+
+    const gateSessionResult = await createGateSessionForGateAccess({
+      accessId: selectedAccessId,
+      validatorPhone: customer.whatsapp_phone,
+      passphrase: text,
+    });
+
+    if (!gateSessionResult.ok) {
+      return {
+        reply:
+          gateSessionResult.reason === "invalid_passphrase"
+            ? "Palavra-chave inválida."
+            : "Não encontrei acesso de portaria ativo para este telefone. Confira se o número foi cadastrado pelo administrador.",
+        nextContext:
+          gateSessionResult.reason === "invalid_passphrase"
+            ? baseContext
+            : {
+                ...baseContext,
+                step: "idle",
+                state: "idle",
+                gateAccess: undefined,
+              },
+      };
+    }
+
+    return {
+      reply: buildGateCheckInReply({
+        gateUrl: gateSessionResult.gateUrl,
+        expiresAt: gateSessionResult.gateSession.expires_at,
+      }),
+      nextContext: {
+        ...baseContext,
+        step: "idle",
+        state: "idle",
+        gateAccess: undefined,
+      },
+    };
+  }
+
   if (
     reservedAdminCommand &&
     previousState.state !== "admin_menu" &&
@@ -7431,8 +7564,14 @@ export async function routeTicketMessage({
         };
       }
 
-      if (submenuOption === "exit") return endAdminSession();
-      if (submenuOption === "menu" || submenuOption === "back") {
+      if (submenuOption === "exit" || submenuOption === gateSubmenu.exitOption) {
+        return endAdminSession();
+      }
+      if (
+        submenuOption === "menu" ||
+        submenuOption === "back" ||
+        submenuOption === gateSubmenu.backOption
+      ) {
         return {
           reply: renderAdminSubmenu(gateSubmenu),
           nextContext: adminReplyContext({
@@ -7480,11 +7619,11 @@ export async function routeTicketMessage({
 
       if (baseContext.state === "admin_gate_password_collecting") {
         const adminGate = baseContext.adminGate ?? {};
-        const gateLabel = text.trim();
+        const passphrase = text.trim();
         const validatorPhone = adminGate.pendingValidatorPhone;
         const eventId = adminGate.selectedEventId;
 
-        if (!validatorPhone || !eventId || !gateLabel) {
+        if (!validatorPhone || !eventId || !passphrase) {
           return {
             reply: renderGateValidatorPasswordPrompt(),
             nextContext: withAdminGateContext(
@@ -7495,17 +7634,18 @@ export async function routeTicketMessage({
           };
         }
 
-        const gateSessionResult = await createGateSession({
-          validatorPhone,
-          createdByAdminPhone: customer.whatsapp_phone,
-          gateLabel,
+        const gateAccessResult = await createGateAccess({
+          phone: validatorPhone,
+          passphrase,
           eventId,
+          createdByAdminUserId: adminUser.id,
+          createdByAdminPhone: customer.whatsapp_phone,
         });
 
-        if (!gateSessionResult.ok) {
+        if (!gateAccessResult.ok) {
           return {
             reply:
-              gateSessionResult.reason === "already_registered"
+              gateAccessResult.reason === "already_registered"
                 ? "Esse telefone já está cadastrado para check-in."
                 : TICKET_MESSAGES.gateAdminCreateError,
             nextContext: adminReplyContext({
@@ -7521,7 +7661,7 @@ export async function routeTicketMessage({
         return {
           reply: buildGateValidatorRegisteredReply({
             validatorPhone,
-            gateLabel,
+            passphrase,
           }),
           nextContext: adminReplyContext({
             state: "admin_gate_menu",
@@ -7560,6 +7700,85 @@ export async function routeTicketMessage({
               {
                 ...adminGate,
                 selectedEventId: eventId,
+              },
+            ),
+          };
+        }
+
+        if (adminGate.mode === "self_checkin") {
+          const gateSessionResult = await createGateSession({
+            validatorPhone: customer.whatsapp_phone,
+            createdByAdminPhone: customer.whatsapp_phone,
+            gateLabel: "Check-in",
+            eventId,
+            replaceActiveSessions: true,
+          });
+
+          return {
+            reply: gateSessionResult.ok
+              ? buildGateCheckInReply({
+                  gateUrl: gateSessionResult.gateUrl,
+                  expiresAt: gateSessionResult.gateSession.expires_at,
+                })
+              : TICKET_MESSAGES.gateAdminCreateError,
+            nextContext: adminReplyContext({
+              state: "admin_gate_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        if (adminGate.mode === "revoke") {
+          const result = await listGateAccesses({
+            filter: "active",
+            eventId,
+          });
+
+          if (!result.ok) {
+            return {
+              reply: TICKET_MESSAGES.adminGenericError,
+              nextContext: adminReplyContext({
+                state: "admin_gate_menu",
+                role: adminUser.role,
+                sessionId: adminSession.id,
+                adminUserId: adminUser.id,
+                expiresAt: adminSession.expires_at,
+              }),
+            };
+          }
+
+          const reply = [
+            renderGateAccessesList({
+              title: "REVOGAR ACESSOS",
+              accesses: result.accesses,
+            }),
+            "",
+            "Digite o número do acesso que deseja pausar.",
+          ].join("\n");
+
+          return {
+            reply,
+            nextContext: withAdminGateContext(
+              adminReplyContext({
+                state: "admin_gate_revoke_select",
+                role: adminUser.role,
+                sessionId: adminSession.id,
+                adminUserId: adminUser.id,
+                expiresAt: adminSession.expires_at,
+              }),
+              "admin_gate_revoke_select",
+              {
+                ...adminGate,
+                selectedEventId: eventId,
+                lastGateAccesses: result.accesses.map((access, index) => ({
+                  option: index + 1,
+                  gateAccessId: access.id,
+                  validatorPhone: access.phone,
+                  eventId: access.eventId,
+                })),
               },
             ),
           };
@@ -7608,7 +7827,20 @@ export async function routeTicketMessage({
           };
         }
 
-        const result = await listGateSessions({
+        if (!adminGate.selectedEventId) {
+          return {
+            reply: TICKET_MESSAGES.adminGenericError,
+            nextContext: adminReplyContext({
+              state: "admin_gate_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        const result = await listGateAccesses({
           filter: option === 1 ? "active" : "paused",
           eventId: adminGate.selectedEventId,
         });
@@ -7616,9 +7848,9 @@ export async function routeTicketMessage({
         return {
           reply: result.ok
             ? withAdminNavigationHint(
-                renderGateSessionsList({
+                renderGateAccessesList({
                   title: option === 1 ? "ACESSOS ATIVOS" : "ACESSOS PAUSADOS",
-                  sessions: result.sessions,
+                  accesses: result.accesses,
                 }),
               )
             : TICKET_MESSAGES.adminGenericError,
@@ -7636,7 +7868,7 @@ export async function routeTicketMessage({
         const adminGate = baseContext.adminGate ?? {};
         const option = text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
         const selected = option
-          ? adminGate.lastGateSessions?.find((session) => session.option === option)
+          ? adminGate.lastGateAccesses?.find((access) => access.option === option)
           : null;
 
         if (!selected) {
@@ -7650,7 +7882,11 @@ export async function routeTicketMessage({
           };
         }
 
-        const revokeResult = await revokeGateSession(selected.gateSessionId);
+        const revokeResult = await pauseGateAccess({
+          accessId: selected.gateAccessId,
+          eventId: selected.eventId,
+          revokedByAdminUserId: adminUser.id,
+        });
 
         return {
           reply: revokeResult.ok
@@ -8524,38 +8760,12 @@ export async function routeTicketMessage({
         previousState.state === "admin_gate_menu" &&
         submenuOption === 1
       ) {
-        const gateSessionResult = await createGateSession({
-          validatorPhone: customer.whatsapp_phone,
-          createdByAdminPhone: customer.whatsapp_phone,
-          gateLabel: "Check-in",
+        return buildAdminGateEventSelect({
+          baseContext,
+          scope: buildAdminEventScope(adminUser),
+          title: "CHECK-IN NESTE TELEFONE - ESCOLHA O EVENTO",
+          mode: "self_checkin",
         });
-
-        if (!gateSessionResult.ok) {
-          return {
-            reply: TICKET_MESSAGES.gateAdminCreateError,
-            nextContext: adminReplyContext({
-              state: "admin_gate_menu",
-              role: adminUser.role,
-              sessionId: adminSession.id,
-              adminUserId: adminUser.id,
-              expiresAt: adminSession.expires_at,
-            }),
-          };
-        }
-
-        return {
-          reply: buildGateCheckInReply({
-            gateUrl: gateSessionResult.gateUrl,
-            expiresAt: gateSessionResult.gateSession.expires_at,
-          }),
-          nextContext: adminReplyContext({
-            state: "admin_gate_menu",
-            role: adminUser.role,
-            sessionId: adminSession.id,
-            adminUserId: adminUser.id,
-            expiresAt: adminSession.expires_at,
-          }),
-        };
       }
 
       if (
@@ -8579,6 +8789,7 @@ export async function routeTicketMessage({
           baseContext,
           scope: buildAdminEventScope(adminUser),
           title: "PORTARIA - ESCOLHA O EVENTO",
+          mode: "list",
         });
       }
 
@@ -8586,50 +8797,12 @@ export async function routeTicketMessage({
         previousState.state === "admin_gate_menu" &&
         submenuOption === 4
       ) {
-        const result = await listGateSessions({ filter: "active" });
-
-        if (!result.ok) {
-          return {
-            reply: TICKET_MESSAGES.adminGenericError,
-            nextContext: adminReplyContext({
-              state: "admin_gate_menu",
-              role: adminUser.role,
-              sessionId: adminSession.id,
-              adminUserId: adminUser.id,
-              expiresAt: adminSession.expires_at,
-            }),
-          };
-        }
-
-        const reply = [
-          renderGateSessionsList({
-            title: "REVOGAR ACESSOS",
-            sessions: result.sessions,
-          }),
-          "",
-          "Digite o número do acesso que deseja pausar.",
-        ].join("\n");
-
-        return {
-          reply,
-          nextContext: withAdminGateContext(
-            adminReplyContext({
-              state: "admin_gate_revoke_select",
-              role: adminUser.role,
-              sessionId: adminSession.id,
-              adminUserId: adminUser.id,
-              expiresAt: adminSession.expires_at,
-            }),
-            "admin_gate_revoke_select",
-            {
-              lastGateSessions: result.sessions.map((session, index) => ({
-                option: index + 1,
-                gateSessionId: session.id,
-                validatorPhone: session.validatorPhone,
-              })),
-            },
-          ),
-        };
+        return buildAdminGateEventSelect({
+          baseContext,
+          scope: buildAdminEventScope(adminUser),
+          title: "REVOGAR ACESSOS - ESCOLHA O EVENTO",
+          mode: "revoke",
+        });
       }
 
       if (
@@ -8728,20 +8901,47 @@ export async function routeTicketMessage({
 
   if (gateCommand && !isAdminPhone(customer.whatsapp_phone)) {
     if (!gateCommand.valid && normalizeAdminText(text) === "portaria") {
-      const gateSessionResult = await createGateSessionForRegisteredValidator(
+      const accessResult = await findActiveGateAccessesForPhone(
         customer.whatsapp_phone,
       );
 
-      if (gateSessionResult.ok) {
+      if (accessResult.ok && accessResult.accesses.length === 1) {
+        const access = accessResult.accesses[0];
+
         return {
-          reply: buildGateCheckInReply({
-            gateUrl: gateSessionResult.gateUrl,
-            expiresAt: gateSessionResult.gateSession.expires_at,
-          }),
+          reply: renderGateAccessPassphrasePrompt(access.eventTitle),
           nextContext: {
             ...baseContext,
-            step: "idle",
-            state: "idle",
+            step: "gate_access_passphrase_collecting",
+            state: "gate_access_passphrase_collecting",
+            gateAccess: {
+              selectedAccessId: access.id,
+              lastAccesses: [
+                {
+                  option: 1,
+                  gateAccessId: access.id,
+                  eventTitle: access.eventTitle,
+                },
+              ],
+            },
+          },
+        };
+      }
+
+      if (accessResult.ok && accessResult.accesses.length > 1) {
+        return {
+          reply: renderGateAccessSelection(accessResult.accesses),
+          nextContext: {
+            ...baseContext,
+            step: "gate_access_selecting",
+            state: "gate_access_selecting",
+            gateAccess: {
+              lastAccesses: accessResult.accesses.map((access, index) => ({
+                option: index + 1,
+                gateAccessId: access.id,
+                eventTitle: access.eventTitle,
+              })),
+            },
           },
         };
       }

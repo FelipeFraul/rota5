@@ -64,6 +64,8 @@ export type TicketConversationStep =
   | "selecting_quantity"
   | "showing_seats"
   | "reservation_created"
+  | "gate_access_selecting"
+  | "gate_access_passphrase_collecting"
   | "payment_pending";
 
 export type TicketConversationSearch = {
@@ -215,7 +217,7 @@ export type TicketConversationAdminUsers = {
 };
 
 export type TicketConversationAdminGate = {
-  mode?: "register" | "list";
+  mode?: "self_checkin" | "register" | "list" | "revoke";
   pendingValidatorPhone?: string;
   selectedEventId?: string;
   lastEvents?: Array<{
@@ -227,6 +229,21 @@ export type TicketConversationAdminGate = {
     option: number;
     gateSessionId: string;
     validatorPhone: string;
+  }>;
+  lastGateAccesses?: Array<{
+    option: number;
+    gateAccessId: string;
+    validatorPhone: string;
+    eventId?: string;
+  }>;
+};
+
+export type TicketConversationGateAccess = {
+  selectedAccessId?: string;
+  lastAccesses?: Array<{
+    option: number;
+    gateAccessId: string;
+    eventTitle?: string | null;
   }>;
 };
 
@@ -256,6 +273,7 @@ export type TicketConversationState = {
   adminUsers?: TicketConversationAdminUsers;
   adminGate?: TicketConversationAdminGate;
   adminReports?: TicketConversationAdminReports;
+  gateAccess?: TicketConversationGateAccess;
   lastSearch?: TicketConversationSearch;
   lastEvents?: TicketConversationEventOption[];
   selectedEvent?: TicketConversationSelectedEvent;

@@ -139,7 +139,7 @@ function fixedTimeEqual(left: string, right: string) {
   );
 }
 
-function verifyPassphraseHash(passphrase: string, configuredHash: string) {
+export function verifyPassphraseHash(passphrase: string, configuredHash: string) {
   const [algorithm, iterationsRaw, salt, expectedDigest] =
     configuredHash.split("$");
 
