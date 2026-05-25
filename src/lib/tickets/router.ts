@@ -1470,7 +1470,7 @@ function formatPaymentLinkReply({
     "Pague clicando neste link (crédito ou pix):",
     checkout.checkoutUrl,
     "",
-    `Após a confirmação do ${selectedEvent?.title ?? "pagamento"}, seu ingresso será emitido automaticamente na próxima mensagem.`,
+    "Após a confirmação do pagamento, seu ingresso será emitido automaticamente.",
   ];
 
   return lines.join("\n");
@@ -6518,6 +6518,18 @@ function isUnavailableCheckoutFailure(
   );
 }
 
+function formatCheckoutFailureMessage(
+  result: Extract<CreateCheckoutForReservationResult, { ok: false }>,
+) {
+  if (result.reason === "reservation_expired") {
+    return TICKET_MESSAGES.reservationExpired;
+  }
+
+  return isUnavailableCheckoutFailure(result)
+    ? TICKET_MESSAGES.reservationUnavailableForPayment
+    : TICKET_MESSAGES.checkoutGenericError;
+}
+
 function getConversationState(
   context: Record<string, unknown>,
 ): Partial<TicketConversationState> {
@@ -8856,9 +8868,7 @@ export async function routeTicketMessage({
 
     if (!checkoutResult.ok) {
       return {
-        reply: isUnavailableCheckoutFailure(checkoutResult)
-          ? TICKET_MESSAGES.reservationUnavailableForPayment
-          : TICKET_MESSAGES.checkoutGenericError,
+        reply: formatCheckoutFailureMessage(checkoutResult),
         nextContext: {
           ...baseContext,
           step: "idle",
@@ -8967,9 +8977,7 @@ export async function routeTicketMessage({
 
     if (!checkoutResult.ok) {
       return {
-        reply: isUnavailableCheckoutFailure(checkoutResult)
-          ? TICKET_MESSAGES.reservationUnavailableForPayment
-          : TICKET_MESSAGES.checkoutGenericError,
+        reply: formatCheckoutFailureMessage(checkoutResult),
         nextContext: {
           ...baseContext,
           step: "idle",

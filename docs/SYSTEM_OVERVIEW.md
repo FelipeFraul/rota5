@@ -167,7 +167,7 @@ LINK DE PAGAMENTO GERADO
 Pague clicando neste link (crédito ou pix):
 https://...
 
-Após a confirmação do evento, seu ingresso será emitido automaticamente na próxima mensagem.
+Após a confirmação do pagamento, seu ingresso será emitido automaticamente.
 ```
 
 ### 3.8 Emissão do ingresso
