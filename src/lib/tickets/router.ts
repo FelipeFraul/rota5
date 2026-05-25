@@ -2532,7 +2532,8 @@ function getPreviousCreateEventField(draft: Record<string, unknown>) {
     entrySeatItem: "entryItem",
     entrySeatMapVisual: "entrySeatItem",
     entryOfferItem: "entryCount",
-    status: "entryModel",
+    description: "entryModel",
+    status: "description",
   };
 
   return previousByField[field] ?? null;
@@ -2575,6 +2576,49 @@ function stepBackCreateEventDraft(draft: Record<string, unknown>) {
       nextDraft.sharedPriceOptions = offers.slice(0, -1);
       nextDraft.currentEntryIndex = offers.length;
       nextDraft.field = "entryOfferItem";
+      return nextDraft;
+    }
+  }
+
+  if (currentField === "description") {
+    const sections = getInitialSectionsFromDraft(nextDraft);
+
+    if (nextDraft.entryCapacityMode === "shared") {
+      const offers = getDraftArray<{
+        ticketType: AdminTicketType;
+        label: string;
+        priceCents: number;
+        feeCents: number;
+      }>(nextDraft, "sharedPriceOptions");
+      if (offers.length > 0) {
+        nextDraft.sharedPriceOptions = offers.slice(0, -1);
+        delete nextDraft.initialSections;
+        delete nextDraft.pendingNumberedSection;
+        nextDraft.currentEntryIndex = offers.length;
+        nextDraft.field = "entryOfferItem";
+        return nextDraft;
+      }
+    }
+
+    if (nextDraft.entryModel === "single_general") {
+      delete nextDraft.initialSections;
+      nextDraft.field = "singleEntryDetails";
+      return nextDraft;
+    }
+
+    if (nextDraft.entryModel === "numbered" && sections.length > 0) {
+      const previousSection = sections[sections.length - 1];
+      nextDraft.initialSections = sections.slice(0, -1);
+      nextDraft.pendingNumberedSection = previousSection;
+      nextDraft.currentEntryIndex = sections.length;
+      nextDraft.field = "entrySeatMapVisual";
+      return nextDraft;
+    }
+
+    if (sections.length > 0) {
+      nextDraft.initialSections = sections.slice(0, -1);
+      nextDraft.currentEntryIndex = sections.length;
+      nextDraft.field = "entryItem";
       return nextDraft;
     }
   }
@@ -2628,22 +2672,7 @@ function stepBackCreateEventDraft(draft: Record<string, unknown>) {
 
 function getCreateEventConfirmBackDraft(draft: Record<string, unknown>) {
   const nextDraft = { ...draft };
-  const sections = getInitialSectionsFromDraft(nextDraft);
-
-  if (nextDraft.entryModel === "single_general") {
-    delete nextDraft.initialSections;
-    nextDraft.field = "singleEntryDetails";
-    return nextDraft;
-  }
-
-  if (sections.length > 0) {
-    nextDraft.initialSections = sections.slice(0, -1);
-    nextDraft.currentEntryIndex = sections.length;
-    nextDraft.field = "entryItem";
-    return nextDraft;
-  }
-
-  nextDraft.field = "entryCount";
+  nextDraft.field = "status";
   return nextDraft;
 }
 
@@ -2813,6 +2842,8 @@ function renderCreateEventPrompt(field?: string) {
       "Quantas datas esse evento terá?\n\nSe quiser, responda junto com as sessões por data. Ex: 1 sessão, 3 datas",
     sessionsPerDate: "Quantas sessões por data esse evento terá?",
     sessionItem: "Qual a data e horário da sessão? Ex: 10/06/2026 22:00",
+    description:
+      "Envie as informações gerais do evento.\n\nEx: abertura dos portões, classificação, observações importantes.\nSe não quiser adicionar agora, responda PULAR.",
     status:
       "Para finalizar, escolha como deseja salvar o evento.\n\n> 1. Deixar como rascunho\n> 2. Publicar",
     entryModel:
@@ -2827,6 +2858,7 @@ function renderCreateEventPrompt(field?: string) {
     entryItem:
       "Envie o tipo/setor com capacidade e valor.\nFormato: nome capacidade valor taxa opcional\nEx: Pista 500 120,00 12,00",
     entrySeatItem: renderCreateEventSeatPrompt(),
+    entrySeatMapVisual: renderCreateEventSeatMapVisualPrompt(),
     entryOfferItem:
       "Envie o tipo de compra/oferta com valor.\nFormato: nome valor taxa opcional\nEx: Meia entrada professor 60,00 0",
   };
@@ -2845,6 +2877,7 @@ function renderCreateEventSummary(draft: Record<string, unknown>) {
     `Cidade/UF: ${draft.city}/${draft.state}`,
     `Local: ${draft.venueName}`,
     `Foto: ${draft.imageUrl ? "cadastrada" : "ausente"}`,
+    `Informações gerais: ${draft.description ? "cadastradas" : "ausentes"}`,
     "Sessões:",
     ...(sessionsStartsAt.length
       ? sessionsStartsAt.map(
@@ -3545,7 +3578,7 @@ async function handleAdminEventsFlow({
 
     if (isAbortText(text)) {
       return {
-        reply: "Criação de evento cancelada.",
+        reply: ["Criação de evento cancelada.", "", renderAdminEventsMenu()].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
       };
     }
@@ -3578,6 +3611,7 @@ async function handleAdminEventsFlow({
       dateCount: null,
       sessionsPerDate: null,
       sessionItem: null,
+      description: "status",
       status: null,
       entryModel: null,
       singleEntryDetails: null,
@@ -3993,9 +4027,9 @@ async function handleAdminEventsFlow({
         };
       }
       draft.initialSections = [section];
-      draft.field = "status";
+      draft.field = "description";
       return {
-        reply: renderCreateEventPrompt("status"),
+        reply: renderCreateEventPrompt("description"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
           draft,
         }),
@@ -4106,9 +4140,9 @@ async function handleAdminEventsFlow({
       }
 
       draft.initialSections = [sharedSection];
-      draft.field = "status";
+      draft.field = "description";
       return {
-        reply: renderCreateEventPrompt("status"),
+        reply: renderCreateEventPrompt("description"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
           draft,
         }),
@@ -4211,9 +4245,9 @@ async function handleAdminEventsFlow({
         };
       }
 
-      draft.field = "status";
+      draft.field = "description";
       return {
-        reply: renderCreateEventPrompt("status"),
+        reply: renderCreateEventPrompt("description"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
           draft,
         }),
@@ -4271,13 +4305,18 @@ async function handleAdminEventsFlow({
         };
       }
 
-      draft.field = "status";
+      draft.field = "description";
       return {
-        reply: renderCreateEventPrompt("status"),
+        reply: renderCreateEventPrompt("description"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
           draft,
         }),
       };
+    } else if (field === "description") {
+      const normalized = normalizeAdminText(text);
+      draft.description = ["pular", "sem", "nenhum", "nao", "não"].includes(normalized)
+        ? null
+        : text.trim();
     } else {
       const value = text.trim();
       if (!value) {
@@ -4325,7 +4364,7 @@ async function handleAdminEventsFlow({
 
     if (isAbortText(text)) {
       return {
-        reply: "Criação de evento cancelada.",
+        reply: ["Criação de evento cancelada.", "", renderAdminEventsMenu()].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
       };
     }
@@ -4344,6 +4383,8 @@ async function handleAdminEventsFlow({
     const state = String(draft.state ?? "").trim().toUpperCase();
     const venueName = String(draft.venueName ?? "").trim();
     const imageUrl = normalizeEventImageUrl(String(draft.imageUrl ?? ""));
+    const descriptionRaw = String(draft.description ?? "").trim();
+    const description = descriptionRaw ? descriptionRaw : null;
     const sessionsStartsAt = getDraftArray<string>(draft, "sessionsStartsAt");
     const status = String(draft.status ?? "");
     const initialSections = getInitialSectionsFromDraft(draft);
@@ -4379,6 +4420,7 @@ async function handleAdminEventsFlow({
       state,
       venueName,
       imageUrl,
+      description,
       sessionsStartsAt,
       status,
       initialSections,

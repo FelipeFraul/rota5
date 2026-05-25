@@ -522,6 +522,14 @@ Regras:
 
 O desenho gerado ainda precisa ser refinado para ficar visualmente mais próximo dos mapas reais de teatro.
 
+Status operacional:
+
+- o menu `MEUS EVENTOS` usa a numeração oficial e não mostra mais `Setores e assentos` como item principal;
+- `Listar meus eventos` filtra ativos, pausados, cancelados e todos, com até 5 eventos por página e comando `Mais`;
+- a criação guiada coleta foto, sessões/datas, modelo de entrada, carga, tipos/ofertas, assentos digitados quando houver, informações gerais, escolha entre rascunho/publicação e confirmação final;
+- eventos só são gravados depois de `CONFIRMAR`; ao cancelar antes da confirmação, o rascunho da conversa é descartado e nenhum evento temporário é criado;
+- publicação exige foto; rascunho pode seguir sem foto.
+
 ### 6.8 Editar evento
 
 Menu desejado:

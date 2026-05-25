@@ -819,6 +819,7 @@ export async function createAdminEvent(input: {
   state: string;
   venueName: string;
   imageUrl: string | null;
+  description: string | null;
   sessionsStartsAt: string[];
   status: AdminEventStatus;
   initialSections: AdminInitialEventSectionInput[];
@@ -839,7 +840,7 @@ export async function createAdminEvent(input: {
   const eventPayload = {
     title: input.title.trim(),
     artist_name: input.artistName.trim(),
-    description: null,
+    description: input.description?.trim() || null,
     city: input.city.trim(),
     state: input.state.trim().toUpperCase(),
     image_url: input.imageUrl,
