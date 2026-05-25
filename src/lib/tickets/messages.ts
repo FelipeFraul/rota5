@@ -35,11 +35,11 @@ export const TICKET_MESSAGES = {
     "Você já tem uma reserva em andamento. No próximo passo vamos gerar o link de pagamento ou permitir cancelar/trocar.",
   paymentLinkPrompt: "Para comprar sua reserva, responda COMPRAR.",
   reservationCancelled:
-    "Reserva cancelada. Os ingressos foram liberados novamente.\n\nPara comprar, faça uma nova busca pelo evento.",
+    "PROCESSO CANCELADO\nSua reserva foi cancelada e os ingressos foram liberados.\nPara começar de novo, envie o nome do evento, artista, cidade ou data.",
   reservationExpired:
-    "⏰ *A SUA RESERVA EXPIROU*\nOs ingressos foram liberados novamente para venda.\nPara ver o mesmo evento ou buscar outro, só digitar uma nova busca.",
+    "⏰ A SUA RESERVA EXPIROU\nOs ingressos foram liberados novamente para venda.\nPara ver o mesmo evento ou buscar outro, só digitar uma nova busca.",
   buyerFlowReset:
-    "Processo reiniciado. Me diga qual evento você procura para começar novamente.",
+    "PROCESSO CANCELADO\nPara começar de novo, envie o nome do evento, artista, cidade ou data.",
   reservationUnavailableForPayment:
     "Sua reserva não está mais disponível. Faça uma nova busca para escolher outro assento.",
   checkoutGenericError:

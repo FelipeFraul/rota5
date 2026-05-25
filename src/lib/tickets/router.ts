@@ -987,28 +987,6 @@ function resetBuyerReservationContext(
   };
 }
 
-async function restartBuyerFlowAfterExpiredReservation({
-  customer,
-  conversation,
-  text,
-  mediaUrl,
-}: RouteTicketMessageInput): Promise<RouteTicketMessageOutput> {
-  const restartedResult = await routeTicketMessage({
-    customer,
-    conversation: {
-      ...conversation,
-      context: buildInitialConversationState(),
-    },
-    text,
-    mediaUrl,
-  });
-
-  return {
-    ...restartedResult,
-    reply: `${TICKET_MESSAGES.reservationExpired}\n\n${restartedResult.reply}`,
-  };
-}
-
 function parseTicketQuantity(text: string) {
   const normalized = normalizeIntentText(text);
 
@@ -1424,7 +1402,7 @@ function formatReservationReply({
   const quantity = reservation.items.length || 1;
 
   return [
-    "*RESERVA CRIADA. VOCÊ TEM 10 MINUTOS PARA EFETUAR A COMPRA*",
+    "RESERVA CRIADA. VOCÊ TEM 10 MINUTOS PARA EFETUAR A COMPRA",
     `> Evento: ${selectedEvent.title}`,
     `> Setor: ${selectedSection.sectionName}`,
     ...(selectedSection.selectedTicketType
@@ -1433,7 +1411,7 @@ function formatReservationReply({
     ...(selectedSeat ? [`> Assento: ${selectedSeat.seatCode}`] : []),
     `> Quantidade: ${quantity}`,
     "",
-    `*Valor: ${formatPriceWithOptionalFee(reservation.totalAmountCents, reservation.totalFeeCents)}*`,
+    `Valor: ${formatPriceWithOptionalFee(reservation.totalAmountCents, reservation.totalFeeCents)}`,
     `> Reserva válida até: ${formatTime(reservation.expiresAt)}`,
     "",
     "Para comprar, digite COMPRAR. Você receberá o link de pagamento na próxima mensagem.",
@@ -6470,11 +6448,11 @@ function messageForReservationFailure(
   }
 
   if (result.reason === "seat_not_available") {
-    return TICKET_MESSAGES.seatJustBecameUnavailable;
+    return TICKET_MESSAGES.seatInvalidOption;
   }
 
   if (result.reason === "seat_unavailable") {
-    return TICKET_MESSAGES.seatUnavailable;
+    return TICKET_MESSAGES.seatInvalidOption;
   }
 
   if (result.reason === "not_enough_seats") {
@@ -6525,6 +6503,24 @@ function formatCheckoutFailureMessage(
   return isUnavailableCheckoutFailure(result)
     ? TICKET_MESSAGES.reservationUnavailableForPayment
     : TICKET_MESSAGES.checkoutGenericError;
+}
+
+function messageForBuyerReservationCancellation({
+  expired,
+  cancelResult,
+}: {
+  expired: boolean;
+  cancelResult: Awaited<ReturnType<typeof cancelPendingReservationForCustomer>>;
+}) {
+  if (expired || (cancelResult.ok && cancelResult.status === "expired")) {
+    return TICKET_MESSAGES.reservationExpired;
+  }
+
+  if (cancelResult.ok && cancelResult.status === "cancelled") {
+    return TICKET_MESSAGES.reservationCancelled;
+  }
+
+  return TICKET_MESSAGES.buyerFlowReset;
 }
 
 function getConversationState(
@@ -8828,20 +8824,11 @@ export async function routeTicketMessage({
         orderId: previousState.reservation.orderId,
       });
 
-      if (reservationContextExpired && !shouldExitReservationFlow) {
-        return restartBuyerFlowAfterExpiredReservation({
-          customer,
-          conversation,
-          text,
-          mediaUrl,
-        });
-      }
-
       return {
-        reply:
-          cancelResult.ok && cancelResult.status === "cancelled"
-            ? TICKET_MESSAGES.reservationCancelled
-            : TICKET_MESSAGES.reservationExpired,
+        reply: messageForBuyerReservationCancellation({
+          expired: reservationContextExpired,
+          cancelResult,
+        }),
         nextContext: resetBuyerReservationContext(baseContext),
       };
     }
@@ -8937,20 +8924,11 @@ export async function routeTicketMessage({
         orderId: previousState.reservation.orderId,
       });
 
-      if (reservationContextExpired && !shouldExitReservationFlow) {
-        return restartBuyerFlowAfterExpiredReservation({
-          customer,
-          conversation,
-          text,
-          mediaUrl,
-        });
-      }
-
       return {
-        reply:
-          cancelResult.ok && cancelResult.status === "cancelled"
-            ? TICKET_MESSAGES.reservationCancelled
-            : TICKET_MESSAGES.reservationExpired,
+        reply: messageForBuyerReservationCancellation({
+          expired: reservationContextExpired,
+          cancelResult,
+        }),
         nextContext: resetBuyerReservationContext(baseContext),
       };
     }

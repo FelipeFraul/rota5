@@ -124,6 +124,21 @@ type ActivePendingReservationRow = {
     | null;
 };
 
+type CancelPendingReservationRpcResponse = {
+  status?: string;
+  released_seats_count?: number;
+};
+
+function isMissingCancelReservationRpc(error: unknown) {
+  const message = getPostgresErrorMessage(error);
+
+  return (
+    message.includes("cancel_pending_reservation") ||
+    (message.includes("function") && message.includes("does not exist")) ||
+    message.includes("PGRST202")
+  );
+}
+
 async function createOnDemandUnnumberedSeats({
   sessionId,
   sectionId,
@@ -332,7 +347,7 @@ export async function cancelPendingReservationForCustomer({
   }
 
   if (new Date(reservation.expires_at).getTime() <= Date.now()) {
-    const { error } = await supabase.rpc("expire_reservations", { p_limit: 100 });
+    const { error } = await supabase.rpc("expire_reservations", { p_limit: 500 });
 
     if (error) {
       return { ok: false, reason: "cancel_failed", error };
@@ -341,65 +356,89 @@ export async function cancelPendingReservationForCustomer({
     return { ok: true, status: "expired", releasedSeatsCount: 0 };
   }
 
-  const { data: reservationItems, error: itemsError } = await supabase
-    .from("reservation_items")
-    .select("session_seat_id")
-    .eq("reservation_id", reservationId)
-    .returns<Array<{ session_seat_id: string }>>();
+  const { data, error } = await supabase.rpc("cancel_pending_reservation", {
+    p_reservation_id: reservationId,
+    p_customer_id: customerId,
+    p_reason: "buyer_cancelled",
+  });
 
-  if (itemsError) {
-    return { ok: false, reason: "cancel_failed", error: itemsError };
-  }
-
-  const sessionSeatIds = (reservationItems ?? []).map(
-    (item) => item.session_seat_id,
-  );
-  let releasedSeatsCount = 0;
-
-  if (sessionSeatIds.length > 0) {
-    const { data: releasedSeats, error: releaseError } = await supabase
-      .from("session_seats")
-      .update({
-        status: "available",
-        current_reservation_id: null,
-      })
-      .in("id", sessionSeatIds)
-      .eq("status", "reserved")
-      .eq("current_reservation_id", reservationId)
-      .select("id");
-
-    if (releaseError) {
-      return { ok: false, reason: "cancel_failed", error: releaseError };
+  if (error) {
+    if (!isMissingCancelReservationRpc(error)) {
+      return { ok: false, reason: "cancel_failed", error };
     }
 
-    releasedSeatsCount = releasedSeats?.length ?? 0;
+    const { data: reservationItems, error: itemsError } = await supabase
+      .from("reservation_items")
+      .select("session_seat_id")
+      .eq("reservation_id", reservationId)
+      .returns<Array<{ session_seat_id: string }>>();
+
+    if (itemsError) {
+      return { ok: false, reason: "cancel_failed", error: itemsError };
+    }
+
+    const sessionSeatIds = (reservationItems ?? []).map(
+      (item) => item.session_seat_id,
+    );
+    let releasedSeatsCount = 0;
+
+    if (sessionSeatIds.length > 0) {
+      const { data: releasedSeats, error: releaseError } = await supabase
+        .from("session_seats")
+        .update({
+          status: "available",
+          current_reservation_id: null,
+        })
+        .in("id", sessionSeatIds)
+        .eq("status", "reserved")
+        .eq("current_reservation_id", reservationId)
+        .select("id");
+
+      if (releaseError) {
+        return { ok: false, reason: "cancel_failed", error: releaseError };
+      }
+
+      releasedSeatsCount = releasedSeats?.length ?? 0;
+    }
+
+    const { error: reservationUpdateError } = await supabase
+      .from("reservations")
+      .update({ status: "cancelled" })
+      .eq("id", reservationId)
+      .eq("status", "active");
+
+    if (reservationUpdateError) {
+      return {
+        ok: false,
+        reason: "cancel_failed",
+        error: reservationUpdateError,
+      };
+    }
+
+    const { error: orderUpdateError } = await supabase
+      .from("orders")
+      .update({ status: "cancelled" })
+      .eq("id", orderId)
+      .in("status", ["draft", "pending_payment"]);
+
+    if (orderUpdateError) {
+      return { ok: false, reason: "cancel_failed", error: orderUpdateError };
+    }
+
+    return { ok: true, status: "cancelled", releasedSeatsCount };
   }
 
-  const { error: reservationUpdateError } = await supabase
-    .from("reservations")
-    .update({ status: "cancelled" })
-    .eq("id", reservationId)
-    .eq("status", "active");
+  const payload = data as CancelPendingReservationRpcResponse | null;
 
-  if (reservationUpdateError) {
-    return {
-      ok: false,
-      reason: "cancel_failed",
-      error: reservationUpdateError,
-    };
+  if (payload?.status !== "cancelled") {
+    return { ok: false, reason: "not_found" };
   }
 
-  const { error: orderUpdateError } = await supabase
-    .from("orders")
-    .update({ status: "cancelled" })
-    .eq("id", orderId)
-    .in("status", ["draft", "pending_payment"]);
-
-  if (orderUpdateError) {
-    return { ok: false, reason: "cancel_failed", error: orderUpdateError };
-  }
-
-  return { ok: true, status: "cancelled", releasedSeatsCount };
+  return {
+    ok: true,
+    status: "cancelled",
+    releasedSeatsCount: payload.released_seats_count ?? 0,
+  };
 }
 
 export async function reserveSelectedSeat({

@@ -152,6 +152,34 @@ Para ver o mesmo evento ou buscar outro, só digitar uma nova busca.
 
 Quando a reserva expira ou quando o usuário digita comandos como `cancelar`, `cancela`, `apagar` ou `sair`, o processo precisa ser zerado para a conversa poder começar de novo.
 
+Expiração operacional:
+
+- reservas expiradas são processadas pela RPC `public.expire_reservations`;
+- existe endpoint protegido `GET /api/cron/expire-reservations`, exigindo `Authorization: Bearer CRON_SECRET`;
+- em produção, se o plano Vercel não permitir cron em frequência de minuto, um agendador externo deve chamar o endpoint;
+- a expiração libera apenas assentos ainda reservados pela própria reserva e não altera ingressos pagos, vendidos ou bloqueados.
+
+Cancelamento pelo comprador:
+
+- `cancelar`, `cancela`, `apagar` e `sair` zeram o fluxo de compra;
+- se houver reserva ativa e pedido pendente, o sistema cancela a reserva, cancela o pedido pendente e libera os assentos/ingressos;
+- reservas/pedidos pagos não são cancelados por esse comando.
+
+Mensagem quando havia reserva ativa cancelada:
+
+```text
+PROCESSO CANCELADO
+Sua reserva foi cancelada e os ingressos foram liberados.
+Para começar de novo, envie o nome do evento, artista, cidade ou data.
+```
+
+Mensagem quando não havia reserva ativa:
+
+```text
+PROCESSO CANCELADO
+Para começar de novo, envie o nome do evento, artista, cidade ou data.
+```
+
 ### 3.7 Pagamento
 
 O pagamento é feito via Mercado Pago.

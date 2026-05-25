@@ -1105,6 +1105,43 @@ A real controlled purchase additionally validated that the buyer receives the QR
 
 The remaining real-delivery check for Ponto 2 was closed with the `TEST_REAL_SEATMAP_IMAGE` prefix. A temporary published event, future sales-open session, numbered-seat section, six seats, and active full-price offer were created in the real Supabase project. The production Z-API webhook then sent the seat map image to a controlled WhatsApp number, marked one seat as reserved, sent a second map, and removed the temporary catalog. Both image sends were recorded as `message_type = image` with `send_status = sent`.
 
+### Reservation expiration and buyer cancellation audit
+
+Ponto 3 added a transactional cancellation migration:
+
+```text
+supabase/migrations/20260525000200_create_cancel_pending_reservation_rpc.sql
+```
+
+The function `public.cancel_pending_reservation(p_reservation_id uuid, p_customer_id uuid default null, p_reason text default 'buyer_cancelled')`:
+
+- locks the target reservation and order;
+- cancels only `active` reservations with `draft` or `pending_payment` orders;
+- optionally verifies the reservation belongs to the supplied customer;
+- releases only `session_seats.status = reserved` rows whose `current_reservation_id` still points to the reservation;
+- marks the reservation and order as `cancelled`;
+- does not touch `paid`, `sold`, `blocked`, or tickets;
+- grants execution only to `service_role`.
+
+Apply the migration with a linked Supabase CLI or paste the SQL into Supabase SQL Editor. This workspace could not apply it automatically because `npx supabase link --project-ref uhttjhrszwrnodcczkdp` requires `supabase login` or `SUPABASE_ACCESS_TOKEN`. The application keeps a compatibility fallback for cancellation until the RPC exists in the database, but the intended production path is the RPC.
+
+The reservation/expiration/cancellation audit used temporary real Supabase data with the `TEST_RESERVATION_EXPIRATION_CANCEL` prefix and a local Z-API mock. It validated:
+
+- numbered and unnumbered reservations through the existing `public.reserve_seats` RPC;
+- frozen reservation item values and `pending_payment` orders;
+- reservation message with quantity, value, expiration, and `COMPRAR` instruction;
+- atomic multi-seat reservation and no partial reservation when one seat is unavailable;
+- exact `ASSENTO INDISPONÍVEL` for invalid/unavailable seats;
+- checkout generation only for active reservations;
+- expired reservation checkout blocked with the expiration message;
+- `public.expire_reservations` releasing seats and expiring pending orders;
+- `sold`, `blocked`, `paid`, and paid orders left untouched;
+- buyer commands `cancelar`, `cancela`, `apagar`, and `sair` clearing the flow;
+- active pending reservation cancellation releasing seats;
+- paid `payment_pending` state not being cancelled by buyer commands;
+- concurrent expiration/cancellation calls not corrupting reservation/session-seat status;
+- full cleanup of temporary events, venues, customers, conversations, reservations, orders, payments, prices, seats, and session seats.
+
 ## Step 15 - Gate Sessions And Scanner Shell
 
 Step 15 creates the temporary gate access structure without validating tickets definitively yet.
