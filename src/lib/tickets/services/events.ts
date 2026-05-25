@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { listAvailableSections } from "@/lib/tickets/services/sections";
 
 const DEFAULT_EVENT_SEARCH_LIMIT = 5;
 const MAX_EVENT_CANDIDATES = 100;
@@ -97,15 +98,32 @@ function normalizeSearchValue(value: string) {
     .trim();
 }
 
-function eventMatchesArtist(event: EventRow, artistTerm: string) {
-  const normalizedTerm = normalizeSearchValue(artistTerm);
+function eventMatchesSearchTerm({
+  event,
+  session,
+  searchTerm,
+}: {
+  event: EventRow;
+  session?: SessionRow;
+  searchTerm: string;
+}) {
+  const normalizedTerm = normalizeSearchValue(searchTerm);
 
   if (!normalizedTerm) {
     return true;
   }
 
   const haystack = normalizeSearchValue(
-    `${event.artist_name} ${event.title} ${event.city} ${event.state}`,
+    [
+      event.artist_name,
+      event.title,
+      event.city,
+      event.state,
+      event.venues?.name,
+      session?.venues?.name,
+    ]
+      .filter(Boolean)
+      .join(" "),
   );
 
   return haystack.includes(normalizedTerm);
@@ -119,6 +137,28 @@ function eventMatchesCity(event: EventRow, cityTerm: string) {
   }
 
   return normalizeSearchValue(event.city) === normalizedTerm;
+}
+
+function eventMatchesLocationTerm({
+  event,
+  session,
+  locationTerm,
+}: {
+  event: EventRow;
+  session?: SessionRow;
+  locationTerm: string;
+}) {
+  const normalizedTerm = normalizeSearchValue(locationTerm);
+
+  if (!normalizedTerm) {
+    return true;
+  }
+
+  return (
+    eventMatchesCity(event, locationTerm) ||
+    normalizeSearchValue(event.venues?.name ?? "").includes(normalizedTerm) ||
+    normalizeSearchValue(session?.venues?.name ?? "").includes(normalizedTerm)
+  );
 }
 
 export async function searchEvents({
@@ -146,11 +186,7 @@ export async function searchEvents({
     throw eventsError;
   }
 
-  const filteredEvents = (events ?? []).filter(
-    (event) =>
-      (!artistTerm || eventMatchesArtist(event, artistTerm)) &&
-      (!cityTerm || eventMatchesCity(event, cityTerm)),
-  );
+  const filteredEvents = events ?? [];
 
   if (filteredEvents.length === 0) {
     return [];
@@ -177,11 +213,25 @@ export async function searchEvents({
     throw sessionsError;
   }
 
-  return (sessions ?? [])
+  const matchedSessions = (sessions ?? [])
     .flatMap((session) => {
       const event = eventsById.get(session.event_id);
 
-      if (!event) {
+      if (
+        !event ||
+        (cityTerm &&
+          !eventMatchesLocationTerm({
+            event,
+            session,
+            locationTerm: cityTerm,
+          })) ||
+        (artistTerm &&
+          !eventMatchesSearchTerm({
+            event,
+            session,
+            searchTerm: artistTerm,
+          }))
+      ) {
         return [];
       }
 
@@ -200,8 +250,26 @@ export async function searchEvents({
           sessionStatus: session.status,
         },
       ];
-    })
-    .slice(0, resultLimit);
+    });
+  const purchasableResults: TicketEventSearchResult[] = [];
+
+  for (const result of matchedSessions) {
+    const sections = await listAvailableSections(result.sessionId, {
+      venueId: result.venueId,
+    });
+
+    if (sections.length === 0) {
+      continue;
+    }
+
+    purchasableResults.push(result);
+
+    if (purchasableResults.length >= resultLimit) {
+      break;
+    }
+  }
+
+  return purchasableResults;
 }
 
 export async function getEventById(eventId: string) {

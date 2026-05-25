@@ -15,7 +15,8 @@ export type ReserveSelectedSeatInput = {
   eventId: string;
   sessionId: string;
   sectionId: string;
-  seatId: string;
+  seatId?: string;
+  seatIds?: string[];
   ticketType?: string;
 };
 
@@ -122,6 +123,67 @@ type ActivePendingReservationRow = {
       }[]
     | null;
 };
+
+async function createOnDemandUnnumberedSeats({
+  sessionId,
+  sectionId,
+  quantity,
+}: {
+  sessionId: string;
+  sectionId: string;
+  quantity: number;
+}) {
+  const supabase = getSupabaseAdmin();
+  const { data: section, error: sectionError } = await supabase
+    .from("venue_sections")
+    .select("id, venue_id, slug, has_numbered_seats, capacity")
+    .eq("id", sectionId)
+    .maybeSingle<{
+      id: string;
+      venue_id: string;
+      slug: string;
+      has_numbered_seats: boolean;
+      capacity: number | null;
+    }>();
+
+  if (sectionError) throw sectionError;
+
+  if (!section || section.has_numbered_seats || section.capacity !== null) {
+    return;
+  }
+
+  const stamp = Date.now().toString(36).toUpperCase();
+  const prefix = section.slug.replace(/[^a-z0-9]/gi, "").toUpperCase() || "INGRESSO";
+  const { data: seats, error: seatsError } = await supabase
+    .from("seats")
+    .insert(
+      Array.from({ length: quantity }, (_, index) => ({
+        venue_id: section.venue_id,
+        section_id: section.id,
+        row_label: null,
+        seat_number: `${stamp}-${index + 1}`,
+        seat_code: `${prefix}-${stamp}-${index + 1}`,
+        status: "active",
+      })),
+    )
+    .select("id, section_id")
+    .returns<Array<{ id: string; section_id: string }>>();
+
+  if (seatsError) throw seatsError;
+
+  const { error: sessionSeatsError } = await supabase
+    .from("session_seats")
+    .insert(
+      (seats ?? []).map((seat) => ({
+        session_id: sessionId,
+        seat_id: seat.id,
+        section_id: seat.section_id,
+        status: "available",
+      })),
+    );
+
+  if (sessionSeatsError) throw sessionSeatsError;
+}
 
 function getPostgresErrorMessage(error: unknown) {
   if (error && typeof error === "object" && "message" in error) {
@@ -347,6 +409,7 @@ export async function reserveSelectedSeat({
   sessionId,
   sectionId,
   seatId,
+  seatIds,
   ticketType = "full",
 }: ReserveSelectedSeatInput): Promise<ReserveSelectedSeatResult> {
   const activeReservation =
@@ -376,15 +439,29 @@ export async function reserveSelectedSeat({
     return { ok: false, reason: "seat_unavailable" };
   }
 
-  const selectedSeat = await getValidatedSeatForReservation({
-    sessionId: selectedSession.sessionId,
-    sectionId: selectedSection.sectionId,
-    seatId,
-  });
+  const requestedSeatIds = seatIds?.length ? seatIds : seatId ? [seatId] : [];
 
-  if (!selectedSeat) {
+  if (!requestedSeatIds.length || requestedSeatIds.length > 10) {
     return { ok: false, reason: "seat_unavailable" };
   }
+
+  const selectedSeats = await Promise.all(
+    requestedSeatIds.map((requestedSeatId) =>
+      getValidatedSeatForReservation({
+        sessionId: selectedSession.sessionId,
+        sectionId: selectedSection.sectionId,
+        seatId: requestedSeatId,
+      }),
+    ),
+  );
+
+  if (selectedSeats.some((selectedSeat) => !selectedSeat)) {
+    return { ok: false, reason: "seat_unavailable" };
+  }
+  const validSelectedSeats = selectedSeats.filter(
+    (selectedSeat): selectedSeat is NonNullable<typeof selectedSeat> =>
+      selectedSeat !== null,
+  );
 
   const env = getEnv();
   const supabase = getSupabaseAdmin();
@@ -392,7 +469,7 @@ export async function reserveSelectedSeat({
     p_customer_id: customerId,
     p_conversation_id: conversationId,
     p_session_id: selectedSession.sessionId,
-    p_seat_ids: [selectedSeat.seatId],
+    p_seat_ids: validSelectedSeats.map((selectedSeat) => selectedSeat.seatId),
     p_ticket_type: ticketType,
     p_ttl_minutes: env.TICKET_RESERVATION_TTL_MINUTES,
   });
@@ -455,11 +532,25 @@ export async function reserveUnnumberedSectionTickets({
     return { ok: false, reason: "seat_unavailable" };
   }
 
-  const seatList = await listAvailableSeats({
+  let seatList = await listAvailableSeats({
     sessionId: selectedSession.sessionId,
     sectionId: selectedSection.sectionId,
     limit: quantity,
   });
+
+  if (seatList.seats.length < quantity && selectedSection.availableSeatsCount >= 999_999) {
+    await createOnDemandUnnumberedSeats({
+      sessionId: selectedSession.sessionId,
+      sectionId: selectedSection.sectionId,
+      quantity: quantity - seatList.seats.length,
+    });
+
+    seatList = await listAvailableSeats({
+      sessionId: selectedSession.sessionId,
+      sectionId: selectedSection.sectionId,
+      limit: quantity,
+    });
+  }
 
   if (seatList.seats.length < quantity) {
     return { ok: false, reason: "not_enough_seats" };

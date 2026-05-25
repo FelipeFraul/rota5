@@ -31,6 +31,8 @@ export type AdminUser = {
   status: "active" | "disabled";
   name: string | null;
   last_login_at: string | null;
+  courtesy_send_limit?: number | null;
+  courtesy_receive_limit?: number | null;
 };
 
 export type AdminSession = {
@@ -59,9 +61,9 @@ export const ADMIN_ROLE_PERMISSIONS: Record<AdminRole, AdminPermission[]> = {
     "manage_gate",
     "view_reports",
   ],
-  operator: ["manage_gate", "manage_tickets", "view_reports"],
-  gate: ["manage_gate"],
-  support: ["manage_tickets"],
+  operator: ["manage_courtesies", "view_reports"],
+  gate: [],
+  support: [],
 };
 
 export function normalizeAdminPhone(phone: string | null | undefined) {
@@ -137,26 +139,7 @@ function fixedTimeEqual(left: string, right: string) {
   );
 }
 
-export function hashAdminPassphrase(passphrase: string): string {
-  const salt = randomBytes(16).toString("hex");
-  const digest = pbkdf2Sync(
-    passphrase,
-    salt,
-    ADMIN_HASH_ITERATIONS,
-    ADMIN_HASH_KEY_LENGTH,
-    "sha256",
-  ).toString("hex");
-
-  return `${ADMIN_HASH_ALGORITHM}$${ADMIN_HASH_ITERATIONS}$${salt}$${digest}`;
-}
-
-export function verifyAdminPassphrase(passphrase: string): boolean {
-  const configuredHash = process.env.ADMIN_AUTH_SECRET_HASH?.trim();
-
-  if (!configuredHash) {
-    return false;
-  }
-
+function verifyPassphraseHash(passphrase: string, configuredHash: string) {
   const [algorithm, iterationsRaw, salt, expectedDigest] =
     configuredHash.split("$");
 
@@ -181,6 +164,52 @@ export function verifyAdminPassphrase(passphrase: string): boolean {
   return fixedTimeEqual(digest, expectedDigest);
 }
 
+export function hashAdminPassphrase(passphrase: string): string {
+  const salt = randomBytes(16).toString("hex");
+  const digest = pbkdf2Sync(
+    passphrase,
+    salt,
+    ADMIN_HASH_ITERATIONS,
+    ADMIN_HASH_KEY_LENGTH,
+    "sha256",
+  ).toString("hex");
+
+  return `${ADMIN_HASH_ALGORITHM}$${ADMIN_HASH_ITERATIONS}$${salt}$${digest}`;
+}
+
+export function verifyAdminPassphrase(passphrase: string): boolean {
+  const configuredHash = process.env.ADMIN_AUTH_SECRET_HASH?.trim();
+
+  if (!configuredHash) {
+    return false;
+  }
+
+  return verifyPassphraseHash(passphrase, configuredHash);
+}
+
+export async function verifyAdminUserPassphrase(phone: string, passphrase: string) {
+  const normalizedPhone = normalizeAdminPhone(phone);
+
+  if (!normalizedPhone) return false;
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("admin_users")
+    .select("passphrase_hash")
+    .eq("phone", normalizedPhone)
+    .maybeSingle<{ passphrase_hash: string | null }>();
+
+  if (error) {
+    return verifyAdminPassphrase(passphrase);
+  }
+
+  if (data?.passphrase_hash) {
+    return verifyPassphraseHash(passphrase, data.passphrase_hash);
+  }
+
+  return verifyAdminPassphrase(passphrase);
+}
+
 export function hashAdminAuthMetadata(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -198,7 +227,7 @@ export function getAdminMenuOptions(role: AdminRole) {
   }> = [
     {
       option: 1,
-      label: "Eventos",
+      label: "Meus eventos",
       permission: "manage_events" satisfies AdminPermission,
     },
     {
@@ -238,14 +267,14 @@ export function formatAdminMenu(role: AdminRole) {
   return [
     "Acesso administrativo liberado.",
     "",
-    "Escolha uma opção:",
+    "*MENU ADMIN*",
     "",
     ...getAdminMenuOptions(role).map(
-      (option) => `${option.option}. ${option.label}`,
+      (option) => `> ${option.option}. ${option.label}`,
     ),
     "",
     "Responda com o número da opção.",
-    "Digite sair para encerrar. Em submenus, use voltar ou cancelar.",
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
   ].join("\n");
 }
 
@@ -262,7 +291,7 @@ export async function getAdminUserByPhone(phone: string) {
   const supabase = getSupabaseAdmin();
   const { data: adminUser, error } = await supabase
     .from("admin_users")
-    .select("id, phone, role, status, name, last_login_at")
+    .select("id, phone, role, status, name, last_login_at, courtesy_send_limit, courtesy_receive_limit")
     .eq("phone", normalizedPhone)
     .maybeSingle<AdminUser>();
 
@@ -327,7 +356,7 @@ export async function ensureAdminUserForPhone(phone: string) {
       status: "active",
       created_by_admin_phone: normalizedPhone,
     })
-    .select("id, phone, role, status, name, last_login_at")
+    .select("id, phone, role, status, name, last_login_at, courtesy_send_limit, courtesy_receive_limit")
     .single<AdminUser>();
 
   if (error) {

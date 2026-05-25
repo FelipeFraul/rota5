@@ -5,9 +5,39 @@ export type TicketConversationStep =
   | "admin_events_menu"
   | "admin_orders_menu"
   | "admin_courtesies_menu"
+  | "admin_courtesy_generate_type"
+  | "admin_courtesy_phone_collecting"
+  | "admin_courtesy_event_select"
+  | "admin_courtesy_list_event_select"
+  | "admin_courtesy_resend_event_select"
+  | "admin_courtesy_cancel_event_select"
+  | "admin_courtesy_cancel_method_select"
+  | "admin_courtesy_cancel_target_collecting"
+  | "admin_courtesy_limit_event_select"
+  | "admin_courtesy_limit_collecting"
   | "admin_gate_menu"
+  | "admin_gate_register_event_select"
+  | "admin_gate_validator_collecting"
+  | "admin_gate_password_collecting"
+  | "admin_gate_access_event_select"
+  | "admin_gate_accesses_filter"
+  | "admin_gate_revoke_select"
   | "admin_users_menu"
+  | "admin_users_add_type_select"
+  | "admin_users_add_phone_collecting"
+  | "admin_users_add_name_collecting"
+  | "admin_users_add_passphrase_collecting"
+  | "admin_users_role_select"
+  | "admin_users_role_collecting"
+  | "admin_users_disable_select"
   | "admin_reports_menu"
+  | "admin_report_event_select"
+  | "admin_report_period_select"
+  | "admin_report_custom_period_collecting"
+  | "admin_order_phone_collecting"
+  | "admin_order_code_collecting"
+  | "admin_order_cancel_collecting"
+  | "admin_ticket_consult_collecting"
   | "admin_events_list"
   | "admin_event_detail"
   | "admin_event_create_collecting"
@@ -16,6 +46,7 @@ export type TicketConversationStep =
   | "admin_event_edit_menu"
   | "admin_event_edit_collecting"
   | "admin_event_edit_confirm"
+  | "admin_event_edit_publish_select"
   | "admin_event_status_select"
   | "admin_event_status_confirm"
   | "admin_event_sessions_menu"
@@ -80,11 +111,16 @@ export type TicketConversationSectionOption = {
   minPriceCents: number;
   minFeeCents: number;
   ticketTypes: TicketConversationSectionTicketType[];
+  selectedTicketType?: TicketConversationSectionTicketType;
 };
 
 export type TicketConversationSelectedSection = Pick<
   TicketConversationSectionOption,
-  "sectionId" | "sectionName" | "hasNumberedSeats" | "availableSeatsCount"
+  | "sectionId"
+  | "sectionName"
+  | "hasNumberedSeats"
+  | "availableSeatsCount"
+  | "selectedTicketType"
 >;
 
 export type TicketConversationSeatOption = {
@@ -138,9 +174,76 @@ export type TicketConversationAdminEvents = {
   selectedSessionId?: string;
   selectedSectionId?: string;
   selectedPriceId?: string;
+  statusFilter?: "active" | "paused" | "cancelled" | "all";
+  listTitle?: string;
+  listActionLabel?: string;
   mode?: string;
   field?: string;
   draft?: Record<string, unknown>;
+};
+
+export type TicketConversationAdminCourtesies = {
+  mode?: "single" | "batch" | "list" | "resend" | "cancel" | "limit";
+  phones?: string[];
+  selectedEventId?: string;
+  cancelMethod?: "phone" | "code" | "list";
+  lastCourtesies?: Array<{
+    option: number;
+    courtesyId: string;
+    phone: string;
+    ticketCode?: string | null;
+  }>;
+  lastEvents?: Array<{
+    option: number;
+    eventId: string;
+    title: string;
+  }>;
+};
+
+export type TicketConversationAdminUsers = {
+  mode?: "add" | "role" | "disable";
+  pendingRole?: TicketAdminRole;
+  pendingPhone?: string;
+  pendingName?: string;
+  selectedAdminUserId?: string;
+  lastUsers?: Array<{
+    option: number;
+    adminUserId: string;
+    phone: string;
+    name?: string | null;
+  }>;
+};
+
+export type TicketConversationAdminGate = {
+  mode?: "register" | "list";
+  pendingValidatorPhone?: string;
+  selectedEventId?: string;
+  lastEvents?: Array<{
+    option: number;
+    eventId: string;
+    title: string;
+  }>;
+  lastGateSessions?: Array<{
+    option: number;
+    gateSessionId: string;
+    validatorPhone: string;
+  }>;
+};
+
+export type TicketConversationAdminReports = {
+  reportType?:
+    | "sales_event"
+    | "sales_section"
+    | "expired_reservations"
+    | "gate_checkins"
+    | "ticket_usage"
+    | "summary";
+  selectedEventId?: string;
+  lastEvents?: Array<{
+    option: number;
+    eventId: string;
+    title: string;
+  }>;
 };
 
 export type TicketConversationState = {
@@ -149,11 +252,16 @@ export type TicketConversationState = {
   lastInboundText?: string;
   admin?: TicketConversationAdmin;
   adminEvents?: TicketConversationAdminEvents;
+  adminCourtesies?: TicketConversationAdminCourtesies;
+  adminUsers?: TicketConversationAdminUsers;
+  adminGate?: TicketConversationAdminGate;
+  adminReports?: TicketConversationAdminReports;
   lastSearch?: TicketConversationSearch;
   lastEvents?: TicketConversationEventOption[];
   selectedEvent?: TicketConversationSelectedEvent;
   selectedSection?: TicketConversationSelectedSection;
   selectedSeat?: TicketConversationSelectedSeat;
+  selectedQuantity?: number;
   reservation?: TicketConversationReservation;
   payment?: TicketConversationPayment;
   lastSections?: TicketConversationSectionOption[];

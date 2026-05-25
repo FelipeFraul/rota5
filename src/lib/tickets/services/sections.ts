@@ -31,6 +31,7 @@ type VenueSectionRow = {
   id: string;
   venue_id: string;
   name: string;
+  capacity: number | null;
   has_numbered_seats: boolean;
   sort_order: number;
   venues: { status: string } | null;
@@ -105,15 +106,31 @@ export async function listAvailableSections(
     );
   }
 
-  const sectionIds = Array.from(availableSeatsBySection.keys());
+  const { data: sessionPrices, error: sessionPricesError } = await supabase
+    .from("ticket_prices")
+    .select(
+      "id, section_id, ticket_type, label, price_cents, fee_cents, currency, sales_start_at, sales_end_at",
+    )
+    .eq("session_id", sessionId)
+    .eq("status", "active")
+    .returns<TicketPriceRow[]>();
 
-  if (sectionIds.length === 0) {
-    return [];
+  if (sessionPricesError) {
+    throw sessionPricesError;
   }
+
+  const sectionIds = Array.from(
+    new Set([
+      ...availableSeatsBySection.keys(),
+      ...(sessionPrices ?? []).map((price) => price.section_id),
+    ]),
+  );
+
+  if (sectionIds.length === 0) return [];
 
   const { data: sections, error: sectionsError } = await supabase
     .from("venue_sections")
-    .select("id, venue_id, name, has_numbered_seats, sort_order, venues!inner(status)")
+    .select("id, venue_id, name, capacity, has_numbered_seats, sort_order, venues!inner(status)")
     .in("id", sectionIds)
     .eq("status", "active")
     .eq("venues.status", "active")
@@ -132,23 +149,13 @@ export async function listAvailableSections(
     return [];
   }
 
-  const { data: prices, error: pricesError } = await supabase
-    .from("ticket_prices")
-    .select(
-      "id, section_id, ticket_type, label, price_cents, fee_cents, currency, sales_start_at, sales_end_at",
-    )
-    .eq("session_id", sessionId)
-    .eq("status", "active")
-    .in("section_id", activeSectionIds)
-    .returns<TicketPriceRow[]>();
-
-  if (pricesError) {
-    throw pricesError;
-  }
-
   const ticketTypesBySection = new Map<string, AvailableSectionTicketType[]>();
 
-  for (const price of prices ?? []) {
+  for (const price of sessionPrices ?? []) {
+    if (!activeSectionIds.includes(price.section_id)) {
+      continue;
+    }
+
     if (!isPriceInsideSalesWindow(price, nowIso)) {
       continue;
     }
@@ -174,8 +181,11 @@ export async function listAvailableSections(
   return filteredSections
     .flatMap((section) => {
       const ticketTypes = ticketTypesBySection.get(section.id) ?? [];
+      const availableSeatsCount =
+        availableSeatsBySection.get(section.id) ??
+        (!section.has_numbered_seats && section.capacity === null ? 999_999 : 0);
 
-      if (ticketTypes.length === 0) {
+      if (ticketTypes.length === 0 || availableSeatsCount <= 0) {
         return [];
       }
 
@@ -189,7 +199,7 @@ export async function listAvailableSections(
           sectionName: section.name,
           venueId: section.venue_id,
           hasNumberedSeats: section.has_numbered_seats,
-          availableSeatsCount: availableSeatsBySection.get(section.id) ?? 0,
+          availableSeatsCount,
           minPriceCents: cheapest.priceCents,
           minFeeCents: cheapest.feeCents,
           ticketTypes,

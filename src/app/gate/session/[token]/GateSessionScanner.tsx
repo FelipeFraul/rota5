@@ -13,6 +13,7 @@ type GateSessionValidation =
       gateSession: {
         id: string;
         gateLabel: string | null;
+        eventTitle: string | null;
         validatorPhoneLast4: string;
         expiresAt: string;
         status: "active";
@@ -60,6 +61,23 @@ function describeInvalidReason(reason?: string) {
   return "Não foi possível validar este acesso de portaria.";
 }
 
+function extractTicketToken(rawValue: string) {
+  const value = rawValue.trim();
+
+  try {
+    const parsedUrl = new URL(value);
+    const match = parsedUrl.pathname.match(/\/tickets\/([^/]+)\/?$/);
+
+    if (match?.[1]) {
+      return decodeURIComponent(match[1]);
+    }
+  } catch {
+    // Not a URL; use the raw QR value as the ticket token.
+  }
+
+  return value;
+}
+
 export function GateSessionScanner({
   token,
   initialValidation,
@@ -68,6 +86,11 @@ export function GateSessionScanner({
   const streamRef = useRef<MediaStream | null>(null);
   const lastScanRef = useRef<string | null>(null);
   const lastScanAtRef = useRef(0);
+  const lastAllowedTokenRef = useRef<string | null>(null);
+  const lastAllowedAtRef = useRef(0);
+  const scanPausedUntilRef = useRef(0);
+  const scanResumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const submittingScanRef = useRef(false);
   const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [validation, setValidation] =
     useState<GateSessionValidation>(initialValidation);
@@ -78,6 +101,11 @@ export function GateSessionScanner({
   const [allowedCount, setAllowedCount] = useState(0);
   const [deniedCount, setDeniedCount] = useState(0);
   const [lastAction, setLastAction] = useState<"allowed" | "denied" | null>(null);
+  const [accessOverlay, setAccessOverlay] = useState<{
+    ticketCode?: string;
+    sectionName?: string | null;
+    seatCode?: string | null;
+  } | null>(null);
 
   const triggerCounterFeedback = useCallback((action: "allowed" | "denied") => {
     setLastAction(action);
@@ -123,6 +151,113 @@ export function GateSessionScanner({
     setLastResult(message);
   }, [triggerCounterFeedback]);
 
+  const pauseScannerAfterAllowed = useCallback(
+    (
+      ticketToken: string,
+      ticket?: {
+        ticketCode?: string;
+        sectionName?: string | null;
+        seatCode?: string | null;
+      },
+    ) => {
+      lastAllowedTokenRef.current = ticketToken;
+      lastAllowedAtRef.current = Date.now();
+      scanPausedUntilRef.current = Date.now() + 2_000;
+      setAccessOverlay(ticket ?? {});
+      setCameraStatus("Acesso liberado. Scanner pausado por 2 segundos.");
+
+      if (scanResumeTimerRef.current) {
+        clearTimeout(scanResumeTimerRef.current);
+      }
+
+      scanResumeTimerRef.current = setTimeout(() => {
+        setAccessOverlay(null);
+        scanPausedUntilRef.current = 0;
+        setCameraStatus("Scanner ativo. Aponte para o QR Code do ingresso.");
+        scanResumeTimerRef.current = null;
+      }, 2_000);
+    },
+    [],
+  );
+
+  const submitScan = useCallback(
+    async (rawTicketToken: string) => {
+      const ticketToken = extractTicketToken(rawTicketToken);
+      const now = Date.now();
+
+      if (!ticketToken) {
+        return;
+      }
+
+      if (now < scanPausedUntilRef.current) {
+        return;
+      }
+
+      if (
+        ticketToken === lastAllowedTokenRef.current &&
+        now - lastAllowedAtRef.current < 10_000
+      ) {
+        return;
+      }
+
+      if (
+        ticketToken === lastScanRef.current &&
+        now - lastScanAtRef.current < 3_000
+      ) {
+        return;
+      }
+
+      if (submittingScanRef.current) {
+        return;
+      }
+
+      submittingScanRef.current = true;
+      lastScanRef.current = ticketToken;
+      lastScanAtRef.current = now;
+
+      try {
+        const response = await fetch("/api/gate/session/scan", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            gateSessionToken: token,
+            ticketToken,
+          }),
+        });
+        const result = (await response.json()) as {
+          allowed?: boolean;
+          message?: string;
+          result?: string;
+          ticket?: {
+            ticketCode?: string;
+            sectionName?: string | null;
+            seatCode?: string | null;
+          };
+        };
+
+        if (result.allowed) {
+          registerAllowedResult(result);
+          pauseScannerAfterAllowed(ticketToken, result.ticket);
+          return;
+        }
+
+        registerDeniedResult(result.message ?? "Entrada recusada.");
+      } catch {
+        registerDeniedResult("Não foi possível registrar a leitura.");
+      } finally {
+        submittingScanRef.current = false;
+      }
+    },
+    [
+      pauseScannerAfterAllowed,
+      registerAllowedResult,
+      registerDeniedResult,
+      token,
+    ],
+  );
+
   useEffect(() => {
     if (!initialValidation.valid) {
       return;
@@ -162,6 +297,9 @@ export function GateSessionScanner({
       if (feedbackTimerRef.current) {
         clearTimeout(feedbackTimerRef.current);
       }
+      if (scanResumeTimerRef.current) {
+        clearTimeout(scanResumeTimerRef.current);
+      }
     };
   }, [initialValidation.valid, token]);
 
@@ -172,70 +310,6 @@ export function GateSessionScanner({
 
     let cancelled = false;
     let animationFrame = 0;
-
-    function extractTicketToken(rawValue: string) {
-      const value = rawValue.trim();
-
-      try {
-        const parsedUrl = new URL(value);
-        const match = parsedUrl.pathname.match(/\/tickets\/([^/]+)\/?$/);
-
-        if (match?.[1]) {
-          return decodeURIComponent(match[1]);
-        }
-      } catch {
-        // Not a URL; use the raw QR value as the ticket token.
-      }
-
-      return value;
-    }
-
-    async function submitScan(rawTicketToken: string) {
-      const ticketToken = extractTicketToken(rawTicketToken);
-      const now = Date.now();
-
-      if (
-        ticketToken === lastScanRef.current &&
-        now - lastScanAtRef.current < 3_000
-      ) {
-        return;
-      }
-
-      lastScanRef.current = ticketToken;
-      lastScanAtRef.current = now;
-
-      try {
-        const response = await fetch("/api/gate/session/scan", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            gateSessionToken: token,
-            ticketToken,
-          }),
-        });
-        const result = (await response.json()) as {
-          allowed?: boolean;
-          message?: string;
-          result?: string;
-          ticket?: {
-            ticketCode?: string;
-            sectionName?: string | null;
-            seatCode?: string | null;
-          };
-        };
-
-        if (result.allowed) {
-          registerAllowedResult(result);
-          return;
-        }
-
-        registerDeniedResult(result.message ?? "Entrada recusada.");
-      } catch {
-        registerDeniedResult("Não foi possível registrar a leitura.");
-      }
-    }
 
     async function startCamera() {
       if (!navigator.mediaDevices?.getUserMedia) {
@@ -274,12 +348,16 @@ export function GateSessionScanner({
             return;
           }
 
+          if (Date.now() < scanPausedUntilRef.current) {
+            animationFrame = window.requestAnimationFrame(tick);
+            return;
+          }
+
           try {
             const codes = await detector.detect(videoRef.current);
             const rawValue = codes[0]?.rawValue;
 
-            if (rawValue && rawValue !== lastScanRef.current) {
-              lastScanRef.current = rawValue;
+            if (rawValue) {
               await submitScan(rawValue);
             }
 
@@ -304,7 +382,7 @@ export function GateSessionScanner({
       window.cancelAnimationFrame(animationFrame);
       streamRef.current?.getTracks().forEach((track) => track.stop());
     };
-  }, [registerAllowedResult, registerDeniedResult, token, validation]);
+  }, [submitScan, validation]);
 
   async function submitManualCode() {
     const value = manualCode.trim();
@@ -314,37 +392,7 @@ export function GateSessionScanner({
     }
 
     setManualCode("");
-
-    try {
-      const response = await fetch("/api/gate/session/scan", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          gateSessionToken: token,
-          ticketToken: value,
-        }),
-      });
-      const result = (await response.json()) as {
-        allowed?: boolean;
-        message?: string;
-        ticket?: {
-          ticketCode?: string;
-          sectionName?: string | null;
-          seatCode?: string | null;
-        };
-      };
-
-      if (result.allowed) {
-        registerAllowedResult(result);
-        return;
-      }
-
-      registerDeniedResult(result.message ?? "Entrada recusada.");
-    } catch {
-      registerDeniedResult("Não foi possível registrar a leitura.");
-    }
+    await submitScan(value);
   }
 
   if (loading) {
@@ -370,7 +418,7 @@ export function GateSessionScanner({
       <section className="gate-header">
         <div>
           <p className="gate-kicker">Portaria</p>
-          <h1>{validation.gateSession.gateLabel ?? "Entrada"}</h1>
+          <h1>{validation.gateSession.eventTitle ?? "Evento"}</h1>
           <p>Validade: {formatDateTime(validation.gateSession.expiresAt)}</p>
           <p>Validador: final {validation.gateSession.validatorPhoneLast4}</p>
         </div>
@@ -388,8 +436,22 @@ export function GateSessionScanner({
         </div>
       </section>
 
-      <section className="gate-scanner">
+      <section className={accessOverlay ? "gate-scanner is-paused" : "gate-scanner"}>
         <video ref={videoRef} muted playsInline />
+        {accessOverlay ? (
+          <div className="gate-access-overlay" role="status" aria-live="assertive">
+            <strong>ACESSO LIBERADO</strong>
+            {accessOverlay.ticketCode ? (
+              <span>Código: {accessOverlay.ticketCode}</span>
+            ) : null}
+            {accessOverlay.sectionName ? (
+              <span>Setor: {accessOverlay.sectionName}</span>
+            ) : null}
+            {accessOverlay.seatCode ? (
+              <span>Ingresso/Assento: {accessOverlay.seatCode}</span>
+            ) : null}
+          </div>
+        ) : null}
         <p>{cameraStatus}</p>
       </section>
 

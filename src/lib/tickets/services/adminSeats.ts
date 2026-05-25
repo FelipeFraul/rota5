@@ -6,6 +6,7 @@ export {
   getAdminSeatOperationalUsage,
   parseSeatCodes,
   parseSeatCodesOrRange,
+  parseSeatLayout,
   parseSeatRange,
   updateAdminSeatStatuses,
   type AdminSeatStatus,

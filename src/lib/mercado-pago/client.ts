@@ -17,6 +17,8 @@ export type MercadoPagoPayment = {
   transaction_amount?: number | string | null;
   date_approved?: string | null;
   currency_id?: string | null;
+  payment_method_id?: string | null;
+  payment_type_id?: string | null;
   point_of_interaction?: {
     transaction_data?: {
       qr_code?: string | null;

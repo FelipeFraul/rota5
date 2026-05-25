@@ -1,12 +1,12 @@
 export const TICKET_MESSAGES = {
   genericHelp:
-    "Olá! Me diga qual evento você procura.\nVocê pode mandar o nome do artista, a cidade ou a data.\n\nExemplos:\n- Ana Castela\n- shows em Sorocaba\n- eventos sábado",
+    "Olá! Me diga qual evento você procura.\nVocê pode mandar o nome do artista, cidade, local ou data.\n\nExemplos:\n- Ana Castela\n- shows em Sorocaba\n- Bancários\n- 8 de agosto",
   noEventsFound:
-    'Não encontrei eventos com essa busca.\nTente enviar o nome do artista, cidade ou data. Ex: "shows em Sorocaba" ou "Ana Castela em junho".',
+    'Não encontrei eventos com essa busca.\nTente enviar o nome do artista, cidade, local ou data. Ex: "shows em Sorocaba", "Bancários" ou "8 de agosto".',
   numericInvalidOption:
     "Não encontrei essa opção. Responda com um número da lista.",
   numericWithoutContext:
-    "Me diga primeiro qual evento você procura. Você pode mandar o nome do artista, cidade ou data.",
+    "Me diga primeiro qual evento você procura. Você pode mandar o nome do artista, cidade, local ou data.",
   eventOptionUnavailable:
     "Essa opção não está mais disponível. Faça uma nova busca.",
   noSectionsAvailable:
@@ -18,9 +18,9 @@ export const TICKET_MESSAGES = {
   noSeatsAvailable:
     "Não encontrei assentos disponíveis nesse setor no momento. Escolha outro setor ou faça uma nova busca.",
   unnumberedSectionPending:
-    "Quantos ingressos você quer? Responda somente com o número. Ex: 2",
+    "Digite o número de ingressos para compra, ex: 2",
   seatInvalidOption:
-    "Não encontrei esse assento na lista. Escolha um dos códigos enviados.",
+    "ASSENTO INDISPONÍVEL",
   seatUnavailable:
     "Esse assento não está mais disponível. Escolha outro assento ou faça uma nova busca.",
   seatJustBecameUnavailable:
@@ -33,11 +33,13 @@ export const TICKET_MESSAGES = {
     "Não consegui reservar esse assento agora. Tente novamente em instantes.",
   reservationAlreadyCreated:
     "Você já tem uma reserva em andamento. No próximo passo vamos gerar o link de pagamento ou permitir cancelar/trocar.",
-  paymentLinkPrompt: "Para pagar sua reserva, responda PAGAR.",
+  paymentLinkPrompt: "Para comprar sua reserva, responda COMPRAR.",
   reservationCancelled:
     "Reserva cancelada. Os ingressos foram liberados novamente.\n\nPara comprar, faça uma nova busca pelo evento.",
   reservationExpired:
-    "O tempo limite da sua reserva acabou. Os ingressos foram liberados novamente.\n\nPara comprar, faça uma nova busca pelo evento.",
+    "⏰ *A SUA RESERVA EXPIROU*\nOs ingressos foram liberados novamente para venda.\nPara ver o mesmo evento ou buscar outro, só digitar uma nova busca.",
+  buyerFlowReset:
+    "Processo reiniciado. Me diga qual evento você procura para começar novamente.",
   reservationUnavailableForPayment:
     "Sua reserva não está mais disponível. Faça uma nova busca para escolher outro assento.",
   checkoutGenericError:
@@ -49,7 +51,7 @@ export const TICKET_MESSAGES = {
   gateAdminCreateError:
     "Não consegui criar o acesso de portaria agora. Tente novamente em instantes.",
   adminReservedNeutral:
-    "Não consegui entender sua mensagem.\nMe diga o nome do evento, artista, cidade ou data que você procura.",
+    "Não consegui entender sua mensagem.\nMe diga o nome do evento, artista, cidade, local ou data que você procura.",
   adminAuthPrompt: "Envie a palavra-chave de acesso administrativo.",
   adminAuthInvalid: "Palavra-chave inválida.",
   adminSessionExpired:

@@ -153,6 +153,8 @@ function buildPaymentRawMetadata(payment: {
   transaction_amount?: string | number | null;
   date_approved?: string | null;
   currency_id?: string | null;
+  payment_method_id?: string | null;
+  payment_type_id?: string | null;
 }) {
   return {
     id: String(payment.id),
@@ -161,6 +163,8 @@ function buildPaymentRawMetadata(payment: {
     transaction_amount: payment.transaction_amount,
     date_approved: payment.date_approved,
     currency_id: payment.currency_id,
+    payment_method_id: payment.payment_method_id,
+    payment_type_id: payment.payment_type_id,
   };
 }
 

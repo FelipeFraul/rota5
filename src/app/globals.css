@@ -111,6 +111,7 @@ main {
 }
 
 .gate-scanner {
+  position: relative;
   overflow: hidden;
   border: 1px solid #d1d5db;
   border-radius: 8px;
@@ -124,6 +125,36 @@ main {
   aspect-ratio: 4 / 3;
   object-fit: cover;
   background: #111827;
+}
+
+.gate-scanner.is-paused video {
+  filter: brightness(0.45) saturate(0.8);
+}
+
+.gate-access-overlay {
+  position: absolute;
+  inset: 0 0 56px;
+  z-index: 1;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 24px;
+  background: rgba(22, 101, 52, 0.86);
+  color: #ffffff;
+  text-align: center;
+}
+
+.gate-access-overlay strong {
+  font-size: clamp(28px, 8vw, 54px);
+  line-height: 1;
+}
+
+.gate-access-overlay span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .gate-scanner p,

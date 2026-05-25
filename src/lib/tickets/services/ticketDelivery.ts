@@ -1,14 +1,17 @@
 import "server-only";
 
+import QRCode from "qrcode";
 import { logError, logInfo, logWarn } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { buildInitialConversationState } from "@/lib/tickets/conversationState";
+import { updateConversationAfterMessage } from "@/lib/tickets/services/conversations";
 import {
   createSignedTicketToken,
   createTicketUrl,
   getTicketsForOrder,
   type TicketForDelivery,
 } from "@/lib/tickets/services/tickets";
-import { sendZapiText } from "@/lib/zapi/client";
+import { sendZapiImage, sendZapiText } from "@/lib/zapi/client";
 
 type OrderCustomer = {
   id: string;
@@ -16,6 +19,11 @@ type OrderCustomer = {
   customers: {
     whatsapp_phone: string | null;
   } | null;
+};
+
+type OpenConversationRow = {
+  id: string;
+  context: Record<string, unknown>;
 };
 
 export type DeliverTicketsForOrderResult =
@@ -36,6 +44,10 @@ export type DeliverTicketsForOrderResult =
     };
 
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
+const QR_CODE_CAPTION = [
+  "*APRESENTE O QRCODE NA PORTARIA*",
+  "Este ingresso será validado uma única vez na portaria. Por segurança, não envie para terceiros.",
+].join("\n");
 
 function formatEventDate(startsAt: string) {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -50,23 +62,23 @@ function formatEventDate(startsAt: string) {
     .replace(",", " às");
 }
 
-function formatTicket(ticket: TicketForDelivery, index: number) {
+function buildTicketUrl(ticket: TicketForDelivery) {
   const token = createSignedTicketToken({
     ticketId: ticket.ticketId,
     ticketCode: ticket.ticketCode,
   });
-  const ticketUrl = createTicketUrl(token);
 
+  return createTicketUrl(token);
+}
+
+function formatTicket(ticket: TicketForDelivery) {
   return [
-    `${index + 1}. ${ticket.eventTitle}`,
-    `Data: ${formatEventDate(ticket.startsAt)}`,
-    `Local: ${ticket.venueName ?? "A confirmar"} - ${ticket.city}/${ticket.state}`,
-    `Setor: ${ticket.sectionName}`,
-    `Assento: ${ticket.seatCode}`,
-    `Código: ${ticket.ticketCode}`,
-    "",
-    "Apresente este link/QR Code na entrada:",
-    ticketUrl,
+    `> ${ticket.eventTitle}`,
+    `> Data: ${formatEventDate(ticket.startsAt)}`,
+    `> Local: ${ticket.venueName ?? "A confirmar"} - ${ticket.city}/${ticket.state}`,
+    `> Setor: ${ticket.sectionName}`,
+    `> Ingresso/Assento: ${ticket.seatCode}`,
+    `> Código: ${ticket.ticketCode}`,
   ].join("\n");
 }
 
@@ -74,16 +86,20 @@ export function buildTicketDeliveryMessage(tickets: TicketForDelivery[]) {
   const ticketBlocks = tickets.map(formatTicket);
 
   return [
-    "Pagamento confirmado!",
-    "",
-    tickets.length === 1
-      ? "Seu ingresso foi emitido:"
-      : "Seus ingressos foram emitidos:",
-    "",
+    "*PAGAMENTO CONFIRMADO*",
     ticketBlocks.join("\n\n"),
-    "",
-    "Este ingresso é pessoal e será validado uma única vez na portaria.",
   ].join("\n");
+}
+
+async function buildTicketQrImage(ticket: TicketForDelivery) {
+  const ticketUrl = buildTicketUrl(ticket);
+
+  return QRCode.toDataURL(ticketUrl, {
+    errorCorrectionLevel: "M",
+    margin: 2,
+    scale: 8,
+    type: "image/png",
+  });
 }
 
 async function getOrderCustomer(orderId: string) {
@@ -99,6 +115,62 @@ async function getOrderCustomer(orderId: string) {
   }
 
   return data;
+}
+
+function contextReservationOrderId(context: Record<string, unknown>) {
+  const reservation =
+    context.reservation &&
+    typeof context.reservation === "object" &&
+    !Array.isArray(context.reservation)
+      ? (context.reservation as Record<string, unknown>)
+      : null;
+
+  return typeof reservation?.orderId === "string" ? reservation.orderId : null;
+}
+
+async function resetPaidOrderConversationContext({
+  customerId,
+  orderId,
+}: {
+  customerId: string;
+  orderId: string;
+}) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("conversations")
+    .select("id, context")
+    .eq("customer_id", customerId)
+    .eq("status", "open")
+    .order("last_message_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<OpenConversationRow>();
+
+  if (error) {
+    logError("Failed to load conversation for paid order context reset", {
+      orderId,
+      customerId,
+      code: error.code,
+    });
+    return;
+  }
+
+  if (!data || contextReservationOrderId(data.context) !== orderId) {
+    return;
+  }
+
+  const updateResult = await updateConversationAfterMessage({
+    conversationId: data.id,
+    context: buildInitialConversationState(),
+  });
+
+  if (!updateResult.ok) {
+    logError("Failed to reset paid order conversation context", {
+      orderId,
+      conversationId: data.id,
+      code: updateResult.error.code,
+    });
+  }
 }
 
 export async function deliverTicketsForOrder(
@@ -153,6 +225,54 @@ export async function deliverTicketsForOrder(
       ticketsCount: tickets.length,
     };
   }
+
+  for (const ticket of tickets) {
+    let qrImage: string;
+
+    try {
+      qrImage = await buildTicketQrImage(ticket);
+    } catch (error) {
+      logError("Failed to generate ticket QR Code image", {
+        orderId,
+        ticketId: ticket.ticketId,
+        error,
+      });
+
+      return {
+        ok: true,
+        sent: false,
+        reason: "zapi_failed",
+        ticketsCount: tickets.length,
+      };
+    }
+
+    const imageSendResult = await sendZapiImage({
+      phone,
+      image: qrImage,
+      caption: QR_CODE_CAPTION,
+    });
+
+    if (!imageSendResult.ok) {
+      logWarn("Ticket QR Code WhatsApp delivery failed after payment confirmation", {
+        orderId,
+        phoneLast4: phone.slice(-4),
+        reason: imageSendResult.error,
+        ticketsCount: tickets.length,
+      });
+
+      return {
+        ok: true,
+        sent: false,
+        reason: "zapi_failed",
+        ticketsCount: tickets.length,
+      };
+    }
+  }
+
+  await resetPaidOrderConversationContext({
+    customerId: order.customer_id,
+    orderId,
+  });
 
   logInfo("Delivered paid tickets by WhatsApp", {
     orderId,

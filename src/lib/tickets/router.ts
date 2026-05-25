@@ -1,17 +1,20 @@
 import "server-only";
 
 import { getEnv } from "@/lib/env";
+import { logError } from "@/lib/logger";
 import {
   buildInitialConversationState,
   type TicketConversationEventOption,
   type TicketConversationSearch,
   type TicketConversationSectionOption,
+  type TicketConversationSectionTicketType,
   type TicketConversationSeatOption,
   type TicketConversationReservation,
   type TicketConversationPayment,
   type TicketConversationSelectedSection,
   type TicketConversationSelectedEvent,
   type TicketConversationSelectedSeat,
+  type TicketConversationStep,
   type TicketConversationState,
 } from "@/lib/tickets/conversationState";
 import { TICKET_MESSAGES } from "@/lib/tickets/messages";
@@ -31,9 +34,10 @@ import {
   type AvailableSection,
 } from "@/lib/tickets/services/sections";
 import {
-  listAvailableSeats,
+  buildSeatMapImageDataUrl,
+  listSeatMap,
   type AvailableSeat,
-  type AvailableSeatList,
+  type SeatMap,
 } from "@/lib/tickets/services/seats";
 import {
   cancelPendingReservationForCustomer,
@@ -44,11 +48,13 @@ import {
 } from "@/lib/tickets/services/reservations";
 import {
   createAdminEvent,
+  duplicateAdminEvent,
   findOrCreateVenue,
   getAdminEventDetails,
   isEventStatus,
   isTicketType,
   listAdminEvents,
+  listAdminVenues,
   normalizeSlug,
   parseBrazilianDateTime,
   updateAdminEvent,
@@ -68,6 +74,7 @@ import {
   createMissingSessionSeats,
   getAdminSeatOperationalUsage,
   parseSeatCodesOrRange,
+  parseSeatLayout,
   updateAdminSeatStatuses,
   type AdminSeatStatus,
 } from "@/lib/tickets/services/adminSeats";
@@ -86,10 +93,52 @@ import {
   type AdminSessionStatus,
 } from "@/lib/tickets/services/adminSessions";
 import {
+  cancelAdminPendingReservation,
+  findAdminTicketByCode,
+  findAdminTicketsByPhone,
+  listAdminTicketValidations,
+  type AdminPendingReservationLookup,
+  type AdminTicketLookup,
+  type AdminTicketValidation,
+} from "@/lib/tickets/services/adminTickets";
+import {
+  buildCourtesyDeliveryForPhone,
+  buildCourtesyEventsReply,
+  buildCourtesyIssueSummary,
+  buildCourtesiesListReply,
+  cancelCourtesyForEvent,
+  getCourtesyLimit,
+  issueCourtesies,
+  listCourtesyEvents,
+  listCourtesiesForEvent,
+  normalizeCourtesyPhone,
+  parseCourtesyPhones,
+  resolveCourtesyEventId,
+  resolveCourtesyCancelTarget,
+  setCourtesyLimit,
+} from "@/lib/tickets/services/adminCourtesies";
+import {
+  createAdminUser,
+  disableAdminUser,
+  listAdminUsers,
+  parseAdminRole,
+  resolveAdminUserId,
+  updateAdminRole,
+  type AdminUserListItem,
+} from "@/lib/tickets/services/adminUsers";
+import {
   createGateSession,
+  createGateSessionForRegisteredValidator,
+  listGateSessions,
   normalizeGatePhone,
   revokeGateSession,
+  type AdminGateSessionListItem,
 } from "@/lib/tickets/services/gateSessions";
+import {
+  buildAdminReport,
+  type AdminReportPeriod,
+  type AdminReportType,
+} from "@/lib/tickets/services/adminReports";
 import {
   createAdminSession,
   ensureAdminUserForPhone,
@@ -104,7 +153,7 @@ import {
   revokeActiveAdminSessions,
   type AdminRole,
   type AdminPermission,
-  verifyAdminPassphrase,
+  verifyAdminUserPassphrase,
 } from "@/lib/tickets/services/adminAuth";
 import { sendZapiText } from "@/lib/zapi/client";
 
@@ -135,6 +184,7 @@ const GENERIC_MESSAGES = new Set([
   "início",
 ]);
 const PAYMENT_LINK_INTENTS = new Set([
+  "comprar",
   "pagar",
   "pagamento",
   "link",
@@ -299,6 +349,16 @@ function buildMonthRange(month: number, now = new Date()) {
   };
 }
 
+function isValidCalendarDate(year: number, month: number, day: number) {
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
 function parseExplicitDate(text: string, now = new Date()) {
   const match = text.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
 
@@ -317,9 +377,43 @@ function parseExplicitDate(text: string, now = new Date()) {
     return null;
   }
 
+  if (!isValidCalendarDate(parsedYear, month, day)) {
+    return null;
+  }
+
   const range = buildDayRange({ year: parsedYear, month, day });
 
-  if (!match[3] && range.dateTo < new Date().toISOString()) {
+  if (!match[3] && range.dateTo < now.toISOString()) {
+    return buildDayRange({ year: parsedYear + 1, month, day });
+  }
+
+  return range;
+}
+
+function parseNaturalDate(text: string, now = new Date()) {
+  const monthAlternation = Object.keys(MONTHS).join("|");
+  const match = text.match(
+    new RegExp(`\\b(\\d{1,2})(?:\\s+de)?\\s+(${monthAlternation})(?:\\s+de\\s+(\\d{2,4}))?\\b`, "i"),
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const today = getSaoPauloDateParts(now);
+  const day = Number(match[1]);
+  const month = MONTHS[match[2].toLowerCase()] + 1;
+  const parsedYear = match[3]
+    ? Number(match[3].length === 2 ? `20${match[3]}` : match[3])
+    : today.year;
+
+  if (!isValidCalendarDate(parsedYear, month, day)) {
+    return null;
+  }
+
+  const range = buildDayRange({ year: parsedYear, month, day });
+
+  if (!match[3] && range.dateTo < now.toISOString()) {
     return buildDayRange({ year: parsedYear + 1, month, day });
   }
 
@@ -348,6 +442,12 @@ function parseDateRange(
 
   if (explicitDate) {
     return explicitDate;
+  }
+
+  const naturalDate = parseNaturalDate(normalized, now);
+
+  if (naturalDate) {
+    return naturalDate;
   }
 
   for (const [monthName, month] of Object.entries(MONTHS)) {
@@ -392,9 +492,14 @@ function extractCity(text: string) {
 }
 
 function stripSearchNoise(text: string) {
+  const monthAlternation = Object.keys(MONTHS).join("|");
   const cleaned = text
     .replace(/\b(?:em|na|no)\s+[a-zA-ZÀ-ÿ][a-zA-ZÀ-ÿ\s-]{1,40}$/i, "")
     .replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g, " ")
+    .replace(
+      new RegExp(`\\b\\d{1,2}(?:\\s+de)?\\s+(?:${monthAlternation})(?:\\s+de\\s+\\d{2,4})?\\b`, "gi"),
+      " ",
+    )
     .replace(
       /\b(hoje|amanh[ãa]|s[áa]bado|domingo|segunda(?:-feira)?|ter[cç]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|fim de semana|este fim de semana|janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b/gi,
       " ",
@@ -515,6 +620,58 @@ function formatCurrencyFromCents(cents: number) {
   }).format(cents / 100);
 }
 
+const LOWERCASE_NAME_PARTS = new Set([
+  "a",
+  "as",
+  "com",
+  "da",
+  "das",
+  "de",
+  "do",
+  "dos",
+  "e",
+  "em",
+  "na",
+  "nas",
+  "no",
+  "nos",
+  "o",
+  "os",
+  "para",
+  "por",
+]);
+
+function formatAnnouncementTitle(value: string) {
+  return value.trim().toLocaleUpperCase("pt-BR");
+}
+
+function capitalizeNamePart(value: string) {
+  if (!value) return value;
+  return value.charAt(0).toLocaleUpperCase("pt-BR") + value.slice(1);
+}
+
+function formatProperName(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed) return "";
+
+  return trimmed
+    .toLocaleLowerCase("pt-BR")
+    .split(/(\s+|-)/)
+    .map((part, index) => {
+      if (!part.trim() || part === "-") return part;
+      if (index > 0 && LOWERCASE_NAME_PARTS.has(part)) return part;
+      return part
+        .split("/")
+        .map((piece) => capitalizeNamePart(piece))
+        .join("/");
+    })
+    .join("");
+}
+
+function formatCityState(city: string, state: string) {
+  return `${formatProperName(city)}/${state.trim().toLocaleUpperCase("pt-BR")}`;
+}
+
 function buildEventOptions(
   events: TicketEventSearchResult[],
 ): TicketConversationEventOption[] {
@@ -551,12 +708,12 @@ function formatSingleEventReply(
   index: number,
   totalEvents: number,
 ) {
-  const title = event.title.toLocaleUpperCase("pt-BR");
+  const title = formatAnnouncementTitle(event.title);
   const details = [
-    `> 🎤 Artista: ${event.artistName}`,
-    `> 📍 Cidade: ${event.city}/${event.state}`,
+    `> 🎤 Artista: ${formatProperName(event.artistName)}`,
+    `> 📍 Cidade: ${formatCityState(event.city, event.state)}`,
     `> 🗓️ Data: ${formatEventDate(event.startsAt)}`,
-    `> 🏟️ Local: ${event.venueName ?? "A confirmar"}`,
+    `> 🏟️ Local: ${event.venueName ? formatProperName(event.venueName) : "A confirmar"}`,
     `> 🎫 Status: ${formatSearchSessionStatus(event.sessionStatus)}`,
   ];
   const options =
@@ -584,11 +741,11 @@ function buildEventSearchOutboundMessages(events: TicketEventSearchResult[]) {
 
 function formatSingleEventMoreInfo(event: TicketConversationEventOption) {
   return [
-    `🎟️ - *${event.title.toLocaleUpperCase("pt-BR")}*`,
-    ...(event.artistName ? [`> 🎤 Artista: ${event.artistName}`] : []),
-    `> 📍 Cidade: ${event.city}/${event.state}`,
+    `🎟️ - *${formatAnnouncementTitle(event.title)}*`,
+    ...(event.artistName ? [`> 🎤 Artista: ${formatProperName(event.artistName)}`] : []),
+    `> 📍 Cidade: ${formatCityState(event.city, event.state)}`,
     `> 🗓️ Data: ${formatEventDate(event.startsAt)}`,
-    `> 🏟️ Local: ${event.venueName ?? "A confirmar"}`,
+    `> 🏟️ Local: ${event.venueName ? formatProperName(event.venueName) : "A confirmar"}`,
     "",
     "1. Comprar",
     "3. Buscar outro evento",
@@ -615,26 +772,37 @@ function buildSelectedEvent(
 function buildSectionOptions(
   sections: AvailableSection[],
 ): TicketConversationSectionOption[] {
-  return sections.map((section, index) => ({
-    option: index + 1,
-    sectionId: section.sectionId,
-    sectionName: section.sectionName,
-    hasNumberedSeats: section.hasNumberedSeats,
-    availableSeatsCount: section.availableSeatsCount,
-    minPriceCents: section.minPriceCents,
-    minFeeCents: section.minFeeCents,
-    ticketTypes: section.ticketTypes,
-  }));
+  let option = 1;
+
+  return sections.flatMap((section) => {
+    const ticketTypes = section.ticketTypes.length > 1
+      ? section.ticketTypes
+      : [section.ticketTypes[0]].filter(Boolean);
+
+    return ticketTypes.map((ticketType) => ({
+      option: option++,
+      sectionId: section.sectionId,
+      sectionName: section.sectionName,
+      hasNumberedSeats: section.hasNumberedSeats,
+      availableSeatsCount: section.availableSeatsCount,
+      minPriceCents: section.minPriceCents,
+      minFeeCents: section.minFeeCents,
+      ticketTypes: section.ticketTypes,
+      selectedTicketType: ticketType,
+    }));
+  });
 }
 
 function buildSelectedSection(
   section: AvailableSection,
+  ticketType?: TicketConversationSectionTicketType,
 ): TicketConversationSelectedSection {
   return {
     sectionId: section.sectionId,
     sectionName: section.sectionName,
     hasNumberedSeats: section.hasNumberedSeats,
     availableSeatsCount: section.availableSeatsCount,
+    selectedTicketType: ticketType ?? section.ticketTypes[0],
   };
 }
 
@@ -652,10 +820,20 @@ function formatSectionPrice(section: AvailableSection) {
   if (section.ticketTypes.length === 1) {
     const ticketType = section.ticketTypes[0];
 
-    return `${formatCurrencyFromCents(ticketType.priceCents)} + ${formatCurrencyFromCents(ticketType.feeCents)} taxa`;
+    return formatPriceWithOptionalFee(ticketType.priceCents, ticketType.feeCents);
   }
 
-  return `A partir de: ${formatCurrencyFromCents(section.minPriceCents)} + ${formatCurrencyFromCents(section.minFeeCents)} taxa`;
+  return `A partir de: ${formatPriceWithOptionalFee(section.minPriceCents, section.minFeeCents)}`;
+}
+
+function formatPriceWithOptionalFee(priceCents: number, feeCents: number) {
+  const price = formatCurrencyFromCents(priceCents);
+
+  if (feeCents <= 0) {
+    return price;
+  }
+
+  return `${price} + ${formatCurrencyFromCents(feeCents)} taxa`;
 }
 
 function formatSectionsReply({
@@ -663,68 +841,83 @@ function formatSectionsReply({
 }: {
   sections: AvailableSection[];
 }) {
-  const sectionLines = sections.flatMap((section, index) => [
-    `> ${index + 1}. ${section.sectionName} - *${formatSectionPrice(section)}*`,
-    "",
-  ]);
+  let option = 1;
+  const sectionLines = sections.flatMap((section) =>
+    section.ticketTypes.map((ticketType) => {
+      const label = section.ticketTypes.length > 1
+        ? `${section.sectionName} - ${ticketType.label}`
+        : section.sectionName;
+      const line = `> ${option}. ${label} - ${formatPriceWithOptionalFee(ticketType.priceCents, ticketType.feeCents)}`;
+      option += 1;
+      return line;
+    }),
+  );
 
   return [
     "*ESCOLHA SEU INGRESSO/SETOR*",
-    "",
     ...sectionLines,
+    "",
     "Responda com o número do setor para continuar.",
   ].join("\n");
 }
 
-function formatQuantityPrompt(section: AvailableSection) {
+function formatQuantityPrompt(
+  section: AvailableSection,
+  ticketType = section.ticketTypes[0],
+) {
+  const selectedPrice = ticketType
+    ? formatPriceWithOptionalFee(ticketType.priceCents, ticketType.feeCents)
+    : formatSectionPrice(section);
+
   return [
     `*${section.sectionName.toLocaleUpperCase("pt-BR")}*`,
     "",
-    `> 🎫 Valor: *${formatSectionPrice(section)}*`,
+    ...(ticketType ? [`> Ingresso: ${ticketType.label}`] : []),
+    `> 🎫 Valor: ${selectedPrice}`,
     "",
-    "Quantos ingressos você quer?",
-    "Responda somente com o número. Ex: 2",
+    "Digite o número de ingressos para compra, ex: 2",
   ].join("\n");
-}
-
-function groupSeatCodesByRow(seats: AvailableSeat[]) {
-  const rows = new Map<string, string[]>();
-
-  for (const seat of seats) {
-    const row = seat.rowLabel?.trim() || "Assentos";
-    rows.set(row, [...(rows.get(row) ?? []), seat.seatCode]);
-  }
-
-  return Array.from(rows.entries()).map(([row, seatCodes]) =>
-    row === "Assentos" ? seatCodes.join(", ") : `${row}: ${seatCodes.join(", ")}`,
-  );
 }
 
 function formatSeatsReply({
   section,
-  seatList,
+  seatMap,
+  ticketType,
+  quantity = 1,
 }: {
   section: AvailableSection;
-  seatList: AvailableSeatList;
+  seatMap: SeatMap;
+  ticketType?: TicketConversationSectionTicketType;
+  quantity?: number;
 }) {
-  const intro = seatList.hasMore
-    ? [`Mostrando os primeiros ${seatList.limit} assentos disponíveis.`]
-    : [];
-
   return [
-    `Setor escolhido: ${section.sectionName}`,
+    `*MAPA DE ASSENTOS - ${section.sectionName.toLocaleUpperCase("pt-BR")}*`,
+    ...(ticketType
+      ? [
+          `> Ingresso: ${ticketType.label}`,
+          `> Valor: ${formatPriceWithOptionalFee(ticketType.priceCents, ticketType.feeCents)}`,
+        ]
+      : []),
+    `> Verde: livre (${seatMap.totalAvailableCount})`,
+    `> Cinza: ocupado (${seatMap.totalSeatsCount - seatMap.totalAvailableCount})`,
     "",
-    "Assentos disponíveis:",
-    ...intro,
-    ...groupSeatCodesByRow(seatList.seats),
-    "",
-    "Responda com o código do assento desejado.",
-    "Exemplo: A03",
+    quantity > 1
+      ? `Responda com os ${quantity} códigos dos assentos desejados.`
+      : "Responda com o código do assento desejado.",
+    quantity > 1 ? "Exemplo: A03 A04" : "Exemplo: A03",
   ].join("\n");
 }
 
 function normalizeSeatCode(value: string) {
   return value.trim().replace(/[\s-]+/g, "").toUpperCase();
+}
+
+function parseRequestedSeatCodes(value: string) {
+  const matches = value.toUpperCase().match(/[A-Z]+\s*\d+/g) ?? [];
+
+  return Array.from(
+    new Set(matches.map((match) => normalizeSeatCode(match)).filter(Boolean)),
+  );
 }
 
 function normalizeIntentText(value: string) {
@@ -758,7 +951,9 @@ function isBuyerReservationExitIntent(text: string) {
 
   return (
     normalized === "sair" ||
+    normalized === "cancela" ||
     normalized === "cancelar" ||
+    normalized === "apagar" ||
     normalized === "encerrar" ||
     normalized === "logout"
   );
@@ -783,10 +978,35 @@ function resetBuyerReservationContext(
     state: "idle",
     reservation: undefined,
     payment: undefined,
+    selectedEvent: undefined,
+    selectedSection: undefined,
     selectedSeat: undefined,
+    selectedQuantity: undefined,
     lastSeats: [],
     lastSections: [],
     lastEvents: [],
+  };
+}
+
+async function restartBuyerFlowAfterExpiredReservation({
+  customer,
+  conversation,
+  text,
+  mediaUrl,
+}: RouteTicketMessageInput): Promise<RouteTicketMessageOutput> {
+  const restartedResult = await routeTicketMessage({
+    customer,
+    conversation: {
+      ...conversation,
+      context: buildInitialConversationState(),
+    },
+    text,
+    mediaUrl,
+  });
+
+  return {
+    ...restartedResult,
+    reply: `${TICKET_MESSAGES.reservationExpired}\n\n${restartedResult.reply}`,
   };
 }
 
@@ -845,6 +1065,11 @@ type AdminSubmenuState =
   | "admin_users_menu"
   | "admin_reports_menu";
 
+type AdminReportFlowState =
+  | "admin_report_event_select"
+  | "admin_report_period_select"
+  | "admin_report_custom_period_collecting";
+
 type AdminSubmenuConfig = {
   title: string;
   state: AdminSubmenuState;
@@ -855,22 +1080,43 @@ type AdminSubmenuConfig = {
   options: string[];
 };
 
+type AdminEventScope = {
+  adminUserId: string;
+  adminPhone: string;
+  canSeeAllEvents: boolean;
+};
+
+const GLOBAL_ADMIN_EVENT_PHONE = "15997503836";
+
+function buildAdminEventScope(adminUser: {
+  id: string;
+  phone: string;
+  role: AdminRole;
+}): AdminEventScope {
+  const normalizedPhone = normalizeGatePhone(adminUser.phone) ?? adminUser.phone;
+
+  return {
+    adminUserId: adminUser.id,
+    adminPhone: normalizedPhone,
+    canSeeAllEvents:
+      adminUser.role === "root" || normalizedPhone === GLOBAL_ADMIN_EVENT_PHONE,
+  };
+}
+
 const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
   admin_events_menu: {
-    title: "Eventos",
+    title: "Meus eventos",
     state: "admin_events_menu",
     mainOption: 1,
     permission: "manage_events",
-    backOption: 8,
-    exitOption: 9,
+    backOption: 6,
+    exitOption: 7,
     options: [
-      "Listar eventos",
-      "Criar evento",
-      "Editar evento",
-      "Tirar da publicação/ativar evento",
-      "Sessões e datas",
-      "Setores e assentos",
-      "Preços e lotes",
+      "Listar meus eventos",
+      "Criar meu evento",
+      "Editar meu evento",
+      "Ativar/Pausar meu evento",
+      "Duplicar evento",
     ],
   },
   admin_orders_menu: {
@@ -878,14 +1124,11 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
     state: "admin_orders_menu",
     mainOption: 2,
     permission: "manage_tickets",
-    backOption: 8,
-    exitOption: 9,
+    backOption: 5,
+    exitOption: 6,
     options: [
-      "Buscar pedido por telefone",
-      "Buscar pedido por código",
-      "Reenviar ingresso",
-      "Ver reservas ativas",
-      "Ver pagamentos pendentes",
+      "Buscar ingresso por telefone",
+      "Buscar ingresso por código",
       "Cancelar reserva pendente",
       "Consultar ticket",
     ],
@@ -914,10 +1157,9 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
     exitOption: 7,
     options: [
       "Check-in neste telefone",
-      "Enviar acesso para outro validador",
-      "Ver acessos ativos",
-      "Revogar acesso de portaria",
-      "Contadores da portaria",
+      "Definir outro telefone para check-in",
+      "Ver todos os acessos",
+      "Revogar acessos",
     ],
   },
   admin_users_menu: {
@@ -925,14 +1167,13 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
     state: "admin_users_menu",
     mainOption: 5,
     permission: "manage_admins",
-    backOption: 6,
-    exitOption: 7,
+    backOption: 5,
+    exitOption: 6,
     options: [
       "Listar administradores",
       "Adicionar administrador",
       "Alterar nível de administrador",
       "Desativar administrador",
-      "Ver sessões administrativas",
     ],
   },
   admin_reports_menu: {
@@ -940,12 +1181,11 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
     state: "admin_reports_menu",
     mainOption: 6,
     permission: "view_reports",
-    backOption: 8,
-    exitOption: 9,
+    backOption: 7,
+    exitOption: 8,
     options: [
       "Vendas por evento",
       "Vendas por setor",
-      "Pagamentos pendentes",
       "Reservas expiradas",
       "Check-ins da portaria",
       "Ingressos usados e não usados",
@@ -956,19 +1196,35 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
 
 function renderAdminSubmenu(config: AdminSubmenuConfig) {
   return [
-    config.title,
+    `*${config.title.toUpperCase()}*`,
     "",
-    ...config.options.map((label, index) => `${index + 1}. ${label}`),
-    `${config.backOption}. Voltar`,
-    `${config.exitOption}. Sair`,
+    ...config.options.map((label, index) => `> ${index + 1}. ${label}`),
+    `> ${config.backOption}. Voltar`,
+    `> ${config.exitOption}. Sair`,
     "",
     "Responda com o número da opção.",
-    "Digite voltar para voltar ou cancelar para abandonar esta tela.",
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
   ].join("\n");
 }
 
 function renderAdminEventsMenu() {
   return renderAdminSubmenu(ADMIN_SUBMENUS.admin_events_menu);
+}
+
+function renderAdminEventListFilterMenu() {
+  return [
+    "*LISTAR MEUS EVENTOS*",
+    "",
+    "> 1. Eventos ativos",
+    "> 2. Eventos pausados",
+    "> 3. Eventos cancelados",
+    "> 4. Todos os eventos",
+    "> 5. Voltar",
+    "> 6. Sair",
+    "",
+    "Responda com o número da opção.",
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
+  ].join("\n");
 }
 
 function getAdminSubmenuByMainOption(option: number) {
@@ -1169,18 +1425,19 @@ function formatReservationReply({
   const quantity = reservation.items.length || 1;
 
   return [
-    "Reserva criada por alguns minutos!",
+    "*RESERVA CRIADA. VOCÊ TEM 10 MINUTOS PARA EFETUAR A COMPRA*",
+    `> Evento: ${selectedEvent.title}`,
+    `> Setor: ${selectedSection.sectionName}`,
+    ...(selectedSection.selectedTicketType
+      ? [`> Ingresso: ${selectedSection.selectedTicketType.label}`]
+      : []),
+    ...(selectedSeat ? [`> Assento: ${selectedSeat.seatCode}`] : []),
+    `> Quantidade: ${quantity}`,
     "",
-    `Evento: ${selectedEvent.title}`,
-    `Setor: ${selectedSection.sectionName}`,
-    ...(selectedSeat ? [`Assento: ${selectedSeat.seatCode}`] : []),
-    `Quantidade: ${quantity}`,
+    `*Valor: ${formatPriceWithOptionalFee(reservation.totalAmountCents, reservation.totalFeeCents)}*`,
+    `> Reserva válida até: ${formatTime(reservation.expiresAt)}`,
     "",
-    `Valor: ${formatCurrencyFromCents(reservation.totalAmountCents)} + ${formatCurrencyFromCents(reservation.totalFeeCents)} taxa`,
-    `Reserva válida até: ${formatTime(reservation.expiresAt)}`,
-    "",
-    "Quer continuar com a compra?",
-    "Responda PAGAR para receber o link de pagamento.",
+    "Para comprar, digite COMPRAR. Você receberá o link de pagamento na próxima mensagem.",
   ].join("\n");
 }
 
@@ -1188,26 +1445,32 @@ function formatPaymentLinkReply({
   selectedEvent,
   selectedSection,
   selectedSeat,
+  reservation,
   checkout,
 }: {
   selectedEvent?: TicketConversationSelectedEvent;
   selectedSection?: TicketConversationSelectedSection;
   selectedSeat?: TicketConversationSelectedSeat;
+  reservation?: TicketConversationReservation;
   checkout: CheckoutForReservation;
 }) {
+  const totalLabel = reservation
+    ? formatPriceWithOptionalFee(
+        reservation.totalAmountCents,
+        reservation.totalFeeCents,
+      )
+    : formatCurrencyFromCents(checkout.amountCents);
   const lines = [
-    "Link de pagamento gerado!",
+    "*LINK DE PAGAMENTO GERADO*",
+    ...(selectedEvent ? [`> Evento: ${selectedEvent.title}`] : []),
+    ...(selectedSection ? [`> Setor: ${selectedSection.sectionName}`] : []),
+    ...(selectedSeat ? [`> Assento: ${selectedSeat.seatCode}`] : []),
+    `> Total: ${totalLabel}`,
     "",
-    ...(selectedEvent ? [`Evento: ${selectedEvent.title}`] : []),
-    ...(selectedSection ? [`Setor: ${selectedSection.sectionName}`] : []),
-    ...(selectedSeat ? [`Assento: ${selectedSeat.seatCode}`] : []),
-    `Total: ${formatCurrencyFromCents(checkout.amountCents)}`,
-    "",
-    "Pague por aqui:",
+    "Pague clicando neste link (crédito ou pix):",
     checkout.checkoutUrl,
     "",
-    `Sua reserva é válida até ${formatTime(checkout.expiresAt)}.`,
-    "Após a confirmação do Mercado Pago, seu ingresso será emitido automaticamente.",
+    `Após a confirmação do ${selectedEvent?.title ?? "pagamento"}, seu ingresso será emitido automaticamente na próxima mensagem.`,
   ];
 
   return lines.join("\n");
@@ -1220,7 +1483,7 @@ function isConfirmText(text: string) {
 function isCancelText(text: string) {
   const normalized = normalizeAdminText(text);
 
-  return normalized === "cancelar" || normalized === "voltar";
+  return normalized === "cancelar";
 }
 
 function isBackText(text: string) {
@@ -1234,15 +1497,726 @@ function isAbortText(text: string) {
 function withAdminNavigationHint(reply: string) {
   const normalized = normalizeAdminText(reply);
 
-  if (normalized.includes("voltar") && normalized.includes("cancelar")) {
+  if (
+    normalized.includes("voltar") &&
+    normalized.includes("cancelar") &&
+    normalized.includes("sair")
+  ) {
     return reply;
   }
 
   return [
     reply,
     "",
-    "Digite voltar para voltar ou cancelar para abandonar esta tela.",
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
   ].join("\n");
+}
+
+function isAdminOrdersFlowState(
+  state: string | undefined,
+): state is
+  | "admin_order_phone_collecting"
+  | "admin_order_code_collecting"
+  | "admin_order_cancel_collecting"
+  | "admin_ticket_consult_collecting" {
+  return (
+    state === "admin_order_phone_collecting" ||
+    state === "admin_order_code_collecting" ||
+    state === "admin_order_cancel_collecting" ||
+    state === "admin_ticket_consult_collecting"
+  );
+}
+
+function isAdminCourtesyFlowState(
+  state: string | undefined,
+): state is
+  | "admin_courtesy_generate_type"
+  | "admin_courtesy_phone_collecting"
+  | "admin_courtesy_event_select"
+  | "admin_courtesy_list_event_select"
+  | "admin_courtesy_resend_event_select"
+  | "admin_courtesy_cancel_event_select"
+  | "admin_courtesy_cancel_method_select"
+  | "admin_courtesy_cancel_target_collecting"
+  | "admin_courtesy_limit_event_select"
+  | "admin_courtesy_limit_collecting" {
+  return (
+    state === "admin_courtesy_generate_type" ||
+    state === "admin_courtesy_phone_collecting" ||
+    state === "admin_courtesy_event_select" ||
+    state === "admin_courtesy_list_event_select" ||
+    state === "admin_courtesy_resend_event_select" ||
+    state === "admin_courtesy_cancel_event_select" ||
+    state === "admin_courtesy_cancel_method_select" ||
+    state === "admin_courtesy_cancel_target_collecting" ||
+    state === "admin_courtesy_limit_event_select" ||
+    state === "admin_courtesy_limit_collecting"
+  );
+}
+
+function renderCourtesyCancelMethodMenu() {
+  return [
+    "*CANCELAR CORTESIA*",
+    "",
+    "> 1. Cancelar pelo número de telefone",
+    "> 2. Cancelar pelo código",
+    "> 3. Ver todas as cortesias",
+    "> 4. Voltar",
+    "> 5. Sair",
+    "",
+    "Responda com o número da opção.",
+  ].join("\n");
+}
+
+function isAdminUsersFlowState(
+  state: string | undefined,
+): state is
+  | "admin_users_add_type_select"
+  | "admin_users_add_phone_collecting"
+  | "admin_users_add_name_collecting"
+  | "admin_users_add_passphrase_collecting"
+  | "admin_users_role_select"
+  | "admin_users_role_collecting"
+  | "admin_users_disable_select" {
+  return (
+    state === "admin_users_add_type_select" ||
+    state === "admin_users_add_phone_collecting" ||
+    state === "admin_users_add_name_collecting" ||
+    state === "admin_users_add_passphrase_collecting" ||
+    state === "admin_users_role_select" ||
+    state === "admin_users_role_collecting" ||
+    state === "admin_users_disable_select"
+  );
+}
+
+function isAdminGateFlowState(
+  state: string | undefined,
+): state is
+  | "admin_gate_register_event_select"
+  | "admin_gate_validator_collecting"
+  | "admin_gate_password_collecting"
+  | "admin_gate_access_event_select"
+  | "admin_gate_accesses_filter"
+  | "admin_gate_revoke_select" {
+  return (
+    state === "admin_gate_register_event_select" ||
+    state === "admin_gate_validator_collecting" ||
+    state === "admin_gate_password_collecting" ||
+    state === "admin_gate_access_event_select" ||
+    state === "admin_gate_accesses_filter" ||
+    state === "admin_gate_revoke_select"
+  );
+}
+
+function isAdminReportsFlowState(
+  state: string | undefined,
+): state is AdminReportFlowState {
+  return (
+    state === "admin_report_event_select" ||
+    state === "admin_report_period_select" ||
+    state === "admin_report_custom_period_collecting"
+  );
+}
+
+function withAdminUsersContext(
+  baseContext: TicketConversationState,
+  state: TicketConversationState["state"],
+  adminUsers: NonNullable<TicketConversationState["adminUsers"]>,
+) {
+  return {
+    ...baseContext,
+    step: state,
+    state,
+    adminUsers,
+  };
+}
+
+function withAdminGateContext(
+  baseContext: TicketConversationState,
+  state: TicketConversationState["state"],
+  adminGate: NonNullable<TicketConversationState["adminGate"]>,
+) {
+  return {
+    ...baseContext,
+    step: state,
+    state,
+    adminGate,
+  };
+}
+
+function withAdminReportsContext(
+  baseContext: TicketConversationState,
+  state: TicketConversationState["state"],
+  adminReports: NonNullable<TicketConversationState["adminReports"]>,
+) {
+  return {
+    ...baseContext,
+    step: state,
+    state,
+    adminReports,
+  };
+}
+
+function getAdminReportsContext(baseContext: TicketConversationState) {
+  return baseContext.adminReports ?? {};
+}
+
+function renderGateAccessFilterMenu() {
+  return [
+    "*VER TODOS OS ACESSOS*",
+    "",
+    "> 1. Ativos",
+    "> 2. Pausados",
+    "> 3. Voltar",
+    "> 4. Sair",
+    "",
+    "Responda com o número da opção.",
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
+  ].join("\n");
+}
+
+function formatGateSessionStatus(status: AdminGateSessionListItem["status"]) {
+  if (status === "active") return "ativo";
+  if (status === "revoked") return "pausado";
+  if (status === "expired") return "expirado";
+  return status;
+}
+
+function renderGateSessionsList({
+  title,
+  sessions,
+}: {
+  title: string;
+  sessions: AdminGateSessionListItem[];
+}) {
+  const blocks = sessions.map((session, index) =>
+    [
+      `${index + 1}. ${session.gateLabel ?? "Portaria"}`,
+      `> Telefone: ${session.validatorPhone}`,
+      session.validatorName ? `> Nome: ${session.validatorName}` : null,
+      `> Status: ${formatGateSessionStatus(session.status)}`,
+      `> Validade: ${formatDateTime(session.expiresAt)}`,
+      `> Criado em: ${formatDateTime(session.createdAt)}`,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  );
+
+  return [
+    `*${title}*`,
+    "",
+    blocks.length > 0 ? blocks.join("\n---\n") : "Nenhum acesso encontrado.",
+  ].join("\n");
+}
+
+function renderGateValidatorPhonePrompt() {
+  return [
+    "*DEFINIR TELEFONE PARA CHECK-IN*",
+    "",
+    "> Digite o número de telefone",
+    "",
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
+  ].join("\n");
+}
+
+function renderGateValidatorPasswordPrompt() {
+  return [
+    "*DEFINIR PALAVRA CHAVE (SENHA) PARA CHECK-IN*",
+    "",
+    "> Digite a senha para entrar no sistema",
+    "",
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
+  ].join("\n");
+}
+
+function buildGateValidatorRegisteredReply({
+  validatorPhone,
+  gateLabel,
+}: {
+  validatorPhone: string;
+  gateLabel: string;
+}) {
+  return [
+    "*NOVO TELEFONE CADASTRADO PARA CHECK-IN*",
+    "",
+    `> Telefone: ${validatorPhone}`,
+    `> Palavra chave: ${gateLabel}`,
+    "",
+    "O telefone cadastrado deve enviar uma mensagem com a palavra Portaria para o telefone 15 99642-6671",
+  ].join("\n");
+}
+
+function renderAdminReportPeriodMenu() {
+  return [
+    "*QUAL PERÍODO DO RELATÓRIO?*",
+    "",
+    "> 1. Hoje",
+    "> 2. Últimos 7 dias",
+    "> 3. Últimos 30 dias",
+    "> 4. Todo o período",
+    "> 5. Escolher datas",
+    "> 6. Voltar",
+    "> 7. Sair",
+    "",
+    "Responda com o número da opção.",
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
+  ].join("\n");
+}
+
+function parseAdminReportPeriodOption(input: string): AdminReportPeriod | "custom" | null {
+  const option = input.trim().match(/^\d+$/) ? Number(input.trim()) : null;
+  const now = new Date();
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const endOfToday = new Date(now);
+  endOfToday.setHours(23, 59, 59, 999);
+
+  if (option === 1) {
+    return { label: "Hoje", from: startOfToday.toISOString(), to: endOfToday.toISOString() };
+  }
+
+  if (option === 2 || option === 3) {
+    const days = option === 2 ? 7 : 30;
+    const from = new Date(now);
+    from.setDate(from.getDate() - (days - 1));
+    from.setHours(0, 0, 0, 0);
+
+    return { label: `Últimos ${days} dias`, from: from.toISOString(), to: endOfToday.toISOString() };
+  }
+
+  if (option === 4) return { label: "Todo o período" };
+  if (option === 5) return "custom";
+
+  return null;
+}
+
+function parseBrazilianDateOnly(value: string) {
+  const match = value.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return null;
+
+  const [, day, month, year] = match;
+  const parsed = new Date(Number(year), Number(month) - 1, Number(day));
+
+  if (
+    parsed.getFullYear() !== Number(year) ||
+    parsed.getMonth() !== Number(month) - 1 ||
+    parsed.getDate() !== Number(day)
+  ) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function parseAdminReportCustomPeriod(input: string): AdminReportPeriod | null {
+  const parts = input
+    .split(/\s+(?:a|até|-)\s+/i)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length !== 2) return null;
+
+  const from = parseBrazilianDateOnly(parts[0]);
+  const to = parseBrazilianDateOnly(parts[1]);
+
+  if (!from || !to || from.getTime() > to.getTime()) return null;
+
+  from.setHours(0, 0, 0, 0);
+  to.setHours(23, 59, 59, 999);
+
+  return {
+    label: `${parts[0]} a ${parts[1]}`,
+    from: from.toISOString(),
+    to: to.toISOString(),
+  };
+}
+
+function renderAdminUserTypePrompt() {
+  return [
+    "*QUAL O TIPO DE ADMINISTRADOR VOCÊ QUER CADASTRAR?*",
+    "",
+    "> 1. Diretor - Acesso total ao sistema. Pode gerenciar eventos, ingressos, cortesias, portaria, relatórios e outros administradores.",
+    "> 2. Gerente - Pode gerenciar eventos, ingressos, cortesias, portaria e relatórios. Não gerencia, inclui ou exclui outros administradores.",
+    "> 3. Operador - Gerencia cortesias e relatórios",
+    "",
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
+  ].join("\n");
+}
+
+function renderAdminUserPhonePrompt() {
+  return [
+    "*QUAL TELEFONE DO ADMINISTRADOR?*",
+    "",
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
+  ].join("\n");
+}
+
+function renderAdminUserNamePrompt() {
+  return [
+    "*QUAL O NOME DO ADMINISTRADOR?*",
+    "",
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
+  ].join("\n");
+}
+
+function renderAdminUserPassphrasePrompt() {
+  return [
+    "*QUAL A PALAVRA CHAVE (SENHA) DO ADMINISTRADOR?*",
+    "",
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
+  ].join("\n");
+}
+
+function renderAdminUserRolePrompt() {
+  return renderAdminUserTypePrompt().replace(
+    "*QUAL O TIPO DE ADMINISTRADOR VOCÊ QUER CADASTRAR?*",
+    "*QUAL O NOVO TIPO DE ADMINISTRADOR?*",
+  );
+}
+
+function formatAdminRoleLabel(role: string) {
+  if (role === "root") return "Diretor";
+  if (role === "admin") return "Gerente";
+  if (role === "operator") return "Operador";
+  if (role === "gate") return "Porteiro";
+  if (role === "support") return "Suporte";
+  return role;
+}
+
+function renderAdminUsersList(users: AdminUserListItem[]) {
+  const userBlocks = users.map((user, index) =>
+    [
+      `${index + 1}. ${user.name ?? "Sem nome"}`,
+      `> Telefone: ${user.phone}`,
+      `> Perfil: ${formatAdminRoleLabel(user.role)}`,
+      `> Status: ${user.status}`,
+      `> ID: ${user.id}`,
+    ].join("\n"),
+  );
+
+  return [
+    "*ADMINISTRADORES*",
+    "",
+    users.length ? userBlocks.join("\n---\n") : "Nenhum administrador encontrado.",
+  ].join("\n");
+}
+
+function formatTicketStatus(status: string) {
+  if (status === "issued") {
+    return "emitido";
+  }
+
+  if (status === "used") {
+    return "usado";
+  }
+
+  if (status === "cancelled") {
+    return "cancelado";
+  }
+
+  return status;
+}
+
+function formatOrderStatus(status: string) {
+  if (status === "draft") {
+    return "rascunho";
+  }
+
+  if (status === "pending_payment") {
+    return "pagamento pendente";
+  }
+
+  if (status === "paid") {
+    return "pago";
+  }
+
+  if (status === "cancelled") {
+    return "cancelado";
+  }
+
+  if (status === "expired") {
+    return "expirado";
+  }
+
+  return status;
+}
+
+function formatPaymentStatus(status: string) {
+  if (status === "approved") {
+    return "aprovado";
+  }
+
+  if (status === "pending") {
+    return "pendente";
+  }
+
+  if (status === "rejected") {
+    return "recusado";
+  }
+
+  if (status === "cancelled") {
+    return "cancelado";
+  }
+
+  if (status === "expired") {
+    return "expirado";
+  }
+
+  return status;
+}
+
+function formatAdminTicketPaymentLabel(ticket: AdminTicketLookup) {
+  return [
+    ticket.paymentMethod,
+    ticket.paymentProvider,
+    ticket.paymentStatus ? formatPaymentStatus(ticket.paymentStatus) : null,
+  ]
+    .filter(Boolean)
+    .join(" - ");
+}
+
+function formatAdminTicket(ticket: AdminTicketLookup, index?: number) {
+  const prefix = typeof index === "number" ? `${index}. ` : "";
+  const venue = ticket.venueName
+    ? `${ticket.venueName} - ${ticket.city}/${ticket.state}`
+    : `${ticket.city}/${ticket.state}`;
+  const lines = [
+    `${prefix}${ticket.eventTitle}`,
+    `   Data: ${formatDateTime(ticket.startsAt)}`,
+    `   Local: ${venue}`,
+    `   Setor: ${ticket.sectionName}`,
+    `   Ingresso/Assento: ${ticket.seatCode}`,
+    `   Código: ${ticket.ticketCode}`,
+    `   Status: ${formatTicketStatus(ticket.status)}`,
+  ];
+
+  if (ticket.customerPhone) {
+    lines.push(`   Telefone: ${ticket.customerPhone}`);
+  }
+
+  if (ticket.purchasedAt) {
+    lines.push(`   Compra: ${formatDateTime(ticket.purchasedAt)}`);
+  }
+
+  if (ticket.paymentMethod || ticket.paymentProvider || ticket.paymentStatus) {
+    const paymentLabel = formatAdminTicketPaymentLabel(ticket);
+
+    lines.push(`   Pagamento: ${paymentLabel}`);
+  }
+
+  if (ticket.totalAmountCents != null) {
+    const totalFeeText =
+      ticket.totalFeeCents && ticket.totalFeeCents > 0
+        ? ` + ${formatCurrencyFromCents(ticket.totalFeeCents)} taxa`
+        : "";
+
+    lines.push(
+      `   Total: ${formatCurrencyFromCents(ticket.totalAmountCents)}${totalFeeText}`,
+    );
+  }
+
+  if (ticket.usedAt) {
+    lines.push(`   Validado em: ${formatDateTime(ticket.usedAt)}`);
+  }
+
+  return lines.join("\n");
+}
+
+function formatAdminTicketForPhoneSearch(
+  ticket: AdminTicketLookup,
+  index: number,
+) {
+  const lines = [
+    `${index}. ${ticket.eventTitle}`,
+    `   Data: ${formatDateTime(ticket.startsAt)}`,
+    `   Setor: ${ticket.sectionName}`,
+    `   Código: ${ticket.ticketCode}`,
+  ];
+
+  if (ticket.purchasedAt) {
+    lines.push(`   Compra: ${formatDateTime(ticket.purchasedAt)}`);
+  }
+
+  if (ticket.paymentMethod || ticket.paymentProvider || ticket.paymentStatus) {
+    lines.push(`   Pagamento: ${formatAdminTicketPaymentLabel(ticket)}`);
+  }
+
+  if (ticket.totalAmountCents != null) {
+    const totalFeeText =
+      ticket.totalFeeCents && ticket.totalFeeCents > 0
+        ? ` + ${formatCurrencyFromCents(ticket.totalFeeCents)} taxa`
+        : "";
+
+    lines.push(
+      `   Total: ${formatCurrencyFromCents(ticket.totalAmountCents)}${totalFeeText}`,
+    );
+  }
+
+  lines.push(`   Status: ${formatTicketStatus(ticket.status)}`);
+
+  if (ticket.usedAt) {
+    lines.push(`   Validado em: ${formatDateTime(ticket.usedAt)}`);
+  }
+
+  return lines.join("\n");
+}
+
+function formatAdminPendingReservation(
+  reservation: AdminPendingReservationLookup,
+  index?: number,
+) {
+  const prefix = typeof index === "number" ? `${index}. ` : "";
+  const venue = reservation.venueName
+    ? `${reservation.venueName} - ${reservation.city}/${reservation.state}`
+    : `${reservation.city}/${reservation.state}`;
+  const totalFeeText =
+    reservation.totalFeeCents > 0
+      ? ` + ${formatCurrencyFromCents(reservation.totalFeeCents)} taxa`
+      : "";
+
+  return [
+    `${prefix}${reservation.eventTitle}`,
+    `   Data: ${formatDateTime(reservation.startsAt)}`,
+    `   Local: ${venue}`,
+    `   Setor: ${reservation.sectionName}`,
+    `   Quantidade: ${reservation.quantity}`,
+    `   Valor: ${formatCurrencyFromCents(reservation.totalAmountCents)}${totalFeeText}`,
+    `   Pedido: ${reservation.orderId}`,
+    `   Reserva: ${reservation.reservationId}`,
+    `   Status: ${formatOrderStatus(reservation.orderStatus)}`,
+    `   Expira em: ${formatDateTime(reservation.expiresAt)}`,
+  ].join("\n");
+}
+
+function formatAdminTicketValidations(validations: AdminTicketValidation[]) {
+  if (validations.length === 0) {
+    return "Nenhuma validação registrada.";
+  }
+
+  return validations
+    .map((validation, index) => {
+      const gate = validation.gateLabel ? ` - ${validation.gateLabel}` : "";
+      const validator = validation.validatorIdentifier
+        ? ` (${validation.validatorIdentifier})`
+        : "";
+
+      return `${index + 1}. ${formatDateTime(validation.createdAt)} - ${validation.result}${gate}${validator}`;
+    })
+    .join("\n");
+}
+
+async function buildAdminCourtesyEventSelect({
+  baseContext,
+  scope,
+  state,
+  title,
+  context,
+}: {
+  baseContext: TicketConversationState;
+  scope: AdminEventScope;
+  state: TicketConversationState["state"];
+  title: string;
+  context: NonNullable<TicketConversationState["adminCourtesies"]>;
+}) {
+  const result = await listCourtesyEvents({
+    ownerAdminUserId: scope.adminUserId,
+    canSeeAll: scope.canSeeAllEvents,
+  });
+
+  if (!result.ok) {
+    return {
+      reply: TICKET_MESSAGES.adminGenericError,
+      nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesies_menu", {}),
+    };
+  }
+
+  return {
+    reply: buildCourtesyEventsReply(title, result.events),
+    nextContext: withAdminCourtesiesContext(baseContext, state, {
+      ...context,
+      lastEvents: result.events.map((event) => ({
+        option: event.option,
+        eventId: event.eventId,
+        title: event.title,
+      })),
+    }),
+  };
+}
+
+async function buildAdminReportEventSelect({
+  baseContext,
+  scope,
+  reportType,
+}: {
+  baseContext: TicketConversationState;
+  scope: AdminEventScope;
+  reportType: AdminReportType;
+}) {
+  const result = await listCourtesyEvents({
+    ownerAdminUserId: scope.adminUserId,
+    canSeeAll: scope.canSeeAllEvents,
+  });
+
+  if (!result.ok) {
+    return {
+      reply: TICKET_MESSAGES.adminGenericError,
+      nextContext: withAdminReportsContext(baseContext, "admin_reports_menu", {}),
+    };
+  }
+
+  return {
+    reply: buildCourtesyEventsReply("RELATÓRIO - ESCOLHA O EVENTO", result.events),
+    nextContext: withAdminReportsContext(baseContext, "admin_report_event_select", {
+      reportType,
+      lastEvents: result.events.map((event) => ({
+        option: event.option,
+        eventId: event.eventId,
+        title: event.title,
+      })),
+    }),
+  };
+}
+
+async function buildAdminGateEventSelect({
+  baseContext,
+  scope,
+  title,
+  nextState = "admin_gate_access_event_select",
+  mode = "list",
+}: {
+  baseContext: TicketConversationState;
+  scope: AdminEventScope;
+  title: string;
+  nextState?: "admin_gate_register_event_select" | "admin_gate_access_event_select";
+  mode?: NonNullable<TicketConversationState["adminGate"]>["mode"];
+}) {
+  const result = await listCourtesyEvents({
+    ownerAdminUserId: scope.adminUserId,
+    canSeeAll: scope.canSeeAllEvents,
+  });
+
+  if (!result.ok) {
+    return {
+      reply: TICKET_MESSAGES.adminGenericError,
+      nextContext: withAdminGateContext(baseContext, "admin_gate_menu", {}),
+    };
+  }
+
+  return {
+    reply: buildCourtesyEventsReply(title, result.events),
+    nextContext: withAdminGateContext(
+      baseContext,
+      nextState,
+      {
+        mode,
+        lastEvents: result.events.map((event) => ({
+          option: event.option,
+          eventId: event.eventId,
+          title: event.title,
+        })),
+      },
+    ),
+  };
 }
 
 function normalizeEventImageUrl(value: string | null | undefined) {
@@ -1277,11 +2251,47 @@ function getInitialSectionsFromDraft(draft: Record<string, unknown>) {
       : "full";
     return [
       {
+        priceOptions: Array.isArray(item.priceOptions)
+          ? item.priceOptions.flatMap((option) => {
+              if (!option || typeof option !== "object") return [];
+              const price = option as Record<string, unknown>;
+              const optionTicketType = isTicketType(String(price.ticketType ?? ""))
+                ? (String(price.ticketType) as AdminTicketType)
+                : "full";
+              return [
+                {
+                  ticketType: optionTicketType,
+                  label: String(price.label ?? ""),
+                  priceCents: typeof price.priceCents === "number" ? price.priceCents : 0,
+                  feeCents: typeof price.feeCents === "number" ? price.feeCents : 0,
+                },
+              ];
+            })
+          : undefined,
         name: String(item.name ?? ""),
         slug: String(item.slug ?? ""),
         hasNumberedSeats: item.hasNumberedSeats === true,
         capacity: typeof item.capacity === "number" ? item.capacity : null,
         createInventorySeats: item.createInventorySeats === true,
+        seatCodes: Array.isArray(item.seatCodes)
+          ? item.seatCodes.map((seatCode) => String(seatCode)).filter(Boolean)
+          : undefined,
+        seatMapPositions:
+          item.seatMapPositions && typeof item.seatMapPositions === "object"
+            ? Object.fromEntries(
+                Object.entries(item.seatMapPositions).flatMap(([seatCode, position]) => {
+                  if (!position || typeof position !== "object") return [];
+                  const point = position as Record<string, unknown>;
+                  const x = Number(point.x);
+                  const y = Number(point.y);
+
+                  if (!Number.isFinite(x) || !Number.isFinite(y)) return [];
+
+                  return [[seatCode, { x, y }]];
+                }),
+              )
+            : undefined,
+        createVisualMap: item.createVisualMap === true,
         ticketType,
         label: String(item.label ?? item.name ?? ""),
         priceCents: typeof item.priceCents === "number" ? item.priceCents : 0,
@@ -1306,10 +2316,21 @@ function renderInitialSectionsSummary(draft: Record<string, unknown>) {
           : "setores com assentos marcados"
     }`,
     ...sections.map((section) =>
-      [
+      section.priceOptions?.length
+        ? [
+            `- ${section.name}`,
+            section.hasNumberedSeats ? "assento marcado" : "sem assento marcado",
+            section.capacity ? `carga compartilhada ${section.capacity}` : "carga a definir",
+            `ofertas ${section.priceOptions.length}`,
+          ].join(" | ")
+        : [
         `- ${section.name}`,
         section.hasNumberedSeats ? "assento marcado" : "sem assento marcado",
-        section.capacity ? `capacidade ${section.capacity}` : "capacidade a definir",
+        section.hasNumberedSeats && section.seatCodes?.length
+          ? `assentos ${section.seatCodes.length}`
+          : section.capacity
+            ? `capacidade ${section.capacity}`
+            : "capacidade a definir",
         `valor ${formatCurrencyFromCents(section.priceCents)}`,
         `taxa ${formatCurrencyFromCents(section.feeCents)}`,
       ].join(" | "),
@@ -1317,26 +2338,35 @@ function renderInitialSectionsSummary(draft: Record<string, unknown>) {
   ];
 }
 
-function parseInitialEntryDefinition(value: string, options: { numbered: boolean }) {
-  const parts = value.split("|").map((part) => part.trim());
+function parseInitialEntryDefinition(
+  value: string,
+  options: { numbered: boolean; requireCapacity?: boolean },
+) {
+  const requireCapacity = options.requireCapacity !== false;
+  const moneyPattern = "(?:R\\$\\s*)?\\d+(?:[.,]\\d{2})?";
+  const separatorPattern = "\\s*(?:\\||,|\\s+-\\s+|-|\\s+)\\s*";
+  const match = requireCapacity
+    ? value
+        .trim()
+        .match(new RegExp(`^(.+?)${separatorPattern}(\\d+)${separatorPattern}(${moneyPattern})(?:${separatorPattern}(${moneyPattern}))?$`, "i"))
+    : value
+        .trim()
+        .match(new RegExp(`^(.+?)${separatorPattern}(${moneyPattern})(?:${separatorPattern}(${moneyPattern}))?$`, "i"));
 
-  if (parts.length < 3) {
-    return null;
-  }
+  if (!match) return null;
 
-  const [nameRaw, capacityRaw, priceRaw, feeRaw = "0"] = parts;
+  const [, nameRaw, secondRaw, thirdRaw, fourthRaw = "0"] = match;
   const name = nameRaw?.trim();
-  const capacity = Number(capacityRaw?.replace(/\D/g, ""));
-  const priceCents = parseMoneyToCents(priceRaw ?? "");
-  const feeCents = parseMoneyToCents(feeRaw);
+  const capacity = requireCapacity ? Number(secondRaw?.replace(/\D/g, "")) : null;
+  const priceCents = parseMoneyToCents(requireCapacity ? thirdRaw ?? "" : secondRaw ?? "");
+  const feeCents = parseMoneyToCents(requireCapacity ? fourthRaw : thirdRaw ?? "0");
   const slug = normalizeSlug(name ?? "");
 
   if (
     !name ||
     !slug ||
-    !Number.isInteger(capacity) ||
-    capacity <= 0 ||
-    capacity > 5000 ||
+    (requireCapacity &&
+      (!Number.isInteger(capacity) || !capacity || capacity <= 0 || capacity > 5000)) ||
     priceCents === null ||
     feeCents === null
   ) {
@@ -1348,11 +2378,78 @@ function parseInitialEntryDefinition(value: string, options: { numbered: boolean
     slug,
     hasNumberedSeats: options.numbered,
     capacity,
-    createInventorySeats: !options.numbered,
+    createInventorySeats: !options.numbered && capacity !== null,
     ticketType: "full" as const,
     label: name,
     priceCents,
     feeCents,
+  };
+}
+
+function renderEntryItemPrompt(draft: Record<string, unknown>) {
+  return renderCreateEventPrompt("entryItem");
+}
+
+function parseInitialOfferDefinition(value: string) {
+  const moneyPattern = "(?:R\\$\\s*)?\\d+(?:[.,]\\d{2})?";
+  const separatorPattern = "\\s*(?:\\||,|\\s+-\\s+|-|\\s+)\\s*";
+  const match = value
+    .trim()
+    .match(new RegExp(`^(.+?)${separatorPattern}(${moneyPattern})(?:${separatorPattern}(${moneyPattern}))?$`, "i"));
+  if (!match) return null;
+
+  const [, nameRaw, priceRaw, feeRaw = "0"] = match;
+  const name = nameRaw?.trim();
+  const priceCents = parseMoneyToCents(priceRaw ?? "");
+  const feeCents = parseMoneyToCents(feeRaw);
+
+  if (!name || priceCents === null || feeCents === null) return null;
+  const normalizedName = normalizeAdminText(name);
+  const ticketType: AdminTicketType =
+    /\b(meia|estudante|senior|sênior|idoso|pcd|professor)\b/.test(normalizedName)
+      ? "half"
+      : /\b(cortesia|gratis|grátis|gratuito|free)\b/.test(normalizedName)
+        ? "free"
+        : /\b(promocional|promo)\b/.test(normalizedName)
+          ? "promotional"
+          : "full";
+
+  return {
+    ticketType,
+    label: name,
+    priceCents,
+    feeCents,
+  };
+}
+
+function parseCreateEventSessionQuantities(value: string) {
+  const normalized = normalizeAdminText(value);
+  const extractBefore = (word: string) => {
+    const match = normalized.match(new RegExp(`(\\d+)\\s*${word}`));
+    return match ? Number(match[1]) : null;
+  };
+  const numbers = normalized.match(/\d+/g)?.map(Number) ?? [];
+
+  const datesCount =
+    extractBefore("data") ??
+    extractBefore("datas") ??
+    (normalized.includes("data") && numbers.length > 1 ? numbers[numbers.length - 1] : null);
+  const sessionsPerDate =
+    extractBefore("sessao") ??
+    extractBefore("sessoes") ??
+    extractBefore("sess") ??
+    null;
+
+  if (datesCount) {
+    return {
+      datesCount,
+      sessionsPerDate: sessionsPerDate ?? null,
+    };
+  }
+
+  return {
+    datesCount: numbers[0] ?? null,
+    sessionsPerDate,
   };
 }
 
@@ -1365,11 +2462,18 @@ function getPreviousCreateEventField(draft: Record<string, unknown>) {
     state: "city",
     venueName: "state",
     imageUrl: "venueName",
-    startsAt: "imageUrl",
-    entryModel: "startsAt",
+    dateCount: "imageUrl",
+    sessionsPerDate: "dateCount",
+    sessionItem: "sessionsPerDate",
+    entryModel: "sessionItem",
     singleEntryDetails: "entryModel",
-    entryCount: "entryModel",
+    entryCapacityMode: "entryModel",
+    sharedEntryCapacity: "entryCapacityMode",
+    entryCount: "entryCapacityMode",
     entryItem: "entryCount",
+    entrySeatItem: "entryItem",
+    entrySeatMapVisual: "entrySeatItem",
+    entryOfferItem: "entryCount",
     status: "entryModel",
   };
 
@@ -1390,6 +2494,43 @@ function stepBackCreateEventDraft(draft: Record<string, unknown>) {
     }
   }
 
+  if (currentField === "entrySeatItem") {
+    delete nextDraft.pendingNumberedSection;
+    nextDraft.field = "entryItem";
+    return nextDraft;
+  }
+
+  if (currentField === "entrySeatMapVisual") {
+    delete nextDraft.pendingNumberedSection;
+    nextDraft.field = "entrySeatItem";
+    return nextDraft;
+  }
+
+  if (currentField === "entryOfferItem") {
+    const offers = getDraftArray<{
+      ticketType: AdminTicketType;
+      label: string;
+      priceCents: number;
+      feeCents: number;
+    }>(nextDraft, "sharedPriceOptions");
+    if (offers.length > 0) {
+      nextDraft.sharedPriceOptions = offers.slice(0, -1);
+      nextDraft.currentEntryIndex = offers.length;
+      nextDraft.field = "entryOfferItem";
+      return nextDraft;
+    }
+  }
+
+  if (currentField === "sessionItem") {
+    const sessionsStartsAt = getDraftArray<string>(nextDraft, "sessionsStartsAt");
+    if (sessionsStartsAt.length > 0) {
+      nextDraft.sessionsStartsAt = sessionsStartsAt.slice(0, -1);
+      nextDraft.currentSessionIndex = sessionsStartsAt.length;
+      nextDraft.field = "sessionItem";
+      return nextDraft;
+    }
+  }
+
   const previousField = getPreviousCreateEventField(nextDraft);
   if (!previousField) {
     return null;
@@ -1403,8 +2544,24 @@ function stepBackCreateEventDraft(draft: Record<string, unknown>) {
     delete nextDraft.currentEntryIndex;
   }
 
+  if (previousField === "dateCount") {
+    delete nextDraft.sessionsStartsAt;
+    delete nextDraft.currentSessionIndex;
+    delete nextDraft.expectedSessionCount;
+    delete nextDraft.expectedDateCount;
+    delete nextDraft.sessionsPerDate;
+  }
+
+  if (previousField === "sessionsPerDate") {
+    delete nextDraft.sessionsStartsAt;
+    delete nextDraft.currentSessionIndex;
+    delete nextDraft.expectedSessionCount;
+    delete nextDraft.sessionsPerDate;
+  }
+
   if (previousField === "entryCount") {
     delete nextDraft.initialSections;
+    delete nextDraft.sharedPriceOptions;
     delete nextDraft.currentEntryIndex;
   }
 
@@ -1432,9 +2589,33 @@ function getCreateEventConfirmBackDraft(draft: Record<string, unknown>) {
   return nextDraft;
 }
 
+function renderCreateEventSeatPrompt(sectionName?: string) {
+  return [
+    `Envie os assentos do setor${sectionName ? ` ${sectionName}` : ""}.`,
+    "",
+    "Use uma fileira por linha.",
+    "Ex:",
+    "A 10 assentos 1 a 10",
+    "B 13 assentos de 13 a 1 - 1X esquerda",
+    "C: __ 1 2 3 4 5 6 7 8 9 10 11 12 13",
+    "D: 1 2 _ 4 5 6 7 8 9 10 11 12 13 14 15",
+  ].join("\n");
+}
+
+function renderCreateEventSeatMapVisualPrompt(sectionName?: string) {
+  return [
+    `Deseja criar o mapa visual do setor${sectionName ? ` ${sectionName}` : ""}?`,
+    "",
+    "> 1. Sim, criar mapa visual automaticamente",
+    "> 2. Não, apenas cadastrar os assentos",
+  ].join("\n");
+}
+
 function renderAdminEventListReply({
   events,
   hasMore,
+  title = "*EVENTOS ENCONTRADOS:*",
+  actionLabel = "detalhes",
 }: {
   events: Array<{
     option: number;
@@ -1446,30 +2627,46 @@ function renderAdminEventListReply({
     nextSessionStartsAt: string | null;
   }>;
   hasMore: boolean;
+  title?: string;
+  actionLabel?: string;
 }) {
+  const navigationLines = [
+    "Responda com o",
+    `> Digite o número do evento para ${actionLabel}`,
+    '> Digite "Mais" para ver mais eventos',
+  ];
+
   if (!events.length) {
-    return withAdminNavigationHint("Não encontrei eventos cadastrados.");
+    return withAdminNavigationHint([
+      title,
+      "",
+      "Nenhum evento encontrado.",
+      "",
+      ...navigationLines,
+    ].join("\n"));
   }
 
+  void hasMore;
+  const eventBlocks = events.map((event) =>
+    [
+      `${event.option}. ${event.title}`,
+      `   ${event.city}/${event.state}`,
+      `   Status: ${event.status}`,
+      `   Sessões: ${event.sessionsCount}`,
+      `   Próxima: ${
+        event.nextSessionStartsAt
+          ? formatDateTime(event.nextSessionStartsAt)
+          : "sem sessão futura"
+      }`,
+    ].join("\n"),
+  );
+
   return withAdminNavigationHint([
-    "Eventos encontrados:",
+    title,
     "",
-    ...events.map((event) =>
-      [
-        `${event.option}. ${event.title}`,
-        `   ${event.city}/${event.state}`,
-        `   Status: ${event.status}`,
-        `   Sessões: ${event.sessionsCount}`,
-        `   Próxima: ${
-          event.nextSessionStartsAt
-            ? formatDateTime(event.nextSessionStartsAt)
-            : "sem sessão futura"
-        }`,
-      ].join("\n"),
-    ),
+    eventBlocks.join("\n---\n"),
     "",
-    'Responda com o número para ver detalhes, "mais" para próxima página ou "voltar".',
-    ...(hasMore ? [] : ["Não há mais páginas."]),
+    ...navigationLines,
   ].join("\n"));
 }
 
@@ -1495,14 +2692,12 @@ function renderAdminEventDetails(event: AdminEventDetails) {
       ? event.sections.map((section) => `- ${section.name}`)
       : ["nenhum setor cadastrado"]),
     "",
-    "Opções:",
-    "1. Editar evento",
-    "2. Sessões e datas",
-    "3. Setores e assentos",
-    "4. Preços e lotes",
-    "5. Tirar da publicação/ativar",
-    "6. Voltar",
-    "7. Sair",
+    "*OPÇÕES:*",
+    "> 1. Editar evento",
+    "> 2. Setores e assentos",
+    "> 3. Ativar/Pausar evento",
+    "> 4. Voltar",
+    "> 5. Sair",
   ].join("\n"));
 }
 
@@ -1512,7 +2707,7 @@ function getAdminEventStatusActions(status: AdminEventStatus) {
       {
         option: 1,
         status: "draft" as const,
-        label: "Voltar para rascunho / tirar da publicação",
+        label: "Pausar evento",
       },
       { option: 2, status: "cancelled" as const, label: "Cancelar evento" },
     ];
@@ -1520,7 +2715,7 @@ function getAdminEventStatusActions(status: AdminEventStatus) {
 
   if (status === "draft") {
     return [
-      { option: 1, status: "published" as const, label: "Ativar/publicar" },
+      { option: 1, status: "published" as const, label: "Ativar evento" },
       { option: 2, status: "cancelled" as const, label: "Cancelar evento" },
     ];
   }
@@ -1532,17 +2727,17 @@ function renderAdminEventStatusMenu(event: AdminEventDetails) {
   const actions = getAdminEventStatusActions(event.status);
 
   return withAdminNavigationHint([
-    `Evento: ${event.title}`,
+    `*ATIVAR/PAUSAR EVENTO: ${event.title.toUpperCase()}*`,
     `Status atual: ${event.status}`,
     "",
     ...(actions.length
-      ? actions.map((action) => `${action.option}. ${action.label}`)
+      ? actions.map((action) => `> ${action.option}. ${action.label}`)
       : [
           event.status === "cancelled"
             ? "Este evento está cancelado. Reativação não está disponível por aqui."
             : "Este evento está finalizado. Alteração de publicação não está disponível por aqui.",
         ]),
-    `${actions.length + 1}. Voltar`,
+    `> ${actions.length + 1}. Voltar`,
   ].join("\n"));
 }
 
@@ -1552,24 +2747,38 @@ function renderCreateEventPrompt(field?: string) {
     artistName: "Qual o artista ou atração principal?",
     city: "Em qual cidade?",
     state: "Qual UF? Ex: SP",
-    venueName: "Qual o nome do local/teatro/arena?",
+    venueName:
+      "Qual o nome do local/teatro/arena?\n\nEscreva o nome ou responda 1 para ver os locais cadastrados.",
     imageUrl:
       "Envie a foto do evento agora ou cole uma URL pública https://...\nPara salvar como rascunho sem foto, responda PULAR. Para publicar, a foto é obrigatória.",
-    startsAt: "Qual a data e horário do evento? Ex: 10/06/2026 22:00",
-    status: "Agora escolha o status do evento.\n1. Rascunho\n2. Publicado",
+    dateCount:
+      "Quantas datas esse evento terá?\n\nSe quiser, responda junto com as sessões por data. Ex: 1 sessão, 3 datas",
+    sessionsPerDate: "Quantas sessões por data esse evento terá?",
+    sessionItem: "Qual a data e horário da sessão? Ex: 10/06/2026 22:00",
+    status:
+      "Para finalizar, escolha como deseja salvar o evento.\n\n> 1. Deixar como rascunho\n> 2. Publicar",
     entryModel:
       "Como serão as entradas/lugares?\n1. Entrada única sem assento marcado\n2. Vários setores/tipos sem assento marcado\n3. Setores com assentos marcados",
     singleEntryDetails:
-      "Envie a entrada com capacidade e valor.\nFormato: nome | capacidade | valor | taxa opcional\nEx: Entrada Geral | 500 | 120,00 | 12,00",
+      "Envie a entrada com capacidade e valor.\nFormato: nome capacidade valor taxa opcional\nEx: Entrada Geral 500 120,00 12,00",
+    entryCapacityMode:
+      "Como a carga de ingressos será controlada?\n\n> 1. Carga total compartilhada entre todos os tipos de compra\n> 2. Carga separada para cada tipo/setor",
+    sharedEntryCapacity:
+      "Qual a carga total compartilhada de ingressos?\nEx: 200",
     entryCount: "Quantos tipos/setores de ingresso serão cadastrados agora?",
     entryItem:
-      "Envie o tipo/setor com capacidade e valor.\nFormato: nome | capacidade | valor | taxa opcional\nEx: Pista | 500 | 120,00 | 12,00",
+      "Envie o tipo/setor com capacidade e valor.\nFormato: nome capacidade valor taxa opcional\nEx: Pista 500 120,00 12,00",
+    entrySeatItem: renderCreateEventSeatPrompt(),
+    entryOfferItem:
+      "Envie o tipo de compra/oferta com valor.\nFormato: nome valor taxa opcional\nEx: Meia entrada professor 60,00 0",
   };
 
   return withAdminNavigationHint(prompts[field ?? "title"]);
 }
 
 function renderCreateEventSummary(draft: Record<string, unknown>) {
+  const sessionsStartsAt = getDraftArray<string>(draft, "sessionsStartsAt");
+
   return [
     "Confirme o novo evento:",
     "",
@@ -1578,8 +2787,13 @@ function renderCreateEventSummary(draft: Record<string, unknown>) {
     `Cidade/UF: ${draft.city}/${draft.state}`,
     `Local: ${draft.venueName}`,
     `Foto: ${draft.imageUrl ? "cadastrada" : "ausente"}`,
-    `Data: ${formatDateTime(String(draft.startsAt))}`,
-    `Status: ${draft.status}`,
+    "Sessões:",
+    ...(sessionsStartsAt.length
+      ? sessionsStartsAt.map(
+          (startsAt, index) => `${index + 1}. ${formatDateTime(startsAt)}`,
+        )
+      : ["nenhuma sessão definida"]),
+    `Publicação: ${draft.status === "published" ? "publicar" : "rascunho"}`,
     "",
     ...renderInitialSectionsSummary(draft),
     "",
@@ -1592,25 +2806,34 @@ function renderEditEventSummary(draft: Record<string, unknown>) {
   const labelByField: Record<string, string> = {
     title: "Título",
     artist_name: "Artista",
-    city_state: "Cidade/UF",
+    city: "Cidade",
+    state: "Estado",
+    starts_at: "Data/hora",
     venue: "Local",
     image_url: "Foto do evento",
+    description: "Informações gerais",
     status: "Status",
   };
   const value =
-    field === "city_state"
-      ? `${draft.city}/${draft.state}`
-      : field === "venue"
+    field === "venue"
         ? draft.venueName
         : field === "image_url"
           ? draft.imageUrl
-        : field === "status"
-          ? draft.status
-          : field === "title"
-            ? draft.title
-            : field === "artist_name"
-              ? draft.artist_name
-              : "";
+          : field === "starts_at"
+            ? draft.startsAt
+          : field === "status"
+            ? draft.status
+            : field === "title"
+              ? draft.title
+              : field === "artist_name"
+                ? draft.artist_name
+                : field === "city"
+                  ? draft.city
+                  : field === "state"
+                    ? draft.state
+                    : field === "description"
+                      ? draft.description
+                      : "";
 
   return [
     "Confirmar alteração do evento?",
@@ -1624,8 +2847,103 @@ function renderEditEventSummary(draft: Record<string, unknown>) {
   ].join("\n");
 }
 
+function renderAdminEventEditMenu(eventTitle?: string) {
+  return withAdminNavigationHint([
+    eventTitle
+      ? `*EDITAR MEU EVENTO: ${eventTitle.toUpperCase()}*`
+      : "*EDITAR MEU EVENTO*",
+    "",
+    "> 1. Editar nome",
+    "> 2. Editar artista",
+    "> 3. Editar cidade",
+    "> 4. Editar estado",
+    "> 5. Editar local",
+    "> 6. Editar foto",
+    "> 7. Editar data/hora",
+    "> 8. Editar setores/lugares",
+    "> 9. Editar carga",
+    "> 10. Editar valores",
+    "> 11. Editar informações gerais",
+    "> 12. Voltar",
+    "> 13. Sair",
+  ].join("\n"));
+}
+
+function renderAdminEventPublishSelectReply(eventTitle?: string) {
+  return withAdminNavigationHint([
+    eventTitle
+      ? `*PUBLICAR EVENTO: ${eventTitle.toUpperCase()}*`
+      : "*PUBLICAR EVENTO*",
+    "",
+    "A edição foi salva.",
+    "",
+    "> 1. Deixar como rascunho",
+    "> 2. Publicar evento",
+    "> 3. Voltar",
+    "> 4. Sair",
+    "",
+    "Responda com o número da opção.",
+  ].join("\n"));
+}
+
 function getAdminEventsContext(baseContext: Partial<TicketConversationState>) {
   return baseContext.adminEvents ?? {};
+}
+
+function getAdminEventStatusFromListFilter(
+  filter?: NonNullable<TicketConversationState["adminEvents"]>["statusFilter"],
+) {
+  if (filter === "active") return "published" as const;
+  if (filter === "paused") return "draft" as const;
+  if (filter === "cancelled") return "cancelled" as const;
+  return "all" as const;
+}
+
+function getAdminEventListOptionsForMode(mode?: string) {
+  const optionsByMode: Record<string, { title: string; actionLabel: string }> = {
+    edit: {
+      title: "*ESCOLHA O EVENTO PARA EDITAR*",
+      actionLabel: "editar",
+    },
+    status: {
+      title: "*ESCOLHA O EVENTO PARA ATIVAR/PAUSAR*",
+      actionLabel: "ativar/pausar",
+    },
+    duplicate: {
+      title: "*ESCOLHA O EVENTO PARA DUPLICAR*",
+      actionLabel: "duplicar",
+    },
+    sections: {
+      title: "*ESCOLHA O EVENTO PARA GERENCIAR SETORES E ASSENTOS*",
+      actionLabel: "gerenciar setores e assentos",
+    },
+  };
+
+  return mode ? optionsByMode[mode] : undefined;
+}
+
+function canAdminAccessEvent(
+  event: Pick<AdminEventDetails, "createdByAdminUserId">,
+  scope: AdminEventScope,
+) {
+  return (
+    scope.canSeeAllEvents ||
+    !event.createdByAdminUserId ||
+    event.createdByAdminUserId === scope.adminUserId
+  );
+}
+
+async function getScopedAdminEventDetails(
+  eventId: string,
+  scope: AdminEventScope,
+) {
+  const details = await getAdminEventDetails(eventId);
+
+  if (!details.ok || !canAdminAccessEvent(details.event, scope)) {
+    return { ok: false as const, reason: "not_found" as const };
+  }
+
+  return details;
 }
 
 function withAdminEventsContext(
@@ -1641,12 +2959,43 @@ function withAdminEventsContext(
   };
 }
 
+function withAdminCourtesiesContext(
+  baseContext: TicketConversationState,
+  state: TicketConversationState["state"],
+  adminCourtesies: NonNullable<TicketConversationState["adminCourtesies"]>,
+) {
+  return {
+    ...baseContext,
+    step: state,
+    state,
+    adminCourtesies,
+  };
+}
+
+function getAdminCourtesiesContext(baseContext: TicketConversationState) {
+  return baseContext.adminCourtesies ?? {};
+}
+
 async function buildAdminEventsListContext(
   baseContext: TicketConversationState,
+  scope: AdminEventScope,
   page: number,
   search?: string | null,
+  statusFilter?: NonNullable<TicketConversationState["adminEvents"]>["statusFilter"],
+  listOptions?: {
+    title?: string;
+    actionLabel?: string;
+  },
 ) {
-  const result = await listAdminEvents({ page, search });
+  const resolvedListOptions =
+    listOptions ?? getAdminEventListOptionsForMode(baseContext.adminEvents?.mode);
+  const result = await listAdminEvents({
+    page,
+    search,
+    status: getAdminEventStatusFromListFilter(statusFilter),
+    ownerAdminUserId: scope.adminUserId,
+    canSeeAll: scope.canSeeAllEvents,
+  });
 
   if (!result.ok) {
     return {
@@ -1664,11 +3013,20 @@ async function buildAdminEventsListContext(
     reply: renderAdminEventListReply({
       events,
       hasMore: result.hasMore,
+      title: resolvedListOptions?.title,
+      actionLabel: resolvedListOptions?.actionLabel,
     }),
     nextContext: withAdminEventsContext(baseContext, "admin_events_list", {
       ...getAdminEventsContext(baseContext),
       page: result.page,
       hasMore: result.hasMore,
+      statusFilter,
+      ...(resolvedListOptions?.title
+        ? { listTitle: resolvedListOptions.title }
+        : {}),
+      ...(resolvedListOptions?.actionLabel
+        ? { listActionLabel: resolvedListOptions.actionLabel }
+        : {}),
       lastEvents: events.map((event) => ({
         option: event.option,
         eventId: event.eventId,
@@ -1682,10 +3040,28 @@ function getSelectedAdminEventId(
   text: string,
   adminEvents: NonNullable<TicketConversationState["adminEvents"]>,
 ) {
-  const option = text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
+  const trimmed = text.trim();
+  const option = trimmed.match(/^\d+$/) ? Number(trimmed) : null;
 
   if (!option) {
-    return adminEvents.selectedEventId ?? null;
+    if (
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        trimmed,
+      )
+    ) {
+      return trimmed;
+    }
+
+    const normalized = trimmed.toLocaleLowerCase("pt-BR");
+    const byName =
+      adminEvents.lastEvents?.find(
+        (event) => event.title.toLocaleLowerCase("pt-BR") === normalized,
+      ) ??
+      adminEvents.lastEvents?.find((event) =>
+        event.title.toLocaleLowerCase("pt-BR").includes(normalized),
+      );
+
+    return byName?.eventId ?? adminEvents.selectedEventId ?? null;
   }
 
   return (
@@ -1696,10 +3072,11 @@ function getSelectedAdminEventId(
 
 async function showAdminEventDetails(
   baseContext: TicketConversationState,
+  scope: AdminEventScope,
   eventId: string,
   prefix?: string,
 ) {
-  const details = await getAdminEventDetails(eventId);
+  const details = await getScopedAdminEventDetails(eventId, scope);
 
   if (!details.ok) {
     return {
@@ -1716,12 +3093,28 @@ async function showAdminEventDetails(
   };
 }
 
+async function adminEventHasPurchasableInventory(event: AdminEventDetails) {
+  for (const session of event.sessions) {
+    const sections = await listAvailableSections(session.sessionId, {
+      venueId: session.venueId,
+    });
+
+    if (sections.length > 0) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 async function handleAdminEventsFlow({
   baseContext,
+  scope,
   text,
   mediaUrl,
 }: {
   baseContext: TicketConversationState;
+  scope: AdminEventScope;
   text: string;
   mediaUrl?: string | null;
 }): Promise<RouteTicketMessageOutput | null> {
@@ -1741,6 +3134,20 @@ async function handleAdminEventsFlow({
     };
   }
 
+  if (baseContext.state === "admin_events_menu" && numericOption === 6) {
+    return {
+      reply: "__ADMIN_BACK__",
+      nextContext: withAdminEventsContext(baseContext, "admin_events_menu", adminEvents),
+    };
+  }
+
+  if (baseContext.state === "admin_events_menu" && numericOption === 7) {
+    return {
+      reply: "__ADMIN_EXIT__",
+      nextContext: withAdminEventsContext(baseContext, "admin_events_menu", adminEvents),
+    };
+  }
+
   if (normalized === "menu") {
     return {
       reply: renderAdminEventsMenu(),
@@ -1750,7 +3157,12 @@ async function handleAdminEventsFlow({
 
   if (baseContext.state === "admin_events_menu") {
     if (numericOption === 1) {
-      return buildAdminEventsListContext(baseContext, 0);
+      return {
+        reply: renderAdminEventListFilterMenu(),
+        nextContext: withAdminEventsContext(baseContext, "admin_events_list", {
+          mode: "select_list_filter",
+        }),
+      };
     }
 
     if (numericOption === 2) {
@@ -1762,39 +3174,33 @@ async function handleAdminEventsFlow({
       };
     }
 
-    if ([3, 4, 5, 6, 7].includes(numericOption ?? 0)) {
+    if ([3, 4, 5].includes(numericOption ?? 0)) {
       const modeByOption: Record<number, string> = {
         3: "edit",
         4: "status",
-        5: "sessions",
-        6: "sections",
-        7: "prices",
+        5: "duplicate",
       };
-      const list = await buildAdminEventsListContext(baseContext, 0);
+      const mode = modeByOption[numericOption ?? 0];
+      const list = await buildAdminEventsListContext(
+        withAdminEventsContext(baseContext, "admin_events_menu", {
+          ...adminEvents,
+          mode,
+        }),
+        scope,
+        0,
+        null,
+        undefined,
+      );
 
       return {
-        reply: [
-          `Escolha o evento para ${
-            numericOption === 3
-              ? "editar"
-              : numericOption === 4
-                ? "tirar da publicação/ativar"
-                : numericOption === 5
-                  ? "gerenciar sessões"
-                  : numericOption === 6
-                    ? "gerenciar setores e assentos"
-                    : "gerenciar preços"
-          }.`,
-          "",
-          list.reply,
-        ].join("\n"),
+        reply: list.reply,
         nextContext: {
           ...list.nextContext,
           state: "admin_events_list",
           step: "admin_events_list",
           adminEvents: {
             ...list.nextContext.adminEvents,
-            mode: modeByOption[numericOption ?? 0],
+            mode,
           },
         },
       };
@@ -1814,29 +3220,99 @@ async function handleAdminEventsFlow({
       };
     }
 
+    if (adminEvents.mode === "select_list_filter") {
+      const filterByOption: Record<
+        number,
+        NonNullable<TicketConversationState["adminEvents"]>["statusFilter"]
+      > = {
+        1: "active",
+        2: "paused",
+        3: "cancelled",
+        4: "all",
+      };
+
+      if (numericOption === 5) {
+        return {
+          reply: renderAdminEventsMenu(),
+          nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
+        };
+      }
+
+      if (numericOption === 6) {
+        return {
+          reply: "__ADMIN_EXIT__",
+          nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
+        };
+      }
+
+      const statusFilter = numericOption ? filterByOption[numericOption] : undefined;
+
+      if (!statusFilter) {
+        return {
+          reply: renderAdminEventListFilterMenu(),
+          nextContext: withAdminEventsContext(baseContext, "admin_events_list", {
+            mode: "select_list_filter",
+          }),
+        };
+      }
+
+      return buildAdminEventsListContext(baseContext, scope, 0, null, statusFilter);
+    }
+
     if (normalized === "mais") {
       if (adminEvents.hasMore === false) {
         return {
           reply: [
-            "Não há mais páginas de eventos.",
+            adminEvents.listTitle ?? "*EVENTOS ENCONTRADOS:*",
             "",
-            'Responda com o número para ver detalhes ou "voltar".',
+            "Não há mais eventos para mostrar.",
+            "",
+            "Responda com o",
+            `> Digite o número do evento para ${adminEvents.listActionLabel ?? "detalhes"}`,
+            '> Digite "Mais" para ver mais eventos',
           ].join("\n"),
           nextContext: withAdminEventsContext(baseContext, "admin_events_list", adminEvents),
         };
       }
 
-      return buildAdminEventsListContext(baseContext, (adminEvents.page ?? 0) + 1);
+      return buildAdminEventsListContext(
+        baseContext,
+        scope,
+        (adminEvents.page ?? 0) + 1,
+        null,
+        adminEvents.statusFilter,
+        {
+          title: adminEvents.listTitle,
+          actionLabel: adminEvents.listActionLabel,
+        },
+      );
     }
 
     const eventId = getSelectedAdminEventId(text, adminEvents);
 
     if (!eventId) {
-      return buildAdminEventsListContext(baseContext, 0, text);
+      if (numericOption) {
+        return {
+          reply: [
+            "Não encontrei essa opção na lista atual.",
+            "",
+            "Digite o número do evento que aparece na lista, \"Mais\" para ver mais eventos ou \"Voltar\".",
+          ].join("\n"),
+          nextContext: withAdminEventsContext(baseContext, "admin_events_list", adminEvents),
+        };
+      }
+
+      return buildAdminEventsListContext(
+        baseContext,
+        scope,
+        0,
+        text,
+        adminEvents.statusFilter,
+      );
     }
 
     if (adminEvents.mode === "edit") {
-      const details = await getAdminEventDetails(eventId);
+      const details = await getScopedAdminEventDetails(eventId, scope);
 
       if (!details.ok) {
         return {
@@ -1846,19 +3322,7 @@ async function handleAdminEventsFlow({
       }
 
       return {
-        reply: [
-          `Editar evento: ${details.event.title}`,
-          "",
-          "1. Título",
-          "2. Artista",
-          "3. Cidade/UF",
-          "4. Local",
-          "5. Foto do evento",
-          "6. Status",
-          "7. Voltar",
-          "",
-          "Responda com o número do campo.",
-        ].join("\n"),
+        reply: renderAdminEventEditMenu(details.event.title),
         nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
           selectedEventId: eventId,
         }),
@@ -1866,7 +3330,7 @@ async function handleAdminEventsFlow({
     }
 
     if (adminEvents.mode === "status") {
-      const details = await getAdminEventDetails(eventId);
+      const details = await getScopedAdminEventDetails(eventId, scope);
 
       if (!details.ok) {
         return {
@@ -1883,19 +3347,61 @@ async function handleAdminEventsFlow({
       };
     }
 
-    if (adminEvents.mode === "sessions") {
-      return showAdminEventSessionsMenu(baseContext, eventId);
+    if (adminEvents.mode === "duplicate") {
+      const details = await getScopedAdminEventDetails(eventId, scope);
+
+      if (!details.ok) {
+        return {
+          reply: "Não encontrei esse evento.",
+          nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
+        };
+      }
+
+      const duplicateResult = await duplicateAdminEvent({
+        eventId,
+        createdByAdminUserId: scope.adminUserId,
+        createdByAdminPhone: scope.adminPhone,
+      });
+
+      if (!duplicateResult.ok) {
+        return {
+          reply: "Não consegui duplicar esse evento agora.",
+          nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
+        };
+      }
+
+      const duplicatedDetails = await getScopedAdminEventDetails(
+        duplicateResult.eventId,
+        scope,
+      );
+
+      return {
+        reply: [
+          "*EVENTO DUPLICADO*",
+          `> Origem: ${details.event.title}`,
+          duplicatedDetails.ok
+            ? `> Novo evento: ${duplicatedDetails.event.title}`
+            : "> Novo evento criado como rascunho",
+          `> Sessões copiadas: ${duplicateResult.sessionsCount}`,
+          `> Setores copiados: ${duplicateResult.createdSectionsCount}`,
+          `> Assentos/unidades copiados: ${duplicateResult.createdSeatsCount}`,
+          `> Valores copiados: ${duplicateResult.createdPricesCount}`,
+          "",
+          renderAdminEventEditMenu(
+            duplicatedDetails.ok ? duplicatedDetails.event.title : undefined,
+          ),
+        ].join("\n"),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
+          selectedEventId: duplicateResult.eventId,
+        }),
+      };
     }
 
     if (adminEvents.mode === "sections") {
-      return showAdminEventSectionsMenu(baseContext, eventId);
+      return showAdminEventSectionsMenu(baseContext, scope, eventId);
     }
 
-    if (adminEvents.mode === "prices") {
-      return showAdminEventPricesMenu(baseContext, eventId);
-    }
-
-    return showAdminEventDetails(baseContext, eventId);
+    return showAdminEventDetails(baseContext, scope, eventId);
   }
 
   if (baseContext.state === "admin_event_detail") {
@@ -1909,27 +3415,19 @@ async function handleAdminEventsFlow({
     }
 
     if (numericOption === 1) {
+      const details = await getScopedAdminEventDetails(eventId, scope);
+
       return {
-        reply: [
-          "1. Título",
-          "2. Artista",
-          "3. Cidade/UF",
-          "4. Local",
-          "5. Foto do evento",
-          "6. Status",
-          "7. Voltar",
-        ].join("\n"),
+        reply: renderAdminEventEditMenu(details.ok ? details.event.title : undefined),
         nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
           selectedEventId: eventId,
         }),
       };
     }
 
-    if (numericOption === 2) return showAdminEventSessionsMenu(baseContext, eventId);
-    if (numericOption === 3) return showAdminEventSectionsMenu(baseContext, eventId);
-    if (numericOption === 4) return showAdminEventPricesMenu(baseContext, eventId);
-    if (numericOption === 5) {
-      const details = await getAdminEventDetails(eventId);
+    if (numericOption === 2) return showAdminEventSectionsMenu(baseContext, scope, eventId);
+    if (numericOption === 3) {
+      const details = await getScopedAdminEventDetails(eventId, scope);
 
       if (!details.ok) {
         return {
@@ -1946,12 +3444,24 @@ async function handleAdminEventsFlow({
       };
     }
 
-    if (numericOption === 6) {
-      return buildAdminEventsListContext(baseContext, adminEvents.page ?? 0);
+    if (numericOption === 4) {
+      return buildAdminEventsListContext(
+        baseContext,
+        scope,
+        adminEvents.page ?? 0,
+        null,
+        adminEvents.statusFilter,
+      );
     }
 
     if (isBackText(text) || isAbortText(text)) {
-      return buildAdminEventsListContext(baseContext, adminEvents.page ?? 0);
+      return buildAdminEventsListContext(
+        baseContext,
+        scope,
+        adminEvents.page ?? 0,
+        null,
+        adminEvents.statusFilter,
+      );
     }
   }
 
@@ -1990,14 +3500,35 @@ async function handleAdminEventsFlow({
       city: "state",
       state: "venueName",
       venueName: "imageUrl",
-      imageUrl: "startsAt",
-      startsAt: "entryModel",
+      imageUrl: "dateCount",
+      dateCount: null,
+      sessionsPerDate: null,
+      sessionItem: null,
       status: null,
       entryModel: null,
       singleEntryDetails: null,
+      entryCapacityMode: null,
+      sharedEntryCapacity: null,
       entryCount: null,
       entryItem: null,
+      entrySeatItem: null,
+      entrySeatMapVisual: null,
+      entryOfferItem: null,
     };
+
+    if (
+      ["entryCount", "entryItem", "singleEntryDetails"].includes(field) &&
+      !draft.entryCapacityModeConfirmed
+    ) {
+      draft.field = "entryCapacityMode";
+
+      return {
+        reply: renderCreateEventPrompt("entryCapacityMode"),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+          draft,
+        }),
+      };
+    }
 
     if (field === "state") {
       const state = text.trim().toUpperCase();
@@ -2010,7 +3541,170 @@ async function handleAdminEventsFlow({
         };
       }
       draft[field] = state;
-    } else if (field === "startsAt") {
+    } else if (field === "venueName") {
+      const venueOption = text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
+      const lastVenues = getDraftArray<{
+        option: number;
+        name: string;
+        city: string;
+        state: string;
+      }>(draft, "lastVenues");
+      const selectedVenue = lastVenues.find((venue) => venue.option === venueOption);
+
+      if (selectedVenue) {
+        draft[field] = selectedVenue.name;
+      } else if (venueOption === 1) {
+        const venuesResult = await listAdminVenues({
+          city: String(draft.city ?? ""),
+          state: String(draft.state ?? ""),
+          limit: 10,
+        });
+
+        if (!venuesResult.ok) {
+          return {
+            reply: "Não consegui listar os locais cadastrados agora. Escreva o nome do local.",
+            nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+              draft,
+            }),
+          };
+        }
+
+        return {
+          reply: [
+            "Locais cadastrados:",
+            "",
+            ...(venuesResult.venues.length
+              ? venuesResult.venues.map(
+                  (venue) =>
+                    `${venue.option}. ${venue.name} - ${venue.city}/${venue.state}`,
+                )
+              : ["Nenhum local cadastrado para essa cidade/UF."]),
+            "",
+            "Responda com o número do local ou escreva o nome de um novo local.",
+          ].join("\n"),
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft: {
+              ...draft,
+              lastVenues: venuesResult.venues,
+            },
+          }),
+        };
+      } else {
+        const value = text.trim();
+        if (!value) {
+          return {
+            reply: "Valor vazio. Envie o nome do local.",
+            nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+              draft,
+            }),
+          };
+        }
+        draft[field] = value;
+      }
+    } else if (field === "dateCount") {
+      const quantities = parseCreateEventSessionQuantities(text);
+      const datesCount = quantities.datesCount;
+      const sessionsPerDate = quantities.sessionsPerDate;
+
+      if (!Number.isInteger(datesCount) || !datesCount || datesCount < 1 || datesCount > 30) {
+        return {
+          reply: "Quantidade inválida. Envie o número de datas, de 1 a 30.",
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+
+      draft.expectedDateCount = datesCount;
+
+      if (
+        !Number.isInteger(sessionsPerDate) ||
+        !sessionsPerDate ||
+        sessionsPerDate < 1 ||
+        sessionsPerDate > 10
+      ) {
+        draft.field = "sessionsPerDate";
+
+        return {
+          reply: renderCreateEventPrompt("sessionsPerDate"),
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+
+      const totalSessions = datesCount * sessionsPerDate;
+      if (totalSessions > 60) {
+        return {
+          reply: "Quantidade muito alta. Crie até 60 sessões por evento.",
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+
+      draft.sessionsPerDate = sessionsPerDate;
+      draft.expectedSessionCount = totalSessions;
+      draft.currentSessionIndex = 1;
+      draft.sessionsStartsAt = [];
+      draft.field = "sessionItem";
+
+      return {
+        reply: [
+          `Sessão/data 1 de ${totalSessions}.`,
+          "",
+          renderCreateEventPrompt("sessionItem"),
+        ].join("\n"),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+          draft,
+        }),
+      };
+    } else if (field === "sessionsPerDate") {
+      const sessionsPerDate = Number(text.trim().match(/\d+/)?.[0] ?? "");
+      const datesCount = Number(draft.expectedDateCount ?? 0);
+
+      if (
+        !Number.isInteger(sessionsPerDate) ||
+        sessionsPerDate < 1 ||
+        sessionsPerDate > 10 ||
+        !Number.isInteger(datesCount) ||
+        datesCount < 1
+      ) {
+        return {
+          reply: "Quantidade inválida. Envie o número de sessões por data, de 1 a 10.",
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+
+      const totalSessions = datesCount * sessionsPerDate;
+      if (totalSessions > 60) {
+        return {
+          reply: "Quantidade muito alta. Crie até 60 sessões por evento.",
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+
+      draft.sessionsPerDate = sessionsPerDate;
+      draft.expectedSessionCount = totalSessions;
+      draft.currentSessionIndex = 1;
+      draft.sessionsStartsAt = [];
+      draft.field = "sessionItem";
+
+      return {
+        reply: [
+          `Sessão/data 1 de ${totalSessions}.`,
+          "",
+          renderCreateEventPrompt("sessionItem"),
+        ].join("\n"),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+          draft,
+        }),
+      };
+    } else if (field === "sessionItem") {
       const startsAt = parseBrazilianDateTime(text);
       if (!startsAt || new Date(startsAt).getTime() <= Date.now()) {
         return {
@@ -2020,7 +3714,37 @@ async function handleAdminEventsFlow({
           }),
         };
       }
-      draft[field] = startsAt;
+
+      const expectedCount = Number(draft.expectedSessionCount ?? 0);
+      const currentIndex = Number(draft.currentSessionIndex ?? 1);
+      const sessionsStartsAt = getDraftArray<string>(draft, "sessionsStartsAt");
+      draft.sessionsStartsAt = [...sessionsStartsAt, startsAt];
+
+      if (currentIndex < expectedCount) {
+        draft.currentSessionIndex = currentIndex + 1;
+        draft.field = "sessionItem";
+
+        return {
+          reply: [
+            `Sessão cadastrada: ${formatDateTime(startsAt)}.`,
+            "",
+            `Sessão/data ${currentIndex + 1} de ${expectedCount}.`,
+            "",
+            renderCreateEventPrompt("sessionItem"),
+          ].join("\n"),
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+
+      draft.field = "entryModel";
+      return {
+        reply: renderCreateEventPrompt("entryModel"),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+          draft,
+        }),
+      };
     } else if (field === "imageUrl") {
       const normalized = normalizeAdminText(text);
       if (["pular", "sem", "nenhum"].includes(normalized)) {
@@ -2063,9 +3787,9 @@ async function handleAdminEventsFlow({
       const option = text.trim();
       if (option === "1") {
         draft.entryModel = "single_general";
-        draft.field = "singleEntryDetails";
+        draft.field = "entryCapacityMode";
         return {
-          reply: renderCreateEventPrompt("singleEntryDetails"),
+          reply: renderCreateEventPrompt("entryCapacityMode"),
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
           }),
@@ -2073,9 +3797,9 @@ async function handleAdminEventsFlow({
       }
       if (option === "2") {
         draft.entryModel = "multiple_general";
-        draft.field = "entryCount";
+        draft.field = "entryCapacityMode";
         return {
-          reply: renderCreateEventPrompt("entryCount"),
+          reply: renderCreateEventPrompt("entryCapacityMode"),
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
           }),
@@ -2083,9 +3807,9 @@ async function handleAdminEventsFlow({
       }
       if (option === "3") {
         draft.entryModel = "numbered";
-        draft.field = "entryCount";
+        draft.field = "entryCapacityMode";
         return {
-          reply: renderCreateEventPrompt("entryCount"),
+          reply: renderCreateEventPrompt("entryCapacityMode"),
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
           }),
@@ -2098,12 +3822,97 @@ async function handleAdminEventsFlow({
           draft,
         }),
       };
-    } else if (field === "singleEntryDetails") {
-      const section = parseInitialEntryDefinition(text, { numbered: false });
-      if (!section) {
+    } else if (field === "entryCapacityMode") {
+      const option = text.trim();
+      if (option === "1") {
+        draft.entryCapacityMode = "shared";
+        draft.entryCapacityModeConfirmed = true;
+        draft.field = "sharedEntryCapacity";
+        return {
+          reply: renderCreateEventPrompt("sharedEntryCapacity"),
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+
+      if (option === "2") {
+        draft.entryCapacityMode = "per_type";
+        draft.entryCapacityModeConfirmed = true;
+        const existingCount = Number(draft.expectedEntryCount ?? 0);
+        draft.field =
+          draft.entryModel === "single_general"
+            ? "singleEntryDetails"
+            : Number.isInteger(existingCount) && existingCount > 0
+              ? "entryItem"
+              : "entryCount";
         return {
           reply:
-            "Não consegui entender. Envie assim: Entrada Geral | 500 | 120,00 | 12,00",
+            draft.field === "entryItem"
+              ? [
+                  `Envie o tipo/setor ${Number(draft.currentEntryIndex ?? 1)} de ${existingCount}.`,
+                  "",
+                  renderEntryItemPrompt(draft),
+                ].join("\n")
+              : renderCreateEventPrompt(String(draft.field)),
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+
+      return {
+        reply: renderCreateEventPrompt("entryCapacityMode"),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+          draft,
+        }),
+      };
+    } else if (field === "sharedEntryCapacity") {
+      const capacity = Number(text.trim().replace(/\D/g, ""));
+      if (!Number.isInteger(capacity) || capacity < 1 || capacity > 5000) {
+        return {
+          reply: "Carga inválida. Envie um número de 1 a 5000.",
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+
+      draft.sharedEntryCapacity = capacity;
+      const existingCount = Number(draft.expectedEntryCount ?? 0);
+
+      if (Number.isInteger(existingCount) && existingCount > 0) {
+        draft.sharedPriceOptions = [];
+        draft.currentEntryIndex = Number(draft.currentEntryIndex ?? 1) || 1;
+        draft.field = "entryOfferItem";
+
+        return {
+          reply: [
+            `Envie o tipo de compra/oferta ${draft.currentEntryIndex} de ${existingCount}.`,
+            "",
+            renderCreateEventPrompt("entryOfferItem"),
+          ].join("\n"),
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+
+      draft.field = "entryCount";
+      return {
+        reply: renderCreateEventPrompt("entryCount"),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+          draft,
+        }),
+      };
+    } else if (field === "singleEntryDetails") {
+      const section = parseInitialEntryDefinition(text, {
+        numbered: false,
+        requireCapacity: true,
+      });
+      if (!section) {
+        return {
+          reply: "Não consegui entender. Envie assim: Entrada Geral 500 120,00 12,00",
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
           }),
@@ -2129,14 +3938,210 @@ async function handleAdminEventsFlow({
       }
       draft.expectedEntryCount = count;
       draft.currentEntryIndex = 1;
-      draft.initialSections = [];
-      draft.field = "entryItem";
+      if (draft.entryCapacityMode === "shared") {
+        draft.sharedPriceOptions = [];
+        draft.field = "entryOfferItem";
+      } else {
+        draft.initialSections = [];
+        draft.field = "entryItem";
+      }
       return {
         reply: [
-          `Envie o tipo/setor 1 de ${count}.`,
+          draft.entryCapacityMode === "shared"
+            ? `Envie o tipo de compra/oferta 1 de ${count}.`
+            : `Envie o tipo/setor 1 de ${count}.`,
           "",
-          renderCreateEventPrompt("entryItem"),
+          draft.entryCapacityMode === "shared"
+            ? renderCreateEventPrompt("entryOfferItem")
+            : renderEntryItemPrompt(draft),
         ].join("\n"),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+          draft,
+        }),
+      };
+    } else if (field === "entryOfferItem") {
+      const expectedCount = Number(draft.expectedEntryCount ?? 0);
+      const currentIndex = Number(draft.currentEntryIndex ?? 1);
+      const offer = parseInitialOfferDefinition(text);
+      const currentOffers = getDraftArray<{
+        ticketType: AdminTicketType;
+        label: string;
+        priceCents: number;
+        feeCents: number;
+      }>(draft, "sharedPriceOptions");
+
+      if (!offer) {
+        return {
+          reply: "Não consegui entender. Envie assim: Meia entrada professor 60,00 0",
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+
+      draft.sharedPriceOptions = [...currentOffers, offer];
+
+      if (currentIndex < expectedCount) {
+        draft.currentEntryIndex = currentIndex + 1;
+        draft.field = "entryOfferItem";
+        return {
+          reply: [
+            `Oferta cadastrada: ${offer.label}.`,
+            "",
+            `Envie o tipo de compra/oferta ${currentIndex + 1} de ${expectedCount}.`,
+            "",
+            renderCreateEventPrompt("entryOfferItem"),
+          ].join("\n"),
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+
+      const sharedCapacity = Number(draft.sharedEntryCapacity ?? 0);
+      const priceOptions = getDraftArray<{
+        ticketType: AdminTicketType;
+        label: string;
+        priceCents: number;
+        feeCents: number;
+      }>({ sharedPriceOptions: draft.sharedPriceOptions }, "sharedPriceOptions");
+
+      const sharedSection = {
+        name: draft.entryModel === "numbered" ? "Assentos" : "Entrada Geral",
+        slug: draft.entryModel === "numbered" ? "assentos" : "entrada-geral",
+        hasNumberedSeats: draft.entryModel === "numbered",
+        capacity: sharedCapacity,
+        createInventorySeats: true,
+        ticketType: priceOptions[0]?.ticketType ?? "full",
+        label: priceOptions[0]?.label ?? "Entrada Geral",
+        priceCents: priceOptions[0]?.priceCents ?? 0,
+        feeCents: priceOptions[0]?.feeCents ?? 0,
+        priceOptions,
+      };
+
+      if (draft.entryModel === "numbered") {
+        draft.pendingNumberedSection = sharedSection;
+        draft.field = "entrySeatItem";
+
+        return {
+          reply: renderCreateEventSeatPrompt(sharedSection.name),
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+
+      draft.initialSections = [sharedSection];
+      draft.field = "status";
+      return {
+        reply: renderCreateEventPrompt("status"),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+          draft,
+        }),
+      };
+    } else if (field === "entrySeatItem") {
+      const expectedCount = Number(draft.expectedEntryCount ?? 0);
+      const currentIndex = Number(draft.currentEntryIndex ?? 1);
+      const pendingSectionRaw = draft.pendingNumberedSection;
+      const pendingSection =
+        pendingSectionRaw && typeof pendingSectionRaw === "object"
+          ? (pendingSectionRaw as Record<string, unknown>)
+          : null;
+      const seatLayout = parseSeatLayout(text);
+      const seatCodes = seatLayout.seatCodes;
+
+      if (
+        !pendingSection ||
+        seatLayout.invalidLines?.length ||
+        seatCodes.length === 0 ||
+        seatCodes.length > 5000
+      ) {
+        return {
+          reply: [
+            "Não consegui entender os assentos.",
+            ...(seatLayout.invalidLines?.length
+              ? [
+                  "",
+                  "Revise estas linhas:",
+                  ...seatLayout.invalidLines.map((line) => `> ${line}`),
+                ]
+              : []),
+            "",
+            renderCreateEventSeatPrompt(String(pendingSection?.name ?? "")),
+          ].join("\n"),
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+
+      const section = {
+        ...pendingSection,
+        capacity: seatCodes.length,
+        createInventorySeats: true,
+        seatCodes,
+        seatMapPositions: seatLayout.seatMapPositions,
+      };
+      const sectionName = String(pendingSection.name ?? "");
+      draft.pendingNumberedSection = section;
+      draft.field = "entrySeatMapVisual";
+
+      return {
+        reply: renderCreateEventSeatMapVisualPrompt(sectionName),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+          draft,
+        }),
+      };
+    } else if (field === "entrySeatMapVisual") {
+      const expectedCount = Number(draft.expectedEntryCount ?? 0);
+      const currentIndex = Number(draft.currentEntryIndex ?? 1);
+      const pendingSectionRaw = draft.pendingNumberedSection;
+      const pendingSection =
+        pendingSectionRaw && typeof pendingSectionRaw === "object"
+          ? (pendingSectionRaw as Record<string, unknown>)
+          : null;
+      const option = text.trim();
+
+      if (!pendingSection || !["1", "2"].includes(option)) {
+        return {
+          reply: renderCreateEventSeatMapVisualPrompt(
+            String(pendingSection?.name ?? ""),
+          ),
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+
+      const section = {
+        ...pendingSection,
+        createVisualMap: option === "1",
+      };
+      const sectionName = String(pendingSection.name ?? "");
+      const currentSections = getInitialSectionsFromDraft(draft);
+      draft.initialSections = [...currentSections, section];
+      delete draft.pendingNumberedSection;
+
+      if (currentIndex < expectedCount) {
+        draft.currentEntryIndex = currentIndex + 1;
+        draft.field = "entryItem";
+        return {
+          reply: [
+            `Setor cadastrado com assentos: ${sectionName}.`,
+            "",
+            `Envie o tipo/setor ${currentIndex + 1} de ${expectedCount}.`,
+            "",
+            renderCreateEventPrompt("entryItem"),
+          ].join("\n"),
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+
+      draft.field = "status";
+      return {
+        reply: renderCreateEventPrompt("status"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
           draft,
         }),
@@ -2145,7 +4150,10 @@ async function handleAdminEventsFlow({
       const expectedCount = Number(draft.expectedEntryCount ?? 0);
       const currentIndex = Number(draft.currentEntryIndex ?? 1);
       const numbered = draft.entryModel === "numbered";
-      const section = parseInitialEntryDefinition(text, { numbered });
+      const section = parseInitialEntryDefinition(text, {
+        numbered,
+        requireCapacity: true,
+      });
       const currentSections = getInitialSectionsFromDraft(draft);
       const totalCapacity = currentSections.reduce(
         (sum, item) => sum + (item.capacity ?? 0),
@@ -2154,8 +4162,18 @@ async function handleAdminEventsFlow({
 
       if (!section || totalCapacity > 5000) {
         return {
-          reply:
-            "Não consegui entender. Envie assim: Pista | 500 | 120,00 | 12,00",
+          reply: "Não consegui entender. Envie assim: Pista 500 120,00 12,00",
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+            draft,
+          }),
+        };
+      }
+
+      if (numbered) {
+        draft.pendingNumberedSection = section;
+        draft.field = "entrySeatItem";
+        return {
+          reply: renderCreateEventSeatPrompt(section.name),
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
           }),
@@ -2173,7 +4191,7 @@ async function handleAdminEventsFlow({
             "",
             `Envie o tipo/setor ${currentIndex + 1} de ${expectedCount}.`,
             "",
-            renderCreateEventPrompt("entryItem"),
+            renderEntryItemPrompt(draft),
           ].join("\n"),
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
@@ -2254,7 +4272,7 @@ async function handleAdminEventsFlow({
     const state = String(draft.state ?? "").trim().toUpperCase();
     const venueName = String(draft.venueName ?? "").trim();
     const imageUrl = normalizeEventImageUrl(String(draft.imageUrl ?? ""));
-    const startsAt = String(draft.startsAt ?? "");
+    const sessionsStartsAt = getDraftArray<string>(draft, "sessionsStartsAt");
     const status = String(draft.status ?? "");
     const initialSections = getInitialSectionsFromDraft(draft);
 
@@ -2264,8 +4282,8 @@ async function handleAdminEventsFlow({
       !city ||
       !/^[A-Z]{2}$/.test(state) ||
       !venueName ||
-      !startsAt ||
-      new Date(startsAt).getTime() <= Date.now() ||
+      sessionsStartsAt.length === 0 ||
+      sessionsStartsAt.some((startsAt) => new Date(startsAt).getTime() <= Date.now()) ||
       !isEventStatus(status) ||
       !["draft", "published"].includes(status) ||
       (status === "published" && !imageUrl) ||
@@ -2289,15 +4307,17 @@ async function handleAdminEventsFlow({
       state,
       venueName,
       imageUrl,
-      startsAt,
+      sessionsStartsAt,
       status,
       initialSections,
+      createdByAdminUserId: scope.adminUserId,
+      createdByAdminPhone: scope.adminPhone,
     });
 
     if (!result.ok) {
       return {
         reply: result.partialEventCreated
-          ? "O evento foi salvo como rascunho, mas não consegui criar a data. Entre em Sessões e datas para cadastrar a data antes de publicar."
+          ? "O evento foi salvo como rascunho, mas não consegui criar a data. Revise o evento antes de publicar."
           : "Não consegui criar o evento agora. Verifique os dados e tente novamente.",
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
       };
@@ -2306,13 +4326,10 @@ async function handleAdminEventsFlow({
     return {
       reply: [
         "Evento criado.",
+        `Sessões criadas: ${result.sessionsCount}`,
         `Setores/entradas criados: ${result.createdSectionsCount}`,
-        `Preços/lotes criados: ${result.createdPricesCount}`,
-        result.createdSeatsCount
-          ? `Unidades de entrada disponíveis criadas: ${result.createdSeatsCount}`
-          : "Assentos marcados ainda precisam ser cadastrados no menu Setores e assentos.",
-        "",
-        "Agora você pode cadastrar ou revisar assentos e preços.",
+        `Assentos/unidades criados: ${result.createdSeatsCount}`,
+        `Valores de venda criados: ${result.createdPricesCount}`,
       ].join("\n"),
       nextContext: withAdminEventsContext(baseContext, "admin_event_detail", {
         selectedEventId: result.eventId,
@@ -2321,31 +4338,85 @@ async function handleAdminEventsFlow({
   }
 
   if (baseContext.state === "admin_event_edit_menu") {
+    const eventId = adminEvents.selectedEventId;
     const fieldByOption: Record<number, string> = {
       1: "title",
       2: "artist_name",
-      3: "city_state",
-      4: "venue",
-      5: "image_url",
-      6: "status",
+      3: "city",
+      4: "state",
+      5: "venue",
+      6: "image_url",
+      7: "starts_at",
+      11: "description",
     };
     const field = numericOption ? fieldByOption[numericOption] : null;
 
-    if (!field || numericOption === 7) {
-      return showAdminEventDetails(baseContext, adminEvents.selectedEventId ?? "");
+    if (!eventId) {
+      return showAdminEventDetails(
+        baseContext,
+        scope,
+        adminEvents.selectedEventId ?? "",
+      );
+    }
+
+    if (numericOption === 8 || numericOption === 9) {
+      return showAdminEventSectionsMenu(baseContext, scope, eventId);
+    }
+
+    if (numericOption === 10) {
+      return showAdminEventPricesMenu(baseContext, scope, eventId);
+    }
+
+    if (numericOption === 13) {
+      return {
+        reply: "__ADMIN_EXIT__",
+        nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
+      };
+    }
+
+    if (numericOption === 12 || !field) {
+      return showAdminEventDetails(baseContext, scope, eventId);
+    }
+
+    if (field === "starts_at") {
+      const details = await getScopedAdminEventDetails(eventId, scope);
+
+      return {
+        reply: [
+          details.ok ? "Sessões cadastradas:" : "Sessões cadastradas:",
+          "",
+          details.ok && details.event.sessions.length
+            ? details.event.sessions
+                .map(
+                  (session, index) =>
+                    `${index + 1}. ${formatDateTime(session.startsAt)} - ${session.status}`,
+                )
+                .join("\n")
+            : "Nenhuma sessão cadastrada.",
+          "",
+          "Envie: número da sessão | nova data/hora",
+          "Ex: 1 | 10/06/2026 22:00",
+        ].join("\n"),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_edit_collecting", {
+          ...adminEvents,
+          field,
+        }),
+      };
     }
 
     return {
       reply:
-        field === "city_state"
-          ? "Envie a nova cidade/UF. Ex: Sorocaba/SP"
+        field === "city"
+          ? "Envie a nova cidade. Ex: Sorocaba"
+          : field === "state"
+            ? "Envie o novo estado/UF. Ex: SP"
           : field === "venue"
             ? "Envie o novo nome do local."
             : field === "image_url"
               ? "Envie a nova foto do evento ou cole uma URL pública https://..."
-            : field === "status"
-              ? "Envie o novo status: draft, published, cancelled ou finished."
-              : "Envie o novo valor.",
+              : field === "description"
+                  ? "Envie as informações gerais do evento."
+                  : "Envie o novo valor.",
       nextContext: withAdminEventsContext(baseContext, "admin_event_edit_collecting", {
         ...adminEvents,
         field,
@@ -2364,16 +4435,35 @@ async function handleAdminEventsFlow({
       };
     }
 
+    if (isBackText(text) || isAbortText(text)) {
+      const details = await getScopedAdminEventDetails(eventId, scope);
+
+      return {
+        reply: renderAdminEventEditMenu(details.ok ? details.event.title : undefined),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
+          selectedEventId: eventId,
+        }),
+      };
+    }
+
     let value: Record<string, unknown> | null = null;
-    if (field === "city_state") {
-      const [city, state] = text.split("/").map((part) => part.trim());
-      if (!city || !/^[A-Za-z]{2}$/.test(state ?? "")) {
+    if (field === "city") {
+      if (!text.trim()) {
         return {
-          reply: "Formato inválido. Envie como Sorocaba/SP.",
+          reply: "Cidade inválida. Envie novamente.",
           nextContext: withAdminEventsContext(baseContext, "admin_event_edit_collecting", adminEvents),
         };
       }
-      value = { field, city, state: state.toUpperCase() };
+      value = { field, city: text.trim() };
+    } else if (field === "state") {
+      const state = text.trim().toUpperCase();
+      if (!/^[A-Z]{2}$/.test(state)) {
+        return {
+          reply: "UF inválida. Envie com 2 letras. Ex: SP",
+          nextContext: withAdminEventsContext(baseContext, "admin_event_edit_collecting", adminEvents),
+        };
+      }
+      value = { field, state };
     } else if (field === "venue") {
       if (!text.trim()) {
         return {
@@ -2400,6 +4490,57 @@ async function handleAdminEventsFlow({
         };
       }
       value = { field, imageUrl };
+    } else if (field === "starts_at") {
+      const details = await getScopedAdminEventDetails(eventId, scope);
+      const [sessionOptionRaw, startsAtRaw] = text.includes("|")
+        ? text.split("|").map((part) => part.trim())
+        : details.ok && details.event.sessions.length === 1
+          ? ["1", text.trim()]
+          : ["", ""];
+      const session = details.ok
+        ? details.event.sessions[Number(sessionOptionRaw) - 1] ?? null
+        : null;
+      const startsAt = parseBrazilianDateTime(startsAtRaw ?? "");
+
+      if (!session) {
+        return {
+          reply: [
+            "Sessão inválida. Envie: número da sessão | nova data/hora",
+            "Ex: 1 | 10/06/2026 22:00",
+          ].join("\n"),
+          nextContext: withAdminEventsContext(baseContext, "admin_event_edit_collecting", adminEvents),
+        };
+      }
+
+      if (!startsAt || new Date(startsAt).getTime() <= Date.now()) {
+        return {
+          reply: "Data inválida ou no passado. Envie no formato 10/06/2026 22:00.",
+          nextContext: withAdminEventsContext(baseContext, "admin_event_edit_collecting", adminEvents),
+        };
+      }
+
+      const usage = await getAdminSessionUsage(session.sessionId);
+
+      if (!usage.ok) {
+        return {
+          reply: "Não consegui verificar reservas/ingressos dessa data agora.",
+          nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", adminEvents),
+        };
+      }
+
+      if (usage.hasUsage) {
+        return {
+          reply: [
+            "Essa data já tem reservas ou ingressos vinculados.",
+            "Para evitar quebrar ingressos emitidos, a alteração de data/hora está bloqueada neste fluxo.",
+          ].join("\n"),
+          nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", adminEvents),
+        };
+      }
+
+      value = { field, startsAt, sessionId: session.sessionId };
+    } else if (field === "description") {
+      value = { field, description: text.trim() || null };
     } else {
       if (!text.trim()) {
         return {
@@ -2421,9 +4562,25 @@ async function handleAdminEventsFlow({
 
   if (baseContext.state === "admin_event_edit_confirm") {
     const eventId = adminEvents.selectedEventId;
-    if (!eventId || isCancelText(text)) {
-      return showAdminEventDetails(baseContext, eventId ?? "");
+    if (!eventId) {
+      return showAdminEventDetails(baseContext, scope, eventId ?? "");
     }
+
+    if (isBackText(text)) {
+      const details = await getScopedAdminEventDetails(eventId, scope);
+
+      return {
+        reply: renderAdminEventEditMenu(details.ok ? details.event.title : undefined),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
+          selectedEventId: eventId,
+        }),
+      };
+    }
+
+    if (isCancelText(text)) {
+      return showAdminEventDetails(baseContext, scope, eventId);
+    }
+
     const draft = adminEvents.draft ?? {};
     const field = String(draft.field ?? "");
     const confirmed =
@@ -2449,13 +4606,15 @@ async function handleAdminEventsFlow({
     } else if (field === "artist_name") {
       const artistName = String(draft.artist_name ?? "").trim();
       if (artistName) values = { artist_name: artistName };
-    } else if (field === "city_state") {
+    } else if (field === "city") {
       const city = String(draft.city ?? "").trim();
+      if (city) values = { city };
+    } else if (field === "state") {
       const state = String(draft.state ?? "").trim().toUpperCase();
-      if (city && /^[A-Z]{2}$/.test(state)) values = { city, state };
+      if (/^[A-Z]{2}$/.test(state)) values = { state };
     } else if (field === "venue") {
       const venueName = String(draft.venueName ?? "").trim();
-      const details = await getAdminEventDetails(eventId);
+      const details = await getScopedAdminEventDetails(eventId, scope);
 
       if (!details.ok || !venueName) {
         values = null;
@@ -2481,7 +4640,7 @@ async function handleAdminEventsFlow({
       const status = String(draft.status ?? "");
       if (isEventStatus(status)) {
         if (status === "published") {
-          const details = await getAdminEventDetails(eventId);
+          const details = await getScopedAdminEventDetails(eventId, scope);
           if (!details.ok || !details.event.imageUrl) {
             return {
               reply:
@@ -2497,6 +4656,41 @@ async function handleAdminEventsFlow({
     } else if (field === "image_url") {
       const imageUrl = normalizeEventImageUrl(String(draft.imageUrl ?? ""));
       if (imageUrl) values = { image_url: imageUrl };
+    } else if (field === "description") {
+      values = { description: String(draft.description ?? "").trim() || null };
+    } else if (field === "starts_at") {
+      const startsAt = String(draft.startsAt ?? "");
+      const sessionId = String(draft.sessionId ?? "");
+
+      if (!startsAt || !sessionId) {
+        values = null;
+      } else {
+        const result = await updateAdminSession(sessionId, { starts_at: startsAt });
+
+        if (!result.ok) {
+          return {
+            reply: "Não consegui salvar a nova data/hora.",
+            nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
+              selectedEventId: eventId,
+            }),
+          };
+        }
+
+        const details = await getScopedAdminEventDetails(eventId, scope);
+
+        return {
+          reply: renderAdminEventPublishSelectReply(
+            details.ok ? details.event.title : undefined,
+          ),
+          nextContext: withAdminEventsContext(
+            baseContext,
+            "admin_event_edit_publish_select",
+            {
+              selectedEventId: eventId,
+            },
+          ),
+        };
+      }
     }
 
     if (!values) {
@@ -2509,26 +4703,71 @@ async function handleAdminEventsFlow({
     }
 
     const result = await updateAdminEvent(eventId, values);
-    return result.ok
-      ? showAdminEventDetails(
-          baseContext,
-          eventId,
-          field === "status" && draft.status === "cancelled" ? "EVENTO CANCELADO!" : undefined,
-        )
-      : {
-          reply: "Não consegui salvar a alteração.",
-          nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
-            selectedEventId: eventId,
-          }),
-        };
+    if (!result.ok) {
+      return {
+        reply: "Não consegui salvar a alteração.",
+        nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
+          selectedEventId: eventId,
+        }),
+      };
+    }
+
+    const details = await getScopedAdminEventDetails(eventId, scope);
+
+    return {
+      reply: renderAdminEventPublishSelectReply(
+        details.ok ? details.event.title : undefined,
+      ),
+      nextContext: withAdminEventsContext(
+        baseContext,
+        "admin_event_edit_publish_select",
+        {
+          selectedEventId: eventId,
+        },
+      ),
+    };
   }
 
-  if (baseContext.state === "admin_event_status_select") {
+  if (baseContext.state === "admin_event_edit_publish_select") {
     const eventId = adminEvents.selectedEventId;
+
     if (!eventId) {
-      return showAdminEventDetails(baseContext, eventId ?? "");
+      return {
+        reply: renderAdminEventsMenu(),
+        nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
+      };
     }
-    const details = await getAdminEventDetails(eventId);
+
+    if (numericOption === 4) {
+      return {
+        reply: "__ADMIN_EXIT__",
+        nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
+      };
+    }
+
+    if (numericOption === 3 || isCancelText(text) || isBackText(text)) {
+      return showAdminEventDetails(baseContext, scope, eventId);
+    }
+
+    const targetStatus =
+      numericOption === 1 ? "draft" : numericOption === 2 ? "published" : null;
+
+    if (!targetStatus) {
+      const details = await getScopedAdminEventDetails(eventId, scope);
+
+      return {
+        reply: renderAdminEventPublishSelectReply(
+          details.ok ? details.event.title : undefined,
+        ),
+        nextContext: withAdminEventsContext(
+          baseContext,
+          "admin_event_edit_publish_select",
+          adminEvents,
+        ),
+      };
+    }
+
+    const details = await getScopedAdminEventDetails(eventId, scope);
 
     if (!details.ok) {
       return {
@@ -2537,11 +4776,79 @@ async function handleAdminEventsFlow({
       };
     }
 
+    if (targetStatus === "published" && !details.event.imageUrl) {
+      return {
+        reply:
+          "Antes de publicar, cadastre a foto do evento em Editar meu evento > Editar foto.",
+        nextContext: withAdminEventsContext(
+          baseContext,
+          "admin_event_edit_publish_select",
+          adminEvents,
+        ),
+      };
+    }
+
+    if (
+      targetStatus === "published" &&
+      !(await adminEventHasPurchasableInventory(details.event))
+    ) {
+      return {
+        reply:
+          "Antes de publicar, cadastre setores/assentos e valores disponíveis para venda.",
+        nextContext: withAdminEventsContext(
+          baseContext,
+          "admin_event_edit_publish_select",
+          adminEvents,
+        ),
+      };
+    }
+
+    const result = await updateAdminEvent(eventId, {
+      status: targetStatus as AdminEventStatus,
+    });
+
+    return result.ok
+      ? showAdminEventDetails(
+          baseContext,
+          scope,
+          eventId,
+          targetStatus === "published"
+            ? "EVENTO PUBLICADO!"
+            : "EVENTO SALVO COMO RASCUNHO!",
+        )
+      : {
+          reply: "Não consegui alterar o status do evento.",
+          nextContext: withAdminEventsContext(
+            baseContext,
+            "admin_event_edit_publish_select",
+            adminEvents,
+          ),
+        };
+  }
+
+  if (baseContext.state === "admin_event_status_select") {
+    const eventId = adminEvents.selectedEventId;
+    if (!eventId) {
+      return showAdminEventDetails(baseContext, scope, eventId ?? "");
+    }
+    const details = await getScopedAdminEventDetails(eventId, scope);
+
+    if (!details.ok) {
+      return {
+        reply: "Não encontrei esse evento.",
+        nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
+      };
+    }
+
+    if (isBackText(text) || isAbortText(text)) {
+      return showAdminEventDetails(baseContext, scope, eventId);
+    }
+
     const actions = getAdminEventStatusActions(details.event.status);
     const backOption = actions.length + 1;
 
     if (numericOption === backOption) {
-      return showAdminEventDetails(baseContext, eventId);
+      return showAdminEventDetails(baseContext, scope, eventId);
     }
 
     const targetStatus =
@@ -2567,8 +4874,8 @@ async function handleAdminEventsFlow({
         targetStatus === "cancelled"
           ? "Digite CANCELAR EVENTO para confirmar o cancelamento. Não haverá exclusão física nem estorno automático."
           : targetStatus === "draft"
-            ? "Responda CONFIRMAR para voltar o evento para rascunho (draft) e tirá-lo da publicação."
-          : `Responda CONFIRMAR para alterar o status para ${targetStatus}.`,
+            ? "Responda CONFIRMAR para pausar o evento."
+          : "Responda CONFIRMAR para ativar o evento.",
       nextContext: withAdminEventsContext(baseContext, "admin_event_status_confirm", {
         selectedEventId: eventId,
         draft: { status: targetStatus },
@@ -2584,8 +4891,8 @@ async function handleAdminEventsFlow({
         ? normalizeAdminText(text) === "cancelar evento"
         : isConfirmText(text);
 
-    if (!eventId || isCancelText(text)) {
-      return showAdminEventDetails(baseContext, eventId ?? "");
+    if (!eventId || isBackText(text) || isCancelText(text)) {
+      return showAdminEventDetails(baseContext, scope, eventId ?? "");
     }
     if (!confirmed || !isEventStatus(String(status))) {
       return {
@@ -2598,6 +4905,7 @@ async function handleAdminEventsFlow({
     return result.ok
       ? showAdminEventDetails(
           baseContext,
+          scope,
           eventId,
           status === "cancelled" ? "EVENTO CANCELADO!" : undefined,
         )
@@ -2607,14 +4915,15 @@ async function handleAdminEventsFlow({
         };
   }
 
-  return handleAdminEventOperationalSubmenus({ baseContext, text });
+  return handleAdminEventOperationalSubmenus({ baseContext, scope, text });
 }
 
 async function showAdminEventSessionsMenu(
   baseContext: TicketConversationState,
+  scope: AdminEventScope,
   eventId: string,
 ) {
-  const details = await getAdminEventDetails(eventId);
+  const details = await getScopedAdminEventDetails(eventId, scope);
 
   if (!details.ok) {
     return {
@@ -2633,23 +4942,24 @@ async function showAdminEventSessionsMenu(
 
 function renderAdminSessionsMenu(eventTitle: string) {
   return withAdminNavigationHint([
-    `Sessões e datas - ${eventTitle}`,
+    `*DATAS DO EVENTO - ${eventTitle.toUpperCase()}*`,
     "",
-    "1. Listar sessões",
-    "2. Criar sessão",
-    "3. Editar data/hora de sessão",
-    "4. Pausar/abrir vendas da sessão",
-    "5. Cancelar sessão",
-    "6. Voltar",
-    "7. Sair",
+    "> 1. Listar sessões",
+    "> 2. Criar sessão",
+    "> 3. Editar data/hora de sessão",
+    "> 4. Pausar/abrir vendas da sessão",
+    "> 5. Cancelar sessão",
+    "> 6. Voltar",
+    "> 7. Sair",
   ].join("\n"));
 }
 
 async function showAdminEventSectionsMenu(
   baseContext: TicketConversationState,
+  scope: AdminEventScope,
   eventId: string,
 ) {
-  const details = await getAdminEventDetails(eventId);
+  const details = await getScopedAdminEventDetails(eventId, scope);
 
   if (!details.ok) {
     return {
@@ -2668,24 +4978,25 @@ async function showAdminEventSectionsMenu(
 
 function renderAdminSectionsMenu(eventTitle: string) {
   return withAdminNavigationHint([
-    `Setores e assentos - ${eventTitle}`,
+    `*SETORES E ASSENTOS - ${eventTitle.toUpperCase()}*`,
     "",
-    "1. Listar setores",
-    "2. Criar setor",
-    "3. Editar setor",
-    "4. Cadastrar assentos em lote",
-    "5. Bloquear/desbloquear assentos",
-    "6. Criar assentos da sessão",
-    "7. Voltar",
-    "8. Sair",
+    "> 1. Listar setores",
+    "> 2. Criar setor",
+    "> 3. Editar setor",
+    "> 4. Cadastrar assentos em lote",
+    "> 5. Bloquear/desbloquear assentos",
+    "> 6. Criar assentos da sessão",
+    "> 7. Voltar",
+    "> 8. Sair",
   ].join("\n"));
 }
 
 async function showAdminEventPricesMenu(
   baseContext: TicketConversationState,
+  scope: AdminEventScope,
   eventId: string,
 ) {
-  const details = await getAdminEventDetails(eventId);
+  const details = await getScopedAdminEventDetails(eventId, scope);
 
   if (!details.ok) {
     return {
@@ -2704,19 +5015,19 @@ async function showAdminEventPricesMenu(
 
 function renderAdminPricesMenu(eventTitle: string) {
   return withAdminNavigationHint([
-    `Preços e lotes - ${eventTitle}`,
+    `*VALORES DE VENDA - ${eventTitle.toUpperCase()}*`,
     "",
-    "1. Listar preços",
-    "2. Criar preço/lote",
-    "3. Editar preço/lote",
-    "4. Ativar/desativar preço",
-    "5. Voltar",
-    "6. Sair",
+    "> 1. Listar preços",
+    "> 2. Criar preço/lote",
+    "> 3. Editar preço/lote",
+    "> 4. Ativar/desativar preço",
+    "> 5. Voltar",
+    "> 6. Sair",
   ].join("\n"));
 }
 
-async function renderSessionsList(eventId: string) {
-  const details = await getAdminEventDetails(eventId);
+async function renderSessionsList(eventId: string, scope: AdminEventScope) {
+  const details = await getScopedAdminEventDetails(eventId, scope);
   if (!details.ok) return "Não encontrei esse evento.";
   const counts = await getAdminSessionCatalogCounts(details.event.sessions);
 
@@ -2738,8 +5049,12 @@ async function renderSessionsList(eventId: string) {
   ].join("\n");
 }
 
-async function renderSectionsList(eventId: string, sessionId?: string) {
-  const details = await getAdminEventDetails(eventId);
+async function renderSectionsList(
+  eventId: string,
+  scope: AdminEventScope,
+  sessionId?: string,
+) {
+  const details = await getScopedAdminEventDetails(eventId, scope);
   if (!details.ok || !details.event.venueId) return "Não encontrei venue para esse evento.";
   const result = await listAdminSections(details.event.venueId, sessionId);
   if (!result.ok) return "Não consegui listar setores.";
@@ -2764,8 +5079,8 @@ async function renderSectionsList(eventId: string, sessionId?: string) {
   ].join("\n");
 }
 
-async function getAdminPriceListForEvent(eventId: string) {
-  const details = await getAdminEventDetails(eventId);
+async function getAdminPriceListForEvent(eventId: string, scope: AdminEventScope) {
+  const details = await getScopedAdminEventDetails(eventId, scope);
   if (!details.ok) return { ok: false as const, reply: "Não encontrei esse evento." };
   if (!details.event.sessions.length) {
     return { ok: false as const, reply: "Esse evento ainda não tem sessões." };
@@ -2809,6 +5124,7 @@ async function getAdminPriceListForEvent(eventId: string) {
 
   return {
     ok: true as const,
+    eventTitle: details.event.title,
     prices,
     reply: [
     `Preços de ${details.event.title}:`,
@@ -2827,6 +5143,13 @@ async function getAdminPriceListForEvent(eventId: string) {
       : ["Nenhum preço cadastrado."]),
   ].join("\n"),
   };
+}
+
+function formatCompactAdminPriceLabel(label: string) {
+  return label
+    .replace(/\s*\([^)]*\)\s*/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function parseOptionalAdminDateTime(value: string | undefined) {
@@ -2869,9 +5192,11 @@ function selectSectionByOption(event: AdminEventDetails, value: string) {
 
 async function handleAdminEventOperationalSubmenus({
   baseContext,
+  scope,
   text,
 }: {
   baseContext: TicketConversationState;
+  scope: AdminEventScope;
   text: string;
 }): Promise<RouteTicketMessageOutput | null> {
   const adminEvents = getAdminEventsContext(baseContext);
@@ -2880,24 +5205,24 @@ async function handleAdminEventOperationalSubmenus({
 
   if (!eventId) return null;
 
-  if (isCancelText(text)) {
+  if (isBackText(text) || isCancelText(text)) {
     if (baseContext.state === "admin_event_sessions_menu") {
-      return showAdminEventDetails(baseContext, eventId);
+      return showAdminEventDetails(baseContext, scope, eventId);
     }
 
     if (baseContext.state === "admin_event_sections_menu") {
-      return showAdminEventDetails(baseContext, eventId);
+      return showAdminEventDetails(baseContext, scope, eventId);
     }
 
     if (baseContext.state === "admin_event_prices_menu") {
-      return showAdminEventDetails(baseContext, eventId);
+      return showAdminEventDetails(baseContext, scope, eventId);
     }
 
     if (
       baseContext.state === "admin_event_session_create_collecting" ||
       baseContext.state === "admin_event_session_edit_collecting"
     ) {
-      return showAdminEventSessionsMenu(baseContext, eventId);
+      return showAdminEventSessionsMenu(baseContext, scope, eventId);
     }
 
     if (
@@ -2905,21 +5230,21 @@ async function handleAdminEventOperationalSubmenus({
       baseContext.state === "admin_event_seats_create_collecting" ||
       baseContext.state === "admin_event_session_seats_confirm"
     ) {
-      return showAdminEventSectionsMenu(baseContext, eventId);
+      return showAdminEventSectionsMenu(baseContext, scope, eventId);
     }
 
     if (
       baseContext.state === "admin_event_price_create_collecting" ||
       baseContext.state === "admin_event_price_edit_collecting"
     ) {
-      return showAdminEventPricesMenu(baseContext, eventId);
+      return showAdminEventPricesMenu(baseContext, scope, eventId);
     }
   }
 
   if (baseContext.state === "admin_event_sessions_menu") {
     if (numericOption === 1) {
       return {
-        reply: await renderSessionsList(eventId),
+        reply: await renderSessionsList(eventId, scope),
         nextContext: withAdminEventsContext(baseContext, "admin_event_sessions_menu", adminEvents),
       };
     }
@@ -2933,7 +5258,7 @@ async function handleAdminEventOperationalSubmenus({
     if (numericOption === 3) {
       return {
         reply: [
-          await renderSessionsList(eventId),
+          await renderSessionsList(eventId, scope),
           "",
           "Envie: número da sessão | nova data/hora. Ex: 1 | 10/06/2026 22:30",
         ].join("\n"),
@@ -2946,7 +5271,7 @@ async function handleAdminEventOperationalSubmenus({
     if (numericOption === 4) {
       return {
         reply: [
-          await renderSessionsList(eventId),
+          await renderSessionsList(eventId, scope),
           "",
           "Envie: número da sessão | status. Ex: 1 | sales_open",
           "Status: scheduled, sales_open ou sales_closed.",
@@ -2961,7 +5286,7 @@ async function handleAdminEventOperationalSubmenus({
     if (numericOption === 5) {
       return {
         reply: [
-          await renderSessionsList(eventId),
+          await renderSessionsList(eventId, scope),
           "",
           "Envie o número da sessão que deseja cancelar.",
         ].join("\n"),
@@ -2971,13 +5296,13 @@ async function handleAdminEventOperationalSubmenus({
         }),
       };
     }
-    if (numericOption === 6) return showAdminEventDetails(baseContext, eventId);
+    if (numericOption === 6) return showAdminEventDetails(baseContext, scope, eventId);
   }
 
   if (baseContext.state === "admin_event_session_create_collecting") {
     if (adminEvents.mode === "confirm_create_session") {
       if (isCancelText(text)) {
-        return showAdminEventSessionsMenu(baseContext, eventId);
+        return showAdminEventSessionsMenu(baseContext, scope, eventId);
       }
       if (!isConfirmText(text)) {
         return {
@@ -3008,7 +5333,7 @@ async function handleAdminEventOperationalSubmenus({
     const [dateText, statusTextRaw] = text.split("|").map((part) => part.trim());
     const startsAt = parseBrazilianDateTime(dateText);
     const statusText = normalizeAdminText(statusTextRaw ?? "scheduled");
-    const details = await getAdminEventDetails(eventId);
+    const details = await getScopedAdminEventDetails(eventId, scope);
     if (!details.ok) return null;
     if (
       !startsAt ||
@@ -3037,11 +5362,11 @@ async function handleAdminEventOperationalSubmenus({
   }
 
   if (baseContext.state === "admin_event_session_edit_collecting") {
-    const details = await getAdminEventDetails(eventId);
+    const details = await getScopedAdminEventDetails(eventId, scope);
     if (!details.ok) return null;
 
     if (adminEvents.mode === "confirm_edit_session") {
-      if (isCancelText(text)) return showAdminEventSessionsMenu(baseContext, eventId);
+      if (isCancelText(text)) return showAdminEventSessionsMenu(baseContext, scope, eventId);
       if (!isConfirmText(text)) {
         return {
           reply: "Responda CONFIRMAR ou CANCELAR.",
@@ -3070,7 +5395,7 @@ async function handleAdminEventOperationalSubmenus({
     }
 
     if (adminEvents.mode === "confirm_cancel_session") {
-      if (isCancelText(text)) return showAdminEventSessionsMenu(baseContext, eventId);
+      if (isCancelText(text)) return showAdminEventSessionsMenu(baseContext, scope, eventId);
       if (normalizeAdminText(text) !== "cancelar sessao") {
         return {
           reply: "Digite CANCELAR SESSÃO para confirmar ou CANCELAR para abandonar.",
@@ -3235,7 +5560,7 @@ async function handleAdminEventOperationalSubmenus({
   if (baseContext.state === "admin_event_sections_menu") {
     if (numericOption === 1) {
       return {
-        reply: await renderSectionsList(eventId),
+        reply: await renderSectionsList(eventId, scope),
         nextContext: withAdminEventsContext(baseContext, "admin_event_sections_menu", adminEvents),
       };
     }
@@ -3248,7 +5573,7 @@ async function handleAdminEventOperationalSubmenus({
     if (numericOption === 3) {
       return {
         reply: [
-          await renderSectionsList(eventId),
+          await renderSectionsList(eventId, scope),
           "",
           "Envie: número do setor | nome | capacidade | status | numerado sim/não.",
           "Ex: 1 | Pista Premium | 500 | active | sim",
@@ -3261,14 +5586,22 @@ async function handleAdminEventOperationalSubmenus({
     }
     if (numericOption === 4) {
       return {
-        reply: "Envie: número do setor | assentos. Ex: 1 | A01,A02,A03 ou 1 | A, de 1 até 20",
+        reply: [
+          "Envie: número do setor | fileiras/assentos.",
+          "Ex: 1 | A 10 assentos 1 a 10",
+          "Ex: 1 | A 10 assentos 10 a 1",
+          "Você pode enviar várias linhas:",
+          "1 | A 10 assentos 1 a 10",
+          "B 15 assentos 11 a 25",
+          "C 20 assentos 26 a 45",
+        ].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_seats_create_collecting", adminEvents),
       };
     }
     if (numericOption === 5) {
       return {
         reply: [
-          await renderSectionsList(eventId),
+          await renderSectionsList(eventId, scope),
           "",
           "Envie: número do setor | status | assentos.",
           "Ex: 1 | blocked | A01,A02 ou 1 | active | A01,A02",
@@ -3285,13 +5618,13 @@ async function handleAdminEventOperationalSubmenus({
         nextContext: withAdminEventsContext(baseContext, "admin_event_session_seats_confirm", adminEvents),
       };
     }
-    if (numericOption === 7) return showAdminEventDetails(baseContext, eventId);
+    if (numericOption === 7) return showAdminEventDetails(baseContext, scope, eventId);
   }
 
   if (baseContext.state === "admin_event_section_create_collecting") {
     if (adminEvents.mode === "confirm_edit_section") {
       if (isCancelText(text)) {
-        return showAdminEventSectionsMenu(baseContext, eventId);
+        return showAdminEventSectionsMenu(baseContext, scope, eventId);
       }
       if (!isConfirmText(text)) {
         return {
@@ -3328,7 +5661,7 @@ async function handleAdminEventOperationalSubmenus({
 
     if (adminEvents.mode === "confirm_create_section") {
       if (isCancelText(text)) {
-        return showAdminEventSectionsMenu(baseContext, eventId);
+        return showAdminEventSectionsMenu(baseContext, scope, eventId);
       }
       if (!isConfirmText(text)) {
         return {
@@ -3340,7 +5673,7 @@ async function handleAdminEventOperationalSubmenus({
           ),
         };
       }
-      const details = await getAdminEventDetails(eventId);
+      const details = await getScopedAdminEventDetails(eventId, scope);
       if (!details.ok || !details.event.venueId) return null;
       const result = await createAdminSection({
         venueId: details.event.venueId,
@@ -3362,7 +5695,7 @@ async function handleAdminEventOperationalSubmenus({
       };
     }
 
-    const details = await getAdminEventDetails(eventId);
+    const details = await getScopedAdminEventDetails(eventId, scope);
     if (!details.ok || !details.event.venueId) return null;
 
     if (adminEvents.mode === "edit_section") {
@@ -3496,7 +5829,7 @@ async function handleAdminEventOperationalSubmenus({
   if (baseContext.state === "admin_event_seats_create_collecting") {
     if (adminEvents.mode === "confirm_edit_seat_status") {
       if (isCancelText(text)) {
-        return showAdminEventSectionsMenu(baseContext, eventId);
+        return showAdminEventSectionsMenu(baseContext, scope, eventId);
       }
       if (!isConfirmText(text)) {
         return {
@@ -3526,7 +5859,7 @@ async function handleAdminEventOperationalSubmenus({
 
     if (adminEvents.mode === "confirm_create_seats") {
       if (isCancelText(text)) {
-        return showAdminEventSectionsMenu(baseContext, eventId);
+        return showAdminEventSectionsMenu(baseContext, scope, eventId);
       }
       if (!isConfirmText(text)) {
         return {
@@ -3538,7 +5871,7 @@ async function handleAdminEventOperationalSubmenus({
           ),
         };
       }
-      const details = await getAdminEventDetails(eventId);
+      const details = await getScopedAdminEventDetails(eventId, scope);
       if (!details.ok || !details.event.venueId) return null;
       const result = await createAdminSeats({
         venueId: details.event.venueId,
@@ -3555,7 +5888,7 @@ async function handleAdminEventOperationalSubmenus({
       };
     }
 
-    const details = await getAdminEventDetails(eventId);
+    const details = await getScopedAdminEventDetails(eventId, scope);
     if (!details.ok || !details.event.venueId) return null;
 
     if (adminEvents.mode === "edit_seat_status") {
@@ -3624,7 +5957,8 @@ async function handleAdminEventOperationalSubmenus({
       };
     }
 
-    const [sectionNumberRaw, seatsRaw] = text.split("|").map((part) => part.trim());
+    const [sectionNumberRaw, ...seatParts] = text.split("|").map((part) => part.trim());
+    const seatsRaw = seatParts.join("|");
     const section = details.event.sections[Number(sectionNumberRaw) - 1];
     const seatCodes = parseSeatCodesOrRange(seatsRaw ?? "");
     if (!section || !seatCodes.length) {
@@ -3661,7 +5995,7 @@ async function handleAdminEventOperationalSubmenus({
   if (baseContext.state === "admin_event_session_seats_confirm") {
     if (adminEvents.mode === "confirm_create_session_seats") {
       if (isCancelText(text)) {
-        return showAdminEventSectionsMenu(baseContext, eventId);
+        return showAdminEventSectionsMenu(baseContext, scope, eventId);
       }
       if (!isConfirmText(text)) {
         return {
@@ -3687,7 +6021,7 @@ async function handleAdminEventOperationalSubmenus({
       };
     }
 
-    const details = await getAdminEventDetails(eventId);
+    const details = await getScopedAdminEventDetails(eventId, scope);
     if (!details.ok) return null;
     const [sessionNumberRaw, sectionNumberRaw] = text.split("|").map((part) => part.trim());
     const session = details.event.sessions[Number(sessionNumberRaw) - 1];
@@ -3719,11 +6053,12 @@ async function handleAdminEventOperationalSubmenus({
 
   if (baseContext.state === "admin_event_prices_menu") {
     if (numericOption === 1) {
-      const list = await getAdminPriceListForEvent(eventId);
+      const list = await getAdminPriceListForEvent(eventId, scope);
       return {
         reply: list.reply,
-        nextContext: withAdminEventsContext(baseContext, "admin_event_prices_menu", {
+        nextContext: withAdminEventsContext(baseContext, "admin_event_price_edit_collecting", {
           ...adminEvents,
+          mode: "view_prices",
           draft: list.ok ? { lastPrices: list.prices } : adminEvents.draft,
         }),
       };
@@ -3739,23 +6074,33 @@ async function handleAdminEventOperationalSubmenus({
       };
     }
     if (numericOption === 3) {
-      const list = await getAdminPriceListForEvent(eventId);
+      const list = await getAdminPriceListForEvent(eventId, scope);
       return {
         reply: [
-          list.reply,
+          list.ok
+            ? [
+                `Preços de ${list.eventTitle}:`,
+                "",
+                ...(list.prices.length
+                  ? list.prices.map(
+                      (price) => `${price.option}. ${formatCompactAdminPriceLabel(price.label)}`,
+                    )
+                  : ["Nenhum preço cadastrado."]),
+              ].join("\n")
+            : list.reply,
           "",
-          "Envie: número do preço | label | preço | taxa | início opcional | fim opcional.",
-          "Ex: 1 | Inteira 2 lote | 140,00 | 14,00 | - | -",
+          "QUAL PREÇO DESEJA EDITAR?",
+          "Responda com o número do preço.",
         ].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_price_edit_collecting", {
           ...adminEvents,
-          mode: "edit_price",
+          mode: "select_price_value",
           draft: list.ok ? { lastPrices: list.prices } : {},
         }),
       };
     }
     if (numericOption === 4) {
-      const list = await getAdminPriceListForEvent(eventId);
+      const list = await getAdminPriceListForEvent(eventId, scope);
       return {
         reply: [
           list.reply,
@@ -3770,12 +6115,12 @@ async function handleAdminEventOperationalSubmenus({
         }),
       };
     }
-    if (numericOption === 5) return showAdminEventDetails(baseContext, eventId);
+    if (numericOption === 5) return showAdminEventDetails(baseContext, scope, eventId);
   }
 
   if (baseContext.state === "admin_event_price_edit_collecting") {
     if (adminEvents.mode === "confirm_edit_price") {
-      if (isCancelText(text)) return showAdminEventPricesMenu(baseContext, eventId);
+      if (isCancelText(text)) return showAdminEventPricesMenu(baseContext, scope, eventId);
       if (!isConfirmText(text)) {
         return {
           reply: "Responda CONFIRMAR ou CANCELAR.",
@@ -3832,6 +6177,60 @@ async function handleAdminEventOperationalSubmenus({
       feeCents: number;
       status: string;
     }>(adminEvents.draft, "lastPrices");
+
+    if (adminEvents.mode === "collect_price_value") {
+      const priceCents = parseMoneyToCents(text);
+      if (priceCents === null) {
+        return {
+          reply: withAdminNavigationHint([
+            "VALOR INVÁLIDO",
+            "",
+            "Digite somente o novo valor.",
+            "Ex: 140,00",
+          ].join("\n")),
+          nextContext: withAdminEventsContext(
+            baseContext,
+            "admin_event_price_edit_collecting",
+            adminEvents,
+          ),
+        };
+      }
+
+      const result = await updateAdminPrice(String(adminEvents.draft?.priceId), {
+        price_cents: priceCents,
+      });
+
+      return {
+        reply: withAdminNavigationHint([
+          result.ok ? "*VALOR ATUALIZADO*" : "Não consegui atualizar o valor.",
+          ...(result.ok
+            ? [
+                `> Preço: ${String(adminEvents.draft?.priceLabel ?? "Preço")}`,
+                `> Valor anterior: ${formatCurrencyFromCents(Number(adminEvents.draft?.oldPriceCents ?? 0))}`,
+                `> Novo valor: ${formatCurrencyFromCents(priceCents)}`,
+                "",
+                "Reservas já criadas mantêm o valor congelado. A alteração afeta novas reservas.",
+              ]
+            : []),
+        ].join("\n")),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_price_edit_collecting", {
+          selectedEventId: eventId,
+          mode: "price_value_updated",
+        }),
+      };
+    }
+
+    if (adminEvents.mode === "view_prices" || adminEvents.mode === "price_value_updated") {
+      return {
+        reply: withAdminNavigationHint("Digite \"Voltar\" para voltar ao menu de valores."),
+        nextContext: withAdminEventsContext(
+          baseContext,
+          "admin_event_price_edit_collecting",
+          adminEvents,
+        ),
+      };
+    }
+
     const [priceNumberRaw, valueOneRaw, valueTwoRaw, valueThreeRaw, salesStartRaw, salesEndRaw] = text
       .split("|")
       .map((part) => part.trim());
@@ -3845,6 +6244,26 @@ async function handleAdminEventOperationalSubmenus({
           "admin_event_price_edit_collecting",
           adminEvents,
         ),
+      };
+    }
+
+    if (adminEvents.mode === "select_price_value") {
+      return {
+        reply: withAdminNavigationHint([
+          `*NOVO VALOR - ${price.label.toUpperCase()}*`,
+          "",
+          "Digite somente o novo valor.",
+          "Ex: 140,00",
+        ].join("\n")),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_price_edit_collecting", {
+          ...adminEvents,
+          mode: "collect_price_value",
+          draft: {
+            priceId: price.priceId,
+            priceLabel: price.label,
+            oldPriceCents: price.priceCents,
+          },
+        }),
       };
     }
 
@@ -3934,7 +6353,7 @@ async function handleAdminEventOperationalSubmenus({
   if (baseContext.state === "admin_event_price_create_collecting") {
     if (adminEvents.mode === "confirm_create_price") {
       if (isCancelText(text)) {
-        return showAdminEventPricesMenu(baseContext, eventId);
+        return showAdminEventPricesMenu(baseContext, scope, eventId);
       }
       if (!isConfirmText(text)) {
         return {
@@ -3972,7 +6391,7 @@ async function handleAdminEventOperationalSubmenus({
       };
     }
 
-    const details = await getAdminEventDetails(eventId);
+    const details = await getScopedAdminEventDetails(eventId, scope);
     if (!details.ok) return null;
     const [
       sessionRaw,
@@ -4137,7 +6556,7 @@ export async function routeTicketMessage({
       };
     }
 
-    if (!verifyAdminPassphrase(text)) {
+    if (!(await verifyAdminUserPassphrase(customer.whatsapp_phone, text))) {
       return {
         reply: TICKET_MESSAGES.adminAuthInvalid,
         nextContext: {
@@ -4240,7 +6659,7 @@ export async function routeTicketMessage({
       adminUserId,
       expiresAt,
     }: {
-      state: "admin_menu" | AdminSubmenuState;
+      state: TicketConversationStep;
       role: AdminRole;
       sessionId: string;
       adminUserId: string;
@@ -4331,6 +6750,1328 @@ export async function routeTicketMessage({
       };
     }
 
+    if (isAdminOrdersFlowState(baseContext.state)) {
+      const ordersSubmenu = ADMIN_SUBMENUS.admin_orders_menu;
+
+      if (!canAccessAdminMenu(adminUser.role, ordersSubmenu)) {
+        return {
+          reply: ADMIN_MENU_UNAVAILABLE_MESSAGE,
+          nextContext: adminReplyContext({
+            state: "admin_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      const submenuOption = parseAdminSubmenuOption(text);
+
+      if (submenuOption === "menu" || submenuOption === "back") {
+        return {
+          reply: renderAdminSubmenu(ordersSubmenu),
+          nextContext: adminReplyContext({
+            state: "admin_orders_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (submenuOption === "exit") {
+        return endAdminSession();
+      }
+
+      if (baseContext.state === "admin_order_phone_collecting") {
+        const phone = normalizeGatePhone(text) ?? text.replace(/\D/g, "");
+
+        if (phone.length < 10) {
+          return {
+            reply: withAdminNavigationHint(
+              "Envie um telefone com DDD para buscar os ingressos.",
+            ),
+            nextContext: adminReplyContext({
+              state: "admin_order_phone_collecting",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        const result = await findAdminTicketsByPhone(phone);
+        const ticketBlocks = result.tickets.map((ticket, index) =>
+          formatAdminTicketForPhoneSearch(ticket, index + 1),
+        );
+        const reservationBlocks = result.pendingReservations.map(
+          (reservation, index) =>
+            formatAdminPendingReservation(reservation, index + 1),
+        );
+        const reply = [
+          "*BUSCA POR TELEFONE*",
+          "",
+          result.customer
+            ? `Telefone: ${result.customer.whatsapp_phone}`
+            : `Telefone: ${phone}`,
+          "",
+          "*INGRESSOS:*",
+          ticketBlocks.length > 0
+            ? ticketBlocks.join("\n---\n")
+            : "Nenhum ingresso encontrado.",
+          "",
+          "*RESERVAS PENDENTES:*",
+          reservationBlocks.length > 0
+            ? reservationBlocks.join("\n---\n")
+            : "Nenhuma reserva pendente encontrada.",
+        ].join("\n");
+
+        return {
+          reply: withAdminNavigationHint(reply),
+          nextContext: adminReplyContext({
+            state: "admin_orders_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (
+        baseContext.state === "admin_order_code_collecting" ||
+        baseContext.state === "admin_ticket_consult_collecting"
+      ) {
+        const ticket = await findAdminTicketByCode(text);
+
+        if (!ticket) {
+          return {
+            reply: withAdminNavigationHint(
+              "Ingresso não encontrado. Confira o código e tente novamente.",
+            ),
+            nextContext: adminReplyContext({
+              state: baseContext.state,
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        const validations =
+          baseContext.state === "admin_ticket_consult_collecting"
+            ? await listAdminTicketValidations(ticket.ticketId)
+            : [];
+        const reply = [
+          baseContext.state === "admin_ticket_consult_collecting"
+            ? "*CONSULTA DE TICKET*"
+            : "*INGRESSO ENCONTRADO*",
+          "",
+          formatAdminTicket(ticket),
+          ...(baseContext.state === "admin_ticket_consult_collecting"
+            ? ["", "*VALIDAÇÕES:*", formatAdminTicketValidations(validations)]
+            : []),
+        ].join("\n");
+
+        return {
+          reply: withAdminNavigationHint(reply),
+          nextContext: adminReplyContext({
+            state: "admin_orders_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (baseContext.state === "admin_order_cancel_collecting") {
+        const result = await cancelAdminPendingReservation(text);
+
+        if (!result.ok) {
+          return {
+            reply: withAdminNavigationHint(
+              result.reason === "not_found"
+                ? "Nenhuma reserva pendente ativa foi encontrada para esse dado."
+                : "Não foi possível cancelar a reserva agora. Tente novamente.",
+            ),
+            nextContext: adminReplyContext({
+              state: "admin_order_cancel_collecting",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        const reply = [
+          result.cancelResult.status === "expired"
+            ? "*RESERVA EXPIRADA*"
+            : "*RESERVA CANCELADA*",
+          "",
+          formatAdminPendingReservation(result.reservation),
+          "",
+          `Assentos liberados: ${result.cancelResult.releasedSeatsCount}`,
+        ].join("\n");
+
+        return {
+          reply: withAdminNavigationHint(reply),
+          nextContext: adminReplyContext({
+            state: "admin_orders_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+    }
+
+    if (isAdminCourtesyFlowState(baseContext.state)) {
+      const courtesiesSubmenu = ADMIN_SUBMENUS.admin_courtesies_menu;
+      const scope = buildAdminEventScope(adminUser);
+      const adminCourtesies = getAdminCourtesiesContext(baseContext);
+      const submenuOption = parseAdminSubmenuOption(text);
+
+      if (!canAccessAdminMenu(adminUser.role, courtesiesSubmenu)) {
+        return {
+          reply: ADMIN_MENU_UNAVAILABLE_MESSAGE,
+          nextContext: adminReplyContext({
+            state: "admin_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (submenuOption === "exit") {
+        return endAdminSession();
+      }
+
+      if (submenuOption === "menu") {
+        return {
+          reply: renderAdminSubmenu(courtesiesSubmenu),
+          nextContext: adminReplyContext({
+            state: "admin_courtesies_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (submenuOption === "back") {
+        if (baseContext.state === "admin_courtesy_generate_type") {
+          return {
+            reply: renderAdminSubmenu(courtesiesSubmenu),
+            nextContext: adminReplyContext({
+              state: "admin_courtesies_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        if (baseContext.state === "admin_courtesy_phone_collecting") {
+          return {
+            reply: [
+              "*GERAR CORTESIA*",
+              "",
+              "> 1. Individual",
+              "> 2. Lote",
+              "> 3. Voltar",
+              "> 4. Sair",
+            ].join("\n"),
+            nextContext: withAdminCourtesiesContext(
+              baseContext,
+              "admin_courtesy_generate_type",
+              {},
+            ),
+          };
+        }
+
+        return {
+          reply: renderAdminSubmenu(courtesiesSubmenu),
+          nextContext: adminReplyContext({
+            state: "admin_courtesies_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (baseContext.state === "admin_courtesy_generate_type") {
+        const option = text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
+
+        if (option === 4) return endAdminSession();
+        if (option === 3) {
+          return {
+            reply: renderAdminSubmenu(courtesiesSubmenu),
+            nextContext: adminReplyContext({
+              state: "admin_courtesies_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        if (option !== 1 && option !== 2) {
+          return {
+            reply: [
+              "*GERAR CORTESIA*",
+              "",
+              "> 1. Individual",
+              "> 2. Lote",
+              "> 3. Voltar",
+              "> 4. Sair",
+            ].join("\n"),
+            nextContext: withAdminCourtesiesContext(
+              baseContext,
+              "admin_courtesy_generate_type",
+              {},
+            ),
+          };
+        }
+
+        return {
+          reply:
+            option === 1
+              ? "*CORTESIA INDIVIDUAL*\n\nEnvie o telefone que receberá a cortesia."
+              : "*CORTESIA EM LOTE*\n\nEnvie a lista de telefones, separados por vírgula, espaço ou linha.",
+          nextContext: withAdminCourtesiesContext(
+            baseContext,
+            "admin_courtesy_phone_collecting",
+            { mode: option === 1 ? "single" : "batch" },
+          ),
+        };
+      }
+
+      if (baseContext.state === "admin_courtesy_phone_collecting") {
+        const phones = parseCourtesyPhones(text);
+
+        if (phones.length === 0 || (adminCourtesies.mode === "single" && phones.length !== 1)) {
+          return {
+            reply:
+              adminCourtesies.mode === "single"
+                ? "Envie um telefone válido com DDD."
+                : "Envie pelo menos um telefone válido com DDD.",
+            nextContext: withAdminCourtesiesContext(
+              baseContext,
+              "admin_courtesy_phone_collecting",
+              adminCourtesies,
+            ),
+          };
+        }
+
+        return buildAdminCourtesyEventSelect({
+          baseContext,
+          scope,
+          state: "admin_courtesy_event_select",
+          title: "ESCOLHA O EVENTO PARA A CORTESIA",
+          context: { ...adminCourtesies, phones },
+        });
+      }
+
+      if (baseContext.state === "admin_courtesy_cancel_target_collecting") {
+        const eventId = adminCourtesies.selectedEventId;
+        const cancelMethod = adminCourtesies.cancelMethod;
+        const target =
+          cancelMethod === "phone"
+            ? (() => {
+                const phone = normalizeCourtesyPhone(text);
+                return phone ? { phone } : null;
+              })()
+            : cancelMethod === "code"
+              ? /^TCK-[A-Z0-9]+$/i.test(text.trim())
+                ? { ticketCode: text.trim().toUpperCase() }
+                : null
+              : resolveCourtesyCancelTarget(
+                  text,
+                  adminCourtesies.lastCourtesies ?? [],
+                );
+
+        if (!eventId || !target) {
+          return {
+            reply:
+              cancelMethod === "phone"
+                ? "Telefone inválido. Digite o número de telefone da cortesia."
+                : cancelMethod === "code"
+                  ? "Código inválido. Digite o código do ticket. Ex: TCK-XXXXXXXXXXXX"
+                  : "Não encontrei essa cortesia. Responda com o número da lista, telefone ou código do ticket.",
+            nextContext: withAdminCourtesiesContext(
+              baseContext,
+              "admin_courtesy_cancel_target_collecting",
+              adminCourtesies,
+            ),
+          };
+        }
+
+        const result = await cancelCourtesyForEvent(eventId, target);
+
+        return {
+          reply: result.ok
+            ? `Cortesias canceladas: ${result.cancelledCount}`
+            : "Não consegui cancelar essa cortesia. Confira se ela ainda está ativa.",
+          nextContext: adminReplyContext({
+            state: "admin_courtesies_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (
+        baseContext.state === "admin_courtesy_event_select" ||
+        baseContext.state === "admin_courtesy_list_event_select" ||
+        baseContext.state === "admin_courtesy_resend_event_select" ||
+        baseContext.state === "admin_courtesy_cancel_event_select" ||
+        baseContext.state === "admin_courtesy_limit_event_select"
+      ) {
+        const eventId = resolveCourtesyEventId(
+          text,
+          adminCourtesies.lastEvents ?? [],
+        );
+
+        if (!eventId) {
+          return {
+            reply: "Evento não encontrado. Responda com número, nome ou ID.",
+            nextContext: withAdminCourtesiesContext(
+              baseContext,
+              baseContext.state,
+              adminCourtesies,
+            ),
+          };
+        }
+
+        if (baseContext.state === "admin_courtesy_event_select") {
+          const phones = adminCourtesies.phones ?? [];
+          let results: Awaited<ReturnType<typeof issueCourtesies>>;
+          try {
+            results = await issueCourtesies({
+              eventId,
+              phones,
+              issuedByAdminUserId: adminUser.id,
+              issuedByAdminPhone: normalizeGatePhone(adminUser.phone) ?? adminUser.phone,
+            });
+          } catch (error) {
+            logError("Failed to issue admin courtesies", {
+              error,
+              eventId,
+              phonesCount: phones.length,
+              adminUserId: adminUser.id,
+            });
+
+            return {
+              reply:
+                "Não consegui gerar cortesias agora. Registrei o erro técnico nos logs para conferência.",
+              nextContext: adminReplyContext({
+                state: "admin_courtesies_menu",
+                role: adminUser.role,
+                sessionId: adminSession.id,
+                adminUserId: adminUser.id,
+                expiresAt: adminSession.expires_at,
+              }),
+            };
+          }
+          return {
+            reply: [
+              buildCourtesyIssueSummary(results),
+              "",
+              results.every(
+                (result) => !result.ok && result.reason === "limit_reached",
+              )
+                ? ""
+                : results.some((result) => result.ok)
+                ? 'Informe ao contato que para receber sua cortesia, deve enviar "Cortesia" para este mesmo número.'
+                : "Nenhuma nova cortesia foi registrada. Quem já tem cortesia ativa pode escrever CORTESIA na conversa para receber o QR Code.",
+            ].filter(Boolean).join("\n"),
+            nextContext: adminReplyContext({
+              state: "admin_courtesies_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        if (baseContext.state === "admin_courtesy_list_event_select") {
+          const list = await listCourtesiesForEvent(eventId);
+
+          return {
+            reply: list.ok
+              ? buildCourtesiesListReply(list.courtesies)
+              : TICKET_MESSAGES.adminGenericError,
+            nextContext: adminReplyContext({
+              state: "admin_courtesies_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        if (baseContext.state === "admin_courtesy_resend_event_select") {
+          const list = await listCourtesiesForEvent(eventId);
+
+          return {
+            reply: list.ok
+              ? [
+                  "Reenvio automático desativado por segurança do WhatsApp.",
+                  "Peça para o convidado escrever CORTESIA na conversa para receber o QR Code.",
+                  `Cortesias ativas neste evento: ${list.courtesies.filter((courtesy) => courtesy.status === "issued").length}`,
+                ].join("\n")
+              : TICKET_MESSAGES.adminGenericError,
+            nextContext: adminReplyContext({
+              state: "admin_courtesies_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        if (baseContext.state === "admin_courtesy_cancel_event_select") {
+          return {
+            reply: renderCourtesyCancelMethodMenu(),
+            nextContext: withAdminCourtesiesContext(
+              baseContext,
+              "admin_courtesy_cancel_method_select",
+              {
+              ...adminCourtesies,
+              selectedEventId: eventId,
+              },
+            ),
+          };
+        }
+
+        const currentLimit = await getCourtesyLimit(eventId);
+
+        return {
+          reply: [
+            "*DEFINIR NOVO LIMITE DE CORTESIAS*",
+            `> Hoje, limite de ${currentLimit.ok ? currentLimit.limit : 0} cortesias`,
+            "",
+            "Digite o novo limite TOTAL de cortesias para este evento. Use 0 para remover limite.",
+          ].join("\n"),
+          nextContext: withAdminCourtesiesContext(
+            baseContext,
+            "admin_courtesy_limit_collecting",
+            { ...adminCourtesies, selectedEventId: eventId },
+          ),
+        };
+      }
+
+      if (baseContext.state === "admin_courtesy_cancel_method_select") {
+        const option = text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
+        const eventId = adminCourtesies.selectedEventId;
+
+        if (!eventId) {
+          return {
+            reply: renderAdminSubmenu(courtesiesSubmenu),
+            nextContext: adminReplyContext({
+              state: "admin_courtesies_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        if (option === 5) return endAdminSession();
+        if (option === 4) {
+          return buildAdminCourtesyEventSelect({
+            baseContext,
+            scope,
+            state: "admin_courtesy_cancel_event_select",
+            title: "CANCELAR CORTESIA - ESCOLHA O EVENTO",
+            context: { mode: "cancel" },
+          });
+        }
+
+        if (option === 1 || option === 2) {
+          return {
+            reply:
+              option === 1
+                ? "*CANCELAR PELO TELEFONE*\n\nDigite o número de telefone da cortesia."
+                : "*CANCELAR PELO CÓDIGO*\n\nDigite o código do ticket da cortesia. Ex: TCK-XXXXXXXXXXXX",
+            nextContext: withAdminCourtesiesContext(
+              baseContext,
+              "admin_courtesy_cancel_target_collecting",
+              {
+                ...adminCourtesies,
+                cancelMethod: option === 1 ? "phone" : "code",
+              },
+            ),
+          };
+        }
+
+        if (option === 3) {
+          const list = await listCourtesiesForEvent(eventId);
+
+          if (!list.ok) {
+            return {
+              reply: TICKET_MESSAGES.adminGenericError,
+              nextContext: withAdminCourtesiesContext(
+                baseContext,
+                "admin_courtesy_cancel_method_select",
+                adminCourtesies,
+              ),
+            };
+          }
+
+          const issuedCourtesies = list.courtesies.filter(
+            (courtesy) => courtesy.status === "issued",
+          );
+
+          return {
+            reply: [
+              buildCourtesiesListReply(issuedCourtesies),
+              "",
+              "*QUAL CORTESIA DESEJA CANCELAR?*",
+              "Responda com o número da cortesia, telefone ou código do ticket.",
+            ].join("\n"),
+            nextContext: withAdminCourtesiesContext(
+              baseContext,
+              "admin_courtesy_cancel_target_collecting",
+              {
+                ...adminCourtesies,
+                cancelMethod: "list",
+                lastCourtesies: issuedCourtesies.map((courtesy, index) => ({
+                  option: index + 1,
+                  courtesyId: courtesy.courtesyId,
+                  phone: courtesy.phone,
+                  ticketCode: courtesy.ticketCode,
+                })),
+              },
+            ),
+          };
+        }
+
+        return {
+          reply: renderCourtesyCancelMethodMenu(),
+          nextContext: withAdminCourtesiesContext(
+            baseContext,
+            "admin_courtesy_cancel_method_select",
+            adminCourtesies,
+          ),
+        };
+      }
+
+      if (baseContext.state === "admin_courtesy_limit_collecting") {
+        const eventId = adminCourtesies.selectedEventId;
+        const limit = Number(text.trim().replace(/\D/g, ""));
+
+        if (!eventId || !Number.isInteger(limit) || limit < 0) {
+          return {
+            reply: "Limite inválido. Envie um número inteiro maior ou igual a 0.",
+            nextContext: withAdminCourtesiesContext(
+              baseContext,
+              "admin_courtesy_limit_collecting",
+              adminCourtesies,
+            ),
+          };
+        }
+
+        const result = await setCourtesyLimit(eventId, limit);
+
+        return {
+          reply: result.ok
+            ? `Limite de cortesias definido: ${limit}`
+            : TICKET_MESSAGES.adminGenericError,
+          nextContext: adminReplyContext({
+            state: "admin_courtesies_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+    }
+
+    if (isAdminGateFlowState(baseContext.state)) {
+      const gateSubmenu = ADMIN_SUBMENUS.admin_gate_menu;
+      const submenuOption = parseAdminSubmenuOption(text);
+
+      if (!canAccessAdminMenu(adminUser.role, gateSubmenu)) {
+        return {
+          reply: ADMIN_MENU_UNAVAILABLE_MESSAGE,
+          nextContext: adminReplyContext({
+            state: "admin_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (submenuOption === "exit") return endAdminSession();
+      if (submenuOption === "menu" || submenuOption === "back") {
+        return {
+          reply: renderAdminSubmenu(gateSubmenu),
+          nextContext: adminReplyContext({
+            state: "admin_gate_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (baseContext.state === "admin_gate_validator_collecting") {
+        const adminGate = baseContext.adminGate ?? {};
+        const validatorPhone = normalizeGatePhone(text);
+
+        if (!validatorPhone || validatorPhone.length < 10) {
+          return {
+            reply: renderGateValidatorPhonePrompt(),
+            nextContext: adminReplyContext({
+              state: "admin_gate_validator_collecting",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        return {
+          reply: renderGateValidatorPasswordPrompt(),
+          nextContext: withAdminGateContext(
+            adminReplyContext({
+              state: "admin_gate_password_collecting",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+            "admin_gate_password_collecting",
+            { ...adminGate, pendingValidatorPhone: validatorPhone },
+          ),
+        };
+      }
+
+      if (baseContext.state === "admin_gate_password_collecting") {
+        const adminGate = baseContext.adminGate ?? {};
+        const gateLabel = text.trim();
+        const validatorPhone = adminGate.pendingValidatorPhone;
+        const eventId = adminGate.selectedEventId;
+
+        if (!validatorPhone || !eventId || !gateLabel) {
+          return {
+            reply: renderGateValidatorPasswordPrompt(),
+            nextContext: withAdminGateContext(
+              baseContext,
+              "admin_gate_password_collecting",
+              adminGate,
+            ),
+          };
+        }
+
+        const gateSessionResult = await createGateSession({
+          validatorPhone,
+          createdByAdminPhone: customer.whatsapp_phone,
+          gateLabel,
+          eventId,
+        });
+
+        if (!gateSessionResult.ok) {
+          return {
+            reply:
+              gateSessionResult.reason === "already_registered"
+                ? "Esse telefone já está cadastrado para check-in."
+                : TICKET_MESSAGES.gateAdminCreateError,
+            nextContext: adminReplyContext({
+              state: "admin_gate_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        return {
+          reply: buildGateValidatorRegisteredReply({
+            validatorPhone,
+            gateLabel,
+          }),
+          nextContext: adminReplyContext({
+            state: "admin_gate_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (
+        baseContext.state === "admin_gate_register_event_select" ||
+        baseContext.state === "admin_gate_access_event_select"
+      ) {
+        const adminGate = baseContext.adminGate ?? {};
+        const eventId = resolveCourtesyEventId(text, adminGate.lastEvents ?? []);
+
+        if (!eventId) {
+          return {
+            reply: "Evento não encontrado. Responda com número, nome ou ID.",
+            nextContext: withAdminGateContext(
+              baseContext,
+              "admin_gate_access_event_select",
+              adminGate,
+            ),
+          };
+        }
+
+        if (baseContext.state === "admin_gate_register_event_select") {
+          return {
+            reply: renderGateValidatorPhonePrompt(),
+            nextContext: withAdminGateContext(
+              baseContext,
+              "admin_gate_validator_collecting",
+              {
+                ...adminGate,
+                selectedEventId: eventId,
+              },
+            ),
+          };
+        }
+
+        return {
+          reply: renderGateAccessFilterMenu(),
+          nextContext: withAdminGateContext(
+            baseContext,
+            "admin_gate_accesses_filter",
+            {
+              ...adminGate,
+              selectedEventId: eventId,
+            },
+          ),
+        };
+      }
+
+      if (baseContext.state === "admin_gate_accesses_filter") {
+        const option = text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
+        const adminGate = baseContext.adminGate ?? {};
+
+        if (option === 4) return endAdminSession();
+        if (option === 3) {
+          return buildAdminGateEventSelect({
+            baseContext,
+            scope: buildAdminEventScope(adminUser),
+            title: "PORTARIA - ESCOLHA O EVENTO",
+          });
+        }
+
+        if (option !== 1 && option !== 2) {
+          return {
+            reply: renderGateAccessFilterMenu(),
+            nextContext: withAdminGateContext(
+              adminReplyContext({
+                state: "admin_gate_accesses_filter",
+                role: adminUser.role,
+                sessionId: adminSession.id,
+                adminUserId: adminUser.id,
+                expiresAt: adminSession.expires_at,
+              }),
+              "admin_gate_accesses_filter",
+              adminGate,
+            ),
+          };
+        }
+
+        const result = await listGateSessions({
+          filter: option === 1 ? "active" : "paused",
+          eventId: adminGate.selectedEventId,
+        });
+
+        return {
+          reply: result.ok
+            ? withAdminNavigationHint(
+                renderGateSessionsList({
+                  title: option === 1 ? "ACESSOS ATIVOS" : "ACESSOS PAUSADOS",
+                  sessions: result.sessions,
+                }),
+              )
+            : TICKET_MESSAGES.adminGenericError,
+          nextContext: adminReplyContext({
+            state: "admin_gate_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (baseContext.state === "admin_gate_revoke_select") {
+        const adminGate = baseContext.adminGate ?? {};
+        const option = text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
+        const selected = option
+          ? adminGate.lastGateSessions?.find((session) => session.option === option)
+          : null;
+
+        if (!selected) {
+          return {
+            reply: "Não encontrei esse acesso. Digite o número do acesso que deseja pausar.",
+            nextContext: withAdminGateContext(
+              baseContext,
+              "admin_gate_revoke_select",
+              adminGate,
+            ),
+          };
+        }
+
+        const revokeResult = await revokeGateSession(selected.gateSessionId);
+
+        return {
+          reply: revokeResult.ok
+            ? `Acesso pausado para ${selected.validatorPhone}.`
+            : TICKET_MESSAGES.adminGenericError,
+          nextContext: adminReplyContext({
+            state: "admin_gate_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+    }
+
+    if (isAdminReportsFlowState(baseContext.state)) {
+      const reportsSubmenu = ADMIN_SUBMENUS.admin_reports_menu;
+      const submenuOption = parseAdminSubmenuOption(text);
+      const adminReports = getAdminReportsContext(baseContext);
+
+      if (!canAccessAdminMenu(adminUser.role, reportsSubmenu)) {
+        return {
+          reply: ADMIN_MENU_UNAVAILABLE_MESSAGE,
+          nextContext: adminReplyContext({
+            state: "admin_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (submenuOption === "exit" || submenuOption === 7) return endAdminSession();
+      if (submenuOption === "menu" || submenuOption === "back" || submenuOption === 6) {
+        return {
+          reply: renderAdminSubmenu(reportsSubmenu),
+          nextContext: adminReplyContext({
+            state: "admin_reports_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (baseContext.state === "admin_report_event_select") {
+        const eventId = resolveCourtesyEventId(text, adminReports.lastEvents ?? []);
+
+        if (!eventId) {
+          return {
+            reply: "Evento não encontrado. Responda com número, nome ou ID.",
+            nextContext: withAdminReportsContext(
+              baseContext,
+              "admin_report_event_select",
+              adminReports,
+            ),
+          };
+        }
+
+        return {
+          reply: renderAdminReportPeriodMenu(),
+          nextContext: withAdminReportsContext(
+            baseContext,
+            "admin_report_period_select",
+            { ...adminReports, selectedEventId: eventId },
+          ),
+        };
+      }
+
+      const buildReportReply = async (period: AdminReportPeriod) => {
+        if (!adminReports.selectedEventId || !adminReports.reportType) {
+          return {
+            reply: renderAdminSubmenu(reportsSubmenu),
+            nextContext: adminReplyContext({
+              state: "admin_reports_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        try {
+          const report = await buildAdminReport({
+            eventId: adminReports.selectedEventId,
+            type: adminReports.reportType,
+            period,
+          });
+
+          return {
+            reply: withAdminNavigationHint(report),
+            nextContext: adminReplyContext({
+              state: "admin_reports_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        } catch (error) {
+          logError("Failed to build admin report", {
+            error,
+            eventId: adminReports.selectedEventId,
+            reportType: adminReports.reportType,
+          });
+
+          return {
+            reply: TICKET_MESSAGES.adminGenericError,
+            nextContext: adminReplyContext({
+              state: "admin_reports_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+      };
+
+      if (baseContext.state === "admin_report_period_select") {
+        const period = parseAdminReportPeriodOption(text);
+
+        if (period === "custom") {
+          return {
+            reply: [
+              "*ESCOLHER DATAS*",
+              "",
+              "Digite o intervalo no formato DD/MM/AAAA a DD/MM/AAAA.",
+              "Ex: 01/05/2026 a 24/05/2026",
+              "",
+              'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
+            ].join("\n"),
+            nextContext: withAdminReportsContext(
+              baseContext,
+              "admin_report_custom_period_collecting",
+              adminReports,
+            ),
+          };
+        }
+
+        if (!period) {
+          return {
+            reply: renderAdminReportPeriodMenu(),
+            nextContext: withAdminReportsContext(
+              baseContext,
+              "admin_report_period_select",
+              adminReports,
+            ),
+          };
+        }
+
+        return buildReportReply(period);
+      }
+
+      if (baseContext.state === "admin_report_custom_period_collecting") {
+        const period = parseAdminReportCustomPeriod(text);
+
+        if (!period) {
+          return {
+            reply:
+              "Intervalo inválido. Digite no formato DD/MM/AAAA a DD/MM/AAAA.",
+            nextContext: withAdminReportsContext(
+              baseContext,
+              "admin_report_custom_period_collecting",
+              adminReports,
+            ),
+          };
+        }
+
+        return buildReportReply(period);
+      }
+    }
+
+    if (isAdminUsersFlowState(baseContext.state)) {
+      const usersSubmenu = ADMIN_SUBMENUS.admin_users_menu;
+      const submenuOption = parseAdminSubmenuOption(text);
+
+      if (!canAccessAdminMenu(adminUser.role, usersSubmenu)) {
+        return {
+          reply: ADMIN_MENU_UNAVAILABLE_MESSAGE,
+          nextContext: adminReplyContext({
+            state: "admin_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (submenuOption === "exit") return endAdminSession();
+      if (submenuOption === "menu" || submenuOption === "back") {
+        return {
+          reply: renderAdminSubmenu(usersSubmenu),
+          nextContext: adminReplyContext({
+            state: "admin_users_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (baseContext.state === "admin_users_add_type_select") {
+        const selectedRole = parseAdminRole(text);
+
+        if (!selectedRole) {
+          return {
+            reply: renderAdminUserTypePrompt(),
+            nextContext: adminReplyContext({
+              state: "admin_users_add_type_select",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        return {
+          reply: renderAdminUserPhonePrompt(),
+          nextContext: withAdminUsersContext(
+            baseContext,
+            "admin_users_add_phone_collecting",
+            { mode: "add", pendingRole: selectedRole },
+          ),
+        };
+      }
+
+      if (baseContext.state === "admin_users_add_phone_collecting") {
+        const adminUsersContext = baseContext.adminUsers ?? {};
+        const phone = normalizeGatePhone(text);
+
+        if (!phone || phone.length < 10 || !adminUsersContext.pendingRole) {
+          return {
+            reply: renderAdminUserPhonePrompt(),
+            nextContext: withAdminUsersContext(
+              baseContext,
+              "admin_users_add_phone_collecting",
+              adminUsersContext,
+            ),
+          };
+        }
+
+        return {
+          reply: renderAdminUserNamePrompt(),
+          nextContext: withAdminUsersContext(
+            baseContext,
+            "admin_users_add_name_collecting",
+            { ...adminUsersContext, pendingPhone: phone },
+          ),
+        };
+      }
+
+      if (baseContext.state === "admin_users_add_name_collecting") {
+        const adminUsersContext = baseContext.adminUsers ?? {};
+        const name = text.trim();
+
+        if (
+          !adminUsersContext.pendingPhone ||
+          !adminUsersContext.pendingRole ||
+          !name
+        ) {
+          return {
+            reply: renderAdminUserNamePrompt(),
+            nextContext: withAdminUsersContext(
+              baseContext,
+              "admin_users_add_name_collecting",
+              adminUsersContext,
+            ),
+          };
+        }
+
+        return {
+          reply: renderAdminUserPassphrasePrompt(),
+          nextContext: withAdminUsersContext(
+            baseContext,
+            "admin_users_add_passphrase_collecting",
+            { ...adminUsersContext, pendingName: name },
+          ),
+        };
+      }
+
+      if (baseContext.state === "admin_users_add_passphrase_collecting") {
+        const adminUsersContext = baseContext.adminUsers ?? {};
+        const passphrase = text.trim();
+
+        if (
+          !adminUsersContext.pendingPhone ||
+          !adminUsersContext.pendingRole ||
+          !adminUsersContext.pendingName ||
+          !passphrase
+        ) {
+          return {
+            reply: renderAdminUserPassphrasePrompt(),
+            nextContext: withAdminUsersContext(
+              baseContext,
+              "admin_users_add_passphrase_collecting",
+              adminUsersContext,
+            ),
+          };
+        }
+
+        const result = await createAdminUser({
+          phone: adminUsersContext.pendingPhone,
+          name: adminUsersContext.pendingName,
+          role: adminUsersContext.pendingRole,
+          passphrase,
+          createdByAdminPhone: adminUser.phone,
+        });
+
+        return {
+          reply: result.ok
+            ? [
+                "*ADMINISTRADOR CADASTRADO*",
+                `> Telefone: ${adminUsersContext.pendingPhone}`,
+                `> Nome: ${adminUsersContext.pendingName}`,
+                `> Perfil: ${formatAdminRoleLabel(adminUsersContext.pendingRole)}`,
+                `> Palavra chave: ${passphrase}`,
+                "",
+                'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
+              ].join("\n")
+            : TICKET_MESSAGES.adminGenericError,
+          nextContext: adminReplyContext({
+            state: "admin_users_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (
+        baseContext.state === "admin_users_role_select" ||
+        baseContext.state === "admin_users_disable_select"
+      ) {
+        const adminUsersContext = baseContext.adminUsers ?? {};
+        const selectedAdminUserId = resolveAdminUserId(
+          text,
+          adminUsersContext.lastUsers ?? [],
+        );
+
+        if (!selectedAdminUserId) {
+          return {
+            reply: "Administrador não encontrado. Responda com número, telefone ou ID.",
+            nextContext: withAdminUsersContext(
+              baseContext,
+              baseContext.state,
+              adminUsersContext,
+            ),
+          };
+        }
+
+        if (baseContext.state === "admin_users_disable_select") {
+          const result = await disableAdminUser(selectedAdminUserId);
+
+          return {
+            reply: result.ok
+              ? "*ADMINISTRADOR DESATIVADO*"
+              : TICKET_MESSAGES.adminGenericError,
+            nextContext: adminReplyContext({
+              state: "admin_users_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        return {
+          reply: renderAdminUserRolePrompt(),
+          nextContext: withAdminUsersContext(
+            baseContext,
+            "admin_users_role_collecting",
+            { ...adminUsersContext, selectedAdminUserId },
+          ),
+        };
+      }
+
+      if (baseContext.state === "admin_users_role_collecting") {
+        const adminUsersContext = baseContext.adminUsers ?? {};
+        const newRole = parseAdminRole(text);
+
+        if (!adminUsersContext.selectedAdminUserId || !newRole) {
+          return {
+            reply: renderAdminUserRolePrompt(),
+            nextContext: withAdminUsersContext(
+              baseContext,
+              "admin_users_role_collecting",
+              adminUsersContext,
+            ),
+          };
+        }
+
+        const result = await updateAdminRole({
+          adminUserId: adminUsersContext.selectedAdminUserId,
+          role: newRole,
+        });
+
+        return {
+          reply: result.ok
+            ? [
+                "*NÍVEL DE ADMINISTRADOR ATUALIZADO*",
+                `> Perfil: ${formatAdminRoleLabel(newRole)}`,
+                'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
+              ].join("\n")
+            : TICKET_MESSAGES.adminGenericError,
+          nextContext: adminReplyContext({
+            state: "admin_users_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+    }
+
     if (previousState.state !== "admin_menu" && typedMainMenuOption) {
       const targetSubmenu = getAdminSubmenuByMainOption(typedMainMenuOption);
 
@@ -4366,7 +8107,7 @@ export async function routeTicketMessage({
       baseContext.state === "admin_events_list" ||
       baseContext.state.startsWith("admin_event_")
     ) {
-      if (baseContext.state === "admin_events_menu" && numericOption === 8) {
+      if (baseContext.state === "admin_events_menu" && numericOption === 6) {
         return {
           reply: formatAdminMenu(adminUser.role),
           nextContext: adminReplyContext({
@@ -4380,8 +8121,11 @@ export async function routeTicketMessage({
       }
 
       const isEventFlowExitOption =
-        (baseContext.state === "admin_events_menu" && numericOption === 9) ||
-        (baseContext.state === "admin_event_detail" && numericOption === 7) ||
+        (baseContext.state === "admin_events_menu" && numericOption === 7) ||
+        (baseContext.state === "admin_events_list" &&
+          baseContext.adminEvents?.mode === "select_list_filter" &&
+          numericOption === 6) ||
+        (baseContext.state === "admin_event_detail" && numericOption === 5) ||
         (baseContext.state === "admin_event_sessions_menu" && numericOption === 7) ||
         (baseContext.state === "admin_event_sections_menu" && numericOption === 8) ||
         (baseContext.state === "admin_event_prices_menu" && numericOption === 6);
@@ -4390,9 +8134,31 @@ export async function routeTicketMessage({
         return endAdminSession();
       }
 
-      const eventFlowResult = await handleAdminEventsFlow({ baseContext, text, mediaUrl });
+      const eventFlowResult = await handleAdminEventsFlow({
+        baseContext,
+        scope: buildAdminEventScope(adminUser),
+        text,
+        mediaUrl,
+      });
 
       if (eventFlowResult) {
+        if (eventFlowResult.reply === "__ADMIN_BACK__") {
+          return {
+            reply: formatAdminMenu(adminUser.role),
+            nextContext: adminReplyContext({
+              state: "admin_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        if (eventFlowResult.reply === "__ADMIN_EXIT__") {
+          return endAdminSession();
+        }
+
         return {
           ...eventFlowResult,
           reply: withAdminNavigationHint(eventFlowResult.reply),
@@ -4530,6 +8296,225 @@ export async function routeTicketMessage({
         };
       }
 
+      if (previousState.state === "admin_orders_menu") {
+        const orderPrompts: Record<
+          number,
+          { reply: string; state: TicketConversationStep }
+        > = {
+          1: {
+            reply:
+              "*BUSCAR INGRESSO POR TELEFONE*\n\nEnvie o telefone do comprador com DDD.",
+            state: "admin_order_phone_collecting",
+          },
+          2: {
+            reply:
+              "*BUSCAR INGRESSO POR CÓDIGO*\n\nEnvie o código do ingresso. Ex: TCK-XXXXXXXXXXXX",
+            state: "admin_order_code_collecting",
+          },
+          3: {
+            reply:
+              "*CANCELAR RESERVA PENDENTE*\n\nEnvie o telefone do comprador, o ID da reserva ou o ID do pedido.",
+            state: "admin_order_cancel_collecting",
+          },
+          4: {
+            reply:
+              "*CONSULTAR TICKET*\n\nEnvie o código do ticket/ingresso. Ex: TCK-XXXXXXXXXXXX",
+            state: "admin_ticket_consult_collecting",
+          },
+        };
+        const prompt = typeof submenuOption === "number"
+          ? orderPrompts[submenuOption]
+          : undefined;
+
+        if (prompt) {
+          return {
+            reply: withAdminNavigationHint(prompt.reply),
+            nextContext: adminReplyContext({
+              state: prompt.state,
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+      }
+
+      if (previousState.state === "admin_courtesies_menu") {
+        if (submenuOption === 1) {
+          return {
+            reply: [
+              "*GERAR CORTESIA*",
+              "",
+              "> 1. Individual",
+              "> 2. Lote",
+              "> 3. Voltar",
+              "> 4. Sair",
+            ].join("\n"),
+            nextContext: withAdminCourtesiesContext(
+              baseContext,
+              "admin_courtesy_generate_type",
+              {},
+            ),
+          };
+        }
+
+        const courtesyEventSelectByOption: Record<
+          number,
+          {
+            state: TicketConversationStep;
+            title: string;
+            mode: NonNullable<TicketConversationState["adminCourtesies"]>["mode"];
+          }
+        > = {
+          2: {
+            state: "admin_courtesy_list_event_select",
+            title: "LISTAR CORTESIAS - ESCOLHA O EVENTO",
+            mode: "list",
+          },
+          3: {
+            state: "admin_courtesy_resend_event_select",
+            title: "REENVIAR CORTESIA - ESCOLHA O EVENTO",
+            mode: "resend",
+          },
+          4: {
+            state: "admin_courtesy_cancel_event_select",
+            title: "CANCELAR CORTESIA - ESCOLHA O EVENTO",
+            mode: "cancel",
+          },
+          5: {
+            state: "admin_courtesy_limit_event_select",
+            title: "LIMITE DE CORTESIAS - ESCOLHA O EVENTO",
+            mode: "limit",
+          },
+        };
+        const target = typeof submenuOption === "number"
+          ? courtesyEventSelectByOption[submenuOption]
+          : undefined;
+
+        if (target) {
+          return buildAdminCourtesyEventSelect({
+            baseContext,
+            scope: buildAdminEventScope(adminUser),
+            state: target.state,
+            title: target.title,
+            context: { mode: target.mode },
+          });
+        }
+      }
+
+      if (previousState.state === "admin_users_menu") {
+        if (submenuOption === 2) {
+          return {
+            reply: renderAdminUserTypePrompt(),
+            nextContext: adminReplyContext({
+              state: "admin_users_add_type_select",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        if (
+          submenuOption === 1 ||
+          submenuOption === 3 ||
+          submenuOption === 4
+        ) {
+          const usersResult = await listAdminUsers();
+
+          if (!usersResult.ok) {
+            return {
+              reply: TICKET_MESSAGES.adminGenericError,
+              nextContext: adminReplyContext({
+                state: "admin_users_menu",
+                role: adminUser.role,
+                sessionId: adminSession.id,
+                adminUserId: adminUser.id,
+                expiresAt: adminSession.expires_at,
+              }),
+            };
+          }
+
+          if (submenuOption === 1) {
+            return {
+              reply: withAdminNavigationHint(renderAdminUsersList(usersResult.users)),
+              nextContext: adminReplyContext({
+                state: "admin_users_menu",
+                role: adminUser.role,
+                sessionId: adminSession.id,
+                adminUserId: adminUser.id,
+                expiresAt: adminSession.expires_at,
+              }),
+            };
+          }
+
+          if (submenuOption === 3 || submenuOption === 4) {
+            return {
+              reply: [
+                "*ADMINISTRADORES*",
+                submenuOption === 3
+                  ? "*QUAL ADMINISTRADOR DESEJA ALTERAR?*"
+                  : "*QUAL ADMINISTRADOR DESEJA DESATIVAR?*",
+                "Responda com número, telefone ou ID.",
+                "",
+                renderAdminUsersList(usersResult.users).replace(
+                  /^\*ADMINISTRADORES\*\n\n/,
+                  "",
+                ),
+              ].join("\n"),
+              nextContext: withAdminUsersContext(
+                {
+                  ...baseContext,
+                  admin: buildAdminContext({
+                    adminUserId: adminUser.id,
+                    role: adminUser.role,
+                    sessionId: adminSession.id,
+                    expiresAt: adminSession.expires_at,
+                  }),
+                },
+                submenuOption === 3
+                  ? "admin_users_role_select"
+                  : "admin_users_disable_select",
+                {
+                  mode: submenuOption === 3 ? "role" : "disable",
+                  lastUsers: usersResult.users.map((user, index) => ({
+                    option: index + 1,
+                    adminUserId: user.id,
+                    phone: user.phone,
+                    name: user.name,
+                  })),
+                },
+              ),
+            };
+          }
+
+        }
+      }
+
+      if (previousState.state === "admin_reports_menu") {
+        const reportTypeByOption: Record<number, AdminReportType> = {
+          1: "sales_event",
+          2: "sales_section",
+          3: "expired_reservations",
+          4: "gate_checkins",
+          5: "ticket_usage",
+          6: "summary",
+        };
+        const reportType = typeof submenuOption === "number"
+          ? reportTypeByOption[submenuOption]
+          : undefined;
+
+        if (reportType) {
+          return buildAdminReportEventSelect({
+            baseContext,
+            scope: buildAdminEventScope(adminUser),
+            reportType,
+          });
+        }
+      }
+
       if (
         previousState.state === "admin_gate_menu" &&
         submenuOption === 1
@@ -4565,6 +8550,80 @@ export async function routeTicketMessage({
             adminUserId: adminUser.id,
             expiresAt: adminSession.expires_at,
           }),
+        };
+      }
+
+      if (
+        previousState.state === "admin_gate_menu" &&
+        submenuOption === 2
+      ) {
+        return buildAdminGateEventSelect({
+          baseContext,
+          scope: buildAdminEventScope(adminUser),
+          title: "CHECK-IN - ESCOLHA O EVENTO",
+          nextState: "admin_gate_register_event_select",
+          mode: "register",
+        });
+      }
+
+      if (
+        previousState.state === "admin_gate_menu" &&
+        submenuOption === 3
+      ) {
+        return buildAdminGateEventSelect({
+          baseContext,
+          scope: buildAdminEventScope(adminUser),
+          title: "PORTARIA - ESCOLHA O EVENTO",
+        });
+      }
+
+      if (
+        previousState.state === "admin_gate_menu" &&
+        submenuOption === 4
+      ) {
+        const result = await listGateSessions({ filter: "active" });
+
+        if (!result.ok) {
+          return {
+            reply: TICKET_MESSAGES.adminGenericError,
+            nextContext: adminReplyContext({
+              state: "admin_gate_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        const reply = [
+          renderGateSessionsList({
+            title: "REVOGAR ACESSOS",
+            sessions: result.sessions,
+          }),
+          "",
+          "Digite o número do acesso que deseja pausar.",
+        ].join("\n");
+
+        return {
+          reply,
+          nextContext: withAdminGateContext(
+            adminReplyContext({
+              state: "admin_gate_revoke_select",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+            "admin_gate_revoke_select",
+            {
+              lastGateSessions: result.sessions.map((session, index) => ({
+                option: index + 1,
+                gateSessionId: session.id,
+                validatorPhone: session.validatorPhone,
+              })),
+            },
+          ),
         };
       }
 
@@ -4663,6 +8722,36 @@ export async function routeTicketMessage({
   }
 
   if (gateCommand && !isAdminPhone(customer.whatsapp_phone)) {
+    if (!gateCommand.valid && normalizeAdminText(text) === "portaria") {
+      const gateSessionResult = await createGateSessionForRegisteredValidator(
+        customer.whatsapp_phone,
+      );
+
+      if (gateSessionResult.ok) {
+        return {
+          reply: buildGateCheckInReply({
+            gateUrl: gateSessionResult.gateUrl,
+            expiresAt: gateSessionResult.gateSession.expires_at,
+          }),
+          nextContext: {
+            ...baseContext,
+            step: "idle",
+            state: "idle",
+          },
+        };
+      }
+
+      return {
+        reply:
+          "Não encontrei acesso de portaria ativo para este telefone. Confira se o número foi cadastrado pelo administrador.",
+        nextContext: {
+          ...baseContext,
+          step: "idle",
+          state: "idle",
+        },
+      };
+    }
+
     return {
       reply: TICKET_MESSAGES.adminReservedNeutral,
       nextContext: {
@@ -4673,6 +8762,44 @@ export async function routeTicketMessage({
     };
   }
 
+  if (normalizeAdminText(text) === "cortesia") {
+    const deliveryResult = await buildCourtesyDeliveryForPhone(
+      customer.whatsapp_phone,
+    ).catch(() => ({ ok: false as const, reason: "not_found" as const }));
+
+    if (!deliveryResult.ok) {
+      return {
+        reply:
+          "Não encontrei cortesia disponível para este telefone. Confira se ela já foi emitida para este número.",
+        nextContext: resetBuyerReservationContext(baseContext),
+      };
+    }
+
+    return {
+      reply: deliveryResult.delivery.message,
+      outboundMessages: [
+        { type: "text", body: deliveryResult.delivery.message },
+        ...deliveryResult.delivery.qrImages.map((image) => ({
+          type: "image" as const,
+          imageUrl: image.imageUrl,
+          caption: image.caption,
+        })),
+      ],
+      nextContext: resetBuyerReservationContext(baseContext),
+    };
+  }
+
+  if (
+    isBuyerReservationExitIntent(text) &&
+    previousState.state !== "reservation_created" &&
+    previousState.state !== "payment_pending"
+  ) {
+    return {
+      reply: TICKET_MESSAGES.buyerFlowReset,
+      nextContext: resetBuyerReservationContext(baseContext),
+    };
+  }
+
   const parsedSearch = parseEventSearchMessage(text);
 
   if (
@@ -4680,15 +8807,26 @@ export async function routeTicketMessage({
     previousState.reservation?.reservationId &&
     previousState.reservation.orderId
   ) {
-    if (
-      isBuyerReservationExitIntent(text) ||
-      isReservationContextExpired(previousState.reservation)
-    ) {
+    const shouldExitReservationFlow = isBuyerReservationExitIntent(text);
+    const reservationContextExpired = isReservationContextExpired(
+      previousState.reservation,
+    );
+
+    if (shouldExitReservationFlow || reservationContextExpired) {
       const cancelResult = await cancelPendingReservationForCustomer({
         customerId: customer.id,
         reservationId: previousState.reservation.reservationId,
         orderId: previousState.reservation.orderId,
       });
+
+      if (reservationContextExpired && !shouldExitReservationFlow) {
+        return restartBuyerFlowAfterExpiredReservation({
+          customer,
+          conversation,
+          text,
+          mediaUrl,
+        });
+      }
 
       return {
         reply:
@@ -4740,6 +8878,7 @@ export async function routeTicketMessage({
         selectedEvent: previousState.selectedEvent,
         selectedSection: previousState.selectedSection,
         selectedSeat: previousState.selectedSeat,
+        reservation: previousState.reservation,
         checkout: checkoutResult.checkout,
       }),
       nextContext: {
@@ -4779,15 +8918,26 @@ export async function routeTicketMessage({
       };
     }
 
-    if (
-      isBuyerReservationExitIntent(text) ||
-      isReservationContextExpired(previousState.reservation)
-    ) {
+    const shouldExitReservationFlow = isBuyerReservationExitIntent(text);
+    const reservationContextExpired = isReservationContextExpired(
+      previousState.reservation,
+    );
+
+    if (shouldExitReservationFlow || reservationContextExpired) {
       const cancelResult = await cancelPendingReservationForCustomer({
         customerId: customer.id,
         reservationId: previousState.reservation.reservationId,
         orderId: previousState.reservation.orderId,
       });
+
+      if (reservationContextExpired && !shouldExitReservationFlow) {
+        return restartBuyerFlowAfterExpiredReservation({
+          customer,
+          conversation,
+          text,
+          mediaUrl,
+        });
+      }
 
       return {
         reply:
@@ -4839,6 +8989,7 @@ export async function routeTicketMessage({
         selectedEvent: previousState.selectedEvent,
         selectedSection: previousState.selectedSection,
         selectedSeat: previousState.selectedSeat,
+        reservation: previousState.reservation,
         checkout: checkoutResult.checkout,
       }),
       nextContext: {
@@ -4897,6 +9048,66 @@ export async function routeTicketMessage({
       };
     }
 
+    if (previousState.selectedSection.hasNumberedSeats) {
+      const seatMap = await listSeatMap({
+        sessionId: previousState.selectedEvent.sessionId,
+        sectionId: previousState.selectedSection.sectionId,
+      });
+
+      if (seatMap.availableSeats.length < quantity) {
+        return {
+          reply: TICKET_MESSAGES.noSeatsAvailable,
+          nextContext: {
+            ...baseContext,
+            step: "selecting_quantity",
+            state: "selecting_quantity",
+          },
+        };
+      }
+
+      const sectionForReply: AvailableSection = {
+        sectionId: previousState.selectedSection.sectionId,
+        sectionName: previousState.selectedSection.sectionName,
+        venueId: previousState.selectedEvent.venueId ?? "",
+        hasNumberedSeats: true,
+        availableSeatsCount: seatMap.totalAvailableCount,
+        minPriceCents:
+          previousState.selectedSection.selectedTicketType?.priceCents ?? 0,
+        minFeeCents:
+          previousState.selectedSection.selectedTicketType?.feeCents ?? 0,
+        ticketTypes: previousState.selectedSection.selectedTicketType
+          ? [previousState.selectedSection.selectedTicketType]
+          : [],
+      };
+      const seatsReply = formatSeatsReply({
+        section: sectionForReply,
+        seatMap,
+        ticketType: previousState.selectedSection.selectedTicketType,
+        quantity,
+      });
+
+      return {
+        reply: seatsReply,
+        outboundMessages: [
+          {
+            type: "image",
+            imageUrl: buildSeatMapImageDataUrl({
+              sectionName: previousState.selectedSection.sectionName,
+              seatMap,
+            }),
+            caption: seatsReply,
+          },
+        ],
+        nextContext: {
+          ...baseContext,
+          step: "showing_seats",
+          state: "showing_seats",
+          selectedQuantity: quantity,
+          lastSeats: buildSeatOptions(seatMap.availableSeats),
+        },
+      };
+    }
+
     const reservationResult = await reserveUnnumberedSectionTickets({
       customerId: customer.id,
       conversationId: conversation.id,
@@ -4904,6 +9115,7 @@ export async function routeTicketMessage({
       sessionId: previousState.selectedEvent.sessionId,
       sectionId: previousState.selectedSection.sectionId,
       quantity,
+      ticketType: previousState.selectedSection.selectedTicketType?.ticketType ?? "full",
     });
 
     if (!reservationResult.ok) {
@@ -4936,14 +9148,25 @@ export async function routeTicketMessage({
   }
 
   if (previousState.state === "showing_seats" && previousState.lastSeats?.length) {
-    const requestedSeatCode = normalizeSeatCode(text);
-    const selectedSeat = previousState.lastSeats.find(
-      (seat) => normalizeSeatCode(seat.seatCode) === requestedSeatCode,
-    );
+    const quantity = previousState.selectedQuantity ?? 1;
+    const requestedSeatCodes = parseRequestedSeatCodes(text);
+    const selectedSeats = requestedSeatCodes.flatMap((requestedSeatCode) => {
+      const selectedSeat = previousState.lastSeats?.find(
+        (seat) => normalizeSeatCode(seat.seatCode) === requestedSeatCode,
+      );
 
-    if (!selectedSeat) {
+      return selectedSeat ? [selectedSeat] : [];
+    });
+
+    if (
+      requestedSeatCodes.length !== quantity ||
+      selectedSeats.length !== quantity
+    ) {
       return {
-        reply: TICKET_MESSAGES.seatInvalidOption,
+        reply:
+          quantity > 1
+            ? `Envie exatamente ${quantity} assentos disponíveis. Ex: A03 A04`
+            : TICKET_MESSAGES.seatInvalidOption,
         nextContext: {
           ...baseContext,
           step: "showing_seats",
@@ -4971,8 +9194,8 @@ export async function routeTicketMessage({
       eventId: previousState.selectedEvent.eventId,
       sessionId: previousState.selectedEvent.sessionId,
       sectionId: previousState.selectedSection.sectionId,
-      seatId: selectedSeat.seatId,
-      ticketType: "full",
+      seatIds: selectedSeats.map((selectedSeat) => selectedSeat.seatId),
+      ticketType: previousState.selectedSection.selectedTicketType?.ticketType ?? "full",
     });
 
     if (!reservationResult.ok) {
@@ -5002,7 +9225,8 @@ export async function routeTicketMessage({
       };
     }
 
-    const selectedSeatContext = buildSelectedSeatContext(selectedSeat);
+    const selectedSeatContext =
+      selectedSeats.length === 1 ? buildSelectedSeatContext(selectedSeats[0]!) : undefined;
     const reservationContext = buildReservationContext(
       reservationResult.reservation,
     );
@@ -5019,6 +9243,7 @@ export async function routeTicketMessage({
         step: "reservation_created",
         state: "reservation_created",
         selectedSeat: selectedSeatContext,
+        selectedQuantity: undefined,
         reservation: reservationContext,
         lastSeats: [],
       },
@@ -5212,11 +9437,20 @@ export async function routeTicketMessage({
         };
       }
 
-      const selectedSectionContext = buildSelectedSection(selectedSection);
+      const selectedTicketType =
+        selectedSection.ticketTypes.find(
+          (ticketType) =>
+            ticketType.ticketPriceId ===
+            selectedContextSection.selectedTicketType?.ticketPriceId,
+        ) ?? selectedSection.ticketTypes[0];
+      const selectedSectionContext = buildSelectedSection(
+        selectedSection,
+        selectedTicketType,
+      );
 
       if (!selectedSection.hasNumberedSeats) {
         return {
-          reply: formatQuantityPrompt(selectedSection),
+          reply: formatQuantityPrompt(selectedSection, selectedTicketType),
           nextContext: {
             ...baseContext,
             step: "selecting_quantity",
@@ -5228,33 +9462,16 @@ export async function routeTicketMessage({
         };
       }
 
-      const seatList = await listAvailableSeats({
-        sessionId: selectedSession.sessionId,
-        sectionId: selectedSection.sectionId,
-      });
-
-      if (seatList.seats.length === 0) {
-        return {
-          reply: TICKET_MESSAGES.noSeatsAvailable,
-          nextContext: {
-            ...baseContext,
-            step: "showing_sections",
-            state: "showing_sections",
-            selectedSection: undefined,
-            lastSeats: [],
-          },
-        };
-      }
-
       return {
-        reply: formatSeatsReply({ section: selectedSection, seatList }),
+        reply: formatQuantityPrompt(selectedSection, selectedTicketType),
         nextContext: {
           ...baseContext,
-          step: "showing_seats",
-          state: "showing_seats",
+          step: "selecting_quantity",
+          state: "selecting_quantity",
           selectedEvent: buildSelectedEvent(selectedSession),
           selectedSection: selectedSectionContext,
-          lastSeats: buildSeatOptions(seatList.seats),
+          selectedQuantity: undefined,
+          lastSeats: [],
         },
       };
     }

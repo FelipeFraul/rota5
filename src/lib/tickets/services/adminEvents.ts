@@ -22,16 +22,26 @@ export type AdminInitialEventSectionInput = {
   hasNumberedSeats: boolean;
   capacity: number | null;
   createInventorySeats: boolean;
+  seatCodes?: string[];
+  seatMapPositions?: Record<string, { x: number; y: number }>;
+  createVisualMap?: boolean;
   ticketType: AdminTicketType;
   label: string;
   priceCents: number;
   feeCents: number;
+  priceOptions?: Array<{
+    ticketType: AdminTicketType;
+    label: string;
+    priceCents: number;
+    feeCents: number;
+  }>;
 };
 
 export type AdminEventSummary = {
   eventId: string;
   title: string;
   artistName: string;
+  description: string | null;
   city: string;
   state: string;
   status: AdminEventStatus;
@@ -39,6 +49,8 @@ export type AdminEventSummary = {
   venueId: string | null;
   venueName: string | null;
   createdAt: string;
+  createdByAdminUserId: string | null;
+  createdByAdminPhone: string | null;
   sessionsCount: number;
   nextSessionStartsAt: string | null;
   nextSessionStatus: AdminSessionStatus | null;
@@ -66,12 +78,15 @@ type EventRow = {
   id: string;
   title: string;
   artist_name: string;
+  description: string | null;
   city: string;
   state: string;
   status: AdminEventStatus;
   image_url: string | null;
   venue_id: string | null;
   created_at: string;
+  created_by_admin_user_id?: string | null;
+  created_by_admin_phone?: string | null;
   venues?: {
     name: string;
   } | null;
@@ -96,6 +111,30 @@ type SectionRow = {
   capacity: number | null;
   has_numbered_seats: boolean;
   status: AdminSectionStatus;
+};
+
+type TicketPriceRow = {
+  session_id: string;
+  section_id: string | null;
+  ticket_type: AdminTicketType;
+  label: string;
+  price_cents: number;
+  fee_cents: number;
+  currency: string;
+  sales_start_at: string | null;
+  sales_end_at: string | null;
+  status: AdminTicketPriceStatus;
+};
+
+type SeatStructureRow = {
+  id: string;
+  section_id: string;
+  row_label: string | null;
+  seat_number: string;
+  seat_code: string;
+  map_x: number | string | null;
+  map_y: number | string | null;
+  status: AdminSeatStatus;
 };
 
 export function normalizeSlug(value: string) {
@@ -187,28 +226,233 @@ export function parseSeatCodes(value: string) {
 export function parseSeatRange(value: string) {
   const match = value
     .trim()
-    .match(/^(?:prefixo\s+)?([a-zA-Z]+)\s*,?\s*(?:de\s+)?(\d+)\s*(?:a|até|-)\s*(\d+)$/i);
+    .match(
+      /^(?:prefixo\s+)?(?:fileira\s+)?([a-zA-Z]+)\s*,?\s*(?:(\d+)\s*assentos?)?\s*,?\s*(?:de\s+)?(\d+)\s*(?:a|até|-)\s*(\d+)$/i,
+    );
 
   if (!match) {
     return null;
   }
 
-  const [, prefix, startRaw, endRaw] = match;
+  const [, prefix, countRaw, startRaw, endRaw] = match;
   const start = Number(startRaw);
   const end = Number(endRaw);
+  const expectedCount = countRaw ? Number(countRaw) : null;
+  const step = start <= end ? 1 : -1;
+  const count = Math.abs(end - start) + 1;
 
-  if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start) {
+  if (
+    !Number.isInteger(start) ||
+    !Number.isInteger(end) ||
+    start < 1 ||
+    end < 1 ||
+    (expectedCount !== null &&
+      (!Number.isInteger(expectedCount) || expectedCount !== count))
+  ) {
     return null;
   }
 
   const width = Math.max(startRaw.length, endRaw.length, 2);
-  return Array.from({ length: end - start + 1 }, (_, index) => {
-    const seatNumber = String(start + index).padStart(width, "0");
+  return Array.from({ length: count }, (_, index) => {
+    const seatNumber = String(start + index * step).padStart(width, "0");
     return `${prefix.toUpperCase()}${seatNumber}`;
   });
 }
 
-export function parseSeatCodesOrRange(value: string) {
+type ParsedSeatLayoutLine = {
+  seatCodes: string[];
+  seatMapPositions: Record<string, { x: number; y: number }>;
+  invalidLines?: string[];
+};
+
+function buildSeatCode(prefix: string, seatNumber: number, width: number) {
+  return `${prefix.toUpperCase()}${String(seatNumber).padStart(width, "0")}`;
+}
+
+function parseSeatRangeLayoutLine(value: string, rowIndex: number): ParsedSeatLayoutLine | null {
+  const match = value
+    .trim()
+    .match(
+      /^(?:fileira\s+)?([a-zA-Z]+)\s+(?:(\d+)\s+assentos?\s+)?(?:de\s+)?(\d+)\s*(?:a|até|-)\s*(\d+)(.*)$/i,
+    );
+
+  if (!match) {
+    return null;
+  }
+
+  const [, prefix, countRaw, startRaw, endRaw, modifiersRaw = ""] = match;
+  const start = Number(startRaw);
+  const end = Number(endRaw);
+  const expectedCount = countRaw ? Number(countRaw) : null;
+  const step = start <= end ? 1 : -1;
+  const count = Math.abs(end - start) + 1;
+
+  if (
+    !Number.isInteger(start) ||
+    !Number.isInteger(end) ||
+    start < 1 ||
+    end < 1 ||
+    (expectedCount !== null &&
+      (!Number.isInteger(expectedCount) || expectedCount !== count))
+  ) {
+    return null;
+  }
+
+  let xOffset = 0;
+  let yOffset = 0;
+  const modifiers = modifiersRaw
+    .split("-")
+    .map((modifier) => modifier.trim())
+    .filter(Boolean);
+
+  for (const modifier of modifiers) {
+    const modifierMatch = modifier.match(
+      /^(\d+)\s*x?\s*(?:a\s+)?(esquerda|direita|abaixo|acima)$/i,
+    );
+
+    if (!modifierMatch) {
+      return null;
+    }
+
+    const amount = Number(modifierMatch[1]);
+    const direction = modifierMatch[2].toLowerCase();
+
+    if (!Number.isInteger(amount) || amount < 0) {
+      return null;
+    }
+
+    // "3x esquerda" means there are 3 empty slots on the left before seats start.
+    if (direction === "esquerda") xOffset += amount;
+    if (direction === "direita") xOffset -= amount;
+    if (direction === "abaixo") yOffset += amount;
+    if (direction === "acima") yOffset -= amount;
+  }
+
+  const width = Math.max(startRaw.length, endRaw.length, 2);
+  const seatCodes: string[] = [];
+  const seatMapPositions: Record<string, { x: number; y: number }> = {};
+
+  for (let index = 0; index < count; index += 1) {
+    const seatCode = buildSeatCode(prefix, start + index * step, width);
+    seatCodes.push(seatCode);
+    seatMapPositions[seatCode] = {
+      x: xOffset + index + 1,
+      y: rowIndex + 1 + yOffset,
+    };
+  }
+
+  return { seatCodes, seatMapPositions };
+}
+
+function parseVisualSeatLayoutLine(value: string, rowIndex: number): ParsedSeatLayoutLine | null {
+  const match = value.trim().match(/^([a-zA-Z]+)\s*:\s*(.+)$/i);
+
+  if (!match) {
+    return null;
+  }
+
+  const [, rowLabel, layoutRaw] = match;
+  const tokens = layoutRaw.split(/\s+/).filter(Boolean);
+  const numericTokens = tokens.filter((token) => /^\d+$/.test(token));
+
+  if (!numericTokens.length) {
+    return null;
+  }
+
+  const width = Math.max(2, ...numericTokens.map((token) => token.length));
+  const seatCodes: string[] = [];
+  const seatMapPositions: Record<string, { x: number; y: number }> = {};
+  let x = 1;
+
+  for (const token of tokens) {
+    if (/^_+$/.test(token)) {
+      x += token.length;
+      continue;
+    }
+
+    if (!/^\d+$/.test(token)) {
+      return null;
+    }
+
+    const seatCode = buildSeatCode(rowLabel, Number(token), width);
+    seatCodes.push(seatCode);
+    seatMapPositions[seatCode] = { x, y: rowIndex + 1 };
+    x += 1;
+  }
+
+  return { seatCodes, seatMapPositions };
+}
+
+function looksLikeStructuredSeatLayoutLine(value: string) {
+  return (
+    /^[a-zA-Z]\s*:/i.test(value.trim()) ||
+    /^(?:fileira\s+)?[a-zA-Z]+\s+\d+.*\b(?:assento|assentos|de)\b/i.test(
+      value.trim(),
+    )
+  );
+}
+
+export function parseSeatLayout(value: string): ParsedSeatLayoutLine {
+  const lines = value
+    .split(/\n|;/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const seatCodes: string[] = [];
+  const seatMapPositions: Record<string, { x: number; y: number }> = {};
+  const invalidLines: string[] = [];
+
+  for (const [index, line] of lines.entries()) {
+    const parsed =
+      parseVisualSeatLayoutLine(line, index) ??
+      parseSeatRangeLayoutLine(line, index);
+
+    if (!parsed && looksLikeStructuredSeatLayoutLine(line)) {
+      invalidLines.push(line);
+      continue;
+    }
+
+    const parsedSeatCodes = parsed?.seatCodes ?? parseSeatCodesOrRange(line);
+
+    for (const seatCode of parsedSeatCodes) {
+      if (seatCodes.includes(seatCode)) {
+        continue;
+      }
+
+      seatCodes.push(seatCode);
+
+      if (parsed?.seatMapPositions[seatCode]) {
+        seatMapPositions[seatCode] = parsed.seatMapPositions[seatCode];
+      }
+    }
+  }
+
+  return {
+    seatCodes: invalidLines.length ? [] : seatCodes,
+    seatMapPositions: invalidLines.length ? {} : seatMapPositions,
+    invalidLines,
+  };
+}
+
+export function parseSeatCodesOrRange(value: string): string[] {
+  const lines = value
+    .split(/\n|;/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length > 1) {
+    return Array.from(
+      new Set(lines.flatMap((line) => parseSeatLayout(line).seatCodes)),
+    );
+  }
+
+  const parsedLayout =
+    parseVisualSeatLayoutLine(value, 0) ??
+    parseSeatRangeLayoutLine(value, 0);
+
+  if (parsedLayout) {
+    return parsedLayout.seatCodes;
+  }
+
   return value.includes(",") ? parseSeatCodes(value) : parseSeatRange(value) ?? parseSeatCodes(value);
 }
 
@@ -276,6 +520,19 @@ export function isTicketType(value: string): value is AdminTicketType {
   return ["full", "half", "promotional", "free"].includes(value);
 }
 
+function isMissingEventOwnershipColumnError(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  return (
+    "message" in error &&
+    String((error as { message?: unknown }).message).includes(
+      "created_by_admin",
+    )
+  );
+}
+
 function toSummary(event: EventRow, sessions: SessionRow[]): AdminEventSummary {
   const eventSessions = sessions
     .filter((session) => session.event_id === event.id)
@@ -291,6 +548,7 @@ function toSummary(event: EventRow, sessions: SessionRow[]): AdminEventSummary {
     eventId: event.id,
     title: event.title,
     artistName: event.artist_name,
+    description: event.description,
     city: event.city,
     state: event.state,
     status: event.status,
@@ -298,6 +556,8 @@ function toSummary(event: EventRow, sessions: SessionRow[]): AdminEventSummary {
     venueId: event.venue_id,
     venueName: event.venues?.name ?? null,
     createdAt: event.created_at,
+    createdByAdminUserId: event.created_by_admin_user_id ?? null,
+    createdByAdminPhone: event.created_by_admin_phone ?? null,
     sessionsCount: eventSessions.length,
     nextSessionStartsAt: futureSession?.starts_at ?? null,
     nextSessionStatus: futureSession?.status ?? null,
@@ -307,27 +567,53 @@ function toSummary(event: EventRow, sessions: SessionRow[]): AdminEventSummary {
 export async function listAdminEvents(input: {
   page?: number;
   search?: string | null;
+  status?: AdminEventStatus | "all";
+  ownerAdminUserId?: string | null;
+  canSeeAll?: boolean;
 }) {
   const page = Math.max(input.page ?? 0, 0);
   const supabase = getSupabaseAdmin();
-  let query = supabase
-    .from("events")
-    .select("id, title, artist_name, city, state, status, image_url, venue_id, created_at, venues(name)");
+  const runEventsQuery = async (includeOwnership: boolean) => {
+    let query = supabase
+      .from("events")
+      .select(
+        includeOwnership
+          ? "id, title, artist_name, description, city, state, status, image_url, venue_id, created_at, created_by_admin_user_id, created_by_admin_phone, venues(name)"
+          : "id, title, artist_name, description, city, state, status, image_url, venue_id, created_at, venues(name)",
+      );
 
-  if (input.search?.trim()) {
-    query = query.ilike("search_text", `%${input.search.trim().toLowerCase()}%`);
+    if (input.status && input.status !== "all") {
+      query = query.eq("status", input.status);
+    }
+
+    if (includeOwnership && !input.canSeeAll) {
+      query = query.eq("created_by_admin_user_id", input.ownerAdminUserId ?? "");
+    }
+
+    if (input.search?.trim()) {
+      query = query.ilike("search_text", `%${input.search.trim().toLowerCase()}%`);
+    }
+
+    return query
+      .order("created_at", { ascending: false })
+      .limit(50)
+      .returns<EventRow[]>();
+  };
+
+  let { data: events, error } = await runEventsQuery(true);
+
+  if (error && isMissingEventOwnershipColumnError(error)) {
+    const fallback = await runEventsQuery(false);
+    events = fallback.data;
+    error = fallback.error;
   }
-
-  const { data: events, error } = await query
-    .order("created_at", { ascending: false })
-    .limit(50)
-    .returns<EventRow[]>();
 
   if (error) {
     return { ok: false as const, error };
   }
 
-  const eventIds = events.map((event) => event.id);
+  const eventRows = events ?? [];
+  const eventIds = eventRows.map((event) => event.id);
   const { data: sessions, error: sessionsError } = eventIds.length
     ? await supabase
         .from("event_sessions")
@@ -341,7 +627,7 @@ export async function listAdminEvents(input: {
     return { ok: false as const, error: sessionsError };
   }
 
-  const summaries = events
+  const summaries = eventRows
     .map((event) => toSummary(event, sessions ?? []))
     .sort((left, right) => {
       const leftTime = left.nextSessionStartsAt
@@ -365,11 +651,24 @@ export async function listAdminEvents(input: {
 
 export async function getAdminEventDetails(eventId: string) {
   const supabase = getSupabaseAdmin();
-  const { data: event, error } = await supabase
-    .from("events")
-    .select("id, title, artist_name, city, state, status, image_url, venue_id, created_at, venues(name)")
-    .eq("id", eventId)
-    .maybeSingle<EventRow>();
+  const runEventQuery = (includeOwnership: boolean) =>
+    supabase
+      .from("events")
+      .select(
+        includeOwnership
+          ? "id, title, artist_name, description, city, state, status, image_url, venue_id, created_at, created_by_admin_user_id, created_by_admin_phone, venues(name)"
+          : "id, title, artist_name, description, city, state, status, image_url, venue_id, created_at, venues(name)",
+      )
+      .eq("id", eventId)
+      .maybeSingle<EventRow>();
+
+  let { data: event, error } = await runEventQuery(true);
+
+  if (error && isMissingEventOwnershipColumnError(error)) {
+    const fallback = await runEventQuery(false);
+    event = fallback.data;
+    error = fallback.error;
+  }
 
   if (error || !event) {
     return { ok: false as const, reason: "not_found" as const, error };
@@ -467,6 +766,52 @@ export async function findOrCreateVenue(input: {
   return { ok: true as const, venueId: data.id, created: true };
 }
 
+export async function listAdminVenues(input: {
+  city?: string | null;
+  state?: string | null;
+  limit?: number;
+}) {
+  const supabase = getSupabaseAdmin();
+  let query = supabase
+    .from("venues")
+    .select("id, name, city, state, status, created_at")
+    .eq("status", "active");
+
+  if (input.city?.trim()) {
+    query = query.ilike("city", input.city.trim());
+  }
+
+  if (input.state?.trim()) {
+    query = query.ilike("state", input.state.trim().toUpperCase());
+  }
+
+  const { data, error } = await query
+    .order("name", { ascending: true })
+    .limit(input.limit ?? 10)
+    .returns<Array<{
+      id: string;
+      name: string;
+      city: string;
+      state: string;
+      status: string;
+    }>>();
+
+  if (error) {
+    return { ok: false as const, error };
+  }
+
+  return {
+    ok: true as const,
+    venues: data.map((venue, index) => ({
+      option: index + 1,
+      venueId: venue.id,
+      name: venue.name,
+      city: venue.city,
+      state: venue.state,
+    })),
+  };
+}
+
 export async function createAdminEvent(input: {
   title: string;
   artistName: string;
@@ -474,9 +819,11 @@ export async function createAdminEvent(input: {
   state: string;
   venueName: string;
   imageUrl: string | null;
-  startsAt: string;
+  sessionsStartsAt: string[];
   status: AdminEventStatus;
   initialSections: AdminInitialEventSectionInput[];
+  createdByAdminUserId?: string | null;
+  createdByAdminPhone?: string | null;
 }) {
   const venue = await findOrCreateVenue({
     name: input.venueName,
@@ -489,43 +836,65 @@ export async function createAdminEvent(input: {
   }
 
   const supabase = getSupabaseAdmin();
-  const { data: event, error: eventError } = await supabase
+  const eventPayload = {
+    title: input.title.trim(),
+    artist_name: input.artistName.trim(),
+    description: null,
+    city: input.city.trim(),
+    state: input.state.trim().toUpperCase(),
+    image_url: input.imageUrl,
+    venue_id: venue.venueId,
+    status: input.status,
+  };
+  const eventOwnerPayload = {
+    ...eventPayload,
+    created_by_admin_user_id: input.createdByAdminUserId ?? null,
+    created_by_admin_phone: input.createdByAdminPhone ?? null,
+  };
+  let { data: event, error: eventError } = await supabase
     .from("events")
-    .insert({
-      title: input.title.trim(),
-      artist_name: input.artistName.trim(),
-      city: input.city.trim(),
-      state: input.state.trim().toUpperCase(),
-      image_url: input.imageUrl,
-      venue_id: venue.venueId,
-      status: input.status,
-    })
+    .insert(eventOwnerPayload)
     .select("id")
     .single<{ id: string }>();
+
+  if (eventError && isMissingEventOwnershipColumnError(eventError)) {
+    const fallback = await supabase
+      .from("events")
+      .insert(eventPayload)
+      .select("id")
+      .single<{ id: string }>();
+    event = fallback.data;
+    eventError = fallback.error;
+  }
 
   if (eventError) {
     return { ok: false as const, error: eventError };
   }
 
+  if (!event) {
+    return { ok: false as const, error: new Error("event_not_created") };
+  }
+
   const sessionStatus: AdminSessionStatus =
     input.status === "published" ? "sales_open" : "scheduled";
-  const { data: session, error: sessionError } = await supabase
+  const sessionRows = input.sessionsStartsAt.map((startsAt) => ({
+    event_id: event.id,
+    venue_id: venue.venueId,
+    starts_at: startsAt,
+    status: sessionStatus,
+  }));
+  const { data: sessions, error: sessionError } = await supabase
     .from("event_sessions")
-    .insert({
-      event_id: event.id,
-      venue_id: venue.venueId,
-      starts_at: input.startsAt,
-      status: sessionStatus,
-    })
+    .insert(sessionRows)
     .select("id")
-    .single<{ id: string }>();
+    .returns<Array<{ id: string }>>();
 
-  if (sessionError) {
+  if (sessionError || !sessions?.length) {
     await supabase.from("events").update({ status: "draft" }).eq("id", event.id);
 
     return {
       ok: false as const,
-      error: sessionError,
+      error: sessionError ?? new Error("sessions_not_created"),
       eventId: event.id,
       partialEventCreated: true as const,
     };
@@ -533,7 +902,7 @@ export async function createAdminEvent(input: {
 
   const initialSectionsResult = await createInitialEventSections({
     venueId: venue.venueId,
-    sessionId: session.id,
+    sessionIds: sessions.map((session) => session.id),
     sections: input.initialSections,
   });
 
@@ -551,7 +920,8 @@ export async function createAdminEvent(input: {
   return {
     ok: true as const,
     eventId: event.id,
-    sessionId: session.id,
+    sessionId: sessions[0].id,
+    sessionsCount: sessions.length,
     venueId: venue.venueId,
     createdSectionsCount: initialSectionsResult.createdSectionsCount,
     createdSeatsCount: initialSectionsResult.createdSeatsCount,
@@ -562,6 +932,274 @@ export async function createAdminEvent(input: {
 function buildInventorySeatCode(sectionSlug: string, index: number) {
   const prefix = sectionSlug.replace(/[^a-z0-9]/gi, "").toUpperCase() || "ENTRADA";
   return `${prefix}-${String(index).padStart(4, "0")}`;
+}
+
+export async function duplicateAdminEvent(input: {
+  eventId: string;
+  createdByAdminUserId?: string | null;
+  createdByAdminPhone?: string | null;
+}) {
+  const supabase = getSupabaseAdmin();
+  const { data: sourceEvent, error: sourceEventError } = await supabase
+    .from("events")
+    .select(
+      "id, title, artist_name, description, city, state, image_url, venue_id",
+    )
+    .eq("id", input.eventId)
+    .single<Pick<EventRow, "id" | "title" | "artist_name" | "description" | "city" | "state" | "image_url" | "venue_id">>();
+
+  if (sourceEventError || !sourceEvent) {
+    return { ok: false as const, reason: "source_not_found" as const, error: sourceEventError };
+  }
+
+  const eventPayload = {
+    title: `${sourceEvent.title} (cópia)`,
+    artist_name: sourceEvent.artist_name,
+    description: sourceEvent.description,
+    city: sourceEvent.city,
+    state: sourceEvent.state,
+    image_url: sourceEvent.image_url,
+    venue_id: sourceEvent.venue_id,
+    status: "draft" as AdminEventStatus,
+  };
+  const eventOwnerPayload = {
+    ...eventPayload,
+    created_by_admin_user_id: input.createdByAdminUserId ?? null,
+    created_by_admin_phone: input.createdByAdminPhone ?? null,
+  };
+  let { data: newEvent, error: newEventError } = await supabase
+    .from("events")
+    .insert(eventOwnerPayload)
+    .select("id")
+    .single<{ id: string }>();
+
+  if (newEventError && isMissingEventOwnershipColumnError(newEventError)) {
+    const fallback = await supabase
+      .from("events")
+      .insert(eventPayload)
+      .select("id")
+      .single<{ id: string }>();
+    newEvent = fallback.data;
+    newEventError = fallback.error;
+  }
+
+  if (newEventError || !newEvent) {
+    return { ok: false as const, reason: "event_not_created" as const, error: newEventError };
+  }
+
+  const { data: sourceSessions, error: sourceSessionsError } = await supabase
+    .from("event_sessions")
+    .select("id, event_id, venue_id, starts_at, status")
+    .eq("event_id", input.eventId)
+    .order("starts_at", { ascending: true })
+    .returns<SessionRow[]>();
+
+  if (sourceSessionsError) {
+    await supabase.from("events").update({ status: "draft" }).eq("id", newEvent.id);
+    return { ok: false as const, reason: "sessions_not_read" as const, error: sourceSessionsError };
+  }
+
+  const sessionRows = (sourceSessions ?? []).map((session) => ({
+    event_id: newEvent.id,
+    venue_id: session.venue_id,
+    starts_at: session.starts_at,
+    status: "scheduled" as AdminSessionStatus,
+  }));
+  const { data: newSessions, error: newSessionsError } = sessionRows.length
+    ? await supabase
+        .from("event_sessions")
+        .insert(sessionRows)
+        .select("id")
+        .returns<Array<{ id: string }>>()
+    : { data: [] as Array<{ id: string }>, error: null };
+
+  if (newSessionsError) {
+    await supabase.from("events").update({ status: "draft" }).eq("id", newEvent.id);
+    return { ok: false as const, reason: "sessions_not_created" as const, error: newSessionsError };
+  }
+
+  const sourceSessionIds = (sourceSessions ?? []).map((session) => session.id);
+  const newSessionByOld = new Map(
+    (sourceSessions ?? []).map((session, index) => [
+      session.id,
+      newSessions?.[index]?.id,
+    ]),
+  );
+
+  const { data: sourcePrices, error: sourcePricesError } = sourceSessionIds.length
+    ? await supabase
+        .from("ticket_prices")
+        .select(
+          "session_id, section_id, ticket_type, label, price_cents, fee_cents, currency, sales_start_at, sales_end_at, status",
+        )
+        .in("session_id", sourceSessionIds)
+        .returns<TicketPriceRow[]>()
+    : { data: [] as TicketPriceRow[], error: null };
+
+  if (sourcePricesError) {
+    return { ok: false as const, reason: "prices_not_read" as const, error: sourcePricesError };
+  }
+
+  const { data: sourceSessionSeats, error: sourceSessionSeatsError } = sourceSessionIds.length
+    ? await supabase
+        .from("session_seats")
+        .select("section_id")
+        .in("session_id", sourceSessionIds)
+        .returns<Array<{ section_id: string }>>()
+    : { data: [] as Array<{ section_id: string }>, error: null };
+
+  if (sourceSessionSeatsError) {
+    return {
+      ok: false as const,
+      reason: "session_seats_not_read" as const,
+      error: sourceSessionSeatsError,
+    };
+  }
+
+  const sectionIds = Array.from(
+    new Set([
+      ...(sourcePrices ?? []).flatMap((price) => price.section_id ? [price.section_id] : []),
+      ...(sourceSessionSeats ?? []).map((seat) => seat.section_id),
+    ]),
+  );
+  const { data: sourceSections, error: sourceSectionsError } = sectionIds.length
+    ? await supabase
+        .from("venue_sections")
+        .select("id, venue_id, name, slug, capacity, has_numbered_seats, status")
+        .in("id", sectionIds)
+        .returns<SectionRow[]>()
+    : { data: [] as SectionRow[], error: null };
+
+  if (sourceSectionsError) {
+    return { ok: false as const, reason: "sections_not_read" as const, error: sourceSectionsError };
+  }
+
+  const newSectionByOld = new Map<string, string>();
+  let createdSectionsCount = 0;
+  let createdSeatsCount = 0;
+
+  for (const section of sourceSections ?? []) {
+    const slug = await getUniqueSectionSlug(
+      section.venue_id,
+      `${section.slug}-copia`,
+    );
+    const { data: newSection, error: newSectionError } = await supabase
+      .from("venue_sections")
+      .insert({
+        venue_id: section.venue_id,
+        name: section.name,
+        slug,
+        capacity: section.capacity,
+        has_numbered_seats: section.has_numbered_seats,
+        status: section.status,
+      })
+      .select("id")
+      .single<{ id: string }>();
+
+    if (newSectionError || !newSection) {
+      return { ok: false as const, reason: "section_not_created" as const, error: newSectionError };
+    }
+
+    newSectionByOld.set(section.id, newSection.id);
+    createdSectionsCount += 1;
+  }
+
+  const { data: sourceSeats, error: sourceSeatsError } = sectionIds.length
+    ? await supabase
+        .from("seats")
+        .select("id, section_id, row_label, seat_number, seat_code, map_x, map_y, status")
+        .in("section_id", sectionIds)
+        .returns<SeatStructureRow[]>()
+    : { data: [] as SeatStructureRow[], error: null };
+
+  if (sourceSeatsError) {
+    return { ok: false as const, reason: "seats_not_read" as const, error: sourceSeatsError };
+  }
+
+  const seatRows = (sourceSeats ?? []).flatMap((seat) => {
+    const sectionId = newSectionByOld.get(seat.section_id);
+    if (!sectionId) return [];
+
+    return [{
+      venue_id: sourceEvent.venue_id,
+      section_id: sectionId,
+      row_label: seat.row_label,
+      seat_number: seat.seat_number,
+      seat_code: seat.seat_code,
+      map_x: seat.map_x,
+      map_y: seat.map_y,
+      status: seat.status,
+    }];
+  });
+  const { data: newSeats, error: newSeatsError } = seatRows.length
+    ? await supabase
+        .from("seats")
+        .insert(seatRows)
+        .select("id, section_id, status")
+        .returns<Array<{ id: string; section_id: string; status: AdminSeatStatus }>>()
+    : { data: [] as Array<{ id: string; section_id: string; status: AdminSeatStatus }>, error: null };
+
+  if (newSeatsError) {
+    return { ok: false as const, reason: "seats_not_created" as const, error: newSeatsError };
+  }
+
+  const sessionSeatRows = (newSeats ?? []).flatMap((seat) =>
+    (newSessions ?? []).map((session) => ({
+      session_id: session.id,
+      seat_id: seat.id,
+      section_id: seat.section_id,
+      status: seat.status === "active" ? "available" : "blocked",
+    })),
+  );
+  const { error: newSessionSeatsError } = sessionSeatRows.length
+    ? await supabase.from("session_seats").insert(sessionSeatRows)
+    : { error: null };
+
+  if (newSessionSeatsError) {
+    return {
+      ok: false as const,
+      reason: "session_seats_not_created" as const,
+      error: newSessionSeatsError,
+    };
+  }
+
+  createdSeatsCount = sessionSeatRows.length;
+
+  const priceRows = (sourcePrices ?? []).flatMap((price) => {
+    const sessionId = newSessionByOld.get(price.session_id);
+    const sectionId = price.section_id ? newSectionByOld.get(price.section_id) : null;
+
+    if (!sessionId || (price.section_id && !sectionId)) return [];
+
+    return [{
+      session_id: sessionId,
+      section_id: sectionId,
+      ticket_type: price.ticket_type,
+      label: price.label,
+      price_cents: price.price_cents,
+      fee_cents: price.fee_cents,
+      currency: price.currency,
+      sales_start_at: price.sales_start_at,
+      sales_end_at: price.sales_end_at,
+      status: price.status,
+    }];
+  });
+  const { error: newPricesError } = priceRows.length
+    ? await supabase.from("ticket_prices").insert(priceRows)
+    : { error: null };
+
+  if (newPricesError) {
+    return { ok: false as const, reason: "prices_not_created" as const, error: newPricesError };
+  }
+
+  return {
+    ok: true as const,
+    eventId: newEvent.id,
+    sessionsCount: newSessions?.length ?? 0,
+    createdSectionsCount,
+    createdSeatsCount,
+    createdPricesCount: priceRows.length,
+  };
 }
 
 async function getUniqueSectionSlug(venueId: string, desiredSlug: string) {
@@ -587,7 +1225,7 @@ async function getUniqueSectionSlug(venueId: string, desiredSlug: string) {
 
 async function createInitialEventSections(input: {
   venueId: string;
-  sessionId: string;
+  sessionIds: string[];
   sections: AdminInitialEventSectionInput[];
 }) {
   const supabase = getSupabaseAdmin();
@@ -616,41 +1254,113 @@ async function createInitialEventSections(input: {
 
     createdSectionsCount += 1;
 
-    const { error: priceError } = await supabase.from("ticket_prices").insert({
-      session_id: input.sessionId,
-      section_id: createdSection.id,
-      ticket_type: section.ticketType,
-      label: section.label.trim(),
-      price_cents: section.priceCents,
-      fee_cents: section.feeCents,
-      currency: "BRL",
-      sales_start_at: null,
-      sales_end_at: null,
-      status: "active",
-    });
+    const priceOptions = section.priceOptions?.length
+      ? section.priceOptions
+      : [
+          {
+            ticketType: section.ticketType,
+            label: section.label,
+            priceCents: section.priceCents,
+            feeCents: section.feeCents,
+          },
+        ];
+    const priceRows = input.sessionIds.flatMap((sessionId) =>
+      priceOptions.map((price) => ({
+        session_id: sessionId,
+        section_id: createdSection.id,
+        ticket_type: price.ticketType,
+        label: price.label.trim(),
+        price_cents: price.priceCents,
+        fee_cents: price.feeCents,
+        currency: "BRL",
+        sales_start_at: null,
+        sales_end_at: null,
+        status: "active",
+      })),
+    );
+    const { error: priceError } = await supabase
+      .from("ticket_prices")
+      .insert(priceRows);
 
     if (priceError) {
       return { ok: false as const, error: priceError };
     }
 
-    createdPricesCount += 1;
+    createdPricesCount += priceRows.length;
 
-    if (!section.createInventorySeats || !section.capacity) {
+    const mapPositionBySeatCode = section.createVisualMap
+      ? new Map<string, { x: number; y: number }>(
+          (section.seatCodes ?? []).map((seatCode, index) => {
+            const explicitPosition = section.seatMapPositions?.[seatCode];
+
+            if (explicitPosition) {
+              return [seatCode, explicitPosition];
+            }
+
+            const rowMatch = seatCode.match(/^([A-Z]+)/i);
+            const rowLabel = rowMatch?.[1]?.toUpperCase() ?? "";
+            const rowLabels = Array.from(
+              new Set(
+                (section.seatCodes ?? []).map(
+                  (code) => code.match(/^([A-Z]+)/i)?.[1]?.toUpperCase() ?? "",
+                ),
+              ),
+            ).sort((left, right) =>
+              left.localeCompare(right, "pt-BR", {
+                numeric: true,
+                sensitivity: "base",
+              }),
+            );
+            const rowIndex = Math.max(0, rowLabels.indexOf(rowLabel));
+            const previousInRow = (section.seatCodes ?? [])
+              .slice(0, index)
+              .filter(
+                (code) =>
+                  (code.match(/^([A-Z]+)/i)?.[1]?.toUpperCase() ?? "") === rowLabel,
+              ).length;
+
+            return [seatCode, { x: previousInRow + 1, y: rowIndex + 1 }];
+          }),
+        )
+      : new Map<string, { x: number; y: number }>();
+    const seatRows = section.seatCodes?.length
+      ? section.seatCodes.map((seatCode, index) => {
+          const rowMatch = seatCode.match(/^([A-Z]+)/i);
+          const numberMatch = seatCode.match(/(\d+)$/);
+          const mapPosition = mapPositionBySeatCode.get(seatCode);
+
+          return {
+            venue_id: input.venueId,
+            section_id: createdSection.id,
+            row_label: rowMatch?.[1]?.toUpperCase() ?? null,
+            seat_number: numberMatch?.[1] ?? String(index + 1),
+            seat_code: seatCode,
+            map_x: mapPosition?.x ?? null,
+            map_y: mapPosition?.y ?? null,
+            status: "active",
+          };
+        })
+      : section.createInventorySeats && section.capacity
+        ? Array.from({ length: section.capacity }, (_, index) => {
+            const seatNumber = index + 1;
+
+            return {
+              venue_id: input.venueId,
+              section_id: createdSection.id,
+              row_label: null,
+              seat_number: String(seatNumber),
+              seat_code: buildInventorySeatCode(slug, seatNumber),
+              map_x: null,
+              map_y: null,
+              status: "active",
+            };
+          })
+        : [];
+
+    if (!seatRows.length) {
       continue;
     }
 
-    const seatRows = Array.from({ length: section.capacity }, (_, index) => {
-      const seatNumber = index + 1;
-
-      return {
-        venue_id: input.venueId,
-        section_id: createdSection.id,
-        row_label: null,
-        seat_number: String(seatNumber),
-        seat_code: buildInventorySeatCode(slug, seatNumber),
-        status: "active",
-      };
-    });
     const { data: createdSeats, error: seatsError } = await supabase
       .from("seats")
       .insert(seatRows)
@@ -661,12 +1371,12 @@ async function createInitialEventSections(input: {
     }
 
     const sessionSeatRows =
-      createdSeats?.map((seat) => ({
-        session_id: input.sessionId,
+      createdSeats?.flatMap((seat) => input.sessionIds.map((sessionId) => ({
+        session_id: sessionId,
         seat_id: seat.id,
         section_id: seat.section_id,
         status: "available",
-      })) ?? [];
+      }))) ?? [];
 
     if (sessionSeatRows.length) {
       const { error: sessionSeatsError } = await supabase
@@ -689,6 +1399,7 @@ export async function updateAdminEvent(
   values: Partial<{
     title: string;
     artist_name: string;
+    description: string | null;
     city: string;
     state: string;
     venue_id: string | null;

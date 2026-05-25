@@ -35,10 +35,9 @@ function firstOrder(row: ExpiredReservationNotificationRow) {
 
 function buildReservationExpiredMessage() {
   return [
-    "⏰ O tempo limite da sua reserva acabou.",
-    "",
+    "⏰ *A SUA RESERVA EXPIROU*",
     "Os ingressos foram liberados novamente para venda.",
-    "Para comprar, faça uma nova busca pelo evento.",
+    "Para ver o mesmo evento ou buscar outro, só digitar uma nova busca.",
   ].join("\n");
 }
 
@@ -63,7 +62,12 @@ function resetExpiredReservationContext(
     state: "idle",
     reservation: undefined,
     payment: undefined,
+    selectedEvent: undefined,
+    selectedSection: undefined,
     selectedSeat: undefined,
+    lastEvents: [],
+    lastSections: [],
+    lastSeats: [],
     updatedAt: new Date().toISOString(),
   };
 }
