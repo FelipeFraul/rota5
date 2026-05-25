@@ -127,5 +127,5 @@ Ponto 7 auditou e corrigiu `Meus eventos`, listagem e criação guiada usando Su
 21. Portaria e check-in por telefone - criado e validado no Supabase real
 22. Perfis admin em português e permissões reais - criado e validado no Supabase real
 23. Menu principal admin e navegação Voltar/Cancelar/Sair - criado e validado no Supabase real
-24. Meus eventos, listagem e criação guiada completa - criado e validado no Supabase real
+24. Meus eventos, listagem e criação guiada completa - criado e validado no Supabase real. A criação guiada coleta todos os dados em conversa, mostra resumo final, pede `CONFIRMAR`, pergunta se o evento fica como rascunho ou publicado e só então grava no banco. Para evitar publicação parcial, o serviço persiste o evento como `draft`, cria sessões, setores, assentos/unidades e preços, e somente depois promove para `published` e abre as sessões quando essa foi a escolha final.
 25. Próximas evoluções: módulos admin de ingressos/pedidos, cortesias, administradores, relatórios, edição avançada, duplicação, cancelamento/troca, reenvio manual, filtro wrong_event e QR visual/PDF

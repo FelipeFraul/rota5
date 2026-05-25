@@ -4629,7 +4629,7 @@ async function handleAdminEventsFlow({
     if (!result.ok) {
       return {
         reply: result.partialEventCreated
-          ? "O evento foi salvo como rascunho, mas não consegui criar a data. Revise o evento antes de publicar."
+          ? "O evento foi salvo como rascunho, mas não consegui concluir toda a estrutura. Revise o evento antes de publicar."
           : "Não consegui criar o evento agora. Verifique os dados e tente novamente.",
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
       };

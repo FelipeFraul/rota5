@@ -845,7 +845,7 @@ export async function createAdminEvent(input: {
     state: input.state.trim().toUpperCase(),
     image_url: input.imageUrl,
     venue_id: venue.venueId,
-    status: input.status,
+    status: "draft" as AdminEventStatus,
   };
   const eventOwnerPayload = {
     ...eventPayload,
@@ -876,13 +876,11 @@ export async function createAdminEvent(input: {
     return { ok: false as const, error: new Error("event_not_created") };
   }
 
-  const sessionStatus: AdminSessionStatus =
-    input.status === "published" ? "sales_open" : "scheduled";
   const sessionRows = input.sessionsStartsAt.map((startsAt) => ({
     event_id: event.id,
     venue_id: venue.venueId,
     starts_at: startsAt,
-    status: sessionStatus,
+    status: "scheduled" as AdminSessionStatus,
   }));
   const { data: sessions, error: sessionError } = await supabase
     .from("event_sessions")
@@ -916,6 +914,50 @@ export async function createAdminEvent(input: {
       eventId: event.id,
       partialEventCreated: true as const,
     };
+  }
+
+  if (input.status === "published") {
+    const { error: publishSessionsError } = await supabase
+      .from("event_sessions")
+      .update({ status: "sales_open" as AdminSessionStatus })
+      .in(
+        "id",
+        sessions.map((session) => session.id),
+      )
+      .eq("status", "scheduled");
+
+    if (publishSessionsError) {
+      return {
+        ok: false as const,
+        error: publishSessionsError,
+        eventId: event.id,
+        partialEventCreated: true as const,
+      };
+    }
+
+    const { error: publishEventError } = await supabase
+      .from("events")
+      .update({ status: "published" })
+      .eq("id", event.id)
+      .eq("status", "draft");
+
+    if (publishEventError) {
+      await supabase
+        .from("event_sessions")
+        .update({ status: "scheduled" as AdminSessionStatus })
+        .in(
+          "id",
+          sessions.map((session) => session.id),
+        )
+        .eq("status", "sales_open");
+
+      return {
+        ok: false as const,
+        error: publishEventError,
+        eventId: event.id,
+        partialEventCreated: true as const,
+      };
+    }
   }
 
   return {

@@ -427,7 +427,7 @@ Fluxo de criação coleta:
 - confirmação final;
 - escolha entre rascunho ou publicação.
 
-Ao terminar a edição/criação, o sistema deve mostrar o resumo, pedir `CONFIRMAR` ou `CANCELAR` e, depois da confirmação, perguntar se o admin quer deixar como rascunho ou publicar. O evento só é gravado depois dessa escolha final.
+Ao terminar a edição/criação, o sistema deve mostrar o resumo, pedir `CONFIRMAR` ou `CANCELAR` e, depois da confirmação, perguntar se o admin quer deixar como rascunho ou publicar. O evento só é gravado depois dessa escolha final. Mesmo quando o admin escolhe publicar, a gravação começa internamente como `draft`, cria sessões, setores, assentos/unidades e preços, e só depois promove o evento para `published` e as sessões para vendáveis.
 
 ### 6.3 Sessões/datas
 
@@ -529,6 +529,7 @@ Status operacional:
 - a criação guiada coleta foto, quantidade de datas, quantidade de sessões por data, cada data e seus horários separados, modelo de entrada, carga, tipos/ofertas, assentos digitados quando houver, informações gerais, confirmação final e depois escolha entre rascunho/publicação;
 - `3 datas` com `1 sessão por data` cria 3 sessões; `1 data` com `2 sessões por data` cria 2 sessões no mesmo dia com horários distintos;
 - eventos só são gravados depois de `CONFIRMAR` e da escolha final de rascunho/publicação; ao cancelar antes disso, o rascunho da conversa é descartado e nenhum evento temporário é criado;
+- para evitar publicação parcial, a criação persiste primeiro como `draft` e só promove para `published` depois que sessões, setores, assentos/unidades e preços foram criados com sucesso;
 - publicação exige foto; rascunho pode seguir sem foto.
 
 ### 6.8 Editar evento

@@ -4,7 +4,7 @@ import { pbkdf2Sync, randomBytes } from "node:crypto";
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 
-const PREFIX = "TEST_ADMIN_EVENT_CREATION_FLOW";
+const PREFIX = "TEST_MY_EVENTS_CREATION_FLOW";
 const PORT = 3352;
 const ZAPI_PORT = 4582;
 const APP_BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -426,6 +426,55 @@ async function countRows(table, column, values) {
   return count ?? 0;
 }
 
+async function countEventTitle(title) {
+  const { count, error } = await supabase
+    .from("events")
+    .select("id", { count: "exact", head: true })
+    .eq("title", title);
+  if (error) throw new Error(`count event title ${title}: ${error.message}`);
+  return count ?? 0;
+}
+
+async function fetchSessions(eventId) {
+  const { data, error } = await supabase
+    .from("event_sessions")
+    .select("id, starts_at, status")
+    .eq("event_id", eventId)
+    .order("starts_at", { ascending: true });
+  if (error) throw new Error(`select sessions: ${error.message}`);
+  return data ?? [];
+}
+
+async function fetchSections(venueId) {
+  const { data, error } = await supabase
+    .from("venue_sections")
+    .select("id, name, slug, capacity, has_numbered_seats")
+    .eq("venue_id", venueId)
+    .order("name", { ascending: true });
+  if (error) throw new Error(`select sections: ${error.message}`);
+  return data ?? [];
+}
+
+async function fetchPrices(sessionIds) {
+  const { data, error } = await supabase
+    .from("ticket_prices")
+    .select("id, session_id, section_id, ticket_type, label, price_cents, fee_cents")
+    .in("session_id", sessionIds)
+    .order("label", { ascending: true });
+  if (error) throw new Error(`select prices: ${error.message}`);
+  return data ?? [];
+}
+
+async function fetchSeats(sectionIds) {
+  const { data, error } = await supabase
+    .from("seats")
+    .select("id, section_id, seat_code, row_label, seat_number, map_x, map_y")
+    .in("section_id", sectionIds)
+    .order("seat_code", { ascending: true });
+  if (error) throw new Error(`select seats: ${error.message}`);
+  return data ?? [];
+}
+
 async function testSharedDraftCreation() {
   const title = `${PREFIX} CRIACAO COMPARTILHADA`;
   await sendMessage(ADMIN_PHONE, "meus eventos");
@@ -436,13 +485,15 @@ async function testSharedDraftCreation() {
   await sendMessage(ADMIN_PHONE, "SP");
   await sendMessage(ADMIN_PHONE, `${PREFIX} Teatro Compartilhado`);
   await sendMessage(ADMIN_PHONE, "pular");
-  await sendMessage(ADMIN_PHONE, "2");
+  await sendMessage(ADMIN_PHONE, "3");
   await sendMessage(ADMIN_PHONE, "1");
   await sendMessage(ADMIN_PHONE, "10/08/2026");
   await sendMessage(ADMIN_PHONE, "20:00");
   await sendMessage(ADMIN_PHONE, "11/08/2026");
   await sendMessage(ADMIN_PHONE, "21:00");
-  await sendMessage(ADMIN_PHONE, "2");
+  await sendMessage(ADMIN_PHONE, "12/08/2026");
+  await sendMessage(ADMIN_PHONE, "22:00");
+  await sendMessage(ADMIN_PHONE, "1");
   await sendMessage(ADMIN_PHONE, "1");
   await sendMessage(ADMIN_PHONE, "100");
   await sendMessage(ADMIN_PHONE, "2");
@@ -455,8 +506,10 @@ async function testSharedDraftCreation() {
   );
   assertIncludes(summary.text, "Confirme o novo evento", "mostra confirmacao final");
   assertIncludes(summary.text, "Informações gerais: cadastradas", "summary mostra informacoes");
+  assert((await countEventTitle(title)) === 0, "antes de CONFIRMAR nada foi gravado");
   const statusPrompt = await sendMessage(ADMIN_PHONE, "CONFIRMAR");
   assertIncludes(statusPrompt.text, "Deixar como rascunho", "apos confirmar pede rascunho/publicar");
+  assert((await countEventTitle(title)) === 0, "apos CONFIRMAR ainda aguarda rascunho/publicar sem gravar");
   const created = await sendMessage(ADMIN_PHONE, "1");
   assertIncludes(created.text, "Evento criado", "confirma cria evento");
 
@@ -464,10 +517,21 @@ async function testSharedDraftCreation() {
   assert(event.status === "draft", "evento compartilhado ficou rascunho");
   assert(event.description?.includes("Abertura dos portões"), "description foi persistida");
 
-  const sessionIds = await dbSelectIds("event_sessions", "event_id", [event.id]);
-  assert(sessionIds.length === 2, "evento compartilhado criou 2 sessoes");
+  const sessions = await fetchSessions(event.id);
+  const sessionIds = sessions.map((session) => session.id);
+  assert(sessionIds.length === 3, "evento compartilhado criou 3 datas com 1 sessao por data");
+  assert(sessions.every((session) => session.status === "scheduled"), "rascunho mantem sessoes scheduled");
   const priceCount = await countRows("ticket_prices", "session_id", sessionIds);
-  assert(priceCount === 4, "2 ofertas aplicadas nas 2 sessoes");
+  assert(priceCount === 6, "2 ofertas aplicadas nas 3 sessoes");
+  const prices = await fetchPrices(sessionIds);
+  assert(
+    prices.some((price) => price.label === "Inteira" && price.ticket_type === "full" && price.price_cents === 12000),
+    "formato com espaco e virgula vira full em centavos",
+  );
+  assert(
+    prices.some((price) => price.label === "Meia" && price.ticket_type === "half" && price.price_cents === 6000),
+    "oferta Meia compartilhada vira half em centavos",
+  );
 }
 
 async function testNumberedPublishedCreation() {
@@ -490,8 +554,9 @@ async function testNumberedPublishedCreation() {
   await sendMessage(ADMIN_PHONE, "4");
   await sendMessage(ADMIN_PHONE, "1");
   await sendMessage(ADMIN_PHONE, "Inteira 90,00 0");
-  await sendMessage(ADMIN_PHONE, "A 4 assentos 1 a 4");
-  await sendMessage(ADMIN_PHONE, "2");
+  const firstSeatLayoutResponse = await sendMessage(ADMIN_PHONE, "A 4 assentos 1 a 4\nB: 1 _ 3");
+  assertNotIncludes(firstSeatLayoutResponse.text, "1 de 13", "nao concatena sessao 1 de 13");
+  await sendMessage(ADMIN_PHONE, "1");
   const summary = await sendMessage(ADMIN_PHONE, "PULAR");
   assertIncludes(summary.text, "Confirme o novo evento", "descricao pulada leva para resumo");
   const statusPrompt = await sendMessage(ADMIN_PHONE, "CONFIRMAR");
@@ -504,23 +569,137 @@ async function testNumberedPublishedCreation() {
   assert(event.image_url === "https://example.com/test-admin-event.jpg", "foto foi persistida");
   assert(event.description === null, "description pulada fica null");
 
-  const sessionIds = await dbSelectIds("event_sessions", "event_id", [event.id]);
+  const persistedSessions = await fetchSessions(event.id);
+  const sessionIds = persistedSessions.map((session) => session.id);
   assert(sessionIds.length === 2, "evento numerado criou 2 sessoes na mesma data");
-  const { data: sessions, error: sessionError } = await supabase
-    .from("event_sessions")
-    .select("status")
-    .eq("event_id", event.id);
-  if (sessionError) throw sessionError;
   assert(
-    sessions?.every((session) => session.status === "sales_open"),
+    persistedSessions.every((session) => session.status === "sales_open"),
     "evento publicado abre venda das sessoes",
   );
 
-  const sectionIds = await dbSelectIds("venue_sections", "venue_id", [event.venue_id]);
-  const seatCount = await countRows("seats", "section_id", sectionIds);
+  const sections = await fetchSections(event.venue_id);
+  const sectionIds = sections.map((section) => section.id);
+  const seats = await fetchSeats(sectionIds);
+  const seatCount = seats.length;
   const sessionSeatCount = await countRows("session_seats", "session_id", sessionIds);
-  assert(seatCount === 4, "evento numerado criou 4 assentos");
-  assert(sessionSeatCount === 8, "evento numerado criou session_seats por sessao");
+  assert(seatCount === 6, "evento numerado criou assentos de range e desenho textual");
+  assert(
+    seats.some(
+      (seat) =>
+        seat.seat_code === "A04" &&
+        seat.map_x !== null &&
+        seat.map_y !== null &&
+        Number.isFinite(Number(seat.map_x)) &&
+        Number.isFinite(Number(seat.map_y)),
+    ),
+    "formato A 4 ASSENTOS gera seat_code e posicao",
+  );
+  assert(seats.some((seat) => seat.seat_code === "B01"), "desenho textual cria B01");
+  assert(!seats.some((seat) => seat.seat_code === "B02"), "desenho textual com _ nao cria lacuna");
+  assert(seats.some((seat) => seat.seat_code === "B03"), "desenho textual cria B03 apos lacuna");
+  assert(sessionSeatCount === 12, "evento numerado criou session_seats por sessao");
+}
+
+async function testSingleGeneralCreation() {
+  const title = `${PREFIX} CRIACAO ENTRADA UNICA`;
+  await sendMessage(ADMIN_PHONE, "meus eventos");
+  await sendMessage(ADMIN_PHONE, "2");
+  await sendMessage(ADMIN_PHONE, title);
+  await sendMessage(ADMIN_PHONE, `${PREFIX} Entrada Unica`);
+  await sendMessage(ADMIN_PHONE, "Sorocaba");
+  await sendMessage(ADMIN_PHONE, "SP");
+  await sendMessage(ADMIN_PHONE, `${PREFIX} Teatro Entrada Unica`);
+  await sendMessage(ADMIN_PHONE, "pular");
+  await sendMessage(ADMIN_PHONE, "1");
+  await sendMessage(ADMIN_PHONE, "1");
+  await sendMessage(ADMIN_PHONE, "13/08/2026");
+  await sendMessage(ADMIN_PHONE, "20:00");
+  await sendMessage(ADMIN_PHONE, "1");
+  await sendMessage(ADMIN_PHONE, "1");
+  await sendMessage(ADMIN_PHONE, "5");
+  await sendMessage(ADMIN_PHONE, "1");
+  await sendMessage(ADMIN_PHONE, "Inteira 120.00 0");
+  const summary = await sendMessage(ADMIN_PHONE, "pular");
+  assertIncludes(summary.text, "Confirme o novo evento", "entrada unica mostra resumo");
+  await sendMessage(ADMIN_PHONE, "CONFIRMAR");
+  const created = await sendMessage(ADMIN_PHONE, "1");
+  assertIncludes(created.text, "Evento criado", "entrada unica cria rascunho");
+
+  const event = await fetchCreatedEvent(title);
+  const sessions = await fetchSessions(event.id);
+  const sections = await fetchSections(event.venue_id);
+  assert(sections.length === 1, "entrada unica cria um setor padrao");
+  assert(sections[0]?.has_numbered_seats === false, "entrada unica sem assento marcado");
+  assert(sections[0]?.capacity === 5, "entrada unica grava carga compartilhada");
+  const sessionSeatCount = await countRows("session_seats", "session_id", sessions.map((session) => session.id));
+  assert(sessionSeatCount === 5, "entrada unica cria disponibilidade abstrata");
+}
+
+async function testSeparateCapacityFormats() {
+  const title = `${PREFIX} CRIACAO CARGA SEPARADA`;
+  await sendMessage(ADMIN_PHONE, "meus eventos");
+  await sendMessage(ADMIN_PHONE, "2");
+  await sendMessage(ADMIN_PHONE, title);
+  await sendMessage(ADMIN_PHONE, `${PREFIX} Carga Separada`);
+  await sendMessage(ADMIN_PHONE, "Sorocaba");
+  await sendMessage(ADMIN_PHONE, "SP");
+  await sendMessage(ADMIN_PHONE, `${PREFIX} Teatro Carga Separada`);
+  await sendMessage(ADMIN_PHONE, "pular");
+  await sendMessage(ADMIN_PHONE, "1");
+  await sendMessage(ADMIN_PHONE, "1");
+  await sendMessage(ADMIN_PHONE, "14/08/2026");
+  await sendMessage(ADMIN_PHONE, "20:00");
+  await sendMessage(ADMIN_PHONE, "2");
+  await sendMessage(ADMIN_PHONE, "2");
+  await sendMessage(ADMIN_PHONE, "4");
+  await sendMessage(ADMIN_PHONE, "Inteira 100 120,00");
+  await sendMessage(ADMIN_PHONE, "Meia, 50, 60,00");
+  await sendMessage(ADMIN_PHONE, "Promocional - 25 - 30.00 - 1.50");
+  await sendMessage(ADMIN_PHONE, "Cortesia | 5 | 0 | 0");
+  const summary = await sendMessage(ADMIN_PHONE, "pular");
+  assertIncludes(summary.text, "Confirme o novo evento", "carga separada mostra resumo");
+  await sendMessage(ADMIN_PHONE, "CONFIRMAR");
+  const created = await sendMessage(ADMIN_PHONE, "1");
+  assertIncludes(created.text, "Evento criado", "carga separada cria rascunho");
+
+  const event = await fetchCreatedEvent(title);
+  const sessions = await fetchSessions(event.id);
+  const sections = await fetchSections(event.venue_id);
+  const prices = await fetchPrices(sessions.map((session) => session.id));
+
+  assert(sections.length === 4, "carga separada cria quatro setores/tipos");
+  assert(
+    sections.some((section) => section.name === "Inteira" && section.capacity === 100),
+    "formato com espaco grava capacidade",
+  );
+  assert(
+    sections.some((section) => section.name === "Meia" && section.capacity === 50),
+    "formato com virgula grava capacidade",
+  );
+  assert(
+    sections.some((section) => section.name === "Promocional" && section.capacity === 25),
+    "formato com hifen grava capacidade",
+  );
+  assert(
+    sections.some((section) => section.name === "Cortesia" && section.capacity === 5),
+    "formato com pipe grava capacidade",
+  );
+  assert(
+    prices.some((price) => price.label === "Inteira" && price.ticket_type === "full" && price.price_cents === 12000),
+    "Inteira mapeia full e 120,00 para centavos",
+  );
+  assert(
+    prices.some((price) => price.label === "Meia" && price.ticket_type === "half" && price.price_cents === 6000),
+    "Meia mapeia half e 60,00 para centavos",
+  );
+  assert(
+    prices.some((price) => price.label === "Promocional" && price.ticket_type === "promotional" && price.price_cents === 3000 && price.fee_cents === 150),
+    "Promocional mapeia promotional, 30.00 e taxa 1.50",
+  );
+  assert(
+    prices.some((price) => price.label === "Cortesia" && price.ticket_type === "free" && price.price_cents === 0),
+    "Cortesia mapeia free",
+  );
 }
 
 async function testCancelCreationRollback() {
@@ -541,8 +720,12 @@ async function testCancelCreationRollback() {
 }
 
 async function testBuyerUnaffected() {
-  const response = await sendMessage(BUYER_PHONE, `${PREFIX} CRIACAO NUMERADA`);
-  assertNotIncludes(response.text, "MENU ADMIN", "cliente comum nao entra em admin");
+  const published = await sendMessage(BUYER_PHONE, `${PREFIX} CRIACAO NUMERADA`);
+  assertNotIncludes(published.text, "MENU ADMIN", "cliente comum nao entra em admin");
+  assertIncludes(published.text, `${PREFIX} CRIACAO NUMERADA`, "evento publicado aparece na busca");
+
+  const draft = await sendMessage(BUYER_PHONE, `${PREFIX} CRIACAO COMPARTILHADA`);
+  assertNotIncludes(draft.text, `${PREFIX} CRIACAO COMPARTILHADA`, "evento rascunho nao aparece na busca");
 }
 
 async function main() {
@@ -559,6 +742,8 @@ async function main() {
     await testEventsMenuAndListing();
     await testSharedDraftCreation();
     await testNumberedPublishedCreation();
+    await testSingleGeneralCreation();
+    await testSeparateCapacityFormats();
     await testCancelCreationRollback();
     await testBuyerUnaffected();
   } finally {
