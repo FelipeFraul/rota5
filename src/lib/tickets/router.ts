@@ -2386,7 +2386,7 @@ function parseInitialEntryDefinition(
   };
 }
 
-function renderEntryItemPrompt(draft: Record<string, unknown>) {
+function renderEntryItemPrompt() {
   return renderCreateEventPrompt("entryItem");
 }
 
@@ -3852,7 +3852,7 @@ async function handleAdminEventsFlow({
               ? [
                   `Envie o tipo/setor ${Number(draft.currentEntryIndex ?? 1)} de ${existingCount}.`,
                   "",
-                  renderEntryItemPrompt(draft),
+                  renderEntryItemPrompt(),
                 ].join("\n")
               : renderCreateEventPrompt(String(draft.field)),
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
@@ -3953,7 +3953,7 @@ async function handleAdminEventsFlow({
           "",
           draft.entryCapacityMode === "shared"
             ? renderCreateEventPrompt("entryOfferItem")
-            : renderEntryItemPrompt(draft),
+            : renderEntryItemPrompt(),
         ].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
           draft,
@@ -4040,8 +4040,6 @@ async function handleAdminEventsFlow({
         }),
       };
     } else if (field === "entrySeatItem") {
-      const expectedCount = Number(draft.expectedEntryCount ?? 0);
-      const currentIndex = Number(draft.currentEntryIndex ?? 1);
       const pendingSectionRaw = draft.pendingNumberedSection;
       const pendingSection =
         pendingSectionRaw && typeof pendingSectionRaw === "object"
@@ -4191,7 +4189,7 @@ async function handleAdminEventsFlow({
             "",
             `Envie o tipo/setor ${currentIndex + 1} de ${expectedCount}.`,
             "",
-            renderEntryItemPrompt(draft),
+            renderEntryItemPrompt(),
           ].join("\n"),
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
