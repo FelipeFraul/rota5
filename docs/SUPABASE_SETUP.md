@@ -1123,7 +1123,7 @@ The function `public.cancel_pending_reservation(p_reservation_id uuid, p_custome
 - does not touch `paid`, `sold`, `blocked`, or tickets;
 - grants execution only to `service_role`.
 
-Apply the migration with a linked Supabase CLI or paste the SQL into Supabase SQL Editor. This workspace could not apply it automatically because `npx supabase link --project-ref uhttjhrszwrnodcczkdp` requires `supabase login` or `SUPABASE_ACCESS_TOKEN`. The application keeps a compatibility fallback for cancellation until the RPC exists in the database, but the intended production path is the RPC.
+The migration was applied in the real Supabase project through the SQL Editor after the local CLI failed with missing `SUPABASE_ACCESS_TOKEN`. The RPC exists in the schema cache and was validated through the Supabase API. The application now depends on the RPC for buyer cancellation; the older manual cancellation fallback was removed so unexpected RPC failures do not perform partial non-transactional releases.
 
 The reservation/expiration/cancellation audit used temporary real Supabase data with the `TEST_RESERVATION_EXPIRATION_CANCEL` prefix and a local Z-API mock. It validated:
 
@@ -1141,6 +1141,18 @@ The reservation/expiration/cancellation audit used temporary real Supabase data 
 - paid `payment_pending` state not being cancelled by buyer commands;
 - concurrent expiration/cancellation calls not corrupting reservation/session-seat status;
 - full cleanup of temporary events, venues, customers, conversations, reservations, orders, payments, prices, seats, and session seats.
+
+The direct RPC audit used the `TEST_CANCEL_PENDING_RESERVATION_REAL` prefix and confirmed:
+
+- `anon` cannot execute `public.cancel_pending_reservation`;
+- `authenticated` cannot execute it;
+- `service_role` can execute it;
+- active reservation plus `pending_payment` order is cancelled with one reservation, one order, and one seat released;
+- paid reservation/order/payment/ticket/sold seat are preserved;
+- already `expired` or `cancelled` reservations return a safe `not_cancellable` response;
+- `p_customer_id` mismatch returns `not_found` and leaves the reservation/seat untouched;
+- simultaneous calls against the same reservation result in exactly one cancellation/release;
+- cleanup removed all temporary rows.
 
 ## Step 15 - Gate Sessions And Scanner Shell
 
@@ -1848,7 +1860,7 @@ Use temporary data only, and remove it after testing if running against a produc
 - [x] Expired reservation without reservation items does not fail.
 - [x] Sold seats are not released.
 - [x] Blocked seats are not released.
-- [x] Production expiration runner exists at `GET /api/cron/expire-reservations`.
+- [x] Production expiration runner exists at `GET` or `POST /api/cron/expire-reservations`.
 - [x] The route requires `Authorization: Bearer CRON_SECRET`.
 - [x] Because Vercel Hobby only permits daily cron jobs, configure an external scheduler to call the route every minute, or use a Vercel plan with frequent cron support.
 - [x] Expired reservations trigger a WhatsApp notice to the buyer after seats are released.

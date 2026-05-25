@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "crypto";
-import { jsonError, jsonOk, methodNotAllowed, unauthorized } from "@/lib/http/responses";
+import { jsonError, jsonOk, unauthorized } from "@/lib/http/responses";
 import { logError, logWarn } from "@/lib/logger";
 import { expireReservationsAndNotify } from "@/lib/tickets/services/reservationExpiry";
 
@@ -24,7 +24,7 @@ function isSecretMatch(received: string, expected: string) {
   );
 }
 
-export async function GET(request: Request) {
+async function handleExpireReservationsCron(request: Request) {
   const cronSecret = process.env.CRON_SECRET?.trim();
 
   if (!cronSecret) {
@@ -50,6 +50,10 @@ export async function GET(request: Request) {
   }
 }
 
-export function POST() {
-  return methodNotAllowed(["GET"]);
+export async function GET(request: Request) {
+  return handleExpireReservationsCron(request);
+}
+
+export async function POST(request: Request) {
+  return handleExpireReservationsCron(request);
 }

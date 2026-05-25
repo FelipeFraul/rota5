@@ -155,15 +155,16 @@ Quando a reserva expira ou quando o usuário digita comandos como `cancelar`, `c
 Expiração operacional:
 
 - reservas expiradas são processadas pela RPC `public.expire_reservations`;
-- existe endpoint protegido `GET /api/cron/expire-reservations`, exigindo `Authorization: Bearer CRON_SECRET`;
+- existe endpoint protegido `GET` ou `POST /api/cron/expire-reservations`, exigindo `Authorization: Bearer CRON_SECRET`;
 - em produção, se o plano Vercel não permitir cron em frequência de minuto, um agendador externo deve chamar o endpoint;
 - a expiração libera apenas assentos ainda reservados pela própria reserva e não altera ingressos pagos, vendidos ou bloqueados.
 
 Cancelamento pelo comprador:
 
 - `cancelar`, `cancela`, `apagar` e `sair` zeram o fluxo de compra;
-- se houver reserva ativa e pedido pendente, o sistema cancela a reserva, cancela o pedido pendente e libera os assentos/ingressos;
+- se houver reserva ativa e pedido pendente, o sistema cancela a reserva, cancela o pedido pendente e libera os assentos/ingressos pela RPC transacional `public.cancel_pending_reservation`;
 - reservas/pedidos pagos não são cancelados por esse comando.
+- a RPC foi aplicada e validada no Supabase real; `anon` e `authenticated` não executam, somente `service_role`.
 
 Mensagem quando havia reserva ativa cancelada:
 
