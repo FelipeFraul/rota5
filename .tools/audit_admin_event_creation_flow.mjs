@@ -449,16 +449,15 @@ async function testSharedDraftCreation() {
   await sendMessage(ADMIN_PHONE, "Inteira 120,00 0");
   const descriptionPrompt = await sendMessage(ADMIN_PHONE, "Meia 60,00 0");
   assertIncludes(descriptionPrompt.text, "informações gerais", "apos ofertas pede informacoes gerais");
-  const statusPrompt = await sendMessage(
+  const summary = await sendMessage(
     ADMIN_PHONE,
     "Abertura dos portões às 19h. Classificação livre.",
   );
-  assertIncludes(statusPrompt.text, "Deixar como rascunho", "apos informacoes pede rascunho/publicar");
-  const summary = await sendMessage(ADMIN_PHONE, "1");
   assertIncludes(summary.text, "Confirme o novo evento", "mostra confirmacao final");
   assertIncludes(summary.text, "Informações gerais: cadastradas", "summary mostra informacoes");
-  assertIncludes(summary.text, "Publicação: rascunho", "summary mostra rascunho");
-  const created = await sendMessage(ADMIN_PHONE, "CONFIRMAR");
+  const statusPrompt = await sendMessage(ADMIN_PHONE, "CONFIRMAR");
+  assertIncludes(statusPrompt.text, "Deixar como rascunho", "apos confirmar pede rascunho/publicar");
+  const created = await sendMessage(ADMIN_PHONE, "1");
   assertIncludes(created.text, "Evento criado", "confirma cria evento");
 
   const event = await fetchCreatedEvent(title);
@@ -493,11 +492,11 @@ async function testNumberedPublishedCreation() {
   await sendMessage(ADMIN_PHONE, "Inteira 90,00 0");
   await sendMessage(ADMIN_PHONE, "A 4 assentos 1 a 4");
   await sendMessage(ADMIN_PHONE, "2");
-  const statusPrompt = await sendMessage(ADMIN_PHONE, "PULAR");
-  assertIncludes(statusPrompt.text, "Publicar", "descricao pulada leva para status");
-  const summary = await sendMessage(ADMIN_PHONE, "2");
-  assertIncludes(summary.text, "Publicação: publicar", "summary mostra publicar");
-  const created = await sendMessage(ADMIN_PHONE, "CONFIRMAR");
+  const summary = await sendMessage(ADMIN_PHONE, "PULAR");
+  assertIncludes(summary.text, "Confirme o novo evento", "descricao pulada leva para resumo");
+  const statusPrompt = await sendMessage(ADMIN_PHONE, "CONFIRMAR");
+  assertIncludes(statusPrompt.text, "Publicar", "apos confirmar pede publicacao");
+  const created = await sendMessage(ADMIN_PHONE, "2");
   assertIncludes(created.text, "Evento criado", "confirma cria evento numerado");
 
   const event = await fetchCreatedEvent(title);

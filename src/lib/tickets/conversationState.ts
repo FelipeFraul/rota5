@@ -43,6 +43,7 @@ export type TicketConversationStep =
   | "admin_event_detail"
   | "admin_event_create_collecting"
   | "admin_event_create_confirm"
+  | "admin_event_create_status"
   | "admin_event_edit_select"
   | "admin_event_edit_menu"
   | "admin_event_edit_collecting"

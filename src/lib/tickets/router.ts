@@ -2419,6 +2419,7 @@ function parseInitialEntryDefinition(
   const priceCents = parseMoneyToCents(requireCapacity ? thirdRaw ?? "" : secondRaw ?? "");
   const feeCents = parseMoneyToCents(requireCapacity ? fourthRaw : thirdRaw ?? "0");
   const slug = normalizeSlug(name ?? "");
+  const ticketType = inferTicketTypeFromLabel(name ?? "");
 
   if (
     !name ||
@@ -2437,7 +2438,7 @@ function parseInitialEntryDefinition(
     hasNumberedSeats: options.numbered,
     capacity,
     createInventorySeats: !options.numbered && capacity !== null,
-    ticketType: "full" as const,
+    ticketType,
     label: name,
     priceCents,
     feeCents,
@@ -2462,22 +2463,31 @@ function parseInitialOfferDefinition(value: string) {
   const feeCents = parseMoneyToCents(feeRaw);
 
   if (!name || priceCents === null || feeCents === null) return null;
-  const normalizedName = normalizeAdminText(name);
-  const ticketType: AdminTicketType =
-    /\b(meia|estudante|senior|sênior|idoso|pcd|professor)\b/.test(normalizedName)
-      ? "half"
-      : /\b(cortesia|gratis|grátis|gratuito|free)\b/.test(normalizedName)
-        ? "free"
-        : /\b(promocional|promo)\b/.test(normalizedName)
-          ? "promotional"
-          : "full";
 
   return {
-    ticketType,
+    ticketType: inferTicketTypeFromLabel(name),
     label: name,
     priceCents,
     feeCents,
   };
+}
+
+function inferTicketTypeFromLabel(label: string): AdminTicketType {
+  const normalizedName = normalizeAdminText(label);
+
+  if (/\b(meia|estudante|senior|sênior|idoso|pcd|professor)\b/.test(normalizedName)) {
+    return "half";
+  }
+
+  if (/\b(cortesia|gratis|grátis|gratuito|free)\b/.test(normalizedName)) {
+    return "free";
+  }
+
+  if (/\b(promocional|promo)\b/.test(normalizedName)) {
+    return "promotional";
+  }
+
+  return "full";
 }
 
 function parseCreateEventSessionQuantities(value: string) {
@@ -2755,7 +2765,7 @@ function stepBackCreateEventDraft(draft: Record<string, unknown>) {
 
 function getCreateEventConfirmBackDraft(draft: Record<string, unknown>) {
   const nextDraft = { ...draft };
-  nextDraft.field = "status";
+  nextDraft.field = "description";
   return nextDraft;
 }
 
@@ -2968,11 +2978,10 @@ function renderCreateEventSummary(draft: Record<string, unknown>) {
           (startsAt, index) => `${index + 1}. ${formatDateTime(startsAt)}`,
         )
       : ["nenhuma sessão definida"]),
-    `Publicação: ${draft.status === "published" ? "publicar" : "rascunho"}`,
     "",
     ...renderInitialSectionsSummary(draft),
     "",
-    "Responda CONFIRMAR para criar ou CANCELAR para abandonar.",
+    "Responda CONFIRMAR para escolher rascunho/publicação ou CANCELAR para abandonar.",
   ].join("\n");
 }
 
@@ -3697,7 +3706,7 @@ async function handleAdminEventsFlow({
       sessionDateItem: null,
       sessionTimeItem: null,
       sessionItem: null,
-      description: "status",
+      description: null,
       status: null,
       entryModel: null,
       singleEntryDetails: null,
@@ -3979,6 +3988,17 @@ async function handleAdminEventsFlow({
           };
         }
         draft[field] = imageUrl;
+      }
+
+      if (draft.returnToCreateStatus) {
+        delete draft.returnToCreateStatus;
+        delete draft.field;
+        return {
+          reply: renderCreateEventPrompt("status"),
+          nextContext: withAdminEventsContext(baseContext, "admin_event_create_status", {
+            draft,
+          }),
+        };
       }
     } else if (field === "status") {
       const status = text.trim() === "2" ? "published" : text.trim() === "1" ? "draft" : null;
@@ -4492,12 +4512,83 @@ async function handleAdminEventsFlow({
     const city = String(draft.city ?? "").trim();
     const state = String(draft.state ?? "").trim().toUpperCase();
     const venueName = String(draft.venueName ?? "").trim();
+    const sessionsStartsAt = getDraftArray<string>(draft, "sessionsStartsAt");
+    const initialSections = getInitialSectionsFromDraft(draft);
+
+    if (
+      !title ||
+      !artistName ||
+      !city ||
+      !/^[A-Z]{2}$/.test(state) ||
+      !venueName ||
+      sessionsStartsAt.length === 0 ||
+      sessionsStartsAt.some((startsAt) => new Date(startsAt).getTime() <= Date.now()) ||
+      initialSections.length === 0
+    ) {
+      return {
+        reply:
+          initialSections.length === 0
+              ? "Antes de confirmar, defina a estrutura de entradas/lugares. Comece a criação novamente."
+              : "Os dados do evento ficaram incompletos ou inválidos. Comece a criação novamente.",
+        nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
+      };
+    }
+
+    return {
+      reply: renderCreateEventPrompt("status"),
+      nextContext: withAdminEventsContext(baseContext, "admin_event_create_status", {
+        draft,
+      }),
+    };
+  }
+
+  if (baseContext.state === "admin_event_create_status") {
+    if (isBackText(text)) {
+      return {
+        reply: renderCreateEventSummary(adminEvents.draft ?? {}),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_create_confirm", adminEvents),
+      };
+    }
+
+    if (isAbortText(text)) {
+      return {
+        reply: ["Criação de evento cancelada.", "", renderAdminEventsMenu()].join("\n"),
+        nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
+      };
+    }
+
+    const draft = adminEvents.draft ?? {};
+    const status = text.trim() === "2" ? "published" : text.trim() === "1" ? "draft" : null;
+
+    if (!status) {
+      return {
+        reply: renderCreateEventPrompt("status"),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_create_status", adminEvents),
+      };
+    }
+
+    const title = String(draft.title ?? "").trim();
+    const artistName = String(draft.artistName ?? "").trim();
+    const city = String(draft.city ?? "").trim();
+    const state = String(draft.state ?? "").trim().toUpperCase();
+    const venueName = String(draft.venueName ?? "").trim();
     const imageUrl = normalizeEventImageUrl(String(draft.imageUrl ?? ""));
     const descriptionRaw = String(draft.description ?? "").trim();
     const description = descriptionRaw ? descriptionRaw : null;
     const sessionsStartsAt = getDraftArray<string>(draft, "sessionsStartsAt");
-    const status = String(draft.status ?? "");
     const initialSections = getInitialSectionsFromDraft(draft);
+
+    if (status === "published" && !imageUrl) {
+      const nextDraft: Record<string, unknown> = { ...draft, field: "imageUrl" };
+      nextDraft.returnToCreateStatus = true;
+      return {
+        reply:
+          "Para publicar, a foto do evento é obrigatória. Envie a foto agora ou cole uma URL pública https://...",
+        nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
+          draft: nextDraft,
+        }),
+      };
+    }
 
     if (
       !title ||
@@ -4509,16 +4600,13 @@ async function handleAdminEventsFlow({
       sessionsStartsAt.some((startsAt) => new Date(startsAt).getTime() <= Date.now()) ||
       !isEventStatus(status) ||
       !["draft", "published"].includes(status) ||
-      (status === "published" && !imageUrl) ||
       initialSections.length === 0
     ) {
       return {
         reply:
-          status === "published" && !imageUrl
-            ? "Para publicar o evento, cadastre a foto antes. Comece a criação novamente."
-            : initialSections.length === 0
-              ? "Antes de confirmar, defina a estrutura de entradas/lugares. Comece a criação novamente."
-              : "Os dados do evento ficaram incompletos ou inválidos. Comece a criação novamente.",
+          initialSections.length === 0
+            ? "Antes de confirmar, defina a estrutura de entradas/lugares. Comece a criação novamente."
+            : "Os dados do evento ficaram incompletos ou inválidos. Comece a criação novamente.",
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
       };
     }
