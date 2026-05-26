@@ -843,8 +843,9 @@ ADMINISTRADORES
 > 2. Adicionar administrador
 > 3. Alterar nível de administrador
 > 4. Desativar administrador
-> 5. Voltar
-> 6. Sair
+> 5. Liberar administrador bloqueado
+> 6. Voltar
+> 7. Sair
 ```
 
 O item `Limites de cortesias` não deve ficar em Administradores, porque o limite é do evento.
@@ -878,6 +879,8 @@ ADMINISTRADOR ADICIONADO
 ```
 
 O sistema pede uma palavra-chave individual no cadastro e salva apenas o hash PBKDF2 em `admin_users.passphrase_hash`. A palavra-chave não aparece na confirmação, não é salva em texto puro no histórico de mensagens e o contexto temporário guarda apenas o hash pendente até a confirmação. O novo administrador entra enviando `admin` e depois a própria palavra-chave. Não existe senha geral nem fallback por variável de ambiente; administrador ativo sem `passphrase_hash` não autentica e a constraint `admin_users_active_requires_passphrase_hash` impede manter ou ativar admin sem hash individual. Admin desativado pode ficar sem hash, mas precisa receber uma nova palavra-chave para voltar a ficar ativo. Se o telefone já existir ativo, não cria duplicado. Se existir desativado, o fluxo pode reativar com confirmação `REATIVAR ADMIN` e define uma nova palavra-chave.
+
+O login administrativo também aplica limite forte de tentativas. Três senhas incorretas bloqueiam o telefone por 15 minutos; cinco tentativas incorretas sequenciais bloqueiam até liberação manual por Diretor. Quando a origem/IP estiver disponível, o sistema guarda apenas hash da origem em `admin_auth_attempts.last_source_hash`. O Diretor que cadastrou o administrador recebe alerta quando o bloqueio é acionado. A liberação fica em `Administradores > Liberar administrador bloqueado` e exige confirmação `LIBERAR ADMIN`.
 
 ### 10.2 Alterar nível
 

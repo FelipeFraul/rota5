@@ -83,6 +83,15 @@ function getRequestSecret(request: Request): string | null {
   return getHeaderSecret(request) ?? getQuerySecret(request);
 }
 
+function getRequestSourceIdentifier(request: Request) {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip")?.trim() ||
+    request.headers.get("cf-connecting-ip")?.trim() ||
+    null
+  );
+}
+
 function isSecretMatch(received: string | null, expected: string) {
   if (!received) {
     return false;
@@ -559,6 +568,7 @@ export async function POST(request: Request) {
     conversation: conversationResult.conversation,
     text: incoming.text ?? incoming.mediaUrl ?? "",
     mediaUrl: incoming.mediaUrl,
+    sourceIdentifier: getRequestSourceIdentifier(request),
   });
 
   const conversationUpdateResult = await updateConversationAfterMessage({

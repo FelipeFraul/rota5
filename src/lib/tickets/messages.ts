@@ -54,6 +54,10 @@ export const TICKET_MESSAGES = {
     "Não consegui entender sua mensagem.\nMe diga o nome do evento, artista, cidade, local ou data que você procura.",
   adminAuthPrompt: "Envie a palavra-chave de acesso administrativo.",
   adminAuthInvalid: "Palavra-chave inválida.",
+  adminAuthTemporaryLocked:
+    "Muitas tentativas incorretas. Por segurança, este acesso foi bloqueado por {minutes} minutos.",
+  adminAuthHardLocked:
+    "Este acesso foi bloqueado por segurança. Peça ao Diretor para liberar seu administrador.",
   adminAuthMissingPassphrase:
     "Não foi possível autenticar este acesso. Peça ao Diretor para redefinir sua senha.",
   adminSessionExpired:

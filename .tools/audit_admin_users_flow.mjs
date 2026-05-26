@@ -630,7 +630,7 @@ async function main() {
     response = await sendMessage(ROOT_PHONE, "voltar");
     assertIncludes(response.text, "MENU ADMIN", "T) Voltar funciona");
     await sendMessage(ROOT_PHONE, "administradores");
-    response = await sendMessage(ROOT_PHONE, "6");
+    response = await sendMessage(ROOT_PHONE, "7");
     assertIncludes(response.text, "Sessão administrativa encerrada", "T) Sair por número encerra sessão");
 
     response = await sendMessage(COMMON_PHONE, "administradores");

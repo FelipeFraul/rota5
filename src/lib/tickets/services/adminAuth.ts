@@ -6,6 +6,7 @@ import {
   randomBytes,
   timingSafeEqual,
 } from "crypto";
+import { logWarn } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const ADMIN_AUTH_REDACTED_BODY = "[ADMIN_AUTH_REDACTED]";
@@ -14,6 +15,9 @@ const ADMIN_SESSION_DEFAULT_TTL_MINUTES = 60;
 const ADMIN_HASH_ALGORITHM = "pbkdf2_sha256";
 const ADMIN_HASH_ITERATIONS = 210_000;
 const ADMIN_HASH_KEY_LENGTH = 32;
+const ADMIN_AUTH_TEMP_LOCK_FAILED_ATTEMPTS = 3;
+const ADMIN_AUTH_HARD_LOCK_FAILED_ATTEMPTS = 5;
+const ADMIN_AUTH_TEMP_LOCK_MINUTES = 15;
 
 export type AdminRole = "root" | "admin" | "operator";
 export type AdminPermission =
@@ -43,6 +47,21 @@ export type AdminSession = {
   expires_at: string;
   created_at: string;
   last_used_at: string | null;
+};
+
+type AdminAuthAttemptRow = {
+  phone: string;
+  sequential_failed_attempts: number;
+  locked_until: string | null;
+  hard_locked_at: string | null;
+  alert_level: number;
+  last_failed_at: string | null;
+  last_success_at: string | null;
+  last_source_hash: string | null;
+  unlocked_at: string | null;
+  unlocked_by_admin_user_id: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export const ADMIN_ROLE_PERMISSIONS: Record<AdminRole, AdminPermission[]> = {
@@ -217,6 +236,172 @@ export async function verifyAdminUserPassphrase(phone: string, passphrase: strin
 
 export function hashAdminAuthMetadata(value: string) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function isMissingAdminAuthAttemptsTable(error: { code?: string; message?: string } | null | undefined) {
+  return (
+    error?.code === "42P01" ||
+    error?.message?.includes("admin_auth_attempts") === true
+  );
+}
+
+function hashAdminAuthSource(sourceIdentifier?: string | null) {
+  const normalized = sourceIdentifier?.trim();
+
+  return normalized ? createHash("sha256").update(normalized).digest("hex") : null;
+}
+
+function minutesUntil(isoDate: string) {
+  return Math.max(1, Math.ceil((new Date(isoDate).getTime() - Date.now()) / 60_000));
+}
+
+async function getAdminAuthAttemptRow(phone: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("admin_auth_attempts")
+    .select(
+      "phone, sequential_failed_attempts, locked_until, hard_locked_at, alert_level, last_failed_at, last_success_at, last_source_hash, unlocked_at, unlocked_by_admin_user_id, created_at, updated_at",
+    )
+    .eq("phone", phone)
+    .maybeSingle<AdminAuthAttemptRow>();
+
+  if (isMissingAdminAuthAttemptsTable(error)) {
+    logWarn("admin_auth_attempts table is missing; admin lockout is disabled until migration is applied");
+    return { ok: true as const, row: null, missingTable: true as const };
+  }
+
+  if (error) return { ok: false as const, error };
+
+  return { ok: true as const, row: data ?? null, missingTable: false as const };
+}
+
+export async function getAdminAuthBlockStatus(phone: string) {
+  const normalizedPhone = normalizeAdminPhone(phone);
+  if (!normalizedPhone) return { ok: false as const, reason: "invalid_phone" as const };
+
+  const rowResult = await getAdminAuthAttemptRow(normalizedPhone);
+  if (!rowResult.ok) return { ok: false as const, reason: "database_error" as const, error: rowResult.error };
+
+  const row = rowResult.row;
+  if (!row) return { ok: true as const, blocked: false as const };
+
+  if (row.hard_locked_at) {
+    return {
+      ok: true as const,
+      blocked: true as const,
+      type: "hard" as const,
+      failedAttempts: row.sequential_failed_attempts,
+    };
+  }
+
+  if (row.locked_until && new Date(row.locked_until).getTime() > Date.now()) {
+    return {
+      ok: true as const,
+      blocked: true as const,
+      type: "temporary" as const,
+      lockedUntil: row.locked_until,
+      retryAfterMinutes: minutesUntil(row.locked_until),
+      failedAttempts: row.sequential_failed_attempts,
+    };
+  }
+
+  return { ok: true as const, blocked: false as const };
+}
+
+async function getAdminAuthAlertPhone(phone: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("admin_users")
+    .select("created_by_admin_phone")
+    .eq("phone", phone)
+    .maybeSingle<{ created_by_admin_phone: string | null }>();
+
+  if (error) return null;
+
+  return normalizeAdminPhone(data?.created_by_admin_phone);
+}
+
+export async function recordAdminAuthFailure({
+  phone,
+  sourceIdentifier,
+}: {
+  phone: string;
+  sourceIdentifier?: string | null;
+}) {
+  const normalizedPhone = normalizeAdminPhone(phone);
+  if (!normalizedPhone) return { ok: false as const, reason: "invalid_phone" as const };
+
+  const rowResult = await getAdminAuthAttemptRow(normalizedPhone);
+  if (!rowResult.ok) return { ok: false as const, reason: "database_error" as const, error: rowResult.error };
+  if (rowResult.missingTable) return { ok: true as const, failedAttempts: 0 };
+
+  const now = new Date();
+  const previousAttempts = rowResult.row?.sequential_failed_attempts ?? 0;
+  const failedAttempts = previousAttempts + 1;
+  const hardLocked = failedAttempts >= ADMIN_AUTH_HARD_LOCK_FAILED_ATTEMPTS;
+  const lockedUntil = hardLocked
+    ? null
+    : failedAttempts >= ADMIN_AUTH_TEMP_LOCK_FAILED_ATTEMPTS
+      ? new Date(now.getTime() + ADMIN_AUTH_TEMP_LOCK_MINUTES * 60_000).toISOString()
+      : null;
+  const nextAlertLevel = hardLocked
+    ? ADMIN_AUTH_HARD_LOCK_FAILED_ATTEMPTS
+    : failedAttempts >= ADMIN_AUTH_TEMP_LOCK_FAILED_ATTEMPTS
+      ? ADMIN_AUTH_TEMP_LOCK_FAILED_ATTEMPTS
+      : 0;
+  const previousAlertLevel = rowResult.row?.alert_level ?? 0;
+  const shouldAlert = nextAlertLevel > previousAlertLevel;
+
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from("admin_auth_attempts")
+    .upsert({
+      phone: normalizedPhone,
+      sequential_failed_attempts: failedAttempts,
+      locked_until: lockedUntil,
+      hard_locked_at: hardLocked ? now.toISOString() : null,
+      alert_level: Math.max(previousAlertLevel, nextAlertLevel),
+      last_failed_at: now.toISOString(),
+      last_source_hash: hashAdminAuthSource(sourceIdentifier),
+      unlocked_at: null,
+      unlocked_by_admin_user_id: null,
+    }, { onConflict: "phone" });
+
+  if (error) return { ok: false as const, reason: "database_error" as const, error };
+
+  return {
+    ok: true as const,
+    failedAttempts,
+    temporaryLocked: Boolean(lockedUntil),
+    hardLocked,
+    retryAfterMinutes: lockedUntil ? minutesUntil(lockedUntil) : null,
+    alertPhone: shouldAlert ? await getAdminAuthAlertPhone(normalizedPhone) : null,
+    alertLevel: shouldAlert ? nextAlertLevel : null,
+  };
+}
+
+export async function recordAdminAuthSuccess(phone: string) {
+  const normalizedPhone = normalizeAdminPhone(phone);
+  if (!normalizedPhone) return { ok: false as const, reason: "invalid_phone" as const };
+
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from("admin_auth_attempts")
+    .upsert({
+      phone: normalizedPhone,
+      sequential_failed_attempts: 0,
+      locked_until: null,
+      hard_locked_at: null,
+      alert_level: 0,
+      last_success_at: new Date().toISOString(),
+      unlocked_at: null,
+      unlocked_by_admin_user_id: null,
+    }, { onConflict: "phone" });
+
+  if (isMissingAdminAuthAttemptsTable(error)) return { ok: true as const };
+  if (error) return { ok: false as const, reason: "database_error" as const, error };
+
+  return { ok: true as const };
 }
 
 export function hasAdminPermission(role: AdminRole, permission: AdminPermission) {

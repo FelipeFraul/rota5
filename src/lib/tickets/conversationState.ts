@@ -41,6 +41,8 @@ export type TicketConversationStep =
   | "admin_user_role_confirm"
   | "admin_user_disable_select"
   | "admin_user_disable_confirm"
+  | "admin_user_unlock_select"
+  | "admin_user_unlock_confirm"
   | "admin_reports_menu"
   | "admin_report_event_select"
   | "admin_report_period_select"
@@ -241,7 +243,7 @@ export type TicketConversationAdminCourtesies = {
 };
 
 export type TicketConversationAdminUsers = {
-  mode?: "add" | "role" | "disable" | "reactivate";
+  mode?: "add" | "role" | "disable" | "reactivate" | "unlock";
   pendingRole?: TicketAdminRole;
   pendingPhone?: string;
   pendingName?: string | null;
@@ -259,6 +261,11 @@ export type TicketConversationAdminUsers = {
     name?: string | null;
     role?: TicketAdminRole;
     status?: "active" | "disabled";
+  }>;
+  lastBlockedAuths?: Array<{
+    option: number;
+    phone: string;
+    name?: string | null;
   }>;
 };
 

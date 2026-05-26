@@ -48,6 +48,7 @@ Admins:
 - não existe fallback por senha geral;
 - Diretor/root sem hash individual não entra;
 - `gate/support` não são roles válidas de admin.
+- `admin_auth_attempts` deve existir para aplicar bloqueio por tentativa: 3 erros bloqueiam por 15 minutos; 5 erros sequenciais bloqueiam até liberação por Diretor.
 
 ## Webhooks E Cron
 

@@ -130,11 +130,15 @@ import {
   createAdminUser,
   disableAdminUser,
   getAdminProfileLabel,
+  listBlockedAdminAuths,
   listAdminUsers,
   parseAdminRole,
   reactivateAdminUser,
+  resolveBlockedAdminAuthPhone,
   resolveAdminUserId,
+  unlockAdminAuthForPhone,
   updateAdminRole,
+  type AdminAuthBlockedListItem,
   type AdminUserListItem,
 } from "@/lib/tickets/services/adminUsers";
 import {
@@ -161,6 +165,7 @@ import {
   ensureAdminUserForPhone,
   formatAdminMenu,
   getActiveAdminSession,
+  getAdminAuthBlockStatus,
   getAdminUserByPhone,
   hasAdminPermission,
   isAdminLogoutCommand,
@@ -168,6 +173,8 @@ import {
   isReservedAdminCommand,
   hashAdminPassphrase,
   normalizeAdminText,
+  recordAdminAuthFailure,
+  recordAdminAuthSuccess,
   revokeActiveAdminSessions,
   type AdminRole,
   type AdminPermission,
@@ -273,6 +280,7 @@ type RouteTicketMessageInput = {
   };
   text: string;
   mediaUrl?: string | null;
+  sourceIdentifier?: string | null;
 };
 
 type RouteTicketMessageOutput = {
@@ -1161,13 +1169,14 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
     state: "admin_users_menu",
     mainOption: 5,
     permission: "manage_admins",
-    backOption: 5,
-    exitOption: 6,
+    backOption: 6,
+    exitOption: 7,
     options: [
       "Listar administradores",
       "Adicionar administrador",
       "Alterar nível de administrador",
       "Desativar administrador",
+      "Liberar administrador bloqueado",
     ],
   },
   admin_reports_menu: {
@@ -1577,7 +1586,9 @@ function isAdminUsersFlowState(
   | "admin_user_role_select_role"
   | "admin_user_role_confirm"
   | "admin_user_disable_select"
-  | "admin_user_disable_confirm" {
+  | "admin_user_disable_confirm"
+  | "admin_user_unlock_select"
+  | "admin_user_unlock_confirm" {
   return (
     state === "admin_user_create_collect_phone" ||
     state === "admin_user_create_collect_name" ||
@@ -1589,7 +1600,9 @@ function isAdminUsersFlowState(
     state === "admin_user_role_select_role" ||
     state === "admin_user_role_confirm" ||
     state === "admin_user_disable_select" ||
-    state === "admin_user_disable_confirm"
+    state === "admin_user_disable_confirm" ||
+    state === "admin_user_unlock_select" ||
+    state === "admin_user_unlock_confirm"
   );
 }
 
@@ -1996,6 +2009,46 @@ function renderAdminUsersSelectionList(users: AdminUserListItem[]) {
     "*ADMINISTRADORES*",
     "",
     users.length ? userBlocks.join("\n---\n") : "Nenhum administrador encontrado.",
+  ].join("\n");
+}
+
+function renderBlockedAdminAuthList(blocked: AdminAuthBlockedListItem[]) {
+  const blocks = blocked.map((item, index) =>
+    [
+      `${index + 1}. ${item.name ?? "Sem nome"}`,
+      `> Telefone: ${maskAdminPhone(item.phone)}`,
+      ...(item.role ? [`> Perfil: ${formatAdminRoleLabel(item.role)}`] : []),
+      `> Tentativas: ${item.failedAttempts}`,
+      `> Bloqueio: ${item.hardLockedAt ? "até Diretor liberar" : "temporário"}`,
+      ...(item.lockedUntil ? [`> Até: ${formatDateTime(item.lockedUntil)}`] : []),
+      ...(item.lastFailedAt ? [`> Última tentativa: ${formatDateTime(item.lastFailedAt)}`] : []),
+    ].join("\n"),
+  );
+
+  return [
+    "*ADMINISTRADORES BLOQUEADOS*",
+    "",
+    blocked.length
+      ? blocks.join("\n---\n")
+      : "Nenhum administrador bloqueado no momento.",
+  ].join("\n");
+}
+
+function renderAdminUnlockConfirm({
+  phone,
+  name,
+}: {
+  phone: string;
+  name?: string | null;
+}) {
+  return [
+    "*LIBERAR ADMINISTRADOR*",
+    "",
+    `> Nome: ${name || "Sem nome"}`,
+    `> Telefone: ${maskAdminPhone(phone)}`,
+    "",
+    "Digite LIBERAR ADMIN para confirmar.",
+    'Digite "Cancelar" para abandonar esta tela.',
   ].join("\n");
 }
 
@@ -7267,6 +7320,7 @@ export async function routeTicketMessage({
   conversation,
   text,
   mediaUrl,
+  sourceIdentifier,
 }: RouteTicketMessageInput): Promise<RouteTicketMessageOutput> {
   const previousState = getConversationState(conversation.context);
   const baseContext = {
@@ -7292,14 +7346,17 @@ export async function routeTicketMessage({
       };
     }
 
-    const passphraseResult = await verifyAdminUserPassphrase(customer.whatsapp_phone, text);
+    const blockStatus = await getAdminAuthBlockStatus(customer.whatsapp_phone);
 
-    if (!passphraseResult.ok) {
+    if (blockStatus.ok && blockStatus.blocked) {
       return {
         reply:
-          passphraseResult.reason === "missing_passphrase_hash"
-            ? TICKET_MESSAGES.adminAuthMissingPassphrase
-            : TICKET_MESSAGES.adminAuthInvalid,
+          blockStatus.type === "temporary"
+            ? TICKET_MESSAGES.adminAuthTemporaryLocked.replace(
+                "{minutes}",
+                String(blockStatus.retryAfterMinutes),
+              )
+            : TICKET_MESSAGES.adminAuthHardLocked,
         nextContext: {
           ...baseContext,
           step: "admin_auth_pending",
@@ -7311,6 +7368,62 @@ export async function routeTicketMessage({
         },
       };
     }
+
+    const passphraseResult = await verifyAdminUserPassphrase(customer.whatsapp_phone, text);
+
+    if (!passphraseResult.ok) {
+      const failureResult = passphraseResult.reason === "invalid_passphrase"
+        ? await recordAdminAuthFailure({
+            phone: customer.whatsapp_phone,
+            sourceIdentifier,
+          })
+        : null;
+      const alertMessage =
+        failureResult?.ok && failureResult.alertPhone
+          ? {
+              type: "text" as const,
+              phone: failureResult.alertPhone,
+              body: [
+                "*ALERTA DE ACESSO ADMIN*",
+                "",
+                `O telefone ${maskAdminPhone(customer.whatsapp_phone)} teve ${failureResult.failedAttempts} tentativas incorretas de login administrativo.`,
+                failureResult.hardLocked
+                  ? "O acesso foi bloqueado até liberação manual por Diretor."
+                  : `O acesso foi bloqueado temporariamente por ${failureResult.retryAfterMinutes ?? 15} minutos.`,
+                "",
+                "Entre em Administradores > Liberar administrador bloqueado se reconhecer o acesso.",
+              ].join("\n"),
+            }
+          : null;
+      const authFailureReply = failureResult?.ok && failureResult.hardLocked
+        ? TICKET_MESSAGES.adminAuthHardLocked
+        : failureResult?.ok && failureResult.temporaryLocked
+          ? TICKET_MESSAGES.adminAuthTemporaryLocked.replace(
+              "{minutes}",
+              String(failureResult.retryAfterMinutes ?? 15),
+            )
+          : passphraseResult.reason === "missing_passphrase_hash"
+            ? TICKET_MESSAGES.adminAuthMissingPassphrase
+            : TICKET_MESSAGES.adminAuthInvalid;
+
+      return {
+        reply: authFailureReply,
+        outboundMessages: alertMessage
+          ? [{ type: "text", body: authFailureReply }, alertMessage]
+          : undefined,
+        nextContext: {
+          ...baseContext,
+          step: "admin_auth_pending",
+          state: "admin_auth_pending",
+          admin: buildAdminContext({
+            adminUserId: adminUserResult.adminUser.id,
+            role: adminUserResult.adminUser.role,
+          }),
+        },
+      };
+    }
+
+    await recordAdminAuthSuccess(customer.whatsapp_phone);
 
     const sessionResult = await createAdminSession(adminUserResult.adminUser);
 
@@ -9342,6 +9455,41 @@ export async function routeTicketMessage({
         };
       }
 
+      if (baseContext.state === "admin_user_unlock_select") {
+        const adminUsersContext = baseContext.adminUsers ?? {};
+        const selectedPhone = resolveBlockedAdminAuthPhone(
+          text,
+          adminUsersContext.lastBlockedAuths ?? [],
+        );
+
+        if (!selectedPhone) {
+          return {
+            reply: "Administrador bloqueado não encontrado. Responda com número ou telefone.",
+            nextContext: withAdminUsersContext(
+              baseContext,
+              "admin_user_unlock_select",
+              adminUsersContext,
+            ),
+          };
+        }
+
+        const selected = adminUsersContext.lastBlockedAuths?.find(
+          (item) => item.phone === selectedPhone,
+        );
+
+        return {
+          reply: renderAdminUnlockConfirm({
+            phone: selectedPhone,
+            name: selected?.name,
+          }),
+          nextContext: withAdminUsersContext(baseContext, "admin_user_unlock_confirm", {
+            ...adminUsersContext,
+            selectedAdminPhone: selectedPhone,
+            selectedAdminName: selected?.name ?? null,
+          }),
+        };
+      }
+
       if (baseContext.state === "admin_user_role_select_role") {
         const adminUsersContext = baseContext.adminUsers ?? {};
         const newRole = parseAdminRole(text);
@@ -9478,6 +9626,57 @@ export async function routeTicketMessage({
                 `> Perfil: ${adminUsersContext.selectedAdminRole ? formatAdminRoleLabel(adminUsersContext.selectedAdminRole) : "não informado"}`,
               ].join("\n")
             : (blockedMessage ?? TICKET_MESSAGES.adminGenericError),
+          nextContext: adminReplyContext({
+            state: "admin_users_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (baseContext.state === "admin_user_unlock_confirm") {
+        const adminUsersContext = baseContext.adminUsers ?? {};
+
+        if (normalizeAdminText(text) !== "liberar admin") {
+          return {
+            reply: "Digite LIBERAR ADMIN para confirmar ou CANCELAR para abandonar.",
+            nextContext: withAdminUsersContext(
+              baseContext,
+              "admin_user_unlock_confirm",
+              adminUsersContext,
+            ),
+          };
+        }
+
+        if (!adminUsersContext.selectedAdminPhone) {
+          return {
+            reply: TICKET_MESSAGES.adminGenericError,
+            nextContext: adminReplyContext({
+              state: "admin_users_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        const result = await unlockAdminAuthForPhone({
+          phone: adminUsersContext.selectedAdminPhone,
+          unlockedByAdminUserId: adminUser.id,
+        });
+
+        return {
+          reply: result.ok
+            ? [
+                "*ADMINISTRADOR LIBERADO*",
+                "",
+                `> Nome: ${adminUsersContext.selectedAdminName || "Sem nome"}`,
+                `> Telefone: ${maskAdminPhone(adminUsersContext.selectedAdminPhone)}`,
+              ].join("\n")
+            : TICKET_MESSAGES.adminGenericError,
           nextContext: adminReplyContext({
             state: "admin_users_menu",
             role: adminUser.role,
@@ -9831,8 +10030,67 @@ export async function routeTicketMessage({
         if (
           submenuOption === 1 ||
           submenuOption === 3 ||
-          submenuOption === 4
+          submenuOption === 4 ||
+          submenuOption === 5
         ) {
+          if (submenuOption === 5) {
+            const blockedResult = await listBlockedAdminAuths();
+
+            if (!blockedResult.ok) {
+              return {
+                reply: TICKET_MESSAGES.adminGenericError,
+                nextContext: adminReplyContext({
+                  state: "admin_users_menu",
+                  role: adminUser.role,
+                  sessionId: adminSession.id,
+                  adminUserId: adminUser.id,
+                  expiresAt: adminSession.expires_at,
+                }),
+              };
+            }
+
+            if (!blockedResult.blocked.length) {
+              return {
+                reply: withAdminNavigationHint(renderBlockedAdminAuthList([])),
+                nextContext: adminReplyContext({
+                  state: "admin_users_menu",
+                  role: adminUser.role,
+                  sessionId: adminSession.id,
+                  adminUserId: adminUser.id,
+                  expiresAt: adminSession.expires_at,
+                }),
+              };
+            }
+
+            return {
+              reply: [
+                renderBlockedAdminAuthList(blockedResult.blocked),
+                "",
+                "Responda com o número ou telefone que deseja liberar.",
+              ].join("\n"),
+              nextContext: withAdminUsersContext(
+                {
+                  ...baseContext,
+                  admin: buildAdminContext({
+                    adminUserId: adminUser.id,
+                    role: adminUser.role,
+                    sessionId: adminSession.id,
+                    expiresAt: adminSession.expires_at,
+                  }),
+                },
+                "admin_user_unlock_select",
+                {
+                  mode: "unlock",
+                  lastBlockedAuths: blockedResult.blocked.map((item, index) => ({
+                    option: index + 1,
+                    phone: item.phone,
+                    name: item.name,
+                  })),
+                },
+              ),
+            };
+          }
+
           const usersResult = await listAdminUsers();
 
           if (!usersResult.ok) {

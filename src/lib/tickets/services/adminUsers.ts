@@ -17,6 +17,16 @@ export type AdminUserListItem = {
   lastLoginAt: string | null;
 };
 
+export type AdminAuthBlockedListItem = {
+  phone: string;
+  name: string | null;
+  role: AdminRole | null;
+  failedAttempts: number;
+  lockedUntil: string | null;
+  hardLockedAt: string | null;
+  lastFailedAt: string | null;
+};
+
 type AdminUserRow = {
   id: string;
   phone: string;
@@ -25,6 +35,14 @@ type AdminUserRow = {
   name: string | null;
   created_at: string;
   last_login_at: string | null;
+};
+
+type AdminAuthAttemptRow = {
+  phone: string;
+  sequential_failed_attempts: number;
+  locked_until: string | null;
+  hard_locked_at: string | null;
+  last_failed_at: string | null;
 };
 
 function mapAdminUser(row: AdminUserRow): AdminUserListItem {
@@ -80,6 +98,107 @@ export async function listAdminUsers() {
   }
 
   return { ok: true as const, users: (data ?? []).map(mapAdminUser) };
+}
+
+export async function listBlockedAdminAuths() {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("admin_auth_attempts")
+    .select("phone, sequential_failed_attempts, locked_until, hard_locked_at, last_failed_at")
+    .or(`hard_locked_at.not.is.null,locked_until.gt.${new Date().toISOString()}`)
+    .order("hard_locked_at", { ascending: false, nullsFirst: false })
+    .order("locked_until", { ascending: false, nullsFirst: false })
+    .returns<AdminAuthAttemptRow[]>();
+
+  if (error) {
+    return { ok: false as const, error };
+  }
+
+  const phones = [...new Set((data ?? []).map((row) => row.phone))];
+  const usersByPhone = new Map<string, { name: string | null; role: AdminRole | null }>();
+
+  if (phones.length) {
+    const { data: users, error: usersError } = await supabase
+      .from("admin_users")
+      .select("phone, name, role")
+      .in("phone", phones)
+      .returns<Array<{ phone: string; name: string | null; role: string }>>();
+
+    if (usersError) return { ok: false as const, error: usersError };
+
+    for (const user of users ?? []) {
+      usersByPhone.set(user.phone, {
+        name: user.name,
+        role:
+          user.role === "root" || user.role === "admin" || user.role === "operator"
+            ? user.role
+            : null,
+      });
+    }
+  }
+
+  return {
+    ok: true as const,
+    blocked: (data ?? []).map((row) => ({
+      phone: row.phone,
+      name: usersByPhone.get(row.phone)?.name ?? null,
+      role: usersByPhone.get(row.phone)?.role ?? null,
+      failedAttempts: row.sequential_failed_attempts,
+      lockedUntil: row.locked_until,
+      hardLockedAt: row.hard_locked_at,
+      lastFailedAt: row.last_failed_at,
+    })),
+  };
+}
+
+export function resolveBlockedAdminAuthPhone(
+  input: string,
+  blocked: Array<{ option: number; phone: string; name?: string | null }>,
+) {
+  const trimmed = input.trim();
+  const option = /^\d+$/.test(trimmed) ? Number(trimmed) : null;
+
+  if (option) {
+    const item = blocked.find((blockedItem) => blockedItem.option === option);
+    if (item) return item.phone;
+  }
+
+  const phone = normalizeAdminPhone(trimmed);
+  if (phone) {
+    const item = blocked.find((blockedItem) => blockedItem.phone === phone);
+    if (item) return item.phone;
+  }
+
+  const normalized = trimmed.toLocaleLowerCase("pt-BR");
+  return (
+    blocked.find((item) => item.name?.toLocaleLowerCase("pt-BR") === normalized)
+      ?.phone ?? null
+  );
+}
+
+export async function unlockAdminAuthForPhone({
+  phone,
+  unlockedByAdminUserId,
+}: {
+  phone: string;
+  unlockedByAdminUserId: string;
+}) {
+  const normalizedPhone = normalizeAdminPhone(phone);
+  if (!normalizedPhone) return { ok: false as const, reason: "invalid_phone" as const };
+
+  const { error } = await getSupabaseAdmin()
+    .from("admin_auth_attempts")
+    .update({
+      sequential_failed_attempts: 0,
+      locked_until: null,
+      hard_locked_at: null,
+      alert_level: 0,
+      unlocked_at: new Date().toISOString(),
+      unlocked_by_admin_user_id: unlockedByAdminUserId,
+    })
+    .eq("phone", normalizedPhone);
+
+  return error ? { ok: false as const, reason: "database_error" as const, error } : { ok: true as const };
 }
 
 export function resolveAdminUserId(

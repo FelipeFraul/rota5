@@ -114,6 +114,8 @@ Ponto 12 implementou e auditou `Relatórios` como módulo consultivo pelo WhatsA
 
 Ponto 13 fecha a auditoria geral de segurança, consistência e pontos frágeis. A auditoria `TEST_SYSTEM_CLOSURE` valida que apenas `.env.example` está versionado, que `.env.example` não tem segredo real, que `SUPABASE_SERVICE_ROLE_KEY` aparece só em código server-side, que `ADMIN_AUTH_SECRET_HASH` não existe mais no runtime, que a constraint `admin_users_active_requires_passphrase_hash` bloqueia admin ativo sem hash individual, que há Diretor/root ativo com hash PBKDF2, que não existem admins ativos sem `passphrase_hash`, que RPCs sensíveis negam `anon` e aceitam `service_role`, e que não sobra dado temporário do prefixo. A revisão também cobre webhooks/cron/checkout sem segredo em produção, buscas por vazamento de secrets, cleanup de scripts temporários e a atualização do checklist de produção.
 
+Após a auditoria geral, o login administrativo recebeu limite forte de tentativas. A migration `20260526000300_create_admin_auth_attempts.sql` cria a tabela agregada `admin_auth_attempts`; três senhas incorretas bloqueiam o telefone por 15 minutos, cinco tentativas incorretas sequenciais bloqueiam até liberação manual, a origem/IP quando disponível é armazenada apenas como hash, e o Diretor criador recebe alerta. O menu `Administradores` ganhou `Liberar administrador bloqueado`, que lista telefones mascarados e exige `LIBERAR ADMIN`.
+
 ## Next Steps
 
 1. Fundação do projeto

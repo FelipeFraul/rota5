@@ -278,6 +278,7 @@ Admin WhatsApp behavior:
 - A valid individual passphrase creates an `admin_sessions` row and shows a permission-filtered menu.
 - `sair`, `logout`, or `encerrar` revokes active admin sessions while inside the admin flow.
 - The database constraint `admin_users_active_requires_passphrase_hash` enforces that every `active` admin has a non-empty `passphrase_hash`; `disabled` admins may keep or omit the hash.
+- `supabase/migrations/20260526000300_create_admin_auth_attempts.sql` adds `admin_auth_attempts`, an aggregated lockout table by phone. It stores failed-attempt counters, temporary/hard lock timestamps, alert level, unlock audit fields, and only a SHA-256 hash of the request source when available. It never stores raw passphrases or raw IPs.
 
 Admin profile labels and permissions:
 
@@ -307,6 +308,7 @@ The `Administradores` WhatsApp module is implemented for `Diretor/root` only:
 - Disabled phones can be reactivated through the add flow with `REATIVAR ADMIN`.
 - `Alterar nível de administrador` requires `ALTERAR NÍVEL`, accepts only `root/admin/operator`, blocks Director self-downgrade, and revokes active sessions for the changed admin.
 - `Desativar administrador` requires `DESATIVAR ADMIN`, does not delete `admin_users`, blocks Director self-disable, and revokes active sessions for the disabled admin.
+- `Liberar administrador bloqueado` lists temporary or manually blocked admin logins, masks phones, and requires `LIBERAR ADMIN` to clear failed attempts and lock timestamps.
 - The flow never creates `gate` or `support`; the database constraint also rejects those roles.
 - `ADMIN_ROOT_WHATSAPP_PHONES` is not modified by this module.
 
