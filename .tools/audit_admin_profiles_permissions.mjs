@@ -53,7 +53,6 @@ const testEnv = {
   ZAPI_INSTANCE_TOKEN: "audit-token",
   ZAPI_CLIENT_TOKEN: "audit-client",
   ADMIN_ROOT_WHATSAPP_PHONES: ROOT_PHONE,
-  ADMIN_AUTH_SECRET_HASH: hashPassphrase(PASS),
   ADMIN_SESSION_TTL_MINUTES: "60",
   CHECKOUT_INTERNAL_SECRET:
     fileEnv.CHECKOUT_INTERNAL_SECRET || "audit-checkout-internal-secret",

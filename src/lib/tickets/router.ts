@@ -7289,9 +7289,14 @@ export async function routeTicketMessage({
       };
     }
 
-    if (!(await verifyAdminUserPassphrase(customer.whatsapp_phone, text))) {
+    const passphraseResult = await verifyAdminUserPassphrase(customer.whatsapp_phone, text);
+
+    if (!passphraseResult.ok) {
       return {
-        reply: TICKET_MESSAGES.adminAuthInvalid,
+        reply:
+          passphraseResult.reason === "missing_passphrase_hash"
+            ? TICKET_MESSAGES.adminAuthMissingPassphrase
+            : TICKET_MESSAGES.adminAuthInvalid,
         nextContext: {
           ...baseContext,
           step: "admin_auth_pending",

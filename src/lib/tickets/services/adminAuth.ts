@@ -190,20 +190,10 @@ export function hashAdminPassphrase(passphrase: string): string {
   return `${ADMIN_HASH_ALGORITHM}$${ADMIN_HASH_ITERATIONS}$${salt}$${digest}`;
 }
 
-export function verifyAdminPassphrase(passphrase: string): boolean {
-  const configuredHash = process.env.ADMIN_AUTH_SECRET_HASH?.trim();
-
-  if (!configuredHash) {
-    return false;
-  }
-
-  return verifyPassphraseHash(passphrase, configuredHash);
-}
-
 export async function verifyAdminUserPassphrase(phone: string, passphrase: string) {
   const normalizedPhone = normalizeAdminPhone(phone);
 
-  if (!normalizedPhone) return false;
+  if (!normalizedPhone) return { ok: false as const, reason: "invalid_phone" as const };
 
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
@@ -213,14 +203,16 @@ export async function verifyAdminUserPassphrase(phone: string, passphrase: strin
     .maybeSingle<{ passphrase_hash: string | null }>();
 
   if (error) {
-    return verifyAdminPassphrase(passphrase);
+    return { ok: false as const, reason: "database_error" as const, error };
   }
 
-  if (data?.passphrase_hash) {
-    return verifyPassphraseHash(passphrase, data.passphrase_hash);
+  if (!data?.passphrase_hash) {
+    return { ok: false as const, reason: "missing_passphrase_hash" as const };
   }
 
-  return verifyAdminPassphrase(passphrase);
+  return verifyPassphraseHash(passphrase, data.passphrase_hash)
+    ? { ok: true as const }
+    : { ok: false as const, reason: "invalid_passphrase" as const };
 }
 
 export function hashAdminAuthMetadata(value: string) {

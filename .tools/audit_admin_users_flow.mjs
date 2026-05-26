@@ -18,6 +18,8 @@ const NEW_MANAGER_PHONE = "559980001005";
 const NEW_OPERATOR_PHONE = "559980001006";
 const NEW_ROOT_PHONE = "559980001007";
 const DISABLED_PHONE = "559980001008";
+const NO_HASH_PHONE = "559980001009";
+const WRONG_PASS_PHONE = "559980001010";
 const RUN_SECRET = randomBytes(8).toString("hex");
 const PASS = `admin-users-audit-pass-${RUN_SECRET}`;
 const NEW_MANAGER_PASS = `admin-users-audit-manager-pass-${RUN_SECRET}`;
@@ -64,7 +66,6 @@ const testEnv = {
   ZAPI_INSTANCE_TOKEN: "audit-token",
   ZAPI_CLIENT_TOKEN: "audit-client",
   ADMIN_ROOT_WHATSAPP_PHONES: ROOT_PHONE,
-  ADMIN_AUTH_SECRET_HASH: hashPassphrase(PASS),
   ADMIN_SESSION_TTL_MINUTES: "60",
   CHECKOUT_INTERNAL_SECRET:
     fileEnv.CHECKOUT_INTERNAL_SECRET || "audit-checkout-internal-secret",
@@ -148,6 +149,8 @@ async function cleanup() {
     NEW_OPERATOR_PHONE,
     NEW_ROOT_PHONE,
     DISABLED_PHONE,
+    NO_HASH_PHONE,
+    WRONG_PASS_PHONE,
   ];
 
   const { data: admins } = await service.from("admin_users").select("id").in("phone", phones);
@@ -190,6 +193,8 @@ async function verifyCleanup() {
     NEW_OPERATOR_PHONE,
     NEW_ROOT_PHONE,
     DISABLED_PHONE,
+    NO_HASH_PHONE,
+    WRONG_PASS_PHONE,
   ];
   const checks = [
     service.from("admin_users").select("id", { count: "exact", head: true }).in("phone", phones),
@@ -232,6 +237,20 @@ async function seedData() {
     role: "operator",
     status: "disabled",
     name: `${PREFIX} Disabled`,
+    passphrase_hash: passphraseHash,
+  });
+  await dbInsert("admin_users", {
+    phone: NO_HASH_PHONE,
+    role: "admin",
+    status: "active",
+    name: `${PREFIX} Sem Hash`,
+    passphrase_hash: null,
+  });
+  await dbInsert("admin_users", {
+    phone: WRONG_PASS_PHONE,
+    role: "admin",
+    status: "active",
+    name: `${PREFIX} Senha Errada`,
     passphrase_hash: passphraseHash,
   });
 
@@ -388,6 +407,14 @@ async function login(phone, label, passphrase = PASS) {
   return response;
 }
 
+async function loginFails(phone, passphrase, expectedText, label) {
+  assertIncludes((await sendMessage(phone, "admin")).text, "palavra-chave", `${label} pede senha`);
+  const response = await sendMessage(phone, passphrase);
+  assertIncludes(response.text, expectedText, label);
+  assertNotIncludes(response.text, "MENU ADMIN", `${label} não abre menu`);
+  return response;
+}
+
 async function addAdmin(phone, name, roleOption, expectedLabel, label, passphrase) {
   await sendMessage(ROOT_PHONE, "administradores");
   let response = await sendMessage(ROOT_PHONE, "2");
@@ -439,6 +466,9 @@ async function main() {
     response = await login(MANAGER_PHONE, "B/C) Gerente");
     assertNotIncludes(response.text, "Administradores", "B) Gerente não vê Administradores");
     assertIncludes((await sendMessage(MANAGER_PHONE, "administradores")).text, "Essa opção não está disponível", "C) Gerente bloqueado por palavra");
+    await loginFails(WRONG_PASS_PHONE, "senha-incorreta", "Palavra-chave inválida", "B) senha errada bloqueia");
+    await loginFails(NO_HASH_PHONE, PASS, "Peça ao Diretor para redefinir sua senha", "C/D) ativo sem hash não usa senha geral");
+    assertIncludes((await sendMessage(DISABLED_PHONE, "admin")).text, "Não consegui entender", "E) admin desativado não inicia login");
     response = await login(OPERATOR_PHONE, "D) Operador");
     assertNotIncludes(response.text, "Administradores", "D) Operador não vê Administradores");
     assertIncludes((await sendMessage(OPERATOR_PHONE, "administradores")).text, "Essa opção não está disponível", "D) Operador bloqueado");

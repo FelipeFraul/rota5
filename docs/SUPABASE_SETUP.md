@@ -257,26 +257,25 @@ Important indexes and constraints:
 Backend-only environment variables:
 
 - `ADMIN_ROOT_WHATSAPP_PHONES`: comma-separated normalized root phones.
-- `ADMIN_AUTH_SECRET_HASH`: PBKDF2-SHA256 hash of the admin passphrase.
 - `ADMIN_SESSION_TTL_MINUTES`: temporary admin session TTL; default documented value is 60.
 
 None of these variables may use a `NEXT_PUBLIC_` prefix. `.env.example` intentionally contains only empty placeholders, never a real passphrase or hash.
 
-Generate the passphrase hash locally without committing the passphrase:
+Generate an individual admin passphrase hash locally without committing the passphrase:
 
 ```bash
 node -e "const crypto=require('crypto');const p=process.argv[1];const salt=crypto.randomBytes(16).toString('hex');const i=210000;const h=crypto.pbkdf2Sync(p,salt,i,32,'sha256').toString('hex');console.log('pbkdf2_sha256$'+i+'$'+salt+'$'+h)" 'TYPE_THE_PASSPHRASE_HERE'
 ```
 
-Set only the resulting hash in `ADMIN_AUTH_SECRET_HASH`. Do not place the passphrase itself in `.env`, `.env.example`, docs, GitHub, logs, or database rows.
+Set only the resulting hash in `admin_users.passphrase_hash`. Do not place the passphrase itself in `.env`, `.env.example`, docs, GitHub, logs, or database rows.
 
 Admin WhatsApp behavior:
 
 - `admin`, `adm`, and `administrador` are reserved and intercepted before event search.
 - Unauthorized phones receive a neutral message and never see admin wording.
-- A configured root phone sending `admin` is bootstrapped into `admin_users` with role `root` if missing.
+- A configured root phone sending `admin` is bootstrapped into `admin_users` with role `root` if missing, but it still cannot authenticate until `admin_users.passphrase_hash` is set.
 - The next inbound message while `admin_auth_pending` is saved as `[ADMIN_AUTH_REDACTED]`.
-- A valid passphrase creates an `admin_sessions` row and shows a permission-filtered menu.
+- A valid individual passphrase creates an `admin_sessions` row and shows a permission-filtered menu.
 - `sair`, `logout`, or `encerrar` revokes active admin sessions while inside the admin flow.
 
 Admin profile labels and permissions:
@@ -301,7 +300,7 @@ The `Administradores` WhatsApp module is implemented for `Diretor/root` only:
 - It never shows `admin_users.id`, `passphrase_hash`, admin session IDs, tokens, or raw secrets.
 - `Adicionar administrador` collects phone, optional name, profile, and requires `CONFIRMAR ADMIN`.
 - `Adicionar administrador` also collects an individual passphrase. Only its PBKDF2 hash is stored in `admin_users.passphrase_hash`; while confirmation is pending, conversation context stores only the pending hash, never the raw passphrase. The raw passphrase is not echoed back and the inbound WhatsApp message is redacted as `[ADMIN_AUTH_REDACTED]`.
-- New admins authenticate by sending `admin` and then their individual passphrase. Legacy/root rows without `passphrase_hash` still fall back to `ADMIN_AUTH_SECRET_HASH`.
+- New admins authenticate by sending `admin` and then their individual passphrase. Rows without `passphrase_hash` do not authenticate and must have an individual hash defined by a Diretor or by a one-time controlled database update.
 - Active duplicate phones are blocked.
 - Disabled phones can be reactivated through the add flow with `REATIVAR ADMIN`.
 - `Alterar nível de administrador` requires `ALTERAR NÍVEL`, accepts only `root/admin/operator`, blocks Director self-downgrade, and revokes active sessions for the changed admin.
@@ -317,13 +316,13 @@ Final pre-secret audit notes:
 - Behavioral constraint checks confirmed invalid admin phones, invalid roles, invalid statuses, invalid session statuses, and duplicate admin phones are blocked.
 - The migration SQL defines the expected indexes for admin user/session phone, status, role, expiration, and admin user id lookups.
 - The migration SQL defines the `set_admin_users_updated_at` trigger for `admin_users.updated_at`.
-- Without `ADMIN_AUTH_SECRET_HASH`, passphrase verification returns false and admin login remains fail-closed.
+- There is no global admin passphrase fallback. `ADMIN_AUTH_SECRET_HASH` is not used by the application.
 - The admin passphrase hash format is `pbkdf2_sha256$iterations$salt$hash`; production must use a new passphrase that has never been shared outside the secret manager.
 - The repository must not contain a real passphrase or real hash. Searches for sensitive terms should show only code/docs describing the mechanism and the redaction marker.
 - Unauthorized `admin`, `adm`, and `administrador` messages receive a neutral buyer-facing response and do not enter event search.
 - While the conversation is in `admin_auth_pending`, inbound passphrase messages are stored as `[ADMIN_AUTH_REDACTED]` and metadata is limited to `{ redacted: true, reason: "admin_auth" }` plus provider/message type identifiers.
 - While a Director is creating/reactivating an admin in `admin_user_create_collect_passphrase`, the new admin passphrase is also stored as `[ADMIN_AUTH_REDACTED]` with reason `admin_user_passphrase`.
-- Production should be redeployed after adding `ADMIN_AUTH_SECRET_HASH`.
+- Production should be redeployed after auth changes and any real root/admin row without `passphrase_hash` should be updated before relying on WhatsApp admin login.
 
 Request body:
 
