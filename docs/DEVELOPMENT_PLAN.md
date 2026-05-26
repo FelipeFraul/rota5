@@ -118,6 +118,8 @@ Após a auditoria geral, o login administrativo recebeu limite forte de tentativ
 
 A camada seguinte adiciona rate limit para rotas públicas e sensíveis. A migration `20260526000400_create_rate_limit_events.sql` cria `rate_limit_events` e a RPC `consume_rate_limit`, que contam requisições por rota e origem hashada em janelas curtas. A proteção cobre webhooks Z-API e Mercado Pago, checkout, portaria, páginas públicas de ingresso/portaria e cron protegido. A política não salva IP puro, payload, token, telefone completo, QR ou base64 e deve ser complementada com regras de Vercel Firewall documentadas em `docs/VERCEL_FIREWALL.md`.
 
+Em 26/05/2026, uma compra real/controlada validou o fluxo operacional ponta a ponta em produção: o comprador encontrou o evento, criou reserva, recebeu checkout Mercado Pago, concluiu o pagamento, o webhook Mercado Pago processou a confirmação, pedido e reserva foram confirmados, o ticket foi emitido e o QRCode foi enviado ao comprador. Com essa validação, o ciclo compra -> pagamento -> emissão -> QRCode está comprovado para operação controlada com público real.
+
 ## Next Steps
 
 1. Fundação do projeto
@@ -137,7 +139,7 @@ A camada seguinte adiciona rate limit para rotas públicas e sensíveis. A migra
 15. Sessão temporária de portaria e scanner preparatório - criado e validado no Supabase real
 16. Validação transacional de portaria e uso único do ingresso - criado e validado no Supabase real
 17. Auditoria geral e teste ponta a ponta do MVP - concluído e validado no Supabase real
-18. Preparação do teste real Mercado Pago de baixo valor - documentado
+18. Compra real/controlada ponta a ponta - validada em 26/05/2026, cobrindo compra, pagamento Mercado Pago, webhook, emissão de ticket e envio de QRCode.
 19. Base segura de admin via WhatsApp - criada, aplicada e auditada
 20. Admin > Eventos por WhatsApp - criado, endurecido, testado com Supabase real, commitado e deployado
 21. Portaria e check-in por telefone - criado e validado no Supabase real

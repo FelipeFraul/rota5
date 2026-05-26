@@ -37,6 +37,24 @@ URL principal de produção:
 https://site-phi-seven-72.vercel.app
 ```
 
+## Validação Operacional Real
+
+Em 26/05/2026, uma compra real/controlada validou o sistema ponta a ponta em produção.
+
+O ciclo validado foi:
+
+- comprador encontrou o evento;
+- reserva foi criada;
+- checkout Mercado Pago foi gerado;
+- pagamento foi concluído;
+- webhook Mercado Pago processou;
+- pedido e reserva foram confirmados;
+- ticket foi emitido;
+- QRCode foi enviado ao comprador;
+- compra finalizou corretamente.
+
+Com essa validação, o ciclo compra -> pagamento -> emissão -> QRCode está pronto para operação controlada com público real.
+
 ## Segurança de Borda e Rate Limit
 
 Rotas públicas e sensíveis têm proteção por janela curta no app:

@@ -4,7 +4,8 @@
 
 - Ponto 1 a Ponto 12 implementados e auditados com Supabase real.
 - Ponto 13 adiciona a auditoria de fechamento `TEST_SYSTEM_CLOSURE`.
-- Uso recomendado: operação real controlada, com pagamento real de baixo valor validado antes de abertura pública ampla.
+- Em 26/05/2026, uma compra real/controlada validou o ciclo completo: busca do evento, reserva, checkout Mercado Pago, pagamento concluído, webhook processado, pedido/reserva confirmados, ticket emitido e QRCode enviado ao comprador.
+- Uso recomendado: operação real controlada com público real, acompanhando logs, webhooks, pagamentos e entregas de QRCode nas primeiras vendas.
 
 ## Envs
 
@@ -65,6 +66,22 @@ Cron:
 - chamar `/api/cron/expire-reservations` com `Authorization: Bearer CRON_SECRET`;
 - frequência recomendada: a cada minuto por agendador externo ou plano Vercel compatível.
 
+## Validação Operacional Real
+
+Validação realizada em 26/05/2026 com compra real/controlada.
+
+Fluxo validado:
+
+- comprador encontrou o evento;
+- reserva foi criada;
+- checkout Mercado Pago foi gerado;
+- pagamento foi concluído;
+- webhook Mercado Pago processou;
+- pedido e reserva foram confirmados;
+- ticket foi emitido;
+- QRCode foi enviado ao comprador;
+- compra finalizou corretamente.
+
 ## Segurança Operacional
 
 - Não logar QR/base64, token puro, `qr_token_hash`, metadata de pagamento, senha ou secrets.
@@ -76,7 +93,6 @@ Cron:
 
 ## Pendências Futuras
 
-- Pagamento real controlado de baixo valor.
 - Cancelamento, troca e estorno.
 - Reenvio manual de ingresso pago.
 - Filtro de portaria por evento/sessão com `wrong_event`.
