@@ -302,12 +302,14 @@ export type TicketConversationGateAccess = {
 
 export type TicketConversationAdminReports = {
   reportType?:
+    | "summary"
     | "sales_event"
     | "sales_section"
-    | "expired_reservations"
+    | "pending_payments"
+    | "expired_cancelled_reservations"
     | "gate_checkins"
     | "ticket_usage"
-    | "summary";
+    | "courtesies";
   selectedEventId?: string;
   lastEvents?: Array<{
     option: number;

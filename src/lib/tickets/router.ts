@@ -152,6 +152,7 @@ import {
 } from "@/lib/tickets/services/gateAccesses";
 import {
   buildAdminReport,
+  buildAdminGeneralReport,
   type AdminReportPeriod,
   type AdminReportType,
 } from "@/lib/tickets/services/adminReports";
@@ -1174,15 +1175,17 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
     state: "admin_reports_menu",
     mainOption: 6,
     permission: "view_reports",
-    backOption: 7,
-    exitOption: 8,
+    backOption: 9,
+    exitOption: 10,
     options: [
+      "Resumo geral",
       "Vendas por evento",
       "Vendas por setor",
-      "Reservas expiradas",
+      "Pagamentos pendentes",
+      "Reservas expiradas/canceladas",
       "Check-ins da portaria",
       "Ingressos usados e não usados",
-      "Resumo geral",
+      "Cortesias",
     ],
   },
 };
@@ -8811,8 +8814,16 @@ export async function routeTicketMessage({
         };
       }
 
-      if (submenuOption === "exit" || submenuOption === 7) return endAdminSession();
-      if (submenuOption === "menu" || submenuOption === "back" || submenuOption === 6) {
+      if (submenuOption === "exit") return endAdminSession();
+      if (
+        baseContext.state === "admin_report_period_select" &&
+        submenuOption === 7
+      ) return endAdminSession();
+      if (
+        submenuOption === "menu" ||
+        submenuOption === "back" ||
+        (baseContext.state === "admin_report_period_select" && submenuOption === 6)
+      ) {
         return {
           reply: renderAdminSubmenu(reportsSubmenu),
           nextContext: adminReplyContext({
@@ -8850,7 +8861,7 @@ export async function routeTicketMessage({
       }
 
       const buildReportReply = async (period: AdminReportPeriod) => {
-        if (!adminReports.selectedEventId || !adminReports.reportType) {
+        if (!adminReports.reportType) {
           return {
             reply: renderAdminSubmenu(reportsSubmenu),
             nextContext: adminReplyContext({
@@ -8864,11 +8875,29 @@ export async function routeTicketMessage({
         }
 
         try {
-          const report = await buildAdminReport({
-            eventId: adminReports.selectedEventId,
-            type: adminReports.reportType,
-            period,
-          });
+          const report =
+            adminReports.reportType === "summary"
+              ? await buildAdminGeneralReport(period)
+              : adminReports.selectedEventId
+                ? await buildAdminReport({
+                    eventId: adminReports.selectedEventId,
+                    type: adminReports.reportType,
+                    period,
+                  })
+                : null;
+
+          if (!report) {
+            return {
+              reply: renderAdminSubmenu(reportsSubmenu),
+              nextContext: adminReplyContext({
+                state: "admin_reports_menu",
+                role: adminUser.role,
+                sessionId: adminSession.id,
+                adminUserId: adminUser.id,
+                expiresAt: adminSession.expires_at,
+              }),
+            };
+          }
 
           return {
             reply: withAdminNavigationHint(report),
@@ -9882,16 +9911,29 @@ export async function routeTicketMessage({
 
       if (previousState.state === "admin_reports_menu") {
         const reportTypeByOption: Record<number, AdminReportType> = {
-          1: "sales_event",
-          2: "sales_section",
-          3: "expired_reservations",
-          4: "gate_checkins",
-          5: "ticket_usage",
-          6: "summary",
+          1: "summary",
+          2: "sales_event",
+          3: "sales_section",
+          4: "pending_payments",
+          5: "expired_cancelled_reservations",
+          6: "gate_checkins",
+          7: "ticket_usage",
+          8: "courtesies",
         };
         const reportType = typeof submenuOption === "number"
           ? reportTypeByOption[submenuOption]
           : undefined;
+
+        if (reportType === "summary") {
+          return {
+            reply: renderAdminReportPeriodMenu(),
+            nextContext: withAdminReportsContext(
+              baseContext,
+              "admin_report_period_select",
+              { reportType },
+            ),
+          };
+        }
 
         if (reportType) {
           return buildAdminReportEventSelect({

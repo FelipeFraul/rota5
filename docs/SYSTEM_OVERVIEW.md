@@ -925,17 +925,21 @@ Menu:
 ```text
 RELATÓRIOS
 
-> 1. Vendas por evento
-> 2. Vendas por setor
-> 3. Reservas expiradas
-> 4. Check-ins da portaria
-> 5. Ingressos usados e não usados
-> 6. Resumo geral
-> 7. Voltar
-> 8. Sair
+> 1. Resumo geral
+> 2. Vendas por evento
+> 3. Vendas por setor
+> 4. Pagamentos pendentes
+> 5. Reservas expiradas/canceladas
+> 6. Check-ins da portaria
+> 7. Ingressos usados e não usados
+> 8. Cortesias
+> 9. Voltar
+> 10. Sair
 ```
 
-O antigo item `Pagamentos pendentes` foi removido.
+Relatórios são somente leitura, disponíveis para Diretor, Gerente e Operador. Cliente comum, validador externo de portaria e admin desativado não acessam. O período padrão recomendado é `Últimos 30 dias`; a tela também permite hoje, últimos 7 dias, todo o período e intervalo personalizado simples.
+
+Nenhum relatório expõe `payment_id`, metadata de pagamento, `qr_token_hash`, token, IDs internos brutos ou telefone completo. Telefones aparecem mascarados.
 
 ### 11.1 Vendas por setor
 
@@ -956,11 +960,11 @@ VENDAS POR SETOR
 
 Definições:
 
-- Vendidos: ingressos pagos;
-- Cortesias: ingressos gratuitos/cortesia;
-- Emitidos: vendidos + cortesias;
+- Pagos emitidos: ingressos pagos;
+- Cortesias emitidas: ingressos gratuitos/cortesia;
+- Disponíveis restantes: unidades/assentos ainda disponíveis em `session_seats`;
 - Usados: ingressos validados na portaria;
-- Receita: soma dos ingressos pagos, sem cortesias.
+- Valor vendido: soma dos ingressos pagos, sem cortesias.
 
 ### 11.2 Check-ins da portaria
 
@@ -977,10 +981,7 @@ Evento: BEEF TOUR 10 ANOS
 > Validador: ...
 ```
 
-Neste relatório:
-
-- `Evento:` fica sem `>`;
-- `Local` não aparece.
+O relatório resume `allowed`, recusados e `already_used`, e mostra últimas validações sem token ou telefone completo do validador.
 
 ### 11.3 Ingressos usados e não usados
 
@@ -994,10 +995,7 @@ Evento: BEEF TOUR 10 ANOS
 > Não usados: X
 > Usados: X
 > Cancelados: X
-> Barrados: X
-Barrados:
-> QRCode gerado pelo sistema: X
-> QRCode não gerado pelo sistema: X
+> Comparecimento: X%
 ```
 
 Definições:
@@ -1006,22 +1004,23 @@ Definições:
 - Não usados: emitidos menos usados;
 - Usados: tickets validados;
 - Cancelados: tickets cancelados;
-- Barrados: tentativas negadas na portaria;
-- QRCode gerado pelo sistema: QRCode reconhecido, mas negado por motivo como já usado/cancelado/negado;
-- QRCode não gerado pelo sistema: QRCode inválido ou não encontrado.
-
-Neste relatório:
-
-- `Evento:` fica sem `>`;
-- `Local` não aparece;
-- não deve aparecer `Total considerado`.
+- Comparecimento: usados / emitidos, arredondado.
 
 ### 11.4 Resumo geral
 
-Neste relatório:
+Mostra vendas pagas, pedidos pagos, ingressos emitidos, cortesias emitidas, reservas ativas, reservas expiradas, reservas canceladas, check-ins realizados e ingressos não usados.
 
-- `Evento:` fica sem `>`;
-- `Local` não aparece.
+### 11.5 Pagamentos pendentes
+
+Lista reservas ativas com pedido `pending_payment`, telefone mascarado, quantidade, total, expiração e status. Não mostra checkout URL completa nem identificadores do provedor.
+
+### 11.6 Reservas expiradas/canceladas
+
+Lista reservas com status `expired` ou `cancelled`, telefone mascarado, quantidade, valor, status e data de atualização. Quando não houver timestamp específico de cancelamento, usa `updated_at`.
+
+### 11.7 Cortesias
+
+Mostra cortesias emitidas, usadas, não usadas e canceladas, além dos últimos beneficiários com telefone mascarado e motivo/observação quando houver.
 
 ## 12. Regras de segurança e consistência
 

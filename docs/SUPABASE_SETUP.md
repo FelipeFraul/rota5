@@ -1304,6 +1304,29 @@ The submenu options are:
 6. Sair
 ```
 
+### Admin reports
+
+The `RELATÓRIOS` submenu is available to `root`/Diretor, `admin`/Gerente, and `operator`/Operador. It is read-only: it does not call mutation RPCs and does not create, update, cancel, expire, sell, validate, or resend anything.
+
+The submenu options are:
+
+```text
+1. Resumo geral
+2. Vendas por evento
+3. Vendas por setor
+4. Pagamentos pendentes
+5. Reservas expiradas/canceladas
+6. Check-ins da portaria
+7. Ingressos usados e não usados
+8. Cortesias
+9. Voltar
+10. Sair
+```
+
+`Resumo geral` asks only for a period. The other report types ask for an event and then a period. Period options are today, last 7 days, last 30 days, all time, or a simple custom range in `DD/MM/AAAA a DD/MM/AAAA` format.
+
+Reports format monetary values in BRL, use `America/Sao_Paulo`, limit long lists to short WhatsApp-friendly output, and mask phones. They must not expose Mercado Pago identifiers, payment metadata, `qr_token_hash`, signed tokens, raw internal IDs, full phone numbers, or service-role details. The audit script `.tools/audit_admin_reports.mjs` seeds temporary real Supabase data with the `TEST_ADMIN_REPORTS` prefix, validates all report types through the Z-API webhook with a local Z-API mock, compares operational row-count snapshots before/after report generation, and cleans up temporary rows.
+
 Backend service organization:
 
 - `src/lib/tickets/services/adminTickets.ts` loads tickets and pending reservations for admin-safe display, enriches tickets with order/payment summaries, lists recent validation events, and calls `cancel_pending_reservation` for cancellation.

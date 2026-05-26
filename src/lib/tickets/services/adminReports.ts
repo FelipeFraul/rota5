@@ -5,12 +5,14 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 type MaybeArray<T> = T | T[] | null | undefined;
 
 export type AdminReportType =
+  | "summary"
   | "sales_event"
   | "sales_section"
-  | "expired_reservations"
+  | "pending_payments"
+  | "expired_cancelled_reservations"
   | "gate_checkins"
   | "ticket_usage"
-  | "summary";
+  | "courtesies";
 
 export type AdminReportPeriod = {
   label: string;
@@ -23,7 +25,7 @@ type EventRow = {
   title: string;
   city: string;
   state: string;
-  venues: MaybeArray<{ name: string }>;
+  venues: MaybeArray<{ name: string | null }>;
 };
 
 type TicketRow = {
@@ -34,18 +36,23 @@ type TicketRow = {
   used_at: string | null;
   cancelled_at: string | null;
   order_id: string;
-  event_sessions: MaybeArray<{ event_id: string }>;
-  venue_sections: MaybeArray<{ name: string }>;
+  event_sessions: MaybeArray<{ event_id: string; starts_at: string }>;
+  venue_sections: MaybeArray<{ id: string; name: string }>;
   reservation_items: MaybeArray<{
     ticket_type: string;
     price_cents: number;
     fee_cents: number;
+    seat_code: string;
   }>;
   orders: MaybeArray<{
     status: string;
     created_at: string;
     total_amount_cents: number;
     total_fee_cents: number;
+  }>;
+  customers: MaybeArray<{
+    whatsapp_phone: string | null;
+    name: string | null;
   }>;
 };
 
@@ -54,9 +61,14 @@ type ReservationRow = {
   status: string;
   expires_at: string;
   created_at: string;
+  updated_at: string;
   total_amount_cents: number;
   total_fee_cents: number;
-  event_sessions: MaybeArray<{ event_id: string }>;
+  event_sessions: MaybeArray<{
+    event_id: string;
+    starts_at: string;
+    events: MaybeArray<{ title: string }>;
+  }>;
   customers: MaybeArray<{ whatsapp_phone: string | null }>;
   orders: MaybeArray<{ status: string }>;
   reservation_items: MaybeArray<{
@@ -79,11 +91,33 @@ type ValidationRow = {
   }>;
 };
 
+type CourtesyRow = {
+  status: string;
+  phone: string;
+  beneficiary_name: string | null;
+  reason: string | null;
+  created_at: string;
+  cancelled_at: string | null;
+  tickets: MaybeArray<{ status: string; used_at: string | null; ticket_code: string }>;
+};
+
+type SessionSeatRow = {
+  status: string;
+  event_sessions: MaybeArray<{ event_id: string }>;
+  venue_sections: MaybeArray<{ name: string }>;
+};
+
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
+const DEFAULT_LIMIT = 10;
 
 function first<T>(value: MaybeArray<T>): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
   return value ?? null;
+}
+
+function asArray<T>(value: MaybeArray<T>): T[] {
+  if (Array.isArray(value)) return value;
+  return value ? [value] : [];
 }
 
 function formatDateTime(value: string) {
@@ -106,6 +140,12 @@ function formatCurrencyFromCents(cents: number) {
   }).format(cents / 100);
 }
 
+function maskPhone(phone: string | null | undefined) {
+  const digits = String(phone ?? "").replace(/\D/g, "");
+  if (!digits) return "Não informado";
+  return `****${digits.slice(-4)}`;
+}
+
 function isWithinPeriod(value: string | null | undefined, period: AdminReportPeriod) {
   if (!value) return false;
   const date = new Date(value).getTime();
@@ -115,19 +155,32 @@ function isWithinPeriod(value: string | null | undefined, period: AdminReportPer
   return true;
 }
 
-function getSectionName(ticket: TicketRow) {
-  return first(ticket.venue_sections)?.name ?? "Sem setor";
-}
-
 function getTicketAmount(ticket: TicketRow) {
   const item = first(ticket.reservation_items);
   return (item?.price_cents ?? 0) + (item?.fee_cents ?? 0);
+}
+
+function getSectionName(ticket: TicketRow | SessionSeatRow) {
+  return first(ticket.venue_sections)?.name ?? "Sem setor";
+}
+
+function getReservationQuantity(reservation: ReservationRow) {
+  return asArray(reservation.reservation_items).length;
 }
 
 function getEventLocation(event: EventRow | null) {
   if (!event) return "";
   const venue = first(event.venues)?.name;
   return [venue, `${event.city}/${event.state}`].filter(Boolean).join(" - ");
+}
+
+function reportHeader(title: string, event: EventRow | null, period: AdminReportPeriod) {
+  return [
+    title,
+    event ? `Evento: ${event.title}` : null,
+    event ? `> Local: ${getEventLocation(event)}` : null,
+    `> Período: ${period.label}`,
+  ].filter(Boolean) as string[];
 }
 
 async function getEvent(eventId: string) {
@@ -141,278 +194,358 @@ async function getEvent(eventId: string) {
   return data ?? null;
 }
 
-async function getEventTickets(eventId: string) {
-  const { data, error } = await getSupabaseAdmin()
+async function getTickets(eventId?: string) {
+  let query = getSupabaseAdmin()
     .from("tickets")
     .select(
-      "id, ticket_code, status, issued_at, used_at, cancelled_at, order_id, event_sessions!inner(event_id), venue_sections(name), reservation_items(ticket_type, price_cents, fee_cents), orders(status, created_at, total_amount_cents, total_fee_cents)",
-    )
-    .eq("event_sessions.event_id", eventId)
-    .returns<TicketRow[]>();
+      "id, ticket_code, status, issued_at, used_at, cancelled_at, order_id, event_sessions!inner(event_id, starts_at), venue_sections(id, name), reservation_items(ticket_type, price_cents, fee_cents, seat_code), orders(status, created_at, total_amount_cents, total_fee_cents), customers(whatsapp_phone, name)",
+    );
 
+  if (eventId) query = query.eq("event_sessions.event_id", eventId);
+
+  const { data, error } = await query.returns<TicketRow[]>();
   if (error) throw error;
   return data ?? [];
 }
 
-async function getExpiredReservations(eventId: string) {
-  const { data, error } = await getSupabaseAdmin()
+async function getReservations(eventId?: string) {
+  let query = getSupabaseAdmin()
     .from("reservations")
     .select(
-      "id, status, expires_at, created_at, total_amount_cents, total_fee_cents, event_sessions!inner(event_id), customers(whatsapp_phone), orders(status), reservation_items(seat_code, venue_sections(name))",
-    )
-    .eq("event_sessions.event_id", eventId)
-    .returns<ReservationRow[]>();
+      "id, status, expires_at, created_at, updated_at, total_amount_cents, total_fee_cents, event_sessions!inner(event_id, starts_at, events(title)), customers(whatsapp_phone), orders(status), reservation_items(seat_code, venue_sections(name))",
+    );
 
+  if (eventId) query = query.eq("event_sessions.event_id", eventId);
+
+  const { data, error } = await query.returns<ReservationRow[]>();
   if (error) throw error;
-  const now = Date.now();
-  return (data ?? []).filter(
-    (reservation) =>
-      reservation.status === "expired" ||
-      (reservation.status === "active" &&
-        new Date(reservation.expires_at).getTime() <= now),
-  );
+  return data ?? [];
 }
 
-async function getGateValidations(eventId: string) {
-  const { data, error } = await getSupabaseAdmin()
+async function getValidations(eventId?: string) {
+  let query = getSupabaseAdmin()
     .from("ticket_validation_events")
     .select(
       "result, ticket_code, gate_label, validator_identifier, created_at, tickets!inner(id, session_id, event_sessions!inner(event_id), venue_sections(name))",
-    )
-    .eq("tickets.event_sessions.event_id", eventId)
-    .returns<ValidationRow[]>();
+    );
+
+  if (eventId) query = query.eq("tickets.event_sessions.event_id", eventId);
+
+  const { data, error } = await query.returns<ValidationRow[]>();
+  if (error) throw error;
+  return data ?? [];
+}
+
+async function getCourtesies(eventId?: string) {
+  let query = getSupabaseAdmin()
+    .from("courtesies")
+    .select(
+      "status, phone, beneficiary_name, reason, created_at, cancelled_at, tickets(status, used_at, ticket_code)",
+    );
+
+  if (eventId) query = query.eq("event_id", eventId);
+
+  const { data, error } = await query.returns<CourtesyRow[]>();
+  if (error) throw error;
+  return data ?? [];
+}
+
+async function getSessionSeats(eventId: string) {
+  const { data, error } = await getSupabaseAdmin()
+    .from("session_seats")
+    .select("status, event_sessions!inner(event_id), venue_sections(name)")
+    .eq("event_sessions.event_id", eventId)
+    .returns<SessionSeatRow[]>();
 
   if (error) throw error;
   return data ?? [];
 }
 
-function reportHeader(title: string, event: EventRow | null, period: AdminReportPeriod) {
-  return [
-    title,
-    event ? `> Evento: ${event.title}` : null,
-    event ? `> Local: ${getEventLocation(event)}` : null,
-    `> Período: ${period.label}`,
-  ].filter(Boolean) as string[];
+function paidTickets(tickets: TicketRow[], period: AdminReportPeriod) {
+  return tickets.filter(
+    (ticket) =>
+      first(ticket.orders)?.status === "paid" &&
+      first(ticket.reservation_items)?.ticket_type !== "free" &&
+      ticket.status !== "cancelled" &&
+      isWithinPeriod(first(ticket.orders)?.created_at ?? ticket.issued_at, period),
+  );
 }
 
-function gateCheckinsReportHeader(
-  title: string,
-  event: EventRow | null,
-  period: AdminReportPeriod,
-) {
-  return [
-    title,
-    event ? `Evento: ${event.title}` : null,
-    `> Período: ${period.label}`,
-  ].filter(Boolean) as string[];
+function courtesyTickets(tickets: TicketRow[], period: AdminReportPeriod) {
+  return tickets.filter(
+    (ticket) =>
+      first(ticket.reservation_items)?.ticket_type === "free" &&
+      isWithinPeriod(ticket.issued_at, period),
+  );
 }
 
-function compactEventReportHeader(
-  title: string,
-  event: EventRow | null,
-  period: AdminReportPeriod,
-) {
+export async function buildAdminGeneralReport(period: AdminReportPeriod) {
+  const [tickets, reservations, validations, courtesies] = await Promise.all([
+    getTickets(),
+    getReservations(),
+    getValidations().catch(() => [] as ValidationRow[]),
+    getCourtesies().catch(() => [] as CourtesyRow[]),
+  ]);
+  const paid = paidTickets(tickets, period);
+  const paidOrderIds = new Set(paid.map((ticket) => ticket.order_id));
+  const issued = tickets.filter((ticket) => isWithinPeriod(ticket.issued_at, period));
+  const activeReservations = reservations.filter((reservation) => reservation.status === "active");
+  const expiredReservations = reservations.filter(
+    (reservation) =>
+      reservation.status === "expired" && isWithinPeriod(reservation.updated_at, period),
+  );
+  const cancelledReservations = reservations.filter(
+    (reservation) =>
+      reservation.status === "cancelled" && isWithinPeriod(reservation.updated_at, period),
+  );
+  const validationAllowed = validations.filter(
+    (validation) =>
+      validation.result === "allowed" && isWithinPeriod(validation.created_at, period),
+  );
+  const notUsed = issued.filter((ticket) => ticket.status === "issued");
+  const total = paid.reduce((sum, ticket) => sum + getTicketAmount(ticket), 0);
+
   return [
-    title,
-    event ? `Evento: ${event.title}` : null,
+    "RESUMO GERAL",
     `> Período: ${period.label}`,
-  ].filter(Boolean) as string[];
+    "",
+    `> Vendas pagas: ${formatCurrencyFromCents(total)}`,
+    `> Pedidos pagos: ${paidOrderIds.size}`,
+    `> Ingressos emitidos: ${issued.length}`,
+    `> Cortesias emitidas: ${courtesies.filter((courtesy) => isWithinPeriod(courtesy.created_at, period)).length}`,
+    `> Reservas ativas: ${activeReservations.length}`,
+    `> Reservas expiradas: ${expiredReservations.length}`,
+    `> Reservas canceladas: ${cancelledReservations.length}`,
+    `> Check-ins realizados: ${validationAllowed.length}`,
+    `> Ingressos não usados: ${notUsed.length}`,
+  ].join("\n");
 }
 
 export async function buildAdminReport(input: {
   eventId: string;
-  type: AdminReportType;
+  type: Exclude<AdminReportType, "summary">;
   period: AdminReportPeriod;
 }) {
-  const [event, tickets, expiredReservations, validations] = await Promise.all([
-    getEvent(input.eventId),
-    getEventTickets(input.eventId),
-    getExpiredReservations(input.eventId),
-    getGateValidations(input.eventId).catch(() => [] as ValidationRow[]),
-  ]);
+  const [event, tickets, reservations, validations, courtesies, sessionSeats] =
+    await Promise.all([
+      getEvent(input.eventId),
+      getTickets(input.eventId),
+      getReservations(input.eventId),
+      getValidations(input.eventId).catch(() => [] as ValidationRow[]),
+      getCourtesies(input.eventId).catch(() => [] as CourtesyRow[]),
+      getSessionSeats(input.eventId),
+    ]);
 
-  const soldTickets = tickets.filter(
-    (ticket) =>
-      ticket.status !== "cancelled" &&
-      first(ticket.reservation_items)?.ticket_type !== "free" &&
-      isWithinPeriod(first(ticket.orders)?.created_at ?? ticket.issued_at, input.period),
-  );
-  const courtesyTickets = tickets.filter(
-    (ticket) =>
-      first(ticket.reservation_items)?.ticket_type === "free" &&
-      isWithinPeriod(ticket.issued_at, input.period),
-  );
-  const usedTickets = tickets.filter((ticket) =>
-    isWithinPeriod(ticket.used_at, input.period),
-  );
-  const periodExpiredReservations = expiredReservations.filter((reservation) =>
-    isWithinPeriod(reservation.expires_at, input.period),
-  );
+  const paid = paidTickets(tickets, input.period);
+  const courtesy = courtesyTickets(tickets, input.period);
+  const used = tickets.filter((ticket) => isWithinPeriod(ticket.used_at, input.period));
   const periodValidations = validations.filter((validation) =>
     isWithinPeriod(validation.created_at, input.period),
   );
 
   if (input.type === "sales_event") {
-    const totalAmount = soldTickets.reduce(
-      (sum, ticket) => sum + getTicketAmount(ticket),
-      0,
+    const revenue = paid.reduce((sum, ticket) => sum + getTicketAmount(ticket), 0);
+    const paidOrderIds = new Set(paid.map((ticket) => ticket.order_id));
+    const activeReservations = reservations.filter((reservation) => reservation.status === "active");
+    const inactiveReservations = reservations.filter(
+      (reservation) =>
+        (reservation.status === "expired" || reservation.status === "cancelled") &&
+        isWithinPeriod(reservation.updated_at, input.period),
     );
 
     return [
       ...reportHeader("VENDAS POR EVENTO", event, input.period),
-      `> Ingressos vendidos: ${soldTickets.length}`,
-      `> Cortesias emitidas: ${courtesyTickets.length}`,
-      `> Receita: ${formatCurrencyFromCents(totalAmount)}`,
-      `> Ingressos usados: ${usedTickets.length}`,
-      `> Ingressos não usados: ${Math.max(soldTickets.length + courtesyTickets.length - usedTickets.length, 0)}`,
+      `> Valor vendido bruto: ${formatCurrencyFromCents(revenue)}`,
+      `> Pedidos pagos: ${paidOrderIds.size}`,
+      `> Ingressos vendidos: ${paid.length}`,
+      `> Cortesias emitidas: ${courtesy.length}`,
+      `> Reservas ativas: ${activeReservations.length}`,
+      `> Reservas expiradas/canceladas: ${inactiveReservations.length}`,
+      `> Ingressos usados: ${used.length}`,
+      `> Ingressos não usados: ${Math.max(paid.length + courtesy.length - used.length, 0)}`,
     ].join("\n");
   }
 
   if (input.type === "sales_section") {
     const bySection = new Map<
       string,
-      { sold: number; courtesies: number; totalIssued: number; totalAmount: number; used: number }
+      { paid: number; totalAmount: number; courtesies: number; available: number; used: number; unused: number }
     >();
-    for (const ticket of [...soldTickets, ...courtesyTickets]) {
+    for (const seat of sessionSeats) {
+      const section = getSectionName(seat);
+      const current = bySection.get(section) ?? {
+        paid: 0,
+        totalAmount: 0,
+        courtesies: 0,
+        available: 0,
+        used: 0,
+        unused: 0,
+      };
+      if (seat.status === "available") current.available += 1;
+      bySection.set(section, current);
+    }
+    for (const ticket of [...paid, ...courtesy]) {
       const section = getSectionName(ticket);
       const current = bySection.get(section) ?? {
-        sold: 0,
-        courtesies: 0,
-        totalIssued: 0,
+        paid: 0,
         totalAmount: 0,
+        courtesies: 0,
+        available: 0,
         used: 0,
+        unused: 0,
       };
       const isCourtesy = first(ticket.reservation_items)?.ticket_type === "free";
       if (isCourtesy) {
         current.courtesies += 1;
       } else {
-        current.sold += 1;
+        current.paid += 1;
         current.totalAmount += getTicketAmount(ticket);
       }
-      current.totalIssued += 1;
-      if (ticket.used_at && isWithinPeriod(ticket.used_at, input.period)) {
-        current.used += 1;
-      }
+      if (ticket.status === "used") current.used += 1;
+      if (ticket.status === "issued") current.unused += 1;
       bySection.set(section, current);
     }
 
     return [
       ...reportHeader("VENDAS POR SETOR", event, input.period),
-      ...(bySection.size
-        ? [...bySection.entries()].map(
-            ([section, values], index) =>
-              [
-                `${index + 1}. ${section}`,
-                `> Vendidos: ${values.sold}`,
-                `> Cortesias: ${values.courtesies}`,
-                `> Emitidos: ${values.totalIssued}`,
-                `> Usados: ${values.used}`,
-                `> Receita: ${formatCurrencyFromCents(values.totalAmount)}`,
-              ].join("\n"),
-          )
-        : ["Nenhum ingresso encontrado neste período."]),
-    ].join("\n");
+      ...([...bySection.entries()].slice(0, DEFAULT_LIMIT).map(
+        ([section, values], index) =>
+          [
+            `${index + 1}. ${section}`,
+            `> Pagos emitidos: ${values.paid}`,
+            `> Valor vendido: ${formatCurrencyFromCents(values.totalAmount)}`,
+            `> Cortesias emitidas: ${values.courtesies}`,
+            `> Disponíveis restantes: ${values.available}`,
+            `> Usados: ${values.used}`,
+            `> Não usados: ${values.unused}`,
+          ].join("\n"),
+      )),
+      bySection.size > DEFAULT_LIMIT ? `Mais ${bySection.size - DEFAULT_LIMIT} setores não exibidos.` : null,
+      bySection.size ? null : "Nenhum setor encontrado neste período.",
+    ].filter(Boolean).join("\n");
   }
 
-  if (input.type === "expired_reservations") {
+  if (input.type === "pending_payments") {
+    const pending = reservations.filter(
+      (reservation) =>
+        reservation.status === "active" &&
+        first(reservation.orders)?.status === "pending_payment" &&
+        isWithinPeriod(reservation.created_at, input.period),
+    );
+
     return [
-      ...reportHeader("RESERVAS EXPIRADAS", event, input.period),
-      periodExpiredReservations.length
-        ? periodExpiredReservations
-            .slice(0, 20)
-            .map((reservation, index) => {
-              const items = Array.isArray(reservation.reservation_items)
-                ? reservation.reservation_items
-                : reservation.reservation_items
-                  ? [reservation.reservation_items]
-                  : [];
-              const section = first(items[0]?.venue_sections)?.name ?? "Sem setor";
-              return [
-                `${index + 1}. ${first(reservation.customers)?.whatsapp_phone ?? "Sem telefone"}`,
-                `> Setor: ${section}`,
-                `> Quantidade: ${items.length}`,
-                `> Valor: ${formatCurrencyFromCents(reservation.total_amount_cents + reservation.total_fee_cents)}`,
-                `> Expirou em: ${formatDateTime(reservation.expires_at)}`,
-              ].join("\n");
-            })
-            .join("\n")
-        : "Nenhuma reserva expirada neste período.",
-    ].join("\n");
+      ...reportHeader("PAGAMENTOS PENDENTES", event, input.period),
+      ...(pending.length
+        ? pending.slice(0, DEFAULT_LIMIT).map((reservation, index) =>
+            [
+              `${index + 1}. ${first(first(reservation.event_sessions)?.events)?.title ?? event?.title ?? "Evento"}`,
+              `> Telefone: ${maskPhone(first(reservation.customers)?.whatsapp_phone)}`,
+              `> Quantidade: ${getReservationQuantity(reservation)}`,
+              `> Total: ${formatCurrencyFromCents(reservation.total_amount_cents + reservation.total_fee_cents)}`,
+              `> Expira em: ${formatDateTime(reservation.expires_at)}`,
+              `> Status: pending_payment`,
+            ].join("\n"),
+          )
+        : ["Nenhum pagamento pendente neste período."]),
+      pending.length > DEFAULT_LIMIT ? `Mais ${pending.length - DEFAULT_LIMIT} pendências não exibidas.` : null,
+    ].filter(Boolean).join("\n");
+  }
+
+  if (input.type === "expired_cancelled_reservations") {
+    const items = reservations.filter(
+      (reservation) =>
+        (reservation.status === "expired" || reservation.status === "cancelled") &&
+        isWithinPeriod(reservation.updated_at, input.period),
+    );
+
+    return [
+      ...reportHeader("RESERVAS EXPIRADAS/CANCELADAS", event, input.period),
+      ...(items.length
+        ? items.slice(0, DEFAULT_LIMIT).map((reservation, index) =>
+            [
+              `${index + 1}. ${event?.title ?? "Evento"}`,
+              `> Telefone: ${maskPhone(first(reservation.customers)?.whatsapp_phone)}`,
+              `> Quantidade: ${getReservationQuantity(reservation)}`,
+              `> Valor: ${formatCurrencyFromCents(reservation.total_amount_cents + reservation.total_fee_cents)}`,
+              `> Status: ${reservation.status}`,
+              `> Atualizado em: ${formatDateTime(reservation.updated_at)}`,
+            ].join("\n"),
+          )
+        : ["Nenhuma reserva expirada/cancelada neste período."]),
+      items.length > DEFAULT_LIMIT ? `Mais ${items.length - DEFAULT_LIMIT} reservas não exibidas.` : null,
+    ].filter(Boolean).join("\n");
   }
 
   if (input.type === "gate_checkins") {
     const allowed = periodValidations.filter((validation) => validation.result === "allowed");
-    const denied = periodValidations.length - allowed.length;
+    const alreadyUsed = periodValidations.filter((validation) => validation.result === "already_used");
+    const denied = periodValidations.filter(
+      (validation) => validation.result !== "allowed" && validation.result !== "already_used",
+    );
+
     return [
-      ...gateCheckinsReportHeader("CHECK-INS DA PORTARIA", event, input.period),
-      `> Entradas liberadas: ${allowed.length}`,
-      `> Leituras negadas: ${denied}`,
-      ...(allowed.length
-        ? allowed.slice(0, 20).map((validation, index) =>
-            [
-              `${index + 1}. ${validation.ticket_code ?? "Sem código"}`,
-              `> Horário: ${formatDateTime(validation.created_at)}`,
-              `> Validador: ${validation.validator_identifier ?? validation.gate_label ?? "Não informado"}`,
-            ].join("\n"),
-          )
-        : ["Nenhum check-in liberado neste período."]),
-    ].join("\n");
+      ...reportHeader("CHECK-INS DA PORTARIA", event, input.period),
+      `> Validados: ${allowed.length}`,
+      `> Recusados: ${denied.length}`,
+      `> Already used: ${alreadyUsed.length}`,
+      ...periodValidations.slice(0, DEFAULT_LIMIT).map((validation, index) =>
+        [
+          `${index + 1}. ${validation.result}`,
+          `> Código: ${validation.ticket_code ?? "Não informado"}`,
+          `> Horário: ${formatDateTime(validation.created_at)}`,
+          `> Validador: ${maskPhone(validation.validator_identifier ?? validation.gate_label)}`,
+        ].join("\n"),
+      ),
+      periodValidations.length > DEFAULT_LIMIT ? `Mais ${periodValidations.length - DEFAULT_LIMIT} validações não exibidas.` : null,
+    ].filter(Boolean).join("\n");
   }
 
   if (input.type === "ticket_usage") {
-    const periodTickets = tickets.filter((ticket) =>
-      isWithinPeriod(ticket.issued_at, input.period) ||
-      isWithinPeriod(ticket.used_at, input.period) ||
-      isWithinPeriod(ticket.cancelled_at, input.period),
-    );
-    const issued = periodTickets.filter(
+    const periodTickets = tickets.filter(
       (ticket) =>
-        ticket.status !== "cancelled",
+        isWithinPeriod(ticket.issued_at, input.period) ||
+        isWithinPeriod(ticket.used_at, input.period) ||
+        isWithinPeriod(ticket.cancelled_at, input.period),
     );
-    const used = periodTickets.filter(
-      (ticket) =>
-        ticket.status === "used" &&
-        (isWithinPeriod(ticket.used_at, input.period) ||
-          isWithinPeriod(ticket.issued_at, input.period)),
-    );
-    const cancelled = periodTickets.filter(
-      (ticket) =>
-        ticket.status === "cancelled" &&
-        (isWithinPeriod(ticket.cancelled_at, input.period) ||
-          isWithinPeriod(ticket.issued_at, input.period)),
-    );
-    const deniedValidations = periodValidations.filter(
-      (validation) => validation.result !== "allowed",
-    );
-    const blockedSystemQr = deniedValidations.filter(
-      (validation) => validation.result !== "not_found",
-    );
-    const blockedExternalQr = deniedValidations.filter(
-      (validation) => validation.result === "not_found",
-    );
+    const issued = periodTickets.filter((ticket) => ticket.status !== "cancelled");
+    const usedTickets = periodTickets.filter((ticket) => ticket.status === "used");
+    const cancelled = periodTickets.filter((ticket) => ticket.status === "cancelled");
+    const attendance = issued.length ? Math.round((usedTickets.length / issued.length) * 100) : 0;
 
     return [
-      ...compactEventReportHeader("INGRESSOS USADOS E NÃO USADOS", event, input.period),
+      ...reportHeader("INGRESSOS USADOS E NÃO USADOS", event, input.period),
       `> Emitidos: ${issued.length}`,
-      `> Não usados: ${Math.max(issued.length - used.length, 0)}`,
-      `> Usados: ${used.length}`,
+      `> Usados: ${usedTickets.length}`,
+      `> Não usados: ${Math.max(issued.length - usedTickets.length, 0)}`,
       `> Cancelados: ${cancelled.length}`,
-      `> Barrados: ${deniedValidations.length}`,
-      "Barrados:",
-      `> QRCode gerado pelo sistema: ${blockedSystemQr.length}`,
-      `> QRCode não gerado pelo sistema: ${blockedExternalQr.length}`,
+      `> Comparecimento: ${attendance}%`,
     ].join("\n");
   }
 
-  const revenue = soldTickets.reduce((sum, ticket) => sum + getTicketAmount(ticket), 0);
+  const periodCourtesies = courtesies.filter(
+    (courtesyRow) =>
+      isWithinPeriod(courtesyRow.created_at, input.period) ||
+      isWithinPeriod(courtesyRow.cancelled_at, input.period) ||
+      isWithinPeriod(first(courtesyRow.tickets)?.used_at, input.period),
+  );
+  const usedCourtesies = periodCourtesies.filter((courtesyRow) => first(courtesyRow.tickets)?.status === "used");
+  const cancelledCourtesies = periodCourtesies.filter((courtesyRow) => courtesyRow.status === "cancelled");
+  const activeCourtesies = periodCourtesies.filter((courtesyRow) => courtesyRow.status !== "cancelled");
 
   return [
-    ...compactEventReportHeader("RESUMO GERAL", event, input.period),
-    `> Vendas: ${soldTickets.length}`,
-    `> Cortesias: ${courtesyTickets.length}`,
-    `> Receita: ${formatCurrencyFromCents(revenue)}`,
-    `> Check-ins liberados: ${periodValidations.filter((validation) => validation.result === "allowed").length}`,
-    `> Reservas expiradas: ${periodExpiredReservations.length}`,
-    `> Ingressos usados: ${usedTickets.length}`,
-  ].join("\n");
+    ...reportHeader("CORTESIAS", event, input.period),
+    `> Emitidas: ${periodCourtesies.length}`,
+    `> Usadas: ${usedCourtesies.length}`,
+    `> Não usadas: ${Math.max(activeCourtesies.length - usedCourtesies.length, 0)}`,
+    `> Canceladas: ${cancelledCourtesies.length}`,
+    ...periodCourtesies.slice(0, DEFAULT_LIMIT).map((courtesyRow, index) =>
+      [
+        `${index + 1}. ${courtesyRow.beneficiary_name ?? "Beneficiário"}`,
+        `> Telefone: ${maskPhone(courtesyRow.phone)}`,
+        `> Status: ${courtesyRow.status}`,
+        courtesyRow.reason ? `> Motivo: ${courtesyRow.reason}` : null,
+      ].filter(Boolean).join("\n"),
+    ),
+    periodCourtesies.length > DEFAULT_LIMIT ? `Mais ${periodCourtesies.length - DEFAULT_LIMIT} cortesias não exibidas.` : null,
+  ].filter(Boolean).join("\n");
 }
