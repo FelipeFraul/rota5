@@ -295,7 +295,20 @@ supabase/migrations/20260525000400_restrict_admin_roles_to_profiles.sql
 
 It fails deliberately if any `admin_users` row still has `gate` or `support`, then replaces the role constraint with `root/admin/operator` only. In the real Supabase project there were no legacy `gate` or `support` admins before applying it.
 
-This step does not implement CRUD events, courtesies, reports, cancellation, swaps, or destructive admin actions. Menu entries that are not implemented return a controlled “in construction” response.
+The `Administradores` WhatsApp module is implemented for `Diretor/root` only:
+
+- `Listar administradores` shows name, masked phone, Portuguese profile label, status, creation date, and last login when present.
+- It never shows `admin_users.id`, `passphrase_hash`, admin session IDs, tokens, or raw secrets.
+- `Adicionar administrador` collects phone, optional name, profile, and requires `CONFIRMAR ADMIN`.
+- New admins do not receive an individual passphrase during creation. They authenticate through the existing admin login mechanism; if no per-user `passphrase_hash` exists, the backend falls back to `ADMIN_AUTH_SECRET_HASH`.
+- Active duplicate phones are blocked.
+- Disabled phones can be reactivated through the add flow with `REATIVAR ADMIN`.
+- `Alterar nível de administrador` requires `ALTERAR NÍVEL`, accepts only `root/admin/operator`, blocks Director self-downgrade, and revokes active sessions for the changed admin.
+- `Desativar administrador` requires `DESATIVAR ADMIN`, does not delete `admin_users`, blocks Director self-disable, and revokes active sessions for the disabled admin.
+- The flow never creates `gate` or `support`; the database constraint also rejects those roles.
+- `ADMIN_ROOT_WHATSAPP_PHONES` is not modified by this module.
+
+The real Supabase audit `TEST_ADMIN_USERS_FLOW` validated Director-only access, Manager/Operator blocking, safe list output, creation of Gerente/Operador/Diretor, duplicate blocking, disabled-user reactivation, invalid role rejection, confirmation phrases, session revocation on role/status changes, common buyer search preservation, and cleanup.
 
 Final pre-secret audit notes:
 

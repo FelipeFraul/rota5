@@ -132,6 +132,7 @@ import {
   getAdminProfileLabel,
   listAdminUsers,
   parseAdminRole,
+  reactivateAdminUser,
   resolveAdminUserId,
   updateAdminRole,
   type AdminUserListItem,
@@ -1562,21 +1563,27 @@ function isAdminCourtesyFlowState(
 function isAdminUsersFlowState(
   state: string | undefined,
 ): state is
-  | "admin_users_add_type_select"
-  | "admin_users_add_phone_collecting"
-  | "admin_users_add_name_collecting"
-  | "admin_users_add_passphrase_collecting"
-  | "admin_users_role_select"
-  | "admin_users_role_collecting"
-  | "admin_users_disable_select" {
+  | "admin_user_create_collect_phone"
+  | "admin_user_create_collect_name"
+  | "admin_user_create_select_role"
+  | "admin_user_create_confirm"
+  | "admin_user_reactivate_confirm"
+  | "admin_user_role_select_user"
+  | "admin_user_role_select_role"
+  | "admin_user_role_confirm"
+  | "admin_user_disable_select"
+  | "admin_user_disable_confirm" {
   return (
-    state === "admin_users_add_type_select" ||
-    state === "admin_users_add_phone_collecting" ||
-    state === "admin_users_add_name_collecting" ||
-    state === "admin_users_add_passphrase_collecting" ||
-    state === "admin_users_role_select" ||
-    state === "admin_users_role_collecting" ||
-    state === "admin_users_disable_select"
+    state === "admin_user_create_collect_phone" ||
+    state === "admin_user_create_collect_name" ||
+    state === "admin_user_create_select_role" ||
+    state === "admin_user_create_confirm" ||
+    state === "admin_user_reactivate_confirm" ||
+    state === "admin_user_role_select_user" ||
+    state === "admin_user_role_select_role" ||
+    state === "admin_user_role_confirm" ||
+    state === "admin_user_disable_select" ||
+    state === "admin_user_disable_confirm"
   );
 }
 
@@ -1904,11 +1911,11 @@ function parseAdminReportCustomPeriod(input: string): AdminReportPeriod | null {
 
 function renderAdminUserTypePrompt() {
   return [
-    "*QUAL O TIPO DE ADMINISTRADOR VOCÊ QUER CADASTRAR?*",
+    "*QUAL NÍVEL DE ACESSO?*",
     "",
-    "> 1. Diretor - Acesso total ao sistema. Pode gerenciar eventos, ingressos, cortesias, portaria, relatórios e outros administradores.",
-    "> 2. Gerente - Pode gerenciar eventos, ingressos, cortesias, portaria e relatórios. Não gerencia, inclui ou exclui outros administradores.",
-    "> 3. Operador - Gerencia cortesias e relatórios",
+    "> 1. Diretor",
+    "> 2. Gerente",
+    "> 3. Operador",
     "",
     'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
   ].join("\n");
@@ -1926,23 +1933,14 @@ function renderAdminUserNamePrompt() {
   return [
     "*QUAL O NOME DO ADMINISTRADOR?*",
     "",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
-  ].join("\n");
-}
-
-function renderAdminUserPassphrasePrompt() {
-  return [
-    "*QUAL A PALAVRA CHAVE (SENHA) DO ADMINISTRADOR?*",
+    "Digite o nome ou responda PULAR.",
     "",
     'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
   ].join("\n");
 }
 
 function renderAdminUserRolePrompt() {
-  return renderAdminUserTypePrompt().replace(
-    "*QUAL O TIPO DE ADMINISTRADOR VOCÊ QUER CADASTRAR?*",
-    "*QUAL O NOVO TIPO DE ADMINISTRADOR?*",
-  );
+  return renderAdminUserTypePrompt().replace("*QUAL NÍVEL DE ACESSO?*", "*NOVO NÍVEL*");
 }
 
 function formatAdminRoleLabel(role: string) {
@@ -1953,10 +1951,28 @@ function renderAdminUsersList(users: AdminUserListItem[]) {
   const userBlocks = users.map((user, index) =>
     [
       `${index + 1}. ${user.name ?? "Sem nome"}`,
-      `> Telefone: ${user.phone}`,
+      `   Telefone: ${maskAdminPhone(user.phone)}`,
+      `   Perfil: ${formatAdminRoleLabel(user.role)}`,
+      `   Status: ${user.status === "active" ? "ativo" : "desativado"}`,
+      `   Criado em: ${formatDateTime(user.createdAt)}`,
+      ...(user.lastLoginAt ? [`   Último login: ${formatDateTime(user.lastLoginAt)}`] : []),
+    ].join("\n"),
+  );
+
+  return [
+    "*ADMINISTRADORES*",
+    "",
+    users.length ? userBlocks.join("\n\n") : "Nenhum administrador encontrado.",
+  ].join("\n");
+}
+
+function renderAdminUsersSelectionList(users: AdminUserListItem[]) {
+  const userBlocks = users.map((user, index) =>
+    [
+      `${index + 1}. ${user.name ?? "Sem nome"}`,
+      `> Telefone: ${maskAdminPhone(user.phone)}`,
       `> Perfil: ${formatAdminRoleLabel(user.role)}`,
-      `> Status: ${user.status}`,
-      `> ID: ${user.id}`,
+      `> Status: ${user.status === "active" ? "ativo" : "desativado"}`,
     ].join("\n"),
   );
 
@@ -1964,6 +1980,66 @@ function renderAdminUsersList(users: AdminUserListItem[]) {
     "*ADMINISTRADORES*",
     "",
     users.length ? userBlocks.join("\n---\n") : "Nenhum administrador encontrado.",
+  ].join("\n");
+}
+
+function renderAdminUserCreateConfirm({
+  phone,
+  name,
+  role,
+  reactivation = false,
+}: {
+  phone: string;
+  name?: string | null;
+  role: AdminRole;
+  reactivation?: boolean;
+}) {
+  return [
+    reactivation ? "*REATIVAR ADMINISTRADOR*" : "*CONFIRMAR NOVO ADMINISTRADOR*",
+    "",
+    `> Nome: ${name || "Sem nome"}`,
+    `> Telefone: ${maskAdminPhone(phone)}`,
+    `> Perfil: ${formatAdminRoleLabel(role)}`,
+    "",
+    `Digite ${reactivation ? "REATIVAR ADMIN" : "CONFIRMAR ADMIN"} para confirmar.`,
+    'Digite "Cancelar" para abandonar esta tela.',
+  ].join("\n");
+}
+
+function renderAdminUserRoleConfirm({
+  name,
+  phone,
+  currentRole,
+  newRole,
+}: {
+  name?: string | null;
+  phone?: string;
+  currentRole?: AdminRole;
+  newRole: AdminRole;
+}) {
+  return [
+    "*ALTERAR NÍVEL DE ADMINISTRADOR*",
+    "",
+    `> Nome: ${name || "Sem nome"}`,
+    `> Telefone: ${phone ? maskAdminPhone(phone) : "não informado"}`,
+    ...(currentRole ? [`> Perfil atual: ${formatAdminRoleLabel(currentRole)}`] : []),
+    `> Novo perfil: ${formatAdminRoleLabel(newRole)}`,
+    "",
+    "Digite ALTERAR NÍVEL para confirmar.",
+    'Digite "Cancelar" para abandonar esta tela.',
+  ].join("\n");
+}
+
+function renderAdminUserDisableConfirm(user: AdminUserListItem) {
+  return [
+    "*DESATIVAR ADMINISTRADOR*",
+    "",
+    `> Nome: ${user.name || "Sem nome"}`,
+    `> Telefone: ${maskAdminPhone(user.phone)}`,
+    `> Perfil: ${formatAdminRoleLabel(user.role)}`,
+    "",
+    "Digite DESATIVAR ADMIN para confirmar.",
+    'Digite "Cancelar" para abandonar esta tela.',
   ].join("\n");
 }
 
@@ -8890,42 +8966,16 @@ export async function routeTicketMessage({
         };
       }
 
-      if (baseContext.state === "admin_users_add_type_select") {
-        const selectedRole = parseAdminRole(text);
-
-        if (!selectedRole) {
-          return {
-            reply: renderAdminUserTypePrompt(),
-            nextContext: adminReplyContext({
-              state: "admin_users_add_type_select",
-              role: adminUser.role,
-              sessionId: adminSession.id,
-              adminUserId: adminUser.id,
-              expiresAt: adminSession.expires_at,
-            }),
-          };
-        }
-
-        return {
-          reply: renderAdminUserPhonePrompt(),
-          nextContext: withAdminUsersContext(
-            baseContext,
-            "admin_users_add_phone_collecting",
-            { mode: "add", pendingRole: selectedRole },
-          ),
-        };
-      }
-
-      if (baseContext.state === "admin_users_add_phone_collecting") {
+      if (baseContext.state === "admin_user_create_collect_phone") {
         const adminUsersContext = baseContext.adminUsers ?? {};
         const phone = normalizeGatePhone(text);
 
-        if (!phone || phone.length < 10 || !adminUsersContext.pendingRole) {
+        if (!phone || phone.length < 10) {
           return {
             reply: renderAdminUserPhonePrompt(),
             nextContext: withAdminUsersContext(
               baseContext,
-              "admin_users_add_phone_collecting",
+              "admin_user_create_collect_phone",
               adminUsersContext,
             ),
           };
@@ -8935,79 +8985,196 @@ export async function routeTicketMessage({
           reply: renderAdminUserNamePrompt(),
           nextContext: withAdminUsersContext(
             baseContext,
-            "admin_users_add_name_collecting",
+            "admin_user_create_collect_name",
             { ...adminUsersContext, pendingPhone: phone },
           ),
         };
       }
 
-      if (baseContext.state === "admin_users_add_name_collecting") {
+      if (baseContext.state === "admin_user_create_collect_name") {
         const adminUsersContext = baseContext.adminUsers ?? {};
-        const name = text.trim();
+        const normalizedName = normalizeAdminText(text);
+        const name = normalizedName === "pular" ? null : text.trim();
 
-        if (
-          !adminUsersContext.pendingPhone ||
-          !adminUsersContext.pendingRole ||
-          !name
-        ) {
+        if (!adminUsersContext.pendingPhone || (!name && normalizedName !== "pular")) {
           return {
             reply: renderAdminUserNamePrompt(),
             nextContext: withAdminUsersContext(
               baseContext,
-              "admin_users_add_name_collecting",
+              "admin_user_create_collect_name",
               adminUsersContext,
             ),
           };
         }
 
         return {
-          reply: renderAdminUserPassphrasePrompt(),
+          reply: renderAdminUserTypePrompt(),
           nextContext: withAdminUsersContext(
             baseContext,
-            "admin_users_add_passphrase_collecting",
+            "admin_user_create_select_role",
             { ...adminUsersContext, pendingName: name },
           ),
         };
       }
 
-      if (baseContext.state === "admin_users_add_passphrase_collecting") {
+      if (baseContext.state === "admin_user_create_select_role") {
         const adminUsersContext = baseContext.adminUsers ?? {};
-        const passphrase = text.trim();
+        const selectedRole = parseAdminRole(text);
 
-        if (
-          !adminUsersContext.pendingPhone ||
-          !adminUsersContext.pendingRole ||
-          !adminUsersContext.pendingName ||
-          !passphrase
-        ) {
+        if (!adminUsersContext.pendingPhone || !selectedRole) {
           return {
-            reply: renderAdminUserPassphrasePrompt(),
+            reply: renderAdminUserTypePrompt(),
             nextContext: withAdminUsersContext(
               baseContext,
-              "admin_users_add_passphrase_collecting",
+              "admin_user_create_select_role",
               adminUsersContext,
             ),
           };
         }
 
+        return {
+          reply: renderAdminUserCreateConfirm({
+            phone: adminUsersContext.pendingPhone,
+            name: adminUsersContext.pendingName,
+            role: selectedRole,
+          }),
+          nextContext: withAdminUsersContext(baseContext, "admin_user_create_confirm", {
+            ...adminUsersContext,
+            pendingRole: selectedRole,
+          }),
+        };
+      }
+
+      if (baseContext.state === "admin_user_create_confirm") {
+        const adminUsersContext = baseContext.adminUsers ?? {};
+
+        if (normalizeAdminText(text) !== "confirmar admin") {
+          return {
+            reply: "Digite CONFIRMAR ADMIN para confirmar ou CANCELAR para abandonar.",
+            nextContext: withAdminUsersContext(
+              baseContext,
+              "admin_user_create_confirm",
+              adminUsersContext,
+            ),
+          };
+        }
+
+        if (!adminUsersContext.pendingPhone || !adminUsersContext.pendingRole) {
+          return {
+            reply: TICKET_MESSAGES.adminGenericError,
+            nextContext: adminReplyContext({
+              state: "admin_users_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
         const result = await createAdminUser({
           phone: adminUsersContext.pendingPhone,
-          name: adminUsersContext.pendingName,
+          name: adminUsersContext.pendingName ?? null,
           role: adminUsersContext.pendingRole,
-          passphrase,
+          createdByAdminPhone: adminUser.phone,
+        });
+
+        if (!result.ok && result.reason === "already_disabled" && result.adminUserId) {
+          return {
+            reply: renderAdminUserCreateConfirm({
+              phone: adminUsersContext.pendingPhone,
+              name: adminUsersContext.pendingName,
+              role: adminUsersContext.pendingRole,
+              reactivation: true,
+            }),
+            nextContext: withAdminUsersContext(baseContext, "admin_user_reactivate_confirm", {
+              ...adminUsersContext,
+              pendingExistingAdminUserId: result.adminUserId,
+              mode: "reactivate",
+            }),
+          };
+        }
+
+        if (!result.ok && result.reason === "already_active") {
+          return {
+            reply: "Este telefone já possui administrador ativo cadastrado.",
+            nextContext: adminReplyContext({
+              state: "admin_users_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        return {
+          reply: result.ok
+            ? [
+                "*ADMINISTRADOR ADICIONADO*",
+                "",
+                `> Nome: ${adminUsersContext.pendingName || "Sem nome"}`,
+                `> Telefone: ${maskAdminPhone(adminUsersContext.pendingPhone)}`,
+                `> Perfil: ${formatAdminRoleLabel(adminUsersContext.pendingRole)}`,
+              ].join("\n")
+            : TICKET_MESSAGES.adminGenericError,
+          nextContext: adminReplyContext({
+            state: "admin_users_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (baseContext.state === "admin_user_reactivate_confirm") {
+        const adminUsersContext = baseContext.adminUsers ?? {};
+
+        if (normalizeAdminText(text) !== "reativar admin") {
+          return {
+            reply: "Digite REATIVAR ADMIN para confirmar ou CANCELAR para abandonar.",
+            nextContext: withAdminUsersContext(
+              baseContext,
+              "admin_user_reactivate_confirm",
+              adminUsersContext,
+            ),
+          };
+        }
+
+        if (
+          !adminUsersContext.pendingExistingAdminUserId ||
+          !adminUsersContext.pendingPhone ||
+          !adminUsersContext.pendingRole
+        ) {
+          return {
+            reply: TICKET_MESSAGES.adminGenericError,
+            nextContext: adminReplyContext({
+              state: "admin_users_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        const result = await reactivateAdminUser({
+          adminUserId: adminUsersContext.pendingExistingAdminUserId,
+          phone: adminUsersContext.pendingPhone,
+          name: adminUsersContext.pendingName ?? null,
+          role: adminUsersContext.pendingRole,
           createdByAdminPhone: adminUser.phone,
         });
 
         return {
           reply: result.ok
             ? [
-                "*ADMINISTRADOR CADASTRADO*",
-                `> Telefone: ${adminUsersContext.pendingPhone}`,
-                `> Nome: ${adminUsersContext.pendingName}`,
-                `> Perfil: ${formatAdminRoleLabel(adminUsersContext.pendingRole)}`,
-                `> Palavra chave: ${passphrase}`,
+                "*ADMINISTRADOR REATIVADO*",
                 "",
-                'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
+                `> Nome: ${adminUsersContext.pendingName || "Sem nome"}`,
+                `> Telefone: ${maskAdminPhone(adminUsersContext.pendingPhone)}`,
+                `> Perfil: ${formatAdminRoleLabel(adminUsersContext.pendingRole)}`,
               ].join("\n")
             : TICKET_MESSAGES.adminGenericError,
           nextContext: adminReplyContext({
@@ -9021,8 +9188,8 @@ export async function routeTicketMessage({
       }
 
       if (
-        baseContext.state === "admin_users_role_select" ||
-        baseContext.state === "admin_users_disable_select"
+        baseContext.state === "admin_user_role_select_user" ||
+        baseContext.state === "admin_user_disable_select"
       ) {
         const adminUsersContext = baseContext.adminUsers ?? {};
         const selectedAdminUserId = resolveAdminUserId(
@@ -9041,13 +9208,101 @@ export async function routeTicketMessage({
           };
         }
 
-        if (baseContext.state === "admin_users_disable_select") {
-          const result = await disableAdminUser(selectedAdminUserId);
+        const selectedUser = adminUsersContext.lastUsers?.find(
+          (user) => user.adminUserId === selectedAdminUserId,
+        );
+
+        if (baseContext.state === "admin_user_disable_select") {
+          const listedUser = selectedUser
+            ? ({
+                id: selectedUser.adminUserId,
+                phone: selectedUser.phone,
+                name: selectedUser.name ?? null,
+                role: selectedUser.role ?? "operator",
+                status: selectedUser.status ?? "active",
+                createdAt: new Date().toISOString(),
+                lastLoginAt: null,
+              } satisfies AdminUserListItem)
+            : null;
 
           return {
-            reply: result.ok
-              ? "*ADMINISTRADOR DESATIVADO*"
-              : TICKET_MESSAGES.adminGenericError,
+            reply: listedUser
+              ? renderAdminUserDisableConfirm(listedUser)
+              : "Administrador não encontrado. Responda com número, telefone ou ID.",
+            nextContext: withAdminUsersContext(baseContext, "admin_user_disable_confirm", {
+              ...adminUsersContext,
+              selectedAdminUserId,
+              selectedAdminName: selectedUser?.name ?? null,
+              selectedAdminPhone: selectedUser?.phone,
+              selectedAdminRole: selectedUser?.role,
+              selectedAdminStatus: selectedUser?.status,
+            }),
+          };
+        }
+
+        return {
+          reply: renderAdminUserRolePrompt(),
+          nextContext: withAdminUsersContext(
+            baseContext,
+            "admin_user_role_select_role",
+            {
+              ...adminUsersContext,
+              selectedAdminUserId,
+              selectedAdminName: selectedUser?.name ?? null,
+              selectedAdminPhone: selectedUser?.phone,
+              selectedAdminRole: selectedUser?.role,
+              selectedAdminStatus: selectedUser?.status,
+            },
+          ),
+        };
+      }
+
+      if (baseContext.state === "admin_user_role_select_role") {
+        const adminUsersContext = baseContext.adminUsers ?? {};
+        const newRole = parseAdminRole(text);
+
+        if (!adminUsersContext.selectedAdminUserId || !newRole) {
+          return {
+            reply: renderAdminUserRolePrompt(),
+            nextContext: withAdminUsersContext(
+              baseContext,
+              "admin_user_role_select_role",
+              adminUsersContext,
+            ),
+          };
+        }
+
+        return {
+          reply: renderAdminUserRoleConfirm({
+            name: adminUsersContext.selectedAdminName,
+            phone: adminUsersContext.selectedAdminPhone,
+            currentRole: adminUsersContext.selectedAdminRole,
+            newRole,
+          }),
+          nextContext: withAdminUsersContext(baseContext, "admin_user_role_confirm", {
+            ...adminUsersContext,
+            pendingRole: newRole,
+          }),
+        };
+      }
+
+      if (baseContext.state === "admin_user_role_confirm") {
+        const adminUsersContext = baseContext.adminUsers ?? {};
+
+        if (normalizeAdminText(text) !== "alterar nivel") {
+          return {
+            reply: "Digite ALTERAR NÍVEL para confirmar ou CANCELAR para abandonar.",
+            nextContext: withAdminUsersContext(
+              baseContext,
+              "admin_user_role_confirm",
+              adminUsersContext,
+            ),
+          };
+        }
+
+        if (!adminUsersContext.selectedAdminUserId || !adminUsersContext.pendingRole) {
+          return {
+            reply: TICKET_MESSAGES.adminGenericError,
             nextContext: adminReplyContext({
               state: "admin_users_menu",
               role: adminUser.role,
@@ -9058,44 +9313,86 @@ export async function routeTicketMessage({
           };
         }
 
-        return {
-          reply: renderAdminUserRolePrompt(),
-          nextContext: withAdminUsersContext(
-            baseContext,
-            "admin_users_role_collecting",
-            { ...adminUsersContext, selectedAdminUserId },
-          ),
-        };
-      }
-
-      if (baseContext.state === "admin_users_role_collecting") {
-        const adminUsersContext = baseContext.adminUsers ?? {};
-        const newRole = parseAdminRole(text);
-
-        if (!adminUsersContext.selectedAdminUserId || !newRole) {
-          return {
-            reply: renderAdminUserRolePrompt(),
-            nextContext: withAdminUsersContext(
-              baseContext,
-              "admin_users_role_collecting",
-              adminUsersContext,
-            ),
-          };
-        }
-
         const result = await updateAdminRole({
           adminUserId: adminUsersContext.selectedAdminUserId,
-          role: newRole,
+          role: adminUsersContext.pendingRole,
+          actingAdminUserId: adminUser.id,
         });
+
+        const blockedMessage =
+          !result.ok && result.reason === "self_downgrade_blocked"
+            ? "Não é permitido rebaixar o próprio Diretor neste fluxo."
+            : !result.ok && result.reason === "last_root_blocked"
+              ? "Não é permitido remover o último Diretor ativo."
+              : null;
 
         return {
           reply: result.ok
             ? [
                 "*NÍVEL DE ADMINISTRADOR ATUALIZADO*",
-                `> Perfil: ${formatAdminRoleLabel(newRole)}`,
+                `> Perfil: ${formatAdminRoleLabel(adminUsersContext.pendingRole)}`,
                 'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
               ].join("\n")
-            : TICKET_MESSAGES.adminGenericError,
+            : (blockedMessage ?? TICKET_MESSAGES.adminGenericError),
+          nextContext: adminReplyContext({
+            state: "admin_users_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (baseContext.state === "admin_user_disable_confirm") {
+        const adminUsersContext = baseContext.adminUsers ?? {};
+
+        if (normalizeAdminText(text) !== "desativar admin") {
+          return {
+            reply: "Digite DESATIVAR ADMIN para confirmar ou CANCELAR para abandonar.",
+            nextContext: withAdminUsersContext(
+              baseContext,
+              "admin_user_disable_confirm",
+              adminUsersContext,
+            ),
+          };
+        }
+
+        if (!adminUsersContext.selectedAdminUserId) {
+          return {
+            reply: TICKET_MESSAGES.adminGenericError,
+            nextContext: adminReplyContext({
+              state: "admin_users_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        const result = await disableAdminUser({
+          adminUserId: adminUsersContext.selectedAdminUserId,
+          actingAdminUserId: adminUser.id,
+        });
+
+        const blockedMessage =
+          !result.ok && result.reason === "self_disable_blocked"
+            ? "Não é permitido desativar o próprio Diretor neste fluxo."
+            : !result.ok && result.reason === "last_root_blocked"
+              ? "Não é permitido desativar o último Diretor ativo."
+              : null;
+
+        return {
+          reply: result.ok
+            ? [
+                "*ADMINISTRADOR DESATIVADO*",
+                "",
+                `> Nome: ${adminUsersContext.selectedAdminName || "Sem nome"}`,
+                `> Telefone: ${adminUsersContext.selectedAdminPhone ? maskAdminPhone(adminUsersContext.selectedAdminPhone) : "não informado"}`,
+                `> Perfil: ${adminUsersContext.selectedAdminRole ? formatAdminRoleLabel(adminUsersContext.selectedAdminRole) : "não informado"}`,
+              ].join("\n")
+            : (blockedMessage ?? TICKET_MESSAGES.adminGenericError),
           nextContext: adminReplyContext({
             state: "admin_users_menu",
             role: adminUser.role,
@@ -9435,9 +9732,9 @@ export async function routeTicketMessage({
       if (previousState.state === "admin_users_menu") {
         if (submenuOption === 2) {
           return {
-            reply: renderAdminUserTypePrompt(),
+            reply: renderAdminUserPhonePrompt(),
             nextContext: adminReplyContext({
-              state: "admin_users_add_type_select",
+              state: "admin_user_create_collect_phone",
               role: adminUser.role,
               sessionId: adminSession.id,
               adminUserId: adminUser.id,
@@ -9480,6 +9777,9 @@ export async function routeTicketMessage({
           }
 
           if (submenuOption === 3 || submenuOption === 4) {
+            const selectableUsers = submenuOption === 4
+              ? usersResult.users.filter((user) => user.status === "active")
+              : usersResult.users;
             return {
               reply: [
                 "*ADMINISTRADORES*",
@@ -9488,7 +9788,7 @@ export async function routeTicketMessage({
                   : "*QUAL ADMINISTRADOR DESEJA DESATIVAR?*",
                 "Responda com número, telefone ou ID.",
                 "",
-                renderAdminUsersList(usersResult.users).replace(
+                renderAdminUsersSelectionList(selectableUsers).replace(
                   /^\*ADMINISTRADORES\*\n\n/,
                   "",
                 ),
@@ -9504,15 +9804,17 @@ export async function routeTicketMessage({
                   }),
                 },
                 submenuOption === 3
-                  ? "admin_users_role_select"
-                  : "admin_users_disable_select",
+                  ? "admin_user_role_select_user"
+                  : "admin_user_disable_select",
                 {
                   mode: submenuOption === 3 ? "role" : "disable",
-                  lastUsers: usersResult.users.map((user, index) => ({
+                  lastUsers: selectableUsers.map((user, index) => ({
                     option: index + 1,
                     adminUserId: user.id,
                     phone: user.phone,
                     name: user.name,
+                    role: user.role,
+                    status: user.status,
                   })),
                 },
               ),

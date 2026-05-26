@@ -851,46 +851,71 @@ O item `Limites de cortesias` não deve ficar em Administradores, porque o limit
 
 ### 10.1 Adicionar administrador
 
-Fluxo desejado:
+Fluxo atual:
 
-Mensagem 1:
+- informar telefone;
+- informar nome ou pular;
+- escolher nível de acesso;
+- confirmar com `CONFIRMAR ADMIN`.
 
-```text
-QUAL O TIPO DE ADMINISTRADOR VOCÊ QUER CADASTRAR?
-> 1. Diretor - Acesso total ao sistema. Pode gerenciar eventos, ingressos, cortesias, portaria, relatórios e outros administradores.
-> 2. Gerente - Pode gerenciar eventos, ingressos, cortesias, portaria e relatórios. Não gerencia, inclui ou exclui outros administradores.
-> 3. Operador - Gerencia cortesias e relatórios
-```
-
-Mensagem 2:
+Níveis:
 
 ```text
-QUAL TELEFONE DO ADMINISTRADOR?
-```
-
-Mensagem 3:
-
-```text
-QUAL O NOME DO ADMINISTRADOR?
-```
-
-Mensagem 4:
-
-```text
-QUAL A PALAVRA CHAVE (SENHA) DO ADMINISTRADOR?
+QUAL NÍVEL DE ACESSO?
+> 1. Diretor
+> 2. Gerente
+> 3. Operador
 ```
 
 Mensagem final:
 
 ```text
-ADMINISTRADOR CADASTRADO
-> Telefone: ...
+ADMINISTRADOR ADICIONADO
 > Nome: ...
+> Telefone: ****3836
 > Perfil: Gerente
-> Palavra chave: ...
 ```
 
-O sistema deve amarrar permissões reais ao perfil escolhido.
+O sistema não pede nem salva palavra-chave individual no cadastro. O novo administrador usa o fluxo normal `admin` e a autenticação existente. Se o telefone já existir ativo, não cria duplicado. Se existir desativado, o fluxo pode reativar com confirmação `REATIVAR ADMIN`.
+
+### 10.2 Alterar nível
+
+Fluxo:
+
+- escolher administrador;
+- escolher novo nível;
+- confirmar com `ALTERAR NÍVEL`.
+
+Regras:
+
+- apenas Diretor pode alterar;
+- não permite `gate`/`support`;
+- não permite auto-rebaixamento de Diretor;
+- revoga sessões ativas do administrador alterado para aplicar novas permissões.
+
+### 10.3 Desativar administrador
+
+Fluxo:
+
+- escolher administrador ativo;
+- confirmar com `DESATIVAR ADMIN`.
+
+Mensagem final:
+
+```text
+ADMINISTRADOR DESATIVADO
+> Nome: ...
+> Telefone: ****3836
+> Perfil: Gerente
+```
+
+Regras:
+
+- não apaga `admin_users`;
+- não desativa o próprio Diretor neste ponto;
+- não remove o último Diretor ativo;
+- revoga sessões ativas do administrador desativado;
+- não altera `ADMIN_ROOT_WHATSAPP_PHONES`.
 
 ## 11. Relatórios
 

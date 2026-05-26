@@ -30,13 +30,16 @@ export type TicketConversationStep =
   | "admin_gate_revoke_select"
   | "admin_gate_revoke_confirm"
   | "admin_users_menu"
-  | "admin_users_add_type_select"
-  | "admin_users_add_phone_collecting"
-  | "admin_users_add_name_collecting"
-  | "admin_users_add_passphrase_collecting"
-  | "admin_users_role_select"
-  | "admin_users_role_collecting"
-  | "admin_users_disable_select"
+  | "admin_user_create_collect_phone"
+  | "admin_user_create_collect_name"
+  | "admin_user_create_select_role"
+  | "admin_user_create_confirm"
+  | "admin_user_reactivate_confirm"
+  | "admin_user_role_select_user"
+  | "admin_user_role_select_role"
+  | "admin_user_role_confirm"
+  | "admin_user_disable_select"
+  | "admin_user_disable_confirm"
   | "admin_reports_menu"
   | "admin_report_event_select"
   | "admin_report_period_select"
@@ -237,16 +240,23 @@ export type TicketConversationAdminCourtesies = {
 };
 
 export type TicketConversationAdminUsers = {
-  mode?: "add" | "role" | "disable";
+  mode?: "add" | "role" | "disable" | "reactivate";
   pendingRole?: TicketAdminRole;
   pendingPhone?: string;
-  pendingName?: string;
+  pendingName?: string | null;
+  pendingExistingAdminUserId?: string;
   selectedAdminUserId?: string;
+  selectedAdminName?: string | null;
+  selectedAdminPhone?: string;
+  selectedAdminRole?: TicketAdminRole;
+  selectedAdminStatus?: "active" | "disabled";
   lastUsers?: Array<{
     option: number;
     adminUserId: string;
     phone: string;
     name?: string | null;
+    role?: TicketAdminRole;
+    status?: "active" | "disabled";
   }>;
 };
 
