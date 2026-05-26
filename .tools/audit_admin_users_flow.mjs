@@ -240,13 +240,6 @@ async function seedData() {
     passphrase_hash: passphraseHash,
   });
   await dbInsert("admin_users", {
-    phone: NO_HASH_PHONE,
-    role: "admin",
-    status: "active",
-    name: `${PREFIX} Sem Hash`,
-    passphrase_hash: null,
-  });
-  await dbInsert("admin_users", {
     phone: WRONG_PASS_PHONE,
     role: "admin",
     status: "active",
@@ -451,6 +444,30 @@ async function assertAdminPassphraseProtected(phone, passphrase, label) {
   assert((leakedMessages ?? []).length === 0, `${label} senha não fica no histórico de mensagens`);
 }
 
+async function assertActiveAdminWithoutHashRejected() {
+  const activeAttempt = await service.from("admin_users").insert({
+    phone: NO_HASH_PHONE,
+    role: "admin",
+    status: "active",
+    name: `${PREFIX} Sem Hash`,
+    passphrase_hash: null,
+  });
+  assert(Boolean(activeAttempt.error), "C/D) banco bloqueia admin active sem passphrase_hash");
+
+  const disabledId = await dbInsert("admin_users", {
+    phone: NO_HASH_PHONE,
+    role: "admin",
+    status: "disabled",
+    name: `${PREFIX} Sem Hash Disabled`,
+    passphrase_hash: null,
+  });
+  const activateAttempt = await service
+    .from("admin_users")
+    .update({ status: "active" })
+    .eq("id", disabledId);
+  assert(Boolean(activateAttempt.error), "C/D) banco bloqueia ativar admin sem passphrase_hash");
+}
+
 async function main() {
   await cleanup();
   await seedData();
@@ -467,7 +484,7 @@ async function main() {
     assertNotIncludes(response.text, "Administradores", "B) Gerente não vê Administradores");
     assertIncludes((await sendMessage(MANAGER_PHONE, "administradores")).text, "Essa opção não está disponível", "C) Gerente bloqueado por palavra");
     await loginFails(WRONG_PASS_PHONE, "senha-incorreta", "Palavra-chave inválida", "B) senha errada bloqueia");
-    await loginFails(NO_HASH_PHONE, PASS, "Peça ao Diretor para redefinir sua senha", "C/D) ativo sem hash não usa senha geral");
+    await assertActiveAdminWithoutHashRejected();
     assertIncludes((await sendMessage(DISABLED_PHONE, "admin")).text, "Não consegui entender", "E) admin desativado não inicia login");
     response = await login(OPERATOR_PHONE, "D) Operador");
     assertNotIncludes(response.text, "Administradores", "D) Operador não vê Administradores");

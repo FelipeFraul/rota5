@@ -277,6 +277,7 @@ Admin WhatsApp behavior:
 - The next inbound message while `admin_auth_pending` is saved as `[ADMIN_AUTH_REDACTED]`.
 - A valid individual passphrase creates an `admin_sessions` row and shows a permission-filtered menu.
 - `sair`, `logout`, or `encerrar` revokes active admin sessions while inside the admin flow.
+- The database constraint `admin_users_active_requires_passphrase_hash` enforces that every `active` admin has a non-empty `passphrase_hash`; `disabled` admins may keep or omit the hash.
 
 Admin profile labels and permissions:
 
@@ -301,6 +302,7 @@ The `Administradores` WhatsApp module is implemented for `Diretor/root` only:
 - `Adicionar administrador` collects phone, optional name, profile, and requires `CONFIRMAR ADMIN`.
 - `Adicionar administrador` also collects an individual passphrase. Only its PBKDF2 hash is stored in `admin_users.passphrase_hash`; while confirmation is pending, conversation context stores only the pending hash, never the raw passphrase. The raw passphrase is not echoed back and the inbound WhatsApp message is redacted as `[ADMIN_AUTH_REDACTED]`.
 - New admins authenticate by sending `admin` and then their individual passphrase. Rows without `passphrase_hash` do not authenticate and must have an individual hash defined by a Diretor or by a one-time controlled database update.
+- The migration `20260526000200_require_active_admin_passphrase_hash.sql` prevents creating or reactivating an `active` administrator without an individual passphrase hash.
 - Active duplicate phones are blocked.
 - Disabled phones can be reactivated through the add flow with `REATIVAR ADMIN`.
 - `Alterar nível de administrador` requires `ALTERAR NÍVEL`, accepts only `root/admin/operator`, blocks Director self-downgrade, and revokes active sessions for the changed admin.
@@ -322,7 +324,7 @@ Final pre-secret audit notes:
 - Unauthorized `admin`, `adm`, and `administrador` messages receive a neutral buyer-facing response and do not enter event search.
 - While the conversation is in `admin_auth_pending`, inbound passphrase messages are stored as `[ADMIN_AUTH_REDACTED]` and metadata is limited to `{ redacted: true, reason: "admin_auth" }` plus provider/message type identifiers.
 - While a Director is creating/reactivating an admin in `admin_user_create_collect_passphrase`, the new admin passphrase is also stored as `[ADMIN_AUTH_REDACTED]` with reason `admin_user_passphrase`.
-- Production should be redeployed after auth changes and any real root/admin row without `passphrase_hash` should be updated before relying on WhatsApp admin login.
+- Production should be redeployed after auth changes. Any real root/admin row without `passphrase_hash` is blocked from login and, once the constraint is applied, cannot remain `active`.
 
 Request body:
 

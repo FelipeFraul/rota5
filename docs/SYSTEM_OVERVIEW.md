@@ -877,7 +877,7 @@ ADMINISTRADOR ADICIONADO
 > Perfil: Gerente
 ```
 
-O sistema pede uma palavra-chave individual no cadastro e salva apenas o hash PBKDF2 em `admin_users.passphrase_hash`. A palavra-chave não aparece na confirmação, não é salva em texto puro no histórico de mensagens e o contexto temporário guarda apenas o hash pendente até a confirmação. O novo administrador entra enviando `admin` e depois a própria palavra-chave. Não existe senha geral nem fallback por variável de ambiente; administrador ativo sem `passphrase_hash` não autentica e deve ter senha individual definida pelo Diretor ou por atualização controlada no banco. Se o telefone já existir ativo, não cria duplicado. Se existir desativado, o fluxo pode reativar com confirmação `REATIVAR ADMIN` e define uma nova palavra-chave.
+O sistema pede uma palavra-chave individual no cadastro e salva apenas o hash PBKDF2 em `admin_users.passphrase_hash`. A palavra-chave não aparece na confirmação, não é salva em texto puro no histórico de mensagens e o contexto temporário guarda apenas o hash pendente até a confirmação. O novo administrador entra enviando `admin` e depois a própria palavra-chave. Não existe senha geral nem fallback por variável de ambiente; administrador ativo sem `passphrase_hash` não autentica e a constraint `admin_users_active_requires_passphrase_hash` impede manter ou ativar admin sem hash individual. Admin desativado pode ficar sem hash, mas precisa receber uma nova palavra-chave para voltar a ficar ativo. Se o telefone já existir ativo, não cria duplicado. Se existir desativado, o fluxo pode reativar com confirmação `REATIVAR ADMIN` e define uma nova palavra-chave.
 
 ### 10.2 Alterar nível
 
