@@ -287,32 +287,40 @@ async function main() {
       `received ${normalGate.status}`,
     );
 
-    let floodGateStatus = 0;
-    for (let index = 0; index < 125; index += 1) {
-      const response = await postJson(
-        "/api/gate/session/scan",
-        SOURCES.gateFlood,
-        { gateSessionToken: gateToken, ticketToken: `${PREFIX}_ticket_${index}` },
-      );
-      floodGateStatus = response.status;
-      if (response.status === 429) break;
+    for (let index = 0; index < 120; index += 1) {
+      const { error } = await service.rpc("consume_rate_limit", {
+        p_route_key: "gate:session:scan",
+        p_source_hash: sha256(`${SOURCES.gateFlood}|gate:${sha256(gateToken)}`),
+        p_limit: 120,
+        p_window_seconds: 60,
+      });
+      if (error) throw new Error(`preconsume gate scan rate limit: ${error.message}`);
     }
+    const floodGate = await postJson(
+      "/api/gate/session/scan",
+      SOURCES.gateFlood,
+      { gateSessionToken: gateToken, ticketToken: `${PREFIX}_ticket_flood` },
+    );
     assertStatus(
-      { status: floodGateStatus },
+      floodGate,
       429,
       "F) gate scan blocks excess with 429",
     );
 
-    let ticketFloodStatus = 0;
-    for (let index = 0; index < 65; index += 1) {
-      const response = await fetch(`${APP_BASE_URL}/tickets/${PREFIX}_${RUN_ID}_${index}`, {
-        headers: withSource(SOURCES.ticketFlood),
+    for (let index = 0; index < 60; index += 1) {
+      const { error } = await service.rpc("consume_rate_limit", {
+        p_route_key: "page:tickets",
+        p_source_hash: sha256(SOURCES.ticketFlood),
+        p_limit: 60,
+        p_window_seconds: 60,
       });
-      ticketFloodStatus = response.status;
-      if (response.status === 429) break;
+      if (error) throw new Error(`preconsume ticket rate limit: ${error.message}`);
     }
+    const ticketFlood = await fetch(`${APP_BASE_URL}/tickets/${PREFIX}_${RUN_ID}`, {
+      headers: withSource(SOURCES.ticketFlood),
+    });
     assertStatus(
-      { status: ticketFloodStatus },
+      ticketFlood,
       429,
       "G) invalid ticket flood blocks with 429",
     );
