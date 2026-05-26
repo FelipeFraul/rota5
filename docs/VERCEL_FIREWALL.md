@@ -16,15 +16,36 @@ Este projeto aplica rate limit no app para rotas públicas e sensíveis. A camad
 
 Quando o limite é excedido, a resposta é `429 Too Many Requests` com header `Retry-After`.
 
-## Regras Recomendadas No Vercel Firewall
+## Regra Publicada No Vercel Firewall
 
-Configurar pelo painel da Vercel:
+No plano atual, foi publicada uma regra única porque o limite gratuito não permite manter múltiplas regras separadas.
 
-1. Criar regra de rate limit por IP para `/tickets/*` e `/gate/session/*`, com limite inicial de 60 requisições por minuto.
-2. Criar regra de rate limit por IP para `/api/gate/session/scan`, com limite inicial de 120 requisições por minuto.
-3. Criar regra de rate limit por IP para `/api/checkout/mercado-pago*`, com limite inicial de 20 requisições por minuto.
-4. Criar regra de monitoramento para picos em `/api/webhook/zapi` e `/api/webhook/payment/mercado-pago`, evitando bloqueios agressivos que possam afetar retries legítimos.
-5. Ativar alertas de tráfego anormal para todas as rotas `/api/*`.
+Nome da regra:
+
+```text
+Rate limit - Sensitive public routes
+```
+
+Condições em OR:
+
+- `/api/webhook/zapi`;
+- `/api/webhook/payment/mercado-pago`;
+- `/api/checkout/mercado-pago*`;
+- `/api/gate/session/scan`;
+- `/api/gate/session/validate`;
+- `/tickets/*`;
+- `/gate/session/*`;
+- `/api/cron/expire-reservations`.
+
+Configuração:
+
+- Rate limit: Fixed Window;
+- Janela: 60 segundos;
+- Limite: 120 requests;
+- Chave: IP Address;
+- Ação: Too Many Requests (`429`).
+
+Essa regra de borda complementa o rate limit no app. O app continua com limites mais específicos por rota e, em alguns casos, por escopo hashado.
 
 ## Cuidados
 

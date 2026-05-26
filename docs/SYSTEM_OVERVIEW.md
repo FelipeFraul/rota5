@@ -47,7 +47,9 @@ Rotas públicas e sensíveis têm proteção por janela curta no app:
 - páginas públicas de ingresso e portaria;
 - cron de expiração de reservas.
 
-O contador fica em `rate_limit_events` por rota e hash SHA-256 da origem. O sistema não salva IP puro, payload bruto, telefone completo, token, QR/base64 ou metadata sensível. Regras complementares de Vercel Firewall estão documentadas em `docs/VERCEL_FIREWALL.md`.
+O contador fica em `rate_limit_events` por rota e hash SHA-256 da origem. O sistema não salva IP puro, payload bruto, telefone completo, token, QR/base64 ou metadata sensível.
+
+Além disso, a Vercel tem uma regra única publicada no Firewall, `Rate limit - Sensitive public routes`, para as rotas sensíveis. Ela usa Fixed Window de 60 segundos, 120 requests, chave IP Address e ação `429`. A configuração está documentada em `docs/VERCEL_FIREWALL.md`.
 
 ## 3. Compra pelo WhatsApp
 
