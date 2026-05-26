@@ -49,6 +49,7 @@ Admins:
 - Diretor/root sem hash individual não entra;
 - `gate/support` não são roles válidas de admin.
 - `admin_auth_attempts` deve existir para aplicar bloqueio por tentativa: 3 erros bloqueiam por 15 minutos; 5 erros sequenciais bloqueiam até liberação por Diretor.
+- `rate_limit_events` e `consume_rate_limit` devem existir para aplicar rate limit por rota e origem hashada.
 
 ## Webhooks E Cron
 
@@ -68,6 +69,8 @@ Cron:
 
 - Não logar QR/base64, token puro, `qr_token_hash`, metadata de pagamento, senha ou secrets.
 - Não expor telefone completo em relatórios/admin.
+- Rate limits do app devem responder `429` sem salvar IP puro, payload, telefone completo, token ou base64.
+- Configurar regras complementares no Vercel Firewall conforme `docs/VERCEL_FIREWALL.md`.
 - Não executar scripts de auditoria com dados reais sem prefixo temporário.
 - Rodar `node .tools/audit_system_closure.mjs` antes de mudanças grandes em produção.
 

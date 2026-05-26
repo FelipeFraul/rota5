@@ -1,6 +1,6 @@
 # Visão Geral do Sistema
 
-Atualizado em 25/05/2026.
+Atualizado em 26/05/2026.
 
 Este documento resume o que existe hoje no sistema, como os fluxos funcionam e quais pontos ainda precisam de decisão ou refinamento.
 
@@ -29,12 +29,25 @@ Ele permite:
 - Mercado Pago;
 - Z-API para WhatsApp;
 - Vercel em produção.
+- Rate limit server-side com Supabase para rotas públicas e sensíveis.
 
 URL principal de produção:
 
 ```text
 https://site-phi-seven-72.vercel.app
 ```
+
+## Segurança de Borda e Rate Limit
+
+Rotas públicas e sensíveis têm proteção por janela curta no app:
+
+- webhooks Z-API e Mercado Pago;
+- checkout Mercado Pago;
+- portaria (`scan` e validação de sessão);
+- páginas públicas de ingresso e portaria;
+- cron de expiração de reservas.
+
+O contador fica em `rate_limit_events` por rota e hash SHA-256 da origem. O sistema não salva IP puro, payload bruto, telefone completo, token, QR/base64 ou metadata sensível. Regras complementares de Vercel Firewall estão documentadas em `docs/VERCEL_FIREWALL.md`.
 
 ## 3. Compra pelo WhatsApp
 

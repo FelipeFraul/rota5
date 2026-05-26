@@ -22,6 +22,22 @@ export function unauthorized(message = "Unauthorized") {
   return jsonError(message, 401);
 }
 
+export function tooManyRequests(retryAfterSeconds = 60) {
+  return NextResponse.json(
+    {
+      error: {
+        message: "Too many requests",
+      },
+    },
+    {
+      status: 429,
+      headers: {
+        "Retry-After": String(retryAfterSeconds),
+      },
+    },
+  );
+}
+
 export function badRequest(message = "Bad request", details?: JsonBody) {
   return jsonError(message, 400, details);
 }

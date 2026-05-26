@@ -3,6 +3,11 @@ import {
   jsonOk,
   methodNotAllowed,
 } from "@/lib/http/responses";
+import {
+  consumeRateLimit,
+  hashRateLimitScope,
+  rateLimitResponse,
+} from "@/lib/security/rateLimit";
 import { validateGateScan } from "@/lib/tickets/services/gateValidation";
 
 type ScanPayload = {
@@ -43,6 +48,18 @@ export async function POST(request: Request) {
 
   if (!payload) {
     return badRequest("Bad request");
+  }
+
+  const rateLimit = await consumeRateLimit({
+    routeKey: "gate:session:scan",
+    limit: 120,
+    windowSeconds: 60,
+    request,
+    scope: `gate:${hashRateLimitScope(payload.gateSessionToken)}`,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit);
   }
 
   const result = await validateGateScan(payload);

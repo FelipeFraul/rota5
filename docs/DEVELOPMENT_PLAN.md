@@ -116,6 +116,8 @@ Ponto 13 fecha a auditoria geral de segurança, consistência e pontos frágeis.
 
 Após a auditoria geral, o login administrativo recebeu limite forte de tentativas. A migration `20260526000300_create_admin_auth_attempts.sql` cria a tabela agregada `admin_auth_attempts`; três senhas incorretas bloqueiam o telefone por 15 minutos, cinco tentativas incorretas sequenciais bloqueiam até liberação manual, a origem/IP quando disponível é armazenada apenas como hash, e o Diretor criador recebe alerta. O menu `Administradores` ganhou `Liberar administrador bloqueado`, que lista telefones mascarados e exige `LIBERAR ADMIN`.
 
+A camada seguinte adiciona rate limit para rotas públicas e sensíveis. A migration `20260526000400_create_rate_limit_events.sql` cria `rate_limit_events` e a RPC `consume_rate_limit`, que contam requisições por rota e origem hashada em janelas curtas. A proteção cobre webhooks Z-API e Mercado Pago, checkout, portaria, páginas públicas de ingresso/portaria e cron protegido. A política não salva IP puro, payload, token, telefone completo, QR ou base64 e deve ser complementada com regras de Vercel Firewall documentadas em `docs/VERCEL_FIREWALL.md`.
+
 ## Next Steps
 
 1. Fundação do projeto
@@ -148,4 +150,5 @@ Após a auditoria geral, o login administrativo recebeu limite forte de tentativ
 28. Administradores - criado e validado no Supabase real. Listagem segura, criação, reativação, alteração de nível, desativação, bloqueios de segurança e cleanup foram auditados com `TEST_ADMIN_USERS_FLOW`.
 29. Relatórios consultivos - criado e validado no Supabase real com `TEST_ADMIN_REPORTS`.
 30. Auditoria geral de segurança e consistência - criada e validada com `TEST_SYSTEM_CLOSURE`.
-31. Próximas evoluções: cancelamento/troca, reenvio manual de ingresso pago, filtro `wrong_event`, exportação de relatórios e QR visual/PDF.
+31. Rate limit e WAF para rotas públicas e sensíveis - criado no app e documentado para Vercel Firewall.
+32. Próximas evoluções: cancelamento/troca, reenvio manual de ingresso pago, filtro `wrong_event`, exportação de relatórios e QR visual/PDF.

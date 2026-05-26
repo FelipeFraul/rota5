@@ -16,6 +16,10 @@ import {
   parseMercadoPagoWebhookPayload,
   validateMercadoPagoWebhookSignature,
 } from "@/lib/mercado-pago/webhook";
+import {
+  consumeRateLimit,
+  rateLimitResponse,
+} from "@/lib/security/rateLimit";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   decimalAmountToCents,
@@ -214,6 +218,21 @@ export async function POST(request: Request) {
       providerPaymentId: paymentId,
     });
     return unauthorized();
+  }
+
+  const rateLimit = await consumeRateLimit({
+    routeKey: "webhook:mercado-pago",
+    limit: 120,
+    windowSeconds: 60,
+    request,
+  });
+
+  if (!rateLimit.allowed) {
+    logWarn("Rate limited Mercado Pago webhook", {
+      sourceHash: rateLimit.sourceHash,
+      count: rateLimit.count,
+    });
+    return rateLimitResponse(rateLimit);
   }
 
   const eventType = extractMercadoPagoEventType(payload);

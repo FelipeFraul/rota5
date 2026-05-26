@@ -8,6 +8,10 @@ import {
   unauthorized,
 } from "@/lib/http/responses";
 import { logWarn } from "@/lib/logger";
+import {
+  consumeRateLimit,
+  rateLimitResponse,
+} from "@/lib/security/rateLimit";
 import { createCheckoutForReservation } from "@/lib/tickets/services/checkout";
 
 const MAX_CHECKOUT_BYTES = 32 * 1024;
@@ -81,6 +85,21 @@ export async function POST(request: Request) {
   }
 
   getEnv();
+
+  const rateLimit = await consumeRateLimit({
+    routeKey: "checkout:mercado-pago",
+    limit: 20,
+    windowSeconds: 60,
+    request,
+  });
+
+  if (!rateLimit.allowed) {
+    logWarn("Rate limited Mercado Pago checkout request", {
+      sourceHash: rateLimit.sourceHash,
+      count: rateLimit.count,
+    });
+    return rateLimitResponse(rateLimit);
+  }
 
   const bodyResult = await readCheckoutBody(request);
 

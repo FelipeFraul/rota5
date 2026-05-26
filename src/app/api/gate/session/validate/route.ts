@@ -3,6 +3,10 @@ import {
   jsonOk,
   methodNotAllowed,
 } from "@/lib/http/responses";
+import {
+  consumeRateLimit,
+  rateLimitResponse,
+} from "@/lib/security/rateLimit";
 import { validateGateSessionToken } from "@/lib/tickets/services/gateSessions";
 
 async function readToken(request: Request) {
@@ -26,6 +30,17 @@ async function readToken(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const rateLimit = await consumeRateLimit({
+    routeKey: "gate:session:validate",
+    limit: 60,
+    windowSeconds: 60,
+    request,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit);
+  }
+
   const token = await readToken(request);
 
   if (!token) {
@@ -52,4 +67,3 @@ export function PATCH() {
 export function DELETE() {
   return methodNotAllowed(["POST"]);
 }
-

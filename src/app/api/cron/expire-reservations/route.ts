@@ -1,6 +1,10 @@
 import { timingSafeEqual } from "crypto";
 import { jsonError, jsonOk, unauthorized } from "@/lib/http/responses";
 import { logError, logWarn } from "@/lib/logger";
+import {
+  consumeRateLimit,
+  rateLimitResponse,
+} from "@/lib/security/rateLimit";
 import { expireReservationsAndNotify } from "@/lib/tickets/services/reservationExpiry";
 
 export const runtime = "nodejs";
@@ -35,6 +39,21 @@ async function handleExpireReservationsCron(request: Request) {
   if (!isSecretMatch(getBearerToken(request), cronSecret)) {
     logWarn("Rejected reservation expiry cron with invalid secret");
     return unauthorized();
+  }
+
+  const rateLimit = await consumeRateLimit({
+    routeKey: "cron:expire-reservations",
+    limit: 10,
+    windowSeconds: 60,
+    request,
+  });
+
+  if (!rateLimit.allowed) {
+    logWarn("Rate limited reservation expiry cron", {
+      sourceHash: rateLimit.sourceHash,
+      count: rateLimit.count,
+    });
+    return rateLimitResponse(rateLimit);
   }
 
   try {

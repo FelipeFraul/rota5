@@ -5,6 +5,10 @@ import {
   methodNotAllowed,
 } from "@/lib/http/responses";
 import { logWarn } from "@/lib/logger";
+import {
+  consumeRateLimit,
+  rateLimitResponse,
+} from "@/lib/security/rateLimit";
 import { paySelfHostedCheckout } from "@/lib/tickets/services/checkout";
 
 const MAX_PAYMENT_BYTES = 32 * 1024;
@@ -101,6 +105,21 @@ async function readPaymentBody(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const rateLimit = await consumeRateLimit({
+    routeKey: "checkout:mercado-pago:pay",
+    limit: 20,
+    windowSeconds: 60,
+    request,
+  });
+
+  if (!rateLimit.allowed) {
+    logWarn("Rate limited Mercado Pago self-hosted payment request", {
+      sourceHash: rateLimit.sourceHash,
+      count: rateLimit.count,
+    });
+    return rateLimitResponse(rateLimit);
+  }
+
   const bodyResult = await readPaymentBody(request);
 
   if (!bodyResult.ok) {
