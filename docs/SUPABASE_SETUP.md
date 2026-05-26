@@ -300,7 +300,8 @@ The `Administradores` WhatsApp module is implemented for `Diretor/root` only:
 - `Listar administradores` shows name, masked phone, Portuguese profile label, status, creation date, and last login when present.
 - It never shows `admin_users.id`, `passphrase_hash`, admin session IDs, tokens, or raw secrets.
 - `Adicionar administrador` collects phone, optional name, profile, and requires `CONFIRMAR ADMIN`.
-- New admins do not receive an individual passphrase during creation. They authenticate through the existing admin login mechanism; if no per-user `passphrase_hash` exists, the backend falls back to `ADMIN_AUTH_SECRET_HASH`.
+- `Adicionar administrador` also collects an individual passphrase. Only its PBKDF2 hash is stored in `admin_users.passphrase_hash`; while confirmation is pending, conversation context stores only the pending hash, never the raw passphrase. The raw passphrase is not echoed back and the inbound WhatsApp message is redacted as `[ADMIN_AUTH_REDACTED]`.
+- New admins authenticate by sending `admin` and then their individual passphrase. Legacy/root rows without `passphrase_hash` still fall back to `ADMIN_AUTH_SECRET_HASH`.
 - Active duplicate phones are blocked.
 - Disabled phones can be reactivated through the add flow with `REATIVAR ADMIN`.
 - `Alterar nível de administrador` requires `ALTERAR NÍVEL`, accepts only `root/admin/operator`, blocks Director self-downgrade, and revokes active sessions for the changed admin.
@@ -321,6 +322,7 @@ Final pre-secret audit notes:
 - The repository must not contain a real passphrase or real hash. Searches for sensitive terms should show only code/docs describing the mechanism and the redaction marker.
 - Unauthorized `admin`, `adm`, and `administrador` messages receive a neutral buyer-facing response and do not enter event search.
 - While the conversation is in `admin_auth_pending`, inbound passphrase messages are stored as `[ADMIN_AUTH_REDACTED]` and metadata is limited to `{ redacted: true, reason: "admin_auth" }` plus provider/message type identifiers.
+- While a Director is creating/reactivating an admin in `admin_user_create_collect_passphrase`, the new admin passphrase is also stored as `[ADMIN_AUTH_REDACTED]` with reason `admin_user_passphrase`.
 - Production should be redeployed after adding `ADMIN_AUTH_SECRET_HASH`.
 
 Request body:

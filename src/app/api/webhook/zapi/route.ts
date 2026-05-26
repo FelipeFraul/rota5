@@ -297,10 +297,16 @@ function buildInboundMetadata({
 }
 
 function getInboundRedaction(context: Record<string, unknown>) {
-  if (context?.state === "admin_auth_pending") {
+  if (
+    context?.state === "admin_auth_pending" ||
+    context?.state === "admin_user_create_collect_passphrase"
+  ) {
     return {
       body: ADMIN_AUTH_REDACTED_BODY,
-      reason: "admin_auth",
+      reason:
+        context?.state === "admin_user_create_collect_passphrase"
+          ? "admin_user_passphrase"
+          : "admin_auth",
     };
   }
 

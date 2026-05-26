@@ -19,6 +19,10 @@ const NEW_OPERATOR_PHONE = "559980001006";
 const NEW_ROOT_PHONE = "559980001007";
 const DISABLED_PHONE = "559980001008";
 const PASS = "admin-users-audit-pass";
+const NEW_MANAGER_PASS = "admin-users-audit-manager-pass";
+const NEW_OPERATOR_PASS = "admin-users-audit-operator-pass";
+const NEW_ROOT_PASS = "admin-users-audit-root-pass";
+const DISABLED_REACTIVATE_PASS = "admin-users-audit-reactivate-pass";
 const TEMP_ENV_FILE = ".env.test.local";
 
 function parseEnvFile(path) {
@@ -375,14 +379,14 @@ async function sendMessage(phone, text) {
   return { messages, text: messages.map((message) => message.message).join("\n---\n") };
 }
 
-async function login(phone, label) {
+async function login(phone, label, passphrase = PASS) {
   assertIncludes((await sendMessage(phone, "admin")).text, "palavra-chave", `${label} pede senha`);
-  const response = await sendMessage(phone, PASS);
+  const response = await sendMessage(phone, passphrase);
   assertIncludes(response.text, "MENU ADMIN", `${label} abre menu`);
   return response;
 }
 
-async function addAdmin(phone, name, roleOption, expectedLabel, label) {
+async function addAdmin(phone, name, roleOption, expectedLabel, label, passphrase) {
   await sendMessage(ROOT_PHONE, "administradores");
   let response = await sendMessage(ROOT_PHONE, "2");
   assertIncludes(response.text, "QUAL TELEFONE", `${label} pede telefone`);
@@ -391,10 +395,31 @@ async function addAdmin(phone, name, roleOption, expectedLabel, label) {
   response = await sendMessage(ROOT_PHONE, name);
   assertIncludes(response.text, "QUAL NÍVEL", `${label} pede perfil`);
   response = await sendMessage(ROOT_PHONE, String(roleOption));
+  assertIncludes(response.text, "PALAVRA-CHAVE", `${label} pede senha individual`);
+  response = await sendMessage(ROOT_PHONE, passphrase);
   assertIncludes(response.text, "CONFIRMAR NOVO ADMINISTRADOR", `${label} pede confirmação`);
+  assertNotIncludes(response.text, passphrase, `${label} confirmação não ecoa senha`);
   response = await sendMessage(ROOT_PHONE, "CONFIRMAR ADMIN");
   assertIncludes(response.text, "ADMINISTRADOR ADICIONADO", `${label} adiciona`);
   assertIncludes(response.text, expectedLabel, `${label} mostra perfil`);
+}
+
+async function assertAdminPassphraseProtected(phone, passphrase, label) {
+  const { data, error } = await service
+    .from("admin_users")
+    .select("passphrase_hash")
+    .eq("phone", phone)
+    .single();
+  if (error) throw error;
+  assert(data.passphrase_hash?.startsWith("pbkdf2_sha256$"), `${label} senha salva como PBKDF2`);
+  assert(!data.passphrase_hash.includes(passphrase), `${label} senha não salva em texto puro`);
+
+  const { data: leakedMessages, error: leakedError } = await service
+    .from("whatsapp_messages")
+    .select("id")
+    .eq("body", passphrase);
+  if (leakedError) throw leakedError;
+  assert((leakedMessages ?? []).length === 0, `${label} senha não fica no histórico de mensagens`);
 }
 
 async function main() {
@@ -424,35 +449,41 @@ async function main() {
     assertNotIncludes(response.text, seed.rootId, "E) lista não expõe id");
     assertNotIncludes(response.text, "hash", "E) lista não expõe hash");
 
-    await addAdmin(NEW_MANAGER_PHONE, `${PREFIX} Novo Gerente`, 2, "Gerente", "F)");
+    await addAdmin(NEW_MANAGER_PHONE, `${PREFIX} Novo Gerente`, 2, "Gerente", "F)", NEW_MANAGER_PASS);
     let { data: newManager } = await service
       .from("admin_users")
-      .select("id, role, status")
+      .select("id, role, status, passphrase_hash")
       .eq("phone", NEW_MANAGER_PHONE)
       .single();
     assert(newManager.role === "admin" && newManager.status === "active", "F) Gerente criado como role admin");
+    await assertAdminPassphraseProtected(NEW_MANAGER_PHONE, NEW_MANAGER_PASS, "F) Gerente");
+    response = await login(NEW_MANAGER_PHONE, "F) Gerente novo", NEW_MANAGER_PASS);
+    assertNotIncludes(response.text, "Administradores", "F) Gerente novo respeita permissões");
 
-    await addAdmin(NEW_OPERATOR_PHONE, `${PREFIX} Novo Operador`, 3, "Operador", "G)");
+    await addAdmin(NEW_OPERATOR_PHONE, `${PREFIX} Novo Operador`, 3, "Operador", "G)", NEW_OPERATOR_PASS);
     let { data: newOperator } = await service
       .from("admin_users")
       .select("id, role, status")
       .eq("phone", NEW_OPERATOR_PHONE)
       .single();
     assert(newOperator.role === "operator" && newOperator.status === "active", "G) Operador criado como role operator");
+    await assertAdminPassphraseProtected(NEW_OPERATOR_PHONE, NEW_OPERATOR_PASS, "G) Operador");
 
-    await addAdmin(NEW_ROOT_PHONE, `${PREFIX} Novo Diretor`, 1, "Diretor", "H)");
+    await addAdmin(NEW_ROOT_PHONE, `${PREFIX} Novo Diretor`, 1, "Diretor", "H)", NEW_ROOT_PASS);
     const { data: newRoot } = await service
       .from("admin_users")
       .select("id, role, status")
       .eq("phone", NEW_ROOT_PHONE)
       .single();
     assert(newRoot.role === "root" && newRoot.status === "active", "H) Diretor criado como role root");
+    await assertAdminPassphraseProtected(NEW_ROOT_PHONE, NEW_ROOT_PASS, "H) Diretor");
 
     await sendMessage(ROOT_PHONE, "administradores");
     await sendMessage(ROOT_PHONE, "2");
     await sendMessage(ROOT_PHONE, NEW_MANAGER_PHONE);
     await sendMessage(ROOT_PHONE, "Duplicado");
     await sendMessage(ROOT_PHONE, "2");
+    await sendMessage(ROOT_PHONE, "senha-duplicado");
     response = await sendMessage(ROOT_PHONE, "CONFIRMAR ADMIN");
     assertIncludes(response.text, "já possui administrador ativo", "I) telefone ativo duplicado bloqueia");
 
@@ -461,16 +492,20 @@ async function main() {
     await sendMessage(ROOT_PHONE, DISABLED_PHONE);
     await sendMessage(ROOT_PHONE, `${PREFIX} Reativado`);
     await sendMessage(ROOT_PHONE, "2");
+    response = await sendMessage(ROOT_PHONE, DISABLED_REACTIVATE_PASS);
+    assertIncludes(response.text, "CONFIRMAR", "J) reativação pede confirmação após senha");
     response = await sendMessage(ROOT_PHONE, "CONFIRMAR ADMIN");
     assertIncludes(response.text, "REATIVAR ADMINISTRADOR", "J) telefone disabled pede reativação");
+    assertNotIncludes(response.text, DISABLED_REACTIVATE_PASS, "J) reativação não ecoa senha");
     response = await sendMessage(ROOT_PHONE, "REATIVAR ADMIN");
     assertIncludes(response.text, "ADMINISTRADOR REATIVADO", "J) telefone disabled reativado");
     const { data: reactivated } = await service
       .from("admin_users")
-      .select("status, role")
+      .select("status, role, passphrase_hash")
       .eq("phone", DISABLED_PHONE)
       .single();
     assert(reactivated.status === "active" && reactivated.role === "admin", "J) reativação atualiza status e perfil");
+    await assertAdminPassphraseProtected(DISABLED_PHONE, DISABLED_REACTIVATE_PASS, "J) Reativado");
 
     const activeSessionId = await dbInsert("admin_sessions", {
       admin_user_id: newOperator.id,

@@ -33,6 +33,7 @@ export type TicketConversationStep =
   | "admin_user_create_collect_phone"
   | "admin_user_create_collect_name"
   | "admin_user_create_select_role"
+  | "admin_user_create_collect_passphrase"
   | "admin_user_create_confirm"
   | "admin_user_reactivate_confirm"
   | "admin_user_role_select_user"
@@ -244,6 +245,7 @@ export type TicketConversationAdminUsers = {
   pendingRole?: TicketAdminRole;
   pendingPhone?: string;
   pendingName?: string | null;
+  pendingPassphraseHash?: string;
   pendingExistingAdminUserId?: string;
   selectedAdminUserId?: string;
   selectedAdminName?: string | null;

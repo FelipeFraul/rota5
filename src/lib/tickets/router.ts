@@ -165,6 +165,7 @@ import {
   isAdminLogoutCommand,
   isAuthorizedAdminPhone,
   isReservedAdminCommand,
+  hashAdminPassphrase,
   normalizeAdminText,
   revokeActiveAdminSessions,
   type AdminRole,
@@ -1566,6 +1567,7 @@ function isAdminUsersFlowState(
   | "admin_user_create_collect_phone"
   | "admin_user_create_collect_name"
   | "admin_user_create_select_role"
+  | "admin_user_create_collect_passphrase"
   | "admin_user_create_confirm"
   | "admin_user_reactivate_confirm"
   | "admin_user_role_select_user"
@@ -1577,6 +1579,7 @@ function isAdminUsersFlowState(
     state === "admin_user_create_collect_phone" ||
     state === "admin_user_create_collect_name" ||
     state === "admin_user_create_select_role" ||
+    state === "admin_user_create_collect_passphrase" ||
     state === "admin_user_create_confirm" ||
     state === "admin_user_reactivate_confirm" ||
     state === "admin_user_role_select_user" ||
@@ -1943,6 +1946,16 @@ function renderAdminUserRolePrompt() {
   return renderAdminUserTypePrompt().replace("*QUAL NÍVEL DE ACESSO?*", "*NOVO NÍVEL*");
 }
 
+function renderAdminUserPassphrasePrompt() {
+  return [
+    "*QUAL A PALAVRA-CHAVE DO ADMINISTRADOR?*",
+    "",
+    "Digite a senha individual que este administrador usará para entrar.",
+    "",
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
+  ].join("\n");
+}
+
 function formatAdminRoleLabel(role: string) {
   return getAdminProfileLabel(role);
 }
@@ -2000,6 +2013,7 @@ function renderAdminUserCreateConfirm({
     `> Nome: ${name || "Sem nome"}`,
     `> Telefone: ${maskAdminPhone(phone)}`,
     `> Perfil: ${formatAdminRoleLabel(role)}`,
+    "> Palavra-chave: definida e protegida por hash",
     "",
     `Digite ${reactivation ? "REATIVAR ADMIN" : "CONFIRMAR ADMIN"} para confirmar.`,
     'Digite "Cancelar" para abandonar esta tela.',
@@ -9033,14 +9047,44 @@ export async function routeTicketMessage({
         }
 
         return {
+          reply: renderAdminUserPassphrasePrompt(),
+          nextContext: withAdminUsersContext(baseContext, "admin_user_create_collect_passphrase", {
+            ...adminUsersContext,
+            pendingRole: selectedRole,
+          }),
+        };
+      }
+
+      if (baseContext.state === "admin_user_create_collect_passphrase") {
+        const adminUsersContext = baseContext.adminUsers ?? {};
+        const passphrase = text.trim();
+
+        if (
+          !adminUsersContext.pendingPhone ||
+          !adminUsersContext.pendingRole ||
+          !passphrase
+        ) {
+          return {
+            reply: renderAdminUserPassphrasePrompt(),
+            nextContext: withAdminUsersContext(
+              baseContext,
+              "admin_user_create_collect_passphrase",
+              adminUsersContext,
+            ),
+          };
+        }
+
+        const passphraseHash = hashAdminPassphrase(passphrase);
+
+        return {
           reply: renderAdminUserCreateConfirm({
             phone: adminUsersContext.pendingPhone,
             name: adminUsersContext.pendingName,
-            role: selectedRole,
+            role: adminUsersContext.pendingRole,
           }),
           nextContext: withAdminUsersContext(baseContext, "admin_user_create_confirm", {
             ...adminUsersContext,
-            pendingRole: selectedRole,
+            pendingPassphraseHash: passphraseHash,
           }),
         };
       }
@@ -9059,7 +9103,11 @@ export async function routeTicketMessage({
           };
         }
 
-        if (!adminUsersContext.pendingPhone || !adminUsersContext.pendingRole) {
+        if (
+          !adminUsersContext.pendingPhone ||
+          !adminUsersContext.pendingRole ||
+          !adminUsersContext.pendingPassphraseHash
+        ) {
           return {
             reply: TICKET_MESSAGES.adminGenericError,
             nextContext: adminReplyContext({
@@ -9076,6 +9124,7 @@ export async function routeTicketMessage({
           phone: adminUsersContext.pendingPhone,
           name: adminUsersContext.pendingName ?? null,
           role: adminUsersContext.pendingRole,
+          passphraseHash: adminUsersContext.pendingPassphraseHash,
           createdByAdminPhone: adminUser.phone,
         });
 
@@ -9145,7 +9194,8 @@ export async function routeTicketMessage({
         if (
           !adminUsersContext.pendingExistingAdminUserId ||
           !adminUsersContext.pendingPhone ||
-          !adminUsersContext.pendingRole
+          !adminUsersContext.pendingRole ||
+          !adminUsersContext.pendingPassphraseHash
         ) {
           return {
             reply: TICKET_MESSAGES.adminGenericError,
@@ -9164,6 +9214,7 @@ export async function routeTicketMessage({
           phone: adminUsersContext.pendingPhone,
           name: adminUsersContext.pendingName ?? null,
           role: adminUsersContext.pendingRole,
+          passphraseHash: adminUsersContext.pendingPassphraseHash,
           createdByAdminPhone: adminUser.phone,
         });
 

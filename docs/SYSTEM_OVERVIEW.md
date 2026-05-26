@@ -856,6 +856,7 @@ Fluxo atual:
 - informar telefone;
 - informar nome ou pular;
 - escolher nível de acesso;
+- informar palavra-chave individual;
 - confirmar com `CONFIRMAR ADMIN`.
 
 Níveis:
@@ -876,7 +877,7 @@ ADMINISTRADOR ADICIONADO
 > Perfil: Gerente
 ```
 
-O sistema não pede nem salva palavra-chave individual no cadastro. O novo administrador usa o fluxo normal `admin` e a autenticação existente. Se o telefone já existir ativo, não cria duplicado. Se existir desativado, o fluxo pode reativar com confirmação `REATIVAR ADMIN`.
+O sistema pede uma palavra-chave individual no cadastro e salva apenas o hash PBKDF2 em `admin_users.passphrase_hash`. A palavra-chave não aparece na confirmação, não é salva em texto puro no histórico de mensagens e o contexto temporário guarda apenas o hash pendente até a confirmação. O novo administrador entra enviando `admin` e depois a própria palavra-chave. Se o telefone já existir ativo, não cria duplicado. Se existir desativado, o fluxo pode reativar com confirmação `REATIVAR ADMIN` e define uma nova palavra-chave.
 
 ### 10.2 Alterar nível
 

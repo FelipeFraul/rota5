@@ -125,18 +125,25 @@ export async function createAdminUser({
   phone,
   name,
   role,
+  passphraseHash,
   createdByAdminPhone,
 }: {
   phone: string;
   name: string | null;
   role: AdminRole;
+  passphraseHash: string;
   createdByAdminPhone: string;
 }) {
   const normalizedPhone = normalizeAdminPhone(phone);
   const normalizedCreatorPhone = normalizeAdminPhone(createdByAdminPhone);
+  const normalizedPassphraseHash = passphraseHash.trim();
 
   if (!normalizedPhone || !normalizedCreatorPhone) {
     return { ok: false as const, reason: "invalid_phone" as const };
+  }
+
+  if (!normalizedPassphraseHash.startsWith("pbkdf2_sha256$")) {
+    return { ok: false as const, reason: "invalid_passphrase" as const };
   }
 
   const supabase = getSupabaseAdmin();
@@ -165,6 +172,7 @@ export async function createAdminUser({
       name,
       role,
       status: "active",
+      passphrase_hash: normalizedPassphraseHash,
       created_by_admin_phone: normalizedCreatorPhone,
     },
   );
@@ -263,18 +271,24 @@ export async function reactivateAdminUser({
   phone,
   name,
   role,
+  passphraseHash,
   createdByAdminPhone,
 }: {
   adminUserId: string;
   phone: string;
   name: string | null;
   role: AdminRole;
+  passphraseHash: string;
   createdByAdminPhone: string;
 }) {
   const normalizedPhone = normalizeAdminPhone(phone);
   const normalizedCreatorPhone = normalizeAdminPhone(createdByAdminPhone);
+  const normalizedPassphraseHash = passphraseHash.trim();
   if (!normalizedPhone || !normalizedCreatorPhone) {
     return { ok: false as const, reason: "invalid_phone" as const };
+  }
+  if (!normalizedPassphraseHash.startsWith("pbkdf2_sha256$")) {
+    return { ok: false as const, reason: "invalid_passphrase" as const };
   }
 
   const supabase = getSupabaseAdmin();
@@ -284,6 +298,7 @@ export async function reactivateAdminUser({
       name,
       role,
       status: "active",
+      passphrase_hash: normalizedPassphraseHash,
       created_by_admin_phone: normalizedCreatorPhone,
     })
     .eq("id", adminUserId)
