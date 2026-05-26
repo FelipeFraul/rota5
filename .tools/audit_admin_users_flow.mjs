@@ -18,11 +18,13 @@ const NEW_MANAGER_PHONE = "559980001005";
 const NEW_OPERATOR_PHONE = "559980001006";
 const NEW_ROOT_PHONE = "559980001007";
 const DISABLED_PHONE = "559980001008";
-const PASS = "admin-users-audit-pass";
-const NEW_MANAGER_PASS = "admin-users-audit-manager-pass";
-const NEW_OPERATOR_PASS = "admin-users-audit-operator-pass";
-const NEW_ROOT_PASS = "admin-users-audit-root-pass";
-const DISABLED_REACTIVATE_PASS = "admin-users-audit-reactivate-pass";
+const RUN_SECRET = randomBytes(8).toString("hex");
+const PASS = `admin-users-audit-pass-${RUN_SECRET}`;
+const NEW_MANAGER_PASS = `admin-users-audit-manager-pass-${RUN_SECRET}`;
+const NEW_OPERATOR_PASS = `admin-users-audit-operator-pass-${RUN_SECRET}`;
+const NEW_ROOT_PASS = `admin-users-audit-root-pass-${RUN_SECRET}`;
+const DISABLED_REACTIVATE_PASS = `admin-users-audit-reactivate-pass-${RUN_SECRET}`;
+const DUPLICATE_PASS = `admin-users-audit-duplicate-pass-${RUN_SECRET}`;
 const TEMP_ENV_FILE = ".env.test.local";
 
 function parseEnvFile(path) {
@@ -483,7 +485,7 @@ async function main() {
     await sendMessage(ROOT_PHONE, NEW_MANAGER_PHONE);
     await sendMessage(ROOT_PHONE, "Duplicado");
     await sendMessage(ROOT_PHONE, "2");
-    await sendMessage(ROOT_PHONE, "senha-duplicado");
+    await sendMessage(ROOT_PHONE, DUPLICATE_PASS);
     response = await sendMessage(ROOT_PHONE, "CONFIRMAR ADMIN");
     assertIncludes(response.text, "já possui administrador ativo", "I) telefone ativo duplicado bloqueia");
 
