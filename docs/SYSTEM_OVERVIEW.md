@@ -719,86 +719,82 @@ CORTESIAS
 > 2. Listar cortesias emitidas
 > 3. Reenviar cortesia
 > 4. Cancelar cortesia
-> 5. Definir limite de cortesias
-> 6. Voltar
-> 7. Sair
+> 5. Voltar
+> 6. Sair
 ```
 
 ### 8.1 Conceito
 
 Cortesia é um ingresso emitido pelo administrador.
 
-Regra importante:
+Regras importantes:
 
-- o sistema não deve enviar automaticamente a cortesia para todos os telefones cadastrados;
-- se forem mil cortesias, disparar mil WhatsApps pode derrubar/bloquear o número;
-- o convidado deve escrever `CORTESIA` na conversa;
-- se o telefone tiver cortesia ativa, recebe o QRCode.
+- a cortesia consome disponibilidade real do setor/assento;
+- cortesia com assento marcado deixa o assento indisponível;
+- cortesia não cria pagamento Mercado Pago;
+- cortesia emitida valida na portaria como ingresso normal;
+- cortesia cancelada é recusada na portaria;
+- o QRCode é enviado como imagem ao beneficiário pelo WhatsApp;
+- o reenvio usa o mesmo ticket, sem criar novo ingresso.
 
 ### 8.2 Gerar cortesia
 
-Pode ser:
-
-- individual;
-- em lote.
-
 Fluxo:
 
-- escolher individual ou lote;
-- informar telefone(s);
 - escolher evento;
-- sistema registra a cortesia;
-- admin recebe confirmação.
+- escolher sessão;
+- escolher setor/oferta;
+- informar quantidade;
+- para assento marcado, receber mapa e informar códigos;
+- informar telefone do beneficiário;
+- informar nome e motivo, opcionais;
+- confirmar;
+- sistema emite ticket gratuito, consome disponibilidade e envia o QRCode ao beneficiário.
 
 Mensagem de sucesso:
 
 ```text
-CORTESIA GERADA COM SUCESSO PARA:
+CORTESIA GERADA
 
-> 5515997503836
+> Evento: ...
+> Beneficiário: ...
+> Telefone: ****3836
+> Quantidade: ...
+> Código(s): ...
 
-Informe ao contato que para receber sua cortesia, deve enviar "Cortesia" para este mesmo número.
+O ingresso foi enviado ao beneficiário pelo WhatsApp.
 ```
 
-Se não puder emitir por limite:
+Mensagem ao beneficiário:
 
 ```text
-NÃO FOI POSSÍVEL EMITIR CORTESIA.
-O LIMITE DO EVENTO É DE [NÚMERO] DE CORTESIAS
+VOCÊ RECEBEU UMA CORTESIA
+
+> Evento: ...
+> Data: ...
+> Setor: ...
+> Código: ...
+
+Apresente o QRCode na portaria.
 ```
 
-### 8.3 Limite de cortesias
+### 8.3 Listar e reenviar
 
-O limite de cortesia é do evento.
+Listar cortesias pede o evento e mostra beneficiário, telefone mascarado, código, setor/assento, status, uso e data de emissão. Não mostra token, `qr_token_hash`, metadados crus ou ids internos sensíveis.
 
-Regra:
-
-- o limite considera emissão histórica;
-- se a cortesia foi cancelada, usada ou alterada, isso não devolve o limite;
-- limite é quantidade total emitida permitida.
-
-Mensagem para definir limite:
-
-```text
-DEFINIR NOVO LIMITE DE CORTESIAS
-> Hoje, limite de [numero] cortesias
-
-Digite o novo limite TOTAL de cortesias para este evento. Use 0 para remover limite.
-```
+Reenviar cortesia pede telefone ou código, lista os resultados quando houver mais de um, exige confirmação e reenvia o mesmo ticket/QRCode. Não cria novo ticket e não altera disponibilidade. Cortesias canceladas ou usadas não são reenviadas.
 
 ### 8.4 Cancelar cortesia
 
-Antes de listar todas as cortesias, deve perguntar:
+Cancelar cortesia pede telefone ou código, lista os resultados, exige confirmação forte:
 
 ```text
-1. Cancelar pelo número de telefone
-2. Cancelar pelo código
-3. Ver todas as cortesias
-4. Voltar
-5. Sair
+CANCELAR CORTESIA
 ```
 
-Só depois deve buscar/listar.
+Depois marca o ticket como `cancelled`, marca a cortesia como `cancelled`, mantém histórico e libera a disponibilidade quando a cortesia ainda não foi usada. Cortesia usada não é cancelada neste fluxo.
+
+Implementação operacional: a emissão usa a RPC `public.issue_courtesy_order`, que fecha uma reserva gratuita sem criar linha em `payments`. A RPC deve estar aplicada no Supabase real antes dos testes finais do Ponto 10.
 
 ## 9. Portaria
 

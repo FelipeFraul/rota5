@@ -5,16 +5,22 @@ export type TicketConversationStep =
   | "admin_events_menu"
   | "admin_orders_menu"
   | "admin_courtesies_menu"
-  | "admin_courtesy_generate_type"
-  | "admin_courtesy_phone_collecting"
   | "admin_courtesy_event_select"
+  | "admin_courtesy_session_select"
+  | "admin_courtesy_section_select"
+  | "admin_courtesy_quantity_collecting"
+  | "admin_courtesy_seat_collecting"
+  | "admin_courtesy_beneficiary_phone_collecting"
+  | "admin_courtesy_beneficiary_name_collecting"
+  | "admin_courtesy_reason_collecting"
+  | "admin_courtesy_confirm"
   | "admin_courtesy_list_event_select"
-  | "admin_courtesy_resend_event_select"
-  | "admin_courtesy_cancel_event_select"
-  | "admin_courtesy_cancel_method_select"
+  | "admin_courtesy_resend_target_collecting"
+  | "admin_courtesy_resend_select"
+  | "admin_courtesy_resend_confirm"
   | "admin_courtesy_cancel_target_collecting"
-  | "admin_courtesy_limit_event_select"
-  | "admin_courtesy_limit_collecting"
+  | "admin_courtesy_cancel_select"
+  | "admin_courtesy_cancel_confirm"
   | "admin_gate_menu"
   | "admin_gate_register_event_select"
   | "admin_gate_validator_collecting"
@@ -190,10 +196,20 @@ export type TicketConversationAdminEvents = {
 };
 
 export type TicketConversationAdminCourtesies = {
-  mode?: "single" | "batch" | "list" | "resend" | "cancel" | "limit";
-  phones?: string[];
+  mode?: "generate" | "list" | "resend" | "cancel";
   selectedEventId?: string;
-  cancelMethod?: "phone" | "code" | "list";
+  selectedEventTitle?: string | null;
+  selectedSessionId?: string;
+  selectedSessionLabel?: string | null;
+  selectedSectionId?: string;
+  selectedSectionName?: string | null;
+  hasNumberedSeats?: boolean;
+  quantity?: number;
+  seatCodes?: string[];
+  beneficiaryPhone?: string;
+  beneficiaryName?: string | null;
+  reason?: string | null;
+  pendingCourtesyId?: string;
   lastCourtesies?: Array<{
     option: number;
     courtesyId: string;
@@ -204,6 +220,19 @@ export type TicketConversationAdminCourtesies = {
     option: number;
     eventId: string;
     title: string;
+  }>;
+  lastSessions?: Array<{
+    option: number;
+    sessionId: string;
+    startsAt: string;
+    status: string;
+  }>;
+  lastSections?: Array<{
+    option: number;
+    sectionId: string;
+    sectionName: string;
+    hasNumberedSeats: boolean;
+    availableSeatsCount: number;
   }>;
 };
 

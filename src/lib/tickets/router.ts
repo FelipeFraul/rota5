@@ -104,20 +104,27 @@ import {
   type AdminTicketValidation,
 } from "@/lib/tickets/services/adminTickets";
 import {
+  buildCourtesyAdminSuccess,
   buildCourtesyDeliveryForPhone,
+  buildCourtesyDeliveryForCourtesyId,
   buildCourtesyEventsReply,
-  buildCourtesyIssueSummary,
+  buildCourtesyConfirmation,
+  buildCourtesySectionsReply,
+  buildCourtesySessionsReply,
   buildCourtesiesListReply,
   cancelCourtesyForEvent,
-  getCourtesyLimit,
-  issueCourtesies,
+  findCourtesyTargets,
+  issueAdminCourtesy,
+  listCourtesySections,
   listCourtesyEvents,
+  listCourtesySessions,
   listCourtesiesForEvent,
   normalizeCourtesyPhone,
-  parseCourtesyPhones,
+  parseCourtesySeatCodes,
   resolveCourtesyEventId,
   resolveCourtesyCancelTarget,
-  setCourtesyLimit,
+  resolveCourtesySectionId,
+  resolveCourtesySessionId,
 } from "@/lib/tickets/services/adminCourtesies";
 import {
   createAdminUser,
@@ -268,8 +275,8 @@ type RouteTicketMessageInput = {
 type RouteTicketMessageOutput = {
   reply: string;
   outboundMessages?: Array<
-    | { type: "text"; body: string }
-    | { type: "image"; imageUrl: string; caption: string }
+    | { type: "text"; body: string; phone?: string }
+    | { type: "image"; imageUrl: string; caption: string; phone?: string }
   >;
   nextContext: TicketConversationState;
 };
@@ -1123,14 +1130,13 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
     state: "admin_courtesies_menu",
     mainOption: 3,
     permission: "manage_courtesies",
-    backOption: 6,
-    exitOption: 7,
+    backOption: 5,
+    exitOption: 6,
     options: [
       "Gerar cortesia",
       "Listar cortesias emitidas",
       "Reenviar cortesia",
       "Cancelar cortesia",
-      "Definir limite de cortesias",
     ],
   },
   admin_gate_menu: {
@@ -1517,42 +1523,40 @@ function isAdminOrdersFlowState(
 function isAdminCourtesyFlowState(
   state: string | undefined,
 ): state is
-  | "admin_courtesy_generate_type"
-  | "admin_courtesy_phone_collecting"
   | "admin_courtesy_event_select"
+  | "admin_courtesy_session_select"
+  | "admin_courtesy_section_select"
+  | "admin_courtesy_quantity_collecting"
+  | "admin_courtesy_seat_collecting"
+  | "admin_courtesy_beneficiary_phone_collecting"
+  | "admin_courtesy_beneficiary_name_collecting"
+  | "admin_courtesy_reason_collecting"
+  | "admin_courtesy_confirm"
   | "admin_courtesy_list_event_select"
-  | "admin_courtesy_resend_event_select"
-  | "admin_courtesy_cancel_event_select"
-  | "admin_courtesy_cancel_method_select"
   | "admin_courtesy_cancel_target_collecting"
-  | "admin_courtesy_limit_event_select"
-  | "admin_courtesy_limit_collecting" {
+  | "admin_courtesy_cancel_select"
+  | "admin_courtesy_cancel_confirm"
+  | "admin_courtesy_resend_target_collecting"
+  | "admin_courtesy_resend_select"
+  | "admin_courtesy_resend_confirm" {
   return (
-    state === "admin_courtesy_generate_type" ||
-    state === "admin_courtesy_phone_collecting" ||
     state === "admin_courtesy_event_select" ||
+    state === "admin_courtesy_session_select" ||
+    state === "admin_courtesy_section_select" ||
+    state === "admin_courtesy_quantity_collecting" ||
+    state === "admin_courtesy_seat_collecting" ||
+    state === "admin_courtesy_beneficiary_phone_collecting" ||
+    state === "admin_courtesy_beneficiary_name_collecting" ||
+    state === "admin_courtesy_reason_collecting" ||
+    state === "admin_courtesy_confirm" ||
     state === "admin_courtesy_list_event_select" ||
-    state === "admin_courtesy_resend_event_select" ||
-    state === "admin_courtesy_cancel_event_select" ||
-    state === "admin_courtesy_cancel_method_select" ||
+    state === "admin_courtesy_resend_target_collecting" ||
+    state === "admin_courtesy_resend_select" ||
+    state === "admin_courtesy_resend_confirm" ||
     state === "admin_courtesy_cancel_target_collecting" ||
-    state === "admin_courtesy_limit_event_select" ||
-    state === "admin_courtesy_limit_collecting"
+    state === "admin_courtesy_cancel_select" ||
+    state === "admin_courtesy_cancel_confirm"
   );
-}
-
-function renderCourtesyCancelMethodMenu() {
-  return [
-    "*CANCELAR CORTESIA*",
-    "",
-    "> 1. Cancelar pelo número de telefone",
-    "> 2. Cancelar pelo código",
-    "> 3. Ver todas as cortesias",
-    "> 4. Voltar",
-    "> 5. Sair",
-    "",
-    "Responda com o número da opção.",
-  ].join("\n");
 }
 
 function isAdminUsersFlowState(
@@ -7388,17 +7392,25 @@ export async function routeTicketMessage({
       sessionId: string;
       adminUserId: string;
       expiresAt: string;
-    }) => ({
-      ...baseContext,
-      step: state,
-      state,
-      admin: buildAdminContext({
-        adminUserId,
-        role,
-        sessionId,
-        expiresAt,
-      }),
-    });
+    }) => {
+      const nextContext: TicketConversationState = {
+        ...baseContext,
+        step: state,
+        state,
+        admin: buildAdminContext({
+          adminUserId,
+          role,
+          sessionId,
+          expiresAt,
+        }),
+      };
+
+      if (!state.startsWith("admin_courtesy")) {
+        delete nextContext.adminCourtesies;
+      }
+
+      return nextContext;
+    };
 
     const endAdminSession = async () => {
       await revokeActiveAdminSessions(customer.whatsapp_phone);
@@ -7760,9 +7772,19 @@ export async function routeTicketMessage({
 
     if (isAdminCourtesyFlowState(baseContext.state)) {
       const courtesiesSubmenu = ADMIN_SUBMENUS.admin_courtesies_menu;
-      const scope = buildAdminEventScope(adminUser);
       const adminCourtesies = getAdminCourtesiesContext(baseContext);
       const submenuOption = parseAdminSubmenuOption(text);
+
+      const returnToCourtesyMenu = () => ({
+        reply: renderAdminSubmenu(courtesiesSubmenu),
+        nextContext: adminReplyContext({
+          state: "admin_courtesies_menu",
+          role: adminUser.role,
+          sessionId: adminSession.id,
+          adminUserId: adminUser.id,
+          expiresAt: adminSession.expires_at,
+        }),
+      });
 
       if (!canAccessAdminMenu(adminUser.role, courtesiesSubmenu)) {
         return {
@@ -7777,263 +7799,20 @@ export async function routeTicketMessage({
         };
       }
 
-      if (submenuOption === "exit") {
-        return endAdminSession();
-      }
-
-      if (submenuOption === "menu") {
-        return {
-          reply: renderAdminSubmenu(courtesiesSubmenu),
-          nextContext: adminReplyContext({
-            state: "admin_courtesies_menu",
-            role: adminUser.role,
-            sessionId: adminSession.id,
-            adminUserId: adminUser.id,
-            expiresAt: adminSession.expires_at,
-          }),
-        };
-      }
-
-      if (submenuOption === "back") {
-        if (baseContext.state === "admin_courtesy_generate_type") {
-          return {
-            reply: renderAdminSubmenu(courtesiesSubmenu),
-            nextContext: adminReplyContext({
-              state: "admin_courtesies_menu",
-              role: adminUser.role,
-              sessionId: adminSession.id,
-              adminUserId: adminUser.id,
-              expiresAt: adminSession.expires_at,
-            }),
-          };
-        }
-
-        if (baseContext.state === "admin_courtesy_phone_collecting") {
-          return {
-            reply: [
-              "*GERAR CORTESIA*",
-              "",
-              "> 1. Individual",
-              "> 2. Lote",
-              "> 3. Voltar",
-              "> 4. Sair",
-            ].join("\n"),
-            nextContext: withAdminCourtesiesContext(
-              baseContext,
-              "admin_courtesy_generate_type",
-              {},
-            ),
-          };
-        }
-
-        return {
-          reply: renderAdminSubmenu(courtesiesSubmenu),
-          nextContext: adminReplyContext({
-            state: "admin_courtesies_menu",
-            role: adminUser.role,
-            sessionId: adminSession.id,
-            adminUserId: adminUser.id,
-            expiresAt: adminSession.expires_at,
-          }),
-        };
-      }
-
-      if (baseContext.state === "admin_courtesy_generate_type") {
-        const option = text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
-
-        if (option === 4) return endAdminSession();
-        if (option === 3) {
-          return {
-            reply: renderAdminSubmenu(courtesiesSubmenu),
-            nextContext: adminReplyContext({
-              state: "admin_courtesies_menu",
-              role: adminUser.role,
-              sessionId: adminSession.id,
-              adminUserId: adminUser.id,
-              expiresAt: adminSession.expires_at,
-            }),
-          };
-        }
-
-        if (option !== 1 && option !== 2) {
-          return {
-            reply: [
-              "*GERAR CORTESIA*",
-              "",
-              "> 1. Individual",
-              "> 2. Lote",
-              "> 3. Voltar",
-              "> 4. Sair",
-            ].join("\n"),
-            nextContext: withAdminCourtesiesContext(
-              baseContext,
-              "admin_courtesy_generate_type",
-              {},
-            ),
-          };
-        }
-
-        return {
-          reply:
-            option === 1
-              ? "*CORTESIA INDIVIDUAL*\n\nEnvie o telefone que receberá a cortesia."
-              : "*CORTESIA EM LOTE*\n\nEnvie a lista de telefones, separados por vírgula, espaço ou linha.",
-          nextContext: withAdminCourtesiesContext(
-            baseContext,
-            "admin_courtesy_phone_collecting",
-            { mode: option === 1 ? "single" : "batch" },
-          ),
-        };
-      }
-
-      if (baseContext.state === "admin_courtesy_phone_collecting") {
-        const phones = parseCourtesyPhones(text);
-
-        if (phones.length === 0 || (adminCourtesies.mode === "single" && phones.length !== 1)) {
-          return {
-            reply:
-              adminCourtesies.mode === "single"
-                ? "Envie um telefone válido com DDD."
-                : "Envie pelo menos um telefone válido com DDD.",
-            nextContext: withAdminCourtesiesContext(
-              baseContext,
-              "admin_courtesy_phone_collecting",
-              adminCourtesies,
-            ),
-          };
-        }
-
-        return buildAdminCourtesyEventSelect({
-          baseContext,
-          scope,
-          state: "admin_courtesy_event_select",
-          title: "ESCOLHA O EVENTO PARA A CORTESIA",
-          context: { ...adminCourtesies, phones },
-        });
-      }
-
-      if (baseContext.state === "admin_courtesy_cancel_target_collecting") {
-        const eventId = adminCourtesies.selectedEventId;
-        const cancelMethod = adminCourtesies.cancelMethod;
-        const target =
-          cancelMethod === "phone"
-            ? (() => {
-                const phone = normalizeCourtesyPhone(text);
-                return phone ? { phone } : null;
-              })()
-            : cancelMethod === "code"
-              ? /^TCK-[A-Z0-9]+$/i.test(text.trim())
-                ? { ticketCode: text.trim().toUpperCase() }
-                : null
-              : resolveCourtesyCancelTarget(
-                  text,
-                  adminCourtesies.lastCourtesies ?? [],
-                );
-
-        if (!eventId || !target) {
-          return {
-            reply:
-              cancelMethod === "phone"
-                ? "Telefone inválido. Digite o número de telefone da cortesia."
-                : cancelMethod === "code"
-                  ? "Código inválido. Digite o código do ticket. Ex: TCK-XXXXXXXXXXXX"
-                  : "Não encontrei essa cortesia. Responda com o número da lista, telefone ou código do ticket.",
-            nextContext: withAdminCourtesiesContext(
-              baseContext,
-              "admin_courtesy_cancel_target_collecting",
-              adminCourtesies,
-            ),
-          };
-        }
-
-        const result = await cancelCourtesyForEvent(eventId, target);
-
-        return {
-          reply: result.ok
-            ? `Cortesias canceladas: ${result.cancelledCount}`
-            : "Não consegui cancelar essa cortesia. Confira se ela ainda está ativa.",
-          nextContext: adminReplyContext({
-            state: "admin_courtesies_menu",
-            role: adminUser.role,
-            sessionId: adminSession.id,
-            adminUserId: adminUser.id,
-            expiresAt: adminSession.expires_at,
-          }),
-        };
-      }
+      if (submenuOption === "exit") return endAdminSession();
+      if (submenuOption === "menu" || submenuOption === "back") return returnToCourtesyMenu();
 
       if (
         baseContext.state === "admin_courtesy_event_select" ||
-        baseContext.state === "admin_courtesy_list_event_select" ||
-        baseContext.state === "admin_courtesy_resend_event_select" ||
-        baseContext.state === "admin_courtesy_cancel_event_select" ||
-        baseContext.state === "admin_courtesy_limit_event_select"
+        baseContext.state === "admin_courtesy_list_event_select"
       ) {
-        const eventId = resolveCourtesyEventId(
-          text,
-          adminCourtesies.lastEvents ?? [],
-        );
+        const eventId = resolveCourtesyEventId(text, adminCourtesies.lastEvents ?? []);
+        const event = (adminCourtesies.lastEvents ?? []).find((item) => item.eventId === eventId);
 
         if (!eventId) {
           return {
             reply: "Evento não encontrado. Responda com número, nome ou ID.",
-            nextContext: withAdminCourtesiesContext(
-              baseContext,
-              baseContext.state,
-              adminCourtesies,
-            ),
-          };
-        }
-
-        if (baseContext.state === "admin_courtesy_event_select") {
-          const phones = adminCourtesies.phones ?? [];
-          let results: Awaited<ReturnType<typeof issueCourtesies>>;
-          try {
-            results = await issueCourtesies({
-              eventId,
-              phones,
-              issuedByAdminUserId: adminUser.id,
-              issuedByAdminPhone: normalizeGatePhone(adminUser.phone) ?? adminUser.phone,
-            });
-          } catch (error) {
-            logError("Failed to issue admin courtesies", {
-              error,
-              eventId,
-              phonesCount: phones.length,
-              adminUserId: adminUser.id,
-            });
-
-            return {
-              reply:
-                "Não consegui gerar cortesias agora. Registrei o erro técnico nos logs para conferência.",
-              nextContext: adminReplyContext({
-                state: "admin_courtesies_menu",
-                role: adminUser.role,
-                sessionId: adminSession.id,
-                adminUserId: adminUser.id,
-                expiresAt: adminSession.expires_at,
-              }),
-            };
-          }
-          return {
-            reply: [
-              buildCourtesyIssueSummary(results),
-              "",
-              results.every(
-                (result) => !result.ok && result.reason === "limit_reached",
-              )
-                ? ""
-                : results.some((result) => result.ok)
-                ? 'Informe ao contato que para receber sua cortesia, deve enviar "Cortesia" para este mesmo número.'
-                : "Nenhuma nova cortesia foi registrada. Quem já tem cortesia ativa pode escrever CORTESIA na conversa para receber o QR Code.",
-            ].filter(Boolean).join("\n"),
-            nextContext: adminReplyContext({
-              state: "admin_courtesies_menu",
-              role: adminUser.role,
-              sessionId: adminSession.id,
-              adminUserId: adminUser.id,
-              expiresAt: adminSession.expires_at,
-            }),
+            nextContext: withAdminCourtesiesContext(baseContext, baseContext.state, adminCourtesies),
           };
         }
 
@@ -8041,9 +7820,7 @@ export async function routeTicketMessage({
           const list = await listCourtesiesForEvent(eventId);
 
           return {
-            reply: list.ok
-              ? buildCourtesiesListReply(list.courtesies)
-              : TICKET_MESSAGES.adminGenericError,
+            reply: list.ok ? buildCourtesiesListReply(list.courtesies) : TICKET_MESSAGES.adminGenericError,
             nextContext: adminReplyContext({
               state: "admin_courtesies_menu",
               role: adminUser.role,
@@ -8054,17 +7831,10 @@ export async function routeTicketMessage({
           };
         }
 
-        if (baseContext.state === "admin_courtesy_resend_event_select") {
-          const list = await listCourtesiesForEvent(eventId);
-
+        const sessions = await listCourtesySessions(eventId);
+        if (!sessions.ok || sessions.sessions.length === 0) {
           return {
-            reply: list.ok
-              ? [
-                  "Reenvio automático desativado por segurança do WhatsApp.",
-                  "Peça para o convidado escrever CORTESIA na conversa para receber o QR Code.",
-                  `Cortesias ativas neste evento: ${list.courtesies.filter((courtesy) => courtesy.status === "issued").length}`,
-                ].join("\n")
-              : TICKET_MESSAGES.adminGenericError,
+            reply: "Nenhuma sessão disponível para gerar cortesia neste evento.",
             nextContext: adminReplyContext({
               state: "admin_courtesies_menu",
               role: adminUser.role,
@@ -8075,162 +7845,389 @@ export async function routeTicketMessage({
           };
         }
 
-        if (baseContext.state === "admin_courtesy_cancel_event_select") {
+        return {
+          reply: buildCourtesySessionsReply(sessions.sessions),
+          nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_session_select", {
+            ...adminCourtesies,
+            mode: "generate",
+            selectedEventId: eventId,
+            selectedEventTitle: event?.title ?? null,
+            lastSessions: sessions.sessions.map((session) => ({
+              option: session.option,
+              sessionId: session.sessionId,
+              startsAt: session.startsAt,
+              status: session.status,
+            })),
+          }),
+        };
+      }
+
+      if (baseContext.state === "admin_courtesy_session_select") {
+        const sessionId = resolveCourtesySessionId(text, adminCourtesies.lastSessions ?? []);
+        const session = (adminCourtesies.lastSessions ?? []).find((item) => item.sessionId === sessionId);
+        if (!sessionId) {
           return {
-            reply: renderCourtesyCancelMethodMenu(),
-            nextContext: withAdminCourtesiesContext(
-              baseContext,
-              "admin_courtesy_cancel_method_select",
+            reply: "Sessão não encontrada. Responda com o número da sessão.",
+            nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_session_select", adminCourtesies),
+          };
+        }
+
+        const sections = await listCourtesySections(sessionId);
+        if (!sections.ok || sections.sections.length === 0) {
+          return {
+            reply: "Nenhum setor com disponibilidade para cortesia nessa sessão.",
+            nextContext: returnToCourtesyMenu().nextContext,
+          };
+        }
+
+        return {
+          reply: buildCourtesySectionsReply(sections.sections),
+          nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_section_select", {
+            ...adminCourtesies,
+            selectedSessionId: sessionId,
+            selectedSessionLabel: session?.startsAt ? formatDateTime(session.startsAt) : null,
+            lastSections: sections.sections,
+          }),
+        };
+      }
+
+      if (baseContext.state === "admin_courtesy_section_select") {
+        const sectionId = resolveCourtesySectionId(text, adminCourtesies.lastSections ?? []);
+        const section = (adminCourtesies.lastSections ?? []).find((item) => item.sectionId === sectionId);
+        if (!sectionId || !section) {
+          return {
+            reply: "Setor não encontrado. Responda com o número do setor.",
+            nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_section_select", adminCourtesies),
+          };
+        }
+
+        return {
+          reply: "*QUANTIDADE DE CORTESIAS*\n\nDigite a quantidade que deseja emitir.",
+          nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_quantity_collecting", {
+            ...adminCourtesies,
+            selectedSectionId: sectionId,
+            selectedSectionName: section.sectionName,
+            hasNumberedSeats: section.hasNumberedSeats,
+          }),
+        };
+      }
+
+      if (baseContext.state === "admin_courtesy_quantity_collecting") {
+        const quantity = /^\d+$/.test(text.trim()) ? Number(text.trim()) : null;
+        if (!quantity || quantity <= 0 || quantity > 10) {
+          return {
+            reply: "Quantidade inválida. Envie um número de 1 a 10.",
+            nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_quantity_collecting", adminCourtesies),
+          };
+        }
+
+        if (adminCourtesies.hasNumberedSeats) {
+          const sessionId = adminCourtesies.selectedSessionId;
+          const sectionId = adminCourtesies.selectedSectionId;
+          if (!sessionId || !sectionId) return returnToCourtesyMenu();
+          const seatMap = await listSeatMap({ sessionId, sectionId });
+          const seatsReply = [
+            "*ESCOLHA OS ASSENTOS DA CORTESIA*",
+            "",
+            `Digite ${quantity} código(s) de assento.`,
+          ].join("\n");
+          return {
+            reply: seatsReply,
+            outboundMessages: [
               {
-              ...adminCourtesies,
-              selectedEventId: eventId,
+                type: "image",
+                imageUrl: buildSeatMapPngDataUrl({
+                  seatMap,
+                  title: adminCourtesies.selectedSectionName ?? "Assentos",
+                  stageLabel: "PALCO",
+                }),
+                caption: seatsReply,
               },
-            ),
+            ],
+            nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_seat_collecting", {
+              ...adminCourtesies,
+              quantity,
+            }),
           };
         }
 
-        const currentLimit = await getCourtesyLimit(eventId);
+        return {
+          reply: "*TELEFONE DO BENEFICIÁRIO*\n\nDigite o telefone que receberá a cortesia.",
+          nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_beneficiary_phone_collecting", {
+            ...adminCourtesies,
+            quantity,
+          }),
+        };
+      }
+
+      if (baseContext.state === "admin_courtesy_seat_collecting") {
+        const seatCodes = parseCourtesySeatCodes(text);
+        if (!adminCourtesies.quantity || seatCodes.length !== adminCourtesies.quantity) {
+          return {
+            reply: "ASSENTO INDISPONÍVEL",
+            nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_seat_collecting", adminCourtesies),
+          };
+        }
+
+        return {
+          reply: "*TELEFONE DO BENEFICIÁRIO*\n\nDigite o telefone que receberá a cortesia.",
+          nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_beneficiary_phone_collecting", {
+            ...adminCourtesies,
+            seatCodes,
+          }),
+        };
+      }
+
+      if (baseContext.state === "admin_courtesy_beneficiary_phone_collecting") {
+        const phone = normalizeCourtesyPhone(text);
+        if (!phone || phone.length < 12) {
+          return {
+            reply: "Telefone inválido. Envie um telefone com DDD.",
+            nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_beneficiary_phone_collecting", adminCourtesies),
+          };
+        }
+
+        return {
+          reply: "*NOME DO BENEFICIÁRIO*\n\nDigite o nome ou responda PULAR.",
+          nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_beneficiary_name_collecting", {
+            ...adminCourtesies,
+            beneficiaryPhone: phone,
+          }),
+        };
+      }
+
+      if (baseContext.state === "admin_courtesy_beneficiary_name_collecting") {
+        const normalized = normalizeIntentText(text);
+        const beneficiaryName = normalized === "pular" ? null : text.trim();
+        return {
+          reply: "*MOTIVO/OBSERVAÇÃO*\n\nDigite uma observação ou responda PULAR.",
+          nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_reason_collecting", {
+            ...adminCourtesies,
+            beneficiaryName: beneficiaryName || null,
+          }),
+        };
+      }
+
+      if (baseContext.state === "admin_courtesy_reason_collecting") {
+        const normalized = normalizeIntentText(text);
+        const reason = normalized === "pular" ? null : text.trim();
+        const nextCourtesy = { ...adminCourtesies, reason: reason || null };
+
+        return {
+          reply: buildCourtesyConfirmation({
+            eventTitle: nextCourtesy.selectedEventTitle,
+            sessionLabel: nextCourtesy.selectedSessionLabel,
+            sectionName: nextCourtesy.selectedSectionName,
+            quantity: nextCourtesy.quantity,
+            seatCodes: nextCourtesy.seatCodes,
+            beneficiaryPhone: nextCourtesy.beneficiaryPhone,
+            beneficiaryName: nextCourtesy.beneficiaryName,
+            reason: nextCourtesy.reason,
+          }),
+          nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_confirm", nextCourtesy),
+        };
+      }
+
+      if (baseContext.state === "admin_courtesy_confirm") {
+        if (normalizeIntentText(text) !== "confirmar") {
+          return {
+            reply: "Digite CONFIRMAR para emitir a cortesia ou CANCELAR para abandonar.",
+            nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_confirm", adminCourtesies),
+          };
+        }
+
+        const eventId = adminCourtesies.selectedEventId;
+        const sessionId = adminCourtesies.selectedSessionId;
+        const sectionId = adminCourtesies.selectedSectionId;
+        const quantity = adminCourtesies.quantity;
+        const beneficiaryPhone = adminCourtesies.beneficiaryPhone;
+        if (!eventId || !sessionId || !sectionId || !quantity || !beneficiaryPhone) {
+          return returnToCourtesyMenu();
+        }
+
+        const issueResult = await issueAdminCourtesy({
+          eventId,
+          sessionId,
+          sectionId,
+          quantity,
+          seatCodes: adminCourtesies.seatCodes,
+          beneficiaryPhone,
+          beneficiaryName: adminCourtesies.beneficiaryName,
+          reason: adminCourtesies.reason,
+          issuedByAdminUserId: adminUser.id,
+          issuedByAdminPhone: normalizeGatePhone(adminUser.phone) ?? adminUser.phone,
+        });
+
+        if (!issueResult.ok) {
+          logError("Failed to issue admin courtesy", {
+            reason: issueResult.reason,
+            error: issueResult.error,
+            eventId,
+            adminUserId: adminUser.id,
+          });
+          return {
+            reply:
+              issueResult.reason === "seat_unavailable"
+                ? "ASSENTO INDISPONÍVEL"
+                : "Não consegui gerar a cortesia. Nenhum ingresso foi emitido parcialmente.",
+            nextContext: returnToCourtesyMenu().nextContext,
+          };
+        }
+
+        const adminSuccessReply = buildCourtesyAdminSuccess(issueResult);
+
+        return {
+          reply: adminSuccessReply,
+          outboundMessages: [
+            { type: "text", body: adminSuccessReply },
+            { type: "text", body: issueResult.delivery.message, phone: issueResult.beneficiaryPhone },
+            ...issueResult.delivery.qrImages.map((image) => ({
+              type: "image" as const,
+              imageUrl: image.imageUrl,
+              caption: image.caption,
+              phone: issueResult.beneficiaryPhone,
+            })),
+          ],
+          nextContext: returnToCourtesyMenu().nextContext,
+        };
+      }
+
+      if (
+        baseContext.state === "admin_courtesy_resend_target_collecting" ||
+        baseContext.state === "admin_courtesy_cancel_target_collecting"
+      ) {
+        const phone = normalizeCourtesyPhone(text);
+        const ticketCode = /^TCK-[A-Z0-9]+$/i.test(text.trim())
+          ? text.trim().toUpperCase()
+          : undefined;
+
+        if (!phone && !ticketCode) {
+          return {
+            reply: "Digite um telefone válido ou código de ticket. Ex: TCK-XXXXXXXXXXXX",
+            nextContext: withAdminCourtesiesContext(baseContext, baseContext.state, adminCourtesies),
+          };
+        }
+
+        const found = await findCourtesyTargets({ phone: phone ?? undefined, ticketCode });
+        if (!found.ok || found.courtesies.length === 0) {
+          return {
+            reply: "Nenhuma cortesia encontrada para esse dado.",
+            nextContext: returnToCourtesyMenu().nextContext,
+          };
+        }
+
+        const nextState =
+          baseContext.state === "admin_courtesy_resend_target_collecting"
+            ? "admin_courtesy_resend_select"
+            : "admin_courtesy_cancel_select";
 
         return {
           reply: [
-            "*DEFINIR NOVO LIMITE DE CORTESIAS*",
-            `> Hoje, limite de ${currentLimit.ok ? currentLimit.limit : 0} cortesias`,
+            buildCourtesiesListReply(found.courtesies),
             "",
-            "Digite o novo limite TOTAL de cortesias para este evento. Use 0 para remover limite.",
+            nextState === "admin_courtesy_resend_select"
+              ? "*QUAL CORTESIA DESEJA REENVIAR?*"
+              : "*QUAL CORTESIA DESEJA CANCELAR?*",
+            "Responda com o número da cortesia.",
           ].join("\n"),
-          nextContext: withAdminCourtesiesContext(
-            baseContext,
-            "admin_courtesy_limit_collecting",
-            { ...adminCourtesies, selectedEventId: eventId },
-          ),
-        };
-      }
-
-      if (baseContext.state === "admin_courtesy_cancel_method_select") {
-        const option = text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
-        const eventId = adminCourtesies.selectedEventId;
-
-        if (!eventId) {
-          return {
-            reply: renderAdminSubmenu(courtesiesSubmenu),
-            nextContext: adminReplyContext({
-              state: "admin_courtesies_menu",
-              role: adminUser.role,
-              sessionId: adminSession.id,
-              adminUserId: adminUser.id,
-              expiresAt: adminSession.expires_at,
-            }),
-          };
-        }
-
-        if (option === 5) return endAdminSession();
-        if (option === 4) {
-          return buildAdminCourtesyEventSelect({
-            baseContext,
-            scope,
-            state: "admin_courtesy_cancel_event_select",
-            title: "CANCELAR CORTESIA - ESCOLHA O EVENTO",
-            context: { mode: "cancel" },
-          });
-        }
-
-        if (option === 1 || option === 2) {
-          return {
-            reply:
-              option === 1
-                ? "*CANCELAR PELO TELEFONE*\n\nDigite o número de telefone da cortesia."
-                : "*CANCELAR PELO CÓDIGO*\n\nDigite o código do ticket da cortesia. Ex: TCK-XXXXXXXXXXXX",
-            nextContext: withAdminCourtesiesContext(
-              baseContext,
-              "admin_courtesy_cancel_target_collecting",
-              {
-                ...adminCourtesies,
-                cancelMethod: option === 1 ? "phone" : "code",
-              },
-            ),
-          };
-        }
-
-        if (option === 3) {
-          const list = await listCourtesiesForEvent(eventId);
-
-          if (!list.ok) {
-            return {
-              reply: TICKET_MESSAGES.adminGenericError,
-              nextContext: withAdminCourtesiesContext(
-                baseContext,
-                "admin_courtesy_cancel_method_select",
-                adminCourtesies,
-              ),
-            };
-          }
-
-          const issuedCourtesies = list.courtesies.filter(
-            (courtesy) => courtesy.status === "issued",
-          );
-
-          return {
-            reply: [
-              buildCourtesiesListReply(issuedCourtesies),
-              "",
-              "*QUAL CORTESIA DESEJA CANCELAR?*",
-              "Responda com o número da cortesia, telefone ou código do ticket.",
-            ].join("\n"),
-            nextContext: withAdminCourtesiesContext(
-              baseContext,
-              "admin_courtesy_cancel_target_collecting",
-              {
-                ...adminCourtesies,
-                cancelMethod: "list",
-                lastCourtesies: issuedCourtesies.map((courtesy, index) => ({
-                  option: index + 1,
-                  courtesyId: courtesy.courtesyId,
-                  phone: courtesy.phone,
-                  ticketCode: courtesy.ticketCode,
-                })),
-              },
-            ),
-          };
-        }
-
-        return {
-          reply: renderCourtesyCancelMethodMenu(),
-          nextContext: withAdminCourtesiesContext(
-            baseContext,
-            "admin_courtesy_cancel_method_select",
-            adminCourtesies,
-          ),
-        };
-      }
-
-      if (baseContext.state === "admin_courtesy_limit_collecting") {
-        const eventId = adminCourtesies.selectedEventId;
-        const limit = Number(text.trim().replace(/\D/g, ""));
-
-        if (!eventId || !Number.isInteger(limit) || limit < 0) {
-          return {
-            reply: "Limite inválido. Envie um número inteiro maior ou igual a 0.",
-            nextContext: withAdminCourtesiesContext(
-              baseContext,
-              "admin_courtesy_limit_collecting",
-              adminCourtesies,
-            ),
-          };
-        }
-
-        const result = await setCourtesyLimit(eventId, limit);
-
-        return {
-          reply: result.ok
-            ? `Limite de cortesias definido: ${limit}`
-            : TICKET_MESSAGES.adminGenericError,
-          nextContext: adminReplyContext({
-            state: "admin_courtesies_menu",
-            role: adminUser.role,
-            sessionId: adminSession.id,
-            adminUserId: adminUser.id,
-            expiresAt: adminSession.expires_at,
+          nextContext: withAdminCourtesiesContext(baseContext, nextState, {
+            ...adminCourtesies,
+            lastCourtesies: found.courtesies.map((courtesy, index) => ({
+              option: index + 1,
+              courtesyId: courtesy.courtesyId,
+              phone: courtesy.phone,
+              ticketCode: courtesy.ticketCode,
+            })),
           }),
+        };
+      }
+
+      if (
+        baseContext.state === "admin_courtesy_resend_select" ||
+        baseContext.state === "admin_courtesy_cancel_select"
+      ) {
+        const target = resolveCourtesyCancelTarget(text, adminCourtesies.lastCourtesies ?? []);
+        if (!target?.courtesyId) {
+          return {
+            reply: "Não encontrei essa cortesia. Responda com o número da lista.",
+            nextContext: withAdminCourtesiesContext(baseContext, baseContext.state, adminCourtesies),
+          };
+        }
+
+        return {
+          reply:
+            baseContext.state === "admin_courtesy_resend_select"
+              ? "Digite CONFIRMAR para reenviar esta cortesia."
+              : "Digite CANCELAR CORTESIA para cancelar esta cortesia.",
+          nextContext: withAdminCourtesiesContext(
+            baseContext,
+            baseContext.state === "admin_courtesy_resend_select"
+              ? "admin_courtesy_resend_confirm"
+              : "admin_courtesy_cancel_confirm",
+            { ...adminCourtesies, pendingCourtesyId: target.courtesyId },
+          ),
+        };
+      }
+
+      if (baseContext.state === "admin_courtesy_resend_confirm") {
+        if (normalizeIntentText(text) !== "confirmar") {
+          return {
+            reply: "Reenvio não confirmado. Voltando ao menu de Cortesias.",
+            nextContext: returnToCourtesyMenu().nextContext,
+          };
+        }
+
+        const courtesyId = adminCourtesies.pendingCourtesyId;
+        if (!courtesyId) return returnToCourtesyMenu();
+        const found = await findCourtesyTargets({ courtesyId });
+        const courtesy = found.ok ? found.courtesies[0] : null;
+        if (!courtesy || courtesy.status !== "issued" || courtesy.ticketStatus !== "issued" || courtesy.usedAt) {
+          return {
+            reply: "Não é possível reenviar esta cortesia porque ela está cancelada ou já foi usada.",
+            nextContext: returnToCourtesyMenu().nextContext,
+          };
+        }
+        const delivery = await buildCourtesyDeliveryForCourtesyId(courtesyId);
+        if (!delivery.ok) {
+          return { reply: TICKET_MESSAGES.adminGenericError, nextContext: returnToCourtesyMenu().nextContext };
+        }
+        const resendReply = "Cortesia reenviada ao beneficiário pelo WhatsApp.";
+        return {
+          reply: resendReply,
+          outboundMessages: [
+            { type: "text", body: resendReply },
+            { type: "text", body: delivery.delivery.message, phone: courtesy.phone },
+            ...delivery.delivery.qrImages.map((image) => ({
+              type: "image" as const,
+              imageUrl: image.imageUrl,
+              caption: image.caption,
+              phone: courtesy.phone,
+            })),
+          ],
+          nextContext: returnToCourtesyMenu().nextContext,
+        };
+      }
+
+      if (baseContext.state === "admin_courtesy_cancel_confirm") {
+        if (normalizeIntentText(text) !== "cancelar cortesia") {
+          return {
+            reply: "Texto não confirmado. A cortesia não foi cancelada.",
+            nextContext: returnToCourtesyMenu().nextContext,
+          };
+        }
+
+        const courtesyId = adminCourtesies.pendingCourtesyId;
+        if (!courtesyId) return returnToCourtesyMenu();
+        const result = await cancelCourtesyForEvent(adminCourtesies.selectedEventId ?? "", {
+          courtesyId,
+        });
+
+        return {
+          reply:
+            result.ok && result.cancelledCount > 0
+              ? "CORTESIA CANCELADA\nOs ingressos foram liberados para venda novamente."
+              : "Não foi possível cancelar esta cortesia. Ela pode já estar usada ou cancelada.",
+          nextContext: returnToCourtesyMenu().nextContext,
         };
       }
     }
@@ -9381,21 +9378,13 @@ export async function routeTicketMessage({
 
       if (previousState.state === "admin_courtesies_menu") {
         if (submenuOption === 1) {
-          return {
-            reply: [
-              "*GERAR CORTESIA*",
-              "",
-              "> 1. Individual",
-              "> 2. Lote",
-              "> 3. Voltar",
-              "> 4. Sair",
-            ].join("\n"),
-            nextContext: withAdminCourtesiesContext(
-              baseContext,
-              "admin_courtesy_generate_type",
-              {},
-            ),
-          };
+          return buildAdminCourtesyEventSelect({
+            baseContext,
+            scope: buildAdminEventScope(adminUser),
+            state: "admin_courtesy_event_select",
+            title: "GERAR CORTESIA - ESCOLHA O EVENTO",
+            context: { mode: "generate" },
+          });
         }
 
         const courtesyEventSelectByOption: Record<
@@ -9411,21 +9400,6 @@ export async function routeTicketMessage({
             title: "LISTAR CORTESIAS - ESCOLHA O EVENTO",
             mode: "list",
           },
-          3: {
-            state: "admin_courtesy_resend_event_select",
-            title: "REENVIAR CORTESIA - ESCOLHA O EVENTO",
-            mode: "resend",
-          },
-          4: {
-            state: "admin_courtesy_cancel_event_select",
-            title: "CANCELAR CORTESIA - ESCOLHA O EVENTO",
-            mode: "cancel",
-          },
-          5: {
-            state: "admin_courtesy_limit_event_select",
-            title: "LIMITE DE CORTESIAS - ESCOLHA O EVENTO",
-            mode: "limit",
-          },
         };
         const target = typeof submenuOption === "number"
           ? courtesyEventSelectByOption[submenuOption]
@@ -9439,6 +9413,22 @@ export async function routeTicketMessage({
             title: target.title,
             context: { mode: target.mode },
           });
+        }
+
+        if (submenuOption === 3 || submenuOption === 4) {
+          return {
+            reply:
+              submenuOption === 3
+                ? "*REENVIAR CORTESIA*\n\nDigite o telefone do beneficiário ou o código da cortesia."
+                : "*CANCELAR CORTESIA*\n\nDigite o telefone do beneficiário ou o código da cortesia.",
+            nextContext: withAdminCourtesiesContext(
+              baseContext,
+              submenuOption === 3
+                ? "admin_courtesy_resend_target_collecting"
+                : "admin_courtesy_cancel_target_collecting",
+              { mode: submenuOption === 3 ? "resend" : "cancel" },
+            ),
+          };
         }
       }
 

@@ -3,6 +3,9 @@ import "server-only";
 import QRCode from "qrcode";
 import { createHash } from "crypto";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { cancelPendingReservationForCustomer } from "@/lib/tickets/services/reservations";
+import { listAvailableSections, type AvailableSection } from "@/lib/tickets/services/sections";
+import { listAvailableSeats, listSeatMap } from "@/lib/tickets/services/seats";
 import { createSignedTicketToken, createTicketUrl } from "@/lib/tickets/services/tickets";
 
 type MaybeArray<T> = T | T[] | null | undefined;
@@ -21,10 +24,16 @@ export type AdminCourtesyRecord = {
   courtesyId: string;
   eventTitle: string;
   phone: string;
+  beneficiaryName: string | null;
+  reason: string | null;
   status: string;
+  ticketStatus: string | null;
   ticketCode: string | null;
+  sectionName: string | null;
+  seatCode: string | null;
   createdAt: string;
   cancelledAt: string | null;
+  usedAt: string | null;
 };
 
 export type AdminCourtesyCancelTarget = {
@@ -37,6 +46,46 @@ export type CourtesyDelivery = {
   message: string;
   qrImages: Array<{ imageUrl: string; caption: string }>;
 };
+
+export type AdminCourtesySessionOption = {
+  option: number;
+  sessionId: string;
+  startsAt: string;
+  status: string;
+};
+
+export type AdminCourtesySectionOption = {
+  option: number;
+  sectionId: string;
+  sectionName: string;
+  hasNumberedSeats: boolean;
+  availableSeatsCount: number;
+};
+
+export type AdminCourtesyIssueSuccess = {
+  ok: true;
+  eventTitle: string;
+  beneficiaryPhone: string;
+  beneficiaryName: string | null;
+  quantity: number;
+  ticketIds: string[];
+  ticketCodes: string[];
+  delivery: CourtesyDelivery;
+};
+
+export type AdminCourtesyIssueResult =
+  | AdminCourtesyIssueSuccess
+  | {
+      ok: false;
+      reason:
+        | "not_enough_seats"
+        | "seat_unavailable"
+        | "event_not_found"
+        | "section_not_found"
+        | "reservation_failed"
+        | "issue_failed";
+      error?: unknown;
+    };
 
 type EventRow = {
   id: string;
@@ -54,12 +103,19 @@ type EventRow = {
 type CourtesyRow = {
   id: string;
   phone: string;
+  beneficiary_name: string | null;
+  reason: string | null;
   status: string;
   created_at: string;
   cancelled_at: string | null;
   tickets: MaybeArray<{
     id: string;
     ticket_code: string;
+    status: string;
+    used_at: string | null;
+    cancelled_at: string | null;
+    reservation_items: MaybeArray<{ seat_code: string | null }>;
+    venue_sections: MaybeArray<{ name: string | null }>;
   }>;
   events: MaybeArray<{
     title: string;
@@ -70,6 +126,8 @@ type TicketRow = {
   id: string;
   ticket_code: string;
   status: string;
+  used_at?: string | null;
+  cancelled_at?: string | null;
   event_sessions: MaybeArray<{
     starts_at: string;
     events: MaybeArray<{
@@ -83,6 +141,21 @@ type TicketRow = {
   reservation_items: MaybeArray<{ seat_code: string }>;
 };
 
+type IssueCourtesyOrderRpcResponse = {
+  order_id: string;
+  reservation_id: string;
+  status: string;
+  tickets_count: number;
+  tickets?: Array<{
+    ticket_id: string;
+    ticket_code: string;
+    reservation_item_id: string;
+    seat_id: string;
+    seat_code: string;
+    section_id: string;
+  }>;
+};
+
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 const QR_CODE_CAPTION = [
   "*APRESENTE O QRCODE NA PORTARIA*",
@@ -92,6 +165,12 @@ const QR_CODE_CAPTION = [
 function first<T>(value: MaybeArray<T>): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
   return value ?? null;
+}
+
+function maskPhone(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length <= 4) return "****";
+  return `****${digits.slice(-4)}`;
 }
 
 function formatDateTime(value: string) {
@@ -207,7 +286,7 @@ export function resolveCourtesyEventId(
   );
 }
 
-async function ensureCustomer(phone: string) {
+async function ensureCustomer(phone: string, name?: string | null) {
   const supabase = getSupabaseAdmin();
   const { data: existing, error: existingError } = await supabase
     .from("customers")
@@ -216,11 +295,26 @@ async function ensureCustomer(phone: string) {
     .maybeSingle<{ id: string; whatsapp_phone: string; name: string | null }>();
 
   if (existingError) throw existingError;
-  if (existing) return existing;
+  const normalizedName = name?.trim() || null;
+  if (existing) {
+    if (normalizedName && existing.name !== normalizedName) {
+      const { data, error } = await supabase
+        .from("customers")
+        .update({ name: normalizedName })
+        .eq("id", existing.id)
+        .select("id, whatsapp_phone, name")
+        .single<{ id: string; whatsapp_phone: string; name: string | null }>();
+
+      if (error) throw error;
+      return data;
+    }
+
+    return existing;
+  }
 
   const { data, error } = await supabase
     .from("customers")
-    .insert({ whatsapp_phone: phone })
+    .insert({ whatsapp_phone: phone, ...(normalizedName ? { name: normalizedName } : {}) })
     .select("id, whatsapp_phone, name")
     .single<{ id: string; whatsapp_phone: string; name: string | null }>();
 
@@ -228,40 +322,20 @@ async function ensureCustomer(phone: string) {
   return data;
 }
 
-async function getCourtesyIssueTarget(eventId: string) {
-  const supabase = getSupabaseAdmin();
-  const { data: sessionSeat, error } = await supabase
-    .from("session_seats")
-    .select(
-      "id, session_id, seat_id, section_id, event_sessions!inner(event_id, starts_at, status), venue_sections!inner(name)",
-    )
-    .eq("event_sessions.event_id", eventId)
-    .in("event_sessions.status", ["scheduled", "sales_open"])
-    .eq("status", "available")
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle<{
-      id: string;
-      session_id: string;
-      seat_id: string;
-      section_id: string;
-    }>();
-
-  if (error) throw error;
-  return sessionSeat ?? null;
-}
-
 async function ensureCourtesyPrice(target: { session_id: string; section_id: string }) {
   const supabase = getSupabaseAdmin();
-  const { data: existing, error: existingError } = await supabase
+  const { data: existingRows, error: existingError } = await supabase
     .from("ticket_prices")
     .select("id")
     .eq("session_id", target.session_id)
     .eq("section_id", target.section_id)
     .eq("ticket_type", "free")
-    .maybeSingle<{ id: string }>();
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .returns<Array<{ id: string }>>();
 
   if (existingError) throw existingError;
+  const existing = existingRows?.[0];
   if (existing) {
     const { error } = await supabase
       .from("ticket_prices")
@@ -291,140 +365,333 @@ async function ensureCourtesyPrice(target: { session_id: string; section_id: str
   return data.id;
 }
 
-async function issueCourtesyForPhone({
-  eventId,
-  phone,
-  issuedByAdminUserId,
-  issuedByAdminPhone,
-}: {
-  eventId: string;
-  phone: string;
-  issuedByAdminUserId: string;
-  issuedByAdminPhone: string;
-}) {
+export async function listCourtesySessions(eventId: string) {
   const supabase = getSupabaseAdmin();
-  const customer = await ensureCustomer(phone);
-  const { data: limit } = await supabase
-    .from("courtesy_limits")
-    .select("max_courtesies")
+  const { data, error } = await supabase
+    .from("event_sessions")
+    .select("id, starts_at, status")
     .eq("event_id", eventId)
-    .maybeSingle<{ max_courtesies: number }>();
+    .in("status", ["scheduled", "sales_open"])
+    .order("starts_at", { ascending: true })
+    .returns<Array<{ id: string; starts_at: string; status: string }>>();
 
-  if (limit && limit.max_courtesies > 0) {
-    const { count, error } = await supabase
-      .from("courtesies")
-      .select("id", { count: "exact", head: true })
-      .eq("event_id", eventId);
+  if (error) return { ok: false as const, error };
 
-    if (error) throw error;
-    if ((count ?? 0) >= limit.max_courtesies) {
-      return {
-        ok: false as const,
-        reason: "limit_reached" as const,
-        phone,
-        limit: limit.max_courtesies,
-        issuedCount: count ?? 0,
-      };
-    }
-  }
-
-  const target = await getCourtesyIssueTarget(eventId);
-  if (!target) return { ok: false as const, reason: "no_available_seat" as const, phone };
-  await ensureCourtesyPrice(target);
-
-  const { data: reservation, error: reserveError } = await supabase.rpc("reserve_seats", {
-    p_customer_id: customer.id,
-    p_conversation_id: null,
-    p_session_id: target.session_id,
-    p_seat_ids: [target.seat_id],
-    p_ticket_type: "free",
-    p_ttl_minutes: 10,
-  });
-
-  if (reserveError || !reservation || typeof reservation !== "object") {
-    throw reserveError ?? new Error("courtesy_reservation_failed");
-  }
-
-  const reservationData = reservation as { order_id?: string };
-  const orderId = reservationData.order_id;
-  if (!orderId) throw new Error("courtesy_order_missing");
-
-  const { error: confirmError } = await supabase.rpc("confirm_paid_ticket_order", {
-    p_order_id: orderId,
-    p_provider: "mercado_pago",
-    p_provider_payment_id: `courtesy_${orderId}`,
-    p_amount_cents: 0,
-    p_paid_at: new Date().toISOString(),
-    p_raw_metadata: {
-      source: "courtesy",
-      method: "courtesy",
-      issued_by_admin_user_id: issuedByAdminUserId,
-      issued_by_admin_phone: issuedByAdminPhone,
-    },
-  });
-
-  if (confirmError) throw confirmError;
-
-  const { data: ticket, error: ticketError } = await supabase
-    .from("tickets")
-    .select("id")
-    .eq("order_id", orderId)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .single<{ id: string }>();
-
-  if (ticketError) throw ticketError;
-
-  const { error: courtesyError } = await supabase.from("courtesies").insert({
-    event_id: eventId,
-    session_id: target.session_id,
-    ticket_id: ticket.id,
-    order_id: orderId,
-    customer_id: customer.id,
-    phone,
-    issued_by_admin_user_id: issuedByAdminUserId,
-    issued_by_admin_phone: issuedByAdminPhone,
-    status: "issued",
-  });
-
-  if (courtesyError) throw courtesyError;
-
-  return { ok: true as const, phone, orderId, ticketId: ticket.id };
+  return {
+    ok: true as const,
+    sessions: (data ?? []).map((session, index) => ({
+      option: index + 1,
+      sessionId: session.id,
+      startsAt: session.starts_at,
+      status: session.status,
+    })),
+  };
 }
 
-export async function issueCourtesies(input: {
-  eventId: string;
-  phones: string[];
-  issuedByAdminUserId: string;
-  issuedByAdminPhone: string;
+export async function listCourtesySections(sessionId: string) {
+  try {
+    const sections = await listAvailableSections(sessionId);
+
+    return {
+      ok: true as const,
+      sections: sections.map((section, index) => ({
+        option: index + 1,
+        sectionId: section.sectionId,
+        sectionName: section.sectionName,
+        hasNumberedSeats: section.hasNumberedSeats,
+        availableSeatsCount: section.availableSeatsCount,
+      })),
+    };
+  } catch (error) {
+    return { ok: false as const, error };
+  }
+}
+
+export function resolveCourtesySessionId(
+  input: string,
+  sessions: AdminCourtesySessionOption[],
+) {
+  const trimmed = input.trim();
+  const option = /^\d+$/.test(trimmed) ? Number(trimmed) : null;
+  if (option) return sessions.find((session) => session.option === option)?.sessionId ?? null;
+  return sessions.find((session) => session.sessionId === trimmed)?.sessionId ?? null;
+}
+
+export function resolveCourtesySectionId(
+  input: string,
+  sections: AdminCourtesySectionOption[],
+) {
+  const trimmed = input.trim();
+  const option = /^\d+$/.test(trimmed) ? Number(trimmed) : null;
+  if (option) return sections.find((section) => section.option === option)?.sectionId ?? null;
+  const normalized = trimmed.toLocaleLowerCase("pt-BR");
+  return (
+    sections.find((section) => section.sectionId === trimmed)?.sectionId ??
+    sections.find((section) => section.sectionName.toLocaleLowerCase("pt-BR") === normalized)
+      ?.sectionId ??
+    null
+  );
+}
+
+async function getCourtesyEventTitle(eventId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("events")
+    .select("title")
+    .eq("id", eventId)
+    .maybeSingle<{ title: string }>();
+
+  if (error) throw error;
+  return data?.title ?? "Evento";
+}
+
+async function getSectionForCourtesy(
+  sessionId: string,
+  sectionId: string,
+): Promise<AvailableSection | null> {
+  const sections = await listAvailableSections(sessionId);
+  return sections.find((section) => section.sectionId === sectionId) ?? null;
+}
+
+function normalizeSeatCode(value: string) {
+  return value.trim().toLocaleUpperCase("pt-BR");
+}
+
+function parseSeatCodes(value: string) {
+  return [
+    ...new Set(
+      value
+        .split(/[\s,;|]+/)
+        .map(normalizeSeatCode)
+        .filter(Boolean),
+    ),
+  ];
+}
+
+async function getSeatIdsForCourtesy({
+  sessionId,
+  section,
+  quantity,
+  seatCodes,
+}: {
+  sessionId: string;
+  section: AvailableSection;
+  quantity: number;
+  seatCodes?: string[];
 }) {
-  const results = [];
-  for (const phone of input.phones) {
-    results.push(
-      await issueCourtesyForPhone({
-        eventId: input.eventId,
-        phone,
-        issuedByAdminUserId: input.issuedByAdminUserId,
-        issuedByAdminPhone: input.issuedByAdminPhone,
-      }),
+  if (section.hasNumberedSeats) {
+    const requestedCodes = (seatCodes ?? []).map(normalizeSeatCode);
+    if (requestedCodes.length !== quantity) {
+      return { ok: false as const, reason: "seat_unavailable" as const };
+    }
+
+    const seatMap = await listSeatMap({ sessionId, sectionId: section.sectionId });
+    const availableByCode = new Map(
+      seatMap.availableSeats.map((seat) => [normalizeSeatCode(seat.seatCode), seat]),
     );
+    const seats = requestedCodes.map((code) => availableByCode.get(code));
+
+    if (seats.some((seat) => !seat)) {
+      return { ok: false as const, reason: "seat_unavailable" as const };
+    }
+
+    return {
+      ok: true as const,
+      seatIds: seats.map((seat) => seat!.seatId),
+    };
   }
 
-  return results;
+  const seatList = await listAvailableSeats({
+    sessionId,
+    sectionId: section.sectionId,
+    limit: quantity,
+  });
+
+  if (seatList.seats.length < quantity) {
+    return { ok: false as const, reason: "not_enough_seats" as const };
+  }
+
+  return {
+    ok: true as const,
+    seatIds: seatList.seats.slice(0, quantity).map((seat) => seat.seatId),
+  };
+}
+
+async function getCourtesyTicketsByIds(ticketIds: string[]) {
+  if (ticketIds.length === 0) return [];
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("tickets")
+    .select(
+      "id, ticket_code, status, used_at, cancelled_at, reservation_items(seat_code), event_sessions(starts_at, events(title, city, state, venues(name))), venue_sections(name)",
+    )
+    .in("id", ticketIds)
+    .order("ticket_code", { ascending: true })
+    .returns<TicketRow[]>();
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function buildCourtesyDeliveryForTicketIds(ticketIds: string[]) {
+  const tickets = await getCourtesyTicketsByIds(ticketIds);
+  const issuedTickets = tickets.filter((ticket) => ticket.status === "issued");
+
+  if (issuedTickets.length === 0) {
+    return { ok: false as const, reason: "not_found" as const };
+  }
+
+  return {
+    ok: true as const,
+    delivery: {
+      message: [
+        "*VOCÊ RECEBEU UMA CORTESIA*",
+        "",
+        issuedTickets.map(formatCourtesyTicket).join("\n\n"),
+        "",
+        "Apresente o QRCode na portaria.",
+      ].join("\n"),
+      qrImages: await Promise.all(
+        issuedTickets.map(async (ticket) => ({
+          imageUrl: await ticketQrImage(ticket),
+          caption: QR_CODE_CAPTION,
+        })),
+      ),
+    } satisfies CourtesyDelivery,
+  };
+}
+
+export async function issueAdminCourtesy(input: {
+  eventId: string;
+  sessionId: string;
+  sectionId: string;
+  quantity: number;
+  seatCodes?: string[];
+  beneficiaryPhone: string;
+  beneficiaryName?: string | null;
+  reason?: string | null;
+  issuedByAdminUserId: string;
+  issuedByAdminPhone: string;
+}): Promise<AdminCourtesyIssueResult> {
+  const supabase = getSupabaseAdmin();
+  if (!Number.isInteger(input.quantity) || input.quantity <= 0 || input.quantity > 10) {
+    return { ok: false, reason: "not_enough_seats" };
+  }
+
+  let customer: Awaited<ReturnType<typeof ensureCustomer>> | null = null;
+  let reservationId: string | null = null;
+  let orderIdForRollback: string | null = null;
+  try {
+    customer = await ensureCustomer(input.beneficiaryPhone, input.beneficiaryName);
+    const section = await getSectionForCourtesy(input.sessionId, input.sectionId);
+    if (!section) return { ok: false, reason: "section_not_found" };
+
+    await ensureCourtesyPrice({
+      session_id: input.sessionId,
+      section_id: input.sectionId,
+    });
+
+    const seats = await getSeatIdsForCourtesy({
+      sessionId: input.sessionId,
+      section,
+      quantity: input.quantity,
+      seatCodes: input.seatCodes,
+    });
+
+    if (!seats.ok) return { ok: false, reason: seats.reason };
+
+    const { data: reservation, error: reserveError } = await supabase.rpc("reserve_seats", {
+      p_customer_id: customer.id,
+      p_conversation_id: null,
+      p_session_id: input.sessionId,
+      p_seat_ids: seats.seatIds,
+      p_ticket_type: "free",
+      p_ttl_minutes: 10,
+    });
+
+    if (reserveError || !reservation || typeof reservation !== "object") {
+      return { ok: false, reason: "reservation_failed", error: reserveError };
+    }
+
+    const reservationData = reservation as { reservation_id?: string; order_id?: string };
+    reservationId = reservationData.reservation_id ?? null;
+    const orderId = reservationData.order_id;
+    if (!orderId) return { ok: false, reason: "reservation_failed" };
+    orderIdForRollback = orderId;
+
+    const { data: issued, error: issueError } = await supabase.rpc("issue_courtesy_order", {
+      p_order_id: orderId,
+      p_issued_by_admin_user_id: input.issuedByAdminUserId,
+      p_issued_by_admin_phone: input.issuedByAdminPhone,
+      p_beneficiary_name: input.beneficiaryName?.trim() || null,
+      p_reason: input.reason?.trim() || null,
+    });
+
+    if (issueError || !issued || typeof issued !== "object") {
+      if (reservationId) {
+        await cancelPendingReservationForCustomer({
+          reservationId,
+          customerId: customer.id,
+          orderId,
+        });
+      }
+
+      return { ok: false, reason: "issue_failed", error: issueError };
+    }
+
+    const issuedData = issued as IssueCourtesyOrderRpcResponse;
+    const ticketIds = (issuedData.tickets ?? []).map((ticket) => ticket.ticket_id);
+    const ticketCodes = (issuedData.tickets ?? []).map((ticket) => ticket.ticket_code);
+    const deliveryResult = await buildCourtesyDeliveryForTicketIds(ticketIds);
+
+    if (!deliveryResult.ok) {
+      return { ok: false, reason: "issue_failed" };
+    }
+
+    return {
+      ok: true,
+      eventTitle: await getCourtesyEventTitle(input.eventId),
+      beneficiaryPhone: input.beneficiaryPhone,
+      beneficiaryName: input.beneficiaryName?.trim() || null,
+      quantity: ticketIds.length,
+      ticketIds,
+      ticketCodes,
+      delivery: deliveryResult.delivery,
+    };
+  } catch (error) {
+    if (reservationId && orderIdForRollback && customer) {
+      await cancelPendingReservationForCustomer({
+        reservationId,
+        customerId: customer.id,
+        orderId: orderIdForRollback,
+      }).catch(() => null);
+    }
+
+    return { ok: false, reason: "issue_failed", error };
+  }
 }
 
 function mapCourtesy(row: CourtesyRow): AdminCourtesyRecord {
   const ticket = first(row.tickets);
   const event = first(row.events);
+  const reservationItem = first(ticket?.reservation_items);
+  const section = first(ticket?.venue_sections);
 
   return {
     courtesyId: row.id,
     eventTitle: event?.title ?? "Evento",
     phone: row.phone,
+    beneficiaryName: row.beneficiary_name,
+    reason: row.reason,
     status: row.status,
+    ticketStatus: ticket?.status ?? null,
     ticketCode: ticket?.ticket_code ?? null,
+    sectionName: section?.name ?? null,
+    seatCode: reservationItem?.seat_code ?? null,
     createdAt: row.created_at,
     cancelledAt: row.cancelled_at,
+    usedAt: ticket?.used_at ?? null,
   };
 }
 
@@ -432,7 +699,9 @@ export async function listCourtesiesForEvent(eventId: string) {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("courtesies")
-    .select("id, phone, status, created_at, cancelled_at, tickets(id, ticket_code), events(title)")
+    .select(
+      "id, phone, beneficiary_name, reason, status, created_at, cancelled_at, tickets(id, ticket_code, status, used_at, cancelled_at, reservation_items(seat_code), venue_sections(name)), events(title)",
+    )
     .eq("event_id", eventId)
     .order("created_at", { ascending: false })
     .returns<CourtesyRow[]>();
@@ -514,6 +783,47 @@ export async function buildCourtesyDeliveryForPhone(phone: string, eventId?: str
   };
 }
 
+export async function findCourtesyTargets(input: {
+  eventId?: string;
+  phone?: string;
+  ticketCode?: string;
+  courtesyId?: string;
+}) {
+  const supabase = getSupabaseAdmin();
+  let query = supabase
+    .from("courtesies")
+    .select(
+      "id, phone, beneficiary_name, reason, status, created_at, cancelled_at, tickets!inner(id, ticket_code, status, used_at, cancelled_at, reservation_items(seat_code), venue_sections(name)), events(title)",
+    )
+    .order("created_at", { ascending: false });
+
+  if (input.eventId) query = query.eq("event_id", input.eventId);
+  if (input.phone) query = query.eq("phone", input.phone);
+  if (input.courtesyId) query = query.eq("id", input.courtesyId);
+  if (input.ticketCode) query = query.eq("tickets.ticket_code", input.ticketCode);
+
+  const { data, error } = await query.returns<CourtesyRow[]>();
+  if (error) return { ok: false as const, error };
+
+  return { ok: true as const, courtesies: (data ?? []).map(mapCourtesy) };
+}
+
+export async function buildCourtesyDeliveryForCourtesyId(courtesyId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("courtesies")
+    .select("ticket_id")
+    .eq("id", courtesyId)
+    .eq("status", "issued")
+    .maybeSingle<{ ticket_id: string | null }>();
+
+  if (error || !data?.ticket_id) {
+    return { ok: false as const, reason: "not_found" as const };
+  }
+
+  return buildCourtesyDeliveryForTicketIds([data.ticket_id]);
+}
+
 export async function cancelCourtesiesForEvent(eventId: string) {
   return cancelCourtesyForEvent(eventId, {});
 }
@@ -525,9 +835,13 @@ export async function cancelCourtesyForEvent(
   const supabase = getSupabaseAdmin();
   let query = supabase
     .from("courtesies")
-    .select("id, ticket_id")
-    .eq("event_id", eventId)
-    .eq("status", "issued");
+    .select(
+      "id, ticket_id, status, tickets!inner(id, ticket_code, status, used_at, reservation_item_id, reservation_items(session_seat_id))",
+    );
+
+  if (eventId) {
+    query = query.eq("event_id", eventId);
+  }
 
   if (target.courtesyId) {
     query = query.eq("id", target.courtesyId);
@@ -543,20 +857,47 @@ export async function cancelCourtesyForEvent(
     query = query.select("id, ticket_id, tickets!inner(ticket_code)");
   }
 
-  const { data, error } = await query.returns<Array<{ id: string; ticket_id: string | null }>>();
+  const { data, error } = await query.returns<
+    Array<{
+      id: string;
+      ticket_id: string | null;
+      status: string;
+      tickets: MaybeArray<{
+        id: string;
+        ticket_code: string;
+        status: string;
+        used_at: string | null;
+        reservation_item_id: string;
+        reservation_items: MaybeArray<{ session_seat_id: string | null }>;
+      }>;
+    }>
+  >();
 
   if (error) return { ok: false as const, error };
-  const ids = (data ?? []).map((row) => row.id);
-  const ticketIds = (data ?? [])
+  const rows = data ?? [];
+  if (rows.length === 0) return { ok: true as const, cancelledCount: 0 };
+
+  const cancellableRows = rows.filter((row) => {
+    const ticket = first(row.tickets);
+    return row.status === "issued" && ticket?.status === "issued" && !ticket.used_at;
+  });
+
+  if (cancellableRows.length === 0) {
+    return { ok: false as const, reason: "not_cancellable" as const };
+  }
+
+  const ids = cancellableRows.map((row) => row.id);
+  const ticketIds = cancellableRows
     .map((row) => row.ticket_id)
     .filter((id): id is string => Boolean(id));
-
-  if (ids.length === 0) return { ok: true as const, cancelledCount: 0 };
+  const sessionSeatIds = cancellableRows
+    .map((row) => first(first(row.tickets)?.reservation_items)?.session_seat_id)
+    .filter((id): id is string => Boolean(id));
 
   const now = new Date().toISOString();
   const { error: courtesyError } = await supabase
     .from("courtesies")
-    .update({ status: "cancelled", cancelled_at: now })
+    .update({ status: "cancelled", cancelled_at: now, cancelled_reason: "admin_cancelled" })
     .in("id", ids);
 
   if (courtesyError) return { ok: false as const, error: courtesyError };
@@ -569,6 +910,21 @@ export async function cancelCourtesyForEvent(
       .eq("status", "issued");
 
     if (ticketError) return { ok: false as const, error: ticketError };
+  }
+
+  if (sessionSeatIds.length > 0) {
+    const { error: seatError } = await supabase
+      .from("session_seats")
+      .update({
+        status: "available",
+        sold_ticket_id: null,
+        current_reservation_id: null,
+        updated_at: now,
+      })
+      .in("id", sessionSeatIds)
+      .eq("status", "sold");
+
+    if (seatError) return { ok: false as const, error: seatError };
   }
 
   return { ok: true as const, cancelledCount: ids.length };
@@ -631,61 +987,6 @@ export async function getCourtesyLimit(eventId: string) {
   return { ok: true as const, limit: data?.max_courtesies ?? 0 };
 }
 
-export function buildCourtesyIssueSummary(results: Awaited<ReturnType<typeof issueCourtesies>>) {
-  const issuedPhones = results
-    .filter((result) => result.ok)
-    .map((result) => result.phone);
-  const limitReachedPhones = results
-    .filter((result) => !result.ok && result.reason === "limit_reached")
-    .map((result) => result.phone);
-  const unavailablePhones = results
-    .filter((result) => !result.ok && result.reason === "no_available_seat")
-    .map((result) => result.phone);
-  const lines: string[] = [];
-  const eventLimitResults = results.filter(
-    (result) => !result.ok && result.reason === "limit_reached",
-  );
-
-  if (
-    results.length > 0 &&
-    eventLimitResults.length === results.length &&
-    eventLimitResults[0]?.limit
-  ) {
-    return [
-      "*NÃO FOI POSSÍVEL EMITIR CORTESIA.*",
-      `O LIMITE DO EVENTO É DE ${eventLimitResults[0].limit} CORTESIAS`,
-      `CORTESIAS JÁ EMITIDAS PARA O EVENTO: ${eventLimitResults[0].issuedCount ?? eventLimitResults[0].limit}`,
-    ].join("\n");
-  }
-
-  if (issuedPhones.length > 0) {
-    lines.push(
-      "*CORTESIA GERADA COM SUCESSO PARA:*",
-      ...issuedPhones.map((phone) => `> ${phone}`),
-    );
-  } else {
-    lines.push("*NENHUMA NOVA CORTESIA GERADA*");
-  }
-
-  if (limitReachedPhones.length > 0) {
-    lines.push(
-      "",
-      "*NÃO EMITIDAS POR LIMITE DO EVENTO:*",
-      ...limitReachedPhones.map((phone) => `> ${phone}`),
-    );
-  }
-
-  if (unavailablePhones.length > 0) {
-    lines.push(
-      "",
-      "*NÃO EMITIDAS POR FALTA DE DISPONIBILIDADE:*",
-      ...unavailablePhones.map((phone) => `> ${phone}`),
-    );
-  }
-
-  return lines.join("\n");
-}
-
 export function buildCourtesyEventsReply(title: string, events: AdminCourtesyEventOption[]) {
   const eventBlocks = events.map((event) =>
     [
@@ -718,14 +1019,98 @@ export function buildCourtesiesListReply(courtesies: AdminCourtesyRecord[]) {
       ? courtesies.map((courtesy, index) =>
           [
             `${index + 1}. ${courtesy.eventTitle}`,
-            `   Telefone: ${courtesy.phone}`,
+            `   Beneficiário: ${courtesy.beneficiaryName ?? "Não informado"}`,
+            `   Telefone: ${maskPhone(courtesy.phone)}`,
             `   Código: ${courtesy.ticketCode ?? "sem ticket"}`,
-            `   Status: ${courtesy.status}`,
+            `   Setor: ${courtesy.sectionName ?? "Setor"}`,
+            courtesy.seatCode ? `   Assento: ${courtesy.seatCode}` : null,
+            `   Status: ${courtesy.ticketStatus ?? courtesy.status}`,
+            courtesy.usedAt ? `   Usada em: ${formatDateTime(courtesy.usedAt)}` : null,
             `   Emitida em: ${formatDateTime(courtesy.createdAt)}`,
+            courtesy.reason ? `   Motivo: ${courtesy.reason}` : null,
           ].join("\n"),
         )
       : ["Nenhuma cortesia emitida para esse evento."]),
   ].join("\n");
+}
+
+export function buildCourtesySessionsReply(sessions: AdminCourtesySessionOption[]) {
+  return [
+    "*ESCOLHA A SESSÃO*",
+    "",
+    ...(sessions.length
+      ? sessions.map(
+          (session) =>
+            `> ${session.option}. ${formatDateTime(session.startsAt)} - ${session.status}`,
+        )
+      : ["Nenhuma sessão disponível para cortesia."]),
+    "",
+    "Responda com o número da sessão.",
+  ].join("\n");
+}
+
+export function buildCourtesySectionsReply(sections: AdminCourtesySectionOption[]) {
+  return [
+    "*ESCOLHA O SETOR*",
+    "",
+    ...(sections.length
+      ? sections.map((section) =>
+          [
+            `> ${section.option}. ${section.sectionName}`,
+            `   Disponíveis: ${section.availableSeatsCount}`,
+            `   Assento marcado: ${section.hasNumberedSeats ? "sim" : "não"}`,
+          ].join("\n"),
+        )
+      : ["Nenhum setor com disponibilidade."]),
+    "",
+    "Responda com o número do setor.",
+  ].join("\n");
+}
+
+export function parseCourtesySeatCodes(value: string) {
+  return parseSeatCodes(value);
+}
+
+export function buildCourtesyAdminSuccess(result: AdminCourtesyIssueSuccess) {
+  return [
+    "*CORTESIA GERADA*",
+    "",
+    `> Evento: ${result.eventTitle}`,
+    `> Beneficiário: ${result.beneficiaryName ?? "Não informado"}`,
+    `> Telefone: ${maskPhone(result.beneficiaryPhone)}`,
+    `> Quantidade: ${result.quantity}`,
+    `> Código(s): ${result.ticketCodes.join(", ")}`,
+    "",
+    "O ingresso foi enviado ao beneficiário pelo WhatsApp.",
+  ].join("\n");
+}
+
+export function buildCourtesyConfirmation(input: {
+  eventTitle?: string | null;
+  sessionLabel?: string | null;
+  sectionName?: string | null;
+  quantity?: number | null;
+  seatCodes?: string[] | null;
+  beneficiaryPhone?: string | null;
+  beneficiaryName?: string | null;
+  reason?: string | null;
+}) {
+  return [
+    "*CONFIRMAR CORTESIA*",
+    "",
+    `> Evento: ${input.eventTitle ?? "Evento"}`,
+    `> Sessão: ${input.sessionLabel ?? "A confirmar"}`,
+    `> Setor: ${input.sectionName ?? "Setor"}`,
+    `> Quantidade: ${input.quantity ?? 0}`,
+    input.seatCodes?.length ? `> Assentos: ${input.seatCodes.join(", ")}` : null,
+    `> Telefone: ${input.beneficiaryPhone ? maskPhone(input.beneficiaryPhone) : "Não informado"}`,
+    `> Beneficiário: ${input.beneficiaryName || "Não informado"}`,
+    input.reason ? `> Motivo: ${input.reason}` : null,
+    "",
+    "Digite CONFIRMAR para emitir a cortesia ou CANCELAR para abandonar.",
+  ]
+    .filter((line): line is string => Boolean(line))
+    .join("\n");
 }
 
 export function courtesyBatchKey(phones: string[]) {

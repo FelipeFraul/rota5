@@ -1953,6 +1953,50 @@ Use temporary data only, and remove it after testing if running against a produc
 - [x] Mixed available/unavailable multi-seat request fails atomically.
 - [x] Concurrent same-seat requests allow only one successful reservation.
 
+## Courtesy Issuance RPC
+
+Ponto 10 adds:
+
+`supabase/migrations/20260526000100_create_issue_courtesy_order_rpc.sql`
+
+This migration extends `public.courtesies` with safe administrative metadata:
+
+- `beneficiary_name`;
+- `reason`;
+- `cancelled_reason`;
+- `cancelled_by_admin_user_id`.
+
+It also creates `public.issue_courtesy_order`, a service-role RPC used only after `public.reserve_seats` creates a zero-value/free reservation. The RPC:
+
+- requires the order to be `pending_payment`;
+- requires order totals and reservation items to be zero value and `ticket_type = free`;
+- marks reservation/order as `paid` for ticket lifecycle purposes;
+- inserts tickets with hashed QR placeholders only;
+- marks matching `session_seats` as `sold`;
+- inserts one `courtesies` row per ticket;
+- does not insert or update `payments`;
+- revokes execution from `public`, `anon`, and `authenticated`;
+- grants execution only to `service_role`.
+
+The local Supabase CLI is not linked in this checkout. Apply the migration through Supabase SQL Editor, then verify:
+
+```sql
+select routine_schema, routine_name
+from information_schema.routines
+where routine_schema = 'public'
+  and routine_name = 'issue_courtesy_order';
+```
+
+Expected result: 1 row.
+
+Permission verification:
+
+- `anon` cannot execute `issue_courtesy_order`;
+- `authenticated` cannot execute `issue_courtesy_order`;
+- `service_role` can execute it.
+
+After the migration is applied, run the Ponto 10 audit with temporary data using the prefix `TEST_ADMIN_COURTESIES`.
+
 ## Table Checklist
 
 - [x] customers

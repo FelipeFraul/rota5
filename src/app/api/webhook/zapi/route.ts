@@ -44,8 +44,8 @@ type ParsedIncomingMessage = {
   mediaUrl: string | null;
 };
 type RouteOutboundMessage =
-  | { type: "text"; body: string }
-  | { type: "image"; imageUrl: string; caption: string };
+  | { type: "text"; body: string; phone?: string }
+  | { type: "image"; imageUrl: string; caption: string; phone?: string };
 
 function getHeaderSecret(request: Request): string | null {
   for (const headerName of SECRET_HEADER_NAMES) {
@@ -572,8 +572,9 @@ export async function POST(request: Request) {
   const sendResults: SendZapiMessageResult[] = [];
 
   for (const outboundMessage of outboundMessages) {
+    const outboundPhone = outboundMessage.phone ?? incoming.phone;
     const sendResult = await sendOutboundMessage({
-      phone: incoming.phone,
+      phone: outboundPhone,
       message: outboundMessage,
     });
 
@@ -582,7 +583,7 @@ export async function POST(request: Request) {
     if (!sendResult.ok) {
       logWarn("Z-API reply failed after inbound message was persisted", {
         conversationId: conversationResult.conversation.id,
-        phoneLast4: incoming.phone.slice(-4),
+        phoneLast4: outboundPhone.slice(-4),
         messageType: outboundMessage.type,
         error: sendResult.error,
       });
