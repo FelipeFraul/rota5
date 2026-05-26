@@ -1273,6 +1273,36 @@ The gate submenu option `1. Check-in neste telefone` asks the admin to choose an
 
 The gate submenu option `2. Definir outro telefone para check-in` asks for event, validator phone, and passphrase. It creates a `gate_accesses` row and shows the passphrase once to the admin in the final confirmation. The passphrase is not stored in plain text and the inbound message containing it is redacted. If the same event/phone already has an `active` or `paused` access, the flow returns `Este telefone já possui acesso de portaria para este evento.` and does not create a duplicate. When the validator sends `Portaria`, the system checks active `gate_accesses`: no access gets a neutral denial; one access asks for the passphrase; more than one access lists events first. A valid hash check creates a new temporary `gate_session`; a wrong passphrase returns only `Palavra-chave inválida.`
 
+### Admin orders and tickets
+
+The `INGRESSOS E PEDIDOS` submenu is available only to roles with `manage_tickets` (`root`/Diretor and `admin`/Gerente). `operator`/Operador is blocked by both numeric menu selection and word navigation.
+
+The submenu options are:
+
+```text
+1. Buscar ingresso por telefone
+2. Buscar ingresso por código
+3. Cancelar reserva pendente
+4. Consultar ticket
+5. Voltar
+6. Sair
+```
+
+Backend service organization:
+
+- `src/lib/tickets/services/adminTickets.ts` loads tickets and pending reservations for admin-safe display, enriches tickets with order/payment summaries, lists recent validation events, and calls `cancel_pending_reservation` for cancellation.
+- The router stores only minimal cancellation context (`reservationId`, `orderId`, `customerId`) while waiting for confirmation. It does not store payment metadata, signed ticket tokens, QR hashes, or raw sensitive payloads.
+
+Safety rules:
+
+- phone search masks the customer phone and does not expose payment provider ids, raw metadata, QR token hashes, order ids, or reservation ids;
+- ticket-code search and ticket consultation do not expose `qr_token_hash`, signed ticket URL/token, payment metadata, or internal ids;
+- validation details mask long validator identifiers;
+- pending-reservation cancellation by phone lists active reservations first and then requires exact `CANCELAR RESERVA`;
+- cancellation uses only `public.cancel_pending_reservation`, so it cancels active unpaid reservations/orders and releases matching reserved `session_seats` transactionally;
+- paid reservations, paid orders, issued/used/cancelled tickets, payments, and sold seats are not changed;
+- this point does not implement refund/estorno, paid-ticket cancellation, or manual resend.
+
 The gate submenu option `3. Ver todos os acessos` asks for event and filter (`Ativos` or `Pausados`) and lists `gate_accesses` with masked phone, optional name, status, and creation date. It never shows passphrases or hashes. Option `4. Revogar acessos` asks for event, lists active/paused accesses, asks for confirmation, and changes the selected access to `paused`; it does not delete the row or remove history.
 
 The `Eventos` submenu is also operational for `root` and `admin` roles; other administrative areas still return controlled construction messages until their workflows are implemented.

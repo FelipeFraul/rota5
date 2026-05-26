@@ -496,6 +496,29 @@ export async function findAdminTicketsByPhone(
   };
 }
 
+export async function findAdminPendingReservationsByInput(
+  input: string,
+): Promise<AdminPendingReservationLookup[]> {
+  const trimmedInput = input.trim();
+  const phone = trimmedInput.replace(/\D/g, "");
+
+  if (isUuid(trimmedInput)) {
+    const reservation =
+      (await findPendingReservationByReservationId(trimmedInput)) ??
+      (await findPendingReservationByOrderId(trimmedInput));
+
+    return reservation ? [reservation] : [];
+  }
+
+  if (phone.length < 10) {
+    return [];
+  }
+
+  const customer = await getCustomerByPhone(phone);
+
+  return customer ? listPendingReservationsByCustomerId(customer.id) : [];
+}
+
 export async function findAdminTicketByCode(
   code: string,
 ): Promise<AdminTicketLookup | null> {
@@ -574,23 +597,30 @@ async function findPendingReservationByOrderId(orderId: string) {
 }
 
 export async function cancelAdminPendingReservation(
-  input: string,
+  input:
+    | string
+    | {
+        reservationId: string;
+        orderId: string;
+        customerId: string;
+      },
 ): Promise<AdminCancelPendingReservationResult> {
   try {
-    const trimmedInput = input.trim();
-    const phone = trimmedInput.replace(/\D/g, "");
     let reservation: AdminPendingReservationLookup | null = null;
 
-    if (isUuid(trimmedInput)) {
-      reservation =
-        (await findPendingReservationByReservationId(trimmedInput)) ??
-        (await findPendingReservationByOrderId(trimmedInput));
-    } else if (phone.length >= 10) {
-      const customer = await getCustomerByPhone(phone);
-      const reservations = customer
-        ? await listPendingReservationsByCustomerId(customer.id)
-        : [];
+    if (typeof input === "string") {
+      const reservations = await findAdminPendingReservationsByInput(input);
       reservation = reservations[0] ?? null;
+    } else {
+      const candidate = await findPendingReservationByReservationId(input.reservationId);
+
+      if (
+        candidate &&
+        candidate.orderId === input.orderId &&
+        candidate.customerId === input.customerId
+      ) {
+        reservation = candidate;
+      }
     }
 
     if (!reservation) {

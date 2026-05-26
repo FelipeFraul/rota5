@@ -673,6 +673,41 @@ Nenhuma reserva pendente encontrada.
 
 Informações excessivas como local, telefone repetido e assento podem ser omitidas quando não forem necessárias.
 
+### 7.2 Busca por código
+
+Busca o ingresso por `ticket_code` e mostra evento, data/hora, setor, código, comprador mascarado quando houver, status, pagamento resumido e validação quando existir.
+
+Não deve mostrar `qr_token_hash`, token assinado, metadados de pagamento, `payment_id` ou ids internos de pedido/reserva.
+
+### 7.3 Cancelar reserva pendente
+
+O cancelamento administrativo de reserva pendente:
+
+- aceita telefone do comprador, id da reserva ou id do pedido;
+- quando recebe telefone, lista reservas pendentes e pede o número da reserva;
+- mostra resumo e exige a confirmação exata `CANCELAR RESERVA`;
+- chama somente a RPC transacional `public.cancel_pending_reservation`;
+- cancela apenas reserva ativa com pedido `draft` ou `pending_payment`;
+- libera os assentos/unidades reservados;
+- não cancela pedido pago, reserva paga, ticket emitido ou pagamento.
+
+Mensagem de sucesso:
+
+```text
+RESERVA CANCELADA
+Os ingressos foram liberados para venda novamente.
+```
+
+### 7.4 Consultar ticket
+
+Mostra detalhes operacionais seguros do ticket: evento, sessão, setor, assento quando houver, comprador mascarado, status, pagamento resumido e últimas tentativas/validações de portaria. Neste ponto a consulta não altera ticket, pagamento, pedido ou reserva.
+
+Limitações deste ponto:
+
+- sem estorno;
+- sem cancelamento de ticket pago;
+- sem reenvio manual de ingresso.
+
 ## 8. Cortesias
 
 Menu:

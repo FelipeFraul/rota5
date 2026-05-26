@@ -38,6 +38,7 @@ export type TicketConversationStep =
   | "admin_order_phone_collecting"
   | "admin_order_code_collecting"
   | "admin_order_cancel_collecting"
+  | "admin_order_cancel_confirm"
   | "admin_ticket_consult_collecting"
   | "admin_events_list"
   | "admin_event_detail"
@@ -274,6 +275,20 @@ export type TicketConversationAdminReports = {
   }>;
 };
 
+export type TicketConversationAdminOrders = {
+  lastReservations?: Array<{
+    option: number;
+    reservationId: string;
+    orderId: string;
+    customerId: string;
+  }>;
+  pendingCancel?: {
+    reservationId: string;
+    orderId: string;
+    customerId: string;
+  };
+};
+
 export type TicketConversationState = {
   step: TicketConversationStep;
   state: TicketConversationStep;
@@ -283,6 +298,7 @@ export type TicketConversationState = {
   adminCourtesies?: TicketConversationAdminCourtesies;
   adminUsers?: TicketConversationAdminUsers;
   adminGate?: TicketConversationAdminGate;
+  adminOrders?: TicketConversationAdminOrders;
   adminReports?: TicketConversationAdminReports;
   gateAccess?: TicketConversationGateAccess;
   lastSearch?: TicketConversationSearch;

@@ -95,6 +95,7 @@ import {
 } from "@/lib/tickets/services/adminSessions";
 import {
   cancelAdminPendingReservation,
+  findAdminPendingReservationsByInput,
   findAdminTicketByCode,
   findAdminTicketsByPhone,
   listAdminTicketValidations,
@@ -1502,11 +1503,13 @@ function isAdminOrdersFlowState(
   | "admin_order_phone_collecting"
   | "admin_order_code_collecting"
   | "admin_order_cancel_collecting"
+  | "admin_order_cancel_confirm"
   | "admin_ticket_consult_collecting" {
   return (
     state === "admin_order_phone_collecting" ||
     state === "admin_order_code_collecting" ||
     state === "admin_order_cancel_collecting" ||
+    state === "admin_order_cancel_confirm" ||
     state === "admin_ticket_consult_collecting"
   );
 }
@@ -2026,12 +2029,37 @@ function formatPaymentStatus(status: string) {
 
 function formatAdminTicketPaymentLabel(ticket: AdminTicketLookup) {
   return [
-    ticket.paymentMethod,
     ticket.paymentProvider,
     ticket.paymentStatus ? formatPaymentStatus(ticket.paymentStatus) : null,
+    ticket.paymentMethod,
   ]
     .filter(Boolean)
     .join(" - ");
+}
+
+function maskAdminPhone(value: string | null | undefined) {
+  const digits = String(value ?? "").replace(/\D/g, "");
+
+  if (digits.length < 4) {
+    return "não informado";
+  }
+
+  return `****${digits.slice(-4)}`;
+}
+
+function maskAdminIdentifier(value: string | null | undefined) {
+  const raw = String(value ?? "").trim();
+  const digits = raw.replace(/\D/g, "");
+
+  if (digits.length >= 8) {
+    return maskAdminPhone(digits);
+  }
+
+  if (raw.length > 12) {
+    return `${raw.slice(0, 4)}...${raw.slice(-4)}`;
+  }
+
+  return raw || "não informado";
 }
 
 function formatAdminTicket(ticket: AdminTicketLookup, index?: number) {
@@ -2050,7 +2078,7 @@ function formatAdminTicket(ticket: AdminTicketLookup, index?: number) {
   ];
 
   if (ticket.customerPhone) {
-    lines.push(`   Telefone: ${ticket.customerPhone}`);
+    lines.push(`   Comprador: ${maskAdminPhone(ticket.customerPhone)}`);
   }
 
   if (ticket.purchasedAt) {
@@ -2140,11 +2168,22 @@ function formatAdminPendingReservation(
     `   Setor: ${reservation.sectionName}`,
     `   Quantidade: ${reservation.quantity}`,
     `   Valor: ${formatCurrencyFromCents(reservation.totalAmountCents)}${totalFeeText}`,
-    `   Pedido: ${reservation.orderId}`,
-    `   Reserva: ${reservation.reservationId}`,
     `   Status: ${formatOrderStatus(reservation.orderStatus)}`,
     `   Expira em: ${formatDateTime(reservation.expiresAt)}`,
   ].join("\n");
+}
+
+function renderAdminPendingReservationCancelConfirm(
+  reservation: AdminPendingReservationLookup,
+) {
+  return withAdminNavigationHint([
+    "*CANCELAR RESERVA PENDENTE*",
+    "",
+    formatAdminPendingReservation(reservation),
+    "",
+    "Para confirmar, responda exatamente:",
+    "CANCELAR RESERVA",
+  ].join("\n"));
 }
 
 function formatAdminTicketValidations(validations: AdminTicketValidation[]) {
@@ -2156,7 +2195,7 @@ function formatAdminTicketValidations(validations: AdminTicketValidation[]) {
     .map((validation, index) => {
       const gate = validation.gateLabel ? ` - ${validation.gateLabel}` : "";
       const validator = validation.validatorIdentifier
-        ? ` (${validation.validatorIdentifier})`
+        ? ` (${maskAdminIdentifier(validation.validatorIdentifier)})`
         : "";
 
       return `${index + 1}. ${formatDateTime(validation.createdAt)} - ${validation.result}${gate}${validator}`;
@@ -3175,6 +3214,23 @@ function withAdminCourtesiesContext(
 
 function getAdminCourtesiesContext(baseContext: TicketConversationState) {
   return baseContext.adminCourtesies ?? {};
+}
+
+function getAdminOrdersContext(baseContext: TicketConversationState) {
+  return baseContext.adminOrders ?? {};
+}
+
+function withAdminOrdersContext(
+  baseContext: TicketConversationState,
+  state: TicketConversationState["state"],
+  adminOrders: NonNullable<TicketConversationState["adminOrders"]>,
+) {
+  return {
+    ...baseContext,
+    step: state,
+    state,
+    adminOrders,
+  };
 }
 
 async function buildAdminEventsListContext(
@@ -7420,6 +7476,7 @@ export async function routeTicketMessage({
 
     if (isAdminOrdersFlowState(baseContext.state)) {
       const ordersSubmenu = ADMIN_SUBMENUS.admin_orders_menu;
+      const adminOrders = getAdminOrdersContext(baseContext);
 
       if (!canAccessAdminMenu(adminUser.role, ordersSubmenu)) {
         return {
@@ -7483,8 +7540,8 @@ export async function routeTicketMessage({
           "*BUSCA POR TELEFONE*",
           "",
           result.customer
-            ? `Telefone: ${result.customer.whatsapp_phone}`
-            : `Telefone: ${phone}`,
+            ? `Telefone: ${maskAdminPhone(result.customer.whatsapp_phone)}`
+            : `Telefone: ${maskAdminPhone(phone)}`,
           "",
           "*INGRESSOS:*",
           ticketBlocks.length > 0
@@ -7558,22 +7615,129 @@ export async function routeTicketMessage({
       }
 
       if (baseContext.state === "admin_order_cancel_collecting") {
-        const result = await cancelAdminPendingReservation(text);
+        const selectedOption =
+          adminOrders.lastReservations?.length && text.trim().match(/^\d+$/)
+            ? Number(text.trim())
+            : null;
+        const selectedReservation = selectedOption
+          ? adminOrders.lastReservations?.find(
+              (reservation) => reservation.option === selectedOption,
+            )
+          : null;
+
+        if (selectedOption && !selectedReservation) {
+          return {
+            reply: withAdminNavigationHint(
+              "Escolha uma reserva da lista ou envie outro telefone/código para buscar.",
+            ),
+            nextContext: withAdminOrdersContext(baseContext, "admin_order_cancel_collecting", {
+              ...adminOrders,
+            }),
+          };
+        }
+
+        const normalizedCancelInput = text.trim();
+        const cancelInputDigits = normalizedCancelInput.replace(/\D/g, "");
+        const shouldListReservationOptions =
+          !selectedReservation &&
+          cancelInputDigits.length >= 10 &&
+          !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+            normalizedCancelInput,
+          );
+        const reservations = selectedReservation
+          ? await findAdminPendingReservationsByInput(selectedReservation.reservationId)
+          : await findAdminPendingReservationsByInput(text);
+
+        if (reservations.length === 0) {
+          return {
+            reply: withAdminNavigationHint(
+              "Nenhuma reserva pendente ativa foi encontrada para esse dado.",
+            ),
+            nextContext: withAdminOrdersContext(baseContext, "admin_order_cancel_collecting", {}),
+          };
+        }
+
+        if (shouldListReservationOptions || (reservations.length > 1 && !selectedReservation)) {
+          const options = reservations.map((reservation, index) => ({
+            option: index + 1,
+            reservationId: reservation.reservationId,
+            orderId: reservation.orderId,
+            customerId: reservation.customerId,
+          }));
+
+          return {
+            reply: withAdminNavigationHint([
+              "*RESERVAS PENDENTES ENCONTRADAS*",
+              "",
+              reservations
+                .map((reservation, index) =>
+                  formatAdminPendingReservation(reservation, index + 1),
+                )
+                .join("\n---\n"),
+              "",
+              "Digite o número da reserva que deseja cancelar.",
+            ].join("\n")),
+            nextContext: withAdminOrdersContext(baseContext, "admin_order_cancel_collecting", {
+              lastReservations: options,
+            }),
+          };
+        }
+
+        const reservation = reservations[0];
+
+        return {
+          reply: renderAdminPendingReservationCancelConfirm(reservation),
+          nextContext: withAdminOrdersContext(baseContext, "admin_order_cancel_confirm", {
+            pendingCancel: {
+              reservationId: reservation.reservationId,
+              orderId: reservation.orderId,
+              customerId: reservation.customerId,
+            },
+          }),
+        };
+      }
+
+      if (baseContext.state === "admin_order_cancel_confirm") {
+        if (normalizeAdminText(text) !== "cancelar reserva") {
+          const pending = adminOrders.pendingCancel;
+          const reservations = pending
+            ? await findAdminPendingReservationsByInput(pending.reservationId)
+            : [];
+          const reservation = reservations[0] ?? null;
+
+          return {
+            reply: reservation
+              ? renderAdminPendingReservationCancelConfirm(reservation)
+              : withAdminNavigationHint(
+                  "Reserva pendente não encontrada. A ação não foi executada.",
+                ),
+            nextContext: reservation
+              ? withAdminOrdersContext(baseContext, "admin_order_cancel_confirm", adminOrders)
+              : withAdminOrdersContext(baseContext, "admin_orders_menu", {}),
+          };
+        }
+
+        const pending = adminOrders.pendingCancel;
+
+        if (!pending) {
+          return {
+            reply: withAdminNavigationHint(
+              "Reserva pendente não encontrada. A ação não foi executada.",
+            ),
+            nextContext: withAdminOrdersContext(baseContext, "admin_orders_menu", {}),
+          };
+        }
+
+        const result = await cancelAdminPendingReservation(pending);
 
         if (!result.ok) {
           return {
             reply: withAdminNavigationHint(
               result.reason === "not_found"
-                ? "Nenhuma reserva pendente ativa foi encontrada para esse dado."
+                ? "Essa reserva não está mais pendente ou não pode ser cancelada."
                 : "Não foi possível cancelar a reserva agora. Tente novamente.",
             ),
-            nextContext: adminReplyContext({
-              state: "admin_order_cancel_collecting",
-              role: adminUser.role,
-              sessionId: adminSession.id,
-              adminUserId: adminUser.id,
-              expiresAt: adminSession.expires_at,
-            }),
+            nextContext: withAdminOrdersContext(baseContext, "admin_orders_menu", {}),
           };
         }
 
@@ -7582,20 +7746,14 @@ export async function routeTicketMessage({
             ? "*RESERVA EXPIRADA*"
             : "*RESERVA CANCELADA*",
           "",
-          formatAdminPendingReservation(result.reservation),
+          "Os ingressos foram liberados para venda novamente.",
           "",
-          `Assentos liberados: ${result.cancelResult.releasedSeatsCount}`,
+          formatAdminPendingReservation(result.reservation),
         ].join("\n");
 
         return {
           reply: withAdminNavigationHint(reply),
-          nextContext: adminReplyContext({
-            state: "admin_orders_menu",
-            role: adminUser.role,
-            sessionId: adminSession.id,
-            adminUserId: adminUser.id,
-            expiresAt: adminSession.expires_at,
-          }),
+          nextContext: withAdminOrdersContext(baseContext, "admin_orders_menu", {}),
         };
       }
     }
