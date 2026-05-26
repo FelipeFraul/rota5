@@ -2036,6 +2036,51 @@ Permission verification:
 
 After the migration is applied, run the Ponto 10 audit with temporary data using the prefix `TEST_ADMIN_COURTESIES`.
 
+## System Closure Audit
+
+Ponto 13 adds:
+
+`.tools/audit_system_closure.mjs`
+
+Run it from the repository root with the real Supabase env loaded locally:
+
+```bash
+node .tools/audit_system_closure.mjs
+```
+
+The audit uses temporary data with the `TEST_SYSTEM_CLOSURE` prefix and validates:
+
+- only `.env.example` is tracked among local env files;
+- `.env.example` has no real secret value, only empty keys and documented non-secret defaults;
+- `SUPABASE_SERVICE_ROLE_KEY` is referenced only by server-side env/admin client code;
+- `ADMIN_AUTH_SECRET_HASH` is absent from runtime code and `.env.example`;
+- `admin_users_active_requires_passphrase_hash` blocks active admins without `passphrase_hash`;
+- active admins with a PBKDF2 hash are accepted;
+- disabled admins may omit `passphrase_hash`;
+- updating a disabled admin without hash to `active` fails;
+- there is at least one active Diretor/root with PBKDF2 `passphrase_hash`;
+- active admins without `passphrase_hash`: 0;
+- `anon` cannot execute sensitive RPCs;
+- `service_role` can reach sensitive RPCs and receives expected functional errors for invalid/no-op payloads;
+- temporary `TEST_SYSTEM_CLOSURE` rows are removed.
+
+Sensitive RPCs checked:
+
+- `reserve_seats`;
+- `expire_reservations`;
+- `confirm_paid_ticket_order`;
+- `validate_ticket_entry`;
+- `cancel_pending_reservation`;
+- `issue_courtesy_order`.
+
+Production negative checks for the final closure:
+
+- `POST /api/webhook/zapi` without secret returns `401`;
+- `POST /api/webhook/payment/mercado-pago` without signature returns `401`;
+- `POST /api/checkout/mercado-pago` without internal secret returns `401`;
+- `GET` and `POST /api/cron/expire-reservations` without bearer secret return `401`;
+- invalid ticket and gate-session pages render safe public pages.
+
 ## Table Checklist
 
 - [x] customers

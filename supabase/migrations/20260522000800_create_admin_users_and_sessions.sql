@@ -1,5 +1,5 @@
 -- Backend-only WhatsApp admin foundation.
--- Admin passphrases are never stored here; authentication uses server env secrets.
+-- Raw admin passphrases are never stored here; active admins use per-user PBKDF2 passphrase_hash.
 create table if not exists public.admin_users (
   id uuid primary key default gen_random_uuid(),
   phone text not null unique,

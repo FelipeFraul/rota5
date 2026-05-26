@@ -112,6 +112,8 @@ Ponto 11 implementou e auditou o módulo `Administradores` para Diretor/root. O 
 
 Ponto 12 implementou e auditou `Relatórios` como módulo consultivo pelo WhatsApp para Diretor, Gerente e Operador. O menu tem resumo geral, vendas por evento, vendas por setor, pagamentos pendentes, reservas expiradas/canceladas, check-ins da portaria, ingressos usados/não usados e cortesias, além de Voltar e Sair. O resumo geral usa período sem escolher evento; os demais relatórios pedem evento e período. Períodos aceitos: hoje, últimos 7 dias, últimos 30 dias, todo o período e intervalo personalizado simples. O serviço `adminReports.ts` usa Supabase query builder e não chama RPCs de mutação nem altera pedidos, pagamentos, reservas, tickets, assentos, portaria ou cortesias. As respostas mascaram telefones e não mostram `payment_id`, metadata, `qr_token_hash`, tokens, `customer_id`, `order_id` bruto ou service role. A auditoria `TEST_ADMIN_REPORTS` validou permissões, todos os relatórios, segurança de dados, navegação Voltar/Cancelar/Sair, ausência de mutação operacional e cleanup completo.
 
+Ponto 13 fecha a auditoria geral de segurança, consistência e pontos frágeis. A auditoria `TEST_SYSTEM_CLOSURE` valida que apenas `.env.example` está versionado, que `.env.example` não tem segredo real, que `SUPABASE_SERVICE_ROLE_KEY` aparece só em código server-side, que `ADMIN_AUTH_SECRET_HASH` não existe mais no runtime, que a constraint `admin_users_active_requires_passphrase_hash` bloqueia admin ativo sem hash individual, que há Diretor/root ativo com hash PBKDF2, que não existem admins ativos sem `passphrase_hash`, que RPCs sensíveis negam `anon` e aceitam `service_role`, e que não sobra dado temporário do prefixo. A revisão também cobre webhooks/cron/checkout sem segredo em produção, buscas por vazamento de secrets, cleanup de scripts temporários e a atualização do checklist de produção.
+
 ## Next Steps
 
 1. Fundação do projeto
@@ -142,4 +144,6 @@ Ponto 12 implementou e auditou `Relatórios` como módulo consultivo pelo WhatsA
 26. Ingressos e pedidos - criado e validado no Supabase real. Busca por telefone/código, consulta segura de ticket e cancelamento transacional de reserva pendente via RPC estão prontos; estorno, cancelamento de ticket pago e reenvio manual ficam fora deste ponto.
 27. Cortesias - criado e validado no Supabase real. Emissão, listagem, reenvio, cancelamento, portaria e cleanup foram auditados com `TEST_ADMIN_COURTESIES`.
 28. Administradores - criado e validado no Supabase real. Listagem segura, criação, reativação, alteração de nível, desativação, bloqueios de segurança e cleanup foram auditados com `TEST_ADMIN_USERS_FLOW`.
-29. Próximas evoluções: relatórios, cancelamento/troca, reenvio manual de ingresso pago, filtro wrong_event e QR visual/PDF
+29. Relatórios consultivos - criado e validado no Supabase real com `TEST_ADMIN_REPORTS`.
+30. Auditoria geral de segurança e consistência - criada e validada com `TEST_SYSTEM_CLOSURE`.
+31. Próximas evoluções: cancelamento/troca, reenvio manual de ingresso pago, filtro `wrong_event`, exportação de relatórios e QR visual/PDF.

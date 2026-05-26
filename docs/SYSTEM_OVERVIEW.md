@@ -1030,19 +1030,32 @@ Mostra cortesias emitidas, usadas, não usadas e canceladas, além dos últimos 
 - Validação de portaria usa RPC transacional e bloqueia reuso.
 - QRCode/token bruto não deve ser armazenado em texto puro.
 - Admin por WhatsApp deve exigir sessão autenticada.
-- Senha/palavra-chave de admin deve ser armazenada com hash.
+- Senha/palavra-chave de admin deve ser individual e armazenada apenas como hash PBKDF2 em `admin_users.passphrase_hash`.
+- Não existe senha geral administrativa nem fallback por `ADMIN_AUTH_SECRET_HASH`.
+- Admin ativo sem `passphrase_hash` é bloqueado pela aplicação e pela constraint `admin_users_active_requires_passphrase_hash`.
 - Mensagens sensíveis não devem gravar senha em texto.
-- O número root principal pode ver tudo; produtores/artistas devem ver apenas seus eventos.
+- Diretor/root pode ver tudo; Gerente e Operador seguem permissões por módulo.
 
 ## 13. Pontos ainda frágeis ou a revisar
 
-- Revisar todos os caminhos de `Voltar` para garantir uma tela por vez.
-- Refinar desenho visual dos mapas de assentos para teatros com lacunas e deslocamentos.
-- Garantir que criação de evento sempre passe por setores/assentos quando for assento marcado.
-- Refinar edição de dados para sempre ser simples e separada por campo.
-- Revisar todos os relatórios para manter layout consistente.
-- Confirmar fluxo completo de duplicar evento.
-- Confirmar permissões reais por perfil em todos os menus/submenus.
-- Confirmar comportamento de cortesias em lote sem disparo automático.
-- Criar/validar reenvio manual de cortesia/ticket.
-- Revisar cancelamento de reservas e mensagens de expiração em todos os estados.
+- Executar um pagamento real controlado de baixo valor antes de operação pública ampla.
+- Implementar reenvio manual de ingresso pago.
+- Implementar cancelamento/troca/estorno com regras explícitas.
+- Implementar filtro `wrong_event` para portaria quando a validação precisar ser restrita a evento/sessão.
+- Implementar exportação de relatórios fora do WhatsApp, se necessário.
+- Refinar mapas de assento para plantas complexas com lacunas e deslocamentos.
+- Evoluir QR/PDF visual sem salvar token puro, base64 ou segredo.
+
+## 14. Auditoria de fechamento
+
+O Ponto 13 usa `.tools/audit_system_closure.mjs` com o prefixo `TEST_SYSTEM_CLOSURE` para validar a base de segurança:
+
+- somente `.env.example` é versionado;
+- `.env.example` não contém segredo real;
+- `SUPABASE_SERVICE_ROLE_KEY` aparece apenas em código server-side;
+- `ADMIN_AUTH_SECRET_HASH` não existe no runtime nem no exemplo de env;
+- admin ativo sem senha individual é recusado pela constraint do banco;
+- há Diretor/root ativo com hash PBKDF2;
+- não há admin ativo sem `passphrase_hash`;
+- RPCs sensíveis negam `anon` e são alcançáveis por `service_role`;
+- o teste limpa dados temporários e confirma ausência de resíduos.
