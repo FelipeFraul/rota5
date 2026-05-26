@@ -83,6 +83,7 @@ import {
   getAdminSectionUsage,
   listAdminSections,
   updateAdminSection,
+  updateAdminSectionCapacity,
   type AdminSectionStatus,
 } from "@/lib/tickets/services/adminSections";
 import {
@@ -3053,6 +3054,22 @@ function renderAdminEventEditMenu(eventTitle?: string) {
   ].join("\n"));
 }
 
+function renderAdminEventDuplicateConfirmReply(event: AdminEventDetails) {
+  return withAdminNavigationHint([
+    "*DUPLICAR EVENTO*",
+    "",
+    `> Origem: ${event.title}`,
+    `> Novo nome: ${event.title} - CÓPIA`,
+    `> Sessões: ${event.sessions.length}`,
+    `> Setores/lugares: ${event.sections.length}`,
+    "",
+    "O evento duplicado será criado como rascunho.",
+    "Reservas, pedidos, pagamentos, tickets, cortesias e acessos de portaria não serão duplicados.",
+    "",
+    "Responda CONFIRMAR ou CANCELAR.",
+  ].join("\n"));
+}
+
 function renderAdminEventPublishSelectReply(eventTitle?: string) {
   return withAdminNavigationHint([
     eventTitle
@@ -3557,42 +3574,10 @@ async function handleAdminEventsFlow({
         };
       }
 
-      const duplicateResult = await duplicateAdminEvent({
-        eventId,
-        createdByAdminUserId: scope.adminUserId,
-        createdByAdminPhone: scope.adminPhone,
-      });
-
-      if (!duplicateResult.ok) {
-        return {
-          reply: "Não consegui duplicar esse evento agora.",
-          nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
-        };
-      }
-
-      const duplicatedDetails = await getScopedAdminEventDetails(
-        duplicateResult.eventId,
-        scope,
-      );
-
       return {
-        reply: [
-          "*EVENTO DUPLICADO*",
-          `> Origem: ${details.event.title}`,
-          duplicatedDetails.ok
-            ? `> Novo evento: ${duplicatedDetails.event.title}`
-            : "> Novo evento criado como rascunho",
-          `> Sessões copiadas: ${duplicateResult.sessionsCount}`,
-          `> Setores copiados: ${duplicateResult.createdSectionsCount}`,
-          `> Assentos/unidades copiados: ${duplicateResult.createdSeatsCount}`,
-          `> Valores copiados: ${duplicateResult.createdPricesCount}`,
-          "",
-          renderAdminEventEditMenu(
-            duplicatedDetails.ok ? duplicatedDetails.event.title : undefined,
-          ),
-        ].join("\n"),
-        nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
-          selectedEventId: duplicateResult.eventId,
+        reply: renderAdminEventDuplicateConfirmReply(details.event),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_duplicate_confirm", {
+          selectedEventId: eventId,
         }),
       };
     }
@@ -3602,6 +3587,87 @@ async function handleAdminEventsFlow({
     }
 
     return showAdminEventDetails(baseContext, scope, eventId);
+  }
+
+  if (baseContext.state === "admin_event_duplicate_confirm") {
+    const eventId = adminEvents.selectedEventId;
+
+    if (!eventId) {
+      return {
+        reply: renderAdminEventsMenu(),
+        nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
+      };
+    }
+
+    if (isBackText(text) || isCancelText(text)) {
+      return {
+        reply: renderAdminEventsMenu(),
+        nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
+      };
+    }
+
+    if (!isConfirmText(text)) {
+      const details = await getScopedAdminEventDetails(eventId, scope);
+
+      return {
+        reply: details.ok
+          ? renderAdminEventDuplicateConfirmReply(details.event)
+          : "Não encontrei esse evento.",
+        nextContext: withAdminEventsContext(
+          baseContext,
+          "admin_event_duplicate_confirm",
+          adminEvents,
+        ),
+      };
+    }
+
+    const details = await getScopedAdminEventDetails(eventId, scope);
+
+    if (!details.ok) {
+      return {
+        reply: "Não encontrei esse evento.",
+        nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
+      };
+    }
+
+    const duplicateResult = await duplicateAdminEvent({
+      eventId,
+      createdByAdminUserId: scope.adminUserId,
+      createdByAdminPhone: scope.adminPhone,
+    });
+
+    if (!duplicateResult.ok) {
+      return {
+        reply: "Não consegui duplicar esse evento agora.",
+        nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
+      };
+    }
+
+    const duplicatedDetails = await getScopedAdminEventDetails(
+      duplicateResult.eventId,
+      scope,
+    );
+
+    return {
+      reply: [
+        "*EVENTO DUPLICADO*",
+        `> Origem: ${details.event.title}`,
+        duplicatedDetails.ok
+          ? `> Novo evento: ${duplicatedDetails.event.title}`
+          : "> Novo evento criado como rascunho",
+        `> Sessões copiadas: ${duplicateResult.sessionsCount}`,
+        `> Setores copiados: ${duplicateResult.createdSectionsCount}`,
+        `> Assentos/unidades copiados: ${duplicateResult.createdSeatsCount}`,
+        `> Valores copiados: ${duplicateResult.createdPricesCount}`,
+        "",
+        renderAdminEventEditMenu(
+          duplicatedDetails.ok ? duplicatedDetails.event.title : undefined,
+        ),
+      ].join("\n"),
+      nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
+        selectedEventId: duplicateResult.eventId,
+      }),
+    };
   }
 
   if (baseContext.state === "admin_event_detail") {
@@ -4671,8 +4737,26 @@ async function handleAdminEventsFlow({
       );
     }
 
-    if (numericOption === 8 || numericOption === 9) {
+    if (numericOption === 8) {
       return showAdminEventSectionsMenu(baseContext, scope, eventId);
+    }
+
+    if (numericOption === 9) {
+      const details = await getScopedAdminEventDetails(eventId, scope);
+
+      return {
+        reply: [
+          details.ok ? await renderSectionsList(eventId, scope) : "Não encontrei esse evento.",
+          "",
+          "Envie: número do setor | nova carga.",
+          "Ex: 1 | 500",
+          "",
+          "A redução só bloqueia unidades disponíveis. Vendidos e reservados não são alterados.",
+        ].join("\n"),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_capacity_collecting", {
+          selectedEventId: eventId,
+        }),
+      };
     }
 
     if (numericOption === 10) {
@@ -4794,6 +4878,9 @@ async function handleAdminEventsFlow({
       }
       value = { field, status };
     } else if (field === "image_url") {
+      if (["pular", "remover", "sem", "nenhum", "nao", "não"].includes(normalizeAdminText(text))) {
+        value = { field, imageUrl: null };
+      } else {
       const imageUrl = normalizeEventImageUrl(mediaUrl ?? text);
       if (!imageUrl) {
         return {
@@ -4802,6 +4889,7 @@ async function handleAdminEventsFlow({
         };
       }
       value = { field, imageUrl };
+      }
     } else if (field === "starts_at") {
       const details = await getScopedAdminEventDetails(eventId, scope);
       const [sessionOptionRaw, startsAtRaw] = text.includes("|")
@@ -4966,8 +5054,10 @@ async function handleAdminEventsFlow({
         values = { status };
       }
     } else if (field === "image_url") {
-      const imageUrl = normalizeEventImageUrl(String(draft.imageUrl ?? ""));
-      if (imageUrl) values = { image_url: imageUrl };
+      const imageValue = draft.imageUrl;
+      const imageUrl =
+        imageValue === null ? null : normalizeEventImageUrl(String(imageValue ?? ""));
+      if (imageValue === null || imageUrl) values = { image_url: imageUrl };
     } else if (field === "description") {
       values = { description: String(draft.description ?? "").trim() || null };
     } else if (field === "starts_at") {
@@ -5545,6 +5635,17 @@ async function handleAdminEventOperationalSubmenus({
       return showAdminEventSectionsMenu(baseContext, scope, eventId);
     }
 
+    if (baseContext.state === "admin_event_capacity_collecting") {
+      const details = await getScopedAdminEventDetails(eventId, scope);
+
+      return {
+        reply: renderAdminEventEditMenu(details.ok ? details.event.title : undefined),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
+          selectedEventId: eventId,
+        }),
+      };
+    }
+
     if (
       baseContext.state === "admin_event_price_create_collecting" ||
       baseContext.state === "admin_event_price_edit_collecting"
@@ -5931,6 +6032,146 @@ async function handleAdminEventOperationalSubmenus({
       };
     }
     if (numericOption === 7) return showAdminEventDetails(baseContext, scope, eventId);
+  }
+
+  if (baseContext.state === "admin_event_capacity_collecting") {
+    if (adminEvents.mode === "confirm_edit_capacity") {
+      if (isCancelText(text)) {
+        const details = await getScopedAdminEventDetails(eventId, scope);
+
+        return {
+          reply: renderAdminEventEditMenu(details.ok ? details.event.title : undefined),
+          nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
+            selectedEventId: eventId,
+          }),
+        };
+      }
+
+      if (!isConfirmText(text)) {
+        return {
+          reply: "Responda CONFIRMAR ou CANCELAR.",
+          nextContext: withAdminEventsContext(
+            baseContext,
+            "admin_event_capacity_collecting",
+            adminEvents,
+          ),
+        };
+      }
+
+      const details = await getScopedAdminEventDetails(eventId, scope);
+      const sectionId = String(adminEvents.draft?.sectionId ?? "");
+      const newCapacity = Number(adminEvents.draft?.newCapacity);
+
+      if (!details.ok || !details.event.venueId || !sectionId || !Number.isInteger(newCapacity)) {
+        return {
+          reply: "Os dados da carga ficaram inválidos. Comece novamente.",
+          nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
+            selectedEventId: eventId,
+          }),
+        };
+      }
+
+      const result = await updateAdminSectionCapacity({
+        venueId: details.event.venueId,
+        sectionId,
+        sessionIds: details.event.sessions.map((session) => session.sessionId),
+        newCapacity,
+      });
+
+      if (!result.ok && result.reason === "capacity_below_busy") {
+        return {
+          reply:
+            "Não é possível reduzir para esse valor porque já existem ingressos vendidos ou reservados.",
+          nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
+            selectedEventId: eventId,
+          }),
+        };
+      }
+
+      if (!result.ok && result.reason === "numbered_section") {
+        return {
+          reply:
+            "Esse setor usa assento marcado. Ajuste a carga pelo fluxo de edição de assentos.",
+          nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
+            selectedEventId: eventId,
+          }),
+        };
+      }
+
+      const updatedDetails = await getScopedAdminEventDetails(eventId, scope);
+
+      return {
+        reply: result.ok
+          ? [
+              "Carga atualizada.",
+              `> Carga anterior: ${result.currentCapacity}`,
+              `> Nova carga: ${result.newCapacity}`,
+              `> Unidades criadas: ${result.createdCount}`,
+              `> Unidades bloqueadas: ${result.blockedCount}`,
+              "",
+              renderAdminEventEditMenu(updatedDetails.ok ? updatedDetails.event.title : undefined),
+            ].join("\n")
+          : "Não consegui atualizar a carga.",
+        nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
+          selectedEventId: eventId,
+        }),
+      };
+    }
+
+    const details = await getScopedAdminEventDetails(eventId, scope);
+    const [sectionNumberRaw, capacityRaw] = text.split("|").map((part) => part.trim());
+    const section = details.ok ? selectSectionByOption(details.event, sectionNumberRaw ?? "") : null;
+    const newCapacity = Number(capacityRaw);
+
+    if (
+      !details.ok ||
+      !section ||
+      !Number.isInteger(newCapacity) ||
+      newCapacity < 0 ||
+      newCapacity > 5000
+    ) {
+      return {
+        reply: [
+          "Dados inválidos. Envie: número do setor | nova carga.",
+          "Ex: 1 | 500",
+        ].join("\n"),
+        nextContext: withAdminEventsContext(
+          baseContext,
+          "admin_event_capacity_collecting",
+          adminEvents,
+        ),
+      };
+    }
+
+    if (section.hasNumberedSeats) {
+      return {
+        reply: "Esse setor usa assento marcado. Ajuste a carga pelo fluxo de edição de assentos.",
+        nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
+          selectedEventId: eventId,
+        }),
+      };
+    }
+
+    return {
+      reply: [
+        "Confirmar alteração de carga?",
+        `Setor: ${section.name}`,
+        `Carga atual: ${section.capacity ?? "não definida"}`,
+        `Nova carga: ${newCapacity}`,
+        "",
+        "A redução só bloqueia unidades disponíveis. Vendidos e reservados não são alterados.",
+        "",
+        "Responda CONFIRMAR ou CANCELAR.",
+      ].join("\n"),
+      nextContext: withAdminEventsContext(baseContext, "admin_event_capacity_collecting", {
+        ...adminEvents,
+        mode: "confirm_edit_capacity",
+        draft: {
+          sectionId: section.sectionId,
+          newCapacity,
+        },
+      }),
+    };
   }
 
   if (baseContext.state === "admin_event_section_create_collecting") {

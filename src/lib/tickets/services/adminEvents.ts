@@ -986,23 +986,44 @@ export async function duplicateAdminEvent(input: {
   const { data: sourceEvent, error: sourceEventError } = await supabase
     .from("events")
     .select(
-      "id, title, artist_name, description, city, state, image_url, venue_id",
+      "id, title, artist_name, description, city, state, image_url, venue_id, venues(name)",
     )
     .eq("id", input.eventId)
-    .single<Pick<EventRow, "id" | "title" | "artist_name" | "description" | "city" | "state" | "image_url" | "venue_id">>();
+    .single<Pick<EventRow, "id" | "title" | "artist_name" | "description" | "city" | "state" | "image_url" | "venue_id" | "venues">>();
 
   if (sourceEventError || !sourceEvent) {
     return { ok: false as const, reason: "source_not_found" as const, error: sourceEventError };
   }
 
+  let duplicatedVenueId = sourceEvent.venue_id;
+
+  if (sourceEvent.venue_id && sourceEvent.venues?.name) {
+    const { data: newVenue, error: newVenueError } = await supabase
+      .from("venues")
+      .insert({
+        name: sourceEvent.venues.name,
+        city: sourceEvent.city,
+        state: sourceEvent.state,
+        status: "active",
+      })
+      .select("id")
+      .single<{ id: string }>();
+
+    if (newVenueError || !newVenue) {
+      return { ok: false as const, reason: "venue_not_created" as const, error: newVenueError };
+    }
+
+    duplicatedVenueId = newVenue.id;
+  }
+
   const eventPayload = {
-    title: `${sourceEvent.title} (cópia)`,
+    title: `${sourceEvent.title} - CÓPIA`,
     artist_name: sourceEvent.artist_name,
     description: sourceEvent.description,
     city: sourceEvent.city,
     state: sourceEvent.state,
     image_url: sourceEvent.image_url,
-    venue_id: sourceEvent.venue_id,
+    venue_id: duplicatedVenueId,
     status: "draft" as AdminEventStatus,
   };
   const eventOwnerPayload = {
@@ -1044,7 +1065,7 @@ export async function duplicateAdminEvent(input: {
 
   const sessionRows = (sourceSessions ?? []).map((session) => ({
     event_id: newEvent.id,
-    venue_id: session.venue_id,
+    venue_id: duplicatedVenueId ?? session.venue_id,
     starts_at: session.starts_at,
     status: "scheduled" as AdminSessionStatus,
   }));
@@ -1099,23 +1120,31 @@ export async function duplicateAdminEvent(input: {
     };
   }
 
-  const sectionIds = Array.from(
+  let sectionIds = Array.from(
     new Set([
       ...(sourcePrices ?? []).flatMap((price) => price.section_id ? [price.section_id] : []),
       ...(sourceSessionSeats ?? []).map((seat) => seat.section_id),
     ]),
   );
-  const { data: sourceSections, error: sourceSectionsError } = sectionIds.length
+  const { data: sourceSections, error: sourceSectionsError } = sourceEvent.venue_id
     ? await supabase
+        .from("venue_sections")
+        .select("id, venue_id, name, slug, capacity, has_numbered_seats, status")
+        .eq("venue_id", sourceEvent.venue_id)
+        .returns<SectionRow[]>()
+    : sectionIds.length
+      ? await supabase
         .from("venue_sections")
         .select("id, venue_id, name, slug, capacity, has_numbered_seats, status")
         .in("id", sectionIds)
         .returns<SectionRow[]>()
-    : { data: [] as SectionRow[], error: null };
+      : { data: [] as SectionRow[], error: null };
 
   if (sourceSectionsError) {
     return { ok: false as const, reason: "sections_not_read" as const, error: sourceSectionsError };
   }
+
+  sectionIds = (sourceSections ?? []).map((section) => section.id);
 
   const newSectionByOld = new Map<string, string>();
   let createdSectionsCount = 0;
@@ -1123,13 +1152,13 @@ export async function duplicateAdminEvent(input: {
 
   for (const section of sourceSections ?? []) {
     const slug = await getUniqueSectionSlug(
-      section.venue_id,
+      duplicatedVenueId ?? section.venue_id,
       `${section.slug}-copia`,
     );
     const { data: newSection, error: newSectionError } = await supabase
       .from("venue_sections")
       .insert({
-        venue_id: section.venue_id,
+        venue_id: duplicatedVenueId ?? section.venue_id,
         name: section.name,
         slug,
         capacity: section.capacity,
@@ -1164,7 +1193,7 @@ export async function duplicateAdminEvent(input: {
     if (!sectionId) return [];
 
     return [{
-      venue_id: sourceEvent.venue_id,
+      venue_id: duplicatedVenueId,
       section_id: sectionId,
       row_label: seat.row_label,
       seat_number: seat.seat_number,
@@ -1667,6 +1696,228 @@ export async function updateAdminSection(
     .eq("id", sectionId);
 
   return error ? { ok: false as const, error } : { ok: true as const };
+}
+
+export async function updateAdminSectionCapacity(input: {
+  venueId: string;
+  sectionId: string;
+  sessionIds: string[];
+  newCapacity: number;
+}) {
+  const supabase = getSupabaseAdmin();
+  const { data: section, error: sectionError } = await supabase
+    .from("venue_sections")
+    .select("id, capacity, has_numbered_seats")
+    .eq("id", input.sectionId)
+    .eq("venue_id", input.venueId)
+    .single<{ id: string; capacity: number | null; has_numbered_seats: boolean }>();
+
+  if (sectionError || !section) {
+    return { ok: false as const, reason: "section_not_found" as const, error: sectionError };
+  }
+
+  if (section.has_numbered_seats) {
+    return { ok: false as const, reason: "numbered_section" as const };
+  }
+
+  const { data: seats, error: seatsError } = await supabase
+    .from("seats")
+    .select("id, seat_code, status")
+    .eq("section_id", input.sectionId)
+    .order("seat_number", { ascending: true })
+    .returns<Array<{ id: string; seat_code: string; status: AdminSeatStatus }>>();
+
+  if (seatsError) {
+    return { ok: false as const, reason: "seats_not_read" as const, error: seatsError };
+  }
+
+  const activeSeats = (seats ?? []).filter((seat) => seat.status === "active");
+  const currentCapacity = activeSeats.length;
+
+  if (input.newCapacity === currentCapacity) {
+    const { error } = await supabase
+      .from("venue_sections")
+      .update({ capacity: input.newCapacity })
+      .eq("id", input.sectionId);
+
+    return error
+      ? { ok: false as const, reason: "section_not_updated" as const, error }
+      : {
+          ok: true as const,
+          currentCapacity,
+          newCapacity: input.newCapacity,
+          createdCount: 0,
+          blockedCount: 0,
+        };
+  }
+
+  if (input.newCapacity > currentCapacity) {
+    const toCreate = input.newCapacity - currentCapacity;
+    const sectionSlug =
+      (seats?.[0]?.seat_code ?? "ENTRADA").replace(/-\d+$/i, "") || "ENTRADA";
+    const existingCodes = new Set((seats ?? []).map((seat) => seat.seat_code));
+    const seatRows = Array.from({ length: toCreate }, (_, index) => {
+      let nextIndex = currentCapacity + index + 1;
+      let seatCode = buildInventorySeatCode(sectionSlug, nextIndex);
+
+      while (existingCodes.has(seatCode)) {
+        nextIndex += 1;
+        seatCode = buildInventorySeatCode(sectionSlug, nextIndex);
+      }
+
+      existingCodes.add(seatCode);
+
+      return {
+        venue_id: input.venueId,
+        section_id: input.sectionId,
+        row_label: null,
+        seat_number: String(nextIndex),
+        seat_code: seatCode,
+        map_x: null,
+        map_y: null,
+        status: "active" as AdminSeatStatus,
+      };
+    });
+
+    const { data: createdSeats, error: createSeatsError } = await supabase
+      .from("seats")
+      .insert(seatRows)
+      .select("id, section_id")
+      .returns<Array<{ id: string; section_id: string }>>();
+
+    if (createSeatsError) {
+      return { ok: false as const, reason: "seats_not_created" as const, error: createSeatsError };
+    }
+
+    const sessionSeatRows =
+      createdSeats?.flatMap((seat) =>
+        input.sessionIds.map((sessionId) => ({
+          session_id: sessionId,
+          seat_id: seat.id,
+          section_id: seat.section_id,
+          status: "available",
+        })),
+      ) ?? [];
+
+    const { error: sessionSeatsError } = sessionSeatRows.length
+      ? await supabase.from("session_seats").insert(sessionSeatRows)
+      : { error: null };
+
+    if (sessionSeatsError) {
+      return {
+        ok: false as const,
+        reason: "session_seats_not_created" as const,
+        error: sessionSeatsError,
+      };
+    }
+
+    const { error: updateSectionError } = await supabase
+      .from("venue_sections")
+      .update({ capacity: input.newCapacity })
+      .eq("id", input.sectionId);
+
+    return updateSectionError
+      ? { ok: false as const, reason: "section_not_updated" as const, error: updateSectionError }
+      : {
+          ok: true as const,
+          currentCapacity,
+          newCapacity: input.newCapacity,
+          createdCount: sessionSeatRows.length,
+          blockedCount: 0,
+        };
+  }
+
+  const reduceBy = currentCapacity - input.newCapacity;
+  const candidateSeats = activeSeats.slice().reverse();
+  const candidateSeatIds = candidateSeats.map((seat) => seat.id);
+  const { data: candidateSessionSeats, error: sessionSeatsReadError } = candidateSeatIds.length
+    ? await supabase
+        .from("session_seats")
+        .select("id, seat_id, status")
+        .in("seat_id", candidateSeatIds)
+        .in("session_id", input.sessionIds)
+        .returns<Array<{ id: string; seat_id: string; status: string }>>()
+    : { data: [] as Array<{ id: string; seat_id: string; status: string }>, error: null };
+
+  if (sessionSeatsReadError) {
+    return {
+      ok: false as const,
+      reason: "session_seats_not_read" as const,
+      error: sessionSeatsReadError,
+    };
+  }
+
+  const sessionSeatsBySeat = new Map<string, Array<{ id: string; status: string }>>();
+  for (const sessionSeat of candidateSessionSeats ?? []) {
+    const list = sessionSeatsBySeat.get(sessionSeat.seat_id) ?? [];
+    list.push({ id: sessionSeat.id, status: sessionSeat.status });
+    sessionSeatsBySeat.set(sessionSeat.seat_id, list);
+  }
+
+  const removableSeats = candidateSeats.filter((seat) => {
+    const sessionSeats = sessionSeatsBySeat.get(seat.id) ?? [];
+    return (
+      sessionSeats.length === input.sessionIds.length &&
+      sessionSeats.every((sessionSeat) => sessionSeat.status === "available")
+    );
+  });
+
+  if (removableSeats.length < reduceBy) {
+    return {
+      ok: false as const,
+      reason: "capacity_below_busy" as const,
+      currentCapacity,
+      newCapacity: input.newCapacity,
+    };
+  }
+
+  const seatsToBlock = removableSeats.slice(0, reduceBy);
+  const sessionSeatIdsToBlock = seatsToBlock.flatMap((seat) =>
+    (sessionSeatsBySeat.get(seat.id) ?? []).map((sessionSeat) => sessionSeat.id),
+  );
+
+  const { error: updateSeatsError } = await supabase
+    .from("seats")
+    .update({ status: "inactive" as AdminSeatStatus })
+    .in(
+      "id",
+      seatsToBlock.map((seat) => seat.id),
+    );
+
+  if (updateSeatsError) {
+    return { ok: false as const, reason: "seats_not_updated" as const, error: updateSeatsError };
+  }
+
+  const { error: updateSessionSeatsError } = sessionSeatIdsToBlock.length
+    ? await supabase
+        .from("session_seats")
+        .update({ status: "blocked" })
+        .in("id", sessionSeatIdsToBlock)
+        .eq("status", "available")
+    : { error: null };
+
+  if (updateSessionSeatsError) {
+    return {
+      ok: false as const,
+      reason: "session_seats_not_updated" as const,
+      error: updateSessionSeatsError,
+    };
+  }
+
+  const { error: updateSectionError } = await supabase
+    .from("venue_sections")
+    .update({ capacity: input.newCapacity })
+    .eq("id", input.sectionId);
+
+  return updateSectionError
+    ? { ok: false as const, reason: "section_not_updated" as const, error: updateSectionError }
+    : {
+        ok: true as const,
+        currentCapacity,
+        newCapacity: input.newCapacity,
+        createdCount: 0,
+        blockedCount: sessionSeatIdsToBlock.length,
+      };
 }
 
 export async function getAdminSectionUsage(sectionId: string) {

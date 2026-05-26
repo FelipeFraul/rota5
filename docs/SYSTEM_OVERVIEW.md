@@ -553,6 +553,18 @@ EDITAR MEU EVENTO
 > 13. Sair
 ```
 
+A edição de campos simples pede novo valor, mostra resumo e só grava depois de `CONFIRMAR`. Isso vale para nome, artista, cidade, estado, local, foto e informações gerais. A foto pode ser atualizada por URL ou removida; informações gerais ficam em `description` e podem ficar vazias.
+
+Editar data/hora lista as sessões do evento, pede a nova data/hora e exige confirmação. Datas passadas são bloqueadas. Se a sessão já tiver reserva, pedido ou ingresso, o sistema não altera a sessão automaticamente e responde com mensagem segura.
+
+Editar setores/lugares permite alterar nome, capacidade e status com confirmação. Não há exclusão física. Assentos vendidos ou reservados não são apagados nem alterados para disponível.
+
+Editar carga vale para setores sem assento marcado: aumentar cria novas unidades disponíveis; reduzir só bloqueia unidades ainda disponíveis. Se a nova carga for menor que o total já vendido ou reservado, a resposta é:
+
+```text
+Não é possível reduzir para esse valor porque já existem ingressos vendidos ou reservados.
+```
+
 ### 6.9 Editar valores
 
 Menu:
@@ -589,9 +601,11 @@ Digite somente o novo valor.
 Ex: 140,00
 ```
 
-Ao digitar o valor, troca direto.
+Ao digitar o valor, o sistema pede confirmação curta antes de gravar.
 
-Se houver mais informações além do valor, elas devem ser separadas em outro fluxo. Não deve exigir que o admin envie label, preço, taxa, início e fim tudo junto.
+Se houver mais informações além do valor, elas devem ser separadas em outro fluxo. Não deve exigir que o admin envie label, preço, taxa, início e fim tudo junto. A edição simples altera somente `price_cents`; taxa, rótulo e janela de venda permanecem iguais. Reservas antigas continuam com preço congelado em `reservation_items`.
+
+Criar preço/lote continua criando ofertas ativas em BRL com sessão, setor, tipo, rótulo, valor, taxa e janela opcional. Como o sistema permite múltiplas ofertas do mesmo tipo no mesmo setor, a duplicidade bloqueada é de rótulo no mesmo par sessão/setor.
 
 ### 6.10 Duplicar evento
 
@@ -600,9 +614,13 @@ Existe a necessidade de duplicar um evento.
 Fluxo desejado:
 
 - admin escolhe o evento;
-- sistema duplica dados principais, sessões, setores, assentos e preços;
+- sistema mostra um resumo e pede confirmação;
+- sistema duplica dados principais, local, sessões, setores, assentos, unidades de disponibilidade e preços;
+- o duplicado nasce como rascunho com nome no formato `NOME DO EVENTO - CÓPIA`;
 - em seguida joga o admin para a tela de edição do evento duplicado;
 - admin altera o necessário e publica.
+
+A duplicação não copia reservas, pedidos, pagamentos, tickets, validações, acessos de portaria, sessões de portaria, cortesias ou dados financeiros.
 
 ## 7. Ingressos e pedidos
 

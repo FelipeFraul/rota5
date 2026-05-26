@@ -5,5 +5,6 @@ export {
   getAdminSectionUsage,
   listAdminSections,
   updateAdminSection,
+  updateAdminSectionCapacity,
   type AdminSectionStatus,
 } from "@/lib/tickets/services/adminEvents";
