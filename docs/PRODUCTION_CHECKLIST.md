@@ -89,7 +89,7 @@ Fluxo validado:
 - Não logar QR/base64, token puro, `qr_token_hash`, metadata de pagamento, senha ou secrets.
 - Não expor telefone completo em relatórios/admin.
 - Rate limits do app devem responder `429` sem salvar IP puro, payload, telefone completo, token ou base64.
-- Vercel Firewall deve manter a regra publicada `Rate limit - Sensitive public routes`: OR nas rotas sensíveis, Fixed Window de 60 segundos, 120 requests, chave IP Address e ação `429`. Com o login administrativo tokenizado, incluir também `/admin/login/*` e `/api/admin/login/verify` nessa regra.
+- Vercel Firewall deve manter a regra publicada `Rate limit - Sensitive public routes`: OR nas rotas sensíveis, incluindo `/admin/login/*` e `/api/admin/login/verify`, Fixed Window de 60 segundos, 120 requests, chave IP Address e ação `429`.
 - Não executar scripts de auditoria com dados reais sem prefixo temporário.
 - Rodar `node .tools/audit_system_closure.mjs` antes de mudanças grandes em produção.
 

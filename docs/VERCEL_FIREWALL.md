@@ -26,21 +26,18 @@ Nome da regra:
 Rate limit - Sensitive public routes
 ```
 
-Condições em OR publicadas originalmente:
+Condições em OR publicadas:
 
 - `/api/webhook/zapi`;
 - `/api/webhook/payment/mercado-pago`;
 - `/api/checkout/mercado-pago*`;
 - `/api/gate/session/scan`;
 - `/api/gate/session/validate`;
+- `/api/admin/login/verify`;
+- `/admin/login/*`;
 - `/tickets/*`;
 - `/gate/session/*`;
 - `/api/cron/expire-reservations`.
-
-Com o login administrativo tokenizado, a mesma regra deve ser atualizada no painel para incluir também:
-
-- `/api/admin/login/verify`;
-- `/admin/login/*`.
 
 Configuração:
 
@@ -52,7 +49,7 @@ Configuração:
 
 Essa regra de borda complementa o rate limit no app. O app continua com limites mais específicos por rota e, em alguns casos, por escopo hashado.
 
-As rotas `/admin/login/*` e `/api/admin/login/verify` protegem o login tokenizado de administradores. Elas devem estar na regra de borda sempre que o painel permitir editar as condições; no app, ambas também têm rate limit por origem e token hashado.
+As rotas `/admin/login/*` e `/api/admin/login/verify` protegem o login tokenizado de administradores e já fazem parte da regra publicada. No app, ambas também têm rate limit por origem e token hashado.
 
 ## Cuidados
 
