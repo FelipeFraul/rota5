@@ -7345,7 +7345,121 @@ export async function routeTicketMessage({
   const gateCommand = parseGateCommand(text);
   const reservedAdminCommand = isReservedAdminCommand(text);
 
+  const startAdminLogin = async (): Promise<RouteTicketMessageOutput> => {
+    if (!(await isAuthorizedAdminPhone(customer.whatsapp_phone))) {
+      return {
+        reply: TICKET_MESSAGES.adminReservedNeutral,
+        nextContext: {
+          ...baseContext,
+          step: "idle",
+          state: "idle",
+          admin: undefined,
+        },
+      };
+    }
+
+    const adminUserResult = await ensureAdminUserForPhone(customer.whatsapp_phone);
+
+    if (!adminUserResult.ok) {
+      return {
+        reply: TICKET_MESSAGES.adminReservedNeutral,
+        nextContext: {
+          ...baseContext,
+          step: "idle",
+          state: "idle",
+          admin: undefined,
+        },
+      };
+    }
+
+    const blockStatus = await getAdminAuthBlockStatus(customer.whatsapp_phone);
+
+    if (blockStatus.ok && blockStatus.blocked) {
+      return {
+        reply:
+          blockStatus.type === "temporary"
+            ? TICKET_MESSAGES.adminAuthTemporaryLocked.replace(
+                "{minutes}",
+                String(blockStatus.retryAfterMinutes),
+              )
+            : TICKET_MESSAGES.adminAuthHardLocked,
+        nextContext: {
+          ...baseContext,
+          step: "admin_auth_pending",
+          state: "admin_auth_pending",
+          admin: buildAdminContext({
+            adminUserId: adminUserResult.adminUser.id,
+            role: adminUserResult.adminUser.role,
+          }),
+        },
+      };
+    }
+
+    const challengeResult = await createAdminLoginChallenge({
+      adminUser: adminUserResult.adminUser,
+      sourceIdentifier,
+    });
+
+    if (!challengeResult.ok) {
+      return {
+        reply: TICKET_MESSAGES.adminGenericError,
+        nextContext: {
+          ...baseContext,
+          step: "idle",
+          state: "idle",
+          admin: undefined,
+        },
+      };
+    }
+
+    const authReply = [
+      "*LOGIN ADMINISTRATIVO*",
+      "",
+      "Abra este link para informar sua senha individual:",
+      challengeResult.loginUrl,
+      "",
+      `O link expira em ${challengeResult.expiresInMinutes} minutos.`,
+      "Depois de confirmar a senha, envie aqui o código de uso único exibido na página.",
+    ].join("\n");
+
+    return {
+      reply: authReply,
+      outboundMessages: [
+        {
+          type: "text",
+          body: authReply,
+          persistedBody: ADMIN_LOGIN_LINK_REDACTED_BODY,
+        },
+      ],
+      nextContext: {
+        ...baseContext,
+        step: "admin_auth_pending",
+        state: "admin_auth_pending",
+        admin: buildAdminContext({
+          adminUserId: adminUserResult.adminUser.id,
+          role: adminUserResult.adminUser.role,
+          authChallengeId: challengeResult.challengeId,
+          authChallengeExpiresAt: challengeResult.expiresAt,
+        }),
+      },
+    };
+  };
+
   if (previousState.state === "admin_auth_pending") {
+    if (isAdminLogoutCommand(text)) {
+      return {
+        reply: "Login administrativo cancelado. Para acessar novamente, envie admin.",
+        nextContext: {
+          ...buildInitialConversationState(),
+          updatedAt: new Date().toISOString(),
+        },
+      };
+    }
+
+    if (reservedAdminCommand) {
+      return startAdminLogin();
+    }
+
     const adminUserResult = await ensureAdminUserForPhone(customer.whatsapp_phone);
 
     if (!adminUserResult.ok) {
@@ -7559,103 +7673,7 @@ export async function routeTicketMessage({
     !isAdminSubmenuState(previousState.state) &&
     !previousState.admin?.sessionId
   ) {
-    if (!(await isAuthorizedAdminPhone(customer.whatsapp_phone))) {
-      return {
-        reply: TICKET_MESSAGES.adminReservedNeutral,
-        nextContext: {
-          ...baseContext,
-          step: "idle",
-          state: "idle",
-          admin: undefined,
-        },
-      };
-    }
-
-    const adminUserResult = await ensureAdminUserForPhone(customer.whatsapp_phone);
-
-    if (!adminUserResult.ok) {
-      return {
-        reply: TICKET_MESSAGES.adminReservedNeutral,
-        nextContext: {
-          ...baseContext,
-          step: "idle",
-          state: "idle",
-          admin: undefined,
-        },
-      };
-    }
-
-    const blockStatus = await getAdminAuthBlockStatus(customer.whatsapp_phone);
-
-    if (blockStatus.ok && blockStatus.blocked) {
-      return {
-        reply:
-          blockStatus.type === "temporary"
-            ? TICKET_MESSAGES.adminAuthTemporaryLocked.replace(
-                "{minutes}",
-                String(blockStatus.retryAfterMinutes),
-              )
-            : TICKET_MESSAGES.adminAuthHardLocked,
-        nextContext: {
-          ...baseContext,
-          step: "admin_auth_pending",
-          state: "admin_auth_pending",
-          admin: buildAdminContext({
-            adminUserId: adminUserResult.adminUser.id,
-            role: adminUserResult.adminUser.role,
-          }),
-        },
-      };
-    }
-
-    const challengeResult = await createAdminLoginChallenge({
-      adminUser: adminUserResult.adminUser,
-      sourceIdentifier,
-    });
-
-    if (!challengeResult.ok) {
-      return {
-        reply: TICKET_MESSAGES.adminGenericError,
-        nextContext: {
-          ...baseContext,
-          step: "idle",
-          state: "idle",
-          admin: undefined,
-        },
-      };
-    }
-
-    const authReply = [
-      "*LOGIN ADMINISTRATIVO*",
-      "",
-      "Abra este link para informar sua senha individual:",
-      challengeResult.loginUrl,
-      "",
-      `O link expira em ${challengeResult.expiresInMinutes} minutos.`,
-      "Depois de confirmar a senha, envie aqui o código de uso único exibido na página.",
-    ].join("\n");
-
-    return {
-      reply: authReply,
-      outboundMessages: [
-        {
-          type: "text",
-          body: authReply,
-          persistedBody: ADMIN_LOGIN_LINK_REDACTED_BODY,
-        },
-      ],
-      nextContext: {
-        ...baseContext,
-        step: "admin_auth_pending",
-        state: "admin_auth_pending",
-        admin: buildAdminContext({
-          adminUserId: adminUserResult.adminUser.id,
-          role: adminUserResult.adminUser.role,
-          authChallengeId: challengeResult.challengeId,
-          authChallengeExpiresAt: challengeResult.expiresAt,
-        }),
-      },
-    };
+    return startAdminLogin();
   }
 
   if (
