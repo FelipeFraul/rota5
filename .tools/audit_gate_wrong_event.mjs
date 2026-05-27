@@ -1,9 +1,9 @@
-import { createHash, createHmac, randomUUID } from "node:crypto";
+import { createHash, createHmac, randomBytes, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 
-const PREFIX = "TEST_GATE_WRONG_EVENT";
+const PREFIX = "TEST_OPAQUE_GATE_TOKEN";
 const APP_PORT = 3381;
 const APP_BASE_URL = `http://127.0.0.1:${APP_PORT}`;
 const START_A = "2026-08-08T16:00:00.000Z";
@@ -103,21 +103,38 @@ function createTicketToken(ticket) {
   return `${encodedPayload}.${signQrPayload(encodedPayload)}`;
 }
 
-function signGatePayload(encodedPayload) {
-  return createHmac("sha256", testEnv.GATE_SESSION_SECRET)
-    .update(encodedPayload)
-    .digest("base64url");
-}
-
-function createGateSessionToken({ gateSessionId, validatorPhone, expiresAt }) {
-  const encodedPayload = base64UrlEncode(
-    JSON.stringify({ gid: gateSessionId, phone: validatorPhone, exp: expiresAt }),
-  );
-  return `${encodedPayload}.${signGatePayload(encodedPayload)}`;
+function createGateSessionToken() {
+  return randomBytes(32).toString("base64url");
 }
 
 function hash(value) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function decodeBase64UrlJson(value) {
+  try {
+    return JSON.parse(Buffer.from(value, "base64url").toString("utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function assertOpaqueGateToken(token, gateSessionId, validatorPhone, expiresAt) {
+  assert(!token.includes("."), "token de portaria opaco nao usa payload.assinatura legado");
+  assertNotIncludes(token, gateSessionId, "token de portaria nao contem gate_session_id");
+  assertNotIncludes(token, validatorPhone, "token de portaria nao contem telefone");
+  assertNotIncludes(token, expiresAt, "token de portaria nao contem expiracao");
+
+  const decoded = decodeBase64UrlJson(token);
+  assert(
+    !decoded ||
+      !(
+        Object.hasOwn(decoded, "gid") ||
+        Object.hasOwn(decoded, "phone") ||
+        Object.hasOwn(decoded, "exp")
+      ),
+    "token de portaria nao decodifica para JSON operacional",
+  );
 }
 
 async function waitForHealth() {
@@ -403,11 +420,8 @@ async function createGateSession({ eventId, sessionId = null, label }) {
   const gateSessionId = randomUUID();
   const validatorPhone = "559920000099";
   const expiresAt = new Date(Date.now() + 60 * 60_000).toISOString();
-  const token = createGateSessionToken({
-    gateSessionId,
-    validatorPhone,
-    expiresAt,
-  });
+  const token = createGateSessionToken();
+  assertOpaqueGateToken(token, gateSessionId, validatorPhone, expiresAt);
   await supabase.from("gate_sessions").insert({
     id: gateSessionId,
     event_id: eventId,

@@ -1222,7 +1222,7 @@ Creates `public.gate_sessions` with:
 - normalized digit-only `created_by_admin_phone`;
 - `created_at` and `updated_at` maintained by the existing `public.set_updated_at()` trigger.
 
-The raw gate session token is never stored. Only `token_hash = sha256(raw signed token)` is persisted.
+The raw gate session token is never stored. Only `token_hash = sha256(raw opaque token)` is persisted.
 
 Durable validator authorization is stored separately in:
 
@@ -1260,27 +1260,19 @@ GATE_SESSION_SECRET=
 GATE_SESSION_TTL_MINUTES=480
 ```
 
-`GATE_SESSION_SECRET` signs temporary portaria links and is separate from `GATE_ADMIN_SECRET`. It must have at least 32 characters and must not be public. `GATE_SESSION_TTL_MINUTES` controls the default lifetime; current production configuration uses 480 minutes.
+`GATE_SESSION_SECRET` is kept as a required server-side secret for the gate module and future compatibility, but current gate session links use opaque random tokens validated by `gate_sessions.token_hash` instead of signed payloads. It is separate from `GATE_ADMIN_SECRET`, must have at least 32 characters, and must not be public. `GATE_SESSION_TTL_MINUTES` controls the default lifetime; current production configuration uses 480 minutes.
 
 ### Gate Token Strategy
 
 The gate session URL is:
 
 ```text
-APP_BASE_URL/gate/session/{payload.signature}
+APP_BASE_URL/gate/session/{opaque-token}
 ```
 
-Payload:
+The token is generated with 32 cryptographically random bytes encoded as base64url. It is opaque: it does not contain `gid`, validator phone, expiration, event/session data, admin phone, secrets, or bulky metadata. The backend stores only `sha256(token)` in `gate_sessions.token_hash`; validation hashes the received token, looks up the session by hash, and reads status, expiration, validator phone, event scope, and session scope from the database.
 
-```json
-{
-  "gid": "gate_session_id",
-  "phone": "validator_phone",
-  "exp": "expires_at"
-}
-```
-
-The signature is HMAC SHA-256 over the base64url payload using `GATE_SESSION_SECRET`, checked with constant-time comparison. The token payload intentionally excludes admin phone, secrets, event details, and bulky metadata.
+Signed payload gate tokens used before this change are intentionally not accepted. After deploying this format, operational gate links must be regenerated.
 
 ### WhatsApp Admin Flow
 
@@ -1556,7 +1548,7 @@ It does not validate ticket ownership, does not mark the ticket used, does not i
 - [x] `portaria TELEFONE [label]` is gated by normalized `ADMIN_WHATSAPP_PHONES`.
 - [x] Configured admin phones are recognized by normalization; production has the admin phone envs configured as encrypted Vercel variables.
 - [x] `GATE_SESSION_SECRET` and `GATE_SESSION_TTL_MINUTES` are present in `src/lib/env.ts`, `.env.example`, and Vercel Production; neither uses `NEXT_PUBLIC_`, and the secret has no default fallback.
-- [x] Gate tokens use `base64url(payload).signature`, HMAC SHA-256, constant-time signature comparison, and payload fields only `gid`, `phone`, and `exp`.
+- [x] Gate tokens are opaque random base64url strings. They do not carry payload fields such as `gid`, `phone`, or `exp`.
 - [x] `gate_sessions.token_hash` stores only SHA-256 token hashes, is unique, and is not returned by public endpoints.
 - [x] `POST /api/gate/session/validate` returns only gate label, event title, and optional session start date/time.
 - [x] `POST /api/gate/session/scan` remains a placeholder and does not touch tickets, ticket validation events, orders, payments, session seats, or reservations.

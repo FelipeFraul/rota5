@@ -6,7 +6,6 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   createGateSessionToken,
   hashGateSessionToken,
-  verifyGateSessionToken,
 } from "@/lib/tickets/services/gateTokens";
 
 export type GateSession = {
@@ -70,7 +69,6 @@ export type ValidateGateSessionResult =
       valid: false;
       reason:
         | "malformed"
-        | "invalid_signature"
         | "expired"
         | "not_found"
         | "revoked"
@@ -129,11 +127,7 @@ export async function createGateSession(input: {
   const gateSessionId = randomUUID();
   const ttlMinutes = input.ttlMinutes ?? env.GATE_SESSION_TTL_MINUTES;
   const expiresAt = new Date(Date.now() + ttlMinutes * 60_000).toISOString();
-  const token = createGateSessionToken({
-    gateSessionId,
-    validatorPhone,
-    expiresAt,
-  });
+  const token = createGateSessionToken();
   const tokenHash = hashGateSessionToken(token);
   const supabase = getSupabaseAdmin();
   const phoneVariants = getGatePhoneLookupVariants(validatorPhone);
@@ -204,20 +198,21 @@ export async function createGateSession(input: {
 export async function validateGateSessionToken(
   token: string,
 ): Promise<ValidateGateSessionResult> {
-  const verified = verifyGateSessionToken(token);
-
-  if (!verified.valid) {
-    return verified;
+  const normalizedToken = token.trim();
+  if (!normalizedToken) {
+    return {
+      valid: false,
+      reason: "malformed",
+    };
   }
 
-  const tokenHash = hashGateSessionToken(token);
+  const tokenHash = hashGateSessionToken(normalizedToken);
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("gate_sessions")
     .select(
       "id, gate_label, validator_phone, status, expires_at, token_hash, events(title), event_sessions(starts_at)",
     )
-    .eq("id", verified.gateSessionId)
     .eq("token_hash", tokenHash)
     .maybeSingle<
       Pick<
@@ -393,11 +388,7 @@ export async function createGateSessionForRegisteredValidator(validatorPhoneInpu
   const expiresAt = new Date(
     Date.now() + env.GATE_SESSION_TTL_MINUTES * 60_000,
   ).toISOString();
-  const token = createGateSessionToken({
-    gateSessionId: data.id,
-    validatorPhone: data.validator_phone,
-    expiresAt,
-  });
+  const token = createGateSessionToken();
   const tokenHash = hashGateSessionToken(token);
 
   const { data: updated, error: updateError } = await supabase

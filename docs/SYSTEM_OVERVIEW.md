@@ -95,7 +95,7 @@ Também em 27/05/2026, um achado ZAP/Pentest-Tools apontou `Access-Control-Allow
 
 Em 27/05/2026, a Fase 1 de redução de dados no front removeu timestamps exatos e dados operacionais desnecessários dos DTOs públicos. O login administrativo não envia mais `expiresAt` exato do link para `/admin/login/{token}` nem `expiresAt` exato do código em `/api/admin/login/verify`; o front mostra apenas validade genérica de 2 minutos. A portaria não expõe mais `status`, `expiresAt` exato ou final do telefone do validador no DTO público de sessão. O resultado público de scan não retorna mais `ticketCode` nem objeto `ticket`; quando permitido, retorna no máximo `section` e `seat` para conferência operacional.
 
-Continuam visíveis por design: token do admin na URL, token da portaria na URL, senha digitada no POST do próprio navegador, código único exibido ao admin, token do QR lido e enviado no request de validação, e dados operacionais necessários como evento/sessão/setor/assento quando exibidos. Uma Fase 2 futura pode trocar tokens de URL por cookie `HttpOnly` e limpar a URL após bootstrap.
+Continuam visíveis por design: token do admin na URL, token opaco da portaria na URL, senha digitada no POST do próprio navegador, código único exibido ao admin, token do QR lido e enviado no request de validação, e dados operacionais necessários como evento/sessão/setor/assento quando exibidos. O token novo de portaria é aleatório, não carrega `gid`, telefone ou expiração em payload decodificável, e o banco salva apenas `gate_sessions.token_hash`. Links antigos de portaria no formato payload assinado não são compatíveis e devem ser descartados/regenerados. Uma Fase 2 futura pode trocar tokens de URL por cookie `HttpOnly` e limpar a URL após bootstrap.
 
 ## 3. Compra pelo WhatsApp
 
@@ -345,6 +345,8 @@ O telefone cadastrado deve enviar uma mensagem com a palavra Portaria para o tel
 Se tentar cadastrar o mesmo telefone novamente para o mesmo evento/acesso ativo ou pausado, deve responder que o telefone já está cadastrado.
 
 O cadastro do validador fica em `gate_accesses`, separado das sessões temporárias de leitura. A palavra-chave é mostrada ao admin apenas na mensagem final de cadastro, mas no banco é salva somente como hash PBKDF2. Mensagens recebidas contendo palavra-chave de portaria são redigidas no histórico como `[GATE_ACCESS_REDACTED]`. Quando o telefone cadastrado envia `Portaria`, o sistema pede a palavra-chave; se houver mais de um acesso ativo, lista os eventos antes de pedir a palavra-chave; se estiver correta, gera uma nova `gate_session` temporária para o evento cadastrado. Acesso pausado não gera link.
+
+As sessões temporárias de portaria usam token opaco aleatório no link `/gate/session/{token}`. O token bruto é enviado somente ao validador, não é salvo no banco e não contém payload base64url com `gid`, telefone ou expiração. A validação calcula SHA-256 do token recebido, busca `gate_sessions.token_hash` e usa apenas dados do banco para status, expiração, telefone, evento e sessão.
 
 ### 4.3 Scanner
 

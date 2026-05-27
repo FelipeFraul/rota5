@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
-import { pbkdf2Sync, randomBytes } from "node:crypto";
+import { createHash, pbkdf2Sync, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 
@@ -132,6 +132,30 @@ function hashPassphrase(passphrase) {
   const salt = randomBytes(16).toString("hex");
   const digest = pbkdf2Sync(passphrase, salt, 210_000, 32, "sha256").toString("hex");
   return `pbkdf2_sha256$210000$${salt}$${digest}`;
+}
+
+function hashToken(token) {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+function assertOpaqueGateToken(token) {
+  assert(!token.includes("."), "link de portaria usa token opaco sem payload.assinatura");
+  const decoded = (() => {
+    try {
+      return JSON.parse(Buffer.from(token, "base64url").toString("utf8"));
+    } catch {
+      return null;
+    }
+  })();
+  assert(
+    !decoded ||
+      !(
+        Object.hasOwn(decoded, "gid") ||
+        Object.hasOwn(decoded, "phone") ||
+        Object.hasOwn(decoded, "exp")
+      ),
+    "token de portaria nao decodifica gid/phone/exp",
+  );
 }
 
 function providerMessageId() {
@@ -394,6 +418,7 @@ async function sendMessage(phone, text) {
 async function validateGateSessionLink(gateUrl, expectedEventId, expectedEventTitle = PREFIX) {
   const token = gateUrl.match(/\/gate\/session\/([^/\s]+)/)?.[1];
   assert(Boolean(token), "link de check-in contém token");
+  assertOpaqueGateToken(decodeURIComponent(token));
 
   const response = await fetch(`${APP_BASE_URL}/api/gate/session/validate`, {
     method: "POST",
@@ -407,12 +432,13 @@ async function validateGateSessionLink(gateUrl, expectedEventId, expectedEventTi
 
   const { data: session, error } = await service
     .from("gate_sessions")
-    .select("id, event_id, validator_phone, status")
-    .eq("id", body.gateSession.id)
+    .select("id, event_id, validator_phone, token_hash, status")
+    .eq("token_hash", hashToken(decodeURIComponent(token)))
     .single();
   if (error) throw error;
   assert(session.event_id === expectedEventId, "gate_session tem event_id preenchido");
   assert(session.status === "active", "gate_session fica active");
+  assert(session.token_hash === hashToken(decodeURIComponent(token)), "gate_session salva apenas hash do token opaco");
 
   const pageResponse = await fetch(`${APP_BASE_URL}/gate/session/${token}`);
   const pageHtml = await pageResponse.text();
@@ -621,7 +647,78 @@ async function main() {
   }
 }
 
-main().catch(async (error) => {
+async function opaqueOnly() {
+  let nextChild;
+  let zapiServer;
+  const adminPhone = "559940000001";
+  const validatorPhone = "559940000002";
+
+  try {
+    await cleanup();
+    const adminUserId = await createAdminUser(adminPhone);
+    const { eventId } = await createCatalog(adminUserId);
+
+    await dbInsert("gate_accesses", {
+      event_id: eventId,
+      phone: validatorPhone,
+      passphrase_hash: hashPassphrase(GATE_PASS),
+      status: "active",
+      created_by_admin_user_id: adminUserId,
+      created_by_admin_phone: adminPhone,
+    });
+
+    zapiServer = await startZapiMock();
+    nextChild = await startNextDev();
+
+    const prompt = await sendMessage(validatorPhone, "Portaria");
+    assertIncludes(prompt.text, "PALAVRA CHAVE DA PORTARIA", "gate access ativo pede palavra-chave");
+    assertNotIncludes(prompt.text, GATE_PASS, "prompt de gate access não revela palavra-chave");
+
+    const activeLink = await sendMessage(validatorPhone, GATE_PASS);
+    assertIncludes(activeLink.text, "/gate/session/", "gate access ativo gera link opaco");
+    await validateGateSessionLink(activeLink.text, eventId);
+
+    const { error: pauseError } = await service
+      .from("gate_accesses")
+      .update({ status: "paused" })
+      .eq("event_id", eventId)
+      .eq("phone", validatorPhone);
+    if (pauseError) throw pauseError;
+
+    const pausedResponse = await sendMessage(validatorPhone, "Portaria");
+    assertIncludes(
+      pausedResponse.text,
+      "Não encontrei acesso de portaria ativo para este telefone.",
+      "gate access pausado não gera link",
+    );
+    assertNotIncludes(pausedResponse.text, "/gate/session/", "gate access pausado não envia link");
+
+    const { error: revokeError } = await service
+      .from("gate_accesses")
+      .update({ status: "revoked" })
+      .eq("event_id", eventId)
+      .eq("phone", validatorPhone);
+    if (revokeError) throw revokeError;
+
+    const revokedResponse = await sendMessage(validatorPhone, "Portaria");
+    assertIncludes(
+      revokedResponse.text,
+      "Não encontrei acesso de portaria ativo para este telefone.",
+      "gate access revogado não gera link",
+    );
+    assertNotIncludes(revokedResponse.text, "/gate/session/", "gate access revogado não envia link");
+
+    await cleanup();
+    await verifyCleanup();
+  } finally {
+    if (nextChild) await stopChild(nextChild);
+    if (zapiServer) await new Promise((resolve) => zapiServer.close(resolve));
+  }
+}
+
+const runner = process.argv.includes("--opaque-only") ? opaqueOnly : main;
+
+runner().catch(async (error) => {
   console.error(error);
   await cleanup().catch((cleanupError) => console.error("cleanup failed", cleanupError));
   process.exit(1);
