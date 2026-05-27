@@ -1616,11 +1616,13 @@ The RPC locks the matching ticket with `FOR UPDATE`. Results:
 - `already_used`: ticket was already used; `used_at` is returned and not changed.
 - `cancelled`: ticket was cancelled.
 - `not_found`: no matching `id + ticket_code`.
+- `wrong_event`: `gate_sessions.event_id` is set and the ticket belongs to another event. The ticket is not updated.
+- `wrong_session`: `gate_sessions.session_id` is set and the ticket belongs to another session. The ticket is not updated.
 - `denied`: any other unexpected ticket status.
 
 Every known-ticket attempt inserts a `ticket_validation_events` row with `ticket_id`, `ticket_code`, `gate_session_id`, result, gate label, validator identifier, and minimal metadata. Invalid signed ticket tokens cannot call the RPC because there is no ticket id; the backend records a `not_found` event directly with `gate_session_id` and minimal metadata.
 
-The RPC response intentionally excludes phone, document, email, customer id, order id, payment id, `qr_token_hash`, and raw metadata.
+For `wrong_event` and `wrong_session`, the response does not include ticket details, so the scanner does not leak the event/session of the wrong ticket. The RPC response intentionally excludes phone, document, email, customer id, order id, payment id, `qr_token_hash`, raw gate/ticket tokens, raw QR values, and raw metadata.
 
 ### Scan Endpoint
 
@@ -1697,7 +1699,26 @@ Temporary Supabase data was created and removed after validation. The audit conf
 - [x] responses do not expose customer/order/payment/phone/document/email/`qr_token_hash`;
 - [x] cleanup removed temporary data.
 
-Not in scope for Step 16: advanced admin dashboard, event/session-specific wrong-event enforcement, cancellation/swap flows, reports, PDF/image tickets, and advanced camera UX.
+### Gate Session Event/Session Scope
+
+Migration:
+
+```text
+supabase/migrations/20260526000700_enforce_gate_session_ticket_scope.sql
+```
+
+This migration keeps the same RPC signature and adds strict scope checks inside `public.validate_ticket_entry`:
+
+- if `gate_sessions.event_id` is present, only tickets from that event can be validated;
+- if `gate_sessions.session_id` is present, only tickets from that session can be validated;
+- a gate session with only `event_id` and no `session_id` accepts any session from that event;
+- `wrong_event` and `wrong_session` never mark the ticket as `used`;
+- `ticket_validation_events` records the decision and `gate_session_id`;
+- no raw gate token, ticket token, QR payload, customer id, order id, payment id, or `qr_token_hash` is stored or returned.
+
+The endpoint/UI map both `wrong_event` and `wrong_session` as refused reads, incrementing `Recusados`.
+
+Not in scope for Step 16: advanced admin dashboard, cancellation/swap flows, reports, PDF/image tickets, and advanced camera UX.
 
 ## Step 17 - MVP Closure Audit
 

@@ -12,6 +12,8 @@ export type GateScanResult = {
     | "cancelled"
     | "denied"
     | "not_found"
+    | "wrong_event"
+    | "wrong_session"
     | "gate_session_invalid";
   message: string;
   ticket?: {
@@ -124,4 +126,3 @@ export async function validateGateScan(input: {
     ...(result.ticket ? { ticket: result.ticket } : {}),
   };
 }
-

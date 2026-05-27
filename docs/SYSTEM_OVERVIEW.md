@@ -324,8 +324,20 @@ Quando o QRCode é lido:
 
 - primeira leitura válida libera o acesso;
 - leituras seguintes do mesmo QRCode são negadas como já utilizado.
+- se a `gate_session` tiver `event_id`, ingresso de outro evento retorna `wrong_event` e não é marcado como usado;
+- se a `gate_session` tiver `session_id`, ingresso do mesmo evento mas de outra sessão retorna `wrong_session` e não é marcado como usado;
+- se a `gate_session` não tiver `session_id`, qualquer sessão do mesmo evento pode ser validada.
 
 Para evitar várias leituras instantâneas, a página pausa a leitura após resposta `allowed = true`, mostra acesso liberado por alguns segundos e depois retoma a leitura. Leituras recusadas também passam por cooldown curto para evitar loop de leitura.
+
+Mensagens recusadas de escopo:
+
+```text
+INGRESSO DE OUTRO EVENTO
+INGRESSO DE OUTRA SESSÃO
+```
+
+Essas respostas não mostram o nome do evento/sessão do ticket recusado. A tentativa é registrada em `ticket_validation_events` com `gate_session_id` e resultado, sem token bruto, QR bruto, telefone completo, `customer_id`, `order_id`, `payment_id` ou `qr_token_hash`.
 
 ### 4.4 Página da portaria
 

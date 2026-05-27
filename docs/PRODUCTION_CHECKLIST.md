@@ -93,6 +93,7 @@ Fluxo validado:
 - Antifraude de comprador deve manter limites conservadores: uma reserva ativa por telefone, até 5 reservas criadas por telefone em 15 minutos, até 5 reservas expiradas/canceladas em 30 minutos, até 5 solicitações de checkout por order/reserva em 10 minutos, e limites por origem hashada. Bloqueios retornam mensagem segura sem mencionar fraude.
 - Vercel Firewall deve manter a regra publicada `Rate limit - Sensitive public routes`: OR nas rotas sensíveis, incluindo `/admin/login/*` e `/api/admin/login/verify`, Fixed Window de 60 segundos, 120 requests, chave IP Address e ação `429`.
 - Webhook Mercado Pago deve manter `401` sem assinatura, buscar o pagamento real na API, emitir ticket somente para `approved`, marcar falhas definitivas como ignoradas/processadas sem ticket e manter falhas transitórias sem `processed_at` para retry.
+- Portaria deve recusar `wrong_event` e `wrong_session` sem marcar ingresso como usado. `ticket_validation_events` deve registrar `gate_session_id` e resultado sem token/QR bruto.
 - Não executar scripts de auditoria com dados reais sem prefixo temporário.
 - Rodar `node .tools/audit_system_closure.mjs` antes de mudanças grandes em produção.
 
@@ -100,6 +101,5 @@ Fluxo validado:
 
 - Cancelamento, troca e estorno.
 - Reenvio manual de ingresso pago.
-- Filtro de portaria por evento/sessão com `wrong_event`.
 - Exportação de relatórios.
 - QR/PDF visual sem persistir token puro.
