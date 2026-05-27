@@ -1658,12 +1658,7 @@ Example allowed response:
   "result": "allowed",
   "message": "Entrada liberada.",
   "ticket": {
-    "ticketId": "...",
     "ticketCode": "TCK-...",
-    "status": "used",
-    "usedAt": "...",
-    "eventTitle": "...",
-    "startsAt": "...",
     "sectionName": "...",
     "seatCode": "A03"
   }
@@ -1678,6 +1673,23 @@ Example allowed response:
 - `Recusados`.
 
 The scanner extracts ticket tokens from full `/tickets/{token}` URLs or raw token values, calls the scan endpoint, and shows allowed/denied feedback with ticket code, section, and seat when available. Camera reads have a 3-second same-content debounce to reduce repeated scans; the RPC still provides the concurrency-safe source of truth.
+
+The browser-facing scan DTO is intentionally smaller than the RPC return. It does not include `ticketId`, ticket status, `usedAt`, event title, session time, customer/order/payment ids, token/hash fields, or raw metadata.
+
+### Public Frontend DTO Policy
+
+All HTML, client-side JS, and browser-called API responses are treated as public. Public pages and endpoints must return DTOs that select fields explicitly:
+
+- `/tickets/[token]`: event display data, venue/city/state, section, seat and ticket code only;
+- `/gate/session/[token]` and `/api/gate/session/validate`: gate label, event title, session start, validator phone last four digits, expiration and active status only;
+- `/api/gate/session/scan`: `allowed`, `result`, safe `message`, and only `ticketCode`, `sectionName`, `seatCode` when allowed;
+- `/admin/login/[token]`: challenge validity and expiration only;
+- `/api/admin/login/verify`: success flag, one-time code and expiration, or safe generic errors.
+- `/api/checkout/mercado-pago/pay`: payment status and Pix copy-and-paste code when applicable; it must not return `provider_payment_id` or signed ticket URLs.
+
+Never return raw table rows or spread database rows into public DTOs. The following fields must not be exposed to the browser: `customer_id`, `order_id`, `reservation_id`, `payment_id`, `provider_payment_id`, `admin_user_id`, `admin_session_id`, `gate_session_id`, `token_hash`, `qr_token_hash`, `passphrase_hash`, `raw_metadata`, payment metadata, headers, raw payloads, stack traces, SQL errors, service-role details, raw QR values, or complete phone numbers.
+
+Temporary link tokens are bearer credentials in the URL only. They are hashed at rest and are not returned by public APIs. Business rules stay server-side in services and RPCs; frontend code only renders minimal state and submits user actions.
 
 ### Step 16 Audit
 

@@ -33,6 +33,28 @@ type TicketRow = {
   } | null;
 };
 
+type PublicTicketRow = {
+  ticket_code: string;
+  event_sessions: {
+    starts_at: string;
+    events: {
+      title: string;
+      artist_name: string;
+      city: string;
+      state: string;
+      venues: {
+        name: string;
+      } | null;
+    } | null;
+  } | null;
+  venue_sections: {
+    name: string;
+  } | null;
+  reservation_items: {
+    seat_code: string;
+  } | null;
+};
+
 export type TicketForDelivery = {
   ticketId: string;
   ticketCode: string;
@@ -115,17 +137,21 @@ function mapTicketRow(row: TicketRow): TicketForDelivery | null {
   };
 }
 
-function toPublicTicketView(ticket: TicketForDelivery): PublicTicketView {
+function mapPublicTicketRow(row: PublicTicketRow): PublicTicketView | null {
+  if (!row.event_sessions?.events) {
+    return null;
+  }
+
   return {
-    ticketCode: ticket.ticketCode,
-    eventTitle: ticket.eventTitle,
-    artistName: ticket.artistName,
-    city: ticket.city,
-    state: ticket.state,
-    venueName: ticket.venueName,
-    startsAt: ticket.startsAt,
-    sectionName: ticket.sectionName,
-    seatCode: ticket.seatCode,
+    ticketCode: row.ticket_code,
+    eventTitle: row.event_sessions.events.title,
+    artistName: row.event_sessions.events.artist_name,
+    city: row.event_sessions.events.city,
+    state: row.event_sessions.events.state,
+    venueName: row.event_sessions.events.venues?.name ?? null,
+    startsAt: row.event_sessions.starts_at,
+    sectionName: row.venue_sections?.name ?? "Setor",
+    seatCode: row.reservation_items?.seat_code ?? "A confirmar",
   };
 }
 
@@ -221,18 +247,16 @@ export async function getTicketBySignedToken(
   const { data, error } = await supabase
     .from("tickets")
     .select(
-      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, reservation_items!inner(seat_code), event_sessions!inner(starts_at, events!inner(title, artist_name, city, state, venues(name))), venue_sections!inner(name)",
+      "ticket_code, reservation_items!inner(seat_code), event_sessions!inner(starts_at, events!inner(title, artist_name, city, state, venues(name))), venue_sections!inner(name)",
     )
     .eq("id", payload.tid)
     .eq("ticket_code", payload.code)
     .eq("status", "issued")
-    .maybeSingle<TicketRow>();
+    .maybeSingle<PublicTicketRow>();
 
   if (error || !data) {
     return null;
   }
 
-  const ticket = mapTicketRow(data);
-
-  return ticket ? toPublicTicketView(ticket) : null;
+  return mapPublicTicketRow(data);
 }

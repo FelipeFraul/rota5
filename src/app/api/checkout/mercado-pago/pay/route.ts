@@ -216,9 +216,7 @@ export async function POST(request: Request) {
 
   return jsonOk({
     status: result.status,
-    provider_payment_id: result.providerPaymentId,
     qr_code: result.qrCode,
-    ticket_url: result.ticketUrl,
   });
 }
 

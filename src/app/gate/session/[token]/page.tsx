@@ -1,5 +1,6 @@
 import { GateSessionScanner } from "./GateSessionScanner";
 import { validateGateSessionToken } from "@/lib/tickets/services/gateSessions";
+import { buildPublicGateSessionDto } from "@/lib/tickets/services/publicDtos";
 
 type GateSessionPageProps = {
   params: Promise<{
@@ -12,6 +13,8 @@ export default async function GateSessionPage({ params }: GateSessionPageProps) 
   const initialValidation = await validateGateSessionToken(token);
 
   return (
-    <GateSessionScanner token={token} initialValidation={initialValidation} />
+    <GateSessionScanner
+      initialValidation={buildPublicGateSessionDto(initialValidation)}
+    />
   );
 }

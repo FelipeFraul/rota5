@@ -348,6 +348,14 @@ Na página de check-in:
 - não deve aparecer a palavra-chave.
 - não deve aparecer telefone completo, token, `token_hash`, hash de palavra-chave ou dados internos de admin.
 
+### 4.5 Superfície pública mínima
+
+Tudo que chega ao browser é tratado como público. As páginas `/tickets/[token]`, `/gate/session/[token]` e `/admin/login/[token]` usam DTOs públicos que escolhem campo por campo. APIs chamadas pelo browser não retornam objetos crus de tabela.
+
+Nunca deve ir para HTML, JS ou resposta pública: `customer_id`, `order_id`, `reservation_id`, `payment_id`, `provider_payment_id`, `admin_user_id`, `admin_session_id`, `gate_session_id`, `token_hash`, `qr_token_hash`, `passphrase_hash`, `raw_metadata`, metadata de pagamento, headers, payload bruto, secrets, stack trace ou erro SQL.
+
+O token bruto de links temporários existe apenas como credencial da URL enviada ao usuário/porteiro. O banco guarda somente hash e as APIs públicas não devolvem token/hash. A regra de negócio fica no backend/RPC; o frontend só renderiza estado mínimo e envia ações.
+
 ## 5. Área admin pelo WhatsApp
 
 O admin entra pelo WhatsApp com login tokenizado em duas etapas. Ele envia `admin`, recebe um link único e temporário, abre a página, informa a senha individual e recebe um código de uso único. A sessão administrativa só é criada quando esse código volta pelo WhatsApp.

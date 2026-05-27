@@ -1,9 +1,9 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useParams } from "next/navigation";
 
 type AdminLoginFormProps = {
-  token: string;
   expiresAt: string;
 };
 
@@ -15,7 +15,13 @@ function formatTime(value: string) {
   }).format(new Date(value));
 }
 
-export function AdminLoginForm({ token, expiresAt }: AdminLoginFormProps) {
+function getRouteToken(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+}
+
+export function AdminLoginForm({ expiresAt }: AdminLoginFormProps) {
+  const params = useParams<{ token?: string | string[] }>();
+  const token = getRouteToken(params.token);
   const [passphrase, setPassphrase] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

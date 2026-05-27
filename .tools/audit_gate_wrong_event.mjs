@@ -434,6 +434,17 @@ async function scan(gateSessionToken, ticketToken) {
   return body;
 }
 
+async function validateGateSession(gateSessionToken) {
+  const response = await fetch(`${APP_BASE_URL}/api/gate/session/validate`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ token: gateSessionToken }),
+  });
+  const body = await response.json().catch(() => ({}));
+  assert(response.ok, "endpoint de validate responde 200", JSON.stringify(body));
+  return body;
+}
+
 async function ticketStatus(ticketId) {
   const { data, error } = await supabase
     .from("tickets")
@@ -501,8 +512,37 @@ async function runAudit() {
     label: "08",
   });
 
+  const validatedGate = await validateGateSession(gateA.token);
+  assert(validatedGate.valid === true, "API validate retorna sessao valida");
+  const validatedGateSerialized = JSON.stringify(validatedGate);
+  assertNotIncludes(validatedGateSerialized, gateA.gateSessionId, "API validate nao retorna gate_session_id");
+  assertNotIncludes(validatedGateSerialized, "validatorIdentifier", "API validate nao retorna validatorIdentifier");
+  assertNotIncludes(validatedGateSerialized, "token_hash", "API validate nao retorna token_hash");
+  assertNotIncludes(validatedGateSerialized, "559920000099", "API validate nao retorna telefone completo");
+
+  const validTicketPage = await fetch(`${APP_BASE_URL}/tickets/${encodeURIComponent(ticketA.token)}`);
+  const validTicketHtml = await validTicketPage.text();
+  assert(validTicketPage.status === 200, "pagina de ingresso valido responde 200");
+  assertNotIncludes(validTicketHtml, ticketA.ticketId, "pagina de ingresso nao expoe ticket_id");
+  assertNotIncludes(validTicketHtml, catalog.customerId, "pagina de ingresso nao expoe customer_id");
+  assertNotIncludes(validTicketHtml, "qr_token_hash", "pagina de ingresso nao expoe qr_token_hash");
+  assertNotIncludes(validTicketHtml, "raw_metadata", "pagina de ingresso nao expoe raw_metadata");
+
+  const validGatePage = await fetch(`${APP_BASE_URL}/gate/session/${encodeURIComponent(gateA.token)}`);
+  const validGateHtml = await validGatePage.text();
+  assert(validGatePage.status === 200, "pagina de portaria valida responde 200");
+  assertNotIncludes(validGateHtml, gateA.gateSessionId, "pagina de portaria nao expoe gate_session_id");
+  assertNotIncludes(validGateHtml, hash(gateA.token), "pagina de portaria nao expoe token_hash");
+  assertNotIncludes(validGateHtml, "559920000099", "pagina de portaria nao expoe telefone completo");
+  assertNotIncludes(validGateHtml, "validatorIdentifier", "pagina de portaria nao expoe validatorIdentifier");
+
   const allowedA = await scan(gateA.token, ticketA.token);
   assert(allowedA.allowed === true && allowedA.result === "allowed", "A gate A valida ticket do evento/sessao A");
+  const allowedSerialized = JSON.stringify(allowedA);
+  assertNotIncludes(allowedSerialized, ticketA.ticketId, "scan allowed nao retorna ticket_id");
+  assertNotIncludes(allowedSerialized, "usedAt", "scan allowed nao retorna usedAt");
+  assertNotIncludes(allowedSerialized, "eventTitle", "scan allowed nao retorna eventTitle");
+  assertNotIncludes(allowedSerialized, "startsAt", "scan allowed nao retorna startsAt");
 
   const secondA = await scan(gateA.token, ticketA.token);
   assert(secondA.allowed === false && secondA.result === "already_used", "B segunda leitura retorna already_used");

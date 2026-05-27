@@ -1,5 +1,6 @@
 import { AdminLoginForm } from "./AdminLoginForm";
 import { getAdminLoginChallengeByToken } from "@/lib/tickets/services/adminAuth";
+import { buildPublicAdminLoginChallengeDto } from "@/lib/tickets/services/publicDtos";
 
 type AdminLoginPageProps = {
   params: Promise<{
@@ -10,8 +11,9 @@ type AdminLoginPageProps = {
 export default async function AdminLoginPage({ params }: AdminLoginPageProps) {
   const { token } = await params;
   const challengeResult = await getAdminLoginChallengeByToken(token);
+  const publicChallenge = buildPublicAdminLoginChallengeDto(challengeResult);
 
-  if (!challengeResult.ok) {
+  if (!publicChallenge.ok) {
     return (
       <main className="admin-login-shell">
         <section className="admin-login-card">
@@ -27,10 +29,7 @@ export default async function AdminLoginPage({ params }: AdminLoginPageProps) {
 
   return (
     <main className="admin-login-shell">
-      <AdminLoginForm
-        token={token}
-        expiresAt={challengeResult.challenge.expires_at}
-      />
+      <AdminLoginForm expiresAt={publicChallenge.expiresAt} />
     </main>
   );
 }

@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useParams } from "next/navigation";
 
 type GateSessionScannerProps = {
-  token: string;
   initialValidation: GateSessionValidation;
 };
 
@@ -11,7 +11,6 @@ type GateSessionValidation =
   | {
       valid: true;
       gateSession: {
-        id: string;
         gateLabel: string | null;
         eventTitle: string | null;
         sessionStartsAt: string | null;
@@ -83,10 +82,15 @@ function extractTicketToken(rawValue: string) {
   return value;
 }
 
+function getRouteToken(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+}
+
 export function GateSessionScanner({
-  token,
   initialValidation,
 }: GateSessionScannerProps) {
+  const params = useParams<{ token?: string | string[] }>();
+  const token = getRouteToken(params.token);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const lastScanRef = useRef<string | null>(null);
@@ -191,6 +195,11 @@ export function GateSessionScanner({
       const now = Date.now();
 
       if (!ticketToken) {
+        return;
+      }
+
+      if (!token) {
+        registerDeniedResult("Sessão de portaria inválida ou expirada.");
         return;
       }
 

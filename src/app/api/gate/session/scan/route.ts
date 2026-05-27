@@ -8,6 +8,7 @@ import {
   hashRateLimitScope,
   rateLimitResponse,
 } from "@/lib/security/rateLimit";
+import { buildPublicGateScanResponseDto } from "@/lib/tickets/services/publicDtos";
 import { validateGateScan } from "@/lib/tickets/services/gateValidation";
 
 type ScanPayload = {
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
 
   const result = await validateGateScan(payload);
 
-  return jsonOk(result);
+  return jsonOk(buildPublicGateScanResponseDto(result));
 }
 
 export function GET() {
