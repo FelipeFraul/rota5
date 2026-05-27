@@ -1549,7 +1549,11 @@ export async function getAdminSessionCatalogCounts(
     { data: sections, error: sectionsError },
   ] = await Promise.all([
     sessionIds.length
-      ? supabase.from("ticket_prices").select("session_id").in("session_id", sessionIds)
+      ? supabase
+        .from("ticket_prices")
+        .select("session_id")
+        .in("session_id", sessionIds)
+        .neq("ticket_type", "free")
       : Promise.resolve({ data: [] as Array<{ session_id: string }>, error: null }),
     venueIds.length
       ? supabase.from("venue_sections").select("venue_id").in("venue_id", venueIds)
@@ -2122,7 +2126,8 @@ export async function listAdminPrices(input: { sessionId: string; sectionId?: st
   let query = supabase
     .from("ticket_prices")
     .select("id, session_id, section_id, ticket_type, label, price_cents, fee_cents, currency, sales_start_at, sales_end_at, status, venue_sections(name)")
-    .eq("session_id", input.sessionId);
+    .eq("session_id", input.sessionId)
+    .neq("ticket_type", "free");
 
   if (input.sectionId) {
     query = query.eq("section_id", input.sectionId);

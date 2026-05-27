@@ -5781,12 +5781,10 @@ function parseAdminTicketType(value: string) {
   const aliases: Record<string, AdminTicketType> = {
     promo: "promotional",
     promocional: "promotional",
-    courtesy: "free",
-    cortesia: "free",
   };
   const ticketType = aliases[normalized] ?? normalized;
 
-  return isTicketType(ticketType) ? ticketType : null;
+  return isTicketType(ticketType) && ticketType !== "free" ? ticketType : null;
 }
 
 function getDraftArray<T>(draft: Record<string, unknown> | undefined, key: string) {
@@ -6833,7 +6831,7 @@ async function handleAdminEventOperationalSubmenus({
         reply: [
           "Envie: sessão | setor | tipo | label | preço | taxa | início opcional | fim opcional.",
           "Ex: 1 | 1 | full | Inteira | 120,00 | 12,00 | - | -",
-          "Tipos: full, half, promotional/free. Também aceito promo/courtesy como apelidos.",
+          "Tipos de venda: full, half ou promotional. Cortesia fica somente no menu Cortesias.",
         ].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_price_create_collecting", adminEvents),
       };

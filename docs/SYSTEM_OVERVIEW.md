@@ -432,6 +432,8 @@ Regra importante:
 
 O caminho de volta deve ser igual ao caminho de ida. Exemplo: se o admin entrou em `Editar valores`, depois listou preços ou alterou valor, `Voltar` deve retornar para `VALORES DE VENDA`, não para detalhe do evento ou lista de eventos.
 
+`VALORES DE VENDA` lista e altera apenas preços vendidos ao público (`full`, `half`, `promotional`). Cortesias (`free`) ficam somente no módulo `Cortesias`, para não misturar lote comercial com emissão gratuita.
+
 Comandos de troca de área:
 
 - `evento`, `eventos` ou `meus eventos`;
