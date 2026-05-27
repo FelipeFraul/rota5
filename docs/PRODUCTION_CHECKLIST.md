@@ -6,6 +6,7 @@
 - Ponto 13 adiciona a auditoria de fechamento `TEST_SYSTEM_CLOSURE`.
 - Em 26/05/2026, uma compra real/controlada validou o ciclo completo: busca do evento, reserva, checkout Mercado Pago, pagamento concluído, webhook processado, pedido/reserva confirmados, ticket emitido e QRCode enviado ao comprador.
 - Uso recomendado: operação real controlada com público real, acompanhando logs, webhooks, pagamentos e entregas de QRCode nas primeiras vendas.
+- Antes do primeiro evento real, seguir `docs/FIRST_EVENT_RUNBOOK.md` para checklist de pré-venda, portaria, contingência e fechamento.
 
 ## Envs
 
