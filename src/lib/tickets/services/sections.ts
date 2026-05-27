@@ -113,6 +113,7 @@ export async function listAvailableSections(
     )
     .eq("session_id", sessionId)
     .eq("status", "active")
+    .neq("ticket_type", "free")
     .returns<TicketPriceRow[]>();
 
   if (sessionPricesError) {
