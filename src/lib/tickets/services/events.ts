@@ -95,7 +95,13 @@ function normalizeSearchValue(value: string) {
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
     .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\s+/g, " ")
     .trim();
+}
+
+function compactSearchValue(value: string) {
+  return normalizeSearchValue(value).replace(/\s+/g, "");
 }
 
 function eventMatchesSearchTerm({
@@ -125,8 +131,13 @@ function eventMatchesSearchTerm({
       .filter(Boolean)
       .join(" "),
   );
+  const compactTerm = compactSearchValue(searchTerm);
+  const compactHaystack = compactSearchValue(haystack);
 
-  return haystack.includes(normalizedTerm);
+  return (
+    haystack.includes(normalizedTerm) ||
+    Boolean(compactTerm && compactHaystack.includes(compactTerm))
+  );
 }
 
 function eventMatchesCity(event: EventRow, cityTerm: string) {
@@ -154,10 +165,21 @@ function eventMatchesLocationTerm({
     return true;
   }
 
+  const compactTerm = compactSearchValue(locationTerm);
+  const eventVenue = normalizeSearchValue(event.venues?.name ?? "");
+  const sessionVenue = normalizeSearchValue(session?.venues?.name ?? "");
+
   return (
     eventMatchesCity(event, locationTerm) ||
-    normalizeSearchValue(event.venues?.name ?? "").includes(normalizedTerm) ||
-    normalizeSearchValue(session?.venues?.name ?? "").includes(normalizedTerm)
+    eventVenue.includes(normalizedTerm) ||
+    sessionVenue.includes(normalizedTerm) ||
+    Boolean(
+      compactTerm &&
+        (
+          compactSearchValue(eventVenue).includes(compactTerm) ||
+          compactSearchValue(sessionVenue).includes(compactTerm)
+        ),
+    )
   );
 }
 
