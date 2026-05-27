@@ -51,7 +51,7 @@ Admins:
 - Diretor/root sem hash individual não entra;
 - `gate/support` não são roles válidas de admin.
 - `admin_auth_attempts` deve existir para aplicar bloqueio por tentativa: 3 erros bloqueiam por 15 minutos; 5 erros sequenciais bloqueiam até liberação por Diretor.
-- `admin_login_challenges` deve existir para login tokenizado: link único temporário, senha individual no web login e código único retornado pelo WhatsApp. A tabela guarda apenas hashes de token, código e origem.
+- `admin_login_challenges` deve existir para login tokenizado: link único temporário de 2 minutos, senha individual no web login e código único retornado pelo WhatsApp com validade de 2 minutos. A tabela guarda apenas hashes de token, código e origem.
 - `rate_limit_events` e `consume_rate_limit` devem existir para aplicar rate limit por rota e origem hashada.
 - `buyer_risk_events` deve existir para antifraude leve de reserva/checkout. A tabela guarda telefone e origem apenas como SHA-256 e não salva payload, checkout URL, token, QR, base64 ou metadata de pagamento.
 
