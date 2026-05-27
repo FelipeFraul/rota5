@@ -16,6 +16,8 @@ const contentSecurityPolicy = [
   "manifest-src 'self'",
 ].join("; ");
 
+const productionOrigin = "https://site-phi-seven-72.vercel.app";
+
 const nextConfig: NextConfig = {
   async headers() {
     return [
@@ -37,6 +39,10 @@ const nextConfig: NextConfig = {
           {
             key: "X-Frame-Options",
             value: "DENY",
+          },
+          {
+            key: "Access-Control-Allow-Origin",
+            value: productionOrigin,
           },
         ],
       },

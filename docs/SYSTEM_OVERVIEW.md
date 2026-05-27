@@ -76,7 +76,8 @@ O app aplica headers globais via `next.config.ts`:
 - `Content-Security-Policy`;
 - `Referrer-Policy: strict-origin-when-cross-origin`;
 - `X-Content-Type-Options: nosniff`;
-- `X-Frame-Options: DENY`.
+- `X-Frame-Options: DENY`;
+- `Access-Control-Allow-Origin: https://site-phi-seven-72.vercel.app`.
 
 A CSP atual é:
 
@@ -89,6 +90,8 @@ default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; 
 `img-src data:` é necessário porque QRCode e mapas de assento podem ser gerados como imagens base64. `script-src` mantém `'unsafe-inline'` e `'unsafe-eval'` por compatibilidade conservadora com Next/Vercel e adiciona somente `https://sdk.mercadopago.com` para o checkout no browser. `connect-src 'self' https:` permite chamadas HTTPS do browser sem fixar secrets ou domínios sensíveis na política.
 
 Em 27/05/2026, a configuração foi adicionada após scan Mozilla Observatory com nota C / 50 em `https://site-phi-seven-72.vercel.app`. Após deploy, o MDN HTTP Observatory retornou B+ / 80, com 9 de 10 testes passados, scan `97301039` em `2026-05-27T13:06:10.645Z`. SecurityHeaders.com não foi automatizado no terminal porque a página pública retornou desafio Cloudflare e a API pública exige autorização.
+
+Também em 27/05/2026, um achado ZAP/Pentest-Tools apontou `Access-Control-Allow-Origin: *` em páginas e assets estáticos. A aplicação não definia CORS wildcard em rotas, proxy, helpers HTTP ou `vercel.json`; o wildcard aparecia nas respostas estáticas/cacheadas servidas pela Vercel. Para remover o wildcard, `next.config.ts` sobrescreve o header com a origem canônica `https://site-phi-seven-72.vercel.app`. Webhooks são server-to-server e não precisam de CORS. Chamadas do browser para checkout, portaria e admin login são same-origin. Nenhuma rota usa `Access-Control-Allow-Credentials` com wildcard.
 
 ## 3. Compra pelo WhatsApp
 
