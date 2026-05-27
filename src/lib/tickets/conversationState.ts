@@ -179,6 +179,8 @@ export type TicketConversationAdmin = {
   role?: TicketAdminRole;
   sessionId?: string;
   expiresAt?: string;
+  authChallengeId?: string;
+  authChallengeExpiresAt?: string;
 };
 
 export type TicketConversationAdminEvents = {

@@ -4,12 +4,15 @@ import {
   createHash,
   pbkdf2Sync,
   randomBytes,
+  randomInt,
   timingSafeEqual,
 } from "crypto";
+import { getEnv } from "@/lib/env";
 import { logWarn } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const ADMIN_AUTH_REDACTED_BODY = "[ADMIN_AUTH_REDACTED]";
+export const ADMIN_LOGIN_LINK_REDACTED_BODY = "[ADMIN_LOGIN_LINK_REDACTED]";
 
 const ADMIN_SESSION_DEFAULT_TTL_MINUTES = 60;
 const ADMIN_HASH_ALGORITHM = "pbkdf2_sha256";
@@ -18,6 +21,9 @@ const ADMIN_HASH_KEY_LENGTH = 32;
 const ADMIN_AUTH_TEMP_LOCK_FAILED_ATTEMPTS = 3;
 const ADMIN_AUTH_HARD_LOCK_FAILED_ATTEMPTS = 5;
 const ADMIN_AUTH_TEMP_LOCK_MINUTES = 15;
+const ADMIN_LOGIN_LINK_TTL_MINUTES = 5;
+const ADMIN_LOGIN_CODE_TTL_MINUTES = 5;
+const ADMIN_LOGIN_CODE_ATTEMPTS = 3;
 
 export type AdminRole = "root" | "admin" | "operator";
 export type AdminPermission =
@@ -60,6 +66,24 @@ type AdminAuthAttemptRow = {
   last_source_hash: string | null;
   unlocked_at: string | null;
   unlocked_by_admin_user_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type AdminLoginChallengeRow = {
+  id: string;
+  admin_user_id: string;
+  phone: string;
+  link_token_hash: string;
+  return_code_hash: string | null;
+  status: "pending" | "password_verified" | "consumed" | "expired" | "revoked";
+  expires_at: string;
+  code_expires_at: string | null;
+  password_verified_at: string | null;
+  consumed_at: string | null;
+  failed_passphrase_attempts: number;
+  failed_code_attempts: number;
+  source_hash: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -238,6 +262,344 @@ export function hashAdminAuthMetadata(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+export async function createAdminLoginChallenge({
+  adminUser,
+  sourceIdentifier,
+}: {
+  adminUser: AdminUser;
+  sourceIdentifier?: string | null;
+}) {
+  const normalizedPhone = normalizeAdminPhone(adminUser.phone);
+
+  if (!normalizedPhone) {
+    return { ok: false as const, reason: "invalid_phone" as const };
+  }
+
+  if (adminUser.status !== "active") {
+    return { ok: false as const, reason: "disabled" as const };
+  }
+
+  const token = randomBytes(32).toString("hex");
+  const expiresAt = new Date(
+    Date.now() + ADMIN_LOGIN_LINK_TTL_MINUTES * 60_000,
+  ).toISOString();
+  const supabase = getSupabaseAdmin();
+
+  await supabase
+    .from("admin_login_challenges")
+    .update({ status: "revoked" })
+    .eq("phone", normalizedPhone)
+    .in("status", ["pending", "password_verified"]);
+
+  const { data, error } = await supabase
+    .from("admin_login_challenges")
+    .insert({
+      admin_user_id: adminUser.id,
+      phone: normalizedPhone,
+      link_token_hash: hashAdminLoginSecret(token),
+      status: "pending",
+      expires_at: expiresAt,
+      source_hash: hashAdminAuthSource(sourceIdentifier),
+    })
+    .select("id, expires_at")
+    .single<{ id: string; expires_at: string }>();
+
+  if (isMissingAdminLoginChallengesTable(error)) {
+    logWarn("admin_login_challenges table is missing; admin web login challenge cannot be created");
+    return { ok: false as const, reason: "missing_migration" as const };
+  }
+
+  if (error) {
+    return { ok: false as const, reason: "database_error" as const, error };
+  }
+
+  return {
+    ok: true as const,
+    challengeId: data.id,
+    loginUrl: getAdminLoginUrl(token),
+    expiresAt: data.expires_at,
+    expiresInMinutes: ADMIN_LOGIN_LINK_TTL_MINUTES,
+  };
+}
+
+export async function getAdminLoginChallengeByToken(token: string) {
+  const normalizedToken = token.trim();
+
+  if (!normalizedToken) {
+    return { ok: false as const, reason: "invalid_token" as const };
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("admin_login_challenges")
+    .select(
+      "id, admin_user_id, phone, link_token_hash, return_code_hash, status, expires_at, code_expires_at, password_verified_at, consumed_at, failed_passphrase_attempts, failed_code_attempts, source_hash, created_at, updated_at",
+    )
+    .eq("link_token_hash", hashAdminLoginSecret(normalizedToken))
+    .maybeSingle<AdminLoginChallengeRow>();
+
+  if (isMissingAdminLoginChallengesTable(error)) {
+    return { ok: false as const, reason: "missing_migration" as const };
+  }
+
+  if (error) return { ok: false as const, reason: "database_error" as const, error };
+
+  if (!data) return { ok: false as const, reason: "not_found" as const };
+
+  if (
+    data.status === "consumed" ||
+    data.status === "revoked" ||
+    new Date(data.expires_at).getTime() <= Date.now()
+  ) {
+    if (data.status !== "consumed" && data.status !== "revoked") {
+      await expireAdminLoginChallenge(data.id);
+    }
+
+    return { ok: false as const, reason: "expired" as const };
+  }
+
+  return { ok: true as const, challenge: data };
+}
+
+export async function verifyAdminLoginChallengePassphrase({
+  token,
+  passphrase,
+  sourceIdentifier,
+}: {
+  token: string;
+  passphrase: string;
+  sourceIdentifier?: string | null;
+}) {
+  const challengeResult = await getAdminLoginChallengeByToken(token);
+
+  if (!challengeResult.ok) return challengeResult;
+
+  const challenge = challengeResult.challenge;
+
+  if (challenge.status !== "pending") {
+    return { ok: false as const, reason: "not_pending" as const };
+  }
+
+  const blockStatus = await getAdminAuthBlockStatus(challenge.phone);
+
+  if (blockStatus.ok && blockStatus.blocked) {
+    return {
+      ok: false as const,
+      reason: "blocked" as const,
+      blockStatus,
+    };
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data: adminUser, error } = await supabase
+    .from("admin_users")
+    .select("id, phone, role, status, name, last_login_at, courtesy_send_limit, courtesy_receive_limit, passphrase_hash")
+    .eq("id", challenge.admin_user_id)
+    .maybeSingle<
+      Omit<AdminUser, "role"> & {
+        role: string;
+        passphrase_hash: string | null;
+      }
+    >();
+
+  if (error) return { ok: false as const, reason: "database_error" as const, error };
+
+  if (!adminUser || !isAdminRole(adminUser.role) || adminUser.status !== "active") {
+    return { ok: false as const, reason: "admin_unavailable" as const };
+  }
+
+  if (!adminUser.passphrase_hash) {
+    return { ok: false as const, reason: "missing_passphrase_hash" as const };
+  }
+
+  if (!verifyPassphraseHash(passphrase, adminUser.passphrase_hash)) {
+    const failureResult = await recordAdminAuthFailure({
+      phone: challenge.phone,
+      sourceIdentifier,
+    });
+
+    await supabase
+      .from("admin_login_challenges")
+      .update({
+        failed_passphrase_attempts: challenge.failed_passphrase_attempts + 1,
+        source_hash: hashAdminAuthSource(sourceIdentifier),
+      })
+      .eq("id", challenge.id);
+
+    return {
+      ok: false as const,
+      reason: "invalid_passphrase" as const,
+      failureResult,
+    };
+  }
+
+  const code = generateAdminReturnCode();
+  const codeExpiresAt = new Date(
+    Date.now() + ADMIN_LOGIN_CODE_TTL_MINUTES * 60_000,
+  ).toISOString();
+
+  const { data: verifiedChallenge, error: updateError } = await supabase
+    .from("admin_login_challenges")
+    .update({
+      return_code_hash: hashAdminLoginSecret(code),
+      status: "password_verified",
+      password_verified_at: new Date().toISOString(),
+      code_expires_at: codeExpiresAt,
+      source_hash: hashAdminAuthSource(sourceIdentifier),
+    })
+    .eq("id", challenge.id)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle<{ id: string }>();
+
+  if (updateError) {
+    return { ok: false as const, reason: "database_error" as const, error: updateError };
+  }
+
+  if (!verifiedChallenge) {
+    return { ok: false as const, reason: "not_pending" as const };
+  }
+
+  await recordAdminAuthSuccess(challenge.phone);
+
+  return {
+    ok: true as const,
+    code,
+    codeExpiresAt,
+    adminUser: {
+      id: adminUser.id,
+      phone: adminUser.phone,
+      role: adminUser.role,
+      status: adminUser.status,
+      name: adminUser.name,
+      last_login_at: adminUser.last_login_at,
+      courtesy_send_limit: adminUser.courtesy_send_limit,
+      courtesy_receive_limit: adminUser.courtesy_receive_limit,
+    } satisfies AdminUser,
+  };
+}
+
+export async function consumeAdminLoginChallengeCode({
+  phone,
+  code,
+  challengeId,
+  sourceIdentifier,
+}: {
+  phone: string;
+  code: string;
+  challengeId?: string | null;
+  sourceIdentifier?: string | null;
+}) {
+  const normalizedPhone = normalizeAdminPhone(phone);
+  const normalizedCode = code.trim();
+
+  if (!normalizedPhone) {
+    return { ok: false as const, reason: "invalid_phone" as const };
+  }
+
+  if (!/^\d{6}$/.test(normalizedCode)) {
+    return { ok: false as const, reason: "invalid_code_format" as const };
+  }
+
+  const supabase = getSupabaseAdmin();
+  let query = supabase
+    .from("admin_login_challenges")
+    .select(
+      "id, admin_user_id, phone, link_token_hash, return_code_hash, status, expires_at, code_expires_at, password_verified_at, consumed_at, failed_passphrase_attempts, failed_code_attempts, source_hash, created_at, updated_at",
+    )
+    .eq("phone", normalizedPhone)
+    .eq("status", "password_verified")
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (challengeId) {
+    query = query.eq("id", challengeId);
+  }
+
+  const { data, error } = await query.maybeSingle<AdminLoginChallengeRow>();
+
+  if (isMissingAdminLoginChallengesTable(error)) {
+    return { ok: false as const, reason: "missing_migration" as const };
+  }
+
+  if (error) return { ok: false as const, reason: "database_error" as const, error };
+  if (!data || !data.return_code_hash || !data.code_expires_at) {
+    return { ok: false as const, reason: "not_found" as const };
+  }
+
+  if (
+    new Date(data.expires_at).getTime() <= Date.now() ||
+    new Date(data.code_expires_at).getTime() <= Date.now()
+  ) {
+    await expireAdminLoginChallenge(data.id);
+    return { ok: false as const, reason: "expired" as const };
+  }
+
+  if (!fixedTimeEqual(hashAdminLoginSecret(normalizedCode), data.return_code_hash)) {
+    const nextFailedAttempts = data.failed_code_attempts + 1;
+    await supabase
+      .from("admin_login_challenges")
+      .update({
+        failed_code_attempts: nextFailedAttempts,
+        status: nextFailedAttempts >= ADMIN_LOGIN_CODE_ATTEMPTS ? "revoked" : data.status,
+        source_hash: hashAdminAuthSource(sourceIdentifier),
+      })
+      .eq("id", data.id);
+
+    const failureResult = await recordAdminAuthFailure({
+      phone: normalizedPhone,
+      sourceIdentifier,
+    });
+
+    return {
+      ok: false as const,
+      reason: nextFailedAttempts >= ADMIN_LOGIN_CODE_ATTEMPTS
+        ? "too_many_code_attempts"
+        : "invalid_code",
+      failureResult,
+    };
+  }
+
+  const adminUserResult = await getAdminUserByPhone(normalizedPhone);
+
+  if (!adminUserResult.ok) return adminUserResult;
+
+  if (
+    !adminUserResult.adminUser ||
+    adminUserResult.adminUser.status !== "active" ||
+    adminUserResult.adminUser.id !== data.admin_user_id
+  ) {
+    return { ok: false as const, reason: "admin_unavailable" as const };
+  }
+
+  const { data: consumedChallenge, error: consumeError } = await supabase
+    .from("admin_login_challenges")
+    .update({
+      status: "consumed",
+      consumed_at: new Date().toISOString(),
+      source_hash: hashAdminAuthSource(sourceIdentifier),
+    })
+    .eq("id", data.id)
+    .eq("status", "password_verified")
+    .select("id")
+    .maybeSingle<{ id: string }>();
+
+  if (consumeError) {
+    return { ok: false as const, reason: "database_error" as const, error: consumeError };
+  }
+
+  if (!consumedChallenge) {
+    return { ok: false as const, reason: "already_consumed" as const };
+  }
+
+  await recordAdminAuthSuccess(normalizedPhone);
+
+  return {
+    ok: true as const,
+    adminUser: adminUserResult.adminUser,
+  };
+}
+
 function isMissingAdminAuthAttemptsTable(error: { code?: string; message?: string } | null | undefined) {
   return (
     error?.code === "42P01" ||
@@ -249,6 +611,33 @@ function hashAdminAuthSource(sourceIdentifier?: string | null) {
   const normalized = sourceIdentifier?.trim();
 
   return normalized ? createHash("sha256").update(normalized).digest("hex") : null;
+}
+
+function hashAdminLoginSecret(value: string) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function generateAdminReturnCode() {
+  return randomInt(0, 1_000_000).toString().padStart(6, "0");
+}
+
+function getAdminLoginUrl(token: string) {
+  return `${getEnv().APP_BASE_URL.replace(/\/$/, "")}/admin/login/${encodeURIComponent(token)}`;
+}
+
+function isMissingAdminLoginChallengesTable(error: { code?: string; message?: string } | null | undefined) {
+  return (
+    error?.code === "42P01" ||
+    error?.message?.includes("admin_login_challenges") === true
+  );
+}
+
+async function expireAdminLoginChallenge(challengeId: string) {
+  await getSupabaseAdmin()
+    .from("admin_login_challenges")
+    .update({ status: "expired" })
+    .eq("id", challengeId)
+    .in("status", ["pending", "password_verified"]);
 }
 
 function minutesUntil(isoDate: string) {

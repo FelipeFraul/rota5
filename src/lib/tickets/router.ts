@@ -161,6 +161,9 @@ import {
   type AdminReportType,
 } from "@/lib/tickets/services/adminReports";
 import {
+  ADMIN_LOGIN_LINK_REDACTED_BODY,
+  consumeAdminLoginChallengeCode,
+  createAdminLoginChallenge,
   createAdminSession,
   ensureAdminUserForPhone,
   formatAdminMenu,
@@ -173,12 +176,9 @@ import {
   isReservedAdminCommand,
   hashAdminPassphrase,
   normalizeAdminText,
-  recordAdminAuthFailure,
-  recordAdminAuthSuccess,
   revokeActiveAdminSessions,
   type AdminRole,
   type AdminPermission,
-  verifyAdminUserPassphrase,
 } from "@/lib/tickets/services/adminAuth";
 import { sendZapiText } from "@/lib/zapi/client";
 
@@ -286,8 +286,8 @@ type RouteTicketMessageInput = {
 type RouteTicketMessageOutput = {
   reply: string;
   outboundMessages?: Array<
-    | { type: "text"; body: string; phone?: string }
-    | { type: "image"; imageUrl: string; caption: string; phone?: string }
+    | { type: "text"; body: string; phone?: string; persistedBody?: string }
+    | { type: "image"; imageUrl: string; caption: string; phone?: string; persistedBody?: string }
   >;
   nextContext: TicketConversationState;
 };
@@ -1046,17 +1046,23 @@ function buildAdminContext({
   role,
   sessionId,
   expiresAt,
+  authChallengeId,
+  authChallengeExpiresAt,
 }: {
   adminUserId?: string;
   role?: AdminRole;
   sessionId?: string;
   expiresAt?: string;
+  authChallengeId?: string;
+  authChallengeExpiresAt?: string;
 }) {
   return {
     ...(adminUserId ? { adminUserId } : {}),
     ...(role ? { role } : {}),
     ...(sessionId ? { sessionId } : {}),
     ...(expiresAt ? { expiresAt } : {}),
+    ...(authChallengeId ? { authChallengeId } : {}),
+    ...(authChallengeExpiresAt ? { authChallengeExpiresAt } : {}),
   };
 }
 
@@ -7369,15 +7375,16 @@ export async function routeTicketMessage({
       };
     }
 
-    const passphraseResult = await verifyAdminUserPassphrase(customer.whatsapp_phone, text);
+    const codeResult = await consumeAdminLoginChallengeCode({
+      phone: customer.whatsapp_phone,
+      code: text,
+      challengeId: previousState.admin?.authChallengeId,
+      sourceIdentifier,
+    });
 
-    if (!passphraseResult.ok) {
-      const failureResult = passphraseResult.reason === "invalid_passphrase"
-        ? await recordAdminAuthFailure({
-            phone: customer.whatsapp_phone,
-            sourceIdentifier,
-          })
-        : null;
+    if (!codeResult.ok) {
+      const failureResult =
+        "failureResult" in codeResult ? codeResult.failureResult : null;
       const alertMessage =
         failureResult?.ok && failureResult.alertPhone
           ? {
@@ -7396,15 +7403,13 @@ export async function routeTicketMessage({
             }
           : null;
       const authFailureReply = failureResult?.ok && failureResult.hardLocked
-        ? TICKET_MESSAGES.adminAuthHardLocked
+          ? TICKET_MESSAGES.adminAuthHardLocked
         : failureResult?.ok && failureResult.temporaryLocked
           ? TICKET_MESSAGES.adminAuthTemporaryLocked.replace(
               "{minutes}",
               String(failureResult.retryAfterMinutes ?? 15),
             )
-          : passphraseResult.reason === "missing_passphrase_hash"
-            ? TICKET_MESSAGES.adminAuthMissingPassphrase
-            : TICKET_MESSAGES.adminAuthInvalid;
+          : TICKET_MESSAGES.adminAuthInvalid;
 
       return {
         reply: authFailureReply,
@@ -7418,14 +7423,14 @@ export async function routeTicketMessage({
           admin: buildAdminContext({
             adminUserId: adminUserResult.adminUser.id,
             role: adminUserResult.adminUser.role,
+            authChallengeId: previousState.admin?.authChallengeId,
+            authChallengeExpiresAt: previousState.admin?.authChallengeExpiresAt,
           }),
         },
       };
     }
 
-    await recordAdminAuthSuccess(customer.whatsapp_phone);
-
-    const sessionResult = await createAdminSession(adminUserResult.adminUser);
+    const sessionResult = await createAdminSession(codeResult.adminUser);
 
     if (!sessionResult.ok) {
       return {
@@ -7440,14 +7445,14 @@ export async function routeTicketMessage({
     }
 
     return {
-      reply: formatAdminMenu(adminUserResult.adminUser.role),
+      reply: formatAdminMenu(codeResult.adminUser.role),
       nextContext: {
         ...baseContext,
         step: "admin_menu",
         state: "admin_menu",
         admin: buildAdminContext({
-          adminUserId: adminUserResult.adminUser.id,
-          role: adminUserResult.adminUser.role,
+          adminUserId: codeResult.adminUser.id,
+          role: codeResult.adminUser.role,
           sessionId: sessionResult.adminSession.id,
           expiresAt: sessionResult.adminSession.expires_at,
         }),
@@ -7572,8 +7577,65 @@ export async function routeTicketMessage({
       };
     }
 
+    const blockStatus = await getAdminAuthBlockStatus(customer.whatsapp_phone);
+
+    if (blockStatus.ok && blockStatus.blocked) {
+      return {
+        reply:
+          blockStatus.type === "temporary"
+            ? TICKET_MESSAGES.adminAuthTemporaryLocked.replace(
+                "{minutes}",
+                String(blockStatus.retryAfterMinutes),
+              )
+            : TICKET_MESSAGES.adminAuthHardLocked,
+        nextContext: {
+          ...baseContext,
+          step: "admin_auth_pending",
+          state: "admin_auth_pending",
+          admin: buildAdminContext({
+            adminUserId: adminUserResult.adminUser.id,
+            role: adminUserResult.adminUser.role,
+          }),
+        },
+      };
+    }
+
+    const challengeResult = await createAdminLoginChallenge({
+      adminUser: adminUserResult.adminUser,
+      sourceIdentifier,
+    });
+
+    if (!challengeResult.ok) {
+      return {
+        reply: TICKET_MESSAGES.adminGenericError,
+        nextContext: {
+          ...baseContext,
+          step: "idle",
+          state: "idle",
+          admin: undefined,
+        },
+      };
+    }
+
+    const authReply = [
+      "*LOGIN ADMINISTRATIVO*",
+      "",
+      "Abra este link para informar sua senha individual:",
+      challengeResult.loginUrl,
+      "",
+      `O link expira em ${challengeResult.expiresInMinutes} minutos.`,
+      "Depois de confirmar a senha, envie aqui o código de uso único exibido na página.",
+    ].join("\n");
+
     return {
-      reply: TICKET_MESSAGES.adminAuthPrompt,
+      reply: authReply,
+      outboundMessages: [
+        {
+          type: "text",
+          body: authReply,
+          persistedBody: ADMIN_LOGIN_LINK_REDACTED_BODY,
+        },
+      ],
       nextContext: {
         ...baseContext,
         step: "admin_auth_pending",
@@ -7581,6 +7643,8 @@ export async function routeTicketMessage({
         admin: buildAdminContext({
           adminUserId: adminUserResult.adminUser.id,
           role: adminUserResult.adminUser.role,
+          authChallengeId: challengeResult.challengeId,
+          authChallengeExpiresAt: challengeResult.expiresAt,
         }),
       },
     };

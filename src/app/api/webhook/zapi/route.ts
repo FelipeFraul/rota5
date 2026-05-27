@@ -48,8 +48,8 @@ type ParsedIncomingMessage = {
   mediaUrl: string | null;
 };
 type RouteOutboundMessage =
-  | { type: "text"; body: string; phone?: string }
-  | { type: "image"; imageUrl: string; caption: string; phone?: string };
+  | { type: "text"; body: string; phone?: string; persistedBody?: string }
+  | { type: "image"; imageUrl: string; caption: string; phone?: string; persistedBody?: string };
 
 function getHeaderSecret(request: Request): string | null {
   for (const headerName of SECRET_HEADER_NAMES) {
@@ -630,9 +630,10 @@ export async function POST(request: Request) {
       direction: "outbound",
       messageType: outboundMessage.type,
       body:
-        outboundMessage.type === "image"
+        outboundMessage.persistedBody ??
+        (outboundMessage.type === "image"
           ? outboundMessage.caption
-          : outboundMessage.body,
+          : outboundMessage.body),
       providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
       rawMetadata: buildOutboundMetadata({
         sendResult,

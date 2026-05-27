@@ -275,6 +275,7 @@ Admin WhatsApp behavior:
 - Unauthorized phones receive a neutral message and never see admin wording.
 - A configured root phone sending `admin` is bootstrapped into `admin_users` with role `root` if missing, but it still cannot authenticate until `admin_users.passphrase_hash` is set.
 - The next inbound message while `admin_auth_pending` is saved as `[ADMIN_AUTH_REDACTED]`.
+- Admin web login challenges live in `admin_login_challenges`. Store only hashed link tokens, hashed one-time return codes, and hashed source identifiers. The raw web login link sent by WhatsApp is persisted as `[ADMIN_LOGIN_LINK_REDACTED]`; the raw admin password is entered only on the web login page and is never stored.
 - A valid individual passphrase creates an `admin_sessions` row and shows a permission-filtered menu.
 - `sair`, `logout`, or `encerrar` revokes active admin sessions while inside the admin flow.
 - The database constraint `admin_users_active_requires_passphrase_hash` enforces that every `active` admin has a non-empty `passphrase_hash`; `disabled` admins may keep or omit the hash.

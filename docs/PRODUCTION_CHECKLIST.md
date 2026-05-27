@@ -42,6 +42,7 @@ Confirmar migrations aplicadas:
 - `gate_accesses`;
 - `issue_courtesy_order`;
 - `admin_users_active_requires_passphrase_hash`.
+- `admin_login_challenges`.
 
 Admins:
 
@@ -50,6 +51,7 @@ Admins:
 - Diretor/root sem hash individual não entra;
 - `gate/support` não são roles válidas de admin.
 - `admin_auth_attempts` deve existir para aplicar bloqueio por tentativa: 3 erros bloqueiam por 15 minutos; 5 erros sequenciais bloqueiam até liberação por Diretor.
+- `admin_login_challenges` deve existir para login tokenizado: link único temporário, senha individual no web login e código único retornado pelo WhatsApp. A tabela guarda apenas hashes de token, código e origem.
 - `rate_limit_events` e `consume_rate_limit` devem existir para aplicar rate limit por rota e origem hashada.
 
 ## Webhooks E Cron
@@ -87,7 +89,7 @@ Fluxo validado:
 - Não logar QR/base64, token puro, `qr_token_hash`, metadata de pagamento, senha ou secrets.
 - Não expor telefone completo em relatórios/admin.
 - Rate limits do app devem responder `429` sem salvar IP puro, payload, telefone completo, token ou base64.
-- Vercel Firewall deve manter a regra publicada `Rate limit - Sensitive public routes`: OR nas rotas sensíveis, Fixed Window de 60 segundos, 120 requests, chave IP Address e ação `429`.
+- Vercel Firewall deve manter a regra publicada `Rate limit - Sensitive public routes`: OR nas rotas sensíveis, Fixed Window de 60 segundos, 120 requests, chave IP Address e ação `429`. Com o login administrativo tokenizado, incluir também `/admin/login/*` e `/api/admin/login/verify` nessa regra.
 - Não executar scripts de auditoria com dados reais sem prefixo temporário.
 - Rodar `node .tools/audit_system_closure.mjs` antes de mudanças grandes em produção.
 

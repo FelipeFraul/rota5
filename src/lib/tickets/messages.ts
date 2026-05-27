@@ -52,8 +52,10 @@ export const TICKET_MESSAGES = {
     "Não consegui criar o acesso de portaria agora. Tente novamente em instantes.",
   adminReservedNeutral:
     "Não consegui entender sua mensagem.\nMe diga o nome do evento, artista, cidade, local ou data que você procura.",
-  adminAuthPrompt: "Envie a palavra-chave de acesso administrativo.",
-  adminAuthInvalid: "Palavra-chave inválida.",
+  adminAuthPrompt:
+    "Abra o link de login enviado, informe sua senha individual e depois envie aqui o código de uso único.",
+  adminAuthInvalid:
+    "Código inválido ou expirado. Envie admin para gerar um novo link de login.",
   adminAuthTemporaryLocked:
     "Muitas tentativas incorretas. Por segurança, este acesso foi bloqueado por {minutes} minutos.",
   adminAuthHardLocked:

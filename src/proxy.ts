@@ -127,9 +127,23 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  if (pathname.startsWith("/admin/login/")) {
+    const token = decodeURIComponent(pathname.replace(/^\/admin\/login\//, ""));
+    const result = await consumePageRateLimit(request, {
+      routeKey: "page:admin-login",
+      limit: 30,
+      windowSeconds: 60,
+      scope: `admin-login:${await sha256(token)}`,
+    });
+
+    if (!result.allowed) {
+      return tooManyRequests(result.retryAfterSeconds);
+    }
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/tickets/:path*", "/gate/session/:path*"],
+  matcher: ["/tickets/:path*", "/gate/session/:path*", "/admin/login/:path*"],
 };

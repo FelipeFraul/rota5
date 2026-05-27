@@ -41,11 +41,20 @@ admin
 
 Depois, o sistema pede a senha individual.
 
+Fluxo atual:
+
+1. O sistema envia um link único e temporário.
+2. Abra o link e informe sua senha individual.
+3. A página mostra um código de uso único.
+4. Volte ao WhatsApp e envie esse código.
+5. O menu administrativo é liberado.
+
 Regras:
 
 - cada administrador tem senha própria;
 - não existe senha geral;
-- senha digitada não fica salva em texto puro;
+- senha digitada no login web não fica salva em texto puro;
+- link e código são temporários e de uso único;
 - admin desativado não entra;
 - admin ativo precisa ter `passphrase_hash` individual no banco.
 
