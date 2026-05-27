@@ -244,6 +244,8 @@ Após a confirmação do Mercado Pago:
 - os tickets são emitidos;
 - o comprador recebe o ingresso pelo WhatsApp.
 
+O webhook do Mercado Pago exige assinatura (`x-signature`) e `x-request-id`, busca o pagamento real na API Mercado Pago e não confia em status, valor ou cliente vindos do payload. A referência aceita é `ticket_order_<order_id>`. Valor menor que o total congelado no banco não emite ingresso; valor igual emite; valor maior é aceito e o valor pago fica registrado em `payments.amount_cents`, mantendo o total original do pedido. Eventos duplicados processados não reemitem tickets, eventos com `processed_at` nulo podem ser retomados, e falhas transitórias da API Mercado Pago continuam retry-safe. Falhas definitivas de confirmação, como order/reserva não pagável, valor menor, assento não reservado para aquela reserva ou `provider_payment_id` já vinculado a outra order, são marcadas como processadas/ignoradas sem emitir ingresso.
+
 A mensagem de confirmação deve separar:
 
 1. dados do ingresso;

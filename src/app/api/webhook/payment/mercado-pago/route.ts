@@ -135,6 +135,26 @@ async function markPaymentEventProcessed(eventId: string) {
   }
 }
 
+const DEFINITIVE_CONFIRMATION_ERRORS = new Set([
+  "order_not_found",
+  "order_not_payable",
+  "reservation_not_found",
+  "reservation_not_payable",
+  "reservation_expired",
+  "payment_amount_too_low",
+  "reservation_items_not_found",
+  "reserved_seat_not_available",
+  "payment_already_linked",
+]);
+
+function getDefinitiveConfirmationReason(error: { message?: string } | null | undefined) {
+  const message = error?.message?.trim();
+
+  return message && DEFINITIVE_CONFIRMATION_ERRORS.has(message)
+    ? message
+    : null;
+}
+
 async function orderExists(orderId: string) {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
@@ -360,6 +380,22 @@ export async function POST(request: Request) {
   );
 
   if (error) {
+    const definitiveReason = getDefinitiveConfirmationReason(error);
+
+    if (definitiveReason) {
+      await markPaymentEventProcessed(eventInsert.id);
+      logWarn("Ignored definitive Mercado Pago payment confirmation failure", {
+        providerPaymentId: paymentId,
+        orderId,
+        reason: definitiveReason,
+      });
+      return jsonOk({
+        received: true,
+        ignored: true,
+        reason: definitiveReason,
+      });
+    }
+
     logError("Failed to confirm paid ticket order from Mercado Pago webhook", {
       providerPaymentId: paymentId,
       orderId,

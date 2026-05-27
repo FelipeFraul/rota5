@@ -194,7 +194,9 @@ Final quality audit notes:
 - Unsigned webhooks return `401` before parsing the body.
 - `payment_events` rows with `processed_at = null` are retryable; processed rows are treated as duplicate.
 - Definitive ignores such as non-approved payments, invalid references, and missing orders are marked processed without issuing tickets.
+- Definitive confirmation refusals from `confirm_paid_ticket_order`, including low payment amount, non-payable order/reservation, expired reservation, unavailable reserved seat state, and `provider_payment_id` already linked to another order, are marked processed with a safe ignored reason and do not issue tickets.
 - Transient Mercado Pago/API/RPC failures are not marked processed, allowing retry.
+- Overpayment is accepted by policy: `payments.amount_cents` records the paid amount and the order keeps its original expected total.
 - `npm audit` currently reports a moderate PostCSS advisory through `next`; the proposed fix requires `npm audit fix --force` and is not safe to apply automatically.
 
 ## Mercado Pago Checkout
