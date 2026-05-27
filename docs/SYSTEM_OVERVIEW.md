@@ -1,6 +1,6 @@
 # Visão Geral do Sistema
 
-Atualizado em 26/05/2026.
+Atualizado em 27/05/2026.
 
 Este documento resume o que existe hoje no sistema, como os fluxos funcionam e quais pontos ainda precisam de decisão ou refinamento.
 
@@ -68,6 +68,27 @@ Rotas públicas e sensíveis têm proteção por janela curta no app:
 O contador fica em `rate_limit_events` por rota e hash SHA-256 da origem. O sistema não salva IP puro, payload bruto, telefone completo, token, QR/base64 ou metadata sensível.
 
 Além disso, a Vercel tem uma regra única publicada no Firewall, `Rate limit - Sensitive public routes`, para as rotas sensíveis. Ela usa Fixed Window de 60 segundos, 120 requests, chave IP Address e ação `429`. A configuração está documentada em `docs/VERCEL_FIREWALL.md`.
+
+## Headers de Segurança
+
+O app aplica headers globais via `next.config.ts`:
+
+- `Content-Security-Policy`;
+- `Referrer-Policy: strict-origin-when-cross-origin`;
+- `X-Content-Type-Options: nosniff`;
+- `X-Frame-Options: DENY`.
+
+A CSP atual é:
+
+```text
+default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob: https:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.mercadopago.com; connect-src 'self' https:; media-src 'self' data: blob:; worker-src 'self' blob:; manifest-src 'self'
+```
+
+`frame-ancestors 'none'` impede que o site seja embutido por outros sites e substitui/fortalece a proteção histórica do `X-Frame-Options`. O header `X-Frame-Options: DENY` permanece por compatibilidade com verificadores e navegadores antigos.
+
+`img-src data:` é necessário porque QRCode e mapas de assento podem ser gerados como imagens base64. `script-src` mantém `'unsafe-inline'` e `'unsafe-eval'` por compatibilidade conservadora com Next/Vercel e adiciona somente `https://sdk.mercadopago.com` para o checkout no browser. `connect-src 'self' https:` permite chamadas HTTPS do browser sem fixar secrets ou domínios sensíveis na política.
+
+Em 27/05/2026, a configuração foi adicionada após scan Mozilla Observatory com nota C / 50 em `https://site-phi-seven-72.vercel.app`. O novo resultado do Mozilla Observatory e do SecurityHeaders.com deve ser registrado após deploy e re-scan.
 
 ## 3. Compra pelo WhatsApp
 

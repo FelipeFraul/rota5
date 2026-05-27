@@ -89,6 +89,10 @@ Fluxo validado:
 
 - Não logar QR/base64, token puro, `qr_token_hash`, metadata de pagamento, senha ou secrets.
 - Não expor telefone completo em relatórios/admin.
+- Headers globais de segurança devem estar presentes em páginas e APIs: `Content-Security-Policy`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Content-Type-Options: nosniff` e `X-Frame-Options: DENY`.
+- CSP esperada: `default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob: https:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.mercadopago.com; connect-src 'self' https:; media-src 'self' data: blob:; worker-src 'self' blob:; manifest-src 'self'`.
+- `frame-ancestors 'none'` substitui/fortalece a proteção de frame do `X-Frame-Options`; `X-Frame-Options: DENY` também deve permanecer por compatibilidade.
+- `img-src data:` é obrigatório para QRCode/mapas base64. `script-src` mantém `'unsafe-inline'`/`'unsafe-eval'` por compatibilidade com Next/Vercel e libera `https://sdk.mercadopago.com` para o checkout Mercado Pago.
 - Rate limits do app devem responder `429` sem salvar IP puro, payload, telefone completo, token ou base64.
 - Antifraude de comprador deve manter limites conservadores: uma reserva ativa por telefone, até 5 reservas criadas por telefone em 15 minutos, até 5 reservas expiradas/canceladas em 30 minutos, até 5 solicitações de checkout por order/reserva em 10 minutos, e limites por origem hashada. Bloqueios retornam mensagem segura sem mencionar fraude.
 - Vercel Firewall deve manter a regra publicada `Rate limit - Sensitive public routes`: OR nas rotas sensíveis, incluindo `/admin/login/*` e `/api/admin/login/verify`, Fixed Window de 60 segundos, 120 requests, chave IP Address e ação `429`.
@@ -97,6 +101,7 @@ Fluxo validado:
 - Páginas/APIs públicas devem usar DTO mínimo. Não retornar objeto cru do banco nem expor ids internos, hashes, metadata, headers, payload bruto, stack trace ou erro SQL.
 - Não executar scripts de auditoria com dados reais sem prefixo temporário.
 - Rodar `node .tools/audit_system_closure.mjs` antes de mudanças grandes em produção.
+- Após deploy de headers, revalidar Mozilla Observatory e SecurityHeaders.com. Em 27/05/2026, o scan anterior do Mozilla Observatory em `https://site-phi-seven-72.vercel.app` estava C / 50 por ausência de CSP, Referrer-Policy, X-Content-Type-Options e proteção de framing; registrar aqui o novo resultado depois do re-scan.
 
 ## Pendências Futuras
 
