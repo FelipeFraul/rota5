@@ -101,7 +101,7 @@ Fluxo validado:
 - Páginas/APIs públicas devem usar DTO mínimo. Não retornar objeto cru do banco nem expor ids internos, hashes, metadata, headers, payload bruto, stack trace ou erro SQL.
 - Não executar scripts de auditoria com dados reais sem prefixo temporário.
 - Rodar `node .tools/audit_system_closure.mjs` antes de mudanças grandes em produção.
-- Após deploy de headers, revalidar Mozilla Observatory e SecurityHeaders.com. Em 27/05/2026, o scan anterior do Mozilla Observatory em `https://site-phi-seven-72.vercel.app` estava C / 50 por ausência de CSP, Referrer-Policy, X-Content-Type-Options e proteção de framing; registrar aqui o novo resultado depois do re-scan.
+- Após deploy de headers em 27/05/2026, o MDN HTTP Observatory retornou B+ / 80, com 9 de 10 testes passados, scan `97301039` em `2026-05-27T13:06:10.645Z`. O scan anterior estava C / 50 por ausência de CSP, Referrer-Policy, X-Content-Type-Options e proteção de framing. SecurityHeaders.com não foi automatizado no terminal porque a página pública retornou desafio Cloudflare e a API pública exige autorização.
 
 ## Pendências Futuras
 

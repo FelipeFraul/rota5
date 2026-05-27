@@ -88,7 +88,7 @@ default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; 
 
 `img-src data:` é necessário porque QRCode e mapas de assento podem ser gerados como imagens base64. `script-src` mantém `'unsafe-inline'` e `'unsafe-eval'` por compatibilidade conservadora com Next/Vercel e adiciona somente `https://sdk.mercadopago.com` para o checkout no browser. `connect-src 'self' https:` permite chamadas HTTPS do browser sem fixar secrets ou domínios sensíveis na política.
 
-Em 27/05/2026, a configuração foi adicionada após scan Mozilla Observatory com nota C / 50 em `https://site-phi-seven-72.vercel.app`. O novo resultado do Mozilla Observatory e do SecurityHeaders.com deve ser registrado após deploy e re-scan.
+Em 27/05/2026, a configuração foi adicionada após scan Mozilla Observatory com nota C / 50 em `https://site-phi-seven-72.vercel.app`. Após deploy, o MDN HTTP Observatory retornou B+ / 80, com 9 de 10 testes passados, scan `97301039` em `2026-05-27T13:06:10.645Z`. SecurityHeaders.com não foi automatizado no terminal porque a página pública retornou desafio Cloudflare e a API pública exige autorização.
 
 ## 3. Compra pelo WhatsApp
 
