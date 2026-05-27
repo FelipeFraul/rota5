@@ -325,7 +325,7 @@ export async function createAdminLoginChallenge({
 export async function getAdminLoginChallengeByToken(token: string) {
   const normalizedToken = token.trim();
 
-  if (!normalizedToken) {
+  if (!/^[a-f0-9]{64}$/i.test(normalizedToken)) {
     return { ok: false as const, reason: "invalid_token" as const };
   }
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useParams } from "next/navigation";
 
 type GateSessionScannerProps = {
   initialValidation: GateSessionValidation;
@@ -79,15 +78,9 @@ function extractTicketToken(rawValue: string) {
   return value;
 }
 
-function getRouteToken(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
-}
-
 export function GateSessionScanner({
   initialValidation,
 }: GateSessionScannerProps) {
-  const params = useParams<{ token?: string | string[] }>();
-  const token = getRouteToken(params.token);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const lastScanRef = useRef<string | null>(null);
@@ -189,11 +182,6 @@ export function GateSessionScanner({
         return;
       }
 
-      if (!token) {
-        registerDeniedResult("Sessão de portaria inválida ou expirada.");
-        return;
-      }
-
       if (now < scanPausedUntilRef.current) {
         return;
       }
@@ -227,7 +215,6 @@ export function GateSessionScanner({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            gateSessionToken: token,
             ticketToken,
           }),
         });
@@ -259,7 +246,6 @@ export function GateSessionScanner({
       pauseScannerAfterAllowed,
       registerAllowedResult,
       registerDeniedResult,
-      token,
     ],
   );
 
@@ -274,10 +260,6 @@ export function GateSessionScanner({
       try {
         const response = await fetch("/api/gate/session/validate", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ token }),
         });
         const result = (await response.json()) as GateSessionValidation;
 
@@ -306,7 +288,7 @@ export function GateSessionScanner({
         clearTimeout(scanResumeTimerRef.current);
       }
     };
-  }, [initialValidation.valid, token]);
+  }, [initialValidation.valid]);
 
   useEffect(() => {
     if (!validation?.valid) {

@@ -391,14 +391,47 @@ async function sendMessage(phone, text) {
   };
 }
 
+function cookieHeaderFrom(response, cookieName) {
+  const rawCookie = response.headers.get("set-cookie") ?? "";
+  assertIncludes(rawCookie, `${cookieName}=`, `${cookieName} definido`);
+  assertIncludes(rawCookie, "HttpOnly", `${cookieName} HttpOnly`);
+  assertIncludes(rawCookie, "Secure", `${cookieName} Secure`);
+  assertIncludes(rawCookie, "SameSite=lax", `${cookieName} SameSite`);
+  return rawCookie.split(";")[0];
+}
+
+function gateSessionIdFromToken(token) {
+  const [encodedPayload] = decodeURIComponent(token).split(".");
+  const payload = JSON.parse(Buffer.from(encodedPayload, "base64url").toString("utf8"));
+  return payload.gid;
+}
+
+function extractAdminLoginUrl(text) {
+  const match = text.match(/https?:\/\/\S+\/admin\/login\/[a-f0-9]+/i);
+  if (!match) throw new Error(`admin login URL not found in: ${text}`);
+  return match[0];
+}
+
 async function validateGateSessionLink(gateUrl, expectedEventId, expectedEventTitle = PREFIX) {
   const token = gateUrl.match(/\/gate\/session\/([^/\s]+)/)?.[1];
   assert(Boolean(token), "link de check-in contém token");
 
+  const bootstrapResponse = await fetch(`${APP_BASE_URL}/gate/session/${token}`, {
+    redirect: "manual",
+  });
+  assert(
+    bootstrapResponse.status >= 300 && bootstrapResponse.status < 400,
+    "link temporário redireciona para URL limpa",
+  );
+  assert(
+    bootstrapResponse.headers.get("location")?.endsWith("/gate/session"),
+    "redirect limpa token da URL da portaria",
+  );
+  const gateCookie = cookieHeaderFrom(bootstrapResponse, "gate_session");
+
   const response = await fetch(`${APP_BASE_URL}/api/gate/session/validate`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ token: decodeURIComponent(token) }),
+    headers: { cookie: gateCookie },
   });
   const body = await response.json();
   assert(response.ok && body.valid, "link temporário valida na API");
@@ -408,20 +441,55 @@ async function validateGateSessionLink(gateUrl, expectedEventId, expectedEventTi
   const { data: session, error } = await service
     .from("gate_sessions")
     .select("id, event_id, validator_phone, status")
-    .eq("id", body.gateSession.id)
+    .eq("id", gateSessionIdFromToken(token))
     .single();
   if (error) throw error;
   assert(session.event_id === expectedEventId, "gate_session tem event_id preenchido");
   assert(session.status === "active", "gate_session fica active");
 
-  const pageResponse = await fetch(`${APP_BASE_URL}/gate/session/${token}`);
+  const pageResponse = await fetch(`${APP_BASE_URL}/gate/session`, {
+    headers: { cookie: gateCookie },
+  });
   const pageHtml = await pageResponse.text();
   assert(pageResponse.ok, "página de portaria abre");
   assertIncludes(pageHtml, expectedEventTitle, "página mostra nome do evento");
+  assertNotIncludes(pageHtml, decodeURIComponent(token), "página limpa não expõe token bruto");
   assertNotSensitive(pageHtml, "página de portaria");
   assertNotIncludes(pageHtml, session.validator_phone, "página não mostra telefone completo");
 
   return session;
+}
+
+async function performAdminLogin(phone) {
+  const loginPrompt = await sendMessage(phone, "admin");
+  assertIncludes(loginPrompt.text, "LOGIN ADMINISTRATIVO", "admin recebe login tokenizado");
+  const loginUrl = extractAdminLoginUrl(loginPrompt.text);
+  const bootstrapResponse = await fetch(loginUrl, { redirect: "manual" });
+  assert(
+    bootstrapResponse.status >= 300 && bootstrapResponse.status < 400,
+    "link admin redireciona para URL limpa",
+  );
+  const loginCookie = cookieHeaderFrom(bootstrapResponse, "admin_login_challenge");
+
+  const pageResponse = await fetch(`${APP_BASE_URL}/admin/login`, {
+    headers: { cookie: loginCookie },
+  });
+  assert(pageResponse.ok, "pagina de login admin limpa abre com cookie");
+  assertIncludes(await pageResponse.text(), "Informe sua senha individual", "pagina admin pede senha");
+
+  const verifyResponse = await fetch(`${APP_BASE_URL}/api/admin/login/verify`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      cookie: loginCookie,
+    },
+    body: JSON.stringify({ passphrase: ADMIN_PASS }),
+  });
+  const verifyBody = await verifyResponse.json();
+  assert(verifyResponse.ok && /^\d{6}$/.test(verifyBody.code), "senha admin gera codigo");
+
+  const menu = await sendMessage(phone, verifyBody.code);
+  assertIncludes(menu.text, "MENU ADMIN", "admin autenticado abre menu");
 }
 
 async function assertInboundPassphrasesRedacted() {
@@ -495,8 +563,7 @@ async function main() {
     zapiServer = await startZapiMock();
     nextChild = await startNextDev();
 
-    assertIncludes((await sendMessage(adminPhone, "admin")).text, "palavra-chave", "admin pede senha");
-    assertIncludes((await sendMessage(adminPhone, ADMIN_PASS)).text, "MENU ADMIN", "admin autenticado abre menu");
+    await performAdminLogin(adminPhone);
     assertIncludes((await sendMessage(adminPhone, "4")).text, "PORTARIA", "menu portaria abre");
 
     const selfSelect = await sendMessage(adminPhone, "1");
@@ -580,6 +647,8 @@ async function main() {
     assertNotIncludes(accessList.text, GATE_PASS, "lista não mostra palavra-chave");
     assertNotIncludes(accessList.text, "pbkdf2_sha256", "lista não mostra hash");
 
+    assertIncludes((await sendMessage(adminPhone, "Voltar")).text, "PORTARIA - ESCOLHA O EVENTO", "volta para escolha de evento antes de revogar");
+    assertIncludes((await sendMessage(adminPhone, "Voltar")).text, "PORTARIA", "volta ao menu portaria para revogar");
     assertIncludes((await sendMessage(adminPhone, "4")).text, "REVOGAR ACESSOS", "revogar pede evento");
     const revokeList = await sendMessage(adminPhone, `${PREFIX} Evento`);
     assertIncludes(revokeList.text, "Digite o número do acesso", "revogar lista acessos");
@@ -600,6 +669,7 @@ async function main() {
     if (pausedError) throw pausedError;
     assert(paused.status === "paused", "revogar altera status para paused");
 
+    assertIncludes((await sendMessage(adminPhone, "portaria")).text, "PORTARIA", "volta ao menu portaria para ver pausados");
     assertIncludes((await sendMessage(adminPhone, "3")).text, "PORTARIA - ESCOLHA O EVENTO", "ver pausados pede evento");
     assertIncludes((await sendMessage(adminPhone, `${PREFIX} Evento`)).text, "VER TODOS OS ACESSOS", "ver pausados pede filtro");
     const pausedList = await sendMessage(adminPhone, "2");

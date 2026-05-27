@@ -120,6 +120,35 @@ function hash(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+function cookieHeaderFrom(response, cookieName) {
+  const rawCookie = response.headers.get("set-cookie") ?? "";
+  assert(
+    rawCookie.includes(`${cookieName}=`),
+    `${cookieName} definido`,
+    rawCookie,
+  );
+  assert(rawCookie.includes("HttpOnly"), `${cookieName} HttpOnly`, rawCookie);
+  assert(rawCookie.includes("Secure"), `${cookieName} Secure`, rawCookie);
+  assert(rawCookie.includes("SameSite=lax"), `${cookieName} SameSite`, rawCookie);
+  return rawCookie.split(";")[0];
+}
+
+async function gateCookieFor(gateSessionToken) {
+  const response = await fetch(
+    `${APP_BASE_URL}/gate/session/${encodeURIComponent(gateSessionToken)}`,
+    { redirect: "manual" },
+  );
+  assert(
+    response.status >= 300 && response.status < 400,
+    "bootstrap de portaria redireciona para URL limpa",
+  );
+  assert(
+    response.headers.get("location")?.endsWith("/gate/session"),
+    "bootstrap de portaria remove token da URL",
+  );
+  return cookieHeaderFrom(response, "gate_session");
+}
+
 async function waitForHealth() {
   const deadline = Date.now() + 60_000;
   while (Date.now() < deadline) {
@@ -424,10 +453,14 @@ async function createGateSession({ eventId, sessionId = null, label }) {
 }
 
 async function scan(gateSessionToken, ticketToken) {
+  const gateCookie = await gateCookieFor(gateSessionToken);
   const response = await fetch(`${APP_BASE_URL}/api/gate/session/scan`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ gateSessionToken, ticketToken }),
+    headers: {
+      "content-type": "application/json",
+      cookie: gateCookie,
+    },
+    body: JSON.stringify({ ticketToken }),
   });
   const body = await response.json().catch(() => ({}));
   assert(response.ok, "endpoint de scan responde 200", JSON.stringify(body));
@@ -435,10 +468,10 @@ async function scan(gateSessionToken, ticketToken) {
 }
 
 async function validateGateSession(gateSessionToken) {
+  const gateCookie = await gateCookieFor(gateSessionToken);
   const response = await fetch(`${APP_BASE_URL}/api/gate/session/validate`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ token: gateSessionToken }),
+    headers: { cookie: gateCookie },
   });
   const body = await response.json().catch(() => ({}));
   assert(response.ok, "endpoint de validate responde 200", JSON.stringify(body));
@@ -528,9 +561,13 @@ async function runAudit() {
   assertNotIncludes(validTicketHtml, "qr_token_hash", "pagina de ingresso nao expoe qr_token_hash");
   assertNotIncludes(validTicketHtml, "raw_metadata", "pagina de ingresso nao expoe raw_metadata");
 
-  const validGatePage = await fetch(`${APP_BASE_URL}/gate/session/${encodeURIComponent(gateA.token)}`);
+  const validGateCookie = await gateCookieFor(gateA.token);
+  const validGatePage = await fetch(`${APP_BASE_URL}/gate/session`, {
+    headers: { cookie: validGateCookie },
+  });
   const validGateHtml = await validGatePage.text();
   assert(validGatePage.status === 200, "pagina de portaria valida responde 200");
+  assertNotIncludes(validGateHtml, gateA.token, "pagina de portaria limpa nao expoe token bruto");
   assertNotIncludes(validGateHtml, gateA.gateSessionId, "pagina de portaria nao expoe gate_session_id");
   assertNotIncludes(validGateHtml, hash(gateA.token), "pagina de portaria nao expoe token_hash");
   assertNotIncludes(validGateHtml, "559920000099", "pagina de portaria nao expoe telefone completo");
@@ -592,12 +629,12 @@ async function runAudit() {
   const invalidGateResponse = await fetch(`${APP_BASE_URL}/api/gate/session/scan`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ gateSessionToken: "token-invalido", ticketToken: ticketA.token }),
+    body: JSON.stringify({ ticketToken: ticketA.token }),
   });
   const invalidGate = await invalidGateResponse.json();
   assert(
-    invalidGate.allowed === false && invalidGate.result === "gate_session_invalid",
-    "scan com sessão inválida responde seguro",
+    invalidGateResponse.status === 401 && invalidGate.error?.message === "Unauthorized",
+    "scan sem cookie de sessão responde 401 seguro",
   );
 
   const publicInvalidTicket = await fetch(

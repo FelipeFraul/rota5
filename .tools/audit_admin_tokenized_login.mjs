@@ -249,6 +249,15 @@ function extractAdminLoginUrl(text) {
   return match[0];
 }
 
+function cookieHeaderFrom(response, cookieName) {
+  const rawCookie = response.headers.get("set-cookie") ?? "";
+  assertIncludes(rawCookie, `${cookieName}=`, `${cookieName} definido`);
+  assertIncludes(rawCookie, "HttpOnly", `${cookieName} HttpOnly`);
+  assertIncludes(rawCookie, "Secure", `${cookieName} Secure`);
+  assertIncludes(rawCookie, "SameSite=lax", `${cookieName} SameSite`);
+  return rawCookie.split(";")[0];
+}
+
 async function getRootMessages() {
   const { data: customer, error: customerError } = await service
     .from("customers")
@@ -336,17 +345,33 @@ async function main() {
     assertIncludes(response.text, "/admin/login/", "admin recebe link temporário");
     const loginUrl = extractAdminLoginUrl(response.text);
 
-    const pageResponse = await fetch(loginUrl);
+    const bootstrapResponse = await fetch(loginUrl, { redirect: "manual" });
+    assert(
+      bootstrapResponse.status >= 300 && bootstrapResponse.status < 400,
+      "link temporário redireciona para URL limpa",
+    );
+    assert(
+      bootstrapResponse.headers.get("location")?.endsWith("/admin/login"),
+      "redirect limpa token da URL admin",
+    );
+    const loginCookie = cookieHeaderFrom(bootstrapResponse, "admin_login_challenge");
+
+    const pageResponse = await fetch(`${APP_BASE_URL}/admin/login`, {
+      headers: { cookie: loginCookie },
+    });
     assert(pageResponse.ok, "página de login temporário abre");
-    assertIncludes(await pageResponse.text(), "Informe sua senha individual", "página pede senha individual");
+    const pageHtml = await pageResponse.text();
+    assertIncludes(pageHtml, "Informe sua senha individual", "página pede senha individual");
+    assertNotIncludes(pageHtml, loginUrl.split("/").pop(), "página limpa não expõe token bruto");
 
     const wrongResponse = await fetch(`${APP_BASE_URL}/api/admin/login/verify`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
         "x-forwarded-for": SOURCE_IP,
+        cookie: loginCookie,
       },
-      body: JSON.stringify({ token: loginUrl.split("/").pop(), passphrase: WRONG_PASS }),
+      body: JSON.stringify({ passphrase: WRONG_PASS }),
     });
     assert(wrongResponse.status === 401, "senha errada no web login não autentica");
 
@@ -355,12 +380,18 @@ async function main() {
       headers: {
         "content-type": "application/json",
         "x-forwarded-for": SOURCE_IP,
+        cookie: loginCookie,
       },
-      body: JSON.stringify({ token: loginUrl.split("/").pop(), passphrase: PASS }),
+      body: JSON.stringify({ passphrase: PASS }),
     });
     const verifyBody = await verifyResponse.json();
     assert(verifyResponse.ok, "senha correta no web login gera código");
     assert(/^\d{6}$/.test(verifyBody.code), "código tem 6 dígitos");
+    assertIncludes(
+      verifyResponse.headers.get("set-cookie") ?? "",
+      "admin_login_challenge=;",
+      "challenge consumido limpa cookie",
+    );
 
     response = await sendMessage(ROOT_PHONE, "000000");
     assertIncludes(response.text, "Código inválido", "código errado não cria sessão");

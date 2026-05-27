@@ -1,15 +1,8 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useParams } from "next/navigation";
-
-function getRouteToken(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
-}
 
 export function AdminLoginForm() {
-  const params = useParams<{ token?: string | string[] }>();
-  const token = getRouteToken(params.token);
   const [passphrase, setPassphrase] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +19,7 @@ export function AdminLoginForm() {
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ token, passphrase }),
+        body: JSON.stringify({ passphrase }),
       });
       const data = (await response.json()) as {
         ok?: boolean;

@@ -1,8 +1,6 @@
-import {
-  badRequest,
-  jsonOk,
-  methodNotAllowed,
-} from "@/lib/http/responses";
+import { NextRequest } from "next/server";
+import { GATE_SESSION_COOKIE } from "@/lib/http/accessCookies";
+import { jsonOk, methodNotAllowed, unauthorized } from "@/lib/http/responses";
 import {
   consumeRateLimit,
   rateLimitResponse,
@@ -10,27 +8,7 @@ import {
 import { buildPublicGateSessionDto } from "@/lib/tickets/services/publicDtos";
 import { validateGateSessionToken } from "@/lib/tickets/services/gateSessions";
 
-async function readToken(request: Request) {
-  try {
-    const payload = (await request.json()) as unknown;
-
-    if (
-      !payload ||
-      typeof payload !== "object" ||
-      Array.isArray(payload) ||
-      typeof (payload as { token?: unknown }).token !== "string" ||
-      !(payload as { token: string }).token.trim()
-    ) {
-      return null;
-    }
-
-    return (payload as { token: string }).token.trim();
-  } catch {
-    return null;
-  }
-}
-
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const rateLimit = await consumeRateLimit({
     routeKey: "gate:session:validate",
     limit: 60,
@@ -42,10 +20,10 @@ export async function POST(request: Request) {
     return rateLimitResponse(rateLimit);
   }
 
-  const token = await readToken(request);
+  const token = request.cookies.get(GATE_SESSION_COOKIE)?.value.trim() ?? "";
 
   if (!token) {
-    return badRequest("Bad request");
+    return unauthorized();
   }
 
   const result = await validateGateSessionToken(token);

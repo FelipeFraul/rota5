@@ -1,4 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import {
+  ADMIN_LOGIN_CHALLENGE_COOKIE,
+  clearAccessCookie,
+} from "@/lib/http/accessCookies";
 import {
   consumeRateLimit,
   hashRateLimitScope,
@@ -9,7 +13,6 @@ import { logWarn } from "@/lib/logger";
 import { verifyAdminLoginChallengePassphrase } from "@/lib/tickets/services/adminAuth";
 
 type VerifyPayload = {
-  token?: unknown;
   passphrase?: unknown;
 };
 
@@ -17,7 +20,7 @@ function jsonError(message: string, status: number) {
   return NextResponse.json({ ok: false, message }, { status });
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   let payload: VerifyPayload;
 
   try {
@@ -26,11 +29,15 @@ export async function POST(request: Request) {
     return jsonError("Requisição inválida.", 400);
   }
 
-  const token = typeof payload.token === "string" ? payload.token.trim() : "";
+  const token = request.cookies.get(ADMIN_LOGIN_CHALLENGE_COOKIE)?.value.trim() ?? "";
   const passphrase =
     typeof payload.passphrase === "string" ? payload.passphrase : "";
 
-  if (!token || !passphrase) {
+  if (!token) {
+    return jsonError("Nao foi possivel autenticar este acesso.", 401);
+  }
+
+  if (!passphrase) {
     return jsonError("Informe a senha individual.", 400);
   }
 
@@ -76,10 +83,13 @@ export async function POST(request: Request) {
     return jsonError("Não foi possível autenticar este acesso.", 401);
   }
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     ok: true,
     code: result.code,
   });
+  clearAccessCookie(response, ADMIN_LOGIN_CHALLENGE_COOKIE);
+
+  return response;
 }
 
 export function GET() {

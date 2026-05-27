@@ -2,7 +2,10 @@ import {
   badRequest,
   jsonOk,
   methodNotAllowed,
+  unauthorized,
 } from "@/lib/http/responses";
+import { NextRequest } from "next/server";
+import { GATE_SESSION_COOKIE } from "@/lib/http/accessCookies";
 import {
   consumeRateLimit,
   hashRateLimitScope,
@@ -12,7 +15,6 @@ import { buildPublicGateScanResponseDto } from "@/lib/tickets/services/publicDto
 import { validateGateScan } from "@/lib/tickets/services/gateValidation";
 
 type ScanPayload = {
-  gateSessionToken?: unknown;
   ticketToken?: unknown;
 };
 
@@ -24,11 +26,9 @@ async function readScanPayload(request: Request) {
       return null;
     }
 
-    const { gateSessionToken, ticketToken } = payload as ScanPayload;
+    const { ticketToken } = payload as ScanPayload;
 
     if (
-      typeof gateSessionToken !== "string" ||
-      !gateSessionToken.trim() ||
       typeof ticketToken !== "string" ||
       !ticketToken.trim()
     ) {
@@ -36,7 +36,6 @@ async function readScanPayload(request: Request) {
     }
 
     return {
-      gateSessionToken: gateSessionToken.trim(),
       ticketToken: ticketToken.trim(),
     };
   } catch {
@@ -44,11 +43,18 @@ async function readScanPayload(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const payload = await readScanPayload(request);
 
   if (!payload) {
     return badRequest("Bad request");
+  }
+
+  const gateSessionToken =
+    request.cookies.get(GATE_SESSION_COOKIE)?.value.trim() ?? "";
+
+  if (!gateSessionToken) {
+    return unauthorized();
   }
 
   const rateLimit = await consumeRateLimit({
@@ -56,14 +62,17 @@ export async function POST(request: Request) {
     limit: 120,
     windowSeconds: 60,
     request,
-    scope: `gate:${hashRateLimitScope(payload.gateSessionToken)}`,
+    scope: `gate:${hashRateLimitScope(gateSessionToken)}`,
   });
 
   if (!rateLimit.allowed) {
     return rateLimitResponse(rateLimit);
   }
 
-  const result = await validateGateScan(payload);
+  const result = await validateGateScan({
+    gateSessionToken,
+    ticketToken: payload.ticketToken,
+  });
 
   return jsonOk(buildPublicGateScanResponseDto(result));
 }

@@ -2,7 +2,7 @@
 
 Criado em 2026-05-27 12:58:09 -03.
 
-Este documento registra o ponto seguro antes de iniciar a Fase 2 de hardening com tokens em cookie `HttpOnly`. A Fase 2 ainda nao foi implementada neste checkpoint.
+Este documento registra o ponto seguro antes de iniciar a Fase 2 de hardening com tokens em cookie `HttpOnly` e os passos de rollback durante a implementacao.
 
 ## Ponto Seguro
 
@@ -84,7 +84,7 @@ npx vercel@latest inspect site-qabye33me-fraulproenca-gmailcoms-projects.vercel.
 
 ## Como Voltar Banco
 
-Neste checkpoint, nenhuma migration nova da Fase 2 foi criada ou aplicada.
+Neste checkpoint, nenhuma migration nova da Fase 2 foi criada ou aplicada. A implementacao de cookie `HttpOnly` tambem nao exige migration ou alteracao de RPC.
 
 Se nenhuma migration da Fase 2 tiver sido aplicada, nao ha acao de banco no rollback.
 
@@ -141,7 +141,7 @@ curl -s -D - -o /dev/null -X POST https://site-phi-seven-72.vercel.app/api/check
 curl -s -D - -o /dev/null -X POST https://site-phi-seven-72.vercel.app/api/cron/expire-reservations
 curl -s -i -X POST https://site-phi-seven-72.vercel.app/api/gate/session/scan \
   -H 'content-type: application/json' \
-  -d '{"gateSessionToken":"invalid-gate-token","ticketToken":"invalid-ticket-token"}'
+  -d '{"ticketToken":"invalid-ticket-token"}'
 ```
 
 Resultado esperado:
@@ -150,3 +150,26 @@ Resultado esperado:
 - webhooks/checkout/cron sem segredo retornam `401`;
 - scan invalido retorna resposta segura sem dados de ingresso;
 - headers de seguranca continuam presentes.
+
+## Implementacao da Fase 2
+
+Estrategia aplicada:
+
+- `/admin/login/{token}` e `/gate/session/{token}` permanecem como rotas de bootstrap;
+- o bootstrap valida o token no servidor, define cookie temporario `HttpOnly` e redireciona para a URL limpa;
+- `/admin/login` e `/gate/session` renderizam a experiencia somente quando o cookie ainda e valido;
+- `/api/admin/login/verify`, `/api/gate/session/validate` e `/api/gate/session/scan` leem o token pelo cookie e nao aceitam mais o token bruto no body;
+- nenhum schema, dado existente ou RPC critica foi alterado.
+
+Cookies:
+
+- `admin_login_challenge`: `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, `Max-Age` alinhado ao challenge;
+- `gate_session`: `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, `Max-Age` alinhado a expiracao da sessao de portaria.
+
+Visibilidade restante por design:
+
+- o token aparece na URL apenas durante o primeiro acesso ao link de bootstrap;
+- a senha individual digitada aparece no POST do proprio navegador;
+- o codigo unico continua aparecendo para o admin enviar no WhatsApp;
+- o token do QR lido continua no request de scan, pois o navegador precisa ler o QR;
+- setor/assento podem aparecer em scan permitido para conferencia operacional.
