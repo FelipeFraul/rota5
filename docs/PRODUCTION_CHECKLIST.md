@@ -53,6 +53,7 @@ Admins:
 - `admin_auth_attempts` deve existir para aplicar bloqueio por tentativa: 3 erros bloqueiam por 15 minutos; 5 erros sequenciais bloqueiam até liberação por Diretor.
 - `admin_login_challenges` deve existir para login tokenizado: link único temporário, senha individual no web login e código único retornado pelo WhatsApp. A tabela guarda apenas hashes de token, código e origem.
 - `rate_limit_events` e `consume_rate_limit` devem existir para aplicar rate limit por rota e origem hashada.
+- `buyer_risk_events` deve existir para antifraude leve de reserva/checkout. A tabela guarda telefone e origem apenas como SHA-256 e não salva payload, checkout URL, token, QR, base64 ou metadata de pagamento.
 
 ## Webhooks E Cron
 
@@ -89,6 +90,7 @@ Fluxo validado:
 - Não logar QR/base64, token puro, `qr_token_hash`, metadata de pagamento, senha ou secrets.
 - Não expor telefone completo em relatórios/admin.
 - Rate limits do app devem responder `429` sem salvar IP puro, payload, telefone completo, token ou base64.
+- Antifraude de comprador deve manter limites conservadores: uma reserva ativa por telefone, até 5 reservas criadas por telefone em 15 minutos, até 5 reservas expiradas/canceladas em 30 minutos, até 5 solicitações de checkout por order/reserva em 10 minutos, e limites por origem hashada. Bloqueios retornam mensagem segura sem mencionar fraude.
 - Vercel Firewall deve manter a regra publicada `Rate limit - Sensitive public routes`: OR nas rotas sensíveis, incluindo `/admin/login/*` e `/api/admin/login/verify`, Fixed Window de 60 segundos, 120 requests, chave IP Address e ação `429`.
 - Webhook Mercado Pago deve manter `401` sem assinatura, buscar o pagamento real na API, emitir ticket somente para `approved`, marcar falhas definitivas como ignoradas/processadas sem ticket e manter falhas transitórias sem `processed_at` para retry.
 - Não executar scripts de auditoria com dados reais sem prefixo temporário.

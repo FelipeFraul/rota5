@@ -7237,6 +7237,10 @@ function messageForReservationFailure(
     return TICKET_MESSAGES.reservationAlreadyCreated;
   }
 
+  if (result.reason === "buyer_risk_limited") {
+    return TICKET_MESSAGES.buyerAntiAbuseLimited;
+  }
+
   if (result.reason === "seat_not_available") {
     return TICKET_MESSAGES.seatInvalidOption;
   }
@@ -7286,6 +7290,10 @@ function isUnavailableCheckoutFailure(
 function formatCheckoutFailureMessage(
   result: Extract<CreateCheckoutForReservationResult, { ok: false }>,
 ) {
+  if (result.reason === "checkout_risk_limited") {
+    return TICKET_MESSAGES.buyerAntiAbuseLimited;
+  }
+
   if (result.reason === "reservation_expired") {
     return TICKET_MESSAGES.reservationExpired;
   }
@@ -10532,6 +10540,7 @@ export async function routeTicketMessage({
         customerId: customer.id,
         reservationId: previousState.reservation.reservationId,
         orderId: previousState.reservation.orderId,
+        sourceIdentifier,
       });
 
       return {
@@ -10558,6 +10567,7 @@ export async function routeTicketMessage({
       reservationId: previousState.reservation.reservationId,
       orderId: previousState.reservation.orderId,
       customerId: customer.id,
+      sourceIdentifier,
     });
 
     if (!checkoutResult.ok) {
@@ -10632,6 +10642,7 @@ export async function routeTicketMessage({
         customerId: customer.id,
         reservationId: previousState.reservation.reservationId,
         orderId: previousState.reservation.orderId,
+        sourceIdentifier,
       });
 
       return {
@@ -10658,6 +10669,7 @@ export async function routeTicketMessage({
       reservationId: previousState.reservation.reservationId,
       orderId: previousState.reservation.orderId,
       customerId: customer.id,
+      sourceIdentifier,
     });
 
     if (!checkoutResult.ok) {
@@ -10795,6 +10807,7 @@ export async function routeTicketMessage({
       sectionId: previousState.selectedSection.sectionId,
       quantity,
       ticketType: previousState.selectedSection.selectedTicketType?.ticketType ?? "full",
+      sourceIdentifier,
     });
 
     if (!reservationResult.ok) {
@@ -10875,6 +10888,7 @@ export async function routeTicketMessage({
       sectionId: previousState.selectedSection.sectionId,
       seatIds: selectedSeats.map((selectedSeat) => selectedSeat.seatId),
       ticketType: previousState.selectedSection.selectedTicketType?.ticketType ?? "full",
+      sourceIdentifier,
     });
 
     if (!reservationResult.ok) {

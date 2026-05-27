@@ -33,6 +33,8 @@ export const TICKET_MESSAGES = {
     "Não consegui reservar esse assento agora. Tente novamente em instantes.",
   reservationAlreadyCreated:
     "Você já tem uma reserva em andamento. No próximo passo vamos gerar o link de pagamento ou permitir cancelar/trocar.",
+  buyerAntiAbuseLimited:
+    "Muitas tentativas em pouco tempo.\nPor segurança, aguarde alguns minutos antes de tentar novamente.",
   paymentLinkPrompt: "Para comprar sua reserva, responda COMPRAR.",
   reservationCancelled:
     "PROCESSO CANCELADO\nSua reserva foi cancelada e os ingressos foram liberados.\nPara começar de novo, envie o nome do evento, artista, cidade ou data.",

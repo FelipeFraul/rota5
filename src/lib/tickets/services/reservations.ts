@@ -6,6 +6,11 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getValidatedEventSession } from "@/lib/tickets/services/events";
 import { getAvailableSectionForSession } from "@/lib/tickets/services/sections";
 import {
+  checkReservationRisk,
+  recordReservationCancelled,
+  recordReservationCreated,
+} from "@/lib/tickets/services/buyerRisk";
+import {
   getValidatedSeatForReservation,
   listAvailableSeats,
 } from "@/lib/tickets/services/seats";
@@ -19,6 +24,8 @@ export type ReserveSelectedSeatInput = {
   seatId?: string;
   seatIds?: string[];
   ticketType?: string;
+  sourceIdentifier?: string | null;
+  skipBuyerRisk?: boolean;
 };
 
 export type ReserveUnnumberedSectionInput = {
@@ -29,6 +36,8 @@ export type ReserveUnnumberedSectionInput = {
   sectionId: string;
   quantity: number;
   ticketType?: string;
+  sourceIdentifier?: string | null;
+  skipBuyerRisk?: boolean;
 };
 
 export type ReserveSelectedSeatSuccess = {
@@ -75,6 +84,11 @@ export type ReserveSelectedSeatResult =
     }
   | {
       ok: false;
+      reason: "buyer_risk_limited";
+      retryAfterMinutes: number;
+    }
+  | {
+      ok: false;
       reason:
         | "seat_unavailable"
         | "seat_not_available"
@@ -93,7 +107,7 @@ type ReserveSelectedSeatFailureReason = Extract<
 >["reason"];
 type ReserveSeatsRpcFailureReason = Exclude<
   ReserveSelectedSeatFailureReason,
-  "active_reservation_exists"
+  "active_reservation_exists" | "buyer_risk_limited"
 >;
 
 type ReserveSeatsRpcResponse = {
@@ -295,10 +309,14 @@ export async function cancelPendingReservationForCustomer({
   customerId,
   reservationId,
   orderId,
+  sourceIdentifier,
+  skipBuyerRisk = false,
 }: {
   customerId: string;
   reservationId: string;
   orderId: string;
+  sourceIdentifier?: string | null;
+  skipBuyerRisk?: boolean;
 }): Promise<CancelPendingReservationResult> {
   const supabase = getSupabaseAdmin();
   const { data: reservation, error: reservationError } = await supabase
@@ -344,6 +362,16 @@ export async function cancelPendingReservationForCustomer({
       return { ok: false, reason: "cancel_failed", error };
     }
 
+    if (!skipBuyerRisk) {
+      await recordReservationCancelled({
+        customerId,
+        reservationId,
+        orderId,
+        sourceIdentifier,
+        status: "expired",
+      });
+    }
+
     return { ok: true, status: "expired", releasedSeatsCount: 0 };
   }
 
@@ -368,6 +396,16 @@ export async function cancelPendingReservationForCustomer({
     return { ok: false, reason: "not_found" };
   }
 
+  if (!skipBuyerRisk) {
+    await recordReservationCancelled({
+      customerId,
+      reservationId,
+      orderId,
+      sourceIdentifier,
+      status: "cancelled",
+    });
+  }
+
   return {
     ok: true,
     status: "cancelled",
@@ -384,6 +422,8 @@ export async function reserveSelectedSeat({
   seatId,
   seatIds,
   ticketType = "full",
+  sourceIdentifier,
+  skipBuyerRisk = false,
 }: ReserveSelectedSeatInput): Promise<ReserveSelectedSeatResult> {
   const activeReservation =
     await findActivePendingReservationForCustomer(customerId);
@@ -436,6 +476,24 @@ export async function reserveSelectedSeat({
       selectedSeat !== null,
   );
 
+  if (!skipBuyerRisk) {
+    const risk = await checkReservationRisk({
+      customerId,
+      eventId,
+      sessionId: selectedSession.sessionId,
+      sourceIdentifier,
+      quantity: validSelectedSeats.length,
+    });
+
+    if (!risk.allowed) {
+      return {
+        ok: false,
+        reason: "buyer_risk_limited",
+        retryAfterMinutes: risk.retryAfterMinutes,
+      };
+    }
+  }
+
   const env = getEnv();
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase.rpc("reserve_seats", {
@@ -459,9 +517,23 @@ export async function reserveSelectedSeat({
     return { ok: false, reason: "reservation_failed" };
   }
 
+  const reservation = mapRpcResponse(data as ReserveSeatsRpcResponse);
+
+  if (!skipBuyerRisk) {
+    await recordReservationCreated({
+      customerId,
+      eventId,
+      sessionId: selectedSession.sessionId,
+      sourceIdentifier,
+      reservationId: reservation.reservationId,
+      orderId: reservation.orderId,
+      quantity: validSelectedSeats.length,
+    });
+  }
+
   return {
     ok: true,
-    reservation: mapRpcResponse(data as ReserveSeatsRpcResponse),
+    reservation,
   };
 }
 
@@ -473,6 +545,8 @@ export async function reserveUnnumberedSectionTickets({
   sectionId,
   quantity,
   ticketType = "full",
+  sourceIdentifier,
+  skipBuyerRisk = false,
 }: ReserveUnnumberedSectionInput): Promise<ReserveSelectedSeatResult> {
   const activeReservation =
     await findActivePendingReservationForCustomer(customerId);
@@ -529,6 +603,24 @@ export async function reserveUnnumberedSectionTickets({
     return { ok: false, reason: "not_enough_seats" };
   }
 
+  if (!skipBuyerRisk) {
+    const risk = await checkReservationRisk({
+      customerId,
+      eventId,
+      sessionId: selectedSession.sessionId,
+      sourceIdentifier,
+      quantity,
+    });
+
+    if (!risk.allowed) {
+      return {
+        ok: false,
+        reason: "buyer_risk_limited",
+        retryAfterMinutes: risk.retryAfterMinutes,
+      };
+    }
+  }
+
   const env = getEnv();
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase.rpc("reserve_seats", {
@@ -552,8 +644,22 @@ export async function reserveUnnumberedSectionTickets({
     return { ok: false, reason: "reservation_failed" };
   }
 
+  const reservation = mapRpcResponse(data as ReserveSeatsRpcResponse);
+
+  if (!skipBuyerRisk) {
+    await recordReservationCreated({
+      customerId,
+      eventId,
+      sessionId: selectedSession.sessionId,
+      sourceIdentifier,
+      reservationId: reservation.reservationId,
+      orderId: reservation.orderId,
+      quantity,
+    });
+  }
+
   return {
     ok: true,
-    reservation: mapRpcResponse(data as ReserveSeatsRpcResponse),
+    reservation,
   };
 }

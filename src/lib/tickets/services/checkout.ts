@@ -5,6 +5,7 @@ import { createMercadoPagoPayment } from "@/lib/mercado-pago/client";
 import { getEnv } from "@/lib/env";
 import { logError, logWarn } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { checkCheckoutRisk } from "@/lib/tickets/services/buyerRisk";
 import {
   buildOrderExternalReference,
   centsToDecimalAmount,
@@ -92,6 +93,7 @@ export type PayCheckoutInput = {
   token?: string;
   paymentMethodId?: string;
   installments?: number;
+  sourceIdentifier?: string | null;
 };
 
 export type PayCheckoutResult =
@@ -118,6 +120,7 @@ export type PayCheckoutResult =
         | "preference_create_failed"
         | "preference_missing_checkout_url"
         | "internal_error"
+        | "checkout_risk_limited"
         | "invalid_payment_input"
         | "payment_create_failed"
         | "payment_persist_failed";
@@ -144,13 +147,17 @@ export type CreateCheckoutForReservationResult =
         | "preference_create_failed"
         | "preference_missing_checkout_url"
         | "payment_persist_failed"
+        | "checkout_risk_limited"
         | "internal_error";
+      retryAfterMinutes?: number;
     };
 
 export type CreateCheckoutForReservationInput = {
   orderId: string;
   reservationId?: string;
   customerId?: string;
+  sourceIdentifier?: string | null;
+  skipBuyerRisk?: boolean;
 };
 
 function normalizeBaseUrl(baseUrl: string) {
@@ -337,6 +344,8 @@ export async function createCheckoutForReservation({
   orderId,
   reservationId,
   customerId,
+  sourceIdentifier,
+  skipBuyerRisk = false,
 }: CreateCheckoutForReservationInput): Promise<CreateCheckoutForReservationResult> {
   const env = getEnv();
   const supabase = getSupabaseAdmin();
@@ -474,6 +483,23 @@ export async function createCheckoutForReservation({
       itemTotalAmountCents,
     });
     return { ok: false, reason: "checkout_amount_mismatch" };
+  }
+
+  if (!skipBuyerRisk) {
+    const risk = await checkCheckoutRisk({
+      customerId: order.customer_id,
+      sourceIdentifier,
+      reservationId: reservation.id,
+      orderId: order.id,
+    });
+
+    if (!risk.allowed) {
+      return {
+        ok: false,
+        reason: "checkout_risk_limited",
+        retryAfterMinutes: risk.retryAfterMinutes,
+      };
+    }
   }
 
   const externalReference = buildOrderExternalReference(order.id);
@@ -761,9 +787,13 @@ export async function paySelfHostedCheckout({
   token,
   paymentMethodId,
   installments,
+  sourceIdentifier,
 }: PayCheckoutInput): Promise<PayCheckoutResult> {
   const env = getEnv();
-  const checkoutResult = await createCheckoutForReservation({ orderId });
+  const checkoutResult = await createCheckoutForReservation({
+    orderId,
+    sourceIdentifier,
+  });
 
   if (!checkoutResult.ok) {
     return { ok: false, reason: checkoutResult.reason };

@@ -353,6 +353,7 @@ Processing rules:
 - set `notification_url` to `${APP_BASE_URL}/api/webhook/payment/mercado-pago`;
 - set preference expiration to `reservation.expires_at`;
 - create or reuse a pending `payments` row with `provider_preference_id`, `checkout_url`, amount, and minimal metadata.
+- apply buyer anti-abuse limits before creating or reusing checkout.
 
 Checkout reuse policy:
 
@@ -362,6 +363,20 @@ Checkout reuse policy:
 - block instead of reuse when the order is not payable, the reservation is expired/not active, reservation items are missing, or totals diverge.
 
 The route does not confirm payment, does not emit tickets, does not generate QR images, does not send WhatsApp messages, and does not alter seat state. The Mercado Pago webhook and `confirm_paid_ticket_order` remain responsible for payment confirmation and ticket issuance.
+
+Buyer anti-abuse uses `buyer_risk_events` from migration `20260526000600_create_buyer_risk_events.sql`. It stores only `phone_hash`, optional `source_hash`, minimal action/reason/quantity fields, and non-sensitive metadata. It must not store raw phone, raw IP/source, payload, checkout URL, QR data, token, base64, or payment metadata.
+
+Initial limits:
+
+- one active pending reservation per buyer remains enforced before a new reservation;
+- 5 reservations created per phone in 15 minutes; the next reservation is blocked temporarily;
+- 5 expired/cancelled reservations per phone in 30 minutes block new reservations temporarily;
+- 5 checkout requests per order/reservation in 10 minutes;
+- 20 reservations per source hash in 15 minutes;
+- 30 checkout requests per source hash in 15 minutes;
+- 10 tickets reserved by the same phone for the same event/session in a short window.
+
+The user-facing block message is intentionally generic and does not mention fraud. Admin courtesy issuance is excluded from this buyer anti-abuse layer.
 
 The checkout return pages are intentionally informational only. `/checkout/success` does not state that a ticket was issued or that payment is approved; final confirmation still depends on the Mercado Pago webhook.
 

@@ -634,6 +634,7 @@ export async function issueAdminCourtesy(input: {
           reservationId,
           customerId: customer.id,
           orderId,
+          skipBuyerRisk: true,
         });
       }
 
@@ -665,6 +666,7 @@ export async function issueAdminCourtesy(input: {
         reservationId,
         customerId: customer.id,
         orderId: orderIdForRollback,
+        skipBuyerRisk: true,
       }).catch(() => null);
     }
 

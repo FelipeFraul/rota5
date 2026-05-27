@@ -124,6 +124,8 @@ A camada seguinte adiciona rate limit para rotas públicas e sensíveis. A migra
 
 Em 26/05/2026, uma compra real/controlada validou o fluxo operacional ponta a ponta em produção: o comprador encontrou o evento, criou reserva, recebeu checkout Mercado Pago, concluiu o pagamento, o webhook Mercado Pago processou a confirmação, pedido e reserva foram confirmados, o ticket foi emitido e o QRCode foi enviado ao comprador. Com essa validação, o ciclo compra -> pagamento -> emissão -> QRCode está comprovado para operação controlada com público real.
 
+A camada de segurança seguinte adiciona antifraude leve para reserva/checkout. A migration `20260526000600_create_buyer_risk_events.sql` cria `buyer_risk_events`, que registra eventos mínimos com telefone e origem apenas em hash SHA-256. O fluxo de compra bloqueia excesso de reservas por telefone/origem, repetição de expirações/cancelamentos, excesso de checkout por order/reserva e excesso de ingressos por telefone no mesmo evento/sessão. O bloqueio é temporário e usa mensagem segura ao comprador, sem salvar telefone puro, IP puro, payload, checkout URL, token, QR, base64 ou metadata de pagamento. Cortesias/admin não passam por esse bloqueio.
+
 ## Next Steps
 
 1. Fundação do projeto
@@ -153,6 +155,7 @@ Em 26/05/2026, uma compra real/controlada validou o fluxo operacional ponta a po
 25. Editar evento, editar valores, editar carga e duplicar evento - criado e validado no Supabase real. Edições simples exigem confirmação, valor simples altera apenas `price_cents`, carga preserva vendidos/reservados, e duplicação cria uma cópia `draft` sem dados transacionais.
 26. Ingressos e pedidos - criado e validado no Supabase real. Busca por telefone/código, consulta segura de ticket e cancelamento transacional de reserva pendente via RPC estão prontos; estorno, cancelamento de ticket pago e reenvio manual ficam fora deste ponto.
 27. Cortesias - criado e validado no Supabase real. Emissão, listagem, reenvio, cancelamento, portaria e cleanup foram auditados com `TEST_ADMIN_COURTESIES`.
+28. Antifraude leve de reserva/checkout - implementado no app; depende da migration `buyer_risk_events` aplicada no Supabase real e da auditoria `TEST_BUYER_ANTI_ABUSE`.
 28. Administradores - criado e validado no Supabase real. Listagem segura, criação, reativação, alteração de nível, desativação, bloqueios de segurança e cleanup foram auditados com `TEST_ADMIN_USERS_FLOW`.
 29. Relatórios consultivos - criado e validado no Supabase real com `TEST_ADMIN_REPORTS`.
 30. Auditoria geral de segurança e consistência - criada e validada com `TEST_SYSTEM_CLOSURE`.

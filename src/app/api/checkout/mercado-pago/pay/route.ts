@@ -7,6 +7,7 @@ import {
 import { logWarn } from "@/lib/logger";
 import {
   consumeRateLimit,
+  getRequestSourceIdentifier,
   rateLimitResponse,
 } from "@/lib/security/rateLimit";
 import { paySelfHostedCheckout } from "@/lib/tickets/services/checkout";
@@ -198,6 +199,7 @@ export async function POST(request: Request) {
       Number.isInteger(parsedInstallments) && parsedInstallments
         ? parsedInstallments
         : undefined,
+    sourceIdentifier: getRequestSourceIdentifier(request.headers),
   });
 
   if (!result.ok) {

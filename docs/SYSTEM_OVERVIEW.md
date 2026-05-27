@@ -234,6 +234,21 @@ https://...
 Após a confirmação do pagamento, seu ingresso será emitido automaticamente.
 ```
 
+### 3.7.1 Antifraude leve de reserva e checkout
+
+O fluxo de compra aplica uma camada leve de antiabuso antes de reservar assentos e antes de gerar checkout. O objetivo é reduzir automação que segura estoque sem pagar, sem atrapalhar um comprador normal.
+
+Regras ativas:
+
+- o comprador não consegue abrir uma segunda reserva enquanto já tem reserva ativa com pedido pendente;
+- até 5 reservas criadas pelo mesmo telefone em 15 minutos;
+- 5 reservas expiradas/canceladas pelo mesmo telefone em 30 minutos bloqueiam novas reservas por 30 minutos;
+- até 5 solicitações de checkout para a mesma order/reserva em 10 minutos;
+- limites adicionais por origem/IP hashada para reservas e checkouts;
+- até 10 ingressos reservados pelo mesmo telefone para o mesmo evento/sessão em janela curta.
+
+Os eventos ficam em `buyer_risk_events` com telefone e origem apenas em hash SHA-256. A tabela não salva telefone puro, IP puro, payload, checkout URL, token, QR, base64 ou metadata de pagamento. Quando bloqueia, a mensagem ao usuário é genérica: “Muitas tentativas em pouco tempo. Por segurança, aguarde alguns minutos antes de tentar novamente.”
+
 ### 3.8 Emissão do ingresso
 
 Após a confirmação do Mercado Pago:

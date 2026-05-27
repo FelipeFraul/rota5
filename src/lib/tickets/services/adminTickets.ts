@@ -631,6 +631,7 @@ export async function cancelAdminPendingReservation(
       customerId: reservation.customerId,
       reservationId: reservation.reservationId,
       orderId: reservation.orderId,
+      skipBuyerRisk: true,
     });
 
     if (!cancelResult.ok) {
