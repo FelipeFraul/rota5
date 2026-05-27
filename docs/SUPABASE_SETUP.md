@@ -1520,7 +1520,7 @@ The page validates the gate session through:
 POST /api/gate/session/validate
 ```
 
-The valid response contains only minimal public data: session id, gate label, event title, optional session start date/time, validator phone last 4 digits, expiration, and status. It does not return full phone, token hash, admin phone, raw token, passphrase hash, or secrets.
+The valid response contains only minimal public data needed by the gate UI: gate label, event title, and optional session start date/time. It does not return session id, phone data, token hash, admin phone, raw token, passphrase hash, expiration timestamp, internal status, or secrets.
 
 The scanner UI is a client component. It uses browser camera APIs and `BarcodeDetector` when available, with a manual fallback input. Counters are neutral in this step:
 
@@ -1558,7 +1558,7 @@ It does not validate ticket ownership, does not mark the ticket used, does not i
 - [x] `GATE_SESSION_SECRET` and `GATE_SESSION_TTL_MINUTES` are present in `src/lib/env.ts`, `.env.example`, and Vercel Production; neither uses `NEXT_PUBLIC_`, and the secret has no default fallback.
 - [x] Gate tokens use `base64url(payload).signature`, HMAC SHA-256, constant-time signature comparison, and payload fields only `gid`, `phone`, and `exp`.
 - [x] `gate_sessions.token_hash` stores only SHA-256 token hashes, is unique, and is not returned by public endpoints.
-- [x] `POST /api/gate/session/validate` returns only session id, gate label, validator phone last four digits, expiration, and active status.
+- [x] `POST /api/gate/session/validate` returns only gate label, event title, and optional session start date/time.
 - [x] `POST /api/gate/session/scan` remains a placeholder and does not touch tickets, ticket validation events, orders, payments, session seats, or reservations.
 - [x] `/gate/session/[token]` renders invalid/expired/revoked access safely, does not log the token, and does not expose full phone or `token_hash`.
 - [x] The scanner is a client component, guards `navigator.mediaDevices` and `window.BarcodeDetector`, has manual fallback, and uses neutral labels `Leituras` and `Erros`.
@@ -1657,11 +1657,8 @@ Example allowed response:
   "allowed": true,
   "result": "allowed",
   "message": "Entrada liberada.",
-  "ticket": {
-    "ticketCode": "TCK-...",
-    "sectionName": "...",
-    "seatCode": "A03"
-  }
+  "section": "...",
+  "seat": "A03"
 }
 ```
 
@@ -1672,7 +1669,7 @@ Example allowed response:
 - `Validados`;
 - `Recusados`.
 
-The scanner extracts ticket tokens from full `/tickets/{token}` URLs or raw token values, calls the scan endpoint, and shows allowed/denied feedback with ticket code, section, and seat when available. Camera reads have a 3-second same-content debounce to reduce repeated scans; the RPC still provides the concurrency-safe source of truth.
+The scanner extracts ticket tokens from full `/tickets/{token}` URLs or raw token values, calls the scan endpoint, and shows allowed/denied feedback with section and seat when available. Camera reads have a 3-second same-content debounce to reduce repeated scans; the RPC still provides the concurrency-safe source of truth.
 
 The browser-facing scan DTO is intentionally smaller than the RPC return. It does not include `ticketId`, ticket status, `usedAt`, event title, session time, customer/order/payment ids, token/hash fields, or raw metadata.
 
@@ -1681,10 +1678,10 @@ The browser-facing scan DTO is intentionally smaller than the RPC return. It doe
 All HTML, client-side JS, and browser-called API responses are treated as public. Public pages and endpoints must return DTOs that select fields explicitly:
 
 - `/tickets/[token]`: event display data, venue/city/state, section, seat and ticket code only;
-- `/gate/session/[token]` and `/api/gate/session/validate`: gate label, event title, session start, validator phone last four digits, expiration and active status only;
-- `/api/gate/session/scan`: `allowed`, `result`, safe `message`, and only `ticketCode`, `sectionName`, `seatCode` when allowed;
-- `/admin/login/[token]`: challenge validity and expiration only;
-- `/api/admin/login/verify`: success flag, one-time code and expiration, or safe generic errors.
+- `/gate/session/[token]` and `/api/gate/session/validate`: gate label, event title and session start only;
+- `/api/gate/session/scan`: `allowed`, `result`, safe `message`, and only `section`/`seat` when allowed;
+- `/admin/login/[token]`: challenge validity only, without exact expiration timestamp;
+- `/api/admin/login/verify`: success flag and one-time code, or safe generic errors, without exact expiration timestamp.
 - `/api/checkout/mercado-pago/pay`: payment status and Pix copy-and-paste code when applicable; it must not return `provider_payment_id` or signed ticket URLs.
 
 Never return raw table rows or spread database rows into public DTOs. The following fields must not be exposed to the browser: `customer_id`, `order_id`, `reservation_id`, `payment_id`, `provider_payment_id`, `admin_user_id`, `admin_session_id`, `gate_session_id`, `token_hash`, `qr_token_hash`, `passphrase_hash`, `raw_metadata`, payment metadata, headers, raw payloads, stack traces, SQL errors, service-role details, raw QR values, or complete phone numbers.
