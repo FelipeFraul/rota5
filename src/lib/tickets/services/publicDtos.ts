@@ -10,9 +10,6 @@ export type PublicGateSessionValidation =
         gateLabel: string | null;
         eventTitle: string | null;
         sessionStartsAt: string | null;
-        validatorPhoneLast4: string;
-        expiresAt: string;
-        status: "active";
       };
     }
   | {
@@ -23,7 +20,6 @@ export type PublicGateSessionValidation =
 export type PublicAdminLoginChallenge =
   | {
       ok: true;
-      expiresAt: string;
     }
   | {
       ok: false;
@@ -33,11 +29,8 @@ export type PublicGateScanResponse = {
   allowed: boolean;
   result: GateScanResult["result"];
   message: string;
-  ticket?: {
-    ticketCode?: string;
-    sectionName?: string | null;
-    seatCode?: string | null;
-  };
+  section?: string;
+  seat?: string;
 };
 
 export function buildPublicGateSessionDto(
@@ -56,26 +49,18 @@ export function buildPublicGateSessionDto(
       gateLabel: result.gateSession.gateLabel,
       eventTitle: result.gateSession.eventTitle,
       sessionStartsAt: result.gateSession.sessionStartsAt,
-      validatorPhoneLast4: result.gateSession.validatorPhoneLast4,
-      expiresAt: result.gateSession.expiresAt,
-      status: "active",
     },
   };
 }
 
 export function buildPublicAdminLoginChallengeDto(
-  result:
-    | { ok: true; challenge: { expires_at: string } }
-    | { ok: false },
+  result: { ok: true } | { ok: false },
 ): PublicAdminLoginChallenge {
   if (!result.ok) {
     return { ok: false };
   }
 
-  return {
-    ok: true,
-    expiresAt: result.challenge.expires_at,
-  };
+  return { ok: true };
 }
 
 export function buildPublicGateScanResponseDto(
@@ -85,17 +70,10 @@ export function buildPublicGateScanResponseDto(
     allowed: result.allowed,
     result: result.result,
     message: result.message,
-    ...(result.ticket
+    ...(result.allowed && result.ticket
       ? {
-          ticket: {
-            ...(result.ticket.ticketCode
-              ? { ticketCode: result.ticket.ticketCode }
-              : {}),
-            ...(result.ticket.sectionName
-              ? { sectionName: result.ticket.sectionName }
-              : {}),
-            ...(result.ticket.seatCode ? { seatCode: result.ticket.seatCode } : {}),
-          },
+          ...(result.ticket.sectionName ? { section: result.ticket.sectionName } : {}),
+          ...(result.ticket.seatCode ? { seat: result.ticket.seatCode } : {}),
         }
       : {}),
   };

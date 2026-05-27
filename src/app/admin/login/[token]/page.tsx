@@ -29,7 +29,7 @@ export default async function AdminLoginPage({ params }: AdminLoginPageProps) {
 
   return (
     <main className="admin-login-shell">
-      <AdminLoginForm expiresAt={publicChallenge.expiresAt} />
+      <AdminLoginForm />
     </main>
   );
 }

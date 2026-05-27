@@ -3,30 +3,17 @@
 import { FormEvent, useState } from "react";
 import { useParams } from "next/navigation";
 
-type AdminLoginFormProps = {
-  expiresAt: string;
-};
-
-function formatTime(value: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Sao_Paulo",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
 function getRouteToken(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
 }
 
-export function AdminLoginForm({ expiresAt }: AdminLoginFormProps) {
+export function AdminLoginForm() {
   const params = useParams<{ token?: string | string[] }>();
   const token = getRouteToken(params.token);
   const [passphrase, setPassphrase] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [code, setCode] = useState<string | null>(null);
-  const [codeExpiresAt, setCodeExpiresAt] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -44,17 +31,15 @@ export function AdminLoginForm({ expiresAt }: AdminLoginFormProps) {
       const data = (await response.json()) as {
         ok?: boolean;
         code?: string;
-        expiresAt?: string;
         message?: string;
       };
 
-      if (!response.ok || !data.ok || !data.code || !data.expiresAt) {
+      if (!response.ok || !data.ok || !data.code) {
         setError(data.message ?? "Não foi possível autenticar este acesso.");
         return;
       }
 
       setCode(data.code);
-      setCodeExpiresAt(data.expiresAt);
       setPassphrase("");
     } catch {
       setError("Não foi possível autenticar este acesso agora.");
@@ -75,11 +60,7 @@ export function AdminLoginForm({ expiresAt }: AdminLoginFormProps) {
           Volte ao WhatsApp e envie este código para liberar o menu
           administrativo.
         </p>
-        {codeExpiresAt ? (
-          <p className="admin-login-muted">
-            Expira às {formatTime(codeExpiresAt)}.
-          </p>
-        ) : null}
+        <p className="admin-login-muted">Código válido por 2 minutos.</p>
       </section>
     );
   }
@@ -92,7 +73,7 @@ export function AdminLoginForm({ expiresAt }: AdminLoginFormProps) {
         Este link é temporário e só libera acesso depois que o código for
         enviado no WhatsApp.
       </p>
-      <p className="admin-login-muted">Link expira às {formatTime(expiresAt)}.</p>
+      <p className="admin-login-muted">Link temporário válido por 2 minutos.</p>
 
       <form onSubmit={handleSubmit} className="admin-login-form">
         <label htmlFor="admin-passphrase">Senha individual</label>

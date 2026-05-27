@@ -14,9 +14,6 @@ type GateSessionValidation =
         gateLabel: string | null;
         eventTitle: string | null;
         sessionStartsAt: string | null;
-        validatorPhoneLast4: string;
-        expiresAt: string;
-        status: "active";
       };
     }
   | {
@@ -111,9 +108,8 @@ export function GateSessionScanner({
   const [deniedCount, setDeniedCount] = useState(0);
   const [lastAction, setLastAction] = useState<"allowed" | "denied" | null>(null);
   const [accessOverlay, setAccessOverlay] = useState<{
-    ticketCode?: string;
-    sectionName?: string | null;
-    seatCode?: string | null;
+    section?: string | null;
+    seat?: string | null;
   } | null>(null);
 
   const triggerCounterFeedback = useCallback((action: "allowed" | "denied") => {
@@ -132,20 +128,16 @@ export function GateSessionScanner({
   const registerAllowedResult = useCallback(
     (result: {
       message?: string;
-      ticket?: {
-        ticketCode?: string;
-        sectionName?: string | null;
-        seatCode?: string | null;
-      };
+      section?: string | null;
+      seat?: string | null;
     }) => {
       setAllowedCount((count) => count + 1);
       triggerCounterFeedback("allowed");
       setLastResult(
         [
           result.message ?? "Entrada liberada.",
-          result.ticket?.ticketCode ? `Código: ${result.ticket.ticketCode}` : null,
-          result.ticket?.sectionName ? `Setor: ${result.ticket.sectionName}` : null,
-          result.ticket?.seatCode ? `Assento: ${result.ticket.seatCode}` : null,
+          result.section ? `Setor: ${result.section}` : null,
+          result.seat ? `Assento: ${result.seat}` : null,
         ]
           .filter(Boolean)
           .join("\n"),
@@ -164,9 +156,8 @@ export function GateSessionScanner({
     (
       ticketToken: string,
       ticket?: {
-        ticketCode?: string;
-        sectionName?: string | null;
-        seatCode?: string | null;
+        section?: string | null;
+        seat?: string | null;
       },
     ) => {
       lastAllowedTokenRef.current = ticketToken;
@@ -244,16 +235,16 @@ export function GateSessionScanner({
           allowed?: boolean;
           message?: string;
           result?: string;
-          ticket?: {
-            ticketCode?: string;
-            sectionName?: string | null;
-            seatCode?: string | null;
-          };
+          section?: string | null;
+          seat?: string | null;
         };
 
         if (result.allowed) {
           registerAllowedResult(result);
-          pauseScannerAfterAllowed(ticketToken, result.ticket);
+          pauseScannerAfterAllowed(ticketToken, {
+            section: result.section,
+            seat: result.seat,
+          });
           return;
         }
 
@@ -436,8 +427,10 @@ export function GateSessionScanner({
           {validation.gateSession.sessionStartsAt ? (
             <p>Sessão: {formatDateTime(validation.gateSession.sessionStartsAt)}</p>
           ) : null}
-          <p>Validade: {formatDateTime(validation.gateSession.expiresAt)}</p>
-          <p>Validador: final {validation.gateSession.validatorPhoneLast4}</p>
+          {validation.gateSession.gateLabel ? (
+            <p>Entrada: {validation.gateSession.gateLabel}</p>
+          ) : null}
+          <p>Acesso temporário ativo.</p>
         </div>
         <span className="gate-status">Sessão ativa</span>
       </section>
@@ -458,14 +451,11 @@ export function GateSessionScanner({
         {accessOverlay ? (
           <div className="gate-access-overlay" role="status" aria-live="assertive">
             <strong>ACESSO LIBERADO</strong>
-            {accessOverlay.ticketCode ? (
-              <span>Código: {accessOverlay.ticketCode}</span>
+            {accessOverlay.section ? (
+              <span>Setor: {accessOverlay.section}</span>
             ) : null}
-            {accessOverlay.sectionName ? (
-              <span>Setor: {accessOverlay.sectionName}</span>
-            ) : null}
-            {accessOverlay.seatCode ? (
-              <span>Ingresso/Assento: {accessOverlay.seatCode}</span>
+            {accessOverlay.seat ? (
+              <span>Ingresso/Assento: {accessOverlay.seat}</span>
             ) : null}
           </div>
         ) : null}
