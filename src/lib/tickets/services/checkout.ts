@@ -923,7 +923,7 @@ export async function paySelfHostedCheckout({
   );
 
   if (!paymentResult.ok) {
-    logWarn("Failed to create self-hosted Mercado Pago payment", {
+    logWarn("Failed to create self-hosted Black House payment", {
       orderId,
       status: paymentResult.status,
       code: paymentResult.code,

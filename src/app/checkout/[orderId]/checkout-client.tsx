@@ -68,6 +68,7 @@ function formatCardNumber(value: string): string {
 export default function CheckoutClient({ publicKey, order }: CheckoutClientProps) {
   const [mp, setMp] = useState<MercadoPagoInstance | null>(null);
   const [mode, setMode] = useState<"pix" | "card">("pix");
+  const [paymentApproved, setPaymentApproved] = useState(false);
   const [email, setEmail] = useState(order.customerEmail ?? "");
   const [identificationNumber, setIdentificationNumber] = useState("");
   const [cardNumber, setCardNumber] = useState("");
@@ -146,6 +147,43 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
     };
   }, [bin, mp]);
 
+  useEffect(() => {
+    if (!pixCode || paymentApproved) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function checkPaymentStatus() {
+      try {
+        const response = await fetch(
+          `/api/checkout/status?orderId=${encodeURIComponent(order.orderId)}`,
+        );
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = (await response.json()) as { status?: string };
+
+        if (!cancelled && data.status === "approved") {
+          setPaymentApproved(true);
+          setMessage(null);
+        }
+      } catch {
+        // Keep the Pix screen available while Black House confirmation is pending.
+      }
+    }
+
+    checkPaymentStatus();
+    const intervalId = window.setInterval(checkPaymentStatus, 5000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [order.orderId, paymentApproved, pixCode]);
+
   async function submitPayment(payload: Record<string, unknown>) {
     const response = await fetch(
       `/api/checkout/mercado-pago/pay?orderId=${encodeURIComponent(order.orderId)}`,
@@ -182,6 +220,11 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
         identificationNumber,
       });
 
+      if (data.status === "approved") {
+        setPaymentApproved(true);
+        return;
+      }
+
       setPixCode(data.qr_code ?? null);
       setMessage("Pix gerado. Copie o código abaixo e pague no app do banco.");
     } catch (error) {
@@ -193,7 +236,7 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
 
   async function submitCard() {
     if (!mp) {
-      setMessage("Mercado Pago ainda está carregando. Tente novamente.");
+      setMessage("O pagamento da Black House ainda está carregando. Tente novamente.");
       return;
     }
 
@@ -253,11 +296,12 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
         installments,
       });
 
-      setMessage(
-        data.status === "approved"
-          ? "Pagamento aprovado. Seu ingresso será enviado pelo WhatsApp."
-          : `Pagamento enviado. Status atual: ${data.status}.`,
-      );
+      if (data.status === "approved") {
+        setPaymentApproved(true);
+        return;
+      }
+
+      setMessage(`Pagamento enviado. Status atual: ${data.status}.`);
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -274,6 +318,41 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
       navigator.clipboard?.writeText(pixCode).catch(() => undefined);
       setMessage("Código Pix copiado.");
     }
+  }
+
+  if (paymentApproved) {
+    return (
+      <main style={styles.successShell}>
+        <section style={styles.successPanel}>
+          <div style={styles.successIconWrap} aria-hidden="true">
+            <span style={styles.successIconStem} />
+            <span style={styles.successIconKick} />
+          </div>
+          <p style={styles.successEyebrow}>Pagamento</p>
+          <h1 style={styles.successTitle}>Pagamento aprovado</h1>
+          <p style={styles.successText}>
+            Tudo certo. Seu ingresso será enviado pelo WhatsApp em instantes.
+          </p>
+
+          <div style={styles.successSummary}>
+            <span>Total pago</span>
+            <strong>{order.totalLabel}</strong>
+          </div>
+        </section>
+        <style>{`
+          @keyframes checkout-success-pop {
+            0% { transform: scale(0.72); opacity: 0; }
+            55% { transform: scale(1.08); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+          }
+
+          @keyframes checkout-check-fade {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+          }
+        `}</style>
+      </main>
+    );
   }
 
   return (
@@ -600,5 +679,88 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1.45,
     marginTop: 16,
     padding: 12,
+  },
+  successShell: {
+    minHeight: "100vh",
+    background: "linear-gradient(135deg, #052e1a 0%, #0f172a 58%, #16a34a 150%)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "28px 16px",
+    fontFamily: "Arial, sans-serif",
+  },
+  successPanel: {
+    background: "#ffffff",
+    borderRadius: 18,
+    boxShadow: "0 24px 80px rgba(0, 0, 0, 0.22)",
+    color: "#111827",
+    maxWidth: 520,
+    padding: 28,
+    textAlign: "center",
+    width: "100%",
+  },
+  successIconWrap: {
+    animation: "checkout-success-pop 520ms ease-out both",
+    background: "#16a34a",
+    borderRadius: "50%",
+    height: 92,
+    margin: "0 auto 18px",
+    position: "relative",
+    width: 92,
+  },
+  successIconKick: {
+    animation: "checkout-check-fade 180ms ease-out 360ms both",
+    background: "#ffffff",
+    borderRadius: 999,
+    height: 8,
+    left: 26,
+    position: "absolute",
+    top: 51,
+    transform: "rotate(45deg)",
+    transformOrigin: "left center",
+    width: 24,
+  },
+  successIconStem: {
+    animation: "checkout-check-fade 180ms ease-out 520ms both",
+    background: "#ffffff",
+    borderRadius: 999,
+    height: 8,
+    left: 42,
+    position: "absolute",
+    top: 59,
+    transform: "rotate(-45deg)",
+    transformOrigin: "left center",
+    width: 40,
+  },
+  successEyebrow: {
+    color: "#16a34a",
+    fontSize: 13,
+    fontWeight: 800,
+    letterSpacing: 0,
+    margin: "0 0 8px",
+    textTransform: "uppercase",
+  },
+  successTitle: {
+    color: "#16a34a",
+    fontSize: 30,
+    margin: 0,
+  },
+  successText: {
+    color: "#374151",
+    fontSize: 16,
+    lineHeight: 1.5,
+    margin: "12px 0 0",
+  },
+  successSummary: {
+    background: "#f0fdf4",
+    border: "1px solid #bbf7d0",
+    borderRadius: 12,
+    color: "#166534",
+    display: "flex",
+    fontSize: 18,
+    fontWeight: 800,
+    justifyContent: "space-between",
+    marginTop: 22,
+    padding: 16,
   },
 };

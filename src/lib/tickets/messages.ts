@@ -1,12 +1,16 @@
+const PUBLIC_HOME_MESSAGE =
+  "Olá, bem-vindo(a) à Black House, casa de Comédia de Sorocaba!\nPesquise um evento por nome, artista, data ou...";
+const PUBLIC_HOME_COMMANDS_MESSAGE =
+  '> Para ver todos os eventos, digite "TODOS"\n> Para receber ajuda a qualquer momento, digite "AJUDA"\n> Para voltar à página inicial e fazer uma nova pesquisa, digite "SAIR"';
+
 export const TICKET_MESSAGES = {
-  genericHelp:
-    "Olá! Me diga qual evento você procura.\nVocê pode mandar o nome do artista, cidade, local ou data.\n\nExemplos:\n- Ana Castela\n- shows em Sorocaba\n- Bancários\n- 8 de agosto",
+  genericHelp: PUBLIC_HOME_MESSAGE,
+  genericHelpCommands: PUBLIC_HOME_COMMANDS_MESSAGE,
   noEventsFound:
-    'Não encontrei eventos com essa busca.\nTente enviar o nome do artista, cidade, local ou data. Ex: "shows em Sorocaba", "Bancários" ou "8 de agosto".',
+    `Não encontrei eventos com essa busca.\n\n${PUBLIC_HOME_MESSAGE}`,
   numericInvalidOption:
     "Não encontrei essa opção. Responda com um número da lista.",
-  numericWithoutContext:
-    "Me diga primeiro qual evento você procura. Você pode mandar o nome do artista, cidade, local ou data.",
+  numericWithoutContext: PUBLIC_HOME_MESSAGE,
   eventOptionUnavailable:
     "Essa opção não está mais disponível. Faça uma nova busca.",
   noSectionsAvailable:
@@ -37,15 +41,17 @@ export const TICKET_MESSAGES = {
     "Muitas tentativas em pouco tempo.\nPor segurança, aguarde alguns minutos antes de tentar novamente.",
   paymentLinkPrompt: "Para comprar sua reserva, responda COMPRAR.",
   reservationCancelled:
-    "PROCESSO CANCELADO\nSua reserva foi cancelada e os ingressos foram liberados.\nPara começar de novo, envie o nome do evento, artista, cidade ou data.",
+    `PROCESSO CANCELADO\nSua reserva foi cancelada e os ingressos foram liberados.\n\n${PUBLIC_HOME_MESSAGE}`,
   reservationExpired:
     "⏰ A SUA RESERVA EXPIROU\nOs ingressos foram liberados novamente para venda.\nPara ver o mesmo evento ou buscar outro, só digitar uma nova busca.",
   buyerFlowReset:
-    "PROCESSO CANCELADO\nPara começar de novo, envie o nome do evento, artista, cidade ou data.",
+    `PROCESSO CANCELADO\n\n${PUBLIC_HOME_MESSAGE}`,
   reservationUnavailableForPayment:
     "Sua reserva não está mais disponível. Faça uma nova busca para escolher outro assento.",
   checkoutGenericError:
     "Não consegui gerar o link de pagamento agora. Tente novamente em instantes.",
+  freeTicketGenericError:
+    "Não consegui emitir o ingresso gratuito agora. Tente novamente em instantes.",
   gateAdminInvalidCommand:
     "Para criar acesso de portaria, entre no admin, escolha Portaria e depois Check-in.",
   gateAdminOptionInvalid:
@@ -53,7 +59,7 @@ export const TICKET_MESSAGES = {
   gateAdminCreateError:
     "Não consegui criar o acesso de portaria agora. Tente novamente em instantes.",
   adminReservedNeutral:
-    "Não consegui entender sua mensagem.\nMe diga o nome do evento, artista, cidade, local ou data que você procura.",
+    `Não consegui entender sua mensagem.\n\n${PUBLIC_HOME_MESSAGE}`,
   adminAuthPrompt:
     "Abra o link de login enviado, informe sua senha individual e depois envie aqui o código de uso único.",
   adminAuthInvalid:

@@ -107,7 +107,9 @@ export function GateSessionScanner({
   const [allowedCount, setAllowedCount] = useState(0);
   const [deniedCount, setDeniedCount] = useState(0);
   const [lastAction, setLastAction] = useState<"allowed" | "denied" | null>(null);
-  const [accessOverlay, setAccessOverlay] = useState<{
+  const [scanOverlay, setScanOverlay] = useState<{
+    type: "allowed" | "denied";
+    message?: string;
     section?: string | null;
     seat?: string | null;
   } | null>(null);
@@ -163,7 +165,7 @@ export function GateSessionScanner({
       lastAllowedTokenRef.current = ticketToken;
       lastAllowedAtRef.current = Date.now();
       scanPausedUntilRef.current = Date.now() + ALLOWED_SCAN_PAUSE_MS;
-      setAccessOverlay(ticket ?? {});
+      setScanOverlay({ type: "allowed", ...(ticket ?? {}) });
       setCameraStatus("Acesso liberado. Scanner pausado temporariamente.");
 
       if (scanResumeTimerRef.current) {
@@ -171,7 +173,7 @@ export function GateSessionScanner({
       }
 
       scanResumeTimerRef.current = setTimeout(() => {
-        setAccessOverlay(null);
+        setScanOverlay(null);
         scanPausedUntilRef.current = 0;
         setCameraStatus("Scanner ativo. Aponte para o QR Code do ingresso.");
         scanResumeTimerRef.current = null;
@@ -179,6 +181,23 @@ export function GateSessionScanner({
     },
     [],
   );
+
+  const pauseScannerAfterDenied = useCallback((message: string) => {
+    scanPausedUntilRef.current = Date.now() + ALLOWED_SCAN_PAUSE_MS;
+    setScanOverlay({ type: "denied", message });
+    setCameraStatus("Acesso recusado. Scanner pausado temporariamente.");
+
+    if (scanResumeTimerRef.current) {
+      clearTimeout(scanResumeTimerRef.current);
+    }
+
+    scanResumeTimerRef.current = setTimeout(() => {
+      setScanOverlay(null);
+      scanPausedUntilRef.current = 0;
+      setCameraStatus("Scanner ativo. Aponte para o QR Code do ingresso.");
+      scanResumeTimerRef.current = null;
+    }, ALLOWED_SCAN_PAUSE_MS);
+  }, []);
 
   const submitScan = useCallback(
     async (rawTicketToken: string) => {
@@ -248,15 +267,20 @@ export function GateSessionScanner({
           return;
         }
 
-        registerDeniedResult(result.message ?? "Entrada recusada.");
+        const deniedMessage = result.message ?? "Entrada recusada.";
+        registerDeniedResult(deniedMessage);
+        pauseScannerAfterDenied(deniedMessage);
       } catch {
-        registerDeniedResult("Não foi possível registrar a leitura.");
+        const deniedMessage = "Não foi possível registrar a leitura.";
+        registerDeniedResult(deniedMessage);
+        pauseScannerAfterDenied(deniedMessage);
       } finally {
         submittingScanRef.current = false;
       }
     },
     [
       pauseScannerAfterAllowed,
+      pauseScannerAfterDenied,
       registerAllowedResult,
       registerDeniedResult,
       token,
@@ -446,16 +470,30 @@ export function GateSessionScanner({
         </div>
       </section>
 
-      <section className={accessOverlay ? "gate-scanner is-paused" : "gate-scanner"}>
+      <section className={scanOverlay ? "gate-scanner is-paused" : "gate-scanner"}>
         <video ref={videoRef} muted playsInline />
-        {accessOverlay ? (
-          <div className="gate-access-overlay" role="status" aria-live="assertive">
-            <strong>ACESSO LIBERADO</strong>
-            {accessOverlay.section ? (
-              <span>Setor: {accessOverlay.section}</span>
+        {scanOverlay ? (
+          <div
+            className={[
+              "gate-access-overlay",
+              scanOverlay.type === "denied" ? "is-denied" : null,
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            role="status"
+            aria-live="assertive"
+          >
+            <strong>
+              {scanOverlay.type === "allowed" ? "ACESSO LIBERADO" : "QR CODE INVÁLIDO"}
+            </strong>
+            {scanOverlay.type === "denied" && scanOverlay.message ? (
+              <span>{scanOverlay.message}</span>
             ) : null}
-            {accessOverlay.seat ? (
-              <span>Ingresso/Assento: {accessOverlay.seat}</span>
+            {scanOverlay.section ? (
+              <span>Setor: {scanOverlay.section}</span>
+            ) : null}
+            {scanOverlay.seat ? (
+              <span>Ingresso/Assento: {scanOverlay.seat}</span>
             ) : null}
           </div>
         ) : null}

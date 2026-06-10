@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { listAvailableSections } from "@/lib/tickets/services/sections";
 
 const DEFAULT_EVENT_SEARCH_LIMIT = 5;
+const DEFAULT_ALL_EVENTS_LIMIT = 50;
 const MAX_EVENT_CANDIDATES = 100;
 const ACTIVE_SESSION_STATUSES = ["scheduled", "sales_open"];
 
@@ -19,6 +20,7 @@ export type TicketEventSearchResult = {
   eventId: string;
   title: string;
   artistName: string;
+  description: string | null;
   city: string;
   state: string;
   venueName: string | null;
@@ -33,6 +35,7 @@ export type ValidatedEventSession = {
   eventId: string;
   title: string;
   artistName: string;
+  description: string | null;
   city: string;
   state: string;
   venueName: string | null;
@@ -47,6 +50,7 @@ type EventRow = {
   id: string;
   title: string;
   artist_name: string;
+  description: string | null;
   city: string;
   state: string;
   image_url: string | null;
@@ -72,6 +76,7 @@ type EventSessionValidationRow = {
     id: string;
     title: string;
     artist_name: string;
+    description: string | null;
     city: string;
     state: string;
     image_url: string | null;
@@ -194,7 +199,7 @@ export async function searchEvents({
   const resultLimit = normalizeLimit(limit);
   const eventQuery = supabase
     .from("events")
-    .select("id, title, artist_name, city, state, image_url, venue_id, venues(name)")
+    .select("id, title, artist_name, description, city, state, image_url, venue_id, venues(name)")
     .eq("status", "published");
 
   const artistTerm = artist?.trim();
@@ -262,6 +267,7 @@ export async function searchEvents({
           eventId: event.id,
           title: event.title,
           artistName: event.artist_name,
+          description: event.description,
           city: event.city,
           state: event.state,
           venueName: session.venues?.name ?? event.venues?.name ?? null,
@@ -276,6 +282,82 @@ export async function searchEvents({
   const purchasableResults: TicketEventSearchResult[] = [];
 
   for (const result of matchedSessions) {
+    const sections = await listAvailableSections(result.sessionId, {
+      venueId: result.venueId,
+    });
+
+    if (sections.length === 0) {
+      continue;
+    }
+
+    purchasableResults.push(result);
+
+    if (purchasableResults.length >= resultLimit) {
+      break;
+    }
+  }
+
+  return purchasableResults;
+}
+
+export async function listAllPublicEventsByDate({
+  limit = DEFAULT_ALL_EVENTS_LIMIT,
+}: { limit?: number } = {}): Promise<TicketEventSearchResult[]> {
+  const supabase = getSupabaseAdmin();
+  const resultLimit = Math.max(1, Math.min(limit, MAX_EVENT_CANDIDATES));
+  const { data: events, error: eventsError } = await supabase
+    .from("events")
+    .select("id, title, artist_name, description, city, state, image_url, venue_id, venues(name)")
+    .eq("status", "published")
+    .limit(MAX_EVENT_CANDIDATES)
+    .returns<EventRow[]>();
+
+  if (eventsError) {
+    throw eventsError;
+  }
+
+  if (!events?.length) {
+    return [];
+  }
+
+  const eventsById = new Map(events.map((event) => [event.id, event]));
+  const { data: sessions, error: sessionsError } = await supabase
+    .from("event_sessions")
+    .select("id, event_id, venue_id, starts_at, status, venues(name)")
+    .in("event_id", Array.from(eventsById.keys()))
+    .in("status", ACTIVE_SESSION_STATUSES)
+    .gte("starts_at", new Date().toISOString())
+    .order("starts_at", { ascending: true })
+    .limit(MAX_EVENT_CANDIDATES)
+    .returns<SessionRow[]>();
+
+  if (sessionsError) {
+    throw sessionsError;
+  }
+
+  const purchasableResults: TicketEventSearchResult[] = [];
+
+  for (const session of sessions ?? []) {
+    const event = eventsById.get(session.event_id);
+
+    if (!event) {
+      continue;
+    }
+
+    const result = {
+      eventId: event.id,
+      title: event.title,
+      artistName: event.artist_name,
+      description: event.description,
+      city: event.city,
+      state: event.state,
+      venueName: session.venues?.name ?? event.venues?.name ?? null,
+      venueId: session.venue_id ?? event.venue_id,
+      imageUrl: event.image_url,
+      sessionId: session.id,
+      startsAt: session.starts_at,
+      sessionStatus: session.status,
+    };
     const sections = await listAvailableSections(result.sessionId, {
       venueId: result.venueId,
     });
@@ -320,7 +402,7 @@ export async function getValidatedEventSession({
   const { data, error } = await supabase
     .from("event_sessions")
     .select(
-      "id, venue_id, starts_at, status, venues(name, status), events(id, title, artist_name, city, state, image_url, venue_id, status, venues(name, status))",
+      "id, venue_id, starts_at, status, venues(name, status), events(id, title, artist_name, description, city, state, image_url, venue_id, status, venues(name, status))",
     )
     .eq("id", sessionId)
     .eq("event_id", eventId)
@@ -348,6 +430,7 @@ export async function getValidatedEventSession({
     eventId: data.events.id,
     title: data.events.title,
     artistName: data.events.artist_name,
+    description: data.events.description,
     city: data.events.city,
     state: data.events.state,
     venueName: data.venues?.name ?? data.events.venues?.name ?? null,

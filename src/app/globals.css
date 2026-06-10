@@ -242,6 +242,12 @@ main {
   background: rgba(22, 101, 52, 0.86);
   color: #ffffff;
   text-align: center;
+  animation: gate-overlay-pop 260ms ease-out;
+}
+
+.gate-access-overlay.is-denied {
+  background: rgba(153, 27, 27, 0.9);
+  animation: gate-overlay-pop 260ms ease-out, gate-overlay-denied-shake 420ms ease-out 120ms;
 }
 
 .gate-access-overlay strong {
@@ -348,6 +354,35 @@ main {
   }
   100% {
     transform: translateX(0);
+  }
+}
+
+@keyframes gate-overlay-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes gate-overlay-denied-shake {
+  0% {
+    transform: translateX(0) scale(1);
+  }
+  22% {
+    transform: translateX(-8px) scale(1);
+  }
+  44% {
+    transform: translateX(8px) scale(1);
+  }
+  66% {
+    transform: translateX(-5px) scale(1);
+  }
+  100% {
+    transform: translateX(0) scale(1);
   }
 }
 

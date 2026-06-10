@@ -85,13 +85,48 @@ function formatTicket(ticket: TicketForDelivery) {
   ].join("\n");
 }
 
-export function buildTicketDeliveryMessage(tickets: TicketForDelivery[]) {
+export type TicketDeliveryPayload = {
+  message: string;
+  qrImages: Array<{
+    imageUrl: string;
+    caption: string;
+  }>;
+};
+
+export function buildTicketDeliveryMessage(
+  tickets: TicketForDelivery[],
+  title = "*PAGAMENTO CONFIRMADO*",
+) {
   const ticketBlocks = tickets.map(formatTicket);
 
   return [
-    "*PAGAMENTO CONFIRMADO*",
+    title,
     ticketBlocks.join("\n\n"),
   ].join("\n");
+}
+
+export async function buildTicketDeliveryPayload(
+  tickets: TicketForDelivery[],
+  title?: string,
+): Promise<TicketDeliveryPayload> {
+  return {
+    message: buildTicketDeliveryMessage(tickets, title),
+    qrImages: await Promise.all(
+      tickets.map(async (ticket) => {
+        const ticketUrl = buildTicketUrl(ticket);
+        const ticketQrImage = await generateTicketQrImage({
+          ticketUrl,
+          ticketCode: ticket.ticketCode,
+          eventTitle: ticket.eventTitle,
+        });
+
+        return {
+          imageUrl: ticketQrImageToDataUrl(ticketQrImage.buffer),
+          caption: QR_CODE_CAPTION,
+        };
+      }),
+    ),
+  };
 }
 
 async function getOrderCustomer(orderId: string) {

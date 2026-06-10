@@ -3,6 +3,7 @@ import "server-only";
 import QRCode from "qrcode";
 import { createHash } from "crypto";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { normalizeWhatsAppPhone } from "@/lib/tickets/phones";
 import { cancelPendingReservationForCustomer } from "@/lib/tickets/services/reservations";
 import { listAvailableSections, type AvailableSection } from "@/lib/tickets/services/sections";
 import { listAvailableSeats, listSeatMap } from "@/lib/tickets/services/seats";
@@ -187,12 +188,7 @@ function formatDateTime(value: string) {
 }
 
 export function normalizeCourtesyPhone(value: string) {
-  const digits = value.replace(/\D/g, "");
-  if (!digits) return null;
-  if (!digits.startsWith("55") && (digits.length === 10 || digits.length === 11)) {
-    return `55${digits}`;
-  }
-  return digits;
+  return normalizeWhatsAppPhone(value);
 }
 
 export function parseCourtesyPhones(value: string) {
@@ -989,10 +985,23 @@ export async function getCourtesyLimit(eventId: string) {
   return { ok: true as const, limit: data?.max_courtesies ?? 0 };
 }
 
+function formatOptionLine(
+  option: number | string,
+  label: string,
+  { preserveCase = false }: { preserveCase?: boolean } = {},
+) {
+  const normalizedLabel =
+    preserveCase || label.length === 0
+      ? label
+      : label.charAt(0).toLocaleLowerCase("pt-BR") + label.slice(1);
+
+  return `Digite ${option} para ${normalizedLabel}`;
+}
+
 export function buildCourtesyEventsReply(title: string, events: AdminCourtesyEventOption[]) {
   const eventBlocks = events.map((event) =>
     [
-      `${event.option}. ${event.title}`,
+      formatOptionLine(event.option, event.title, { preserveCase: true }),
       `> ${event.city}/${event.state}`,
       `> Status: ${event.status}`,
       event.nextSessionStartsAt
@@ -1020,7 +1029,9 @@ export function buildCourtesiesListReply(courtesies: AdminCourtesyRecord[]) {
     ...(courtesies.length
       ? courtesies.map((courtesy, index) =>
           [
-            `${index + 1}. ${courtesy.eventTitle}`,
+            formatOptionLine(index + 1, courtesy.eventTitle, {
+              preserveCase: true,
+            }),
             `   Beneficiário: ${courtesy.beneficiaryName ?? "Não informado"}`,
             `   Telefone: ${maskPhone(courtesy.phone)}`,
             `   Código: ${courtesy.ticketCode ?? "sem ticket"}`,
@@ -1043,7 +1054,11 @@ export function buildCourtesySessionsReply(sessions: AdminCourtesySessionOption[
     ...(sessions.length
       ? sessions.map(
           (session) =>
-            `> ${session.option}. ${formatDateTime(session.startsAt)} - ${session.status}`,
+            formatOptionLine(
+              session.option,
+              `${formatDateTime(session.startsAt)} - ${session.status}`,
+              { preserveCase: true },
+            ),
         )
       : ["Nenhuma sessão disponível para cortesia."]),
     "",
@@ -1058,7 +1073,9 @@ export function buildCourtesySectionsReply(sections: AdminCourtesySectionOption[
     ...(sections.length
       ? sections.map((section) =>
           [
-            `> ${section.option}. ${section.sectionName}`,
+            formatOptionLine(section.option, section.sectionName, {
+              preserveCase: true,
+            }),
             `   Disponíveis: ${section.availableSeatsCount}`,
             `   Assento marcado: ${section.hasNumberedSeats ? "sim" : "não"}`,
           ].join("\n"),

@@ -10,6 +10,7 @@ import {
 import { getEnv } from "@/lib/env";
 import { logWarn } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { normalizeWhatsAppPhone } from "@/lib/tickets/phones";
 
 export const ADMIN_AUTH_REDACTED_BODY = "[ADMIN_AUTH_REDACTED]";
 export const ADMIN_LOGIN_LINK_REDACTED_BODY = "[ADMIN_LOGIN_LINK_REDACTED]";
@@ -123,9 +124,7 @@ export function getAdminPermissions(role: AdminRole): AdminPermission[] {
 }
 
 export function normalizeAdminPhone(phone: string | null | undefined) {
-  const digits = phone?.replace(/\D/g, "") ?? "";
-
-  return digits.length > 0 ? digits : null;
+  return normalizeWhatsAppPhone(phone);
 }
 
 export function normalizeAdminText(text: string) {
@@ -846,6 +845,15 @@ export function getAdminMenuOptions(role: AdminRole) {
   ];
 }
 
+function formatOptionLine(option: number | string, label: string) {
+  const normalizedLabel =
+    label.length > 0
+      ? label.charAt(0).toLocaleLowerCase("pt-BR") + label.slice(1)
+      : label;
+
+  return `Digite ${option} para ${normalizedLabel}`;
+}
+
 export function formatAdminMenu(role: AdminRole) {
   return [
     "Acesso administrativo liberado.",
@@ -854,7 +862,7 @@ export function formatAdminMenu(role: AdminRole) {
     "*MENU ADMIN*",
     "",
     ...getAdminMenuOptions(role).map(
-      (option) => `> ${option.option}. ${option.label}`,
+      (option) => formatOptionLine(option.option, option.label),
     ),
     "",
     "Responda com o número da opção.",

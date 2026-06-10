@@ -128,7 +128,7 @@ async function markPaymentEventProcessed(eventId: string) {
     .eq("id", eventId);
 
   if (error) {
-    logWarn("Failed to mark Mercado Pago payment event as processed", {
+    logWarn("Failed to mark Black House payment event as processed", {
       paymentEventId: eventId,
       code: error.code,
     });
@@ -199,7 +199,7 @@ export async function POST(request: Request) {
     !request.headers.get("x-signature") ||
     !request.headers.get("x-request-id")
   ) {
-    logWarn("Rejected Mercado Pago webhook without signature headers");
+    logWarn("Rejected Black House webhook without signature headers");
     return unauthorized();
   }
 
@@ -212,7 +212,7 @@ export async function POST(request: Request) {
   const payload = parseMercadoPagoWebhookPayload(bodyResult.rawBody);
 
   if (!payload) {
-    logWarn("Rejected Mercado Pago webhook with invalid JSON");
+    logWarn("Rejected Black House webhook with invalid JSON");
     return badRequest("Bad Request");
   }
 
@@ -221,7 +221,7 @@ export async function POST(request: Request) {
     extractMercadoPagoPaymentId(payload);
 
   if (!paymentId) {
-    logWarn("Ignored Mercado Pago webhook without payment id");
+    logWarn("Ignored Black House webhook without payment id");
     return badRequest("Bad Request");
   }
 
@@ -233,7 +233,7 @@ export async function POST(request: Request) {
   });
 
   if (!signatureResult.ok) {
-    logWarn("Rejected Mercado Pago webhook with invalid signature", {
+    logWarn("Rejected Black House webhook with invalid signature", {
       reason: signatureResult.reason,
       providerPaymentId: paymentId,
     });
@@ -248,7 +248,7 @@ export async function POST(request: Request) {
   });
 
   if (!rateLimit.allowed) {
-    logWarn("Rate limited Mercado Pago webhook", {
+    logWarn("Rate limited Black House webhook", {
       sourceHash: rateLimit.sourceHash,
       count: rateLimit.count,
     });
@@ -269,7 +269,7 @@ export async function POST(request: Request) {
   });
 
   if (!eventInsert.ok) {
-    logError("Failed to register Mercado Pago payment event", {
+    logError("Failed to register Black House payment event", {
       providerPaymentId: paymentId,
       code: eventInsert.error.code,
     });
@@ -277,14 +277,14 @@ export async function POST(request: Request) {
   }
 
   if (eventInsert.duplicate) {
-    logInfo("Ignored already processed Mercado Pago payment event", {
+    logInfo("Ignored already processed Black House payment event", {
       providerPaymentId: paymentId,
     });
     return jsonOk({ received: true, duplicate: true });
   }
 
   if (eventInsert.retryable) {
-    logInfo("Retrying unprocessed Mercado Pago payment event", {
+    logInfo("Retrying unprocessed Black House payment event", {
       providerPaymentId: paymentId,
     });
   }
@@ -292,7 +292,7 @@ export async function POST(request: Request) {
   const paymentResult = await getMercadoPagoPayment(paymentId);
 
   if (!paymentResult.ok) {
-    logWarn("Failed to fetch Mercado Pago payment", {
+    logWarn("Failed to fetch Black House payment", {
       providerPaymentId: paymentId,
       code: paymentResult.code,
       status: paymentResult.status,
@@ -304,7 +304,7 @@ export async function POST(request: Request) {
 
   if (payment.status !== "approved") {
     await markPaymentEventProcessed(eventInsert.id);
-    logInfo("Ignored Mercado Pago payment with non-approved status", {
+    logInfo("Ignored Black House payment with non-approved status", {
       providerPaymentId: paymentId,
       paymentStatus: payment.status,
     });
@@ -321,7 +321,7 @@ export async function POST(request: Request) {
 
   if (!orderId) {
     await markPaymentEventProcessed(eventInsert.id);
-    logWarn("Ignored approved Mercado Pago payment with invalid reference", {
+    logWarn("Ignored approved Black House payment with invalid reference", {
       providerPaymentId: paymentId,
       hasExternalReference: Boolean(payment.external_reference),
     });
@@ -337,7 +337,7 @@ export async function POST(request: Request) {
   try {
     exists = await orderExists(orderId);
   } catch (error) {
-    logError("Failed to verify order for Mercado Pago payment", {
+    logError("Failed to verify order for Black House payment", {
       providerPaymentId: paymentId,
       error,
     });
@@ -346,7 +346,7 @@ export async function POST(request: Request) {
 
   if (!exists) {
     await markPaymentEventProcessed(eventInsert.id);
-    logWarn("Ignored approved Mercado Pago payment for missing order", {
+    logWarn("Ignored approved Black House payment for missing order", {
       providerPaymentId: paymentId,
       orderId,
     });
@@ -360,7 +360,7 @@ export async function POST(request: Request) {
   const amountCents = decimalAmountToCents(payment.transaction_amount);
 
   if (amountCents == null) {
-    logWarn("Rejected Mercado Pago payment with invalid amount", {
+    logWarn("Rejected Black House payment with invalid amount", {
       providerPaymentId: paymentId,
     });
     return jsonError("Internal Server Error", 500);
@@ -384,7 +384,7 @@ export async function POST(request: Request) {
 
     if (definitiveReason) {
       await markPaymentEventProcessed(eventInsert.id);
-      logWarn("Ignored definitive Mercado Pago payment confirmation failure", {
+      logWarn("Ignored definitive Black House payment confirmation failure", {
         providerPaymentId: paymentId,
         orderId,
         reason: definitiveReason,
@@ -396,7 +396,7 @@ export async function POST(request: Request) {
       });
     }
 
-    logError("Failed to confirm paid ticket order from Mercado Pago webhook", {
+    logError("Failed to confirm paid ticket order from Black House webhook", {
       providerPaymentId: paymentId,
       orderId,
       code: error.code,
@@ -433,7 +433,7 @@ export async function POST(request: Request) {
 
   await markPaymentEventProcessed(eventInsert.id);
 
-  logInfo("Processed approved Mercado Pago payment", {
+  logInfo("Processed approved Black House payment", {
     providerPaymentId: paymentId,
     orderId,
     ticketsDelivered:

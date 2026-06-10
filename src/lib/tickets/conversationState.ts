@@ -81,6 +81,8 @@ export type TicketConversationStep =
   | "selecting_quantity"
   | "showing_seats"
   | "reservation_created"
+  | "help_topic_collecting"
+  | "help_results"
   | "gate_access_selecting"
   | "gate_access_passphrase_collecting"
   | "payment_pending";
@@ -99,6 +101,7 @@ export type TicketConversationEventOption = {
   sessionId: string;
   title: string;
   artistName?: string;
+  description?: string | null;
   startsAt: string;
   city: string;
   state: string;
@@ -309,6 +312,19 @@ export type TicketConversationGateAccess = {
   }>;
 };
 
+export type TicketConversationPublicHelp = {
+  query?: string;
+  hasMore?: boolean;
+  page?: number;
+  returnStep?: TicketConversationStep;
+  returnState?: TicketConversationStep;
+  lastResults?: Array<{
+    option: number;
+    id: string;
+    question: string;
+  }>;
+};
+
 export type TicketConversationAdminReports = {
   reportType?:
     | "summary"
@@ -359,6 +375,8 @@ export type TicketConversationState = {
   selectedSection?: TicketConversationSelectedSection;
   selectedSeat?: TicketConversationSelectedSeat;
   selectedQuantity?: number;
+  eventMoreInfoShown?: boolean;
+  publicHelp?: TicketConversationPublicHelp;
   reservation?: TicketConversationReservation;
   payment?: TicketConversationPayment;
   lastSections?: TicketConversationSectionOption[];

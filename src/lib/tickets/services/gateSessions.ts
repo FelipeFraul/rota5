@@ -4,6 +4,10 @@ import { randomUUID } from "crypto";
 import { getEnv } from "@/lib/env";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
+  buildWhatsAppPhoneCandidates,
+  normalizeWhatsAppPhone,
+} from "@/lib/tickets/phones";
+import {
   createGateSessionToken,
   hashGateSessionToken,
 } from "@/lib/tickets/services/gateTokens";
@@ -76,23 +80,11 @@ export type ValidateGateSessionResult =
     };
 
 export function normalizeGatePhone(phone: string | null | undefined) {
-  const digits = phone?.replace(/\D/g, "") ?? "";
-
-  return digits.length > 0 ? digits : null;
+  return normalizeWhatsAppPhone(phone);
 }
 
 function getGatePhoneLookupVariants(phone: string) {
-  const variants = new Set([phone]);
-
-  if (phone.startsWith("55") && (phone.length === 12 || phone.length === 13)) {
-    variants.add(phone.slice(2));
-  }
-
-  if (!phone.startsWith("55") && (phone.length === 10 || phone.length === 11)) {
-    variants.add(`55${phone}`);
-  }
-
-  return [...variants];
+  return buildWhatsAppPhoneCandidates(phone);
 }
 
 function buildGateUrl(token: string) {

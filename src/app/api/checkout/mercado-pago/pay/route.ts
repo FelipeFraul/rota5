@@ -114,7 +114,7 @@ export async function POST(request: Request) {
   });
 
   if (!rateLimit.allowed) {
-    logWarn("Rate limited Mercado Pago self-hosted payment request", {
+    logWarn("Rate limited Black House self-hosted payment request", {
       sourceHash: rateLimit.sourceHash,
       count: rateLimit.count,
     });

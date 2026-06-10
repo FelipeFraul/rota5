@@ -3,6 +3,7 @@ import "server-only";
 import { createHash } from "crypto";
 import { logWarn } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { normalizeWhatsAppPhone } from "@/lib/tickets/phones";
 
 const RESERVATION_CREATED_PHONE_LIMIT = 5;
 const RESERVATION_CREATED_PHONE_WINDOW_MINUTES = 15;
@@ -83,7 +84,7 @@ function hashValue(value: string) {
 }
 
 function normalizePhone(value?: string | null) {
-  return value?.replace(/\D/g, "") || null;
+  return normalizeWhatsAppPhone(value);
 }
 
 function hashPhone(value?: string | null) {

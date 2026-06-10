@@ -19,6 +19,8 @@ import {
   findInboundMessageByProviderId,
   saveWhatsAppMessage,
 } from "@/lib/tickets/services/messages";
+import { TICKET_MESSAGES } from "@/lib/tickets/messages";
+import { normalizeWhatsAppPhone } from "@/lib/tickets/phones";
 import { routeTicketMessage } from "@/lib/tickets/router";
 import { ADMIN_AUTH_REDACTED_BODY } from "@/lib/tickets/services/adminAuth";
 import { GATE_ACCESS_REDACTED_BODY } from "@/lib/tickets/services/gateAccessAuth";
@@ -48,8 +50,8 @@ type ParsedIncomingMessage = {
   mediaUrl: string | null;
 };
 type RouteOutboundMessage =
-  | { type: "text"; body: string; phone?: string; persistedBody?: string }
-  | { type: "image"; imageUrl: string; caption: string; phone?: string; persistedBody?: string };
+  | { type: "text"; body: string; phone?: string; persistedBody?: string; delayMs?: number }
+  | { type: "image"; imageUrl: string; caption: string; phone?: string; persistedBody?: string; delayMs?: number };
 
 function getHeaderSecret(request: Request): string | null {
   for (const headerName of SECRET_HEADER_NAMES) {
@@ -158,9 +160,7 @@ function limitedKeys(value: unknown) {
 }
 
 function normalizePhone(phone: string | null) {
-  const digits = phone?.replace(/\D/g, "") ?? "";
-
-  return digits.length > 0 ? digits : null;
+  return normalizeWhatsAppPhone(phone);
 }
 
 function normalizeMessageType(messageType: string | null) {
@@ -366,7 +366,22 @@ function getOutboundMessages(
     return routeResult.outboundMessages;
   }
 
+  if (routeResult.reply === TICKET_MESSAGES.genericHelp) {
+    return [
+      { type: "text", body: TICKET_MESSAGES.genericHelp },
+      {
+        type: "text",
+        body: TICKET_MESSAGES.genericHelpCommands,
+        delayMs: 5_000,
+      },
+    ];
+  }
+
   return [{ type: "text", body: routeResult.reply }];
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function sendOutboundMessage({
@@ -508,14 +523,14 @@ export async function POST(request: Request) {
     );
 
     if (!duplicateResult.ok) {
-      logError("Failed to check duplicate Z-API message", {
+      logWarn("Failed to pre-check duplicate Z-API message; continuing", {
         code: duplicateResult.error?.code,
+        errorMessage: duplicateResult.error?.message,
         providerMessageId: incoming.providerMessageId,
       });
-      return jsonError("Internal Server Error", 500);
     }
 
-    if (duplicateResult.message) {
+    if (duplicateResult.ok && duplicateResult.message) {
       logInfo("Ignored duplicate Z-API inbound message", {
         providerMessageId: incoming.providerMessageId,
       });
@@ -608,6 +623,11 @@ export async function POST(request: Request) {
 
   for (const outboundMessage of outboundMessages) {
     const outboundPhone = outboundMessage.phone ?? incoming.phone;
+
+    if (outboundMessage.delayMs && outboundMessage.delayMs > 0) {
+      await sleep(outboundMessage.delayMs);
+    }
+
     const sendResult = await sendOutboundMessage({
       phone: outboundPhone,
       message: outboundMessage,

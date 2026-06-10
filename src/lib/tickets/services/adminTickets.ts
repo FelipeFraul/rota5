@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { buildWhatsAppPhoneCandidates } from "@/lib/tickets/phones";
 import {
   cancelPendingReservationForCustomer,
   type CancelPendingReservationResult,
@@ -274,18 +275,7 @@ function uniqueValues(values: string[]) {
 }
 
 function buildPhoneCandidates(phone: string) {
-  const digits = phone.replace(/\D/g, "");
-  const candidates = [digits];
-
-  if (digits.startsWith("55") && digits.length > 12) {
-    candidates.push(digits.slice(2));
-  }
-
-  if (!digits.startsWith("55") && (digits.length === 10 || digits.length === 11)) {
-    candidates.push(`55${digits}`);
-  }
-
-  return uniqueValues(candidates);
+  return uniqueValues(buildWhatsAppPhoneCandidates(phone));
 }
 
 function isUuid(value: string) {
@@ -328,7 +318,7 @@ function getString(value: unknown) {
 
 function formatPaymentProvider(provider: string | null) {
   if (provider === "mercado_pago") {
-    return "Mercado Pago";
+    return "Black House";
   }
 
   return provider;

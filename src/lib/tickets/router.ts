@@ -25,6 +25,7 @@ import {
 } from "@/lib/tickets/services/checkout";
 import {
   getValidatedEventSession,
+  listAllPublicEventsByDate,
   searchEvents,
   type TicketEventSearchResult,
 } from "@/lib/tickets/services/events";
@@ -46,6 +47,18 @@ import {
   type ReserveSelectedSeatResult,
   type ReserveSelectedSeatSuccess,
 } from "@/lib/tickets/services/reservations";
+import {
+  issuePublicFreeTicketsForOrder,
+  type IssuePublicFreeTicketsResult,
+} from "@/lib/tickets/services/publicFreeTickets";
+import {
+  formatPublicHelpAnswer,
+  formatPublicHelpPrompt,
+  formatPublicHelpResults,
+  getPublicHelpTopicById,
+  isPublicHelpCommand,
+  searchPublicHelpTopics,
+} from "@/lib/tickets/services/publicHelp";
 import {
   createAdminEvent,
   duplicateAdminEvent,
@@ -175,6 +188,7 @@ import {
   isAuthorizedAdminPhone,
   isReservedAdminCommand,
   hashAdminPassphrase,
+  normalizeAdminPhone,
   normalizeAdminText,
   revokeActiveAdminSessions,
   type AdminRole,
@@ -286,8 +300,8 @@ type RouteTicketMessageInput = {
 type RouteTicketMessageOutput = {
   reply: string;
   outboundMessages?: Array<
-    | { type: "text"; body: string; phone?: string; persistedBody?: string }
-    | { type: "image"; imageUrl: string; caption: string; phone?: string; persistedBody?: string }
+    | { type: "text"; body: string; phone?: string; persistedBody?: string; delayMs?: number }
+    | { type: "image"; imageUrl: string; caption: string; phone?: string; persistedBody?: string; delayMs?: number }
   >;
   nextContext: TicketConversationState;
 };
@@ -646,6 +660,19 @@ function formatCurrencyFromCents(cents: number) {
   }).format(cents / 100);
 }
 
+function formatOptionLine(
+  option: number | string,
+  label: string,
+  { preserveCase = false }: { preserveCase?: boolean } = {},
+) {
+  const normalizedLabel =
+    preserveCase || label.length === 0
+      ? label
+      : label.charAt(0).toLocaleLowerCase("pt-BR") + label.slice(1);
+
+  return `Digite ${option} para ${normalizedLabel}`;
+}
+
 const LOWERCASE_NAME_PARTS = new Set([
   "a",
   "as",
@@ -707,6 +734,7 @@ function buildEventOptions(
     sessionId: event.sessionId,
     title: event.title,
     artistName: event.artistName,
+    description: event.description,
     startsAt: event.startsAt,
     city: event.city,
     state: event.state,
@@ -729,6 +757,19 @@ function formatEventsReply(events: TicketEventSearchResult[]) {
   ].join("\n");
 }
 
+function formatEventOptionsReply(events: TicketConversationEventOption[]) {
+  const lines = events.flatMap((event, index) => [
+    formatSingleEventOptionReply(event, index, events.length),
+    "",
+  ]);
+
+  return [
+    "Encontrei estes eventos:",
+    "",
+    ...lines,
+  ].join("\n");
+}
+
 function formatSingleEventReply(
   event: TicketEventSearchResult,
   index: number,
@@ -739,19 +780,82 @@ function formatSingleEventReply(
     `> 🎤 Artista: ${formatProperName(event.artistName)}`,
     `> 📍 Cidade: ${formatCityState(event.city, event.state)}`,
     `> 🗓️ Data: ${formatEventDate(event.startsAt)}`,
-    `> 🏟️ Local: ${event.venueName ? formatProperName(event.venueName) : "A confirmar"}`,
-    `> 🎫 Status: ${formatSearchSessionStatus(event.sessionStatus)}`,
   ];
   const options =
     totalEvents === 1
-      ? ["1. Comprar", "2. Saber mais", "3. Buscar outro evento"]
-      : [`${index + 1}. Comprar este evento`];
+      ? [
+          formatOptionLine(1, "comprar"),
+          formatOptionLine(2, "saber mais"),
+          formatOptionLine(3, "buscar outro evento"),
+        ]
+      : [formatOptionLine(index + 1, "comprar este evento")];
 
   return [
     `🎟️ - *${title}*`,
     ...details,
     "",
     ...options,
+  ].join("\n");
+}
+
+function formatSingleEventOptionReply(
+  event: TicketConversationEventOption,
+  index: number,
+  totalEvents: number,
+) {
+  const title = formatAnnouncementTitle(event.title);
+  const details = [
+    ...(event.artistName ? [`> 🎤 Artista: ${formatProperName(event.artistName)}`] : []),
+    `> 📍 Cidade: ${formatCityState(event.city, event.state)}`,
+    `> 🗓️ Data: ${formatEventDate(event.startsAt)}`,
+  ];
+  const options =
+    totalEvents === 1
+      ? [
+          formatOptionLine(1, "comprar"),
+          formatOptionLine(2, "saber mais"),
+          formatOptionLine(3, "buscar outro evento"),
+        ]
+      : [formatOptionLine(index + 1, "comprar este evento")];
+
+  return [
+    `🎟️ - *${title}*`,
+    ...details,
+    "",
+    ...options,
+  ].join("\n");
+}
+
+function formatAllEventsReply(
+  events: Array<TicketEventSearchResult | TicketConversationEventOption>,
+) {
+  const lines = events.flatMap((event, index) => [
+    formatSingleAllEventReply(event, index),
+    "",
+  ]);
+
+  return [
+    "Encontrei estes eventos:",
+    "",
+    ...lines,
+  ].join("\n");
+}
+
+function formatSingleAllEventReply(
+  event: TicketEventSearchResult | TicketConversationEventOption,
+  index: number,
+) {
+  const buyOption = index * 2 + 1;
+  const moreInfoOption = buyOption + 1;
+
+  return [
+    `🎟️ - *${formatAnnouncementTitle(event.title)}*`,
+    `> 🎤 Artista: ${formatProperName(event.artistName)}`,
+    `> 📍 Cidade: ${formatCityState(event.city, event.state)}`,
+    `> 🗓️ Data: ${formatEventDate(event.startsAt)}`,
+    "",
+    formatOptionLine(buyOption, "comprar"),
+    formatOptionLine(moreInfoOption, "ver mais"),
   ].join("\n");
 }
 
@@ -765,16 +869,51 @@ function buildEventSearchOutboundMessages(events: TicketEventSearchResult[]) {
   });
 }
 
-function formatSingleEventMoreInfo(event: TicketConversationEventOption) {
+function buildEventOptionOutboundMessages(events: TicketConversationEventOption[]) {
+  return events.map((event, index) => {
+    const caption = formatSingleEventOptionReply(event, index, events.length);
+
+    return event.imageUrl
+      ? ({ type: "image", imageUrl: event.imageUrl, caption } as const)
+      : ({ type: "text", body: caption } as const);
+  });
+}
+
+function buildEventMoreInfoOutboundMessages(
+  event: TicketConversationEventOption | TicketConversationSelectedEvent,
+) {
+  const body = formatSingleEventMoreInfo(event);
+
+  return [
+    event.imageUrl
+      ? ({ type: "image", imageUrl: event.imageUrl, caption: body } as const)
+      : ({ type: "text", body } as const),
+    { type: "text", body: formatSingleEventMoreInfoOptions() } as const,
+  ];
+}
+
+function formatSingleEventMoreInfo(
+  event: TicketConversationEventOption | TicketConversationSelectedEvent,
+) {
+  const description = event.description?.trim();
+
   return [
     `🎟️ - *${formatAnnouncementTitle(event.title)}*`,
     ...(event.artistName ? [`> 🎤 Artista: ${formatProperName(event.artistName)}`] : []),
     `> 📍 Cidade: ${formatCityState(event.city, event.state)}`,
     `> 🗓️ Data: ${formatEventDate(event.startsAt)}`,
-    `> 🏟️ Local: ${event.venueName ? formatProperName(event.venueName) : "A confirmar"}`,
+    ...(event.venueName ? [`> 🏟️ Local: ${formatProperName(event.venueName)}`] : []),
     "",
-    "1. Comprar",
-    "3. Buscar outro evento",
+    "*INFORMAÇÕES DO EVENTO*",
+    description || "Nenhuma informação adicional cadastrada para este evento.",
+  ].join("\n");
+}
+
+function formatSingleEventMoreInfoOptions() {
+  return [
+    formatOptionLine(1, "comprar"),
+    formatOptionLine(2, "voltar"),
+    formatOptionLine(3, "fazer uma nova pesquisa"),
   ].join("\n");
 }
 
@@ -786,6 +925,7 @@ function buildSelectedEvent(
     sessionId: event.sessionId,
     title: event.title,
     artistName: event.artistName,
+    description: event.description,
     startsAt: event.startsAt,
     city: event.city,
     state: event.state,
@@ -853,6 +993,10 @@ function formatSectionPrice(section: AvailableSection) {
 }
 
 function formatPriceWithOptionalFee(priceCents: number, feeCents: number) {
+  if (priceCents === 0 && feeCents === 0) {
+    return "Gratuito";
+  }
+
   const price = formatCurrencyFromCents(priceCents);
 
   if (feeCents <= 0) {
@@ -873,7 +1017,7 @@ function formatSectionsReply({
       const label = section.ticketTypes.length > 1
         ? `${section.sectionName} - ${ticketType.label}`
         : section.sectionName;
-      const line = `> ${option}. ${label} - ${formatPriceWithOptionalFee(ticketType.priceCents, ticketType.feeCents)}`;
+      const line = `${formatOptionLine(option, label)} - ${formatPriceWithOptionalFee(ticketType.priceCents, ticketType.feeCents)}`;
       option += 1;
       return line;
     }),
@@ -891,6 +1035,7 @@ function formatQuantityPrompt(
   section: AvailableSection,
   ticketType = section.ticketTypes[0],
 ) {
+  const isFree = isPublicFreeTicketType(ticketType);
   const selectedPrice = ticketType
     ? formatPriceWithOptionalFee(ticketType.priceCents, ticketType.feeCents)
     : formatSectionPrice(section);
@@ -901,8 +1046,22 @@ function formatQuantityPrompt(
     ...(ticketType ? [`> Ingresso: ${ticketType.label}`] : []),
     `> 🎫 Valor: ${selectedPrice}`,
     "",
-    "Digite o número de ingressos para compra, ex: 2",
+    isFree
+      ? "Digite o número de ingressos gratuitos, até 4 por pedido. Ex: 2"
+      : "Digite o número de ingressos para compra, ex: 2",
   ].join("\n");
+}
+
+function isPublicFreeTicketType(
+  ticketType?: TicketConversationSectionTicketType | AvailableSection["ticketTypes"][number],
+) {
+  return Boolean(ticketType && ticketType.priceCents === 0 && ticketType.feeCents === 0);
+}
+
+function getMaxTicketsPerOrder(
+  ticketType?: TicketConversationSectionTicketType,
+) {
+  return isPublicFreeTicketType(ticketType) ? 4 : 10;
 }
 
 function formatSeatsReply({
@@ -984,6 +1143,24 @@ function isBuyerReservationExitIntent(text: string) {
   );
 }
 
+function isBuyerBackIntent(text: string) {
+  const normalized = normalizeIntentText(text);
+
+  return normalized === "voltar" || normalized === "volta";
+}
+
+function isAllPublicEventsIntent(text: string) {
+  const normalized = normalizeIntentText(text);
+
+  return normalized === "todos";
+}
+
+function isAllPublicEventsContext(context: Partial<TicketConversationState>) {
+  return context.lastSearch?.originalText
+    ? isAllPublicEventsIntent(context.lastSearch.originalText)
+    : false;
+}
+
 function isReservationContextExpired(
   reservation?: TicketConversationReservation,
 ) {
@@ -1007,10 +1184,190 @@ function resetBuyerReservationContext(
     selectedSection: undefined,
     selectedSeat: undefined,
     selectedQuantity: undefined,
+    eventMoreInfoShown: undefined,
     lastSeats: [],
     lastSections: [],
     lastEvents: [],
+    publicHelp: undefined,
   };
+}
+
+function publicHelpReturnContext(baseContext: TicketConversationState) {
+  const returnState = baseContext.publicHelp?.returnState;
+  const returnStep = baseContext.publicHelp?.returnStep ?? returnState;
+
+  return {
+    ...baseContext,
+    step: returnStep ?? "idle",
+    state: returnState ?? returnStep ?? "idle",
+    publicHelp: undefined,
+  };
+}
+
+function isPublicHelpFlowState(state?: string) {
+  return state === "help_topic_collecting" || state === "help_results";
+}
+
+function hasEnoughHelpTerms(text: string) {
+  return normalizeIntentText(text)
+    .split(" ")
+    .filter((word) => word.length >= 2).length >= 2;
+}
+
+function buildPublicHelpSearchResponse({
+  baseContext,
+  query,
+  page = 0,
+  returnStep,
+  returnState,
+}: {
+  baseContext: TicketConversationState;
+  query: string;
+  page?: number;
+  returnStep?: TicketConversationStep;
+  returnState?: TicketConversationStep;
+}): RouteTicketMessageOutput {
+  if (!hasEnoughHelpTerms(query)) {
+    return {
+      reply: [
+        formatPublicHelpPrompt(),
+        "",
+        "Exemplos:",
+        "> pagamento pix",
+        "> qr invalido",
+        "> reserva expirada",
+      ].join("\n"),
+      nextContext: {
+        ...baseContext,
+        step: "help_topic_collecting",
+        state: "help_topic_collecting",
+        publicHelp: {
+          returnStep: returnStep ?? baseContext.publicHelp?.returnStep ?? baseContext.step,
+          returnState: returnState ?? baseContext.publicHelp?.returnState ?? baseContext.state,
+        },
+      },
+    };
+  }
+
+  const searchResult = searchPublicHelpTopics(query, page);
+
+  return {
+    reply: formatPublicHelpResults(searchResult),
+    nextContext: {
+      ...baseContext,
+      step: searchResult.results.length > 0 ? "help_results" : "help_topic_collecting",
+      state: searchResult.results.length > 0 ? "help_results" : "help_topic_collecting",
+      publicHelp: {
+        query,
+        hasMore: searchResult.hasMore,
+        page: searchResult.page,
+        returnStep: returnStep ?? baseContext.publicHelp?.returnStep ?? baseContext.step,
+        returnState: returnState ?? baseContext.publicHelp?.returnState ?? baseContext.state,
+        lastResults: searchResult.results.map((result) => ({
+          option: result.option,
+          id: result.id,
+          question: result.question,
+        })),
+      },
+    },
+  };
+}
+
+function handlePublicHelpMessage({
+  baseContext,
+  text,
+}: {
+  baseContext: TicketConversationState;
+  text: string;
+}): RouteTicketMessageOutput | null {
+  if (isPublicHelpCommand(text)) {
+    return {
+      reply: formatPublicHelpPrompt(),
+      nextContext: {
+        ...baseContext,
+        step: "help_topic_collecting",
+        state: "help_topic_collecting",
+        publicHelp: {
+          returnStep: isPublicHelpFlowState(baseContext.state) ? baseContext.publicHelp?.returnStep : baseContext.step,
+          returnState: isPublicHelpFlowState(baseContext.state) ? baseContext.publicHelp?.returnState : baseContext.state,
+        },
+      },
+    };
+  }
+
+  if (!isPublicHelpFlowState(baseContext.state)) {
+    return null;
+  }
+
+  if (isBuyerBackIntent(text)) {
+    return {
+      reply: "Voltando ao atendimento anterior.",
+      nextContext: publicHelpReturnContext(baseContext),
+    };
+  }
+
+  if (isBuyerReservationExitIntent(text)) {
+    return {
+      reply: TICKET_MESSAGES.genericHelp,
+      nextContext: buildInitialConversationState(),
+    };
+  }
+
+  if (baseContext.state === "help_results") {
+    const normalizedText = normalizeIntentText(text);
+
+    if (normalizedText === "ver mais" || normalizedText === "mais") {
+      const previousQuery = baseContext.publicHelp?.query;
+
+      if (!previousQuery) {
+        return {
+          reply: formatPublicHelpPrompt(),
+          nextContext: {
+            ...baseContext,
+            step: "help_topic_collecting",
+            state: "help_topic_collecting",
+          },
+        };
+      }
+
+      if (!baseContext.publicHelp?.hasMore) {
+        return {
+          reply:
+            "Não encontrei outros tópicos para essa pesquisa. Digite outras duas palavras para uma nova busca de ajuda ou *VOLTAR* para voltar onde estava.",
+          nextContext: baseContext,
+        };
+      }
+
+      return buildPublicHelpSearchResponse({
+        baseContext,
+        query: previousQuery,
+        page: (baseContext.publicHelp.page ?? 0) + 1,
+      });
+    }
+
+    const selectedOption = text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
+    const selected = selectedOption
+      ? baseContext.publicHelp?.lastResults?.find(
+          (result) => result.option === selectedOption,
+        )
+      : null;
+
+    if (selected) {
+      const topic = getPublicHelpTopicById(selected.id);
+
+      if (topic) {
+        return {
+          reply: formatPublicHelpAnswer(topic),
+          nextContext: baseContext,
+        };
+      }
+    }
+  }
+
+  return buildPublicHelpSearchResponse({
+    baseContext,
+    query: text,
+  });
 }
 
 function parseTicketQuantity(text: string) {
@@ -1209,9 +1566,9 @@ function renderAdminSubmenu(config: AdminSubmenuConfig) {
   return [
     `*${config.title.toUpperCase()}*`,
     "",
-    ...config.options.map((label, index) => `> ${index + 1}. ${label}`),
-    `> ${config.backOption}. Voltar`,
-    `> ${config.exitOption}. Sair`,
+    ...config.options.map((label, index) => formatOptionLine(index + 1, label)),
+    formatOptionLine(config.backOption, "voltar"),
+    formatOptionLine(config.exitOption, "sair"),
     "",
     "Responda com o número da opção.",
     'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
@@ -1226,12 +1583,12 @@ function renderAdminEventListFilterMenu() {
   return [
     "*LISTAR MEUS EVENTOS*",
     "",
-    "> 1. Eventos ativos",
-    "> 2. Eventos pausados",
-    "> 3. Eventos cancelados",
-    "> 4. Todos os eventos",
-    "> 5. Voltar",
-    "> 6. Sair",
+    formatOptionLine(1, "eventos ativos"),
+    formatOptionLine(2, "eventos pausados"),
+    formatOptionLine(3, "eventos cancelados"),
+    formatOptionLine(4, "todos os eventos"),
+    formatOptionLine(5, "voltar"),
+    formatOptionLine(6, "sair"),
     "",
     "Responda com o número da opção.",
     'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
@@ -1282,11 +1639,11 @@ function parseAdminMainMenuOption(text: string) {
 function parseAdminSubmenuOption(text: string) {
   const normalized = normalizeAdminText(text);
 
-  if (normalized === "voltar" || normalized === "cancelar") {
+  if (normalized === "voltar" || normalized === "volta" || normalized === "cancelar") {
     return "back" as const;
   }
 
-  if (normalized === "menu" || normalized === "menu principal") {
+  if (normalized === "menu" || normalized === "menu principal" || normalized === "inicio") {
     return "menu" as const;
   }
 
@@ -1452,6 +1809,36 @@ function formatReservationReply({
   ].join("\n");
 }
 
+function formatReservationContextReply({
+  selectedEvent,
+  selectedSection,
+  selectedSeat,
+  reservation,
+  quantity = 1,
+}: {
+  selectedEvent?: TicketConversationSelectedEvent;
+  selectedSection?: TicketConversationSelectedSection;
+  selectedSeat?: TicketConversationSelectedSeat;
+  reservation: TicketConversationReservation;
+  quantity?: number;
+}) {
+  return [
+    "RESERVA EM ANDAMENTO. VOCÊ AINDA PODE EFETUAR A COMPRA",
+    ...(selectedEvent ? [`> Evento: ${selectedEvent.title}`] : []),
+    ...(selectedSection ? [`> Setor: ${selectedSection.sectionName}`] : []),
+    ...(selectedSection?.selectedTicketType
+      ? [`> Ingresso: ${selectedSection.selectedTicketType.label}`]
+      : []),
+    ...(selectedSeat ? [`> Assento: ${selectedSeat.seatCode}`] : []),
+    `> Quantidade: ${quantity}`,
+    "",
+    `Valor: ${formatPriceWithOptionalFee(reservation.totalAmountCents, reservation.totalFeeCents)}`,
+    `> Reserva válida até: ${formatTime(reservation.expiresAt)}`,
+    "",
+    "Para comprar, digite COMPRAR. Para alterar sua escolha, digite VOLTAR.",
+  ].join("\n");
+}
+
 function formatPaymentLinkReply({
   selectedEvent,
   selectedSection,
@@ -1487,6 +1874,44 @@ function formatPaymentLinkReply({
   return lines.join("\n");
 }
 
+function buildPublicFreeTicketOutboundMessages(
+  result: Extract<IssuePublicFreeTicketsResult, { ok: true }>,
+) {
+  return [
+    { type: "text" as const, body: result.delivery.message },
+    ...result.delivery.qrImages.map((image) => ({
+      type: "image" as const,
+      imageUrl: image.imageUrl,
+      caption: image.caption,
+    })),
+  ];
+}
+
+function formatPublicFreeTicketFailureMessage(
+  result: Extract<IssuePublicFreeTicketsResult, { ok: false }>,
+) {
+  if (result.reason === "reservation_expired") {
+    return TICKET_MESSAGES.reservationExpired;
+  }
+
+  if (result.reason === "free_ticket_limit_exceeded") {
+    return "*QUANTIDADE INVALIDA*\nPara ingresso gratuito, o número máximo de ingressos por pedido são 4. Digite novamente o número de 1 a 4.";
+  }
+
+  if (
+    result.reason === "order_not_found" ||
+    result.reason === "order_not_payable" ||
+    result.reason === "reservation_not_found" ||
+    result.reason === "reservation_not_payable" ||
+    result.reason === "reservation_items_not_found" ||
+    result.reason === "reserved_seat_not_available"
+  ) {
+    return TICKET_MESSAGES.reservationUnavailableForPayment;
+  }
+
+  return TICKET_MESSAGES.freeTicketGenericError;
+}
+
 function isConfirmText(text: string) {
   return normalizeAdminText(text) === "confirmar";
 }
@@ -1498,7 +1923,13 @@ function isCancelText(text: string) {
 }
 
 function isBackText(text: string) {
-  return normalizeAdminText(text) === "voltar";
+  const normalized = normalizeAdminText(text);
+
+  return normalized === "voltar" || normalized === "volta";
+}
+
+function isAdminHomeText(text: string) {
+  return normalizeAdminText(text) === "inicio";
 }
 
 function isAbortText(text: string) {
@@ -1699,10 +2130,10 @@ function renderGateAccessFilterMenu() {
   return [
     "*VER TODOS OS ACESSOS*",
     "",
-    "> 1. Ativos",
-    "> 2. Pausados",
-    "> 3. Voltar",
-    "> 4. Sair",
+    formatOptionLine(1, "ativos"),
+    formatOptionLine(2, "pausados"),
+    formatOptionLine(3, "voltar"),
+    formatOptionLine(4, "sair"),
     "",
     "Responda com o número da opção.",
     'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
@@ -1733,7 +2164,9 @@ function renderGateAccessesList({
 }) {
   const blocks = accesses.map((access, index) =>
     [
-      `${index + 1}. ${access.eventTitle ?? "Evento"}`,
+      formatOptionLine(index + 1, access.eventTitle ?? "Evento", {
+        preserveCase: true,
+      }),
       `> Telefone: ${maskGatePhone(access.phone)}`,
       access.name ? `> Nome: ${access.name}` : null,
       `> Status: ${formatGateAccessStatus(access.status)}`,
@@ -1819,7 +2252,10 @@ function renderGateAccessSelection(accesses: AdminGateAccessListItem[]) {
     "*Você tem acesso de portaria para estes eventos:*",
     "",
     ...accesses.map(
-      (access, index) => `> ${index + 1}. ${access.eventTitle ?? "Evento"}`,
+      (access, index) =>
+        formatOptionLine(index + 1, access.eventTitle ?? "Evento", {
+          preserveCase: true,
+        }),
     ),
     "",
     "Responda com o número do evento para continuar.",
@@ -1833,7 +2269,10 @@ function renderGateAccessSelectionFromContext(
     "*Você tem acesso de portaria para estes eventos:*",
     "",
     ...accesses.map(
-      (access) => `> ${access.option}. ${access.eventTitle ?? "Evento"}`,
+      (access) =>
+        formatOptionLine(access.option, access.eventTitle ?? "Evento", {
+          preserveCase: true,
+        }),
     ),
     "",
     "Responda com o número do evento para continuar.",
@@ -1853,13 +2292,13 @@ function renderAdminReportPeriodMenu() {
   return [
     "*QUAL PERÍODO DO RELATÓRIO?*",
     "",
-    "> 1. Hoje",
-    "> 2. Últimos 7 dias",
-    "> 3. Últimos 30 dias",
-    "> 4. Todo o período",
-    "> 5. Escolher datas",
-    "> 6. Voltar",
-    "> 7. Sair",
+    formatOptionLine(1, "hoje"),
+    formatOptionLine(2, "últimos 7 dias"),
+    formatOptionLine(3, "últimos 30 dias"),
+    formatOptionLine(4, "todo o período"),
+    formatOptionLine(5, "escolher datas"),
+    formatOptionLine(6, "voltar"),
+    formatOptionLine(7, "sair"),
     "",
     "Responda com o número da opção.",
     'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
@@ -1938,9 +2377,9 @@ function renderAdminUserTypePrompt() {
   return [
     "*QUAL NÍVEL DE ACESSO?*",
     "",
-    "> 1. Diretor",
-    "> 2. Gerente",
-    "> 3. Operador",
+    formatOptionLine(1, "diretor"),
+    formatOptionLine(2, "gerente"),
+    formatOptionLine(3, "operador"),
     "",
     'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
   ].join("\n");
@@ -1985,7 +2424,9 @@ function formatAdminRoleLabel(role: string) {
 function renderAdminUsersList(users: AdminUserListItem[]) {
   const userBlocks = users.map((user, index) =>
     [
-      `${index + 1}. ${user.name ?? "Sem nome"}`,
+      formatOptionLine(index + 1, user.name ?? "Sem nome", {
+        preserveCase: true,
+      }),
       `   Telefone: ${maskAdminPhone(user.phone)}`,
       `   Perfil: ${formatAdminRoleLabel(user.role)}`,
       `   Status: ${user.status === "active" ? "ativo" : "desativado"}`,
@@ -2004,7 +2445,9 @@ function renderAdminUsersList(users: AdminUserListItem[]) {
 function renderAdminUsersSelectionList(users: AdminUserListItem[]) {
   const userBlocks = users.map((user, index) =>
     [
-      `${index + 1}. ${user.name ?? "Sem nome"}`,
+      formatOptionLine(index + 1, user.name ?? "Sem nome", {
+        preserveCase: true,
+      }),
       `> Telefone: ${maskAdminPhone(user.phone)}`,
       `> Perfil: ${formatAdminRoleLabel(user.role)}`,
       `> Status: ${user.status === "active" ? "ativo" : "desativado"}`,
@@ -2021,7 +2464,9 @@ function renderAdminUsersSelectionList(users: AdminUserListItem[]) {
 function renderBlockedAdminAuthList(blocked: AdminAuthBlockedListItem[]) {
   const blocks = blocked.map((item, index) =>
     [
-      `${index + 1}. ${item.name ?? "Sem nome"}`,
+      formatOptionLine(index + 1, item.name ?? "Sem nome", {
+        preserveCase: true,
+      }),
       `> Telefone: ${maskAdminPhone(item.phone)}`,
       ...(item.role ? [`> Perfil: ${formatAdminRoleLabel(item.role)}`] : []),
       `> Tentativas: ${item.failedAttempts}`,
@@ -2219,12 +2664,13 @@ function maskAdminIdentifier(value: string | null | undefined) {
 }
 
 function formatAdminTicket(ticket: AdminTicketLookup, index?: number) {
-  const prefix = typeof index === "number" ? `${index}. ` : "";
   const venue = ticket.venueName
     ? `${ticket.venueName} - ${ticket.city}/${ticket.state}`
     : `${ticket.city}/${ticket.state}`;
   const lines = [
-    `${prefix}${ticket.eventTitle}`,
+    typeof index === "number"
+      ? formatOptionLine(index, ticket.eventTitle, { preserveCase: true })
+      : ticket.eventTitle,
     `   Data: ${formatDateTime(ticket.startsAt)}`,
     `   Local: ${venue}`,
     `   Setor: ${ticket.sectionName}`,
@@ -2270,7 +2716,7 @@ function formatAdminTicketForPhoneSearch(
   index: number,
 ) {
   const lines = [
-    `${index}. ${ticket.eventTitle}`,
+    formatOptionLine(index, ticket.eventTitle, { preserveCase: true }),
     `   Data: ${formatDateTime(ticket.startsAt)}`,
     `   Setor: ${ticket.sectionName}`,
     `   Código: ${ticket.ticketCode}`,
@@ -2308,7 +2754,6 @@ function formatAdminPendingReservation(
   reservation: AdminPendingReservationLookup,
   index?: number,
 ) {
-  const prefix = typeof index === "number" ? `${index}. ` : "";
   const venue = reservation.venueName
     ? `${reservation.venueName} - ${reservation.city}/${reservation.state}`
     : `${reservation.city}/${reservation.state}`;
@@ -2318,7 +2763,9 @@ function formatAdminPendingReservation(
       : "";
 
   return [
-    `${prefix}${reservation.eventTitle}`,
+    typeof index === "number"
+      ? formatOptionLine(index, reservation.eventTitle, { preserveCase: true })
+      : reservation.eventTitle,
     `   Data: ${formatDateTime(reservation.startsAt)}`,
     `   Local: ${venue}`,
     `   Setor: ${reservation.sectionName}`,
@@ -2354,7 +2801,11 @@ function formatAdminTicketValidations(validations: AdminTicketValidation[]) {
         ? ` (${maskAdminIdentifier(validation.validatorIdentifier)})`
         : "";
 
-      return `${index + 1}. ${formatDateTime(validation.createdAt)} - ${validation.result}${gate}${validator}`;
+      return formatOptionLine(
+        index + 1,
+        `${formatDateTime(validation.createdAt)} - ${validation.result}${gate}${validator}`,
+        { preserveCase: true },
+      );
     })
     .join("\n");
 }
@@ -2982,8 +3433,8 @@ function renderCreateEventSeatMapVisualPrompt(sectionName?: string) {
   return [
     `Deseja criar o mapa visual do setor${sectionName ? ` ${sectionName}` : ""}?`,
     "",
-    "> 1. Sim, criar mapa visual automaticamente",
-    "> 2. Não, apenas cadastrar os assentos",
+    formatOptionLine(1, "sim, criar mapa visual automaticamente"),
+    formatOptionLine(2, "não, apenas cadastrar os assentos"),
   ].join("\n");
 }
 
@@ -3025,7 +3476,7 @@ function renderAdminEventListReply({
   void hasMore;
   const eventBlocks = events.map((event) =>
     [
-      `${event.option}. ${event.title}`,
+      formatOptionLine(event.option, event.title, { preserveCase: true }),
       `   ${event.city}/${event.state}`,
       `   Status: ${event.status}`,
       `   Sessões: ${event.sessionsCount}`,
@@ -3059,7 +3510,9 @@ function renderAdminEventDetails(event: AdminEventDetails) {
     ...(event.sessions.length
       ? event.sessions.map(
           (session, index) =>
-            `${index + 1}. ${formatDateTime(session.startsAt)} - ${session.status}`,
+            formatOptionLine(index + 1, `${formatDateTime(session.startsAt)} - ${session.status}`, {
+              preserveCase: true,
+            }),
         )
       : ["nenhuma sessão cadastrada"]),
     "",
@@ -3069,11 +3522,11 @@ function renderAdminEventDetails(event: AdminEventDetails) {
       : ["nenhum setor cadastrado"]),
     "",
     "*OPÇÕES:*",
-    "> 1. Editar evento",
-    "> 2. Setores e assentos",
-    "> 3. Ativar/Pausar evento",
-    "> 4. Voltar",
-    "> 5. Sair",
+    formatOptionLine(1, "editar evento"),
+    formatOptionLine(2, "setores e assentos"),
+    formatOptionLine(3, "ativar/pausar evento"),
+    formatOptionLine(4, "voltar"),
+    formatOptionLine(5, "sair"),
   ].join("\n"));
 }
 
@@ -3107,13 +3560,13 @@ function renderAdminEventStatusMenu(event: AdminEventDetails) {
     `Status atual: ${event.status}`,
     "",
     ...(actions.length
-      ? actions.map((action) => `> ${action.option}. ${action.label}`)
+      ? actions.map((action) => formatOptionLine(action.option, action.label))
       : [
           event.status === "cancelled"
             ? "Este evento está cancelado. Reativação não está disponível por aqui."
             : "Este evento está finalizado. Alteração de publicação não está disponível por aqui.",
         ]),
-    `> ${actions.length + 1}. Voltar`,
+    formatOptionLine(actions.length + 1, "voltar"),
   ].join("\n"));
 }
 
@@ -3135,13 +3588,18 @@ function renderCreateEventPrompt(field?: string) {
     description:
       "Envie as informações gerais do evento.\n\nEx: abertura dos portões, classificação, observações importantes.\nSe não quiser adicionar agora, responda PULAR.",
     status:
-      "Para finalizar, escolha como deseja salvar o evento.\n\n> 1. Deixar como rascunho\n> 2. Publicar",
+      `Para finalizar, escolha como deseja salvar o evento.\n\n${formatOptionLine(1, "deixar como rascunho")}\n${formatOptionLine(2, "publicar")}`,
     entryModel:
-      "Como serão as entradas/lugares?\n1. Entrada única sem assento marcado\n2. Vários setores/tipos sem assento marcado\n3. Setores com assentos marcados",
+      [
+        "Como serão as entradas/lugares?",
+        formatOptionLine(1, "entrada única sem assento marcado"),
+        formatOptionLine(2, "vários setores/tipos sem assento marcado"),
+        formatOptionLine(3, "setores com assentos marcados"),
+      ].join("\n"),
     singleEntryDetails:
       "Envie a entrada com capacidade e valor.\nFormato: nome capacidade valor taxa opcional\nEx: Entrada Geral 500 120,00 12,00",
     entryCapacityMode:
-      "Como a carga de ingressos será controlada?\n\n> 1. Carga total compartilhada entre todos os tipos de compra\n> 2. Carga separada para cada tipo/setor",
+      `Como a carga de ingressos será controlada?\n\n${formatOptionLine(1, "carga total compartilhada entre todos os tipos de compra")}\n${formatOptionLine(2, "carga separada para cada tipo/setor")}`,
     sharedEntryCapacity:
       "Qual a carga total compartilhada de ingressos?\nEx: 200",
     entryCount: "Quantos tipos/setores de ingresso serão cadastrados agora?",
@@ -3171,7 +3629,10 @@ function renderCreateEventSummary(draft: Record<string, unknown>) {
     "Sessões:",
     ...(sessionsStartsAt.length
       ? sessionsStartsAt.map(
-          (startsAt, index) => `${index + 1}. ${formatDateTime(startsAt)}`,
+          (startsAt, index) =>
+            formatOptionLine(index + 1, formatDateTime(startsAt), {
+              preserveCase: true,
+            }),
         )
       : ["nenhuma sessão definida"]),
     "",
@@ -3233,19 +3694,19 @@ function renderAdminEventEditMenu(eventTitle?: string) {
       ? `*EDITAR MEU EVENTO: ${eventTitle.toUpperCase()}*`
       : "*EDITAR MEU EVENTO*",
     "",
-    "> 1. Editar nome",
-    "> 2. Editar artista",
-    "> 3. Editar cidade",
-    "> 4. Editar estado",
-    "> 5. Editar local",
-    "> 6. Editar foto",
-    "> 7. Editar data/hora",
-    "> 8. Editar setores/lugares",
-    "> 9. Editar carga",
-    "> 10. Editar valores",
-    "> 11. Editar informações gerais",
-    "> 12. Voltar",
-    "> 13. Sair",
+    formatOptionLine(1, "editar nome"),
+    formatOptionLine(2, "editar artista"),
+    formatOptionLine(3, "editar cidade"),
+    formatOptionLine(4, "editar estado"),
+    formatOptionLine(5, "editar local"),
+    formatOptionLine(6, "editar foto"),
+    formatOptionLine(7, "editar data/hora"),
+    formatOptionLine(8, "editar setores/lugares"),
+    formatOptionLine(9, "editar carga"),
+    formatOptionLine(10, "editar valores"),
+    formatOptionLine(11, "editar informações gerais"),
+    formatOptionLine(12, "voltar"),
+    formatOptionLine(13, "sair"),
   ].join("\n"));
 }
 
@@ -3273,10 +3734,10 @@ function renderAdminEventPublishSelectReply(eventTitle?: string) {
     "",
     "A edição foi salva.",
     "",
-    "> 1. Deixar como rascunho",
-    "> 2. Publicar evento",
-    "> 3. Voltar",
-    "> 4. Sair",
+    formatOptionLine(1, "deixar como rascunho"),
+    formatOptionLine(2, "publicar evento"),
+    formatOptionLine(3, "voltar"),
+    formatOptionLine(4, "sair"),
     "",
     "Responda com o número da opção.",
   ].join("\n"));
@@ -4057,7 +4518,11 @@ async function handleAdminEventsFlow({
             ...(venuesResult.venues.length
               ? venuesResult.venues.map(
                   (venue) =>
-                    `${venue.option}. ${venue.name} - ${venue.city}/${venue.state}`,
+                    formatOptionLine(
+                      venue.option,
+                      `${venue.name} - ${venue.city}/${venue.state}`,
+                      { preserveCase: true },
+                    ),
                 )
               : ["Nenhum local cadastrado para essa cidade/UF."]),
             "",
@@ -4997,7 +5462,11 @@ async function handleAdminEventsFlow({
             ? details.event.sessions
                 .map(
                   (session, index) =>
-                    `${index + 1}. ${formatDateTime(session.startsAt)} - ${session.status}`,
+                    formatOptionLine(
+                      index + 1,
+                      `${formatDateTime(session.startsAt)} - ${session.status}`,
+                      { preserveCase: true },
+                    ),
                 )
                 .join("\n")
             : "Nenhuma sessão cadastrada.",
@@ -5558,13 +6027,13 @@ function renderAdminSessionsMenu(eventTitle: string) {
   return withAdminNavigationHint([
     `*DATAS DO EVENTO - ${eventTitle.toUpperCase()}*`,
     "",
-    "> 1. Listar sessões",
-    "> 2. Criar sessão",
-    "> 3. Editar data/hora de sessão",
-    "> 4. Pausar/abrir vendas da sessão",
-    "> 5. Cancelar sessão",
-    "> 6. Voltar",
-    "> 7. Sair",
+    formatOptionLine(1, "listar sessões"),
+    formatOptionLine(2, "criar sessão"),
+    formatOptionLine(3, "editar data/hora de sessão"),
+    formatOptionLine(4, "pausar/abrir vendas da sessão"),
+    formatOptionLine(5, "cancelar sessão"),
+    formatOptionLine(6, "voltar"),
+    formatOptionLine(7, "sair"),
   ].join("\n"));
 }
 
@@ -5594,14 +6063,14 @@ function renderAdminSectionsMenu(eventTitle: string) {
   return withAdminNavigationHint([
     `*SETORES E ASSENTOS - ${eventTitle.toUpperCase()}*`,
     "",
-    "> 1. Listar setores",
-    "> 2. Criar setor",
-    "> 3. Editar setor",
-    "> 4. Cadastrar assentos em lote",
-    "> 5. Bloquear/desbloquear assentos",
-    "> 6. Criar assentos da sessão",
-    "> 7. Voltar",
-    "> 8. Sair",
+    formatOptionLine(1, "listar setores"),
+    formatOptionLine(2, "criar setor"),
+    formatOptionLine(3, "editar setor"),
+    formatOptionLine(4, "cadastrar assentos em lote"),
+    formatOptionLine(5, "bloquear/desbloquear assentos"),
+    formatOptionLine(6, "criar assentos da sessão"),
+    formatOptionLine(7, "voltar"),
+    formatOptionLine(8, "sair"),
   ].join("\n"));
 }
 
@@ -5629,14 +6098,12 @@ async function showAdminEventPricesMenu(
 
 function renderAdminPricesMenu(eventTitle: string) {
   return withAdminNavigationHint([
-    `*VALORES DE VENDA - ${eventTitle.toUpperCase()}*`,
+    `*EDITAR VALORES - ${eventTitle.toUpperCase()}*`,
     "",
-    "> 1. Listar preços",
-    "> 2. Criar preço/lote",
-    "> 3. Editar preço/lote",
-    "> 4. Ativar/desativar preço",
-    "> 5. Voltar",
-    "> 6. Sair",
+    formatOptionLine(1, "ver valores"),
+    formatOptionLine(2, "alterar valor"),
+    formatOptionLine(3, "voltar"),
+    formatOptionLine(4, "sair"),
   ].join("\n"));
 }
 
@@ -5649,10 +6116,12 @@ async function renderSessionsList(eventId: string, scope: AdminEventScope) {
     `Sessões de ${details.event.title}:`,
     "",
     ...(details.event.sessions.length
-      ? details.event.sessions.map(
+        ? details.event.sessions.map(
           (session, index) =>
             [
-              `${index + 1}. ${formatDateTime(session.startsAt)} - ${session.status}`,
+              formatOptionLine(index + 1, `${formatDateTime(session.startsAt)} - ${session.status}`, {
+                preserveCase: true,
+              }),
               `   Local: ${session.venueName ?? details.event.venueName ?? "não definido"}`,
               counts.ok
                 ? `   Setores: ${counts.getSectionsCount(session.venueId)} | Preços: ${counts.getPricesCount(session.sessionId)}`
@@ -5677,10 +6146,10 @@ async function renderSectionsList(
     `Setores de ${details.event.venueName ?? details.event.title}:`,
     "",
     ...(result.sections.length
-      ? result.sections.map(
+        ? result.sections.map(
           (section, index) =>
             [
-              `${index + 1}. ${section.name}`,
+              formatOptionLine(index + 1, section.name, { preserveCase: true }),
               `   slug: ${section.slug}`,
               `   capacidade: ${section.capacity ?? "não definida"}`,
               `   assento marcado: ${section.hasNumberedSeats ? "sim" : "não"}`,
@@ -5741,21 +6210,19 @@ async function getAdminPriceListForEvent(eventId: string, scope: AdminEventScope
     eventTitle: details.event.title,
     prices,
     reply: [
-    `Preços de ${details.event.title}:`,
-    "",
-    ...(prices.length
-      ? prices.map((price) =>
-          [
-            `${price.option}. ${price.label} (${price.ticketType})`,
-            `   Sessão: ${formatDateTime(price.sessionStartsAt)}`,
-            `   Setor: ${price.sectionName}`,
-            `   Valor: ${formatCurrencyFromCents(price.priceCents)} + ${formatCurrencyFromCents(price.feeCents)} taxa`,
-            `   Janela: ${price.salesStartAt ? formatDateTime(price.salesStartAt) : "início livre"} até ${price.salesEndAt ? formatDateTime(price.salesEndAt) : "fim livre"}`,
-            `   Status: ${price.status}`,
-          ].join("\n"),
-        )
-      : ["Nenhum preço cadastrado."]),
-  ].join("\n"),
+      `Valores de ${details.event.title}:`,
+      "",
+      ...(prices.length
+        ? prices.map((price) =>
+            [
+              formatOptionLine(price.option, price.label, { preserveCase: true }),
+              `   Sessão: ${formatDateTime(price.sessionStartsAt)}`,
+              `   Setor: ${price.sectionName}`,
+              `   Valor: ${formatPriceWithOptionalFee(price.priceCents, price.feeCents)}`,
+            ].join("\n"),
+          )
+        : ["Nenhum preço cadastrado."]),
+    ].join("\n"),
   };
 }
 
@@ -6819,41 +7286,37 @@ async function handleAdminEventOperationalSubmenus({
       const list = await getAdminPriceListForEvent(eventId, scope);
       return {
         reply: list.reply,
-        nextContext: withAdminEventsContext(baseContext, "admin_event_price_edit_collecting", {
+        nextContext: withAdminEventsContext(baseContext, "admin_event_prices_menu", {
           ...adminEvents,
-          mode: "view_prices",
           draft: list.ok ? { lastPrices: list.prices } : adminEvents.draft,
         }),
       };
     }
     if (numericOption === 2) {
-      return {
-        reply: [
-          "Envie: sessão | setor | tipo | label | preço | taxa | início opcional | fim opcional.",
-          "Ex: 1 | 1 | full | Inteira | 120,00 | 12,00 | - | -",
-          "Tipos de venda: full, half ou promotional. Cortesia fica somente no menu Cortesias.",
-        ].join("\n"),
-        nextContext: withAdminEventsContext(baseContext, "admin_event_price_create_collecting", adminEvents),
-      };
-    }
-    if (numericOption === 3) {
       const list = await getAdminPriceListForEvent(eventId, scope);
       return {
         reply: [
           list.ok
             ? [
-                `Preços de ${list.eventTitle}:`,
+                `*VALORES CADASTRADOS - ${list.eventTitle.toUpperCase()}*`,
                 "",
                 ...(list.prices.length
                   ? list.prices.map(
-                      (price) => `${price.option}. ${formatCompactAdminPriceLabel(price.label)}`,
+                      (price) =>
+                        [
+                          formatOptionLine(price.option, formatCompactAdminPriceLabel(price.label), {
+                            preserveCase: true,
+                          }),
+                          price.sectionName,
+                          formatPriceWithOptionalFee(price.priceCents, price.feeCents),
+                        ].join(" - "),
                     )
                   : ["Nenhum preço cadastrado."]),
               ].join("\n")
             : list.reply,
           "",
-          "QUAL PREÇO DESEJA EDITAR?",
-          "Responda com o número do preço.",
+          "*QUAL VALOR DESEJA ALTERAR?*",
+          "Responda com o número.",
         ].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_price_edit_collecting", {
           ...adminEvents,
@@ -6862,23 +7325,7 @@ async function handleAdminEventOperationalSubmenus({
         }),
       };
     }
-    if (numericOption === 4) {
-      const list = await getAdminPriceListForEvent(eventId, scope);
-      return {
-        reply: [
-          list.reply,
-          "",
-          "Envie: número do preço | active ou inactive.",
-          "Ex: 1 | inactive",
-        ].join("\n"),
-        nextContext: withAdminEventsContext(baseContext, "admin_event_price_edit_collecting", {
-          ...adminEvents,
-          mode: "price_status",
-          draft: list.ok ? { lastPrices: list.prices } : {},
-        }),
-      };
-    }
-    if (numericOption === 5) return showAdminEventDetails(baseContext, scope, eventId);
+    if (numericOption === 3) return showAdminEventDetails(baseContext, scope, eventId);
   }
 
   if (baseContext.state === "admin_event_price_edit_collecting") {
@@ -6962,6 +7409,7 @@ async function handleAdminEventOperationalSubmenus({
       const result = await updateAdminPrice(String(adminEvents.draft?.priceId), {
         price_cents: priceCents,
       });
+      const details = await getScopedAdminEventDetails(eventId, scope);
 
       return {
         reply: withAdminNavigationHint([
@@ -6975,10 +7423,10 @@ async function handleAdminEventOperationalSubmenus({
                 "Reservas já criadas mantêm o valor congelado. A alteração afeta novas reservas.",
               ]
             : []),
+          ...(details.ok ? ["", renderAdminPricesMenu(details.event.title)] : []),
         ].join("\n")),
-        nextContext: withAdminEventsContext(baseContext, "admin_event_price_edit_collecting", {
+        nextContext: withAdminEventsContext(baseContext, "admin_event_prices_menu", {
           selectedEventId: eventId,
-          mode: "price_value_updated",
         }),
       };
     }
@@ -6994,14 +7442,14 @@ async function handleAdminEventOperationalSubmenus({
       };
     }
 
-    const [priceNumberRaw, valueOneRaw, valueTwoRaw, valueThreeRaw, salesStartRaw, salesEndRaw] = text
+    const [priceNumberRaw, valueOneRaw] = text
       .split("|")
       .map((part) => part.trim());
     const price = lastPrices.find((item) => item.option === Number(priceNumberRaw));
 
     if (!price) {
       return {
-        reply: "Preço inválido. Liste os preços novamente e envie o número correspondente.",
+        reply: "Valor inválido. Responda com o número do valor que deseja alterar.",
         nextContext: withAdminEventsContext(
           baseContext,
           "admin_event_price_edit_collecting",
@@ -7060,56 +7508,13 @@ async function handleAdminEventOperationalSubmenus({
       };
     }
 
-    const priceCents = parseMoneyToCents(valueTwoRaw ?? "");
-    const feeCents = parseMoneyToCents(valueThreeRaw ?? "");
-    const salesStart = parseOptionalAdminDateTime(salesStartRaw);
-    const salesEnd = parseOptionalAdminDateTime(salesEndRaw);
-    if (
-      !valueOneRaw ||
-      priceCents === null ||
-      feeCents === null ||
-      !salesStart.ok ||
-      !salesEnd.ok ||
-      (salesStart.value &&
-        salesEnd.value &&
-        new Date(salesStart.value).getTime() >= new Date(salesEnd.value).getTime())
-    ) {
-      return {
-        reply: "Dados inválidos. Use: 1 | Inteira 2 lote | 140,00 | 14,00 | - | -",
-        nextContext: withAdminEventsContext(
-          baseContext,
-          "admin_event_price_edit_collecting",
-          adminEvents,
-        ),
-      };
-    }
-
     return {
-      reply: [
-        "Confirmar alteração do preço/lote?",
-        `Preço: ${price.label}`,
-        `Novo label: ${valueOneRaw}`,
-        `Novo valor: ${formatCurrencyFromCents(priceCents)}`,
-        `Nova taxa: ${formatCurrencyFromCents(feeCents)}`,
-        `Início: ${salesStart.value ? formatDateTime(salesStart.value) : "livre"}`,
-        `Fim: ${salesEnd.value ? formatDateTime(salesEnd.value) : "livre"}`,
-        "",
-        "Reservas já criadas mantêm o valor congelado. A alteração afeta novas reservas.",
-        "",
-        "Responda CONFIRMAR ou CANCELAR.",
-      ].join("\n"),
-      nextContext: withAdminEventsContext(baseContext, "admin_event_price_edit_collecting", {
-        ...adminEvents,
-        mode: "confirm_edit_price",
-        draft: {
-          priceId: price.priceId,
-          label: valueOneRaw,
-          priceCents,
-          feeCents,
-          salesStartAt: salesStart.value,
-          salesEndAt: salesEnd.value,
-        },
-      }),
+      reply: "Responda somente com o número do valor que deseja alterar.",
+      nextContext: withAdminEventsContext(
+        baseContext,
+        "admin_event_price_edit_collecting",
+        adminEvents,
+      ),
     };
   }
 
@@ -7317,6 +7722,304 @@ function messageForBuyerReservationCancellation({
   }
 
   return TICKET_MESSAGES.buyerFlowReset;
+}
+
+async function renderBuyerSectionsStep({
+  baseContext,
+  selectedEvent,
+}: {
+  baseContext: TicketConversationState;
+  selectedEvent?: TicketConversationSelectedEvent;
+}): Promise<RouteTicketMessageOutput> {
+  if (!selectedEvent) {
+    return {
+      reply: TICKET_MESSAGES.genericHelp,
+      nextContext: resetBuyerReservationContext(baseContext),
+    };
+  }
+
+  const selectedSession = await getValidatedEventSession({
+    eventId: selectedEvent.eventId,
+    sessionId: selectedEvent.sessionId,
+  });
+
+  if (!selectedSession) {
+    return {
+      reply: TICKET_MESSAGES.eventOptionUnavailable,
+      nextContext: resetBuyerReservationContext(baseContext),
+    };
+  }
+
+  const sections = await listAvailableSections(selectedSession.sessionId, {
+    venueId: selectedSession.venueId,
+  });
+
+  if (sections.length === 0) {
+    return {
+      reply: TICKET_MESSAGES.noSectionsAvailable,
+      nextContext: {
+        ...baseContext,
+        step: "idle",
+        state: "idle",
+        selectedEvent: buildSelectedEvent(selectedSession),
+        selectedSection: undefined,
+        lastSections: [],
+        lastSeats: [],
+      },
+    };
+  }
+
+  return {
+    reply: formatSectionsReply({ sections }),
+    nextContext: {
+      ...baseContext,
+      step: "showing_sections",
+      state: "showing_sections",
+      selectedEvent: buildSelectedEvent(selectedSession),
+      selectedSection: undefined,
+      selectedSeat: undefined,
+      selectedQuantity: undefined,
+      reservation: undefined,
+      payment: undefined,
+      lastSections: buildSectionOptions(sections),
+      lastSeats: [],
+    },
+  };
+}
+
+async function renderBuyerQuantityStep({
+  baseContext,
+  selectedEvent,
+  selectedSection,
+}: {
+  baseContext: TicketConversationState;
+  selectedEvent?: TicketConversationSelectedEvent;
+  selectedSection?: TicketConversationSelectedSection;
+}): Promise<RouteTicketMessageOutput> {
+  if (!selectedEvent || !selectedSection) {
+    return renderBuyerSectionsStep({ baseContext, selectedEvent });
+  }
+
+  const selectedSession = await getValidatedEventSession({
+    eventId: selectedEvent.eventId,
+    sessionId: selectedEvent.sessionId,
+  });
+
+  if (!selectedSession) {
+    return renderBuyerSectionsStep({ baseContext, selectedEvent });
+  }
+
+  const section = await getAvailableSectionForSession({
+    sessionId: selectedSession.sessionId,
+    sectionId: selectedSection.sectionId,
+    venueId: selectedSession.venueId,
+  });
+
+  if (!section) {
+    return renderBuyerSectionsStep({ baseContext, selectedEvent });
+  }
+
+  const ticketType =
+    section.ticketTypes.find(
+      (item) =>
+        item.ticketPriceId === selectedSection.selectedTicketType?.ticketPriceId,
+    ) ?? section.ticketTypes[0];
+
+  return {
+    reply: formatQuantityPrompt(section, ticketType),
+    nextContext: {
+      ...baseContext,
+      step: "selecting_quantity",
+      state: "selecting_quantity",
+      selectedEvent: buildSelectedEvent(selectedSession),
+      selectedSection: buildSelectedSection(section, ticketType),
+      selectedSeat: undefined,
+      selectedQuantity: undefined,
+      reservation: undefined,
+      payment: undefined,
+      lastSeats: [],
+    },
+  };
+}
+
+async function renderBuyerSeatsStep({
+  baseContext,
+  selectedEvent,
+  selectedSection,
+  quantity,
+}: {
+  baseContext: TicketConversationState;
+  selectedEvent?: TicketConversationSelectedEvent;
+  selectedSection?: TicketConversationSelectedSection;
+  quantity?: number;
+}): Promise<RouteTicketMessageOutput> {
+  if (!selectedEvent || !selectedSection || !selectedSection.hasNumberedSeats) {
+    return renderBuyerQuantityStep({ baseContext, selectedEvent, selectedSection });
+  }
+
+  const selectedSession = await getValidatedEventSession({
+    eventId: selectedEvent.eventId,
+    sessionId: selectedEvent.sessionId,
+  });
+
+  if (!selectedSession) {
+    return renderBuyerQuantityStep({ baseContext, selectedEvent, selectedSection });
+  }
+
+  const seatMap = await listSeatMap({
+    sessionId: selectedSession.sessionId,
+    sectionId: selectedSection.sectionId,
+  });
+  const selectedQuantity = Math.max(1, quantity ?? 1);
+
+  if (seatMap.availableSeats.length < selectedQuantity) {
+    return renderBuyerQuantityStep({ baseContext, selectedEvent, selectedSection });
+  }
+
+  const seatsReply = formatSeatsReply({
+    seatMap,
+    ticketType: selectedSection.selectedTicketType,
+    quantity: selectedQuantity,
+  });
+
+  return {
+    reply: seatsReply,
+    outboundMessages: [
+      {
+        type: "image",
+        imageUrl: buildSeatMapPngDataUrl({
+          seatMap,
+          title: selectedSection.sectionName,
+          stageLabel: "PALCO",
+        }),
+        caption: seatsReply,
+      },
+    ],
+    nextContext: {
+      ...baseContext,
+      step: "showing_seats",
+      state: "showing_seats",
+      selectedEvent: buildSelectedEvent(selectedSession),
+      selectedSection,
+      selectedSeat: undefined,
+      selectedQuantity,
+      reservation: undefined,
+      payment: undefined,
+      lastSeats: buildSeatOptions(seatMap.availableSeats),
+    },
+  };
+}
+
+async function handleBuyerBack({
+  baseContext,
+  customerId,
+  sourceIdentifier,
+}: {
+  baseContext: TicketConversationState;
+  customerId: string;
+  sourceIdentifier?: string | null;
+}): Promise<RouteTicketMessageOutput | null> {
+  if (baseContext.state === "showing_events") {
+    return {
+      reply: TICKET_MESSAGES.genericHelp,
+      nextContext: resetBuyerReservationContext(baseContext),
+    };
+  }
+
+  if (baseContext.state === "showing_sections") {
+    if (baseContext.lastEvents?.length) {
+      return {
+        reply: formatEventOptionsReply(baseContext.lastEvents),
+        outboundMessages: buildEventOptionOutboundMessages(baseContext.lastEvents),
+        nextContext: {
+          ...baseContext,
+          step: "showing_events",
+          state: "showing_events",
+          selectedEvent: undefined,
+          selectedSection: undefined,
+          selectedSeat: undefined,
+          selectedQuantity: undefined,
+          eventMoreInfoShown: undefined,
+          reservation: undefined,
+          payment: undefined,
+          lastSections: [],
+          lastSeats: [],
+        },
+      };
+    }
+
+    return {
+      reply: TICKET_MESSAGES.genericHelp,
+      nextContext: resetBuyerReservationContext(baseContext),
+    };
+  }
+
+  if (baseContext.state === "selecting_quantity") {
+    return renderBuyerSectionsStep({
+      baseContext,
+      selectedEvent: baseContext.selectedEvent,
+    });
+  }
+
+  if (baseContext.state === "showing_seats") {
+    return renderBuyerQuantityStep({
+      baseContext,
+      selectedEvent: baseContext.selectedEvent,
+      selectedSection: baseContext.selectedSection,
+    });
+  }
+
+  if (
+    baseContext.state === "payment_pending" &&
+    baseContext.reservation?.reservationId &&
+    baseContext.reservation.orderId
+  ) {
+    return {
+      reply: formatReservationContextReply({
+        selectedEvent: baseContext.selectedEvent,
+        selectedSection: baseContext.selectedSection,
+        selectedSeat: baseContext.selectedSeat,
+        reservation: baseContext.reservation,
+        quantity: baseContext.selectedQuantity,
+      }),
+      nextContext: {
+        ...baseContext,
+        step: "reservation_created",
+        state: "reservation_created",
+        payment: undefined,
+      },
+    };
+  }
+
+  if (
+    baseContext.state === "reservation_created" &&
+    baseContext.reservation?.reservationId &&
+    baseContext.reservation.orderId
+  ) {
+    await cancelPendingReservationForCustomer({
+      customerId,
+      reservationId: baseContext.reservation.reservationId,
+      orderId: baseContext.reservation.orderId,
+      sourceIdentifier,
+    });
+
+    if (baseContext.selectedSection?.hasNumberedSeats) {
+      return renderBuyerSeatsStep({
+        baseContext,
+        selectedEvent: baseContext.selectedEvent,
+        selectedSection: baseContext.selectedSection,
+        quantity: baseContext.selectedQuantity,
+      });
+    }
+
+    return renderBuyerQuantityStep({
+      baseContext,
+      selectedEvent: baseContext.selectedEvent,
+      selectedSection: baseContext.selectedSection,
+    });
+  }
+
+  return null;
 }
 
 function getConversationState(
@@ -7580,6 +8283,22 @@ export async function routeTicketMessage({
     };
   }
 
+  if (
+    !isBuyerReservationExitIntent(text) &&
+    !previousState.admin?.sessionId &&
+    previousState.state !== "admin_menu" &&
+    !isAdminSubmenuState(previousState.state)
+  ) {
+    const publicHelpResult = handlePublicHelpMessage({
+      baseContext,
+      text,
+    });
+
+    if (publicHelpResult) {
+      return publicHelpResult;
+    }
+  }
+
   if (isGateAccessFlowState(previousState.state)) {
     if (previousState.state === "gate_access_selecting") {
       const option = text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
@@ -7704,7 +8423,14 @@ export async function routeTicketMessage({
         }),
       };
 
-      if (!state.startsWith("admin_courtesy")) {
+      if (state === "admin_menu") {
+        delete nextContext.adminEvents;
+        delete nextContext.adminCourtesies;
+        delete nextContext.adminUsers;
+        delete nextContext.adminGate;
+        delete nextContext.adminOrders;
+        delete nextContext.adminReports;
+      } else if (!state.startsWith("admin_courtesy")) {
         delete nextContext.adminCourtesies;
       }
 
@@ -7761,6 +8487,20 @@ export async function routeTicketMessage({
 
     const { adminUser } = adminUserResult;
     const adminSession = sessionResult.adminSession;
+
+    if (isAdminHomeText(text)) {
+      return {
+        reply: formatAdminMenu(adminUser.role),
+        nextContext: adminReplyContext({
+          state: "admin_menu",
+          role: adminUser.role,
+          sessionId: adminSession.id,
+          adminUserId: adminUser.id,
+          expiresAt: adminSession.expires_at,
+        }),
+      };
+    }
+
     const numericOption = text.trim().match(/^\d+$/)
       ? Number(text.trim())
       : null;
@@ -9217,7 +9957,7 @@ export async function routeTicketMessage({
 
       if (baseContext.state === "admin_user_create_collect_phone") {
         const adminUsersContext = baseContext.adminUsers ?? {};
-        const phone = normalizeGatePhone(text);
+        const phone = normalizeAdminPhone(text);
 
         if (!phone || phone.length < 10) {
           return {
@@ -9833,7 +10573,7 @@ export async function routeTicketMessage({
         (baseContext.state === "admin_event_detail" && numericOption === 5) ||
         (baseContext.state === "admin_event_sessions_menu" && numericOption === 7) ||
         (baseContext.state === "admin_event_sections_menu" && numericOption === 8) ||
-        (baseContext.state === "admin_event_prices_menu" && numericOption === 6);
+        (baseContext.state === "admin_event_prices_menu" && numericOption === 4);
 
       if (isEventFlowExitOption) {
         return endAdminSession();
@@ -10528,6 +11268,45 @@ export async function routeTicketMessage({
     };
   }
 
+  if (isBuyerBackIntent(text)) {
+    const backResult = await handleBuyerBack({
+      baseContext,
+      customerId: customer.id,
+      sourceIdentifier,
+    });
+
+    if (backResult) {
+      return backResult;
+    }
+  }
+
+  if (
+    isBuyerReservationExitIntent(text) &&
+    isPublicHelpFlowState(previousState.state) &&
+    (previousState.publicHelp?.returnState === "reservation_created" ||
+      previousState.publicHelp?.returnState === "payment_pending") &&
+    previousState.reservation?.reservationId &&
+    previousState.reservation.orderId
+  ) {
+    const reservationContextExpired = isReservationContextExpired(
+      previousState.reservation,
+    );
+    const cancelResult = await cancelPendingReservationForCustomer({
+      customerId: customer.id,
+      reservationId: previousState.reservation.reservationId,
+      orderId: previousState.reservation.orderId,
+      sourceIdentifier,
+    });
+
+    return {
+      reply: messageForBuyerReservationCancellation({
+        expired: reservationContextExpired,
+        cancelResult,
+      }),
+      nextContext: resetBuyerReservationContext(baseContext),
+    };
+  }
+
   if (
     isBuyerReservationExitIntent(text) &&
     previousState.state !== "reservation_created" &&
@@ -10536,6 +11315,52 @@ export async function routeTicketMessage({
     return {
       reply: TICKET_MESSAGES.buyerFlowReset,
       nextContext: resetBuyerReservationContext(baseContext),
+    };
+  }
+
+  const publicHelpResult = handlePublicHelpMessage({
+    baseContext,
+    text,
+  });
+
+  if (publicHelpResult) {
+    return publicHelpResult;
+  }
+
+  if (
+    isAllPublicEventsIntent(text) &&
+    previousState.state !== "reservation_created" &&
+    previousState.state !== "payment_pending"
+  ) {
+    const events = await listAllPublicEventsByDate();
+
+    if (events.length === 0) {
+      return {
+        reply: `Não encontrei eventos disponíveis no momento.\n\n${TICKET_MESSAGES.genericHelp}`,
+        nextContext: resetBuyerReservationContext(baseContext),
+      };
+    }
+
+    return {
+      reply: formatAllEventsReply(events),
+      nextContext: {
+        ...baseContext,
+        step: "showing_events",
+        state: "showing_events",
+        lastSearch: {
+          originalText: text.trim(),
+        },
+        lastEvents: buildEventOptions(events),
+        selectedEvent: undefined,
+        selectedSection: undefined,
+        selectedSeat: undefined,
+        selectedQuantity: undefined,
+        eventMoreInfoShown: undefined,
+        reservation: undefined,
+        payment: undefined,
+        lastSections: [],
+        lastSeats: [],
+      },
     };
   }
 
@@ -10576,6 +11401,29 @@ export async function routeTicketMessage({
           step: "payment_pending",
           state: "payment_pending",
         },
+      };
+    }
+
+    if (
+      previousState.reservation.totalAmountCents === 0 &&
+      previousState.reservation.totalFeeCents === 0
+    ) {
+      const issueResult = await issuePublicFreeTicketsForOrder({
+        orderId: previousState.reservation.orderId,
+        customerId: customer.id,
+      });
+
+      if (!issueResult.ok) {
+        return {
+          reply: formatPublicFreeTicketFailureMessage(issueResult),
+          nextContext: resetBuyerReservationContext(baseContext),
+        };
+      }
+
+      return {
+        reply: issueResult.delivery.message,
+        outboundMessages: buildPublicFreeTicketOutboundMessages(issueResult),
+        nextContext: resetBuyerReservationContext(baseContext),
       };
     }
 
@@ -10681,6 +11529,29 @@ export async function routeTicketMessage({
       };
     }
 
+    if (
+      previousState.reservation.totalAmountCents === 0 &&
+      previousState.reservation.totalFeeCents === 0
+    ) {
+      const issueResult = await issuePublicFreeTicketsForOrder({
+        orderId: previousState.reservation.orderId,
+        customerId: customer.id,
+      });
+
+      if (!issueResult.ok) {
+        return {
+          reply: formatPublicFreeTicketFailureMessage(issueResult),
+          nextContext: resetBuyerReservationContext(baseContext),
+        };
+      }
+
+      return {
+        reply: issueResult.delivery.message,
+        outboundMessages: buildPublicFreeTicketOutboundMessages(issueResult),
+        nextContext: resetBuyerReservationContext(baseContext),
+      };
+    }
+
     const checkoutResult = await createCheckoutForReservation({
       reservationId: previousState.reservation.reservationId,
       orderId: previousState.reservation.orderId,
@@ -10757,10 +11628,15 @@ export async function routeTicketMessage({
       };
     }
 
-    if (quantity > 10) {
+    const maxTicketsPerOrder = getMaxTicketsPerOrder(
+      previousState.selectedSection.selectedTicketType,
+    );
+
+    if (quantity > maxTicketsPerOrder) {
       return {
-        reply:
-          "Para esta compra, escolha até 10 ingressos por vez. Envie uma quantidade menor.",
+        reply: isPublicFreeTicketType(previousState.selectedSection.selectedTicketType)
+          ? "*QUANTIDADE INVALIDA*\nPara ingresso gratuito, o número máximo de ingressos por pedido são 4. Digite novamente o número de 1 a 4."
+          : "Para esta compra, escolha até 10 ingressos por vez. Envie uma quantidade menor.",
         nextContext: {
           ...baseContext,
           step: "selecting_quantity",
@@ -10827,6 +11703,30 @@ export async function routeTicketMessage({
     });
 
     if (!reservationResult.ok) {
+      if (
+        reservationResult.reason === "active_reservation_exists" &&
+        reservationResult.reservation.totalAmountCents === 0 &&
+        reservationResult.reservation.totalFeeCents === 0
+      ) {
+        const issueResult = await issuePublicFreeTicketsForOrder({
+          orderId: reservationResult.reservation.orderId,
+          customerId: customer.id,
+        });
+
+        if (!issueResult.ok) {
+          return {
+            reply: formatPublicFreeTicketFailureMessage(issueResult),
+            nextContext: resetBuyerReservationContext(baseContext),
+          };
+        }
+
+        return {
+          reply: issueResult.delivery.message,
+          outboundMessages: buildPublicFreeTicketOutboundMessages(issueResult),
+          nextContext: resetBuyerReservationContext(baseContext),
+        };
+      }
+
       return {
         reply: messageForReservationFailure(reservationResult),
         nextContext: {
@@ -10835,6 +11735,33 @@ export async function routeTicketMessage({
           state: "selecting_quantity",
           selectedSeat: undefined,
         },
+      };
+    }
+
+    if (reservationResult.reservation.totalAmountCents === 0 && reservationResult.reservation.totalFeeCents === 0) {
+      const issueResult = await issuePublicFreeTicketsForOrder({
+        orderId: reservationResult.reservation.orderId,
+        customerId: customer.id,
+      });
+
+      if (!issueResult.ok) {
+        return {
+          reply: formatPublicFreeTicketFailureMessage(issueResult),
+          nextContext: {
+            ...baseContext,
+            step: "idle",
+            state: "idle",
+            selectedSeat: undefined,
+            reservation: undefined,
+            lastSeats: [],
+          },
+        };
+      }
+
+      return {
+        reply: issueResult.delivery.message,
+        outboundMessages: buildPublicFreeTicketOutboundMessages(issueResult),
+        nextContext: resetBuyerReservationContext(baseContext),
       };
     }
 
@@ -10849,6 +11776,7 @@ export async function routeTicketMessage({
         step: "reservation_created",
         state: "reservation_created",
         selectedSeat: undefined,
+        selectedQuantity: quantity,
         reservation: buildReservationContext(reservationResult.reservation),
         lastSeats: [],
       },
@@ -10909,6 +11837,29 @@ export async function routeTicketMessage({
 
     if (!reservationResult.ok) {
       if (reservationResult.reason === "active_reservation_exists") {
+        if (
+          reservationResult.reservation.totalAmountCents === 0 &&
+          reservationResult.reservation.totalFeeCents === 0
+        ) {
+          const issueResult = await issuePublicFreeTicketsForOrder({
+            orderId: reservationResult.reservation.orderId,
+            customerId: customer.id,
+          });
+
+          if (!issueResult.ok) {
+            return {
+              reply: formatPublicFreeTicketFailureMessage(issueResult),
+              nextContext: resetBuyerReservationContext(baseContext),
+            };
+          }
+
+          return {
+            reply: issueResult.delivery.message,
+            outboundMessages: buildPublicFreeTicketOutboundMessages(issueResult),
+            nextContext: resetBuyerReservationContext(baseContext),
+          };
+        }
+
         return {
           reply: messageForReservationFailure(reservationResult),
           nextContext: {
@@ -10940,6 +11891,34 @@ export async function routeTicketMessage({
       reservationResult.reservation,
     );
 
+    if (reservationResult.reservation.totalAmountCents === 0 && reservationResult.reservation.totalFeeCents === 0) {
+      const issueResult = await issuePublicFreeTicketsForOrder({
+        orderId: reservationResult.reservation.orderId,
+        customerId: customer.id,
+      });
+
+      if (!issueResult.ok) {
+        return {
+          reply: formatPublicFreeTicketFailureMessage(issueResult),
+          nextContext: {
+            ...baseContext,
+            step: "idle",
+            state: "idle",
+            selectedSeat: undefined,
+            selectedQuantity: undefined,
+            reservation: undefined,
+            lastSeats: [],
+          },
+        };
+      }
+
+      return {
+        reply: issueResult.delivery.message,
+        outboundMessages: buildPublicFreeTicketOutboundMessages(issueResult),
+        nextContext: resetBuyerReservationContext(baseContext),
+      };
+    }
+
     return {
       reply: formatReservationReply({
         selectedEvent: previousState.selectedEvent,
@@ -10952,7 +11931,7 @@ export async function routeTicketMessage({
         step: "reservation_created",
         state: "reservation_created",
         selectedSeat: selectedSeatContext,
-        selectedQuantity: undefined,
+        selectedQuantity: quantity,
         reservation: reservationContext,
         lastSeats: [],
       },
@@ -10962,16 +11941,206 @@ export async function routeTicketMessage({
   if (
     parsedSearch.numericSelection &&
     previousState.state === "showing_events" &&
-    previousState.lastEvents?.length === 1 &&
-    (parsedSearch.numericSelection === 2 || parsedSearch.numericSelection === 3)
+    isAllPublicEventsContext(previousState) &&
+    previousState.eventMoreInfoShown
   ) {
     if (parsedSearch.numericSelection === 2) {
       return {
-        reply: formatSingleEventMoreInfo(previousState.lastEvents[0]),
+        reply: formatAllEventsReply(previousState.lastEvents ?? []),
         nextContext: {
           ...baseContext,
           step: "showing_events",
           state: "showing_events",
+          selectedEvent: undefined,
+          eventMoreInfoShown: undefined,
+        },
+      };
+    }
+
+    if (parsedSearch.numericSelection === 3) {
+      return {
+        reply: TICKET_MESSAGES.genericHelp,
+        nextContext: resetBuyerReservationContext(baseContext),
+      };
+    }
+
+    if (parsedSearch.numericSelection === 1 && previousState.selectedEvent) {
+      const selectedSession = await getValidatedEventSession({
+        eventId: previousState.selectedEvent.eventId,
+        sessionId: previousState.selectedEvent.sessionId,
+      });
+
+      if (!selectedSession) {
+        return {
+          reply: TICKET_MESSAGES.eventOptionUnavailable,
+          nextContext: resetBuyerReservationContext(baseContext),
+        };
+      }
+
+      const selectedEvent = buildSelectedEvent(selectedSession);
+      const sections = await listAvailableSections(selectedSession.sessionId, {
+        venueId: selectedSession.venueId,
+      });
+
+      if (sections.length === 0) {
+        return {
+          reply: TICKET_MESSAGES.noSectionsAvailable,
+          nextContext: {
+            ...baseContext,
+            step: "idle",
+            state: "idle",
+            selectedEvent,
+            eventMoreInfoShown: undefined,
+          },
+        };
+      }
+
+      return {
+        reply: formatSectionsReply({ sections }),
+        nextContext: {
+          ...baseContext,
+          step: "showing_sections",
+          state: "showing_sections",
+          selectedEvent,
+          selectedSection: undefined,
+          selectedSeat: undefined,
+          selectedQuantity: undefined,
+          eventMoreInfoShown: undefined,
+          lastSections: buildSectionOptions(sections),
+          lastSeats: [],
+        },
+      };
+    }
+
+    return {
+      reply: TICKET_MESSAGES.numericInvalidOption,
+      nextContext: baseContext,
+    };
+  }
+
+  if (
+    parsedSearch.numericSelection &&
+    previousState.state === "showing_events" &&
+    isAllPublicEventsContext(previousState) &&
+    previousState.lastEvents?.length
+  ) {
+    const selectedOption = parsedSearch.numericSelection;
+    const selectedIndex = Math.floor((selectedOption - 1) / 2);
+    const selectedContextEvent = previousState.lastEvents[selectedIndex];
+    const isMoreInfoOption = selectedOption % 2 === 0;
+
+    if (!selectedContextEvent || selectedOption < 1) {
+      return {
+        reply: TICKET_MESSAGES.numericInvalidOption,
+        nextContext: {
+          ...baseContext,
+          step: "showing_events",
+          state: "showing_events",
+        },
+      };
+    }
+
+    const selectedSession = await getValidatedEventSession({
+      eventId: selectedContextEvent.eventId,
+      sessionId: selectedContextEvent.sessionId,
+    });
+
+    if (!selectedSession) {
+      return {
+        reply: TICKET_MESSAGES.eventOptionUnavailable,
+        nextContext: resetBuyerReservationContext(baseContext),
+      };
+    }
+
+    const selectedEvent = buildSelectedEvent(selectedSession);
+
+    if (isMoreInfoOption) {
+      return {
+        reply: formatSingleEventMoreInfo(selectedEvent),
+        outboundMessages: buildEventMoreInfoOutboundMessages(selectedEvent),
+        nextContext: {
+          ...baseContext,
+          step: "showing_events",
+          state: "showing_events",
+          selectedEvent,
+          eventMoreInfoShown: true,
+        },
+      };
+    }
+
+    const sections = await listAvailableSections(selectedSession.sessionId, {
+      venueId: selectedSession.venueId,
+    });
+
+    if (sections.length === 0) {
+      return {
+        reply: TICKET_MESSAGES.noSectionsAvailable,
+        nextContext: {
+          ...baseContext,
+          step: "idle",
+          state: "idle",
+          selectedEvent,
+          lastEvents: [],
+          lastSections: [],
+          eventMoreInfoShown: undefined,
+        },
+      };
+    }
+
+    return {
+      reply: formatSectionsReply({ sections }),
+      nextContext: {
+        ...baseContext,
+        step: "showing_sections",
+        state: "showing_sections",
+        selectedEvent,
+        lastSections: buildSectionOptions(sections),
+        eventMoreInfoShown: undefined,
+      },
+    };
+  }
+
+  if (
+    parsedSearch.numericSelection &&
+    previousState.state === "showing_events" &&
+    previousState.lastEvents?.length === 1 &&
+    (
+      parsedSearch.numericSelection === 2 ||
+      parsedSearch.numericSelection === 3
+    )
+  ) {
+    if (!previousState.eventMoreInfoShown && parsedSearch.numericSelection === 2) {
+      const contextEvent = previousState.lastEvents[0];
+      const validatedSession = await getValidatedEventSession({
+        eventId: contextEvent.eventId,
+        sessionId: contextEvent.sessionId,
+      });
+      const eventMoreInfo = validatedSession
+        ? buildSelectedEvent(validatedSession)
+        : contextEvent;
+
+      return {
+        reply: formatSingleEventMoreInfo(eventMoreInfo),
+        outboundMessages: buildEventMoreInfoOutboundMessages(eventMoreInfo),
+        nextContext: {
+          ...baseContext,
+          step: "showing_events",
+          state: "showing_events",
+          eventMoreInfoShown: true,
+        },
+      };
+    }
+
+    if (previousState.eventMoreInfoShown && parsedSearch.numericSelection === 2) {
+      return {
+        reply: formatEventOptionsReply(previousState.lastEvents),
+        outboundMessages: buildEventOptionOutboundMessages(previousState.lastEvents),
+        nextContext: {
+          ...baseContext,
+          step: "showing_events",
+          state: "showing_events",
+          selectedEvent: undefined,
+          eventMoreInfoShown: undefined,
         },
       };
     }
@@ -10985,6 +12154,7 @@ export async function routeTicketMessage({
         lastEvents: [],
         lastSections: [],
         selectedEvent: undefined,
+        eventMoreInfoShown: undefined,
       },
     };
   }
@@ -11007,6 +12177,7 @@ export async function routeTicketMessage({
           ...baseContext,
           step: "showing_events",
           state: "showing_events",
+          eventMoreInfoShown: undefined,
         },
       };
     }
@@ -11042,23 +12213,25 @@ export async function routeTicketMessage({
           ...baseContext,
           step: "idle",
           state: "idle",
-          selectedEvent,
-          lastEvents: [],
-          lastSections: [],
-        },
-      };
+        selectedEvent,
+        lastEvents: [],
+        lastSections: [],
+        eventMoreInfoShown: undefined,
+      },
+    };
     }
 
     return {
       reply: formatSectionsReply({ sections }),
       nextContext: {
         ...baseContext,
-        step: "showing_sections",
-        state: "showing_sections",
-        selectedEvent,
-        lastSections: buildSectionOptions(sections),
-      },
-    };
+      step: "showing_sections",
+      state: "showing_sections",
+      selectedEvent,
+      lastSections: buildSectionOptions(sections),
+      eventMoreInfoShown: undefined,
+    },
+  };
   }
 
   if (
@@ -11235,6 +12408,7 @@ export async function routeTicketMessage({
       state: "showing_events",
       lastSearch: parsedSearch,
       lastEvents: buildEventOptions(events),
+      eventMoreInfoShown: undefined,
     },
   };
 }

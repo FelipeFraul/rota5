@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { normalizeWhatsAppPhone } from "@/lib/tickets/phones";
 
 export type TicketCustomer = {
   id: string;
@@ -41,11 +42,20 @@ export async function upsertCustomerFromWhatsApp({
   name,
 }: UpsertCustomerFromWhatsAppInput) {
   const supabase = getSupabaseAdmin();
+  const normalizedPhone = normalizeWhatsAppPhone(phone);
   const normalizedName = normalizeCustomerName(name);
+
+  if (!normalizedPhone) {
+    return {
+      ok: false as const,
+      error: { code: "invalid_phone", message: "Invalid WhatsApp phone" },
+    };
+  }
+
   const { data: existingCustomer, error: existingCustomerError } = await supabase
     .from("customers")
     .select("id, whatsapp_phone, name")
-    .eq("whatsapp_phone", phone)
+    .eq("whatsapp_phone", normalizedPhone)
     .maybeSingle<TicketCustomer>();
 
   if (existingCustomerError) {
@@ -86,7 +96,7 @@ export async function upsertCustomerFromWhatsApp({
   const { data: customer, error: insertError } = await supabase
     .from("customers")
     .insert({
-      whatsapp_phone: phone,
+      whatsapp_phone: normalizedPhone,
       name: normalizedName,
     })
     .select("id, whatsapp_phone, name")

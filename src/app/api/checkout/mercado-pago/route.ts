@@ -81,7 +81,7 @@ export async function POST(request: Request) {
     !checkoutSecret ||
     !isSecretMatch(request.headers.get("x-checkout-secret"), checkoutSecret)
   ) {
-    logWarn("Rejected Mercado Pago checkout request with invalid secret");
+    logWarn("Rejected Black House checkout request with invalid secret");
     return unauthorized();
   }
 
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
   });
 
   if (!rateLimit.allowed) {
-    logWarn("Rate limited Mercado Pago checkout request", {
+    logWarn("Rate limited Black House checkout request", {
       sourceHash: rateLimit.sourceHash,
       count: rateLimit.count,
     });

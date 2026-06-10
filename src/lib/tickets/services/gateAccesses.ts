@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { buildWhatsAppPhoneCandidates } from "@/lib/tickets/phones";
 import {
   hashGateAccessPassphrase,
   verifyGateAccessPassphrase,
@@ -46,17 +47,7 @@ type GateAccessWithEvent = GateAccess & {
 };
 
 function getGatePhoneLookupVariants(phone: string) {
-  const variants = new Set([phone]);
-
-  if (phone.startsWith("55") && (phone.length === 12 || phone.length === 13)) {
-    variants.add(phone.slice(2));
-  }
-
-  if (!phone.startsWith("55") && (phone.length === 10 || phone.length === 11)) {
-    variants.add(`55${phone}`);
-  }
-
-  return [...variants];
+  return buildWhatsAppPhoneCandidates(phone);
 }
 
 function eventTitleFromJoin(events: GateAccessWithEvent["events"]) {
