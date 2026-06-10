@@ -139,11 +139,20 @@ export function buildApprovedCodexRequestBody(prompt: string) {
   return `${CODEX_APPROVED_PREFIX} ${prompt.trim()}`;
 }
 
-export function formatDeploymentReference() {
+export function getDeploymentReference() {
   const deploymentUrl = process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
     : process.env.APP_BASE_URL;
   const commitSha = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 8);
+
+  return {
+    deploymentUrl,
+    commitSha,
+  };
+}
+
+export function formatDeploymentReference() {
+  const { deploymentUrl, commitSha } = getDeploymentReference();
 
   return [
     deploymentUrl ? `Deploy atual: ${deploymentUrl}` : null,
@@ -151,12 +160,53 @@ export function formatDeploymentReference() {
   ].filter(Boolean);
 }
 
+export function buildCodexGitHubIssueTitle(requestId: string) {
+  return `CODEX WhatsApp #${requestId}`;
+}
+
+export function buildCodexGitHubIssueBody({
+  requestId,
+  prompt,
+  phoneLast4,
+}: {
+  requestId: string;
+  prompt: string;
+  phoneLast4: string;
+}) {
+  const { deploymentUrl, commitSha } = getDeploymentReference();
+
+  return [
+    "Pedido recebido pelo WhatsApp e autenticado com palavra-chave do admin.",
+    "",
+    `Pedido: #${requestId}`,
+    `Telefone: final ${phoneLast4}`,
+    deploymentUrl ? `Deploy atual: ${deploymentUrl}` : null,
+    commitSha ? `Commit atual: ${commitSha}` : null,
+    "",
+    "Solicitação:",
+    "",
+    prompt.trim() || "(pedido vazio)",
+    "",
+    "Fluxo seguro:",
+    "- Analisar o pedido",
+    "- Alterar em branch/commit",
+    "- Rodar validações",
+    "- Fazer deploy somente depois de revisão/aprovação",
+  ]
+    .filter((line): line is string => line !== null)
+    .join("\n");
+}
+
 export function buildCodexRequestAck({
   requestId,
   isEmpty,
+  issueUrl,
+  issueCreationFailed,
 }: {
   requestId: string;
   isEmpty: boolean;
+  issueUrl?: string | null;
+  issueCreationFailed?: boolean;
 }) {
   if (isEmpty) {
     return [
@@ -168,8 +218,15 @@ export function buildCodexRequestAck({
 
   return [
     `Pedido CODEX recebido #${requestId}.`,
-    "Vou analisar aqui no VSCode antes de alterar qualquer coisa.",
+    issueUrl
+      ? `Tarefa criada no GitHub: ${issueUrl}`
+      : "Vou analisar aqui no VSCode antes de alterar qualquer coisa.",
     ...formatDeploymentReference(),
+    ...(issueCreationFailed
+      ? [
+          "Atenção: não consegui criar a tarefa no GitHub. Verifique a configuração do token.",
+        ]
+      : []),
     "",
     "Nada foi mudado automaticamente no sistema.",
   ].join("\n");

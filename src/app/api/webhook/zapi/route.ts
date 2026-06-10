@@ -5,6 +5,7 @@ import {
   methodNotAllowed,
   unauthorized,
 } from "@/lib/http/responses";
+import { createGitHubIssue } from "@/lib/github/issues";
 import { logError, logInfo, logWarn } from "@/lib/logger";
 import {
   consumeRateLimit,
@@ -26,6 +27,8 @@ import {
   buildCodexAuthInvalidReply,
   buildCodexAuthPrompt,
   buildCodexCollectPrompt,
+  buildCodexGitHubIssueBody,
+  buildCodexGitHubIssueTitle,
   buildCodexRequestAck,
   clearCodexRequestContext,
   getCodexRequestContext,
@@ -474,6 +477,26 @@ async function sendAndPersistText({
   };
 }
 
+async function createIssueForCodexRequest({
+  requestId,
+  prompt,
+  phoneLast4,
+}: {
+  requestId: string;
+  prompt: string;
+  phoneLast4: string;
+}) {
+  return createGitHubIssue({
+    title: buildCodexGitHubIssueTitle(requestId),
+    body: buildCodexGitHubIssueBody({
+      requestId,
+      prompt,
+      phoneLast4,
+    }),
+    labels: ["codex-whatsapp", "needs-review"],
+  });
+}
+
 async function readJsonPayload(request: Request) {
   const contentLength = request.headers.get("content-length");
 
@@ -777,9 +800,26 @@ export async function POST(request: Request) {
     }
 
     const requestId = approvedResult.message.id.slice(0, 8);
+    const issueResult = await createIssueForCodexRequest({
+      requestId,
+      prompt: pendingPrompt,
+      phoneLast4: incoming.phone.slice(-4),
+    });
+
+    if (!issueResult.ok) {
+      logWarn("Failed to create GitHub issue for Codex request", {
+        conversationId: conversationResult.conversation.id,
+        requestId,
+        reason: issueResult.reason,
+        status: issueResult.status,
+      });
+    }
+
     const reply = buildCodexRequestAck({
       requestId,
       isEmpty: false,
+      issueUrl: issueResult.ok ? issueResult.issueUrl : null,
+      issueCreationFailed: !issueResult.ok,
     });
     const outboundResult = await sendAndPersistText({
       conversationId: conversationResult.conversation.id,
@@ -847,9 +887,26 @@ export async function POST(request: Request) {
     }
 
     const requestId = approvedResult.message.id.slice(0, 8);
+    const issueResult = await createIssueForCodexRequest({
+      requestId,
+      prompt,
+      phoneLast4: incoming.phone.slice(-4),
+    });
+
+    if (!issueResult.ok) {
+      logWarn("Failed to create GitHub issue for collected Codex request", {
+        conversationId: conversationResult.conversation.id,
+        requestId,
+        reason: issueResult.reason,
+        status: issueResult.status,
+      });
+    }
+
     const reply = buildCodexRequestAck({
       requestId,
       isEmpty: prompt.length === 0,
+      issueUrl: issueResult.ok ? issueResult.issueUrl : null,
+      issueCreationFailed: !issueResult.ok,
     });
     const outboundResult = await sendAndPersistText({
       conversationId: conversationResult.conversation.id,
