@@ -183,7 +183,7 @@ export function buildCodexGitHubIssueBody({
     deploymentUrl ? `Deploy atual: ${deploymentUrl}` : null,
     commitSha ? `Commit atual: ${commitSha}` : null,
     "",
-    "Solicitação:",
+    "Solicitacao:",
     "",
     prompt.trim() || "(pedido vazio)",
     "",
