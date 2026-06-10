@@ -85,6 +85,41 @@ function formatTicket(ticket: TicketForDelivery) {
   ].join("\n");
 }
 
+function buildVenueSearchText(ticket: TicketForDelivery) {
+  return [
+    ticket.venueName,
+    ticket.venueAddress,
+    ticket.city,
+    ticket.state,
+  ]
+    .filter((value): value is string => Boolean(value?.trim()))
+    .join(", ");
+}
+
+function buildVenueMapLink(ticket: TicketForDelivery) {
+  const searchText = buildVenueSearchText(ticket);
+
+  if (!searchText) {
+    return null;
+  }
+
+  return `https://maps.google.com/?q=${encodeURIComponent(searchText)}`;
+}
+
+function buildVenueLinkLines(tickets: TicketForDelivery[]) {
+  const links = new Set<string>();
+
+  for (const ticket of tickets) {
+    const link = buildVenueMapLink(ticket);
+
+    if (link) {
+      links.add(link);
+    }
+  }
+
+  return [...links].map((link) => `> Local: ${link}`);
+}
+
 export type TicketDeliveryPayload = {
   message: string;
   qrImages: Array<{
@@ -98,9 +133,12 @@ export function buildTicketDeliveryMessage(
   title = "*PAGAMENTO CONFIRMADO*",
 ) {
   const ticketBlocks = tickets.map(formatTicket);
+  const venueLinkLines = buildVenueLinkLines(tickets);
 
   return [
     title,
+    ...venueLinkLines,
+    ...(venueLinkLines.length > 0 ? [""] : []),
     ticketBlocks.join("\n\n"),
   ].join("\n");
 }
