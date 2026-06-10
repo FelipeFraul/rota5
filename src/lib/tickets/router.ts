@@ -673,6 +673,33 @@ function formatOptionLine(
   return `Digite ${option} para ${normalizedLabel}`;
 }
 
+function formatTicketOptionLabel(label: string) {
+  return label
+    .trim()
+    .toLocaleLowerCase("pt-BR")
+    .replace(/\bmesa\s+para\s+08\s+pessoas\b/gi, "mesa 8 pessoas")
+    .replace(/\bmesa\s+para\s+/gi, "mesa ")
+    .replace(/\s+/g, " ");
+}
+
+function formatTicketOptionLine(
+  option: number | string,
+  label: string,
+  priceLabel: string,
+) {
+  return `Digite ${option} *${formatTicketOptionLabel(label)}* - ${priceLabel}`;
+}
+
+function shouldUseTicketLabelForSingleOffer(sectionName: string) {
+  const normalized = sectionName
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLocaleLowerCase("pt-BR")
+    .trim();
+
+  return normalized === "cadeira" || normalized === "mesas";
+}
+
 const LOWERCASE_NAME_PARTS = new Set([
   "a",
   "as",
@@ -1016,8 +1043,14 @@ function formatSectionsReply({
     section.ticketTypes.map((ticketType) => {
       const label = section.ticketTypes.length > 1
         ? `${section.sectionName} - ${ticketType.label}`
+        : shouldUseTicketLabelForSingleOffer(section.sectionName)
+          ? ticketType.label
         : section.sectionName;
-      const line = `${formatOptionLine(option, label)} - ${formatPriceWithOptionalFee(ticketType.priceCents, ticketType.feeCents)}`;
+      const line = formatTicketOptionLine(
+        option,
+        label,
+        formatPriceWithOptionalFee(ticketType.priceCents, ticketType.feeCents),
+      );
       option += 1;
       return line;
     }),
