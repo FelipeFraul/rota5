@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -233,15 +233,52 @@ function buildCodexPrompt(request, prompt) {
 }
 
 function runCodex(request, prompt) {
-  return run(codexCommand, [
-    "exec",
-    "--cd",
-    process.cwd(),
-    "--sandbox",
-    "workspace-write",
-    "-",
-  ], {
-    input: buildCodexPrompt(request, prompt),
+  return new Promise((resolveRun) => {
+    const child = spawn(
+      codexCommand,
+      [
+        "exec",
+        "--cd",
+        process.cwd(),
+        "--sandbox",
+        "workspace-write",
+        "-",
+      ],
+      {
+        stdio: ["pipe", "pipe", "pipe"],
+      },
+    );
+    const logs = [];
+
+    child.stdout.on("data", (chunk) => {
+      const text = chunk.toString();
+      logs.push(text);
+      process.stdout.write(text);
+    });
+
+    child.stderr.on("data", (chunk) => {
+      const text = chunk.toString();
+      logs.push(text);
+      process.stderr.write(text);
+    });
+
+    child.on("error", (error) => {
+      logs.push(String(error?.stack || error));
+      resolveRun({
+        status: 1,
+        logs: logs.join("").slice(-6000),
+      });
+    });
+
+    child.on("close", (status) => {
+      resolveRun({
+        status: status ?? 1,
+        logs: logs.join("").slice(-6000),
+      });
+    });
+
+    child.stdin.write(buildCodexPrompt(request, prompt));
+    child.stdin.end();
   });
 }
 
@@ -286,7 +323,7 @@ function markProcessed(state, request, status, extra = {}) {
   saveState(state);
 }
 
-function processRequest(request, state) {
+async function processRequest(request, state) {
   const requestId = request.id.slice(0, 8);
   const prompt = extractPrompt(request.body);
 
@@ -302,9 +339,9 @@ function processRequest(request, state) {
   }
 
   console.log(`Processando pedido CODEX #${requestId}.`);
-  const result = runCodex(request, prompt);
+  const result = await runCodex(request, prompt);
   const ok = result.status === 0;
-  const logs = [result.stdout, result.stderr].filter(Boolean).join("\n").slice(-6000);
+  const logs = result.logs ?? "";
 
   if (!ok) {
     console.error(`Pedido #${requestId} falhou.\n${logs}`);
@@ -331,7 +368,7 @@ async function main() {
       }
 
       for (const request of requests) {
-        processRequest(request, state);
+        await processRequest(request, state);
       }
     } catch (error) {
       console.error(
