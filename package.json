@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "codex:requests": "node scripts/list-codex-requests.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "latest",

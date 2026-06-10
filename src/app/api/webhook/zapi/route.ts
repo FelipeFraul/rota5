@@ -20,6 +20,11 @@ import {
   saveWhatsAppMessage,
 } from "@/lib/tickets/services/messages";
 import { TICKET_MESSAGES } from "@/lib/tickets/messages";
+import {
+  buildCodexRequestAck,
+  isAllowedCodexRequestPhone,
+  parseCodexRequestCommand,
+} from "@/lib/tickets/codexRequests";
 import { normalizeWhatsAppPhone } from "@/lib/tickets/phones";
 import { routeTicketMessage } from "@/lib/tickets/router";
 import { ADMIN_AUTH_REDACTED_BODY } from "@/lib/tickets/services/adminAuth";
@@ -595,6 +600,75 @@ export async function POST(request: Request) {
       code: inboundResult.error?.code,
     });
     return jsonError("Internal Server Error", 500);
+  }
+
+  const codexRequest = parseCodexRequestCommand(incoming.text);
+
+  if (codexRequest && isAllowedCodexRequestPhone(incoming.phone)) {
+    const requestId = inboundResult.message.id.slice(0, 8);
+    const reply = buildCodexRequestAck({
+      requestId,
+      isEmpty: codexRequest.isEmpty,
+    });
+    const sendResult = await sendZapiText({
+      phone: incoming.phone,
+      message: reply,
+    });
+
+    if (!sendResult.ok) {
+      logWarn("Z-API Codex request acknowledgement failed", {
+        conversationId: conversationResult.conversation.id,
+        phoneLast4: incoming.phone.slice(-4),
+        error: sendResult.error,
+      });
+    }
+
+    const outboundResult = await saveWhatsAppMessage({
+      conversationId: conversationResult.conversation.id,
+      customerId: customerResult.customer.id,
+      direction: "outbound",
+      messageType: "text",
+      body: reply,
+      providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
+      rawMetadata: buildOutboundMetadata({
+        sendResult,
+        messageType: "text",
+      }),
+    });
+
+    if (!outboundResult.ok) {
+      logError("Failed to save Codex request acknowledgement", {
+        conversationId: conversationResult.conversation.id,
+        code: outboundResult.error?.code,
+      });
+      return jsonError("Internal Server Error", 500);
+    }
+
+    const conversationUpdateResult = await updateConversationAfterMessage({
+      conversationId: conversationResult.conversation.id,
+      context: conversationResult.conversation.context,
+    });
+
+    if (!conversationUpdateResult.ok) {
+      logError("Failed to touch Codex request conversation", {
+        conversationId: conversationResult.conversation.id,
+        code: conversationUpdateResult.error.code,
+      });
+      return jsonError("Internal Server Error", 500);
+    }
+
+    logInfo("Stored Codex request from WhatsApp", {
+      conversationId: conversationResult.conversation.id,
+      requestId,
+      phoneLast4: incoming.phone.slice(-4),
+    });
+
+    return jsonOk({
+      received: true,
+      processed: true,
+      codexRequest: true,
+      requestId,
+    });
   }
 
   const routeResult = await routeTicketMessage({
