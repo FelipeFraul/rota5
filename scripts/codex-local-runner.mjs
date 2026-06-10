@@ -204,6 +204,136 @@ function extractPrompt(body) {
   return (body ?? "").replace(/^CODEX APROVADO:\s*/i, "").trim();
 }
 
+function getGitSnapshot() {
+  const headResult = run("git", ["rev-parse", "--short", "HEAD"]);
+  const statusResult = run("git", ["status", "--short"]);
+
+  return {
+    head: headResult.status === 0 ? headResult.stdout.trim() : null,
+    status: statusResult.status === 0 ? statusResult.stdout.trim() : "",
+  };
+}
+
+function getGitSummary(beforeSnapshot, afterSnapshot) {
+  if (beforeSnapshot.head && afterSnapshot.head && beforeSnapshot.head !== afterSnapshot.head) {
+    const commitsResult = run("git", [
+      "log",
+      "--oneline",
+      `${beforeSnapshot.head}..${afterSnapshot.head}`,
+    ]);
+    const filesResult = run("git", [
+      "diff",
+      "--name-status",
+      beforeSnapshot.head,
+      afterSnapshot.head,
+    ]);
+
+    return {
+      commits: commitsResult.status === 0 ? commitsResult.stdout.trim() : "",
+      files: filesResult.status === 0 ? filesResult.stdout.trim() : "",
+    };
+  }
+
+  return {
+    commits: "",
+    files: afterSnapshot.status || "Sem alteracoes detectadas no Git.",
+  };
+}
+
+function extractDeployUrl(logs) {
+  const matches = [...logs.matchAll(/Production:\s+(https:\/\/\S+)/g)];
+  const lastMatch = matches.at(-1);
+
+  return lastMatch?.[1] ?? null;
+}
+
+function clipText(text, maxLength) {
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  return `${text.slice(0, maxLength - 20)}\n...[cortado]`;
+}
+
+function buildWhatsAppSummary({
+  requestId,
+  prompt,
+  ok,
+  gitSummary,
+  deployUrl,
+  logs,
+}) {
+  return clipText(
+    [
+      ok ? `Pedido CODEX #${requestId} concluido.` : `Pedido CODEX #${requestId} falhou.`,
+      "",
+      "Pedido:",
+      clipText(prompt, 700),
+      "",
+      gitSummary.commits ? "Commits:" : null,
+      gitSummary.commits || null,
+      "",
+      "Arquivos adicionados/modificados:",
+      gitSummary.files || "Sem lista de arquivos.",
+      "",
+      deployUrl ? `Deploy: ${deployUrl}` : null,
+      "",
+      "Resumo tecnico:",
+      clipText(logs || "Sem logs finais.", 1200),
+    ]
+      .filter((line) => line !== null)
+      .join("\n"),
+    3500,
+  );
+}
+
+async function sendZapiText(phone, message) {
+  const instanceId = process.env.ZAPI_INSTANCE_ID;
+  const instanceToken = process.env.ZAPI_INSTANCE_TOKEN;
+  const clientToken = process.env.ZAPI_CLIENT_TOKEN;
+  const baseUrl = process.env.ZAPI_BASE_URL;
+
+  if (!instanceId || !instanceToken || !clientToken || !baseUrl) {
+    return {
+      ok: false,
+      error: "zapi_not_configured",
+    };
+  }
+
+  const url = new URL(
+    `/instances/${instanceId}/token/${instanceToken}/send-text`,
+    baseUrl,
+  );
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Client-Token": clientToken,
+      },
+      body: JSON.stringify({
+        phone,
+        message,
+      }),
+      signal: controller.signal,
+    });
+
+    return response.ok
+      ? { ok: true }
+      : { ok: false, error: `zapi_status_${response.status}` };
+  } catch (error) {
+    return {
+      ok: false,
+      error: String(error?.message || error),
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function buildCodexPrompt(request, prompt) {
   const requestId = request.id.slice(0, 8);
   const phone = request.customers?.whatsapp_phone ?? "";
@@ -339,9 +469,30 @@ async function processRequest(request, state) {
   }
 
   console.log(`Processando pedido CODEX #${requestId}.`);
+  const beforeSnapshot = getGitSnapshot();
   const result = await runCodex(request, prompt);
+  const afterSnapshot = getGitSnapshot();
   const ok = result.status === 0;
   const logs = result.logs ?? "";
+  const gitSummary = getGitSummary(beforeSnapshot, afterSnapshot);
+  const deployUrl = extractDeployUrl(logs);
+  const summary = buildWhatsAppSummary({
+    requestId,
+    prompt,
+    ok,
+    gitSummary,
+    deployUrl,
+    logs,
+  });
+  const phone = request.customers?.whatsapp_phone;
+
+  if (phone) {
+    const sendResult = await sendZapiText(phone, summary);
+
+    if (!sendResult.ok) {
+      console.error(`Falha ao enviar resumo por WhatsApp: ${sendResult.error}`);
+    }
+  }
 
   if (!ok) {
     console.error(`Pedido #${requestId} falhou.\n${logs}`);
