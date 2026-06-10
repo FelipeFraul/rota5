@@ -57,9 +57,11 @@ function normalizeWhatsAppPhone(phone) {
 }
 
 function run(command, args, options = {}) {
+  const hasInput = Object.hasOwn(options, "input");
+
   return spawnSync(command, args, {
     encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
+    stdio: [hasInput ? "pipe" : "ignore", "pipe", "pipe"],
     ...options,
   });
 }
