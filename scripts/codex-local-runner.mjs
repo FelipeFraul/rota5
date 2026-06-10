@@ -1,6 +1,12 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
+import { join, resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
 const APPROVED_PREFIX = "CODEX APROVADO:";
@@ -10,6 +16,7 @@ const POLL_SECONDS = Number(process.env.CODEX_RUNNER_POLL_SECONDS ?? 60);
 const RUN_ONCE = process.argv.includes("--once");
 const CHECK_ONLY = process.argv.includes("--check");
 const DEFAULT_CODEX_PHONE = "15997503836";
+let codexCommand = process.env.CODEX_CLI_PATH || "codex";
 
 function loadEnvFile(filePath) {
   if (!existsSync(filePath)) return;
@@ -55,6 +62,50 @@ function run(command, args, options = {}) {
     stdio: ["ignore", "pipe", "pipe"],
     ...options,
   });
+}
+
+function findBundledCodexCommand() {
+  const userProfile = process.env.USERPROFILE;
+
+  if (!userProfile) {
+    return null;
+  }
+
+  const extensionsDir = join(userProfile, ".vscode", "extensions");
+
+  if (!existsSync(extensionsDir)) {
+    return null;
+  }
+
+  return findCodexUnder(extensionsDir);
+}
+
+function findCodexUnder(directory) {
+  let entries;
+
+  try {
+    entries = readdirSync(directory, { withFileTypes: true });
+  } catch {
+    return null;
+  }
+
+  for (const entry of entries) {
+    const fullPath = join(directory, entry.name);
+
+    if (entry.isFile() && entry.name.toLowerCase() === "codex.exe") {
+      return fullPath;
+    }
+
+    if (entry.isDirectory()) {
+      const found = findCodexUnder(fullPath);
+
+      if (found) {
+        return found;
+      }
+    }
+  }
+
+  return null;
 }
 
 function required(value, name) {
@@ -174,7 +225,7 @@ function buildCodexPrompt(request, prompt) {
 }
 
 function runCodex(request, prompt) {
-  return run("codex", [
+  return run(codexCommand, [
     "exec",
     "--cd",
     process.cwd(),
@@ -189,13 +240,35 @@ function runCodex(request, prompt) {
 }
 
 function ensureTools() {
-  for (const command of ["codex", "git"]) {
+  let codexResult = run(codexCommand, ["--version"]);
+
+  if (codexResult.status !== 0 && codexCommand === "codex") {
+    const bundledCodex = findBundledCodexCommand();
+
+    if (bundledCodex) {
+      codexCommand = bundledCodex;
+      codexResult = run(codexCommand, ["--version"]);
+    }
+  }
+
+  if (codexResult.status !== 0) {
+    throw new Error(
+      [
+        "Comando obrigatorio indisponivel: codex",
+        "Instale/abra a extensao do ChatGPT/Codex no VSCode ou defina CODEX_CLI_PATH com o caminho do codex.exe.",
+      ].join("\n"),
+    );
+  }
+
+  for (const command of ["git"]) {
     const result = run(command, ["--version"]);
 
     if (result.status !== 0) {
       throw new Error(`Comando obrigatorio indisponivel: ${command}`);
     }
   }
+
+  console.log(`Usando Codex CLI: ${codexCommand}`);
 }
 
 function markProcessed(state, request, status, extra = {}) {
