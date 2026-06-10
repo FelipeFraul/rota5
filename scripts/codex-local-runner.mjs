@@ -188,7 +188,13 @@ async function listPendingRequests(supabase, state) {
   return (data ?? []).filter((request) => {
     const shortId = request.id.slice(0, 8);
 
-    return !state.processedRequests[request.id] && !state.processedRequests[shortId];
+    const processedById = state.processedRequests[request.id];
+    const processedByShortId = state.processedRequests[shortId];
+
+    return (
+      processedById?.status !== "completed" &&
+      processedByShortId?.status !== "completed"
+    );
   });
 }
 
@@ -231,8 +237,6 @@ function runCodex(request, prompt) {
     process.cwd(),
     "--sandbox",
     "workspace-write",
-    "--ask-for-approval",
-    "never",
     "-",
   ], {
     input: buildCodexPrompt(request, prompt),
