@@ -493,7 +493,6 @@ async function createIssueForCodexRequest({
       prompt,
       phoneLast4,
     }),
-    labels: ["codex-whatsapp", "needs-review"],
   });
 }
 
