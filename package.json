@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "codex:requests": "node scripts/list-codex-requests.mjs"
+    "codex:requests": "node scripts/list-codex-requests.mjs",
+    "codex:runner": "node scripts/codex-local-runner.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "latest",
