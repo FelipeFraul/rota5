@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
 const DEFAULT_CODEX_PHONE = "15997503836";
+const APPROVED_PREFIX = "CODEX APROVADO:";
 
 function loadEnvFile(filePath) {
   if (!existsSync(filePath)) {
@@ -88,8 +89,9 @@ const { data, error } = await supabase
   .from("whatsapp_messages")
   .select("id, body, created_at, customers!inner(whatsapp_phone, name)")
   .eq("direction", "inbound")
+  .eq("message_type", "system")
   .eq("customers.whatsapp_phone", phone)
-  .ilike("body", "codex%")
+  .ilike("body", `${APPROVED_PREFIX}%`)
   .order("created_at", { ascending: false })
   .limit(Number.isFinite(limit) && limit > 0 ? limit : 20);
 
@@ -98,7 +100,7 @@ if (error) {
 }
 
 if (!data?.length) {
-  console.log(`Nenhum pedido CODEX encontrado para ${phone}.`);
+  console.log(`Nenhum pedido CODEX aprovado encontrado para ${phone}.`);
 } else {
   for (const request of data) {
     const requestId = request.id.slice(0, 8);
@@ -106,7 +108,7 @@ if (!data?.length) {
       timeZone: "America/Sao_Paulo",
     });
     const body = request.body ?? "";
-    const prompt = body.replace(/^codex(?:\s*[:\-]|\s+)/i, "").trim();
+    const prompt = body.replace(/^CODEX APROVADO:\s*/i, "").trim();
 
     console.log(`#${requestId} - ${createdAt}`);
     console.log(prompt || "(pedido vazio)");

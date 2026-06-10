@@ -21,13 +21,27 @@ import {
 } from "@/lib/tickets/services/messages";
 import { TICKET_MESSAGES } from "@/lib/tickets/messages";
 import {
+  CODEX_AUTH_REDACTED_BODY,
+  buildApprovedCodexRequestBody,
+  buildCodexAuthInvalidReply,
+  buildCodexAuthPrompt,
+  buildCodexCollectPrompt,
   buildCodexRequestAck,
+  clearCodexRequestContext,
+  getCodexRequestContext,
   isAllowedCodexRequestPhone,
+  isCodexRequestAuthPending,
+  isCodexRequestCollecting,
   parseCodexRequestCommand,
+  withCodexRequestAuthPending,
+  withCodexRequestCollecting,
 } from "@/lib/tickets/codexRequests";
 import { normalizeWhatsAppPhone } from "@/lib/tickets/phones";
 import { routeTicketMessage } from "@/lib/tickets/router";
-import { ADMIN_AUTH_REDACTED_BODY } from "@/lib/tickets/services/adminAuth";
+import {
+  ADMIN_AUTH_REDACTED_BODY,
+  verifyAdminUserPassphrase,
+} from "@/lib/tickets/services/adminAuth";
 import { GATE_ACCESS_REDACTED_BODY } from "@/lib/tickets/services/gateAccessAuth";
 import {
   sendZapiImage,
@@ -315,6 +329,13 @@ function buildInboundMetadata({
 }
 
 function getInboundRedaction(context: Record<string, unknown>) {
+  if (isCodexRequestAuthPending(context)) {
+    return {
+      body: CODEX_AUTH_REDACTED_BODY,
+      reason: "codex_auth",
+    };
+  }
+
   if (
     context?.state === "admin_auth_pending" ||
     context?.state === "admin_user_create_collect_passphrase"
@@ -408,6 +429,49 @@ async function sendOutboundMessage({
     phone,
     message: message.body,
   });
+}
+
+async function sendAndPersistText({
+  conversationId,
+  customerId,
+  phone,
+  body,
+}: {
+  conversationId: string;
+  customerId: string;
+  phone: string;
+  body: string;
+}) {
+  const sendResult = await sendZapiText({
+    phone,
+    message: body,
+  });
+
+  const outboundResult = await saveWhatsAppMessage({
+    conversationId,
+    customerId,
+    direction: "outbound",
+    messageType: "text",
+    body,
+    providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
+    rawMetadata: buildOutboundMetadata({
+      sendResult,
+      messageType: "text",
+    }),
+  });
+
+  if (!outboundResult.ok) {
+    return {
+      ok: false as const,
+      sendResult,
+      error: outboundResult.error,
+    };
+  }
+
+  return {
+    ok: true as const,
+    sendResult,
+  };
 }
 
 async function readJsonPayload(request: Request) {
@@ -602,38 +666,126 @@ export async function POST(request: Request) {
     return jsonError("Internal Server Error", 500);
   }
 
-  const codexRequest = parseCodexRequestCommand(incoming.text);
+  const isAllowedCodexPhone = isAllowedCodexRequestPhone(incoming.phone);
+  const currentContext = conversationResult.conversation.context;
 
-  if (codexRequest && isAllowedCodexRequestPhone(incoming.phone)) {
-    const requestId = inboundResult.message.id.slice(0, 8);
-    const reply = buildCodexRequestAck({
-      requestId,
-      isEmpty: codexRequest.isEmpty,
-    });
-    const sendResult = await sendZapiText({
-      phone: incoming.phone,
-      message: reply,
-    });
+  if (isAllowedCodexPhone && isCodexRequestAuthPending(currentContext)) {
+    const passphraseResult = await verifyAdminUserPassphrase(
+      incoming.phone,
+      incoming.text ?? "",
+    );
 
-    if (!sendResult.ok) {
-      logWarn("Z-API Codex request acknowledgement failed", {
+    if (!passphraseResult.ok) {
+      const nextContext = clearCodexRequestContext(currentContext);
+      const reply = buildCodexAuthInvalidReply();
+      const outboundResult = await sendAndPersistText({
         conversationId: conversationResult.conversation.id,
-        phoneLast4: incoming.phone.slice(-4),
-        error: sendResult.error,
+        customerId: customerResult.customer.id,
+        phone: incoming.phone,
+        body: reply,
+      });
+
+      if (!outboundResult.ok) {
+        logError("Failed to save Codex auth failure reply", {
+          conversationId: conversationResult.conversation.id,
+          code: outboundResult.error?.code,
+        });
+        return jsonError("Internal Server Error", 500);
+      }
+
+      const conversationUpdateResult = await updateConversationAfterMessage({
+        conversationId: conversationResult.conversation.id,
+        context: nextContext,
+      });
+
+      if (!conversationUpdateResult.ok) {
+        logError("Failed to clear Codex request context after invalid auth", {
+          conversationId: conversationResult.conversation.id,
+          code: conversationUpdateResult.error.code,
+        });
+        return jsonError("Internal Server Error", 500);
+      }
+
+      return jsonOk({
+        received: true,
+        processed: true,
+        codexRequest: true,
+        authenticated: false,
       });
     }
 
-    const outboundResult = await saveWhatsAppMessage({
+    const pendingPrompt = getCodexRequestContext(currentContext).pendingPrompt?.trim();
+
+    if (!pendingPrompt) {
+      const nextContext = withCodexRequestCollecting(currentContext);
+      const reply = buildCodexCollectPrompt();
+      const outboundResult = await sendAndPersistText({
+        conversationId: conversationResult.conversation.id,
+        customerId: customerResult.customer.id,
+        phone: incoming.phone,
+        body: reply,
+      });
+
+      if (!outboundResult.ok) {
+        logError("Failed to save Codex collect prompt", {
+          conversationId: conversationResult.conversation.id,
+          code: outboundResult.error?.code,
+        });
+        return jsonError("Internal Server Error", 500);
+      }
+
+      const conversationUpdateResult = await updateConversationAfterMessage({
+        conversationId: conversationResult.conversation.id,
+        context: nextContext,
+      });
+
+      if (!conversationUpdateResult.ok) {
+        logError("Failed to update Codex collect context", {
+          conversationId: conversationResult.conversation.id,
+          code: conversationUpdateResult.error.code,
+        });
+        return jsonError("Internal Server Error", 500);
+      }
+
+      return jsonOk({
+        received: true,
+        processed: true,
+        codexRequest: true,
+        authenticated: true,
+        collectingPrompt: true,
+      });
+    }
+
+    const approvedResult = await saveWhatsAppMessage({
       conversationId: conversationResult.conversation.id,
       customerId: customerResult.customer.id,
-      direction: "outbound",
-      messageType: "text",
+      direction: "inbound",
+      messageType: "system",
+      body: buildApprovedCodexRequestBody(pendingPrompt),
+      rawMetadata: {
+        provider: "codex_request",
+        authenticated: true,
+      },
+    });
+
+    if (!approvedResult.ok) {
+      logError("Failed to save approved Codex request", {
+        conversationId: conversationResult.conversation.id,
+        code: approvedResult.error?.code,
+      });
+      return jsonError("Internal Server Error", 500);
+    }
+
+    const requestId = approvedResult.message.id.slice(0, 8);
+    const reply = buildCodexRequestAck({
+      requestId,
+      isEmpty: false,
+    });
+    const outboundResult = await sendAndPersistText({
+      conversationId: conversationResult.conversation.id,
+      customerId: customerResult.customer.id,
+      phone: incoming.phone,
       body: reply,
-      providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
-      rawMetadata: buildOutboundMetadata({
-        sendResult,
-        messageType: "text",
-      }),
     });
 
     if (!outboundResult.ok) {
@@ -646,18 +798,18 @@ export async function POST(request: Request) {
 
     const conversationUpdateResult = await updateConversationAfterMessage({
       conversationId: conversationResult.conversation.id,
-      context: conversationResult.conversation.context,
+      context: clearCodexRequestContext(currentContext),
     });
 
     if (!conversationUpdateResult.ok) {
-      logError("Failed to touch Codex request conversation", {
+      logError("Failed to clear Codex request context", {
         conversationId: conversationResult.conversation.id,
         code: conversationUpdateResult.error.code,
       });
       return jsonError("Internal Server Error", 500);
     }
 
-    logInfo("Stored Codex request from WhatsApp", {
+    logInfo("Stored authenticated Codex request from WhatsApp", {
       conversationId: conversationResult.conversation.id,
       requestId,
       phoneLast4: incoming.phone.slice(-4),
@@ -667,7 +819,116 @@ export async function POST(request: Request) {
       received: true,
       processed: true,
       codexRequest: true,
+      authenticated: true,
       requestId,
+    });
+  }
+
+  if (isAllowedCodexPhone && isCodexRequestCollecting(currentContext)) {
+    const prompt = incoming.text?.trim() ?? "";
+    const approvedResult = await saveWhatsAppMessage({
+      conversationId: conversationResult.conversation.id,
+      customerId: customerResult.customer.id,
+      direction: "inbound",
+      messageType: "system",
+      body: buildApprovedCodexRequestBody(prompt),
+      rawMetadata: {
+        provider: "codex_request",
+        authenticated: true,
+      },
+    });
+
+    if (!approvedResult.ok) {
+      logError("Failed to save collected Codex request", {
+        conversationId: conversationResult.conversation.id,
+        code: approvedResult.error?.code,
+      });
+      return jsonError("Internal Server Error", 500);
+    }
+
+    const requestId = approvedResult.message.id.slice(0, 8);
+    const reply = buildCodexRequestAck({
+      requestId,
+      isEmpty: prompt.length === 0,
+    });
+    const outboundResult = await sendAndPersistText({
+      conversationId: conversationResult.conversation.id,
+      customerId: customerResult.customer.id,
+      phone: incoming.phone,
+      body: reply,
+    });
+
+    if (!outboundResult.ok) {
+      logError("Failed to save collected Codex request acknowledgement", {
+        conversationId: conversationResult.conversation.id,
+        code: outboundResult.error?.code,
+      });
+      return jsonError("Internal Server Error", 500);
+    }
+
+    const conversationUpdateResult = await updateConversationAfterMessage({
+      conversationId: conversationResult.conversation.id,
+      context: clearCodexRequestContext(currentContext),
+    });
+
+    if (!conversationUpdateResult.ok) {
+      logError("Failed to clear collected Codex request context", {
+        conversationId: conversationResult.conversation.id,
+        code: conversationUpdateResult.error.code,
+      });
+      return jsonError("Internal Server Error", 500);
+    }
+
+    return jsonOk({
+      received: true,
+      processed: true,
+      codexRequest: true,
+      authenticated: true,
+      requestId,
+    });
+  }
+
+  const codexRequest = parseCodexRequestCommand(incoming.text);
+
+  if (codexRequest && isAllowedCodexPhone) {
+    const nextContext = withCodexRequestAuthPending({
+      context: currentContext,
+      pendingPrompt: codexRequest.isEmpty ? null : codexRequest.prompt,
+    });
+    const reply = buildCodexAuthPrompt();
+    const outboundResult = await sendAndPersistText({
+      conversationId: conversationResult.conversation.id,
+      customerId: customerResult.customer.id,
+      phone: incoming.phone,
+      body: reply,
+    });
+
+    if (!outboundResult.ok) {
+      logError("Failed to save Codex auth prompt", {
+        conversationId: conversationResult.conversation.id,
+        code: outboundResult.error?.code,
+      });
+      return jsonError("Internal Server Error", 500);
+    }
+
+    const conversationUpdateResult = await updateConversationAfterMessage({
+      conversationId: conversationResult.conversation.id,
+      context: nextContext,
+    });
+
+    if (!conversationUpdateResult.ok) {
+      logError("Failed to set Codex auth context", {
+        conversationId: conversationResult.conversation.id,
+        code: conversationUpdateResult.error.code,
+      });
+      return jsonError("Internal Server Error", 500);
+    }
+
+    return jsonOk({
+      received: true,
+      processed: true,
+      codexRequest: true,
+      awaitingAuth: true,
     });
   }
 
