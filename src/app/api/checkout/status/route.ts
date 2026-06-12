@@ -3,6 +3,11 @@ import {
   jsonOk,
   methodNotAllowed,
 } from "@/lib/http/responses";
+import {
+  consumeRateLimit,
+  hashRateLimitScope,
+  rateLimitResponse,
+} from "@/lib/security/rateLimit";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 const UUID_PATTERN =
@@ -14,6 +19,18 @@ export async function GET(request: Request) {
 
   if (!UUID_PATTERN.test(orderId)) {
     return badRequest("Pedido inválido.");
+  }
+
+  const rateLimit = await consumeRateLimit({
+    routeKey: "checkout:status",
+    limit: 90,
+    windowSeconds: 60,
+    request,
+    scope: `order:${hashRateLimitScope(orderId)}`,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit);
   }
 
   const supabase = getSupabaseAdmin();
