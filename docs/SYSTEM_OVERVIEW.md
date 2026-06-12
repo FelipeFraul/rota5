@@ -82,12 +82,12 @@ O app aplica headers globais via `next.config.ts`:
 A CSP atual é:
 
 ```text
-default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob: https:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.mercadopago.com; connect-src 'self' https:; media-src 'self' data: blob:; worker-src 'self' blob:; manifest-src 'self'
+default-src 'none'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob: https:; font-src 'self' data:; style-src 'self' 'nonce-{request-nonce}'; script-src 'self' 'nonce-{request-nonce}' 'strict-dynamic' https://sdk.mercadopago.com; connect-src 'self' https:; media-src 'self' data: blob:; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests
 ```
 
 `frame-ancestors 'none'` impede que o site seja embutido por outros sites e substitui/fortalece a proteção histórica do `X-Frame-Options`. O header `X-Frame-Options: DENY` permanece por compatibilidade com verificadores e navegadores antigos.
 
-`img-src data:` é necessário porque QRCode e mapas de assento podem ser gerados como imagens base64. `script-src` mantém `'unsafe-inline'` e `'unsafe-eval'` por compatibilidade conservadora com Next/Vercel e adiciona somente `https://sdk.mercadopago.com` para o checkout no browser. `connect-src 'self' https:` permite chamadas HTTPS do browser sem fixar secrets ou domínios sensíveis na política.
+`img-src data:` é necessário porque QRCode e mapas de assento podem ser gerados como imagens base64. Em produção, `script-src` e `style-src` usam nonce por request gerado no `proxy`, sem `'unsafe-inline'` ou `'unsafe-eval'`; `https://sdk.mercadopago.com` permanece autorizado para o checkout no browser. `connect-src 'self' https:` permite chamadas HTTPS do browser sem fixar secrets ou domínios sensíveis na política. Em desenvolvimento local, o `proxy` pode liberar `'unsafe-eval'` e `'unsafe-inline'` apenas para compatibilidade com o React/Next dev server.
 
 Em 27/05/2026, a configuração foi adicionada após scan Mozilla Observatory com nota C / 50 em `https://site-phi-seven-72.vercel.app`. Após deploy, o MDN HTTP Observatory retornou B+ / 80, com 9 de 10 testes passados, scan `97301039` em `2026-05-27T13:06:10.645Z`. SecurityHeaders.com não foi automatizado no terminal porque a página pública retornou desafio Cloudflare e a API pública exige autorização.
 

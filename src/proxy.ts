@@ -12,6 +12,62 @@ type RateLimitResponse = {
   retry_after_seconds?: unknown;
 };
 
+function createNonce() {
+  return btoa(crypto.randomUUID());
+}
+
+function buildContentSecurityPolicy(nonce: string) {
+  const isDevelopment = process.env.NODE_ENV === "development";
+  const scriptSources = [
+    "'self'",
+    `'nonce-${nonce}'`,
+    "'strict-dynamic'",
+    "https://sdk.mercadopago.com",
+  ];
+  const styleSources = ["'self'", `'nonce-${nonce}'`];
+
+  if (isDevelopment) {
+    scriptSources.push("'unsafe-eval'");
+    styleSources.push("'unsafe-inline'");
+  }
+
+  return [
+    "default-src 'none'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data:",
+    `style-src ${styleSources.join(" ")}`,
+    `script-src ${scriptSources.join(" ")}`,
+    "connect-src 'self' https:",
+    "media-src 'self' data: blob:",
+    "worker-src 'self' blob:",
+    "manifest-src 'self'",
+    "upgrade-insecure-requests",
+  ].join("; ");
+}
+
+function nextWithContentSecurityPolicy(request: NextRequest) {
+  const nonce = createNonce();
+  const contentSecurityPolicy = buildContentSecurityPolicy(nonce);
+  const requestHeaders = new Headers(request.headers);
+
+  requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("Content-Security-Policy", contentSecurityPolicy);
+
+  const response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
+
+  response.headers.set("Content-Security-Policy", contentSecurityPolicy);
+
+  return response;
+}
+
 function getRequestSourceIdentifier(request: NextRequest) {
   return (
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -98,7 +154,7 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (request.method !== "GET") {
-    return NextResponse.next();
+    return nextWithContentSecurityPolicy(request);
   }
 
   if (pathname.startsWith("/tickets/")) {
@@ -141,9 +197,17 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  return nextWithContentSecurityPolicy(request);
 }
 
 export const config = {
-  matcher: ["/tickets/:path*", "/gate/session/:path*", "/admin/login/:path*"],
+  matcher: [
+    {
+      source: "/((?!_next/static|_next/image|favicon.ico).*)",
+      missing: [
+        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "purpose", value: "prefetch" },
+      ],
+    },
+  ],
 };

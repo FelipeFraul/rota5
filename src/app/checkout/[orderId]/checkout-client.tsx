@@ -1,6 +1,5 @@
 "use client";
 
-import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 
 type CheckoutOrder = {
@@ -322,49 +321,37 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
 
   if (paymentApproved) {
     return (
-      <main style={styles.successShell}>
-        <section style={styles.successPanel}>
-          <div style={styles.successIconWrap} aria-hidden="true">
-            <span style={styles.successIconStem} />
-            <span style={styles.successIconKick} />
+      <main className="checkout-success-shell">
+        <section className="checkout-success-panel">
+          <div className="checkout-success-icon" aria-hidden="true">
+            <span className="checkout-success-icon-stem" />
+            <span className="checkout-success-icon-kick" />
           </div>
-          <p style={styles.successEyebrow}>Pagamento</p>
-          <h1 style={styles.successTitle}>Pagamento aprovado</h1>
-          <p style={styles.successText}>
+          <p className="checkout-success-eyebrow">Pagamento</p>
+          <h1>Pagamento aprovado</h1>
+          <p className="checkout-success-text">
             Tudo certo. Seu ingresso será enviado pelo WhatsApp em instantes.
           </p>
 
-          <div style={styles.successSummary}>
+          <div className="checkout-success-summary">
             <span>Total pago</span>
             <strong>{order.totalLabel}</strong>
           </div>
         </section>
-        <style>{`
-          @keyframes checkout-success-pop {
-            0% { transform: scale(0.72); opacity: 0; }
-            55% { transform: scale(1.08); opacity: 1; }
-            100% { transform: scale(1); opacity: 1; }
-          }
-
-          @keyframes checkout-check-fade {
-            0% { opacity: 0; }
-            100% { opacity: 1; }
-          }
-        `}</style>
       </main>
     );
   }
 
   return (
-    <main style={styles.shell}>
-      <section style={styles.summaryPanel}>
-        <p style={styles.eyebrow}>Checkout seguro</p>
-        <h1 style={styles.title}>Finalize sua compra</h1>
-        <p style={styles.muted}>Reserva válida até {expiresAt}.</p>
+    <main className="checkout-shell">
+      <section className="checkout-summary-panel">
+        <p className="checkout-eyebrow">Checkout seguro</p>
+        <h1>Finalize sua compra</h1>
+        <p className="checkout-muted">Reserva válida até {expiresAt}.</p>
 
-        <div style={styles.items}>
+        <div className="checkout-items">
           {order.items.map((item) => (
-            <div key={`${item.name}-${item.quantity}`} style={styles.itemRow}>
+            <div key={`${item.name}-${item.quantity}`} className="checkout-item-row">
               <span>
                 {item.quantity}x {item.name}
               </span>
@@ -373,46 +360,46 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
           ))}
         </div>
 
-        <div style={styles.totalRow}>
+        <div className="checkout-total-row">
           <span>Total</span>
           <strong>{order.totalLabel}</strong>
         </div>
       </section>
 
-      <section style={styles.paymentPanel}>
-        <p style={styles.sectionTitle}>Pagamento</p>
-        <div style={styles.tabs}>
+      <section className="checkout-payment-panel">
+        <p className="checkout-section-title">Pagamento</p>
+        <div className="checkout-tabs">
           <button
             type="button"
-            style={mode === "pix" ? styles.tabActive : styles.tab}
+            className={mode === "pix" ? "checkout-tab is-active" : "checkout-tab"}
             onClick={() => setMode("pix")}
           >
             Pix
           </button>
           <button
             type="button"
-            style={mode === "card" ? styles.tabActive : styles.tab}
+            className={mode === "card" ? "checkout-tab is-active" : "checkout-tab"}
             onClick={() => setMode("card")}
           >
             Cartão
           </button>
         </div>
 
-        <div style={styles.formBlock}>
-          <label style={styles.label}>
+        <div className="checkout-form-block">
+          <label className="checkout-label">
             E-mail
             <input
-              style={styles.input}
+              className="checkout-input"
               inputMode="email"
               placeholder="seuemail@exemplo.com"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
             />
           </label>
-          <label style={styles.label}>
+          <label className="checkout-label">
             CPF
             <input
-              style={styles.input}
+              className="checkout-input"
               inputMode="numeric"
               placeholder="Somente números"
               value={identificationNumber}
@@ -424,31 +411,31 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
         </div>
 
         {mode === "card" ? (
-          <div style={styles.formBlock}>
-            <label style={styles.label}>
+          <div className="checkout-form-block">
+            <label className="checkout-label">
               Número do cartão
               <input
-                style={styles.input}
+                className="checkout-input"
                 inputMode="numeric"
                 placeholder="0000 0000 0000 0000"
                 value={cardNumber}
                 onChange={(event) => setCardNumber(formatCardNumber(event.target.value))}
               />
             </label>
-            <label style={styles.label}>
+            <label className="checkout-label">
               Nome impresso no cartão
               <input
-                style={styles.input}
+                className="checkout-input"
                 placeholder="Nome do titular"
                 value={cardholderName}
                 onChange={(event) => setCardholderName(event.target.value)}
               />
             </label>
-            <div style={styles.gridThree}>
-              <label style={styles.label}>
+            <div className="checkout-grid-three">
+              <label className="checkout-label">
                 Validade
                 <input
-                  style={styles.input}
+                  className="checkout-input"
                   inputMode="numeric"
                   placeholder="MM/AA"
                   value={expiration}
@@ -457,10 +444,10 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
                   }
                 />
               </label>
-              <label style={styles.label}>
+              <label className="checkout-label">
                 CVV
                 <input
-                  style={styles.input}
+                  className="checkout-input"
                   inputMode="numeric"
                   placeholder="000"
                   value={securityCode}
@@ -469,10 +456,10 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
                   }
                 />
               </label>
-              <label style={styles.label}>
+              <label className="checkout-label">
                 Parcelas
                 <select
-                  style={styles.input}
+                  className="checkout-input"
                   value={installments}
                   onChange={(event) => setInstallments(Number(event.target.value))}
                 >
@@ -484,7 +471,7 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
             </div>
             <button
               type="button"
-              style={styles.primaryButton}
+              className="checkout-primary-button"
               onClick={submitCard}
               disabled={loading}
             >
@@ -492,22 +479,26 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
             </button>
           </div>
         ) : (
-          <div style={styles.formBlock}>
+          <div className="checkout-form-block">
             <button
               type="button"
-              style={styles.primaryButton}
+              className="checkout-primary-button"
               onClick={submitPix}
               disabled={loading}
             >
               {loading ? "Gerando Pix..." : `Gerar Pix de ${order.totalLabel}`}
             </button>
             {pixCode ? (
-              <div style={styles.pixBox}>
-                <label style={styles.label}>
+              <div className="checkout-pix-box">
+                <label className="checkout-label">
                   Pix copia e cola
-                  <textarea style={styles.textarea} value={pixCode} readOnly />
+                  <textarea className="checkout-textarea" value={pixCode} readOnly />
                 </label>
-                <button type="button" style={styles.secondaryButton} onClick={copyPixCode}>
+                <button
+                  type="button"
+                  className="checkout-secondary-button"
+                  onClick={copyPixCode}
+                >
                   Copiar código Pix
                 </button>
               </div>
@@ -515,252 +506,8 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
           </div>
         )}
 
-        {message ? <p style={styles.message}>{message}</p> : null}
+        {message ? <p className="checkout-message">{message}</p> : null}
       </section>
     </main>
   );
 }
-
-const baseButton = {
-  border: 0,
-  borderRadius: 8,
-  cursor: "pointer",
-  fontSize: 15,
-  fontWeight: 700,
-  minHeight: 52,
-  padding: "0 18px",
-} satisfies React.CSSProperties;
-
-const styles: Record<string, React.CSSProperties> = {
-  shell: {
-    minHeight: "100vh",
-    background: "linear-gradient(135deg, #0f172a 0%, #111827 42%, #fb7000 160%)",
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 520px))",
-    gap: 22,
-    justifyContent: "center",
-    alignItems: "start",
-    padding: "28px 16px",
-    fontFamily: "Arial, sans-serif",
-  },
-  summaryPanel: {
-    background: "#ffffff",
-    borderRadius: 18,
-    color: "#111827",
-    padding: 22,
-  },
-  paymentPanel: {
-    background: "#ffffff",
-    borderRadius: 18,
-    padding: 22,
-  },
-  eyebrow: {
-    color: "#fb7000",
-    fontSize: 13,
-    fontWeight: 800,
-    margin: "0 0 6px",
-    textTransform: "uppercase",
-  },
-  title: {
-    margin: 0,
-    fontSize: 28,
-    color: "#111827",
-  },
-  muted: {
-    color: "#4b5563",
-    lineHeight: 1.5,
-  },
-  items: {
-    borderTop: "1px solid #e5e7eb",
-    marginTop: 18,
-    paddingTop: 16,
-    display: "grid",
-    gap: 12,
-  },
-  itemRow: {
-    display: "flex",
-    gap: 12,
-    justifyContent: "space-between",
-    fontSize: 14,
-    lineHeight: 1.4,
-  },
-  totalRow: {
-    borderTop: "1px solid #e5e7eb",
-    display: "flex",
-    justifyContent: "space-between",
-    marginTop: 20,
-    paddingTop: 18,
-    fontSize: 22,
-    fontWeight: 800,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 800,
-    margin: "0 0 14px",
-  },
-  tabs: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 10,
-    marginBottom: 18,
-  },
-  tab: {
-    ...baseButton,
-    background: "#f3f4f6",
-    color: "#111827",
-  },
-  tabActive: {
-    ...baseButton,
-    background: "#fb7000",
-    color: "#fff",
-  },
-  formBlock: {
-    display: "grid",
-    gap: 14,
-    marginTop: 16,
-  },
-  label: {
-    color: "#111827",
-    display: "grid",
-    fontSize: 13,
-    fontWeight: 700,
-    gap: 6,
-  },
-  input: {
-    background: "#ffffff",
-    border: "1px solid #d1d5db",
-    borderRadius: 8,
-    boxSizing: "border-box",
-    color: "#111827",
-    fontSize: 15,
-    minHeight: 46,
-    padding: "0 14px",
-    width: "100%",
-  },
-  gridThree: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 120px), 1fr))",
-    gap: 12,
-  },
-  primaryButton: {
-    ...baseButton,
-    background: "#fb7000",
-    color: "#fff",
-    marginTop: 6,
-  },
-  secondaryButton: {
-    ...baseButton,
-    background: "#111827",
-    color: "#fff",
-  },
-  pixBox: {
-    background: "#f9fafb",
-    border: "1px solid #e5e7eb",
-    borderRadius: 12,
-    display: "grid",
-    gap: 12,
-    padding: 14,
-  },
-  textarea: {
-    border: "1px solid #d1d5db",
-    borderRadius: 8,
-    boxSizing: "border-box",
-    fontSize: 14,
-    minHeight: 120,
-    padding: 12,
-    resize: "vertical",
-    width: "100%",
-  },
-  message: {
-    background: "#fff7ed",
-    border: "1px solid #fed7aa",
-    borderRadius: 10,
-    color: "#9a3412",
-    lineHeight: 1.45,
-    marginTop: 16,
-    padding: 12,
-  },
-  successShell: {
-    minHeight: "100vh",
-    background: "linear-gradient(135deg, #052e1a 0%, #0f172a 58%, #16a34a 150%)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "28px 16px",
-    fontFamily: "Arial, sans-serif",
-  },
-  successPanel: {
-    background: "#ffffff",
-    borderRadius: 18,
-    boxShadow: "0 24px 80px rgba(0, 0, 0, 0.22)",
-    color: "#111827",
-    maxWidth: 520,
-    padding: 28,
-    textAlign: "center",
-    width: "100%",
-  },
-  successIconWrap: {
-    animation: "checkout-success-pop 520ms ease-out both",
-    background: "#16a34a",
-    borderRadius: "50%",
-    height: 92,
-    margin: "0 auto 18px",
-    position: "relative",
-    width: 92,
-  },
-  successIconKick: {
-    animation: "checkout-check-fade 180ms ease-out 360ms both",
-    background: "#ffffff",
-    borderRadius: 999,
-    height: 8,
-    left: 26,
-    position: "absolute",
-    top: 51,
-    transform: "rotate(45deg)",
-    transformOrigin: "left center",
-    width: 24,
-  },
-  successIconStem: {
-    animation: "checkout-check-fade 180ms ease-out 520ms both",
-    background: "#ffffff",
-    borderRadius: 999,
-    height: 8,
-    left: 42,
-    position: "absolute",
-    top: 59,
-    transform: "rotate(-45deg)",
-    transformOrigin: "left center",
-    width: 40,
-  },
-  successEyebrow: {
-    color: "#16a34a",
-    fontSize: 13,
-    fontWeight: 800,
-    letterSpacing: 0,
-    margin: "0 0 8px",
-    textTransform: "uppercase",
-  },
-  successTitle: {
-    color: "#16a34a",
-    fontSize: 30,
-    margin: 0,
-  },
-  successText: {
-    color: "#374151",
-    fontSize: 16,
-    lineHeight: 1.5,
-    margin: "12px 0 0",
-  },
-  successSummary: {
-    background: "#f0fdf4",
-    border: "1px solid #bbf7d0",
-    borderRadius: 12,
-    color: "#166534",
-    display: "flex",
-    fontSize: 18,
-    fontWeight: 800,
-    justifyContent: "space-between",
-    marginTop: 22,
-    padding: 16,
-  },
-};

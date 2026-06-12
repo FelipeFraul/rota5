@@ -641,18 +641,6 @@ function formatDateTime(startsAt: string) {
     .replace(",", " às");
 }
 
-function formatSearchSessionStatus(status: string) {
-  if (status === "sales_open") {
-    return "vendas abertas";
-  }
-
-  if (status === "scheduled") {
-    return "em breve";
-  }
-
-  return status;
-}
-
 function formatCurrencyFromCents(cents: number) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
