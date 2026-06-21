@@ -80,6 +80,7 @@ export type TicketConversationStep =
   | "showing_sections"
   | "selecting_quantity"
   | "showing_seats"
+  | "reviewing_cart"
   | "reservation_created"
   | "help_topic_collecting"
   | "help_results"
@@ -157,6 +158,26 @@ export type TicketConversationSeatOption = {
 export type TicketConversationSelectedSeat = {
   seatId: string;
   seatCode: string;
+};
+
+export type TicketConversationCartItem = {
+  sectionId: string;
+  sectionName: string;
+  hasNumberedSeats: boolean;
+  ticketPriceId: string;
+  ticketType: string;
+  ticketLabel: string;
+  priceCents: number;
+  feeCents: number;
+  currency: string;
+  quantity: number;
+  seats?: TicketConversationSelectedSeat[];
+};
+
+export type TicketConversationCart = {
+  eventId: string;
+  sessionId: string;
+  items: TicketConversationCartItem[];
 };
 
 export type TicketConversationReservation = {
@@ -385,6 +406,7 @@ export type TicketConversationState = {
   selectedSection?: TicketConversationSelectedSection;
   selectedSeat?: TicketConversationSelectedSeat;
   selectedQuantity?: number;
+  cart?: TicketConversationCart;
   eventMoreInfoShown?: boolean;
   publicHelp?: TicketConversationPublicHelp;
   ticketResend?: TicketConversationTicketResend;

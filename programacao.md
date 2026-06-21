@@ -451,18 +451,23 @@ Netto Tomaz é um dos nomes que ganharam destaque nacional por meio das pegadinh
 
 Em seu espetáculo de stand-up, Netto reúne histórias, causos e observações inspiradas em experiências vividas ao longo de sua trajetória no humor. Com um estilo espontâneo e acessível, transforma situações simples em momentos de identificação e muitas risadas.
 
+Cadeira
 Cadeira Individual (TODOS pagam meia)
 R$ 30,00
 
+Balcão
 1ª FILEIRA (com balcão) - cadeira Individual
 R$ 40,00
 
+Mesa
 Poltrona+Mesa 2 lugares (1 deste vale para 2)
 R$ 100,00
 
+Mesa
 Poltrona+Mesa 4 lugares (1 deste vale para 4)
 R$ 180,00
 
+Cadeira
 Cadeira Individual (Inteira)
 R$ 60,00
 

@@ -40,6 +40,26 @@ export type ReserveUnnumberedSectionInput = {
   skipBuyerRisk?: boolean;
 };
 
+export type ReserveTicketCartItemInput = {
+  sectionId: string;
+  ticketPriceId: string;
+  quantity: number;
+  priceCents: number;
+  feeCents: number;
+  currency: string;
+  seatIds?: string[];
+};
+
+export type ReserveTicketCartInput = {
+  customerId: string;
+  conversationId: string;
+  eventId: string;
+  sessionId: string;
+  items: ReserveTicketCartItemInput[];
+  sourceIdentifier?: string | null;
+  skipBuyerRisk?: boolean;
+};
+
 export type ReserveSelectedSeatSuccess = {
   reservationId: string;
   orderId: string;
@@ -655,6 +675,295 @@ export async function reserveUnnumberedSectionTickets({
       reservationId: reservation.reservationId,
       orderId: reservation.orderId,
       quantity,
+    });
+  }
+
+  return {
+    ok: true,
+    reservation,
+  };
+}
+
+export async function reserveTicketCart({
+  customerId,
+  conversationId,
+  eventId,
+  sessionId,
+  items,
+  sourceIdentifier,
+  skipBuyerRisk = false,
+}: ReserveTicketCartInput): Promise<ReserveSelectedSeatResult> {
+  const activeReservation =
+    await findActivePendingReservationForCustomer(customerId);
+
+  if (activeReservation) {
+    return {
+      ok: false,
+      reason: "active_reservation_exists",
+      reservation: activeReservation,
+    };
+  }
+
+  const totalQuantity = items.reduce((total, item) => total + item.quantity, 0);
+
+  if (
+    items.length === 0 ||
+    !items.every(
+      (item) =>
+        item.sectionId &&
+        item.ticketPriceId &&
+        Number.isInteger(item.quantity) &&
+        item.quantity > 0 &&
+        Number.isInteger(item.priceCents) &&
+        item.priceCents >= 0 &&
+        Number.isInteger(item.feeCents) &&
+        item.feeCents >= 0 &&
+        item.currency === "BRL",
+    ) ||
+    totalQuantity > 10
+  ) {
+    return { ok: false, reason: "seat_unavailable" };
+  }
+
+  const selectedSession = await getValidatedEventSession({ eventId, sessionId });
+
+  if (!selectedSession) {
+    return { ok: false, reason: "session_not_available" };
+  }
+
+  const itemsBySection = new Map<string, ReserveTicketCartItemInput[]>();
+
+  for (const item of items) {
+    const sectionItems = itemsBySection.get(item.sectionId) ?? [];
+    sectionItems.push(item);
+    itemsBySection.set(item.sectionId, sectionItems);
+  }
+
+  const resolvedSections = new Map<
+    string,
+    NonNullable<Awaited<ReturnType<typeof getAvailableSectionForSession>>>
+  >();
+  let freeQuantity = 0;
+
+  for (const [sectionId, sectionItems] of itemsBySection) {
+    const section = await getAvailableSectionForSession({
+      sessionId: selectedSession.sessionId,
+      sectionId,
+      venueId: selectedSession.venueId,
+    });
+
+    if (!section) {
+      return { ok: false, reason: "seat_unavailable" };
+    }
+
+    for (const item of sectionItems) {
+      const ticketPrice = section.ticketTypes.find(
+        (candidate) => candidate.ticketPriceId === item.ticketPriceId,
+      );
+
+      if (!ticketPrice) {
+        return { ok: false, reason: "ticket_price_not_found" };
+      }
+
+      if (
+        ticketPrice.priceCents !== item.priceCents ||
+        ticketPrice.feeCents !== item.feeCents ||
+        ticketPrice.currency !== item.currency
+      ) {
+        return { ok: false, reason: "ticket_price_not_found" };
+      }
+
+      if (ticketPrice.priceCents === 0 && ticketPrice.feeCents === 0) {
+        freeQuantity += item.quantity;
+      }
+
+      if (
+        section.hasNumberedSeats &&
+        (!item.seatIds || item.seatIds.length !== item.quantity)
+      ) {
+        return { ok: false, reason: "seat_unavailable" };
+      }
+
+      if (!section.hasNumberedSeats && item.seatIds?.length) {
+        return { ok: false, reason: "seat_unavailable" };
+      }
+    }
+
+    resolvedSections.set(sectionId, section);
+  }
+
+  if (freeQuantity > 4) {
+    return { ok: false, reason: "seat_unavailable" };
+  }
+
+  if (!skipBuyerRisk) {
+    const risk = await checkReservationRisk({
+      customerId,
+      eventId,
+      sessionId: selectedSession.sessionId,
+      sourceIdentifier,
+      quantity: totalQuantity,
+    });
+
+    if (!risk.allowed) {
+      return {
+        ok: false,
+        reason: "buyer_risk_limited",
+        retryAfterMinutes: risk.retryAfterMinutes,
+      };
+    }
+  }
+
+  const rpcItems: Array<{
+    seat_id: string;
+    ticket_price_id: string;
+    expected_price_cents: number;
+    expected_fee_cents: number;
+    expected_currency: string;
+  }> = [];
+  const usedSeatIds = new Set<string>();
+
+  for (const [sectionId, sectionItems] of itemsBySection) {
+    const section = resolvedSections.get(sectionId);
+
+    if (!section) {
+      return { ok: false, reason: "seat_unavailable" };
+    }
+
+    if (section.hasNumberedSeats) {
+      for (const item of sectionItems) {
+        const validatedSeats = await Promise.all(
+          (item.seatIds ?? []).map((seatId) =>
+            getValidatedSeatForReservation({
+              sessionId: selectedSession.sessionId,
+              sectionId,
+              seatId,
+            }),
+          ),
+        );
+
+        if (validatedSeats.some((seat) => !seat)) {
+          return { ok: false, reason: "seat_unavailable" };
+        }
+
+        for (const seat of validatedSeats) {
+          if (!seat || usedSeatIds.has(seat.seatId)) {
+            return { ok: false, reason: "seat_unavailable" };
+          }
+
+          usedSeatIds.add(seat.seatId);
+          rpcItems.push({
+            seat_id: seat.seatId,
+            ticket_price_id: item.ticketPriceId,
+            expected_price_cents: item.priceCents,
+            expected_fee_cents: item.feeCents,
+            expected_currency: item.currency,
+          });
+        }
+      }
+
+      continue;
+    }
+
+    const sectionQuantity = sectionItems.reduce(
+      (total, item) => total + item.quantity,
+      0,
+    );
+    let availableSeats = await listAvailableSeats({
+      sessionId: selectedSession.sessionId,
+      sectionId,
+      limit: sectionQuantity,
+    });
+
+    if (
+      availableSeats.seats.length < sectionQuantity &&
+      section.availableSeatsCount >= 999_999
+    ) {
+      await createOnDemandUnnumberedSeats({
+        sessionId: selectedSession.sessionId,
+        sectionId,
+        quantity: sectionQuantity - availableSeats.seats.length,
+      });
+      availableSeats = await listAvailableSeats({
+        sessionId: selectedSession.sessionId,
+        sectionId,
+        limit: sectionQuantity,
+      });
+    }
+
+    if (availableSeats.seats.length < sectionQuantity) {
+      return { ok: false, reason: "not_enough_seats" };
+    }
+
+    let seatIndex = 0;
+
+    for (const item of sectionItems) {
+      for (let index = 0; index < item.quantity; index += 1) {
+        const seat = availableSeats.seats[seatIndex];
+        seatIndex += 1;
+
+        if (!seat || usedSeatIds.has(seat.seatId)) {
+          return { ok: false, reason: "seat_unavailable" };
+        }
+
+        usedSeatIds.add(seat.seatId);
+        rpcItems.push({
+          seat_id: seat.seatId,
+          ticket_price_id: item.ticketPriceId,
+          expected_price_cents: item.priceCents,
+          expected_fee_cents: item.feeCents,
+          expected_currency: item.currency,
+        });
+      }
+    }
+  }
+
+  const env = getEnv();
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.rpc("reserve_ticket_cart", {
+    p_customer_id: customerId,
+    p_conversation_id: conversationId,
+    p_session_id: selectedSession.sessionId,
+    p_items: rpcItems,
+    p_ttl_minutes: env.TICKET_RESERVATION_TTL_MINUTES,
+  });
+
+  if (error) {
+    if (getPostgresErrorMessage(error).includes("active_reservation_exists")) {
+      const concurrentReservation =
+        await findActivePendingReservationForCustomer(customerId);
+
+      if (concurrentReservation) {
+        return {
+          ok: false,
+          reason: "active_reservation_exists",
+          reservation: concurrentReservation,
+        };
+      }
+    }
+
+    return {
+      ok: false,
+      reason: mapReserveError(error),
+      error,
+    };
+  }
+
+  if (!data || typeof data !== "object") {
+    return { ok: false, reason: "reservation_failed" };
+  }
+
+  const reservation = mapRpcResponse(data as ReserveSeatsRpcResponse);
+
+  if (!skipBuyerRisk) {
+    await recordReservationCreated({
+      customerId,
+      eventId,
+      sessionId: selectedSession.sessionId,
+      sourceIdentifier,
+      reservationId: reservation.reservationId,
+      orderId: reservation.orderId,
+      quantity: totalQuantity,
     });
   }
 

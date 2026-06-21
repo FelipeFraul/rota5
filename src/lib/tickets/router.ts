@@ -3,6 +3,8 @@ import "server-only";
 import { logError } from "@/lib/logger";
 import {
   buildInitialConversationState,
+  type TicketConversationCart,
+  type TicketConversationCartItem,
   type TicketConversationEventOption,
   type TicketConversationSearch,
   type TicketConversationSectionOption,
@@ -41,8 +43,7 @@ import {
 import { buildSeatMapPngDataUrl } from "@/lib/tickets/services/seatMapImage";
 import {
   cancelPendingReservationForCustomer,
-  reserveUnnumberedSectionTickets,
-  reserveSelectedSeat,
+  reserveTicketCart,
   type ReserveSelectedSeatResult,
   type ReserveSelectedSeatSuccess,
 } from "@/lib/tickets/services/reservations";
@@ -1105,6 +1106,146 @@ function getMaxTicketsPerOrder(
   return isPublicFreeTicketType(ticketType) ? 4 : 10;
 }
 
+function getCartQuantity(cart?: TicketConversationCart) {
+  return cart?.items.reduce((total, item) => total + item.quantity, 0) ?? 0;
+}
+
+function getCartFreeQuantity(cart?: TicketConversationCart) {
+  return (
+    cart?.items.reduce(
+      (total, item) =>
+        total +
+        (item.priceCents === 0 && item.feeCents === 0 ? item.quantity : 0),
+      0,
+    ) ?? 0
+  );
+}
+
+function getCartSectionQuantity(
+  cart: TicketConversationCart | undefined,
+  sectionId: string,
+) {
+  return (
+    cart?.items.reduce(
+      (total, item) =>
+        total + (item.sectionId === sectionId ? item.quantity : 0),
+      0,
+    ) ?? 0
+  );
+}
+
+function getCartSeatIds(cart?: TicketConversationCart) {
+  return new Set(
+    cart?.items.flatMap((item) =>
+      (item.seats ?? []).map((seat) => seat.seatId),
+    ) ?? [],
+  );
+}
+
+function addSelectionToCart({
+  cart,
+  selectedEvent,
+  selectedSection,
+  quantity,
+  seats,
+}: {
+  cart?: TicketConversationCart;
+  selectedEvent: TicketConversationSelectedEvent;
+  selectedSection: TicketConversationSelectedSection;
+  quantity: number;
+  seats?: TicketConversationSelectedSeat[];
+}) {
+  const ticket = selectedSection.selectedTicketType;
+
+  if (!ticket) return null;
+  if (
+    cart &&
+    (cart.eventId !== selectedEvent.eventId ||
+      cart.sessionId !== selectedEvent.sessionId)
+  ) {
+    return null;
+  }
+
+  const nextItem: TicketConversationCartItem = {
+    sectionId: selectedSection.sectionId,
+    sectionName: selectedSection.sectionName,
+    hasNumberedSeats: selectedSection.hasNumberedSeats,
+    ticketPriceId: ticket.ticketPriceId,
+    ticketType: ticket.ticketType,
+    ticketLabel: ticket.label,
+    priceCents: ticket.priceCents,
+    feeCents: ticket.feeCents,
+    currency: ticket.currency,
+    quantity,
+    ...(seats?.length ? { seats } : {}),
+  };
+  const existingItems = cart?.items ?? [];
+  const matchingIndex = existingItems.findIndex(
+    (item) => item.ticketPriceId === ticket.ticketPriceId,
+  );
+  let nextItems: TicketConversationCartItem[];
+
+  if (matchingIndex < 0) {
+    nextItems = [...existingItems, nextItem];
+  } else {
+    const matchingItem = existingItems[matchingIndex]!;
+    const mergedSeats = [
+      ...(matchingItem.seats ?? []),
+      ...(nextItem.seats ?? []),
+    ];
+    const uniqueSeatIds = new Set(mergedSeats.map((seat) => seat.seatId));
+
+    if (uniqueSeatIds.size !== mergedSeats.length) return null;
+
+    nextItems = existingItems.map((item, index) =>
+      index === matchingIndex
+        ? {
+            ...item,
+            quantity: item.quantity + quantity,
+            ...(mergedSeats.length ? { seats: mergedSeats } : {}),
+          }
+        : item,
+    );
+  }
+
+  return {
+    eventId: selectedEvent.eventId,
+    sessionId: selectedEvent.sessionId,
+    items: nextItems,
+  } satisfies TicketConversationCart;
+}
+
+function formatCartDecisionReply({
+  cart,
+  latestItem,
+}: {
+  cart: TicketConversationCart;
+  latestItem: TicketConversationCartItem;
+}) {
+  const totalAmountCents = cart.items.reduce(
+    (total, item) => total + item.priceCents * item.quantity,
+    0,
+  );
+  const totalFeeCents = cart.items.reduce(
+    (total, item) => total + item.feeCents * item.quantity,
+    0,
+  );
+
+  return [
+    "*ITEM ADICIONADO À COMPRA*",
+    `> Ingresso: ${latestItem.ticketLabel}`,
+    `> Quantidade: ${latestItem.quantity}`,
+    ...(latestItem.seats?.length
+      ? [`> Assentos: ${latestItem.seats.map((seat) => seat.seatCode).join(", ")}`]
+      : []),
+    "",
+    `> Total da compra: ${formatPriceWithOptionalFee(totalAmountCents, totalFeeCents)}`,
+    "",
+    "Digite 1 para *continuar comprando*",
+    "Digite 2 para *finalizar a compra*",
+  ].join("\n");
+}
+
 function formatSeatsReply({
   seatMap,
   ticketType,
@@ -1231,6 +1372,7 @@ function resetBuyerReservationContext(
     selectedSection: undefined,
     selectedSeat: undefined,
     selectedQuantity: undefined,
+    cart: undefined,
     eventMoreInfoShown: undefined,
     lastSeats: [],
     lastSections: [],
@@ -1774,28 +1916,46 @@ function buildSelectedSeatContext(
   };
 }
 
+function formatCartSummaryLines(cart: TicketConversationCart) {
+  return cart.items.flatMap((item, index) => [
+    ...(index > 0 ? ["---"] : []),
+    `> Setor: ${item.sectionName}`,
+    `> Ingresso: ${item.ticketLabel}`,
+    ...(item.seats?.length
+      ? [`> Assentos: ${item.seats.map((seat) => seat.seatCode).join(", ")}`]
+      : []),
+    `> Quantidade: ${item.quantity}`,
+  ]);
+}
+
 function formatReservationReply({
   selectedEvent,
   selectedSection,
   selectedSeat,
   reservation,
+  cart,
 }: {
   selectedEvent: TicketConversationSelectedEvent;
   selectedSection: TicketConversationSelectedSection;
   selectedSeat?: TicketConversationSelectedSeat;
   reservation: ReserveSelectedSeatSuccess;
+  cart?: TicketConversationCart;
 }) {
   const quantity = reservation.items.length || 1;
 
   return [
     "RESERVA CRIADA. VOCÊ TEM 10 MINUTOS PARA EFETUAR A COMPRA",
     `> Evento: ${selectedEvent.title}`,
-    `> Setor: ${selectedSection.sectionName}`,
-    ...(selectedSection.selectedTicketType
-      ? [`> Ingresso: ${selectedSection.selectedTicketType.label}`]
-      : []),
-    ...(selectedSeat ? [`> Assento: ${selectedSeat.seatCode}`] : []),
-    `> Quantidade: ${quantity}`,
+    ...(cart
+      ? formatCartSummaryLines(cart)
+      : [
+          `> Setor: ${selectedSection.sectionName}`,
+          ...(selectedSection.selectedTicketType
+            ? [`> Ingresso: ${selectedSection.selectedTicketType.label}`]
+            : []),
+          ...(selectedSeat ? [`> Assento: ${selectedSeat.seatCode}`] : []),
+          `> Quantidade: ${quantity}`,
+        ]),
     "",
     `Valor: ${formatPriceWithOptionalFee(reservation.totalAmountCents, reservation.totalFeeCents)}`,
     `> Reserva válida até: ${formatTime(reservation.expiresAt)}`,
@@ -1810,22 +1970,28 @@ function formatReservationContextReply({
   selectedSeat,
   reservation,
   quantity = 1,
+  cart,
 }: {
   selectedEvent?: TicketConversationSelectedEvent;
   selectedSection?: TicketConversationSelectedSection;
   selectedSeat?: TicketConversationSelectedSeat;
   reservation: TicketConversationReservation;
   quantity?: number;
+  cart?: TicketConversationCart;
 }) {
   return [
     "RESERVA EM ANDAMENTO. VOCÊ AINDA PODE EFETUAR A COMPRA",
     ...(selectedEvent ? [`> Evento: ${selectedEvent.title}`] : []),
-    ...(selectedSection ? [`> Setor: ${selectedSection.sectionName}`] : []),
-    ...(selectedSection?.selectedTicketType
-      ? [`> Ingresso: ${selectedSection.selectedTicketType.label}`]
-      : []),
-    ...(selectedSeat ? [`> Assento: ${selectedSeat.seatCode}`] : []),
-    `> Quantidade: ${quantity}`,
+    ...(cart
+      ? formatCartSummaryLines(cart)
+      : [
+          ...(selectedSection ? [`> Setor: ${selectedSection.sectionName}`] : []),
+          ...(selectedSection?.selectedTicketType
+            ? [`> Ingresso: ${selectedSection.selectedTicketType.label}`]
+            : []),
+          ...(selectedSeat ? [`> Assento: ${selectedSeat.seatCode}`] : []),
+          `> Quantidade: ${quantity}`,
+        ]),
     "",
     `Valor: ${formatPriceWithOptionalFee(reservation.totalAmountCents, reservation.totalFeeCents)}`,
     `> Reserva válida até: ${formatTime(reservation.expiresAt)}`,
@@ -1840,12 +2006,14 @@ function formatPaymentLinkReply({
   selectedSeat,
   reservation,
   checkout,
+  cart,
 }: {
   selectedEvent?: TicketConversationSelectedEvent;
   selectedSection?: TicketConversationSelectedSection;
   selectedSeat?: TicketConversationSelectedSeat;
   reservation?: TicketConversationReservation;
   checkout: CheckoutForReservation;
+  cart?: TicketConversationCart;
 }) {
   const totalLabel = reservation
     ? formatPriceWithOptionalFee(
@@ -1856,8 +2024,12 @@ function formatPaymentLinkReply({
   const lines = [
     "*LINK DE PAGAMENTO GERADO*",
     ...(selectedEvent ? [`> Evento: ${selectedEvent.title}`] : []),
-    ...(selectedSection ? [`> Setor: ${selectedSection.sectionName}`] : []),
-    ...(selectedSeat ? [`> Assento: ${selectedSeat.seatCode}`] : []),
+    ...(cart
+      ? formatCartSummaryLines(cart)
+      : [
+          ...(selectedSection ? [`> Setor: ${selectedSection.sectionName}`] : []),
+          ...(selectedSeat ? [`> Assento: ${selectedSeat.seatCode}`] : []),
+        ]),
     `> Total: ${totalLabel}`,
     "",
     "Pague clicando neste link (crédito ou pix):",
@@ -8184,74 +8356,6 @@ async function renderBuyerQuantityStep({
   };
 }
 
-async function renderBuyerSeatsStep({
-  baseContext,
-  selectedEvent,
-  selectedSection,
-  quantity,
-}: {
-  baseContext: TicketConversationState;
-  selectedEvent?: TicketConversationSelectedEvent;
-  selectedSection?: TicketConversationSelectedSection;
-  quantity?: number;
-}): Promise<RouteTicketMessageOutput> {
-  if (!selectedEvent || !selectedSection || !selectedSection.hasNumberedSeats) {
-    return renderBuyerQuantityStep({ baseContext, selectedEvent, selectedSection });
-  }
-
-  const selectedSession = await getValidatedEventSession({
-    eventId: selectedEvent.eventId,
-    sessionId: selectedEvent.sessionId,
-  });
-
-  if (!selectedSession) {
-    return renderBuyerQuantityStep({ baseContext, selectedEvent, selectedSection });
-  }
-
-  const seatMap = await listSeatMap({
-    sessionId: selectedSession.sessionId,
-    sectionId: selectedSection.sectionId,
-  });
-  const selectedQuantity = Math.max(1, quantity ?? 1);
-
-  if (seatMap.availableSeats.length < selectedQuantity) {
-    return renderBuyerQuantityStep({ baseContext, selectedEvent, selectedSection });
-  }
-
-  const seatsReply = formatSeatsReply({
-    seatMap,
-    ticketType: selectedSection.selectedTicketType,
-    quantity: selectedQuantity,
-  });
-
-  return {
-    reply: seatsReply,
-    outboundMessages: [
-      {
-        type: "image",
-        imageUrl: buildSeatMapPngDataUrl({
-          seatMap,
-          title: selectedSection.sectionName,
-          stageLabel: "PALCO",
-        }),
-        caption: seatsReply,
-      },
-    ],
-    nextContext: {
-      ...baseContext,
-      step: "showing_seats",
-      state: "showing_seats",
-      selectedEvent: buildSelectedEvent(selectedSession),
-      selectedSection,
-      selectedSeat: undefined,
-      selectedQuantity,
-      reservation: undefined,
-      payment: undefined,
-      lastSeats: buildSeatOptions(seatMap.availableSeats),
-    },
-  };
-}
-
 async function handleBuyerBack({
   baseContext,
   customerId,
@@ -8261,6 +8365,13 @@ async function handleBuyerBack({
   customerId: string;
   sourceIdentifier?: string | null;
 }): Promise<RouteTicketMessageOutput | null> {
+  if (baseContext.state === "reviewing_cart") {
+    return renderBuyerSectionsStep({
+      baseContext,
+      selectedEvent: baseContext.selectedEvent,
+    });
+  }
+
   if (baseContext.state === "showing_events") {
     return {
       reply: TICKET_MESSAGES.genericHelp,
@@ -8269,6 +8380,20 @@ async function handleBuyerBack({
   }
 
   if (baseContext.state === "showing_sections") {
+    if (baseContext.cart?.items.length) {
+      return {
+        reply: formatCartDecisionReply({
+          cart: baseContext.cart,
+          latestItem: baseContext.cart.items.at(-1)!,
+        }),
+        nextContext: {
+          ...baseContext,
+          step: "reviewing_cart",
+          state: "reviewing_cart",
+        },
+      };
+    }
+
     if (baseContext.lastEvents?.length) {
       return {
         reply: formatEventOptionsReply(baseContext.lastEvents),
@@ -8323,6 +8448,7 @@ async function handleBuyerBack({
         selectedSeat: baseContext.selectedSeat,
         reservation: baseContext.reservation,
         quantity: baseContext.selectedQuantity,
+        cart: baseContext.cart,
       }),
       nextContext: {
         ...baseContext,
@@ -8345,19 +8471,9 @@ async function handleBuyerBack({
       sourceIdentifier,
     });
 
-    if (baseContext.selectedSection?.hasNumberedSeats) {
-      return renderBuyerSeatsStep({
-        baseContext,
-        selectedEvent: baseContext.selectedEvent,
-        selectedSection: baseContext.selectedSection,
-        quantity: baseContext.selectedQuantity,
-      });
-    }
-
-    return renderBuyerQuantityStep({
-      baseContext,
+    return renderBuyerSectionsStep({
+      baseContext: { ...baseContext, cart: undefined },
       selectedEvent: baseContext.selectedEvent,
-      selectedSection: baseContext.selectedSection,
     });
   }
 
@@ -11769,6 +11885,7 @@ export async function routeTicketMessage({
         selectedSection: undefined,
         selectedSeat: undefined,
         selectedQuantity: undefined,
+        cart: undefined,
         eventMoreInfoShown: undefined,
         reservation: undefined,
         payment: undefined,
@@ -11857,6 +11974,7 @@ export async function routeTicketMessage({
           state: "idle",
           reservation: undefined,
           payment: undefined,
+          cart: undefined,
           selectedSeat: undefined,
           lastSeats: [],
           lastSections: [],
@@ -11872,6 +11990,7 @@ export async function routeTicketMessage({
         selectedSeat: previousState.selectedSeat,
         reservation: previousState.reservation,
         checkout: checkoutResult.checkout,
+        cart: previousState.cart,
       }),
       nextContext: {
         ...baseContext,
@@ -11904,6 +12023,7 @@ export async function routeTicketMessage({
           step: "idle",
           state: "idle",
           reservation: undefined,
+          cart: undefined,
           selectedSeat: undefined,
           lastSeats: [],
         },
@@ -11982,6 +12102,7 @@ export async function routeTicketMessage({
           state: "idle",
           reservation: undefined,
           payment: undefined,
+          cart: undefined,
           selectedSeat: undefined,
           lastSeats: [],
           lastSections: [],
@@ -11997,6 +12118,7 @@ export async function routeTicketMessage({
         selectedSeat: previousState.selectedSeat,
         reservation: previousState.reservation,
         checkout: checkoutResult.checkout,
+        cart: previousState.cart,
       }),
       nextContext: {
         ...baseContext,
@@ -12011,6 +12133,149 @@ export async function routeTicketMessage({
           currency: checkoutResult.checkout.currency,
         },
         payment: buildPaymentContext(checkoutResult.checkout),
+      },
+    };
+  }
+
+  if (previousState.state === "reviewing_cart") {
+    const selectedOption = /^\d+$/.test(text.trim()) ? Number(text.trim()) : null;
+
+    if (
+      !previousState.cart?.items.length ||
+      !previousState.selectedEvent ||
+      !previousState.selectedSection
+    ) {
+      return {
+        reply: "Não encontrei itens nessa compra. Escolha o ingresso novamente.",
+        nextContext: resetBuyerReservationContext(baseContext),
+      };
+    }
+
+    if (selectedOption === 1) {
+      return renderBuyerSectionsStep({
+        baseContext,
+        selectedEvent: previousState.selectedEvent,
+      });
+    }
+
+    if (selectedOption !== 2) {
+      const latestItem = previousState.cart.items.at(-1)!;
+
+      return {
+        reply: formatCartDecisionReply({
+          cart: previousState.cart,
+          latestItem,
+        }),
+        nextContext: {
+          ...baseContext,
+          step: "reviewing_cart",
+          state: "reviewing_cart",
+        },
+      };
+    }
+
+    const reservationResult = await reserveTicketCart({
+      customerId: customer.id,
+      conversationId: conversation.id,
+      eventId: previousState.selectedEvent.eventId,
+      sessionId: previousState.selectedEvent.sessionId,
+      items: previousState.cart.items.map((item) => ({
+        sectionId: item.sectionId,
+        ticketPriceId: item.ticketPriceId,
+        quantity: item.quantity,
+        priceCents: item.priceCents,
+        feeCents: item.feeCents,
+        currency: item.currency,
+        ...(item.seats?.length
+          ? { seatIds: item.seats.map((seat) => seat.seatId) }
+          : {}),
+      })),
+      sourceIdentifier,
+    });
+
+    if (!reservationResult.ok) {
+      if (reservationResult.reason === "active_reservation_exists") {
+        return {
+          reply: messageForReservationFailure(reservationResult),
+          nextContext: {
+            ...baseContext,
+            step: "reservation_created",
+            state: "reservation_created",
+            reservation: reservationResult.reservation,
+            cart: undefined,
+            selectedEvent: undefined,
+            selectedSection: undefined,
+            selectedSeat: undefined,
+            selectedQuantity: undefined,
+            lastSeats: [],
+          },
+        };
+      }
+
+      if (reservationResult.reason === "buyer_risk_limited") {
+        return {
+          reply: messageForReservationFailure(reservationResult),
+          nextContext: {
+            ...baseContext,
+            step: "reviewing_cart",
+            state: "reviewing_cart",
+          },
+        };
+      }
+
+      const sectionsResult = await renderBuyerSectionsStep({
+        baseContext: { ...baseContext, cart: undefined },
+        selectedEvent: previousState.selectedEvent,
+      });
+
+      return {
+        ...sectionsResult,
+        reply: [
+          "O estoque mudou antes da finalização e a reserva não foi criada. Selecione os ingressos novamente.",
+          "",
+          sectionsResult.reply,
+        ].join("\n"),
+      };
+    }
+
+    if (
+      reservationResult.reservation.totalAmountCents === 0 &&
+      reservationResult.reservation.totalFeeCents === 0
+    ) {
+      const issueResult = await issuePublicFreeTicketsForOrder({
+        orderId: reservationResult.reservation.orderId,
+        customerId: customer.id,
+      });
+
+      if (!issueResult.ok) {
+        return {
+          reply: formatPublicFreeTicketFailureMessage(issueResult),
+          nextContext: resetBuyerReservationContext(baseContext),
+        };
+      }
+
+      return {
+        reply: issueResult.delivery.message,
+        outboundMessages: buildPublicFreeTicketOutboundMessages(issueResult),
+        nextContext: resetBuyerReservationContext(baseContext),
+      };
+    }
+
+    return {
+      reply: formatReservationReply({
+        selectedEvent: previousState.selectedEvent,
+        selectedSection: previousState.selectedSection,
+        selectedSeat: previousState.selectedSeat,
+        reservation: reservationResult.reservation,
+        cart: previousState.cart,
+      }),
+      nextContext: {
+        ...baseContext,
+        step: "reservation_created",
+        state: "reservation_created",
+        selectedQuantity: getCartQuantity(previousState.cart),
+        reservation: buildReservationContext(reservationResult.reservation),
+        lastSeats: [],
       },
     };
   }
@@ -12059,13 +12324,69 @@ export async function routeTicketMessage({
       };
     }
 
+    const nextCartQuantity = getCartQuantity(previousState.cart) + quantity;
+    const nextFreeQuantity =
+      getCartFreeQuantity(previousState.cart) +
+      (isPublicFreeTicketType(previousState.selectedSection.selectedTicketType)
+        ? quantity
+        : 0);
+
+    if (nextCartQuantity > 10 || nextFreeQuantity > 4) {
+      return {
+        reply:
+          nextFreeQuantity > 4
+            ? "Para ingresso gratuito, o máximo são 4 ingressos por pedido. Escolha uma quantidade menor."
+            : "A compra pode ter no máximo 10 ingressos no total. Escolha uma quantidade menor.",
+        nextContext: {
+          ...baseContext,
+          step: "selecting_quantity",
+          state: "selecting_quantity",
+        },
+      };
+    }
+
+    const sectionQuantityInCart = getCartSectionQuantity(
+      previousState.cart,
+      previousState.selectedSection.sectionId,
+    );
+
+    if (
+      previousState.selectedSection.availableSeatsCount < 999_999 &&
+      sectionQuantityInCart + quantity >
+        previousState.selectedSection.availableSeatsCount
+    ) {
+      return {
+        reply: TICKET_MESSAGES.noSeatsAvailable,
+        nextContext: {
+          ...baseContext,
+          step: "selecting_quantity",
+          state: "selecting_quantity",
+        },
+      };
+    }
+
     if (previousState.selectedSection.hasNumberedSeats) {
       const seatMap = await listSeatMap({
         sessionId: previousState.selectedEvent.sessionId,
         sectionId: previousState.selectedSection.sectionId,
       });
+      const cartSeatIds = getCartSeatIds(previousState.cart);
+      const selectableSeatMap: SeatMap = {
+        ...seatMap,
+        seats: seatMap.seats.map((seat) =>
+          cartSeatIds.has(seat.seatId)
+            ? { ...seat, status: "selected_in_cart", isAvailable: false }
+            : seat,
+        ),
+        availableSeats: seatMap.availableSeats.filter(
+          (seat) => !cartSeatIds.has(seat.seatId),
+        ),
+        totalAvailableCount: seatMap.availableSeats.filter(
+          (seat) => !cartSeatIds.has(seat.seatId),
+        ).length,
+      };
 
-      if (seatMap.availableSeats.length < quantity) {
+      if (selectableSeatMap.availableSeats.length < quantity) {
         return {
           reply: TICKET_MESSAGES.noSeatsAvailable,
           nextContext: {
@@ -12077,7 +12398,7 @@ export async function routeTicketMessage({
       }
 
       const seatsReply = formatSeatsReply({
-        seatMap,
+        seatMap: selectableSeatMap,
         ticketType: previousState.selectedSection.selectedTicketType,
         quantity,
       });
@@ -12088,7 +12409,7 @@ export async function routeTicketMessage({
           {
             type: "image",
             imageUrl: buildSeatMapPngDataUrl({
-              seatMap,
+              seatMap: selectableSeatMap,
               title: previousState.selectedSection.sectionName,
               stageLabel: "PALCO",
             }),
@@ -12100,98 +12421,48 @@ export async function routeTicketMessage({
           step: "showing_seats",
           state: "showing_seats",
           selectedQuantity: quantity,
-          lastSeats: buildSeatOptions(seatMap.availableSeats),
+          lastSeats: buildSeatOptions(selectableSeatMap.availableSeats),
         },
       };
     }
 
-    const reservationResult = await reserveUnnumberedSectionTickets({
-      customerId: customer.id,
-      conversationId: conversation.id,
-      eventId: previousState.selectedEvent.eventId,
-      sessionId: previousState.selectedEvent.sessionId,
-      sectionId: previousState.selectedSection.sectionId,
+    const cart = addSelectionToCart({
+      cart: previousState.cart,
+      selectedEvent: previousState.selectedEvent,
+      selectedSection: previousState.selectedSection,
       quantity,
-      ticketType: previousState.selectedSection.selectedTicketType?.ticketType ?? "full",
-      sourceIdentifier,
     });
 
-    if (!reservationResult.ok) {
-      if (
-        reservationResult.reason === "active_reservation_exists" &&
-        reservationResult.reservation.totalAmountCents === 0 &&
-        reservationResult.reservation.totalFeeCents === 0
-      ) {
-        const issueResult = await issuePublicFreeTicketsForOrder({
-          orderId: reservationResult.reservation.orderId,
-          customerId: customer.id,
-        });
-
-        if (!issueResult.ok) {
-          return {
-            reply: formatPublicFreeTicketFailureMessage(issueResult),
-            nextContext: resetBuyerReservationContext(baseContext),
-          };
-        }
-
-        return {
-          reply: issueResult.delivery.message,
-          outboundMessages: buildPublicFreeTicketOutboundMessages(issueResult),
-          nextContext: resetBuyerReservationContext(baseContext),
-        };
-      }
-
+    if (!cart) {
       return {
-        reply: messageForReservationFailure(reservationResult),
+        reply: "Não consegui adicionar esse ingresso à compra. Escolha o setor novamente.",
         nextContext: {
           ...baseContext,
-          step: "selecting_quantity",
-          state: "selecting_quantity",
-          selectedSeat: undefined,
+          step: "showing_sections",
+          state: "showing_sections",
+          selectedSection: undefined,
+          selectedQuantity: undefined,
         },
       };
     }
 
-    if (reservationResult.reservation.totalAmountCents === 0 && reservationResult.reservation.totalFeeCents === 0) {
-      const issueResult = await issuePublicFreeTicketsForOrder({
-        orderId: reservationResult.reservation.orderId,
-        customerId: customer.id,
-      });
-
-      if (!issueResult.ok) {
-        return {
-          reply: formatPublicFreeTicketFailureMessage(issueResult),
-          nextContext: {
-            ...baseContext,
-            step: "idle",
-            state: "idle",
-            selectedSeat: undefined,
-            reservation: undefined,
-            lastSeats: [],
-          },
-        };
-      }
-
-      return {
-        reply: issueResult.delivery.message,
-        outboundMessages: buildPublicFreeTicketOutboundMessages(issueResult),
-        nextContext: resetBuyerReservationContext(baseContext),
-      };
-    }
+    const latestItem = cart.items.find(
+      (item) =>
+        item.ticketPriceId ===
+        previousState.selectedSection?.selectedTicketType?.ticketPriceId,
+    )!;
 
     return {
-      reply: formatReservationReply({
-        selectedEvent: previousState.selectedEvent,
-        selectedSection: previousState.selectedSection,
-        reservation: reservationResult.reservation,
-      }),
+      reply: formatCartDecisionReply({ cart, latestItem }),
       nextContext: {
         ...baseContext,
-        step: "reservation_created",
-        state: "reservation_created",
+        step: "reviewing_cart",
+        state: "reviewing_cart",
         selectedSeat: undefined,
         selectedQuantity: quantity,
-        reservation: buildReservationContext(reservationResult.reservation),
+        cart,
+        reservation: undefined,
+        payment: undefined,
         lastSeats: [],
       },
     };
@@ -12238,115 +12509,45 @@ export async function routeTicketMessage({
       };
     }
 
-    const reservationResult = await reserveSelectedSeat({
-      customerId: customer.id,
-      conversationId: conversation.id,
-      eventId: previousState.selectedEvent.eventId,
-      sessionId: previousState.selectedEvent.sessionId,
-      sectionId: previousState.selectedSection.sectionId,
-      seatIds: selectedSeats.map((selectedSeat) => selectedSeat.seatId),
-      ticketType: previousState.selectedSection.selectedTicketType?.ticketType ?? "full",
-      sourceIdentifier,
+    const selectedSeatContexts = selectedSeats.map(buildSelectedSeatContext);
+    const cart = addSelectionToCart({
+      cart: previousState.cart,
+      selectedEvent: previousState.selectedEvent,
+      selectedSection: previousState.selectedSection,
+      quantity,
+      seats: selectedSeatContexts,
     });
 
-    if (!reservationResult.ok) {
-      if (reservationResult.reason === "active_reservation_exists") {
-        if (
-          reservationResult.reservation.totalAmountCents === 0 &&
-          reservationResult.reservation.totalFeeCents === 0
-        ) {
-          const issueResult = await issuePublicFreeTicketsForOrder({
-            orderId: reservationResult.reservation.orderId,
-            customerId: customer.id,
-          });
-
-          if (!issueResult.ok) {
-            return {
-              reply: formatPublicFreeTicketFailureMessage(issueResult),
-              nextContext: resetBuyerReservationContext(baseContext),
-            };
-          }
-
-          return {
-            reply: issueResult.delivery.message,
-            outboundMessages: buildPublicFreeTicketOutboundMessages(issueResult),
-            nextContext: resetBuyerReservationContext(baseContext),
-          };
-        }
-
-        return {
-          reply: messageForReservationFailure(reservationResult),
-          nextContext: {
-            ...baseContext,
-            step: "reservation_created",
-            state: "reservation_created",
-            reservation: reservationResult.reservation,
-            selectedSeat: undefined,
-            lastSeats: [],
-          },
-        };
-      }
-
+    if (!cart) {
       return {
-        reply: messageForReservationFailure(reservationResult),
+        reply: "Não consegui adicionar esses assentos à compra. Escolha novamente.",
         nextContext: {
           ...baseContext,
           step: "showing_seats",
           state: "showing_seats",
           selectedSeat: undefined,
-          reservation: undefined,
         },
       };
     }
 
-    const selectedSeatContext =
-      selectedSeats.length === 1 ? buildSelectedSeatContext(selectedSeats[0]!) : undefined;
-    const reservationContext = buildReservationContext(
-      reservationResult.reservation,
-    );
-
-    if (reservationResult.reservation.totalAmountCents === 0 && reservationResult.reservation.totalFeeCents === 0) {
-      const issueResult = await issuePublicFreeTicketsForOrder({
-        orderId: reservationResult.reservation.orderId,
-        customerId: customer.id,
-      });
-
-      if (!issueResult.ok) {
-        return {
-          reply: formatPublicFreeTicketFailureMessage(issueResult),
-          nextContext: {
-            ...baseContext,
-            step: "idle",
-            state: "idle",
-            selectedSeat: undefined,
-            selectedQuantity: undefined,
-            reservation: undefined,
-            lastSeats: [],
-          },
-        };
-      }
-
-      return {
-        reply: issueResult.delivery.message,
-        outboundMessages: buildPublicFreeTicketOutboundMessages(issueResult),
-        nextContext: resetBuyerReservationContext(baseContext),
-      };
-    }
+    const latestItem = cart.items.find(
+      (item) =>
+        item.ticketPriceId ===
+        previousState.selectedSection?.selectedTicketType?.ticketPriceId,
+    )!;
 
     return {
-      reply: formatReservationReply({
-        selectedEvent: previousState.selectedEvent,
-        selectedSection: previousState.selectedSection,
-        selectedSeat: selectedSeatContext,
-        reservation: reservationResult.reservation,
-      }),
+      reply: formatCartDecisionReply({ cart, latestItem }),
       nextContext: {
         ...baseContext,
-        step: "reservation_created",
-        state: "reservation_created",
-        selectedSeat: selectedSeatContext,
+        step: "reviewing_cart",
+        state: "reviewing_cart",
+        selectedSeat:
+          selectedSeatContexts.length === 1 ? selectedSeatContexts[0] : undefined,
         selectedQuantity: quantity,
-        reservation: reservationContext,
+        cart,
+        reservation: undefined,
+        payment: undefined,
         lastSeats: [],
       },
     };
@@ -12653,6 +12854,7 @@ export async function routeTicketMessage({
         selectedSection: undefined,
         selectedSeat: undefined,
         selectedQuantity: undefined,
+        cart: undefined,
         eventMoreInfoShown: undefined,
         lastSections: buildSectionOptions(sections),
         lastSeats: [],
@@ -12955,6 +13157,7 @@ export async function routeTicketMessage({
         state: "idle",
         lastSearch: parsedSearch,
         lastEvents: [],
+        cart: undefined,
       },
     };
   }
@@ -12968,6 +13171,7 @@ export async function routeTicketMessage({
       state: "showing_events",
       lastSearch: parsedSearch,
       lastEvents: buildEventOptions(events),
+      cart: undefined,
       eventMoreInfoShown: undefined,
     },
   };
