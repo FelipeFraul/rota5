@@ -769,8 +769,8 @@ function buildEventOptions(
 }
 
 function formatEventsReply(events: TicketEventSearchResult[]) {
-  const lines = events.flatMap((event) => [
-    formatSingleEventReply(event),
+  const lines = events.flatMap((event, index) => [
+    formatSingleEventReply(event, index, events.length),
     "",
   ]);
 
@@ -782,8 +782,8 @@ function formatEventsReply(events: TicketEventSearchResult[]) {
 }
 
 function formatEventOptionsReply(events: TicketConversationEventOption[]) {
-  const lines = events.flatMap((event) => [
-    formatSingleEventOptionReply(event),
+  const lines = events.flatMap((event, index) => [
+    formatSingleEventOptionReply(event, index, events.length),
     "",
   ]);
 
@@ -794,16 +794,22 @@ function formatEventOptionsReply(events: TicketConversationEventOption[]) {
   ].join("\n");
 }
 
-function formatSingleEventReply(event: TicketEventSearchResult) {
+function formatSingleEventReply(
+  event: TicketEventSearchResult,
+  index: number,
+  totalEvents: number,
+) {
   const title = formatAnnouncementTitle(event.title);
   const details = [
     `> 🎤 Artista: ${formatProperName(event.artistName)}`,
     `> 📍 Cidade: ${formatCityState(event.city, event.state)}`,
     `> 🗓️ Data: ${formatEventDate(event.startsAt)}`,
   ];
+  const buyOption = totalEvents === 1 ? 1 : index * 2 + 1;
+  const moreInfoOption = buyOption + 1;
   const options = [
-    formatOptionLine(1, "comprar"),
-    formatOptionLine(2, "saber mais"),
+    formatOptionLine(buyOption, "comprar"),
+    formatOptionLine(moreInfoOption, "saber mais"),
     "Digite uma palavra para *nova pesquisa*",
   ];
 
@@ -815,16 +821,22 @@ function formatSingleEventReply(event: TicketEventSearchResult) {
   ].join("\n");
 }
 
-function formatSingleEventOptionReply(event: TicketConversationEventOption) {
+function formatSingleEventOptionReply(
+  event: TicketConversationEventOption,
+  index: number,
+  totalEvents: number,
+) {
   const title = formatAnnouncementTitle(event.title);
   const details = [
     ...(event.artistName ? [`> 🎤 Artista: ${formatProperName(event.artistName)}`] : []),
     `> 📍 Cidade: ${formatCityState(event.city, event.state)}`,
     `> 🗓️ Data: ${formatEventDate(event.startsAt)}`,
   ];
+  const buyOption = totalEvents === 1 ? 1 : index * 2 + 1;
+  const moreInfoOption = buyOption + 1;
   const options = [
-    formatOptionLine(1, "comprar"),
-    formatOptionLine(2, "saber mais"),
+    formatOptionLine(buyOption, "comprar"),
+    formatOptionLine(moreInfoOption, "saber mais"),
     "Digite uma palavra para *nova pesquisa*",
   ];
 
@@ -870,8 +882,8 @@ function formatSingleAllEventReply(
 }
 
 function buildEventSearchOutboundMessages(events: TicketEventSearchResult[]) {
-  return events.map((event) => {
-    const caption = formatSingleEventReply(event);
+  return events.map((event, index) => {
+    const caption = formatSingleEventReply(event, index, events.length);
 
     return event.imageUrl
       ? ({ type: "image", imageUrl: event.imageUrl, caption } as const)
@@ -880,8 +892,8 @@ function buildEventSearchOutboundMessages(events: TicketEventSearchResult[]) {
 }
 
 function buildEventOptionOutboundMessages(events: TicketConversationEventOption[]) {
-  return events.map((event) => {
-    const caption = formatSingleEventOptionReply(event);
+  return events.map((event, index) => {
+    const caption = formatSingleEventOptionReply(event, index, events.length);
 
     return event.imageUrl
       ? ({ type: "image", imageUrl: event.imageUrl, caption } as const)
@@ -12473,6 +12485,152 @@ export async function routeTicketMessage({
         selectedEvent,
         lastSections: buildSectionOptions(sections),
         eventMoreInfoShown: undefined,
+      },
+    };
+  }
+
+  if (
+    parsedSearch.numericSelection &&
+    previousState.state === "showing_events" &&
+    !isAllPublicEventsContext(previousState) &&
+    previousState.eventMoreInfoShown &&
+    previousState.selectedEvent
+  ) {
+    if (parsedSearch.numericSelection === 2) {
+      return {
+        reply: formatEventOptionsReply(previousState.lastEvents ?? []),
+        outboundMessages: buildEventOptionOutboundMessages(
+          previousState.lastEvents ?? [],
+        ),
+        nextContext: {
+          ...baseContext,
+          step: "showing_events",
+          state: "showing_events",
+          selectedEvent: undefined,
+          eventMoreInfoShown: undefined,
+        },
+      };
+    }
+
+    if (parsedSearch.numericSelection === 1) {
+      const selectedSession = await getValidatedEventSession({
+        eventId: previousState.selectedEvent.eventId,
+        sessionId: previousState.selectedEvent.sessionId,
+      });
+
+      if (!selectedSession) {
+        return {
+          reply: TICKET_MESSAGES.eventOptionUnavailable,
+          nextContext: resetBuyerReservationContext(baseContext),
+        };
+      }
+
+      const selectedEvent = buildSelectedEvent(selectedSession);
+      const sections = await listAvailableSections(selectedSession.sessionId, {
+        venueId: selectedSession.venueId,
+      });
+
+      if (sections.length === 0) {
+        return {
+          reply: TICKET_MESSAGES.noSectionsAvailable,
+          nextContext: resetBuyerReservationContext(baseContext),
+        };
+      }
+
+      return {
+        reply: formatSectionsReply({ sections }),
+        nextContext: {
+          ...baseContext,
+          step: "showing_sections",
+          state: "showing_sections",
+          selectedEvent,
+          selectedSection: undefined,
+          selectedSeat: undefined,
+          selectedQuantity: undefined,
+          eventMoreInfoShown: undefined,
+          lastSections: buildSectionOptions(sections),
+          lastSeats: [],
+        },
+      };
+    }
+
+    return {
+      reply: TICKET_MESSAGES.numericInvalidOption,
+      nextContext: baseContext,
+    };
+  }
+
+  if (
+    parsedSearch.numericSelection &&
+    previousState.state === "showing_events" &&
+    !isAllPublicEventsContext(previousState) &&
+    previousState.lastEvents &&
+    previousState.lastEvents.length > 1
+  ) {
+    const selectedOption = parsedSearch.numericSelection;
+    const selectedIndex = Math.floor((selectedOption - 1) / 2);
+    const selectedContextEvent = previousState.lastEvents[selectedIndex];
+    const isMoreInfoOption = selectedOption % 2 === 0;
+
+    if (!selectedContextEvent || selectedOption < 1) {
+      return {
+        reply: TICKET_MESSAGES.numericInvalidOption,
+        nextContext: baseContext,
+      };
+    }
+
+    const selectedSession = await getValidatedEventSession({
+      eventId: selectedContextEvent.eventId,
+      sessionId: selectedContextEvent.sessionId,
+    });
+
+    if (!selectedSession) {
+      return {
+        reply: TICKET_MESSAGES.eventOptionUnavailable,
+        nextContext: resetBuyerReservationContext(baseContext),
+      };
+    }
+
+    const selectedEvent = buildSelectedEvent(selectedSession);
+
+    if (isMoreInfoOption) {
+      return {
+        reply: formatSingleEventMoreInfo(selectedEvent),
+        outboundMessages: buildEventMoreInfoOutboundMessages(selectedEvent),
+        nextContext: {
+          ...baseContext,
+          step: "showing_events",
+          state: "showing_events",
+          selectedEvent,
+          eventMoreInfoShown: true,
+        },
+      };
+    }
+
+    const sections = await listAvailableSections(selectedSession.sessionId, {
+      venueId: selectedSession.venueId,
+    });
+
+    if (sections.length === 0) {
+      return {
+        reply: TICKET_MESSAGES.noSectionsAvailable,
+        nextContext: resetBuyerReservationContext(baseContext),
+      };
+    }
+
+    return {
+      reply: formatSectionsReply({ sections }),
+      nextContext: {
+        ...baseContext,
+        step: "showing_sections",
+        state: "showing_sections",
+        selectedEvent,
+        selectedSection: undefined,
+        selectedSeat: undefined,
+        selectedQuantity: undefined,
+        eventMoreInfoShown: undefined,
+        lastSections: buildSectionOptions(sections),
+        lastSeats: [],
       },
     };
   }
