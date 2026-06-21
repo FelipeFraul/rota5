@@ -661,7 +661,9 @@ function formatOptionLine(
       ? label
       : label.charAt(0).toLocaleLowerCase("pt-BR") + label.slice(1);
   const emphasizedLabel =
-    /\b(?:comprar|voltar|ver mais|nova pesquisa)\b/iu.test(normalizedLabel)
+    /\b(?:comprar|saber mais|voltar|ver mais|nova pesquisa)\b/iu.test(
+      normalizedLabel,
+    )
       ? `*${normalizedLabel}*`
       : normalizedLabel;
 
