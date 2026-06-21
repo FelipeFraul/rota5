@@ -1,4 +1,4 @@
-import { timingSafeEqual } from "crypto";
+import { randomUUID, timingSafeEqual } from "crypto";
 import {
   jsonError,
   jsonOk,
@@ -14,6 +14,7 @@ import {
 } from "@/lib/security/rateLimit";
 import {
   getOrCreateOpenConversation,
+  reconcileConversationDelivery,
   updateConversationAfterMessage,
 } from "@/lib/tickets/services/conversations";
 import { upsertCustomerFromWhatsApp } from "@/lib/tickets/services/customers";
@@ -43,6 +44,15 @@ import {
 import { normalizeWhatsAppPhone } from "@/lib/tickets/phones";
 import { routeTicketMessage } from "@/lib/tickets/router";
 import {
+  getDeliveryGuard,
+  getNumericPrompt,
+  getRetiredNumericMessageIds,
+  extractNumericOptions,
+  parseStrictNumericReply,
+  withoutDeliveryGuard,
+  withoutDeliveryMetadata,
+} from "@/lib/tickets/numericOptions";
+import {
   DEFAULT_CONVERSATION_INACTIVITY_TTL_MINUTES,
   resolveConversationContextForInbound,
 } from "@/lib/tickets/conversationState";
@@ -60,6 +70,7 @@ import {
 const MAX_WEBHOOK_BYTES = 256 * 1024;
 const PHONE_RATE_LIMIT = 30;
 const PHONE_RATE_LIMIT_WINDOW_SECONDS = 60;
+const DELIVERY_PENDING_TIMEOUT_MS = 2 * 60 * 1000;
 const SECRET_HEADER_NAMES = [
   "x-zapi-webhook-secret",
   "x-webhook-secret",
@@ -80,6 +91,7 @@ type ParsedIncomingMessage = {
   contactName: string | null;
   text: string | null;
   providerMessageId: string | null;
+  referenceMessageId: string | null;
   fromMe: boolean;
   isGroup: boolean;
   messageType: "text" | "image" | "document" | "system";
@@ -285,6 +297,12 @@ function extractIncomingMessage(
     message.id,
     message.keyId,
   );
+  const referenceMessageId = firstString(
+    payload.referenceMessageId,
+    payload.reference_message_id,
+    message.referenceMessageId,
+    message.reference_message_id,
+  );
   const contactName = firstString(
     payload.contactName,
     payload.senderName,
@@ -319,6 +337,7 @@ function extractIncomingMessage(
     contactName,
     text,
     providerMessageId,
+    referenceMessageId,
     fromMe,
     isGroup,
     messageType: normalizeMessageType(rawMessageType),
@@ -328,11 +347,13 @@ function extractIncomingMessage(
 
 function buildInboundMetadata({
   providerMessageId,
+  referenceMessageId,
   messageType,
   redacted = false,
   redactionReason = "sensitive_input",
 }: {
   providerMessageId: string | null;
+  referenceMessageId?: string | null;
   messageType: string;
   redacted?: boolean;
   redactionReason?: string;
@@ -340,6 +361,9 @@ function buildInboundMetadata({
   return {
     provider: "zapi",
     provider_message_id: providerMessageId,
+    ...(referenceMessageId
+      ? { reference_message_id: referenceMessageId }
+      : {}),
     message_type: messageType,
     ...(redacted ? { redacted: true, reason: redactionReason } : {}),
   };
@@ -425,6 +449,10 @@ function getOutboundMessages(
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getOutboundMessageText(message: RouteOutboundMessage) {
+  return message.type === "image" ? message.caption : message.body;
 }
 
 async function sendOutboundMessage({
@@ -690,7 +718,23 @@ export async function POST(request: Request) {
     lastMessageAt: conversationResult.conversation.last_message_at,
     inactivityTtlMinutes: getConversationInactivityTtlMinutes(),
   });
-  const currentContext = resolvedContext.context;
+  let currentContext = resolvedContext.context;
+  const loadedDeliveryGuard = getDeliveryGuard(currentContext);
+  const deliveryStartedAt = loadedDeliveryGuard
+    ? new Date(loadedDeliveryGuard.startedAt).getTime()
+    : Number.NaN;
+  const deliveryGuardIsFresh = Boolean(
+    loadedDeliveryGuard &&
+      Number.isFinite(deliveryStartedAt) &&
+      Date.now() - deliveryStartedAt <= DELIVERY_PENDING_TIMEOUT_MS,
+  );
+  const deliveryGuardIsStale = Boolean(
+    loadedDeliveryGuard && !deliveryGuardIsFresh,
+  );
+
+  if (deliveryGuardIsStale) {
+    currentContext = withoutDeliveryGuard(currentContext);
+  }
 
   if (resolvedContext.resetReason) {
     logInfo("Reset inactive WhatsApp conversation context", {
@@ -713,6 +757,7 @@ export async function POST(request: Request) {
     providerMessageId: incoming.providerMessageId,
     rawMetadata: buildInboundMetadata({
       providerMessageId: incoming.providerMessageId,
+      referenceMessageId: incoming.referenceMessageId,
       messageType: incoming.messageType,
       redacted: Boolean(inboundRedaction),
       redactionReason: inboundRedaction?.reason,
@@ -732,6 +777,120 @@ export async function POST(request: Request) {
       code: inboundResult.error?.code,
     });
     return jsonError("Internal Server Error", 500);
+  }
+
+  const numericReply = parseStrictNumericReply(incoming.text);
+
+  if (deliveryGuardIsFresh) {
+    const pendingReply =
+      "Ainda estou enviando as opções. Aguarde alguns instantes e responda novamente.";
+    const pendingResult = await sendAndPersistText({
+      conversationId: conversationResult.conversation.id,
+      customerId: customerResult.customer.id,
+      phone: incoming.phone,
+      body: pendingReply,
+    });
+
+    if (!pendingResult.ok) {
+      return jsonError("Internal Server Error", 500);
+    }
+
+    const pendingActivityUpdate = await updateConversationAfterMessage({
+      conversationId: conversationResult.conversation.id,
+    });
+
+    if (!pendingActivityUpdate.ok) {
+      return jsonError("Internal Server Error", 500);
+    }
+
+    return jsonOk({
+      received: true,
+      processed: true,
+      deliveryPending: true,
+    });
+  }
+
+  if (deliveryGuardIsStale && numericReply !== null) {
+    const staleDeliveryReply =
+      "Não consegui confirmar a entrega da lista anterior. Envie sua pesquisa novamente para receber opções atualizadas.";
+    const staleResult = await sendAndPersistText({
+      conversationId: conversationResult.conversation.id,
+      customerId: customerResult.customer.id,
+      phone: incoming.phone,
+      body: staleDeliveryReply,
+    });
+
+    if (!staleResult.ok) {
+      return jsonError("Internal Server Error", 500);
+    }
+
+    const staleContextUpdate = await updateConversationAfterMessage({
+      conversationId: conversationResult.conversation.id,
+      context: currentContext,
+    });
+
+    if (!staleContextUpdate.ok) {
+      return jsonError("Internal Server Error", 500);
+    }
+
+    return jsonOk({
+      received: true,
+      processed: true,
+      staleDelivery: true,
+    });
+  }
+
+  const numericPrompt = getNumericPrompt(currentContext);
+  const retiredNumericMessageIds = getRetiredNumericMessageIds(currentContext);
+  const quotedMessageWasRetired = Boolean(
+    incoming.referenceMessageId &&
+      retiredNumericMessageIds.includes(incoming.referenceMessageId),
+  );
+  const quotedMessageIsStale = Boolean(
+    numericPrompt &&
+      incoming.referenceMessageId &&
+      numericPrompt.messageIds.length > 0 &&
+      !numericPrompt.messageIds.includes(incoming.referenceMessageId),
+  );
+  const numericOptionWasNotDelivered = Boolean(
+    numericPrompt &&
+      numericReply !== null &&
+      !numericPrompt.validOptions.includes(numericReply),
+  );
+
+  if (
+    numericReply !== null &&
+    !inboundRedaction &&
+    (quotedMessageIsStale ||
+      quotedMessageWasRetired ||
+      numericOptionWasNotDelivered)
+  ) {
+    const invalidNumericReply =
+      "Essa resposta numérica não pertence à lista mais recente entregue. Consulte a última mensagem e tente novamente.";
+    const invalidNumericResult = await sendAndPersistText({
+      conversationId: conversationResult.conversation.id,
+      customerId: customerResult.customer.id,
+      phone: incoming.phone,
+      body: invalidNumericReply,
+    });
+
+    if (!invalidNumericResult.ok) {
+      return jsonError("Internal Server Error", 500);
+    }
+
+    const invalidNumericActivityUpdate = await updateConversationAfterMessage({
+      conversationId: conversationResult.conversation.id,
+    });
+
+    if (!invalidNumericActivityUpdate.ok) {
+      return jsonError("Internal Server Error", 500);
+    }
+
+    return jsonOk({
+      received: true,
+      processed: true,
+      invalidNumericReply: true,
+    });
   }
 
   const isAllowedCodexPhone = isAllowedCodexRequestPhone(incoming.phone);
@@ -1043,9 +1202,34 @@ export async function POST(request: Request) {
     sourceIdentifier: getRequestSourceIdentifier(request),
   });
 
+  const outboundMessages = getOutboundMessages(routeResult);
+  const generationId = randomUUID();
+  const deliveryGenerationStartedAt = new Date().toISOString();
+  const previousNumericPrompt = getNumericPrompt(currentContext);
+  const retiredMessageIds = [
+    ...getRetiredNumericMessageIds(currentContext),
+    ...(previousNumericPrompt?.messageIds ?? []),
+  ];
+  const boundedRetiredMessageIds = [
+    ...new Set(retiredMessageIds),
+  ].slice(-30);
+  const nextContextWithoutDeliveryMetadata = withoutDeliveryMetadata(
+    routeResult.nextContext,
+  );
+  const pendingContext = {
+    ...nextContextWithoutDeliveryMetadata,
+    ...(boundedRetiredMessageIds.length > 0
+      ? { retiredNumericMessageIds: boundedRetiredMessageIds }
+      : {}),
+    deliveryGuard: {
+      generationId,
+      startedAt: deliveryGenerationStartedAt,
+    },
+  };
+
   const conversationUpdateResult = await updateConversationAfterMessage({
     conversationId: conversationResult.conversation.id,
-    context: routeResult.nextContext,
+    context: pendingContext,
   });
 
   if (!conversationUpdateResult.ok) {
@@ -1056,11 +1240,21 @@ export async function POST(request: Request) {
     return jsonError("Internal Server Error", 500);
   }
 
-  const outboundMessages = getOutboundMessages(routeResult);
   const sendResults: SendZapiMessageResult[] = [];
+  const deliveryResults: Array<{
+    message: RouteOutboundMessage;
+    phone: string;
+    options: number[];
+    sendResult: SendZapiMessageResult;
+  }> = [];
+  let outboundPersistenceFailed = false;
 
   for (const outboundMessage of outboundMessages) {
     const outboundPhone = outboundMessage.phone ?? incoming.phone;
+    const options =
+      outboundPhone === incoming.phone
+        ? extractNumericOptions(getOutboundMessageText(outboundMessage))
+        : [];
 
     if (outboundMessage.delayMs && outboundMessage.delayMs > 0) {
       await sleep(outboundMessage.delayMs);
@@ -1072,6 +1266,12 @@ export async function POST(request: Request) {
     });
 
     sendResults.push(sendResult);
+    deliveryResults.push({
+      message: outboundMessage,
+      phone: outboundPhone,
+      options,
+      sendResult,
+    });
 
     if (!sendResult.ok) {
       logWarn("Z-API reply failed after inbound message was persisted", {
@@ -1104,8 +1304,71 @@ export async function POST(request: Request) {
         conversationId: conversationResult.conversation.id,
         code: outboundResult.error?.code,
       });
-      return jsonError("Internal Server Error", 500);
+      outboundPersistenceFailed = true;
     }
+  }
+
+  const anyMessageDelivered = deliveryResults.some(
+    (result) => result.sendResult.ok,
+  );
+  const intendedOptions = new Set(
+    deliveryResults.flatMap((result) => result.options),
+  );
+  const deliveredOptions = new Set(
+    deliveryResults.flatMap((result) =>
+      result.sendResult.ok ? result.options : [],
+    ),
+  );
+  const deliveredOptionMessageIds = deliveryResults.flatMap((result) =>
+    result.sendResult.ok &&
+    result.options.length > 0 &&
+    result.sendResult.providerMessageId
+      ? [result.sendResult.providerMessageId]
+      : [],
+  );
+  const reconciledContext = anyMessageDelivered
+    ? {
+        ...nextContextWithoutDeliveryMetadata,
+        ...(boundedRetiredMessageIds.length > 0
+          ? { retiredNumericMessageIds: boundedRetiredMessageIds }
+          : {}),
+        ...(intendedOptions.size > 0
+          ? {
+              numericPrompt: {
+                generationId,
+                issuedAt: new Date().toISOString(),
+                validOptions: [...deliveredOptions].sort(
+                  (left, right) => left - right,
+                ),
+                messageIds: [...new Set(deliveredOptionMessageIds)],
+              },
+            }
+          : {}),
+      }
+    : withoutDeliveryGuard(currentContext);
+  const reconcileResult = await reconcileConversationDelivery({
+    conversationId: conversationResult.conversation.id,
+    generationId,
+    context: reconciledContext,
+  });
+
+  if (!reconcileResult.ok) {
+    logError("Failed to reconcile WhatsApp delivery context", {
+      conversationId: conversationResult.conversation.id,
+      code: reconcileResult.error.code,
+    });
+    return jsonError("Internal Server Error", 500);
+  }
+
+  if (!reconcileResult.applied) {
+    logWarn("Skipped stale WhatsApp delivery reconciliation", {
+      conversationId: conversationResult.conversation.id,
+      generationId,
+    });
+  }
+
+  if (outboundPersistenceFailed) {
+    return jsonError("Internal Server Error", 500);
   }
 
   logInfo("Processed Z-API inbound message", {

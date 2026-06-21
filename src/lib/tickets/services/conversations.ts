@@ -94,3 +94,36 @@ export async function updateConversationAfterMessage({
     ok: true as const,
   };
 }
+
+export async function reconcileConversationDelivery({
+  conversationId,
+  generationId,
+  context,
+}: {
+  conversationId: string;
+  generationId: string;
+  context: Record<string, unknown>;
+}) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("conversations")
+    .update({ context })
+    .eq("id", conversationId)
+    .contains("context", {
+      deliveryGuard: { generationId },
+    })
+    .select("id")
+    .maybeSingle<{ id: string }>();
+
+  if (error) {
+    return {
+      ok: false as const,
+      error,
+    };
+  }
+
+  return {
+    ok: true as const,
+    applied: Boolean(data),
+  };
+}

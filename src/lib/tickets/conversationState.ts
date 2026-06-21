@@ -392,6 +392,17 @@ export type TicketConversationState = {
   payment?: TicketConversationPayment;
   lastSections?: TicketConversationSectionOption[];
   lastSeats?: TicketConversationSeatOption[];
+  deliveryGuard?: {
+    generationId: string;
+    startedAt: string;
+  };
+  numericPrompt?: {
+    generationId: string;
+    issuedAt: string;
+    validOptions: number[];
+    messageIds: string[];
+  };
+  retiredNumericMessageIds?: string[];
   updatedAt: string;
 };
 
