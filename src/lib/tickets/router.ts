@@ -670,13 +670,26 @@ function formatOptionLine(
   return `Digite ${option} para ${emphasizedLabel}`;
 }
 
+const CANONICAL_TICKET_OPTION_LABELS: Record<string, string> = {
+  "cadeira individual (todos pagam meia)":
+    "Cadeira Individual (TODOS pagam meia)",
+  "1ª fileira (com balcão) - cadeira individual":
+    "1ª FILEIRA (com balcão) - cadeira Individual",
+  "poltrona+mesa 2 lugares (1 deste vale para 2)":
+    "Poltrona+Mesa 2 lugares (1 deste vale para 2)",
+  "poltrona+mesa 4 lugares (1 deste vale para 4)":
+    "Poltrona+Mesa 4 lugares (1 deste vale para 4)",
+};
+
 function formatTicketOptionLabel(label: string) {
-  return label
+  const formattedLabel = label
     .trim()
     .toLocaleLowerCase("pt-BR")
     .replace(/\bmesa\s+para\s+08\s+pessoas\b/gi, "mesa 8 pessoas")
     .replace(/\bmesa\s+para\s+/gi, "mesa ")
     .replace(/\s+/g, " ");
+
+  return CANONICAL_TICKET_OPTION_LABELS[formattedLabel] ?? formattedLabel;
 }
 
 function formatTicketOptionLine(
@@ -694,7 +707,7 @@ function shouldUseTicketLabelForSingleOffer(sectionName: string) {
     .toLocaleLowerCase("pt-BR")
     .trim();
 
-  return normalized === "cadeira" || normalized === "mesas";
+  return ["cadeira", "1ª fileira", "mesa", "mesas"].includes(normalized);
 }
 
 const LOWERCASE_NAME_PARTS = new Set([
