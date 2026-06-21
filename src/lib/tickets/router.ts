@@ -1070,6 +1070,7 @@ function formatSectionsReply({
     sectionLines.join("\n---\n"),
     "",
     "Responda com o número do setor para continuar.",
+    'Digite "Voltar" para voltar.',
   ].join("\n");
 }
 
@@ -1091,6 +1092,7 @@ function formatQuantityPrompt(
     isFree
       ? "Digite o número de ingressos gratuitos, até 4 por pedido. Ex: 2"
       : "Digite o número de ingressos para compra, ex: 2",
+    'Digite "Voltar" para voltar.',
   ].join("\n");
 }
 
@@ -1215,13 +1217,7 @@ function addSelectionToCart({
   } satisfies TicketConversationCart;
 }
 
-function formatCartDecisionReply({
-  cart,
-  latestItem,
-}: {
-  cart: TicketConversationCart;
-  latestItem: TicketConversationCartItem;
-}) {
+function formatCartDecisionReply({ cart }: { cart: TicketConversationCart }) {
   const totalAmountCents = cart.items.reduce(
     (total, item) => total + item.priceCents * item.quantity,
     0,
@@ -1230,14 +1226,24 @@ function formatCartDecisionReply({
     (total, item) => total + item.feeCents * item.quantity,
     0,
   );
+  const cartItemLines = cart.items.flatMap((item, index) => [
+    ...(index > 0 ? ["---"] : []),
+    `> Item ${index + 1}: ${item.ticketLabel}`,
+    `> Quantidade: ${item.quantity}`,
+    ...(item.seats?.length
+      ? [`> Assentos: ${item.seats.map((seat) => seat.seatCode).join(", ")}`]
+      : []),
+    `> Subtotal: ${formatPriceWithOptionalFee(
+      item.priceCents * item.quantity,
+      item.feeCents * item.quantity,
+    )}`,
+  ]);
 
   return [
     "*ITEM ADICIONADO À COMPRA*",
-    `> Ingresso: ${latestItem.ticketLabel}`,
-    `> Quantidade: ${latestItem.quantity}`,
-    ...(latestItem.seats?.length
-      ? [`> Assentos: ${latestItem.seats.map((seat) => seat.seatCode).join(", ")}`]
-      : []),
+    "",
+    "*ITENS NA COMPRA*",
+    ...cartItemLines,
     "",
     `> Total da compra: ${formatPriceWithOptionalFee(totalAmountCents, totalFeeCents)}`,
     "",
@@ -8382,10 +8388,7 @@ async function handleBuyerBack({
   if (baseContext.state === "showing_sections") {
     if (baseContext.cart?.items.length) {
       return {
-        reply: formatCartDecisionReply({
-          cart: baseContext.cart,
-          latestItem: baseContext.cart.items.at(-1)!,
-        }),
+        reply: formatCartDecisionReply({ cart: baseContext.cart }),
         nextContext: {
           ...baseContext,
           step: "reviewing_cart",
@@ -12159,13 +12162,8 @@ export async function routeTicketMessage({
     }
 
     if (selectedOption !== 2) {
-      const latestItem = previousState.cart.items.at(-1)!;
-
       return {
-        reply: formatCartDecisionReply({
-          cart: previousState.cart,
-          latestItem,
-        }),
+        reply: formatCartDecisionReply({ cart: previousState.cart }),
         nextContext: {
           ...baseContext,
           step: "reviewing_cart",
@@ -12446,14 +12444,8 @@ export async function routeTicketMessage({
       };
     }
 
-    const latestItem = cart.items.find(
-      (item) =>
-        item.ticketPriceId ===
-        previousState.selectedSection?.selectedTicketType?.ticketPriceId,
-    )!;
-
     return {
-      reply: formatCartDecisionReply({ cart, latestItem }),
+      reply: formatCartDecisionReply({ cart }),
       nextContext: {
         ...baseContext,
         step: "reviewing_cart",
@@ -12530,14 +12522,8 @@ export async function routeTicketMessage({
       };
     }
 
-    const latestItem = cart.items.find(
-      (item) =>
-        item.ticketPriceId ===
-        previousState.selectedSection?.selectedTicketType?.ticketPriceId,
-    )!;
-
     return {
-      reply: formatCartDecisionReply({ cart, latestItem }),
+      reply: formatCartDecisionReply({ cart }),
       nextContext: {
         ...baseContext,
         step: "reviewing_cart",
