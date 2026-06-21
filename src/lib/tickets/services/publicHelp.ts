@@ -37,7 +37,7 @@ const HELP_TOPICS: PublicHelpTopic[] = [
     question: "Como ver informações do evento?",
     keywords: ["saber", "mais", "informacao", "informacoes", "descricao", "evento"],
     answer:
-      "Quando aparecer um evento, digite a opção `Saber mais`. O sistema mostra as informações cadastradas e depois oferece as opções de comprar ou buscar outro evento.",
+      "Quando aparecer um evento, digite a opção `Saber mais`. O sistema mostra as informações cadastradas e depois oferece as opções de comprar ou fazer uma nova pesquisa.",
   },
   {
     id: "evento-status",
@@ -62,10 +62,10 @@ const HELP_TOPICS: PublicHelpTopic[] = [
   },
   {
     id: "buscar-outro-evento",
-    question: "Como buscar outro evento depois do resultado?",
+    question: "Como fazer uma nova pesquisa depois do resultado?",
     keywords: ["buscar", "outro", "evento", "opcao", "opção", "nova"],
     answer:
-      "Se aparecer a opção `Buscar outro evento`, digite o número indicado. O sistema volta para a tela inicial de pesquisa para você digitar artista, cidade, local ou data.",
+      "Digite uma palavra para iniciar uma nova pesquisa por artista, cidade, local ou data.",
   },
   {
     id: "comprar-ingresso",

@@ -767,8 +767,8 @@ function buildEventOptions(
 }
 
 function formatEventsReply(events: TicketEventSearchResult[]) {
-  const lines = events.flatMap((event, index) => [
-    formatSingleEventReply(event, index, events.length),
+  const lines = events.flatMap((event) => [
+    formatSingleEventReply(event),
     "",
   ]);
 
@@ -780,8 +780,8 @@ function formatEventsReply(events: TicketEventSearchResult[]) {
 }
 
 function formatEventOptionsReply(events: TicketConversationEventOption[]) {
-  const lines = events.flatMap((event, index) => [
-    formatSingleEventOptionReply(event, index, events.length),
+  const lines = events.flatMap((event) => [
+    formatSingleEventOptionReply(event),
     "",
   ]);
 
@@ -792,25 +792,18 @@ function formatEventOptionsReply(events: TicketConversationEventOption[]) {
   ].join("\n");
 }
 
-function formatSingleEventReply(
-  event: TicketEventSearchResult,
-  index: number,
-  totalEvents: number,
-) {
+function formatSingleEventReply(event: TicketEventSearchResult) {
   const title = formatAnnouncementTitle(event.title);
   const details = [
     `> 🎤 Artista: ${formatProperName(event.artistName)}`,
     `> 📍 Cidade: ${formatCityState(event.city, event.state)}`,
     `> 🗓️ Data: ${formatEventDate(event.startsAt)}`,
   ];
-  const options =
-    totalEvents === 1
-      ? [
-          formatOptionLine(1, "comprar"),
-          formatOptionLine(2, "saber mais"),
-          formatOptionLine(3, "buscar outro evento"),
-        ]
-      : [formatOptionLine(index + 1, "comprar este evento")];
+  const options = [
+    formatOptionLine(1, "comprar"),
+    formatOptionLine(2, "saber mais"),
+    "Digite uma palavra para *nova pesquisa*",
+  ];
 
   return [
     `🎟️ - *${title}*`,
@@ -820,25 +813,18 @@ function formatSingleEventReply(
   ].join("\n");
 }
 
-function formatSingleEventOptionReply(
-  event: TicketConversationEventOption,
-  index: number,
-  totalEvents: number,
-) {
+function formatSingleEventOptionReply(event: TicketConversationEventOption) {
   const title = formatAnnouncementTitle(event.title);
   const details = [
     ...(event.artistName ? [`> 🎤 Artista: ${formatProperName(event.artistName)}`] : []),
     `> 📍 Cidade: ${formatCityState(event.city, event.state)}`,
     `> 🗓️ Data: ${formatEventDate(event.startsAt)}`,
   ];
-  const options =
-    totalEvents === 1
-      ? [
-          formatOptionLine(1, "comprar"),
-          formatOptionLine(2, "saber mais"),
-          formatOptionLine(3, "buscar outro evento"),
-        ]
-      : [formatOptionLine(index + 1, "comprar este evento")];
+  const options = [
+    formatOptionLine(1, "comprar"),
+    formatOptionLine(2, "saber mais"),
+    "Digite uma palavra para *nova pesquisa*",
+  ];
 
   return [
     `🎟️ - *${title}*`,
@@ -882,8 +868,8 @@ function formatSingleAllEventReply(
 }
 
 function buildEventSearchOutboundMessages(events: TicketEventSearchResult[]) {
-  return events.map((event, index) => {
-    const caption = formatSingleEventReply(event, index, events.length);
+  return events.map((event) => {
+    const caption = formatSingleEventReply(event);
 
     return event.imageUrl
       ? ({ type: "image", imageUrl: event.imageUrl, caption } as const)
@@ -892,8 +878,8 @@ function buildEventSearchOutboundMessages(events: TicketEventSearchResult[]) {
 }
 
 function buildEventOptionOutboundMessages(events: TicketConversationEventOption[]) {
-  return events.map((event, index) => {
-    const caption = formatSingleEventOptionReply(event, index, events.length);
+  return events.map((event) => {
+    const caption = formatSingleEventOptionReply(event);
 
     return event.imageUrl
       ? ({ type: "image", imageUrl: event.imageUrl, caption } as const)
@@ -935,7 +921,7 @@ function formatSingleEventMoreInfoOptions() {
   return [
     formatOptionLine(1, "comprar"),
     formatOptionLine(2, "voltar"),
-    formatOptionLine(3, "fazer uma nova pesquisa"),
+    "Digite uma palavra para *nova pesquisa*",
   ].join("\n");
 }
 
