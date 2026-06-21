@@ -1053,7 +1053,7 @@ function formatSectionsReply({
 
   return [
     "*ESCOLHA SEU INGRESSO/SETOR*",
-    ...sectionLines,
+    sectionLines.join("\n---\n"),
     "",
     "Responda com o número do setor para continuar.",
   ].join("\n");
