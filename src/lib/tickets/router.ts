@@ -2280,15 +2280,19 @@ function maskGatePhone(phone: string) {
 function renderGateAccessesList({
   title,
   accesses,
+  selectable = false,
 }: {
   title: string;
   accesses: AdminGateAccessListItem[];
+  selectable?: boolean;
 }) {
   const blocks = accesses.map((access, index) =>
     [
-      formatOptionLine(index + 1, access.eventTitle ?? "Evento", {
-        preserveCase: true,
-      }),
+      selectable
+        ? formatOptionLine(index + 1, access.eventTitle ?? "Evento", {
+            preserveCase: true,
+          })
+        : `- ${access.eventTitle ?? "Evento"}`,
       `> Telefone: ${maskGatePhone(access.phone)}`,
       access.name ? `> Nome: ${access.name}` : null,
       `> Status: ${formatGateAccessStatus(access.status)}`,
@@ -2544,11 +2548,9 @@ function formatAdminRoleLabel(role: string) {
 }
 
 function renderAdminUsersList(users: AdminUserListItem[]) {
-  const userBlocks = users.map((user, index) =>
+  const userBlocks = users.map((user) =>
     [
-      formatOptionLine(index + 1, user.name ?? "Sem nome", {
-        preserveCase: true,
-      }),
+      `- ${user.name ?? "Sem nome"}`,
       `   Telefone: ${maskAdminPhone(user.phone)}`,
       `   Perfil: ${formatAdminRoleLabel(user.role)}`,
       `   Status: ${user.status === "active" ? "ativo" : "desativado"}`,
@@ -2833,12 +2835,9 @@ function formatAdminTicket(ticket: AdminTicketLookup, index?: number) {
   return lines.join("\n");
 }
 
-function formatAdminTicketForPhoneSearch(
-  ticket: AdminTicketLookup,
-  index: number,
-) {
+function formatAdminTicketForPhoneSearch(ticket: AdminTicketLookup) {
   const lines = [
-    formatOptionLine(index, ticket.eventTitle, { preserveCase: true }),
+    `- ${ticket.eventTitle}`,
     `   Data: ${formatDateTime(ticket.startsAt)}`,
     `   Setor: ${ticket.sectionName}`,
     `   Código: ${ticket.ticketCode}`,
@@ -2917,17 +2916,13 @@ function formatAdminTicketValidations(validations: AdminTicketValidation[]) {
   }
 
   return validations
-    .map((validation, index) => {
+    .map((validation) => {
       const gate = validation.gateLabel ? ` - ${validation.gateLabel}` : "";
       const validator = validation.validatorIdentifier
         ? ` (${maskAdminIdentifier(validation.validatorIdentifier)})`
         : "";
 
-      return formatOptionLine(
-        index + 1,
-        `${formatDateTime(validation.createdAt)} - ${validation.result}${gate}${validator}`,
-        { preserveCase: true },
-      );
+      return `- ${formatDateTime(validation.createdAt)} - ${validation.result}${gate}${validator}`;
     })
     .join("\n");
 }
@@ -3631,10 +3626,7 @@ function renderAdminEventDetails(event: AdminEventDetails) {
     "Sessões:",
     ...(event.sessions.length
       ? event.sessions.map(
-          (session, index) =>
-            formatOptionLine(index + 1, `${formatDateTime(session.startsAt)} - ${session.status}`, {
-              preserveCase: true,
-            }),
+          (session) => `- ${formatDateTime(session.startsAt)} - ${session.status}`,
         )
       : ["nenhuma sessão cadastrada"]),
     "",
@@ -5622,7 +5614,11 @@ async function handleAdminEventsFlow({
 
       return {
         reply: [
-          details.ok ? await renderSectionsList(eventId, scope) : "Não encontrei esse evento.",
+          details.ok
+            ? await renderSectionsList(eventId, scope, undefined, {
+                selectable: true,
+              })
+            : "Não encontrei esse evento.",
           "",
           "Envie: número do setor | nova carga.",
           "Ex: 1 | 500",
@@ -6341,7 +6337,11 @@ function renderAdminPricesMenu(eventTitle: string) {
   ].join("\n"));
 }
 
-async function renderSessionsList(eventId: string, scope: AdminEventScope) {
+async function renderSessionsList(
+  eventId: string,
+  scope: AdminEventScope,
+  { selectable = false }: { selectable?: boolean } = {},
+) {
   const details = await getScopedAdminEventDetails(eventId, scope);
   if (!details.ok) return "Não encontrei esse evento.";
   const counts = await getAdminSessionCatalogCounts(details.event.sessions);
@@ -6353,9 +6353,13 @@ async function renderSessionsList(eventId: string, scope: AdminEventScope) {
         ? details.event.sessions.map(
           (session, index) =>
             [
-              formatOptionLine(index + 1, `${formatDateTime(session.startsAt)} - ${session.status}`, {
-                preserveCase: true,
-              }),
+              selectable
+                ? formatOptionLine(
+                    index + 1,
+                    `${formatDateTime(session.startsAt)} - ${session.status}`,
+                    { preserveCase: true },
+                  )
+                : `- ${formatDateTime(session.startsAt)} - ${session.status}`,
               `   Local: ${session.venueName ?? details.event.venueName ?? "não definido"}`,
               counts.ok
                 ? `   Setores: ${counts.getSectionsCount(session.venueId)} | Preços: ${counts.getPricesCount(session.sessionId)}`
@@ -6370,6 +6374,7 @@ async function renderSectionsList(
   eventId: string,
   scope: AdminEventScope,
   sessionId?: string,
+  { selectable = false }: { selectable?: boolean } = {},
 ) {
   const details = await getScopedAdminEventDetails(eventId, scope);
   if (!details.ok || !details.event.venueId) return "Não encontrei venue para esse evento.";
@@ -6383,7 +6388,9 @@ async function renderSectionsList(
         ? result.sections.map(
           (section, index) =>
             [
-              formatOptionLine(index + 1, section.name, { preserveCase: true }),
+              selectable
+                ? formatOptionLine(index + 1, section.name, { preserveCase: true })
+                : `- ${section.name}`,
               `   slug: ${section.slug}`,
               `   capacidade: ${section.capacity ?? "não definida"}`,
               `   assento marcado: ${section.hasNumberedSeats ? "sim" : "não"}`,
@@ -6449,7 +6456,7 @@ async function getAdminPriceListForEvent(eventId: string, scope: AdminEventScope
       ...(prices.length
         ? prices.map((price) =>
             [
-              formatOptionLine(price.option, price.label, { preserveCase: true }),
+              `- ${price.label}`,
               `   Sessão: ${formatDateTime(price.sessionStartsAt)}`,
               `   Setor: ${price.sectionName}`,
               `   Valor: ${formatPriceWithOptionalFee(price.priceCents, price.feeCents)}`,
@@ -6582,7 +6589,7 @@ async function handleAdminEventOperationalSubmenus({
     if (numericOption === 3) {
       return {
         reply: [
-          await renderSessionsList(eventId, scope),
+          await renderSessionsList(eventId, scope, { selectable: true }),
           "",
           "Envie: número da sessão | nova data/hora. Ex: 1 | 10/06/2026 22:30",
         ].join("\n"),
@@ -6595,7 +6602,7 @@ async function handleAdminEventOperationalSubmenus({
     if (numericOption === 4) {
       return {
         reply: [
-          await renderSessionsList(eventId, scope),
+          await renderSessionsList(eventId, scope, { selectable: true }),
           "",
           "Envie: número da sessão | status. Ex: 1 | sales_open",
           "Status: scheduled, sales_open ou sales_closed.",
@@ -6610,7 +6617,7 @@ async function handleAdminEventOperationalSubmenus({
     if (numericOption === 5) {
       return {
         reply: [
-          await renderSessionsList(eventId, scope),
+          await renderSessionsList(eventId, scope, { selectable: true }),
           "",
           "Envie o número da sessão que deseja cancelar.",
         ].join("\n"),
@@ -6918,7 +6925,9 @@ async function handleAdminEventOperationalSubmenus({
     if (numericOption === 3) {
       return {
         reply: [
-          await renderSectionsList(eventId, scope),
+          await renderSectionsList(eventId, scope, undefined, {
+            selectable: true,
+          }),
           "",
           "Envie: número do setor | nome | capacidade | status | numerado sim/não.",
           "Ex: 1 | Pista Premium | 500 | active | sim",
@@ -6946,7 +6955,9 @@ async function handleAdminEventOperationalSubmenus({
     if (numericOption === 5) {
       return {
         reply: [
-          await renderSectionsList(eventId, scope),
+          await renderSectionsList(eventId, scope, undefined, {
+            selectable: true,
+          }),
           "",
           "Envie: número do setor | status | assentos.",
           "Ex: 1 | blocked | A01,A02 ou 1 | active | A01,A02",
@@ -8894,12 +8905,11 @@ export async function routeTicketMessage({
         }
 
         const result = await findAdminTicketsByPhone(phone);
-        const ticketBlocks = result.tickets.map((ticket, index) =>
-          formatAdminTicketForPhoneSearch(ticket, index + 1),
+        const ticketBlocks = result.tickets.map((ticket) =>
+          formatAdminTicketForPhoneSearch(ticket),
         );
         const reservationBlocks = result.pendingReservations.map(
-          (reservation, index) =>
-            formatAdminPendingReservation(reservation, index + 1),
+          (reservation) => formatAdminPendingReservation(reservation),
         );
         const reply = [
           "*BUSCA POR TELEFONE*",
@@ -9492,7 +9502,7 @@ export async function routeTicketMessage({
 
         return {
           reply: [
-            buildCourtesiesListReply(found.courtesies),
+            buildCourtesiesListReply(found.courtesies, { selectable: true }),
             "",
             nextState === "admin_courtesy_resend_select"
               ? "*QUAL CORTESIA DESEJA REENVIAR?*"
@@ -9663,6 +9673,7 @@ export async function routeTicketMessage({
                   renderGateAccessesList({
                     title: "REVOGAR ACESSOS",
                     accesses: result.accesses,
+                    selectable: true,
                   }),
                   "",
                   "Digite o número do acesso que deseja pausar.",
@@ -9890,6 +9901,7 @@ export async function routeTicketMessage({
             renderGateAccessesList({
               title: "REVOGAR ACESSOS",
               accesses: result.accesses,
+              selectable: true,
             }),
             "",
             "Digite o número do acesso que deseja pausar.",

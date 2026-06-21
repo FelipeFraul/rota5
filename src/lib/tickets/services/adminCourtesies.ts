@@ -1029,16 +1029,21 @@ export function buildCourtesyEventsReply(title: string, events: AdminCourtesyEve
   ].join("\n");
 }
 
-export function buildCourtesiesListReply(courtesies: AdminCourtesyRecord[]) {
+export function buildCourtesiesListReply(
+  courtesies: AdminCourtesyRecord[],
+  { selectable = false }: { selectable?: boolean } = {},
+) {
   return [
     "*CORTESIAS EMITIDAS*",
     "",
     ...(courtesies.length
       ? courtesies.map((courtesy, index) =>
           [
-            formatOptionLine(index + 1, courtesy.eventTitle, {
-              preserveCase: true,
-            }),
+            selectable
+              ? formatOptionLine(index + 1, courtesy.eventTitle, {
+                  preserveCase: true,
+                })
+              : `- ${courtesy.eventTitle}`,
             `   Beneficiário: ${courtesy.beneficiaryName ?? "Não informado"}`,
             `   Telefone: ${maskPhone(courtesy.phone)}`,
             `   Código: ${courtesy.ticketCode ?? "sem ticket"}`,
