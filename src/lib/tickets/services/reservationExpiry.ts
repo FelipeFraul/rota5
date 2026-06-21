@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { TICKET_MESSAGES } from "@/lib/tickets/messages";
 import {
   updateConversationAfterMessage,
   type TicketConversation,
@@ -21,6 +22,7 @@ type ExpiredReservationNotificationRow = {
   customer_id: string;
   conversation_id: string | null;
   expires_at: string;
+  updated_at?: string;
   customers: { whatsapp_phone: string } | null;
   conversations: TicketConversation | null;
   orders:
@@ -34,11 +36,7 @@ function firstOrder(row: ExpiredReservationNotificationRow) {
 }
 
 function buildReservationExpiredMessage() {
-  return [
-    "⏰ *A SUA RESERVA EXPIROU*",
-    "Os ingressos foram liberados novamente para venda.",
-    "Para ver o mesmo evento ou buscar outro, só digitar uma nova busca.",
-  ].join("\n");
+  return TICKET_MESSAGES.reservationExpired;
 }
 
 function resetExpiredReservationContext(
@@ -73,6 +71,10 @@ function resetExpiredReservationContext(
 }
 
 async function loadExpiredReservationNotificationRows(reservationIds: string[]) {
+  if (reservationIds.length === 0) {
+    return [];
+  }
+
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("reservations")
@@ -87,6 +89,62 @@ async function loadExpiredReservationNotificationRows(reservationIds: string[]) 
   }
 
   return data ?? [];
+}
+
+async function loadSentExpiredReservationNotificationIds(
+  reservationIds: string[],
+) {
+  if (reservationIds.length === 0) {
+    return new Set<string>();
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("whatsapp_messages")
+    .select("raw_metadata")
+    .eq("direction", "outbound")
+    .eq("raw_metadata->>reason", "reservation_expired")
+    .eq("raw_metadata->>send_status", "sent")
+    .in("raw_metadata->>reservation_id", reservationIds)
+    .returns<{ raw_metadata: Record<string, unknown> | null }[]>();
+
+  if (error) {
+    throw error;
+  }
+
+  return new Set(
+    (data ?? [])
+      .map((row) => row.raw_metadata?.reservation_id)
+      .filter((reservationId): reservationId is string => {
+        return typeof reservationId === "string";
+      }),
+  );
+}
+
+async function loadRecentlyExpiredReservationNotificationRows(limit: number) {
+  const since = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("reservations")
+    .select(
+      "id, customer_id, conversation_id, expires_at, updated_at, customers(whatsapp_phone), conversations(id, customer_id, status, context, last_message_at), orders(id, status)",
+    )
+    .eq("status", "expired")
+    .gte("updated_at", since)
+    .order("updated_at", { ascending: false })
+    .limit(limit)
+    .returns<ExpiredReservationNotificationRow[]>();
+
+  if (error) {
+    throw error;
+  }
+
+  const rows = data ?? [];
+  const sentNotificationIds = await loadSentExpiredReservationNotificationIds(
+    rows.map((row) => row.id),
+  );
+
+  return rows.filter((row) => !sentNotificationIds.has(row.id));
 }
 
 async function notifyExpiredReservation(row: ExpiredReservationNotificationRow) {
@@ -173,21 +231,18 @@ export async function expireReservationsAndNotify(limit = 100) {
     ? result.reservation_ids.filter((id): id is string => typeof id === "string")
     : [];
 
-  if (reservationIds.length === 0) {
-    return {
-      expiredReservationsCount: result.expired_reservations_count ?? 0,
-      releasedSeatsCount: result.released_seats_count ?? 0,
-      expiredOrderCount: result.expired_order_count ?? 0,
-      notifiedCount: 0,
-      failedNotificationCount: 0,
-    };
+  const rowsById = new Map<string, ExpiredReservationNotificationRow>();
+  const expiredRows = await loadExpiredReservationNotificationRows(reservationIds);
+  const retryRows = await loadRecentlyExpiredReservationNotificationRows(limit);
+
+  for (const row of [...expiredRows, ...retryRows]) {
+    rowsById.set(row.id, row);
   }
 
-  const rows = await loadExpiredReservationNotificationRows(reservationIds);
   let notifiedCount = 0;
   let failedNotificationCount = 0;
 
-  for (const row of rows) {
+  for (const row of rowsById.values()) {
     const notification = await notifyExpiredReservation(row);
 
     if (notification.sent) {

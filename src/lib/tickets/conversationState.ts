@@ -83,6 +83,7 @@ export type TicketConversationStep =
   | "reservation_created"
   | "help_topic_collecting"
   | "help_results"
+  | "ticket_resend_selecting"
   | "gate_access_selecting"
   | "gate_access_passphrase_collecting"
   | "payment_pending";
@@ -325,6 +326,15 @@ export type TicketConversationPublicHelp = {
   }>;
 };
 
+export type TicketConversationTicketResend = {
+  lastOptions?: Array<{
+    option: number;
+    eventId: string;
+    sessionId: string;
+    orderIds: string[];
+  }>;
+};
+
 export type TicketConversationAdminReports = {
   reportType?:
     | "summary"
@@ -377,6 +387,7 @@ export type TicketConversationState = {
   selectedQuantity?: number;
   eventMoreInfoShown?: boolean;
   publicHelp?: TicketConversationPublicHelp;
+  ticketResend?: TicketConversationTicketResend;
   reservation?: TicketConversationReservation;
   payment?: TicketConversationPayment;
   lastSections?: TicketConversationSectionOption[];
@@ -384,10 +395,73 @@ export type TicketConversationState = {
   updatedAt: string;
 };
 
-export function buildInitialConversationState(): TicketConversationState {
+export const DEFAULT_CONVERSATION_INACTIVITY_TTL_MINUTES = 60;
+
+export type ConversationContextResetReason =
+  | "inactivity"
+  | "admin_auth_expired";
+
+function timestampHasExpired(value: unknown, now: Date) {
+  if (typeof value !== "string") return false;
+  const timestamp = new Date(value).getTime();
+  return Number.isFinite(timestamp) && timestamp <= now.getTime();
+}
+
+export function resolveConversationContextForInbound({
+  context,
+  lastMessageAt,
+  now = new Date(),
+  inactivityTtlMinutes = DEFAULT_CONVERSATION_INACTIVITY_TTL_MINUTES,
+}: {
+  context: Record<string, unknown>;
+  lastMessageAt?: string | null;
+  now?: Date;
+  inactivityTtlMinutes?: number;
+}): {
+  context: Record<string, unknown>;
+  resetReason: ConversationContextResetReason | null;
+} {
+  const state = context as Partial<TicketConversationState>;
+
+  if (
+    state.state === "admin_auth_pending" &&
+    timestampHasExpired(state.admin?.authChallengeExpiresAt, now)
+  ) {
+    return {
+      context: buildInitialConversationState(now),
+      resetReason: "admin_auth_expired",
+    };
+  }
+
+  const ttl = Number.isFinite(inactivityTtlMinutes) && inactivityTtlMinutes > 0
+    ? inactivityTtlMinutes
+    : DEFAULT_CONVERSATION_INACTIVITY_TTL_MINUTES;
+  const activityTimestamp = lastMessageAt ?? state.updatedAt;
+  const activityTime =
+    typeof activityTimestamp === "string"
+      ? new Date(activityTimestamp).getTime()
+      : Number.NaN;
+  const inactiveForMs = now.getTime() - activityTime;
+
+  if (
+    Number.isFinite(activityTime) &&
+    inactiveForMs >= ttl * 60_000
+  ) {
+    return {
+      context: buildInitialConversationState(now),
+      resetReason: "inactivity",
+    };
+  }
+
+  return { context, resetReason: null };
+}
+
+export function buildInitialConversationState(
+  now = new Date(),
+): TicketConversationState {
   return {
     step: "idle",
     state: "idle",
-    updatedAt: new Date().toISOString(),
+    updatedAt: now.toISOString(),
   };
 }

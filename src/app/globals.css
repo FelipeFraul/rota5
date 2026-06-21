@@ -60,6 +60,13 @@ main {
   font-family: Arial, sans-serif;
 }
 
+/* The Mercado Pago SDK may append a tracking image directly after the checkout
+   root. It has no visual role and some mobile browsers render a broken-image
+   placeholder when the request is blocked. */
+.checkout-shell ~ img {
+  display: none !important;
+}
+
 .checkout-summary-panel,
 .checkout-payment-panel {
   padding: 22px;

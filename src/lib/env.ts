@@ -31,10 +31,6 @@ const envSchema = z.object({
   NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY: z
     .string()
     .min(1, "NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY is required."),
-  ADMIN_WHATSAPP_PHONES: z
-    .string()
-    .min(1, "ADMIN_WHATSAPP_PHONES is required."),
-  ADMIN_ROOT_WHATSAPP_PHONES: z.string().optional(),
   ADMIN_SESSION_TTL_MINUTES: z.coerce
     .number("ADMIN_SESSION_TTL_MINUTES must be a number.")
     .int("ADMIN_SESSION_TTL_MINUTES must be an integer.")

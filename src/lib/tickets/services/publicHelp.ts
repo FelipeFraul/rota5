@@ -303,7 +303,14 @@ const HELP_TOPICS: PublicHelpTopic[] = [
     question: "Paguei e não recebi o ingresso.",
     keywords: ["nao", "recebi", "ingresso", "paguei", "pagamento", "whatsapp"],
     answer:
-      "Aguarde alguns instantes. A entrega depende da confirmação do pagamento e do envio pelo WhatsApp. Confira se o pagamento foi aprovado. Se persistir, fale com a equipe da Black House.",
+      "Aguarde alguns instantes. A entrega depende da confirmação do pagamento e do envio pelo WhatsApp. Se o pagamento foi aprovado, digite `REENVIAR INGRESSO` neste mesmo WhatsApp para receber novamente o ingresso pago emitido para este telefone.",
+  },
+  {
+    id: "reenviar-ingresso",
+    question: "Como reenviar meu ingresso pago?",
+    keywords: ["reenviar", "reenvio", "ingresso", "pago", "qr", "qrcode", "ticket"],
+    answer:
+      "Digite `REENVIAR INGRESSO` no mesmo WhatsApp usado na compra. Se houver apenas um ingresso pago emitido, o sistema envia na hora. Se houver mais de um evento, escolha o número do evento desejado.",
   },
   {
     id: "qr-code",

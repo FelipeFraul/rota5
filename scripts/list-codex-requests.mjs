@@ -2,7 +2,6 @@ import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
-const DEFAULT_CODEX_PHONE = "15997503836";
 const APPROVED_PREFIX = "CODEX APROVADO:";
 
 function loadEnvFile(filePath) {
@@ -66,7 +65,7 @@ loadEnvFile(resolve(".env.local"));
 const supabaseUrl = process.env.SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const phone = normalizeWhatsAppPhone(
-  getArgValue("--phone") ?? process.env.CODEX_WHATSAPP_PHONE ?? DEFAULT_CODEX_PHONE,
+  getArgValue("--phone") ?? process.env.CODEX_WHATSAPP_PHONE,
 );
 const limit = Number(getArgValue("--limit") ?? 20);
 
@@ -75,7 +74,7 @@ if (!supabaseUrl || !serviceRoleKey) {
 }
 
 if (!phone) {
-  throw new Error("Telefone invalido para consulta.");
+  throw new Error("Informe --phone ou CODEX_WHATSAPP_PHONE para consulta.");
 }
 
 const supabase = createClient(supabaseUrl, serviceRoleKey, {

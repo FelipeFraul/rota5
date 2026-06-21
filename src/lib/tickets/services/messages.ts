@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { formatWhatsAppUppercase } from "@/lib/zapi/format";
 
 type WhatsAppMessageDirection = "inbound" | "outbound";
 type WhatsAppMessageType = "text" | "image" | "document" | "system";
@@ -74,7 +75,10 @@ export async function saveWhatsAppMessage({
       customer_id: customerId,
       direction,
       message_type: messageType,
-      body,
+      body:
+        direction === "outbound" && body
+          ? formatWhatsAppUppercase(body)
+          : body,
       provider_message_id: providerMessageId,
       raw_metadata: rawMetadata,
     })

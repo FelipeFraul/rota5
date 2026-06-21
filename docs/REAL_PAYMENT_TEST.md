@@ -86,7 +86,6 @@ Vercel Production must contain these envs:
 - `GATE_SESSION_SECRET`
 - `GATE_SESSION_TTL_MINUTES`
 - `GATE_ADMIN_SECRET`
-- `ADMIN_WHATSAPP_PHONES`
 - `TICKET_RESERVATION_TTL_MINUTES`
 
 `ZAPI_INSTANCE_TOKEN` is the provider token name used by this codebase. If an external checklist calls it `ZAPI_TOKEN`, map that value to `ZAPI_INSTANCE_TOKEN`.
@@ -199,20 +198,16 @@ Expected:
 
 ## Gate Session
 
-From an authorized admin WhatsApp number in `ADMIN_WHATSAPP_PHONES`, send:
-
-```text
-portaria CONTROLLED_VALIDATOR_PHONE TEST_REAL_PAYMENT_MVP
-```
+From an authenticated admin session with `manage_gate`, open `Admin > Portaria > Check-in neste telefone` and select the controlled test event.
 
 Expected:
 
 - `gate_sessions` row is created;
 - only `token_hash` is stored;
-- validator receives a temporary gate link;
-- admin receives confirmation.
+- admin receives a temporary gate link for the authenticated phone;
+- the action is tied to a valid admin user/session rather than a phone allowlist.
 
-Open the gate link on the validator device.
+Open the gate link on the controlled validator/admin device.
 
 ## Gate Validation
 

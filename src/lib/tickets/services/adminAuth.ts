@@ -156,22 +156,6 @@ export function isAdminLogoutCommand(text: string) {
   );
 }
 
-function getRootAdminPhones() {
-  return (process.env.ADMIN_ROOT_WHATSAPP_PHONES ?? "")
-    .split(",")
-    .map((phone) => normalizeAdminPhone(phone))
-    .filter((phone): phone is string => Boolean(phone));
-}
-
-export function isRootAdminPhone(phone: string) {
-  const normalizedPhone = normalizeAdminPhone(phone);
-
-  return Boolean(
-    normalizedPhone &&
-      getRootAdminPhones().some((rootPhone) => rootPhone === normalizedPhone),
-  );
-}
-
 function getSessionTtlMinutes() {
   const rawValue = process.env.ADMIN_SESSION_TTL_MINUTES;
 
@@ -800,6 +784,70 @@ export function canAccessAdminArea(role: AdminRole, permission: AdminPermission)
   return hasAdminPermission(role, permission);
 }
 
+function maskAdminAuthPhone(value: string | null | undefined) {
+  const digits = normalizeAdminPhone(value) ?? value?.replace(/\D/g, "") ?? "";
+
+  if (!digits) return null;
+  if (digits.length <= 4) return digits;
+
+  return `${"*".repeat(Math.max(0, digits.length - 4))}${digits.slice(-4)}`;
+}
+
+export async function requireAdminPermission({
+  phone,
+  sessionId,
+  adminUserId,
+  permission,
+  operation,
+}: {
+  phone: string;
+  sessionId: string | null | undefined;
+  adminUserId: string | null | undefined;
+  permission: AdminPermission;
+  operation: string;
+}) {
+  const sessionResult = await getActiveAdminSession(phone);
+  const adminUserResult = await getAdminUserByPhone(phone);
+  const adminSession = sessionResult.ok ? sessionResult.adminSession : null;
+  const adminUser = adminUserResult.ok ? adminUserResult.adminUser : null;
+  const allowed =
+    Boolean(adminSession) &&
+    adminSession?.id === sessionId &&
+    adminSession?.admin_user_id === adminUserId &&
+    Boolean(adminUser) &&
+    adminUser?.id === adminUserId &&
+    adminUser?.status === "active" &&
+    hasAdminPermission(adminUser.role, permission);
+
+  if (!allowed) {
+    logWarn("Blocked stale or unauthorized admin operation", {
+      operation,
+      permission,
+      adminUserId,
+      adminPhone: maskAdminAuthPhone(phone),
+      contextSessionId: sessionId ?? null,
+      reloadedSessionId: adminSession?.id ?? null,
+      reloadedSessionAdminUserId: adminSession?.admin_user_id ?? null,
+      reloadedAdminUserId: adminUser?.id ?? null,
+      reloadedRole: adminUser?.role ?? null,
+      reloadedStatus: adminUser?.status ?? null,
+    });
+
+    return {
+      ok: false as const,
+      reason: "unauthorized" as const,
+      adminSession,
+      adminUser,
+    };
+  }
+
+  return {
+    ok: true as const,
+    adminSession,
+    adminUser,
+  };
+}
+
 export function getAdminMenuOptions(role: AdminRole) {
   const permissions = getAdminPermissions(role);
   const options: Array<{
@@ -899,95 +947,6 @@ export async function getAdminUserByPhone(phone: string) {
     ok: true as const,
       adminUser: adminUser && isAdminRole(adminUser.role) ? { ...adminUser, role: adminUser.role } : null,
   };
-}
-
-export async function ensureAdminUserForPhone(phone: string) {
-  const normalizedPhone = normalizeAdminPhone(phone);
-
-  if (!normalizedPhone) {
-    return {
-      ok: false as const,
-      reason: "invalid_phone" as const,
-    };
-  }
-
-  const existingResult = await getAdminUserByPhone(normalizedPhone);
-
-  if (!existingResult.ok) {
-    return existingResult;
-  }
-
-  if (existingResult.adminUser) {
-    if (existingResult.adminUser.status !== "active") {
-      return {
-        ok: false as const,
-        reason: "disabled" as const,
-      };
-    }
-
-    return {
-      ok: true as const,
-      adminUser: existingResult.adminUser,
-      bootstrapped: false,
-    };
-  }
-
-  if (!isRootAdminPhone(normalizedPhone)) {
-    return {
-      ok: false as const,
-      reason: "not_authorized" as const,
-    };
-  }
-
-  const supabase = getSupabaseAdmin();
-  const { data: adminUser, error } = await supabase
-    .from("admin_users")
-    .insert({
-      phone: normalizedPhone,
-      role: "root",
-      status: "active",
-      created_by_admin_phone: normalizedPhone,
-    })
-    .select("id, phone, role, status, name, last_login_at, courtesy_send_limit, courtesy_receive_limit")
-    .single<AdminUser>();
-
-  if (error) {
-    if (error.code === "23505") {
-      return ensureAdminUserForPhone(normalizedPhone);
-    }
-
-    return {
-      ok: false as const,
-      reason: "database_error" as const,
-      error,
-    };
-  }
-
-  return {
-    ok: true as const,
-    adminUser,
-    bootstrapped: true,
-  };
-}
-
-export async function isAuthorizedAdminPhone(phone: string) {
-  const normalizedPhone = normalizeAdminPhone(phone);
-
-  if (!normalizedPhone) {
-    return false;
-  }
-
-  if (isRootAdminPhone(normalizedPhone)) {
-    return true;
-  }
-
-  const adminResult = await getAdminUserByPhone(normalizedPhone);
-
-  return Boolean(
-    adminResult.ok &&
-      adminResult.adminUser &&
-      adminResult.adminUser.status === "active",
-  );
 }
 
 export async function createAdminSession(adminUser: AdminUser) {

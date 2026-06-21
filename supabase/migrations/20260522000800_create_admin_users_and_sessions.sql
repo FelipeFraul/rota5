@@ -65,7 +65,7 @@ before update on public.admin_users
 for each row execute function public.set_updated_at();
 
 comment on table public.admin_users
-is 'Backend-only WhatsApp admin users. Root users may be bootstrapped only from ADMIN_ROOT_WHATSAPP_PHONES.';
+is 'Backend-only WhatsApp admin users. Administrative access is granted only by persisted role, status, individual passphrase hash, and active admin sessions.';
 
 comment on table public.admin_sessions
 is 'Temporary backend admin sessions created after passphrase authentication. No passphrase or raw secret is stored.';

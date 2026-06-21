@@ -258,7 +258,6 @@ Important indexes and constraints:
 
 Backend-only environment variables:
 
-- `ADMIN_ROOT_WHATSAPP_PHONES`: comma-separated normalized root phones.
 - `ADMIN_SESSION_TTL_MINUTES`: temporary admin session TTL; default documented value is 60.
 
 None of these variables may use a `NEXT_PUBLIC_` prefix. `.env.example` intentionally contains only empty placeholders, never a real passphrase or hash.
@@ -275,7 +274,7 @@ Admin WhatsApp behavior:
 
 - `admin`, `adm`, and `administrador` are reserved and intercepted before event search.
 - Unauthorized phones receive a neutral message and never see admin wording.
-- A configured root phone sending `admin` is bootstrapped into `admin_users` with role `root` if missing, but it still cannot authenticate until `admin_users.passphrase_hash` is set.
+- An admin phone must already exist as an active `admin_users` row with a valid role and individual `passphrase_hash`; there is no phone-based bootstrap.
 - The next inbound message while `admin_auth_pending` is saved as `[ADMIN_AUTH_REDACTED]`.
 - Admin web login challenges live in `admin_login_challenges`. Store only hashed link tokens, hashed one-time return codes, and hashed source identifiers. The raw web login link sent by WhatsApp is persisted as `[ADMIN_LOGIN_LINK_REDACTED]`; the raw admin password is entered only on the web login page and is never stored.
 - A valid individual passphrase creates an `admin_sessions` row and shows a permission-filtered menu.
@@ -313,7 +312,7 @@ The `Administradores` WhatsApp module is implemented for `Diretor/root` only:
 - `Desativar administrador` requires `DESATIVAR ADMIN`, does not delete `admin_users`, blocks Director self-disable, and revokes active sessions for the disabled admin.
 - `Liberar administrador bloqueado` lists temporary or manually blocked admin logins, masks phones, and requires `LIBERAR ADMIN` to clear failed attempts and lock timestamps.
 - The flow never creates `gate` or `support`; the database constraint also rejects those roles.
-- `ADMIN_ROOT_WHATSAPP_PHONES` is not modified by this module.
+- The flow does not read or modify any root-phone environment allowlist.
 
 The real Supabase audit `TEST_ADMIN_USERS_FLOW` validated Director-only access, Manager/Operator blocking, safe list output, creation of Gerente/Operador/Diretor, duplicate blocking, disabled-user reactivation, invalid role rejection, confirmation phrases, session revocation on role/status changes, common buyer search preservation, and cleanup.
 
@@ -1545,8 +1544,8 @@ It does not validate ticket ownership, does not mark the ticket used, does not i
 
 ### Final Step 15 Audit
 
-- [x] `portaria TELEFONE [label]` is gated by normalized `ADMIN_WHATSAPP_PHONES`.
-- [x] Configured admin phones are recognized by normalization; production has the admin phone envs configured as encrypted Vercel variables.
+- [x] Legacy `portaria TELEFONE [label]` no longer grants administrative access from a phone allowlist; gate creation is available through authenticated admin sessions with `manage_gate`.
+- [x] Admin access is recognized by `admin_users.role`, `admin_users.status`, individual passphrase hash, and active `admin_sessions`.
 - [x] `GATE_SESSION_SECRET` and `GATE_SESSION_TTL_MINUTES` are present in `src/lib/env.ts`, `.env.example`, and Vercel Production; neither uses `NEXT_PUBLIC_`, and the secret has no default fallback.
 - [x] Gate tokens are opaque random base64url strings. They do not carry payload fields such as `gid`, `phone`, or `exp`.
 - [x] `gate_sessions.token_hash` stores only SHA-256 token hashes, is unique, and is not returned by public endpoints.
@@ -1883,7 +1882,6 @@ To run the full cycle locally or in production, configure:
 - `GATE_SESSION_SECRET`
 - `GATE_SESSION_TTL_MINUTES`
 - `GATE_ADMIN_SECRET`
-- `ADMIN_WHATSAPP_PHONES`
 - `TICKET_RESERVATION_TTL_MINUTES`
 
 `ZAPI_INSTANCE_TOKEN` is the token env name used by the codebase. If external Z-API documentation or an operational checklist says `ZAPI_TOKEN`, map that value into `ZAPI_INSTANCE_TOKEN`.

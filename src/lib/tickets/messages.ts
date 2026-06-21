@@ -1,7 +1,7 @@
 const PUBLIC_HOME_MESSAGE =
   "Olá, bem-vindo(a) à Black House, casa de Comédia de Sorocaba!\nPesquise um evento por nome, artista, data ou...";
 const PUBLIC_HOME_COMMANDS_MESSAGE =
-  '> Para ver todos os eventos, digite "TODOS"\n> Para receber ajuda a qualquer momento, digite "AJUDA"\n> Para voltar à página inicial e fazer uma nova pesquisa, digite "SAIR"';
+  '> Para ver todos os eventos, digite "TODOS"\n> Para reenviar ingresso pago, digite "REENVIAR INGRESSO"\n> Para receber ajuda a qualquer momento, digite "AJUDA"\n> Para voltar à página inicial e fazer uma nova pesquisa, digite "SAIR"';
 
 export const TICKET_MESSAGES = {
   genericHelp: PUBLIC_HOME_MESSAGE,

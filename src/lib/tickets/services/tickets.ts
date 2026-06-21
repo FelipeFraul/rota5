@@ -17,6 +17,7 @@ type TicketRow = {
     seat_code: string;
   } | null;
   event_sessions: {
+    event_id?: string;
     starts_at: string;
     events: {
       title: string;
@@ -31,6 +32,29 @@ type TicketRow = {
   } | null;
   venue_sections: {
     name: string;
+  } | null;
+};
+
+type PaidTicketResendRow = TicketRow & {
+  issued_at: string;
+  orders: {
+    id: string;
+    status: string;
+    payments:
+      | {
+          id: string;
+          status: string;
+          paid_at: string | null;
+        }
+      | Array<{
+          id: string;
+          status: string;
+          paid_at: string | null;
+        }>
+      | null;
+  } | null;
+  customers: {
+    whatsapp_phone: string;
   } | null;
 };
 
@@ -88,6 +112,22 @@ export type PublicTicketView = Pick<
   | "seatCode"
 >;
 
+export type PaidTicketResendOption = {
+  option: number;
+  eventId: string;
+  sessionId: string;
+  title: string;
+  startsAt: string;
+  city: string;
+  state: string;
+  orderIds: string[];
+  ticketsCount: number;
+};
+
+export type PaidTicketResendGroup = PaidTicketResendOption & {
+  tickets: TicketForDelivery[];
+};
+
 export type SignedTicketTokenPayload = {
   tid: string;
   code: string;
@@ -140,6 +180,70 @@ function mapTicketRow(row: TicketRow): TicketForDelivery | null {
     sectionName: row.venue_sections?.name ?? "Setor",
     seatCode: row.reservation_items?.seat_code ?? "A confirmar",
   };
+}
+
+function firstPayment(row: PaidTicketResendRow) {
+  const payments = row.orders?.payments;
+
+  if (Array.isArray(payments)) {
+    return payments[0] ?? null;
+  }
+
+  return payments ?? null;
+}
+
+function uniqueStrings(values: string[]) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function mapPaidTicketRowsToGroups(rows: PaidTicketResendRow[]) {
+  const groups = new Map<string, PaidTicketResendGroup>();
+
+  for (const row of rows) {
+    if (row.orders?.status !== "paid" || firstPayment(row)?.status !== "approved") {
+      continue;
+    }
+
+    const ticket = mapTicketRow(row);
+
+    if (!ticket || !row.event_sessions?.events) {
+      continue;
+    }
+
+    const eventId = row.event_sessions.event_id ?? row.session_id;
+    const key = `${eventId}:${row.session_id}`;
+    const existing = groups.get(key);
+
+    if (existing) {
+      existing.tickets.push(ticket);
+      existing.ticketsCount = existing.tickets.length;
+      existing.orderIds = uniqueStrings([...existing.orderIds, row.order_id]);
+      continue;
+    }
+
+    groups.set(key, {
+      option: groups.size + 1,
+      eventId,
+      sessionId: row.session_id,
+      title: row.event_sessions.events.title,
+      startsAt: row.event_sessions.starts_at,
+      city: row.event_sessions.events.city,
+      state: row.event_sessions.events.state,
+      orderIds: [row.order_id],
+      ticketsCount: 1,
+      tickets: [ticket],
+    });
+  }
+
+  return [...groups.values()].map((group, index) => ({
+    ...group,
+    option: index + 1,
+    orderIds: uniqueStrings(group.orderIds),
+    tickets: group.tickets.sort((left, right) =>
+      left.ticketCode.localeCompare(right.ticketCode),
+    ),
+    ticketsCount: group.tickets.length,
+  }));
 }
 
 function mapPublicTicketRow(row: PublicTicketRow): PublicTicketView | null {
@@ -238,6 +342,30 @@ export async function getTicketsForOrder(
 
     return ticket ? [ticket] : [];
   });
+}
+
+export async function listPaidTicketResendGroupsForPhone(
+  phone: string,
+): Promise<PaidTicketResendGroup[]> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("tickets")
+    .select(
+      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, issued_at, customers!inner(whatsapp_phone), orders!inner(id, status, payments!inner(id, status, paid_at)), reservation_items!inner(seat_code), event_sessions!inner(event_id, starts_at, events!inner(title, artist_name, city, state, venues(name, address))), venue_sections!inner(name)",
+    )
+    .eq("customers.whatsapp_phone", phone)
+    .eq("status", "issued")
+    .eq("orders.status", "paid")
+    .eq("orders.payments.status", "approved")
+    .order("issued_at", { ascending: false })
+    .limit(50)
+    .returns<PaidTicketResendRow[]>();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapPaidTicketRowsToGroups(data ?? []);
 }
 
 export async function getTicketBySignedToken(

@@ -1,6 +1,5 @@
 import { normalizeWhatsAppPhone } from "@/lib/tickets/phones";
 
-const DEFAULT_CODEX_REQUEST_PHONES = ["15997503836"];
 const CODEX_COMMAND_PATTERN = /^codex(?:\s*[:\-]|\s+)([\s\S]*)$/i;
 export const CODEX_AUTH_REDACTED_BODY = "[CODEX_AUTH_REDACTED]";
 export const CODEX_APPROVED_PREFIX = "CODEX APROVADO:";
@@ -13,10 +12,8 @@ export type CodexRequestContext = {
 };
 
 function getAllowedCodexPhones() {
-  const configuredPhones =
-    process.env.CODEX_WHATSAPP_PHONES?.split(",") ?? DEFAULT_CODEX_REQUEST_PHONES;
-
-  return configuredPhones
+  return (process.env.CODEX_WHATSAPP_PHONES ?? "")
+    .split(",")
     .map((phone) => normalizeWhatsAppPhone(phone))
     .filter((phone): phone is string => Boolean(phone));
 }

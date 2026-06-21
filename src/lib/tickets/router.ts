@@ -1,6 +1,5 @@
 import "server-only";
 
-import { getEnv } from "@/lib/env";
 import { logError } from "@/lib/logger";
 import {
   buildInitialConversationState,
@@ -51,6 +50,13 @@ import {
   issuePublicFreeTicketsForOrder,
   type IssuePublicFreeTicketsResult,
 } from "@/lib/tickets/services/publicFreeTickets";
+import {
+  buildTicketDeliveryPayload,
+} from "@/lib/tickets/services/ticketDelivery";
+import {
+  listPaidTicketResendGroupsForPhone,
+  type PaidTicketResendGroup,
+} from "@/lib/tickets/services/tickets";
 import {
   formatPublicHelpAnswer,
   formatPublicHelpPrompt,
@@ -155,9 +161,8 @@ import {
   type AdminUserListItem,
 } from "@/lib/tickets/services/adminUsers";
 import {
-  createGateSession,
   normalizeGatePhone,
-  revokeGateSession,
+  createGateSession,
 } from "@/lib/tickets/services/gateSessions";
 import {
   createGateAccess,
@@ -178,23 +183,21 @@ import {
   consumeAdminLoginChallengeCode,
   createAdminLoginChallenge,
   createAdminSession,
-  ensureAdminUserForPhone,
   formatAdminMenu,
   getActiveAdminSession,
   getAdminAuthBlockStatus,
   getAdminUserByPhone,
   hasAdminPermission,
   isAdminLogoutCommand,
-  isAuthorizedAdminPhone,
   isReservedAdminCommand,
   hashAdminPassphrase,
   normalizeAdminPhone,
   normalizeAdminText,
+  requireAdminPermission,
   revokeActiveAdminSessions,
   type AdminRole,
   type AdminPermission,
 } from "@/lib/tickets/services/adminAuth";
-import { sendZapiText } from "@/lib/zapi/client";
 
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 const GENERIC_SEARCH_WORDS = new Set([
@@ -657,8 +660,12 @@ function formatOptionLine(
     preserveCase || label.length === 0
       ? label
       : label.charAt(0).toLocaleLowerCase("pt-BR") + label.slice(1);
+  const emphasizedLabel =
+    /\b(?:comprar|voltar|ver mais|nova pesquisa)\b/iu.test(normalizedLabel)
+      ? `*${normalizedLabel}*`
+      : normalizedLabel;
 
-  return `Digite ${option} para ${normalizedLabel}`;
+  return `Digite ${option} para ${emphasizedLabel}`;
 }
 
 function formatTicketOptionLabel(label: string) {
@@ -1176,6 +1183,12 @@ function isAllPublicEventsIntent(text: string) {
   return normalized === "todos";
 }
 
+function isTicketResendCommand(text: string) {
+  const normalized = normalizeIntentText(text);
+
+  return normalized === "reenviar ingresso";
+}
+
 function isAllPublicEventsContext(context: Partial<TicketConversationState>) {
   return context.lastSearch?.originalText
     ? isAllPublicEventsIntent(context.lastSearch.originalText)
@@ -1210,6 +1223,7 @@ function resetBuyerReservationContext(
     lastSections: [],
     lastEvents: [],
     publicHelp: undefined,
+    ticketResend: undefined,
   };
 }
 
@@ -1403,22 +1417,6 @@ function parseTicketQuantity(text: string) {
   return Number.isInteger(quantity) && quantity > 0 ? quantity : null;
 }
 
-function getAdminPhones() {
-  const env = getEnv();
-
-  return env.ADMIN_WHATSAPP_PHONES.split(",")
-    .map((phone) => normalizeGatePhone(phone))
-    .filter((phone): phone is string => Boolean(phone));
-}
-
-function isAdminPhone(phone: string) {
-  const normalizedPhone = normalizeGatePhone(phone);
-
-  return Boolean(
-    normalizedPhone && getAdminPhones().some((adminPhone) => adminPhone === normalizedPhone),
-  );
-}
-
 function buildAdminContext({
   adminUserId,
   role,
@@ -1473,8 +1471,6 @@ type AdminEventScope = {
   canSeeAllEvents: boolean;
 };
 
-const GLOBAL_ADMIN_EVENT_PHONE = "15997503836";
-
 function buildAdminEventScope(adminUser: {
   id: string;
   phone: string;
@@ -1485,8 +1481,7 @@ function buildAdminEventScope(adminUser: {
   return {
     adminUserId: adminUser.id,
     adminPhone: normalizedPhone,
-    canSeeAllEvents:
-      adminUser.role === "root" || normalizedPhone === GLOBAL_ADMIN_EVENT_PHONE,
+    canSeeAllEvents: adminUser.role === "root",
   };
 }
 
@@ -1731,40 +1726,6 @@ function parseGateCommand(text: string) {
   };
 }
 
-function buildGateValidatorMessage(gateUrl: string) {
-  return [
-    "Você recebeu acesso temporário à portaria.",
-    "",
-    "Abra o link abaixo no celular para validar ingressos:",
-    gateUrl,
-    "",
-    "Este acesso é temporário e deve ser usado apenas pela equipe autorizada.",
-  ].join("\n");
-}
-
-function buildGateAdminReply({
-  validatorPhone,
-  gateLabel,
-  expiresAt,
-  sent,
-}: {
-  validatorPhone: string;
-  gateLabel: string | null;
-  expiresAt: string;
-  sent: boolean;
-}) {
-  return [
-    "Acesso de portaria criado.",
-    "",
-    `Validador: ${validatorPhone}`,
-    `Portaria: ${gateLabel ?? "Entrada"}`,
-    `Validade: até ${formatDateTime(expiresAt)}`,
-    "",
-    sent
-      ? "O link foi enviado ao validador."
-      : "Não consegui enviar o link ao validador. Crie um novo acesso ou tente novamente.",
-  ].join("\n");
-}
 
 function buildReservationContext(
   reservation: ReserveSelectedSeatSuccess,
@@ -1906,6 +1867,146 @@ function buildPublicFreeTicketOutboundMessages(
       caption: image.caption,
     })),
   ];
+}
+
+function buildPaidTicketResendOutboundMessages(
+  delivery: Awaited<ReturnType<typeof buildTicketDeliveryPayload>>,
+) {
+  return [
+    { type: "text" as const, body: delivery.message },
+    ...delivery.qrImages.map((image) => ({
+      type: "image" as const,
+      imageUrl: image.imageUrl,
+      caption: image.caption,
+    })),
+  ];
+}
+
+function formatPaidTicketResendOptions(groups: PaidTicketResendGroup[]) {
+  return [
+    "*REENVIAR INGRESSO*",
+    "",
+    "Encontrei ingressos emitidos para este telefone.",
+    "Escolha o evento que deseja receber novamente:",
+    "",
+    ...groups.map((group) =>
+      formatOptionLine(
+        group.option,
+        `${group.title} - ${formatDateTime(group.startsAt)} - ${group.city}/${group.state} (${group.ticketsCount} ingresso${group.ticketsCount === 1 ? "" : "s"})`,
+        { preserveCase: true },
+      ),
+    ),
+  ].join("\n");
+}
+
+async function buildPaidTicketResendResult({
+  baseContext,
+  group,
+}: {
+  baseContext: TicketConversationState;
+  group: PaidTicketResendGroup;
+}): Promise<RouteTicketMessageOutput> {
+  const delivery = await buildTicketDeliveryPayload(
+    group.tickets,
+    "*REENVIO DE INGRESSO*",
+  );
+
+  return {
+    reply: delivery.message,
+    outboundMessages: buildPaidTicketResendOutboundMessages(delivery),
+    nextContext: resetBuyerReservationContext(baseContext),
+  };
+}
+
+async function handlePaidTicketResendCommand({
+  baseContext,
+  phone,
+}: {
+  baseContext: TicketConversationState;
+  phone: string;
+}): Promise<RouteTicketMessageOutput> {
+  const groups = await listPaidTicketResendGroupsForPhone(phone);
+  const ticketsCount = groups.reduce((total, group) => total + group.tickets.length, 0);
+
+  if (ticketsCount === 0) {
+    return {
+      reply:
+        "NÃ£o encontrei ingresso pago emitido para este telefone. Confira se o pagamento foi aprovado e se este Ã© o mesmo WhatsApp usado na compra.",
+      nextContext: resetBuyerReservationContext(baseContext),
+    };
+  }
+
+  if (ticketsCount === 1) {
+    return buildPaidTicketResendResult({ baseContext, group: groups[0] });
+  }
+
+  return {
+    reply: formatPaidTicketResendOptions(groups),
+    nextContext: {
+      ...resetBuyerReservationContext(baseContext),
+      step: "ticket_resend_selecting",
+      state: "ticket_resend_selecting",
+      ticketResend: {
+        lastOptions: groups.map((group) => ({
+          option: group.option,
+          eventId: group.eventId,
+          sessionId: group.sessionId,
+          orderIds: group.orderIds,
+        })),
+      },
+    },
+  };
+}
+
+async function handlePaidTicketResendSelection({
+  baseContext,
+  phone,
+  text,
+}: {
+  baseContext: TicketConversationState;
+  phone: string;
+  text: string;
+}): Promise<RouteTicketMessageOutput | null> {
+  if (baseContext.state !== "ticket_resend_selecting") {
+    return null;
+  }
+
+  if (isBuyerBackIntent(text) || isBuyerReservationExitIntent(text)) {
+    return {
+      reply: TICKET_MESSAGES.genericHelp,
+      nextContext: resetBuyerReservationContext(baseContext),
+    };
+  }
+
+  const option = text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
+  const selected = option
+    ? baseContext.ticketResend?.lastOptions?.find((item) => item.option === option)
+    : null;
+
+  if (!selected) {
+    return {
+      reply: "NÃ£o encontrei essa opÃ§Ã£o. Responda com um nÃºmero da lista.",
+      nextContext: baseContext,
+    };
+  }
+
+  const groups = await listPaidTicketResendGroupsForPhone(phone);
+  const group = groups.find(
+    (item) =>
+      item.eventId === selected.eventId &&
+      item.sessionId === selected.sessionId &&
+      selected.orderIds.every((orderId) => item.orderIds.includes(orderId)),
+  );
+
+  if (!group) {
+    return {
+      reply:
+        "NÃ£o encontrei mais esse ingresso disponÃ­vel para reenvio. Confira com a equipe da Black House.",
+      nextContext: resetBuyerReservationContext(baseContext),
+    };
+  }
+
+  return buildPaidTicketResendResult({ baseContext, group });
 }
 
 function formatPublicFreeTicketFailureMessage(
@@ -4002,6 +4103,69 @@ async function adminEventHasPurchasableInventory(event: AdminEventDetails) {
   return false;
 }
 
+async function requireFreshAdminPermission({
+  baseContext,
+  scope,
+  permission,
+  operation,
+}: {
+  baseContext: TicketConversationState;
+  scope: Pick<AdminEventScope, "adminPhone" | "adminUserId">;
+  permission: AdminPermission;
+  operation: string;
+}) {
+  const authResult = await requireAdminPermission({
+    phone: scope.adminPhone,
+    sessionId: baseContext.admin?.sessionId,
+    adminUserId: scope.adminUserId,
+    permission,
+    operation,
+  });
+
+  if (!authResult.ok) {
+    return {
+      ok: false as const,
+      response: {
+        reply: ADMIN_MENU_UNAVAILABLE_MESSAGE,
+        nextContext: {
+          ...baseContext,
+          step: "admin_menu",
+          state: "admin_menu",
+          adminEvents: undefined,
+        },
+      } satisfies RouteTicketMessageOutput,
+    };
+  }
+
+  return {
+    ok: true as const,
+    scope: buildAdminEventScope(authResult.adminUser),
+  };
+}
+
+async function requireFreshAdminEventsPermission(
+  baseContext: TicketConversationState,
+  scope: AdminEventScope,
+  operation: string,
+) {
+  return requireFreshAdminPermission({
+    baseContext,
+    scope,
+    permission: "manage_events",
+    operation,
+  });
+}
+
+function buildFreshAdminScope(adminUser: {
+  id: string;
+  phone: string;
+}) {
+  return {
+    adminPhone: adminUser.phone,
+    adminUserId: adminUser.id,
+  } satisfies Pick<AdminEventScope, "adminPhone" | "adminUserId">;
+}
+
 async function handleAdminEventsFlow({
   baseContext,
   scope,
@@ -4324,10 +4488,17 @@ async function handleAdminEventsFlow({
       };
     }
 
+    const freshAuth = await requireFreshAdminEventsPermission(
+      baseContext,
+      scope,
+      "admin_event_duplicate",
+    );
+    if (!freshAuth.ok) return freshAuth.response;
+
     const duplicateResult = await duplicateAdminEvent({
       eventId,
-      createdByAdminUserId: scope.adminUserId,
-      createdByAdminPhone: scope.adminPhone,
+      createdByAdminUserId: freshAuth.scope.adminUserId,
+      createdByAdminPhone: freshAuth.scope.adminPhone,
     });
 
     if (!duplicateResult.ok) {
@@ -5375,6 +5546,13 @@ async function handleAdminEventsFlow({
       };
     }
 
+    const freshAuth = await requireFreshAdminEventsPermission(
+      baseContext,
+      scope,
+      "admin_event_create",
+    );
+    if (!freshAuth.ok) return freshAuth.response;
+
     const result = await createAdminEvent({
       title,
       artistName,
@@ -5386,8 +5564,8 @@ async function handleAdminEventsFlow({
       sessionsStartsAt,
       status,
       initialSections,
-      createdByAdminUserId: scope.adminUserId,
-      createdByAdminPhone: scope.adminPhone,
+      createdByAdminUserId: freshAuth.scope.adminUserId,
+      createdByAdminPhone: freshAuth.scope.adminPhone,
     });
 
     if (!result.ok) {
@@ -5721,6 +5899,13 @@ async function handleAdminEventsFlow({
       if (!details.ok || !venueName) {
         values = null;
       } else {
+        const freshAuth = await requireFreshAdminEventsPermission(
+          baseContext,
+          scope,
+          "admin_event_venue_prepare",
+        );
+        if (!freshAuth.ok) return freshAuth.response;
+
         const venue = await findOrCreateVenue({
           name: venueName,
           city: details.event.city,
@@ -5769,6 +5954,13 @@ async function handleAdminEventsFlow({
       if (!startsAt || !sessionId) {
         values = null;
       } else {
+        const freshAuth = await requireFreshAdminEventsPermission(
+          baseContext,
+          scope,
+          "admin_event_session_datetime_update",
+        );
+        if (!freshAuth.ok) return freshAuth.response;
+
         const result = await updateAdminSession(sessionId, { starts_at: startsAt });
 
         if (!result.ok) {
@@ -5805,6 +5997,13 @@ async function handleAdminEventsFlow({
         }),
       };
     }
+
+    const freshAuth = await requireFreshAdminEventsPermission(
+      baseContext,
+      scope,
+      "admin_event_update",
+    );
+    if (!freshAuth.ok) return freshAuth.response;
 
     const result = await updateAdminEvent(eventId, values);
     if (!result.ok) {
@@ -5907,6 +6106,13 @@ async function handleAdminEventsFlow({
       };
     }
 
+    const freshAuth = await requireFreshAdminEventsPermission(
+      baseContext,
+      scope,
+      "admin_event_publish_select_status_update",
+    );
+    if (!freshAuth.ok) return freshAuth.response;
+
     const result = await updateAdminEvent(eventId, {
       status: targetStatus as AdminEventStatus,
     });
@@ -6004,6 +6210,13 @@ async function handleAdminEventsFlow({
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
       };
     }
+
+    const freshAuth = await requireFreshAdminEventsPermission(
+      baseContext,
+      scope,
+      "admin_event_status_update",
+    );
+    if (!freshAuth.ok) return freshAuth.response;
 
     const result = await updateAdminEvent(eventId, { status: status as AdminEventStatus });
     return result.ok
@@ -6425,6 +6638,13 @@ async function handleAdminEventOperationalSubmenus({
           ),
         };
       }
+      const freshAuth = await requireFreshAdminEventsPermission(
+        baseContext,
+        scope,
+        "admin_event_session_create",
+      );
+      if (!freshAuth.ok) return freshAuth.response;
+
       const result = await createEventAdminSession({
         eventId,
         venueId: String(adminEvents.draft?.venueId ?? "") || null,
@@ -6488,6 +6708,13 @@ async function handleAdminEventOperationalSubmenus({
           ),
         };
       }
+      const freshAuth = await requireFreshAdminEventsPermission(
+        baseContext,
+        scope,
+        "admin_event_session_update",
+      );
+      if (!freshAuth.ok) return freshAuth.response;
+
       const result = await updateAdminSession(String(adminEvents.draft?.sessionId), {
         starts_at: adminEvents.draft?.startsAt
           ? String(adminEvents.draft.startsAt)
@@ -6517,6 +6744,13 @@ async function handleAdminEventOperationalSubmenus({
           ),
         };
       }
+      const freshAuth = await requireFreshAdminEventsPermission(
+        baseContext,
+        scope,
+        "admin_event_session_cancel",
+      );
+      if (!freshAuth.ok) return freshAuth.response;
+
       const result = await updateAdminSession(String(adminEvents.draft?.sessionId), {
         status: "cancelled",
       });
@@ -6769,6 +7003,13 @@ async function handleAdminEventOperationalSubmenus({
         };
       }
 
+      const freshAuth = await requireFreshAdminEventsPermission(
+        baseContext,
+        scope,
+        "admin_event_section_capacity_update",
+      );
+      if (!freshAuth.ok) return freshAuth.response;
+
       const result = await updateAdminSectionCapacity({
         venueId: details.event.venueId,
         sectionId,
@@ -6888,6 +7129,13 @@ async function handleAdminEventOperationalSubmenus({
         };
       }
       const hasNumberedSeats = adminEvents.draft?.hasNumberedSeats;
+      const freshAuth = await requireFreshAdminEventsPermission(
+        baseContext,
+        scope,
+        "admin_event_section_update",
+      );
+      if (!freshAuth.ok) return freshAuth.response;
+
       const result = await updateAdminSection(String(adminEvents.draft?.sectionId), {
         name: String(adminEvents.draft?.name),
         capacity:
@@ -6926,6 +7174,13 @@ async function handleAdminEventOperationalSubmenus({
       }
       const details = await getScopedAdminEventDetails(eventId, scope);
       if (!details.ok || !details.event.venueId) return null;
+      const freshAuth = await requireFreshAdminEventsPermission(
+        baseContext,
+        scope,
+        "admin_event_section_create",
+      );
+      if (!freshAuth.ok) return freshAuth.response;
+
       const result = await createAdminSection({
         venueId: details.event.venueId,
         name: String(adminEvents.draft?.name),
@@ -7092,6 +7347,13 @@ async function handleAdminEventOperationalSubmenus({
           ),
         };
       }
+      const freshAuth = await requireFreshAdminEventsPermission(
+        baseContext,
+        scope,
+        "admin_event_seat_status_update",
+      );
+      if (!freshAuth.ok) return freshAuth.response;
+
       const result = await updateAdminSeatStatuses({
         sectionId: String(adminEvents.draft?.sectionId),
         seatCodes: (adminEvents.draft?.seatCodes as string[]) ?? [],
@@ -7124,6 +7386,13 @@ async function handleAdminEventOperationalSubmenus({
       }
       const details = await getScopedAdminEventDetails(eventId, scope);
       if (!details.ok || !details.event.venueId) return null;
+      const freshAuth = await requireFreshAdminEventsPermission(
+        baseContext,
+        scope,
+        "admin_event_seats_create",
+      );
+      if (!freshAuth.ok) return freshAuth.response;
+
       const result = await createAdminSeats({
         venueId: details.event.venueId,
         sectionId: String(adminEvents.draft?.sectionId),
@@ -7258,6 +7527,13 @@ async function handleAdminEventOperationalSubmenus({
           ),
         };
       }
+      const freshAuth = await requireFreshAdminEventsPermission(
+        baseContext,
+        scope,
+        "admin_event_session_seats_create",
+      );
+      if (!freshAuth.ok) return freshAuth.response;
+
       const result = await createMissingSessionSeats({
         sessionId: String(adminEvents.draft?.sessionId),
         sectionIds: (adminEvents.draft?.sectionIds as string[]) ?? [],
@@ -7363,6 +7639,13 @@ async function handleAdminEventOperationalSubmenus({
         };
       }
 
+      const freshAuth = await requireFreshAdminEventsPermission(
+        baseContext,
+        scope,
+        "admin_event_price_update",
+      );
+      if (!freshAuth.ok) return freshAuth.response;
+
       const result = await updateAdminPrice(String(adminEvents.draft?.priceId), {
         label: adminEvents.draft?.label ? String(adminEvents.draft.label) : undefined,
         price_cents:
@@ -7426,6 +7709,13 @@ async function handleAdminEventOperationalSubmenus({
           ),
         };
       }
+
+      const freshAuth = await requireFreshAdminEventsPermission(
+        baseContext,
+        scope,
+        "admin_event_price_value_update",
+      );
+      if (!freshAuth.ok) return freshAuth.response;
 
       const result = await updateAdminPrice(String(adminEvents.draft?.priceId), {
         price_cents: priceCents,
@@ -7554,6 +7844,13 @@ async function handleAdminEventOperationalSubmenus({
           ),
         };
       }
+      const freshAuth = await requireFreshAdminEventsPermission(
+        baseContext,
+        scope,
+        "admin_event_price_create",
+      );
+      if (!freshAuth.ok) return freshAuth.response;
+
       const result = await createAdminPrice({
         sessionId: String(adminEvents.draft?.sessionId),
         sectionId: String(adminEvents.draft?.sectionId),
@@ -8068,21 +8365,13 @@ export async function routeTicketMessage({
   const reservedAdminCommand = isReservedAdminCommand(text);
 
   const startAdminLogin = async (): Promise<RouteTicketMessageOutput> => {
-    if (!(await isAuthorizedAdminPhone(customer.whatsapp_phone))) {
-      return {
-        reply: TICKET_MESSAGES.adminReservedNeutral,
-        nextContext: {
-          ...baseContext,
-          step: "idle",
-          state: "idle",
-          admin: undefined,
-        },
-      };
-    }
+    const adminUserResult = await getAdminUserByPhone(customer.whatsapp_phone);
 
-    const adminUserResult = await ensureAdminUserForPhone(customer.whatsapp_phone);
-
-    if (!adminUserResult.ok) {
+    if (
+      !adminUserResult.ok ||
+      !adminUserResult.adminUser ||
+      adminUserResult.adminUser.status !== "active"
+    ) {
       return {
         reply: TICKET_MESSAGES.adminReservedNeutral,
         nextContext: {
@@ -8182,9 +8471,13 @@ export async function routeTicketMessage({
       return startAdminLogin();
     }
 
-    const adminUserResult = await ensureAdminUserForPhone(customer.whatsapp_phone);
+    const adminUserResult = await getAdminUserByPhone(customer.whatsapp_phone);
 
-    if (!adminUserResult.ok) {
+    if (
+      !adminUserResult.ok ||
+      !adminUserResult.adminUser ||
+      adminUserResult.adminUser.status !== "active"
+    ) {
       return {
         reply: TICKET_MESSAGES.adminReservedNeutral,
         nextContext: {
@@ -8800,6 +9093,14 @@ export async function routeTicketMessage({
           };
         }
 
+        const freshAuth = await requireFreshAdminPermission({
+          baseContext,
+          scope: buildFreshAdminScope(adminUser),
+          permission: "manage_tickets",
+          operation: "admin_order_cancel_pending_reservation",
+        });
+        if (!freshAuth.ok) return freshAuth.response;
+
         const result = await cancelAdminPendingReservation(pending);
 
         if (!result.ok) {
@@ -9105,6 +9406,14 @@ export async function routeTicketMessage({
           return returnToCourtesyMenu();
         }
 
+        const freshAuth = await requireFreshAdminPermission({
+          baseContext,
+          scope: buildFreshAdminScope(adminUser),
+          permission: "manage_courtesies",
+          operation: "admin_courtesy_issue",
+        });
+        if (!freshAuth.ok) return freshAuth.response;
+
         const issueResult = await issueAdminCourtesy({
           eventId,
           sessionId,
@@ -9114,8 +9423,8 @@ export async function routeTicketMessage({
           beneficiaryPhone,
           beneficiaryName: adminCourtesies.beneficiaryName,
           reason: adminCourtesies.reason,
-          issuedByAdminUserId: adminUser.id,
-          issuedByAdminPhone: normalizeGatePhone(adminUser.phone) ?? adminUser.phone,
+          issuedByAdminUserId: freshAuth.scope.adminUserId,
+          issuedByAdminPhone: normalizeGatePhone(freshAuth.scope.adminPhone) ?? freshAuth.scope.adminPhone,
         });
 
         if (!issueResult.ok) {
@@ -9278,6 +9587,14 @@ export async function routeTicketMessage({
 
         const courtesyId = adminCourtesies.pendingCourtesyId;
         if (!courtesyId) return returnToCourtesyMenu();
+        const freshAuth = await requireFreshAdminPermission({
+          baseContext,
+          scope: buildFreshAdminScope(adminUser),
+          permission: "manage_courtesies",
+          operation: "admin_courtesy_cancel",
+        });
+        if (!freshAuth.ok) return freshAuth.response;
+
         const result = await cancelCourtesyForEvent(adminCourtesies.selectedEventId ?? "", {
           courtesyId,
         });
@@ -9437,12 +9754,20 @@ export async function routeTicketMessage({
           };
         }
 
+        const freshAuth = await requireFreshAdminPermission({
+          baseContext,
+          scope: buildFreshAdminScope(adminUser),
+          permission: "manage_gate",
+          operation: "admin_gate_access_create",
+        });
+        if (!freshAuth.ok) return freshAuth.response;
+
         const gateAccessResult = await createGateAccess({
           phone: validatorPhone,
           passphrase,
           eventId,
-          createdByAdminUserId: adminUser.id,
-          createdByAdminPhone: customer.whatsapp_phone,
+          createdByAdminUserId: freshAuth.scope.adminUserId,
+          createdByAdminPhone: freshAuth.scope.adminPhone,
         });
 
         if (!gateAccessResult.ok) {
@@ -9509,9 +9834,17 @@ export async function routeTicketMessage({
         }
 
         if (adminGate.mode === "self_checkin") {
+          const freshAuth = await requireFreshAdminPermission({
+            baseContext,
+            scope: buildFreshAdminScope(adminUser),
+            permission: "manage_gate",
+            operation: "admin_gate_self_checkin_create",
+          });
+          if (!freshAuth.ok) return freshAuth.response;
+
           const gateSessionResult = await createGateSession({
-            validatorPhone: customer.whatsapp_phone,
-            createdByAdminPhone: customer.whatsapp_phone,
+            validatorPhone: freshAuth.scope.adminPhone,
+            createdByAdminPhone: freshAuth.scope.adminPhone,
             gateLabel: "Check-in",
             eventId,
             replaceActiveSessions: true,
@@ -9737,10 +10070,18 @@ export async function routeTicketMessage({
           };
         }
 
+        const freshAuth = await requireFreshAdminPermission({
+          baseContext,
+          scope: buildFreshAdminScope(adminUser),
+          permission: "manage_gate",
+          operation: "admin_gate_access_pause",
+        });
+        if (!freshAuth.ok) return freshAuth.response;
+
         const revokeResult = await pauseGateAccess({
           accessId: selected.gateAccessId,
           eventId: selected.eventId,
-          revokedByAdminUserId: adminUser.id,
+          revokedByAdminUserId: freshAuth.scope.adminUserId,
         });
 
         return {
@@ -9837,6 +10178,14 @@ export async function routeTicketMessage({
         }
 
         try {
+          const freshAuth = await requireFreshAdminPermission({
+            baseContext,
+            scope: buildFreshAdminScope(adminUser),
+            permission: "view_reports",
+            operation: "admin_report_generate",
+          });
+          if (!freshAuth.ok) return freshAuth.response;
+
           const report =
             adminReports.reportType === "summary"
               ? await buildAdminGeneralReport(period)
@@ -10116,12 +10465,20 @@ export async function routeTicketMessage({
           };
         }
 
+        const freshAuth = await requireFreshAdminPermission({
+          baseContext,
+          scope: buildFreshAdminScope(adminUser),
+          permission: "manage_admins",
+          operation: "admin_user_create",
+        });
+        if (!freshAuth.ok) return freshAuth.response;
+
         const result = await createAdminUser({
           phone: adminUsersContext.pendingPhone,
           name: adminUsersContext.pendingName ?? null,
           role: adminUsersContext.pendingRole,
           passphraseHash: adminUsersContext.pendingPassphraseHash,
-          createdByAdminPhone: adminUser.phone,
+          createdByAdminPhone: freshAuth.scope.adminPhone,
         });
 
         if (!result.ok && result.reason === "already_disabled" && result.adminUserId) {
@@ -10205,13 +10562,21 @@ export async function routeTicketMessage({
           };
         }
 
+        const freshAuth = await requireFreshAdminPermission({
+          baseContext,
+          scope: buildFreshAdminScope(adminUser),
+          permission: "manage_admins",
+          operation: "admin_user_reactivate",
+        });
+        if (!freshAuth.ok) return freshAuth.response;
+
         const result = await reactivateAdminUser({
           adminUserId: adminUsersContext.pendingExistingAdminUserId,
           phone: adminUsersContext.pendingPhone,
           name: adminUsersContext.pendingName ?? null,
           role: adminUsersContext.pendingRole,
           passphraseHash: adminUsersContext.pendingPassphraseHash,
-          createdByAdminPhone: adminUser.phone,
+          createdByAdminPhone: freshAuth.scope.adminPhone,
         });
 
         return {
@@ -10395,10 +10760,18 @@ export async function routeTicketMessage({
           };
         }
 
+        const freshAuth = await requireFreshAdminPermission({
+          baseContext,
+          scope: buildFreshAdminScope(adminUser),
+          permission: "manage_admins",
+          operation: "admin_user_role_update",
+        });
+        if (!freshAuth.ok) return freshAuth.response;
+
         const result = await updateAdminRole({
           adminUserId: adminUsersContext.selectedAdminUserId,
           role: adminUsersContext.pendingRole,
-          actingAdminUserId: adminUser.id,
+          actingAdminUserId: freshAuth.scope.adminUserId,
         });
 
         const blockedMessage =
@@ -10453,9 +10826,17 @@ export async function routeTicketMessage({
           };
         }
 
+        const freshAuth = await requireFreshAdminPermission({
+          baseContext,
+          scope: buildFreshAdminScope(adminUser),
+          permission: "manage_admins",
+          operation: "admin_user_disable",
+        });
+        if (!freshAuth.ok) return freshAuth.response;
+
         const result = await disableAdminUser({
           adminUserId: adminUsersContext.selectedAdminUserId,
-          actingAdminUserId: adminUser.id,
+          actingAdminUserId: freshAuth.scope.adminUserId,
         });
 
         const blockedMessage =
@@ -10512,9 +10893,17 @@ export async function routeTicketMessage({
           };
         }
 
+        const freshAuth = await requireFreshAdminPermission({
+          baseContext,
+          scope: buildFreshAdminScope(adminUser),
+          permission: "manage_admins",
+          operation: "admin_user_unlock",
+        });
+        if (!freshAuth.ok) return freshAuth.response;
+
         const result = await unlockAdminAuthForPhone({
           phone: adminUsersContext.selectedAdminPhone,
-          unlockedByAdminUserId: adminUser.id,
+          unlockedByAdminUserId: freshAuth.scope.adminUserId,
         });
 
         return {
@@ -10573,6 +10962,19 @@ export async function routeTicketMessage({
       baseContext.state === "admin_events_list" ||
       baseContext.state.startsWith("admin_event_")
     ) {
+      if (!canAccessAdminMenu(adminUser.role, ADMIN_SUBMENUS.admin_events_menu)) {
+        return {
+          reply: ADMIN_MENU_UNAVAILABLE_MESSAGE,
+          nextContext: adminReplyContext({
+            state: "admin_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
       if (baseContext.state === "admin_events_menu" && numericOption === 6) {
         return {
           reply: formatAdminMenu(adminUser.role),
@@ -11141,60 +11543,7 @@ export async function routeTicketMessage({
     };
   }
 
-  if (gateCommand && isAdminPhone(customer.whatsapp_phone)) {
-    if (!gateCommand.valid) {
-      return {
-        reply: TICKET_MESSAGES.gateAdminInvalidCommand,
-        nextContext: {
-          ...baseContext,
-          step: previousState.step ?? "idle",
-          state: previousState.state ?? "idle",
-        },
-      };
-    }
-
-    const gateSessionResult = await createGateSession({
-      validatorPhone: gateCommand.validatorPhone,
-      createdByAdminPhone: customer.whatsapp_phone,
-      gateLabel: gateCommand.gateLabel,
-    });
-
-    if (!gateSessionResult.ok) {
-      return {
-        reply: TICKET_MESSAGES.gateAdminCreateError,
-        nextContext: {
-          ...baseContext,
-          step: previousState.step ?? "idle",
-          state: previousState.state ?? "idle",
-        },
-      };
-    }
-
-    const sendResult = await sendZapiText({
-      phone: gateCommand.validatorPhone,
-      message: buildGateValidatorMessage(gateSessionResult.gateUrl),
-    });
-
-    if (!sendResult.ok) {
-      await revokeGateSession(gateSessionResult.gateSession.id);
-    }
-
-    return {
-      reply: buildGateAdminReply({
-        validatorPhone: gateCommand.validatorPhone,
-        gateLabel: gateCommand.gateLabel,
-        expiresAt: gateSessionResult.gateSession.expires_at,
-        sent: sendResult.ok,
-      }),
-      nextContext: {
-        ...baseContext,
-        step: previousState.step ?? "idle",
-        state: previousState.state ?? "idle",
-      },
-    };
-  }
-
-  if (gateCommand && !isAdminPhone(customer.whatsapp_phone)) {
+  if (gateCommand) {
     if (!gateCommand.valid && normalizeAdminText(text) === "portaria") {
       const accessResult = await findActiveGateAccessesForPhone(
         customer.whatsapp_phone,
@@ -11253,7 +11602,9 @@ export async function routeTicketMessage({
     }
 
     return {
-      reply: TICKET_MESSAGES.adminReservedNeutral,
+      reply: gateCommand.valid
+        ? TICKET_MESSAGES.adminReservedNeutral
+        : TICKET_MESSAGES.gateAdminInvalidCommand,
       nextContext: {
         ...baseContext,
         step: "idle",
@@ -11287,6 +11638,23 @@ export async function routeTicketMessage({
       ],
       nextContext: resetBuyerReservationContext(baseContext),
     };
+  }
+
+  const paidTicketResendSelection = await handlePaidTicketResendSelection({
+    baseContext,
+    phone: customer.whatsapp_phone,
+    text,
+  });
+
+  if (paidTicketResendSelection) {
+    return paidTicketResendSelection;
+  }
+
+  if (isTicketResendCommand(text)) {
+    return handlePaidTicketResendCommand({
+      baseContext,
+      phone: customer.whatsapp_phone,
+    });
   }
 
   if (isBuyerBackIntent(text)) {

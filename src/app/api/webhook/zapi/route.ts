@@ -9,6 +9,7 @@ import { createGitHubIssue } from "@/lib/github/issues";
 import { logError, logInfo, logWarn } from "@/lib/logger";
 import {
   consumeRateLimit,
+  hashRateLimitScope,
   rateLimitResponse,
 } from "@/lib/security/rateLimit";
 import {
@@ -42,6 +43,10 @@ import {
 import { normalizeWhatsAppPhone } from "@/lib/tickets/phones";
 import { routeTicketMessage } from "@/lib/tickets/router";
 import {
+  DEFAULT_CONVERSATION_INACTIVITY_TTL_MINUTES,
+  resolveConversationContextForInbound,
+} from "@/lib/tickets/conversationState";
+import {
   ADMIN_AUTH_REDACTED_BODY,
   verifyAdminUserPassphrase,
 } from "@/lib/tickets/services/adminAuth";
@@ -53,12 +58,21 @@ import {
 } from "@/lib/zapi/client";
 
 const MAX_WEBHOOK_BYTES = 256 * 1024;
+const PHONE_RATE_LIMIT = 30;
+const PHONE_RATE_LIMIT_WINDOW_SECONDS = 60;
 const SECRET_HEADER_NAMES = [
   "x-zapi-webhook-secret",
   "x-webhook-secret",
   "authorization",
 ];
 const SECRET_QUERY_NAMES = ["zapi_webhook_secret", "webhook_secret"];
+
+function getConversationInactivityTtlMinutes() {
+  const configured = Number(process.env.CONVERSATION_INACTIVITY_TTL_MINUTES);
+  return Number.isInteger(configured) && configured > 0
+    ? configured
+    : DEFAULT_CONVERSATION_INACTIVITY_TTL_MINUTES;
+}
 
 type ZapiWebhookPayload = Record<string, unknown>;
 type ParsedIncomingMessage = {
@@ -608,6 +622,23 @@ export async function POST(request: Request) {
     return jsonOk({ received: true, ignored: true, reason: "missing_text" });
   }
 
+  const phoneRateLimit = await consumeRateLimit({
+    routeKey: "webhook:zapi:phone",
+    limit: PHONE_RATE_LIMIT,
+    windowSeconds: PHONE_RATE_LIMIT_WINDOW_SECONDS,
+    request,
+    scope: `phone:${hashRateLimitScope(incoming.phone)}`,
+  });
+
+  if (!phoneRateLimit.allowed) {
+    logWarn("Rate limited Z-API webhook by phone", {
+      sourceHash: phoneRateLimit.sourceHash,
+      count: phoneRateLimit.count,
+      phoneLast4: incoming.phone.slice(-4),
+    });
+    return jsonOk({ received: true, ignored: true, reason: "phone_rate_limited" });
+  }
+
   if (incoming.providerMessageId) {
     const duplicateResult = await findInboundMessageByProviderId(
       incoming.providerMessageId,
@@ -654,8 +685,23 @@ export async function POST(request: Request) {
     return jsonError("Internal Server Error", 500);
   }
 
+  const resolvedContext = resolveConversationContextForInbound({
+    context: conversationResult.conversation.context,
+    lastMessageAt: conversationResult.conversation.last_message_at,
+    inactivityTtlMinutes: getConversationInactivityTtlMinutes(),
+  });
+  const currentContext = resolvedContext.context;
+
+  if (resolvedContext.resetReason) {
+    logInfo("Reset inactive WhatsApp conversation context", {
+      conversationId: conversationResult.conversation.id,
+      phoneLast4: incoming.phone.slice(-4),
+      reason: resolvedContext.resetReason,
+    });
+  }
+
   const inboundRedaction = getInboundRedaction(
-    conversationResult.conversation.context,
+    currentContext,
   );
 
   const inboundResult = await saveWhatsAppMessage({
@@ -689,8 +735,6 @@ export async function POST(request: Request) {
   }
 
   const isAllowedCodexPhone = isAllowedCodexRequestPhone(incoming.phone);
-  const currentContext = conversationResult.conversation.context;
-
   if (isAllowedCodexPhone && isCodexRequestAuthPending(currentContext)) {
     const passphraseResult = await verifyAdminUserPassphrase(
       incoming.phone,
@@ -990,7 +1034,10 @@ export async function POST(request: Request) {
 
   const routeResult = await routeTicketMessage({
     customer: customerResult.customer,
-    conversation: conversationResult.conversation,
+    conversation: {
+      ...conversationResult.conversation,
+      context: currentContext,
+    },
     text: incoming.text ?? incoming.mediaUrl ?? "",
     mediaUrl: incoming.mediaUrl,
     sourceIdentifier: getRequestSourceIdentifier(request),

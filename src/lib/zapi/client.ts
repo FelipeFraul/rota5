@@ -2,6 +2,7 @@ import "server-only";
 
 import { getEnv } from "@/lib/env";
 import { logError, logWarn } from "@/lib/logger";
+import { formatWhatsAppUppercase } from "@/lib/zapi/format";
 
 type SendZapiTextInput = {
   phone: string;
@@ -45,7 +46,7 @@ export async function sendZapiText({
       },
       body: JSON.stringify({
         phone,
-        message,
+        message: formatWhatsAppUppercase(message),
       }),
       signal: controller.signal,
     });
@@ -108,7 +109,7 @@ export async function sendZapiImage({
       body: JSON.stringify({
         phone,
         image,
-        ...(caption ? { caption } : {}),
+        ...(caption ? { caption: formatWhatsAppUppercase(caption) } : {}),
         viewOnce: false,
       }),
       signal: controller.signal,

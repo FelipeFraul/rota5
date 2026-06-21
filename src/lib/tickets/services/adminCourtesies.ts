@@ -4,7 +4,6 @@ import QRCode from "qrcode";
 import { createHash } from "crypto";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { normalizeWhatsAppPhone } from "@/lib/tickets/phones";
-import { cancelPendingReservationForCustomer } from "@/lib/tickets/services/reservations";
 import { listAvailableSections, type AvailableSection } from "@/lib/tickets/services/sections";
 import { listAvailableSeats, listSeatMap } from "@/lib/tickets/services/seats";
 import { createSignedTicketToken, createTicketUrl } from "@/lib/tickets/services/tickets";
@@ -84,6 +83,7 @@ export type AdminCourtesyIssueResult =
         | "event_not_found"
         | "section_not_found"
         | "reservation_failed"
+        | "courtesy_limit_exceeded"
         | "issue_failed";
       error?: unknown;
     };
@@ -156,6 +156,46 @@ type IssueCourtesyOrderRpcResponse = {
     section_id: string;
   }>;
 };
+
+function getPostgresErrorMessage(error: unknown) {
+  if (error && typeof error === "object" && "message" in error) {
+    return String((error as { message?: unknown }).message ?? "");
+  }
+
+  return "";
+}
+
+function mapIssueCourtesyError(
+  error: unknown,
+): Extract<AdminCourtesyIssueResult, { ok: false }>["reason"] {
+  const message = getPostgresErrorMessage(error);
+
+  if (
+    message.includes("courtesy_event_limit_exceeded") ||
+    message.includes("courtesy_send_limit_exceeded") ||
+    message.includes("courtesy_receive_limit_exceeded")
+  ) {
+    return "courtesy_limit_exceeded";
+  }
+
+  if (
+    message.includes("seat_not_available") ||
+    message.includes("reserved_seat_not_available")
+  ) {
+    return "seat_unavailable";
+  }
+
+  if (
+    message.includes("reservation_failed") ||
+    message.includes("reservation_not_found") ||
+    message.includes("reservation_not_payable") ||
+    message.includes("reservation_expired")
+  ) {
+    return "reservation_failed";
+  }
+
+  return "issue_failed";
+}
 
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 const QR_CODE_CAPTION = [
@@ -575,11 +615,8 @@ export async function issueAdminCourtesy(input: {
     return { ok: false, reason: "not_enough_seats" };
   }
 
-  let customer: Awaited<ReturnType<typeof ensureCustomer>> | null = null;
-  let reservationId: string | null = null;
-  let orderIdForRollback: string | null = null;
   try {
-    customer = await ensureCustomer(input.beneficiaryPhone, input.beneficiaryName);
+    const customer = await ensureCustomer(input.beneficiaryPhone, input.beneficiaryName);
     const section = await getSectionForCourtesy(input.sessionId, input.sectionId);
     if (!section) return { ok: false, reason: "section_not_found" };
 
@@ -597,44 +634,23 @@ export async function issueAdminCourtesy(input: {
 
     if (!seats.ok) return { ok: false, reason: seats.reason };
 
-    const { data: reservation, error: reserveError } = await supabase.rpc("reserve_seats", {
+    const { data: issued, error: issueError } = await supabase.rpc("issue_admin_courtesy_order", {
       p_customer_id: customer.id,
-      p_conversation_id: null,
       p_session_id: input.sessionId,
       p_seat_ids: seats.seatIds,
-      p_ticket_type: "free",
-      p_ttl_minutes: 10,
-    });
-
-    if (reserveError || !reservation || typeof reservation !== "object") {
-      return { ok: false, reason: "reservation_failed", error: reserveError };
-    }
-
-    const reservationData = reservation as { reservation_id?: string; order_id?: string };
-    reservationId = reservationData.reservation_id ?? null;
-    const orderId = reservationData.order_id;
-    if (!orderId) return { ok: false, reason: "reservation_failed" };
-    orderIdForRollback = orderId;
-
-    const { data: issued, error: issueError } = await supabase.rpc("issue_courtesy_order", {
-      p_order_id: orderId,
       p_issued_by_admin_user_id: input.issuedByAdminUserId,
       p_issued_by_admin_phone: input.issuedByAdminPhone,
       p_beneficiary_name: input.beneficiaryName?.trim() || null,
       p_reason: input.reason?.trim() || null,
+      p_ttl_minutes: 10,
     });
 
     if (issueError || !issued || typeof issued !== "object") {
-      if (reservationId) {
-        await cancelPendingReservationForCustomer({
-          reservationId,
-          customerId: customer.id,
-          orderId,
-          skipBuyerRisk: true,
-        });
-      }
-
-      return { ok: false, reason: "issue_failed", error: issueError };
+      return {
+        ok: false,
+        reason: mapIssueCourtesyError(issueError),
+        error: issueError,
+      };
     }
 
     const issuedData = issued as IssueCourtesyOrderRpcResponse;
@@ -657,16 +673,7 @@ export async function issueAdminCourtesy(input: {
       delivery: deliveryResult.delivery,
     };
   } catch (error) {
-    if (reservationId && orderIdForRollback && customer) {
-      await cancelPendingReservationForCustomer({
-        reservationId,
-        customerId: customer.id,
-        orderId: orderIdForRollback,
-        skipBuyerRisk: true,
-      }).catch(() => null);
-    }
-
-    return { ok: false, reason: "issue_failed", error };
+    return { ok: false, reason: mapIssueCourtesyError(error), error };
   }
 }
 

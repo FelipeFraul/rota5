@@ -1021,7 +1021,7 @@ Regras:
 - não desativa o próprio Diretor neste ponto;
 - não remove o último Diretor ativo;
 - revoga sessões ativas do administrador desativado;
-- não altera `ADMIN_ROOT_WHATSAPP_PHONES`.
+- nao usa allowlist de Diretor/root por telefone.
 
 ## 11. Relatórios
 

@@ -15,7 +15,6 @@ const STATE_FILE = resolve(STATE_DIR, "state.json");
 const POLL_SECONDS = Number(process.env.CODEX_RUNNER_POLL_SECONDS ?? 60);
 const RUN_ONCE = process.argv.includes("--once");
 const CHECK_ONLY = process.argv.includes("--check");
-const DEFAULT_CODEX_PHONE = "15997503836";
 let codexCommand = process.env.CODEX_CLI_PATH || "codex";
 
 function loadEnvFile(filePath) {
@@ -163,16 +162,19 @@ function buildSupabase() {
 }
 
 function getAllowedPhones() {
-  const configuredPhones =
-    process.env.CODEX_WHATSAPP_PHONES?.split(",") ?? [DEFAULT_CODEX_PHONE];
-
-  return configuredPhones
+  return (process.env.CODEX_WHATSAPP_PHONES ?? "")
+    .split(",")
     .map((phone) => normalizeWhatsAppPhone(phone))
     .filter(Boolean);
 }
 
 async function listPendingRequests(supabase, state) {
   const allowedPhones = getAllowedPhones();
+
+  if (!allowedPhones.length) {
+    return [];
+  }
+
   const { data, error } = await supabase
     .from("whatsapp_messages")
     .select("id, body, created_at, customers!inner(whatsapp_phone, name)")
