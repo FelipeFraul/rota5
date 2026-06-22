@@ -48,31 +48,39 @@ function formatUnprotectedText(value: string) {
     .join("");
 }
 
-function isSystemActionLine(value: string) {
-  const trimmed = value.trim();
-  if (!trimmed) return false;
+const SYSTEM_BUTTON_WORDS =
+  "VOLTAR|CANCELAR|SAIR|CONFIRMAR|SIM|N(?:ÃO|AO)|ALTERAR N[ÍI]VEL";
 
-  if (/^Digite\s+\d+\s+para\b/iu.test(trimmed)) return false;
-  if (/^Digite\s+"/iu.test(trimmed)) return true;
-  if (/"(?:Voltar|Cancelar|Sair|Confirmar|Sim|N[aã]o)"/iu.test(trimmed)) return true;
-  if (/^Digite\s+(?:CONFIRMAR|CANCELAR|VOLTAR|SAIR|SIM|N(?:ÃO|AO))\b/iu.test(trimmed)) return true;
-  if (/^Digite\s+[\p{Lu}\p{M}\s]{2,}\s+para\b/u.test(trimmed)) return true;
-  if (/^Responda\b/iu.test(trimmed)) return true;
-
-  return false;
+function formatSystemButtonToken(value: string) {
+  return `*${value.toLocaleUpperCase("pt-BR")}*`;
 }
 
 export function formatSystemActionLines(value: string) {
   return value
     .split(/(\r?\n)/u)
     .map((part) => {
-      if (/^\r?\n$/u.test(part) || !isSystemActionLine(part)) return part;
+      if (/^\r?\n$/u.test(part) || !part.trim()) return part;
 
-      const leading = part.match(/^\s*/u)?.[0] ?? "";
-      const trailing = part.match(/\s*$/u)?.[0] ?? "";
-      const content = part.trim().replace(/^\*{1,2}|\*{1,2}$/gu, "");
+      const quotePattern = new RegExp(`"\\*?(${SYSTEM_BUTTON_WORDS})\\*?"`, "giu");
+      const commandPattern = new RegExp(`\\b(${SYSTEM_BUTTON_WORDS})\\b`, "giu");
+      const formattedQuotedButtons = part.replace(
+        quotePattern,
+        (_, button: string) => `"${formatSystemButtonToken(button)}"`,
+      );
 
-      return `${leading}**${content.toLocaleUpperCase("pt-BR")}**${trailing}`;
+      if (!/^\s*(?:Digite|Responda)\b/iu.test(formattedQuotedButtons)) {
+        return formattedQuotedButtons;
+      }
+
+      return formattedQuotedButtons.replace(
+        commandPattern,
+        (button: string, _captured: string, offset: number, full: string) => {
+          const previous = full.slice(Math.max(0, offset - 2), offset);
+          const next = full.slice(offset + button.length, offset + button.length + 1);
+          if (previous === "*\"" || previous.endsWith("*") || next === "*") return button;
+          return formatSystemButtonToken(button);
+        },
+      );
     })
     .join("");
 }
