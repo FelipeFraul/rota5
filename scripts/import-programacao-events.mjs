@@ -37,12 +37,29 @@ function inferTicketType(label) {
   return "full";
 }
 
-function capacityFor(label) {
+function placeFor(label) {
   const text = normalize(label);
-  if (text.includes("mesa 2 lugares")) return 1;
-  if (text.includes("mesa 4 lugares")) return 1;
-  if (/\b1[^a-z0-9]?\s*fileira\b/.test(text)) return 5;
-  return 15;
+  if (text.includes("mesa 2 lugares")) {
+    return { key: "table-2", name: "Poltrona+Mesa 2 lugares", capacity: 1 };
+  }
+  if (text.includes("mesa 4 lugares")) {
+    return { key: "table-4", name: "Poltrona+Mesa 4 lugares", capacity: 1 };
+  }
+  if (text.includes("fileira") || text.includes("combo premium")) {
+    return { key: "front-row", name: "1ª FILEIRA (com balcão)", capacity: 5 };
+  }
+  if (text.includes("todos pagam meia") || text.includes("meet & greet") || text.includes("meet&greet")) {
+    return { key: "chair-half", name: "Cadeira Individual (TODOS pagam meia)", capacity: 15 };
+  }
+  if (text.includes("individual")) {
+    return { key: "chair-full", name: "Cadeira Individual (Inteira)", capacity: 15 };
+  }
+  throw new Error(`Oferta sem lugar da Black House: ${label}`);
+}
+
+function inventoryUnitsForEvent(event) {
+  const places = new Map(event.offers.map((offer) => [offer.place.key, offer.place]));
+  return [...places.values()].reduce((total, place) => total + place.capacity, 0);
 }
 
 function parseDate(value) {
@@ -84,19 +101,23 @@ function parseProgramacao(source) {
 
       const description = nonempty.slice(cursor, offerStart).join("\n\n") || null;
       const offers = [];
-      for (let index = offerStart; index < nonempty.length; index += 2) {
+      for (let index = offerStart; index < nonempty.length;) {
         const label = nonempty[index];
         const price = nonempty[index + 1];
         if (!label || !price || !/^R\$\s*[\d.,]+$/i.test(price)) {
-          throw new Error(`Oferta inválida em ${title}: ${label ?? "fim do arquivo"}`);
+          index += 1;
+          continue;
         }
+        const place = placeFor(label);
         offers.push({
           label,
           priceCents: parseMoney(price),
           feeCents: 0,
-          capacity: capacityFor(label),
+          capacity: place.capacity,
+          place,
           ticketType: inferTicketType(label),
         });
+        index += 2;
       }
 
       return {
@@ -182,16 +203,23 @@ async function insertEvent(db, event, venueId, admin) {
     if (sessionError) throw sessionError;
     ids.sessionIds.push(session.id);
 
-    for (const [index, offer] of event.offers.entries()) {
-      const baseSlug = slugify(`${event.title}-${offer.label}`) || `entrada-${index + 1}`;
+    const offersByPlace = new Map();
+    for (const offer of event.offers) {
+      const current = offersByPlace.get(offer.place.key) ?? { place: offer.place, offers: [] };
+      current.offers.push(offer);
+      offersByPlace.set(offer.place.key, current);
+    }
+
+    for (const [index, { place, offers }] of [...offersByPlace.values()].entries()) {
+      const baseSlug = slugify(`${event.title}-${place.key}`) || `entrada-${index + 1}`;
       const slug = `${baseSlug}-${createdEvent.id.slice(0, 8)}`;
       const { data: section, error: sectionError } = await db
         .from("venue_sections")
         .insert({
           venue_id: venueId,
-          name: offer.label,
+          name: place.name,
           slug,
-          capacity: offer.capacity,
+          capacity: place.capacity,
           has_numbered_seats: false,
           sort_order: index,
           status: "active",
@@ -201,19 +229,21 @@ async function insertEvent(db, event, venueId, admin) {
       if (sectionError) throw sectionError;
       ids.sectionIds.push(section.id);
 
-      const { error: priceError } = await db.from("ticket_prices").insert({
-        session_id: session.id,
-        section_id: section.id,
-        ticket_type: offer.ticketType,
-        label: offer.label,
-        price_cents: offer.priceCents,
-        fee_cents: 0,
-        currency: "BRL",
-        status: "active",
-      });
+      const { error: priceError } = await db.from("ticket_prices").insert(
+        offers.map((offer) => ({
+          session_id: session.id,
+          section_id: section.id,
+          ticket_type: offer.ticketType,
+          label: offer.label,
+          price_cents: offer.priceCents,
+          fee_cents: 0,
+          currency: "BRL",
+          status: "active",
+        })),
+      );
       if (priceError) throw priceError;
 
-      const seatRows = Array.from({ length: offer.capacity }, (_, seatIndex) => ({
+      const seatRows = Array.from({ length: place.capacity }, (_, seatIndex) => ({
         venue_id: venueId,
         section_id: section.id,
         row_label: null,
@@ -284,10 +314,7 @@ if (!APPLY && !VERIFY) {
           drafts: events.filter((event) => event.status === "draft").map((event) => event.title),
           venue: VENUE,
           offers: events.reduce((total, event) => total + event.offers.length, 0),
-          inventoryUnits: events.reduce(
-            (total, event) => total + event.offers.reduce((sum, offer) => sum + offer.capacity, 0),
-            0,
-          ),
+          inventoryUnits: events.reduce((total, event) => total + inventoryUnitsForEvent(event), 0),
         }
       : { mode: "dry-run", count: events.length, venue: VENUE, preview },
     null,
@@ -306,10 +333,29 @@ const { data: admins, error: adminError } = await db
   .select("id, phone, role, status")
   .eq("status", "active");
 if (adminError) throw adminError;
-if (admins.length !== 1 || admins[0].role !== "root") {
-  throw new Error(`Esperado exatamente um Diretor ativo; encontrados ${admins.length}`);
+const activeDirectors = admins.filter((candidate) => candidate.role === "root");
+let admin;
+
+if (VERIFY) {
+  const { data: ownership, error: ownershipError } = await db
+    .from("events")
+    .select("created_by_admin_user_id")
+    .in("title", events.map((event) => event.title))
+    .eq("city", CITY);
+  if (ownershipError) throw ownershipError;
+  const ownerIds = [...new Set((ownership ?? []).map((event) => event.created_by_admin_user_id))];
+  admin = ownerIds.length === 1
+    ? activeDirectors.find((candidate) => candidate.id === ownerIds[0])
+    : undefined;
+  if (!admin) {
+    throw new Error("Não foi possível identificar um único Diretor ativo responsável pelos eventos");
+  }
+} else {
+  if (activeDirectors.length !== 1) {
+    throw new Error(`Esperado exatamente um Diretor ativo; encontrados ${activeDirectors.length}`);
+  }
+  admin = activeDirectors[0];
 }
-const admin = admins[0];
 
 let { data: venue, error: venueError } = await db
   .from("venues")
@@ -363,16 +409,14 @@ if (VERIFY) {
     throw new Error(`Esperados ${expectedOfferCount} preços; encontrados ${prices.length}`);
   }
 
-  const { count: inventoryCount, error: inventoryError } = await db
+  const { data: inventory, error: inventoryError } = await db
     .from("session_seats")
-    .select("id", { count: "exact", head: true })
-    .in("session_id", sessionIds)
-    .eq("status", "available");
+    .select("status")
+    .in("session_id", sessionIds);
   if (inventoryError) throw inventoryError;
-  const expectedInventory = events.reduce(
-    (sum, event) => sum + event.offers.reduce((subtotal, offer) => subtotal + offer.capacity, 0),
-    0,
-  );
+  const inventoryCount = inventory.length;
+  const availableInventoryCount = inventory.filter((seat) => seat.status === "available").length;
+  const expectedInventory = events.reduce((sum, event) => sum + inventoryUnitsForEvent(event), 0);
   if (inventoryCount !== expectedInventory) {
     throw new Error(`Esperado estoque ${expectedInventory}; encontrado ${inventoryCount}`);
   }
@@ -421,7 +465,8 @@ if (VERIFY) {
     drafts: storedEvents.filter((event) => event.status === "draft").map((event) => event.title),
     sessions: sessions.length,
     offers: prices.length,
-    availableInventory: inventoryCount,
+    inventory: inventoryCount,
+    availableInventory: availableInventoryCount,
     feeCents: 0,
     venue: `${VENUE} - ${CITY}/${STATE}`,
     ownerPhoneLast4: admin.phone.slice(-4),

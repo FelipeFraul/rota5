@@ -120,6 +120,13 @@ type TicketPriceRow = {
 
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 const DEFAULT_LIMIT = 10;
+const BLACK_HOUSE_SECTION_ORDER = new Map([
+  ["Cadeira Individual (TODOS pagam meia)", 0],
+  ["1ª FILEIRA (com balcão)", 1],
+  ["Poltrona+Mesa 2 lugares", 2],
+  ["Poltrona+Mesa 4 lugares", 3],
+  ["Cadeira Individual (Inteira)", 4],
+]);
 
 function first<T>(value: MaybeArray<T>): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
@@ -349,7 +356,14 @@ export async function buildAdminGeneralReport(period: AdminReportPeriod) {
   }
 
   const sectionLines = [...capacityBySection.entries()]
-    .sort(([sectionA], [sectionB]) => sectionA.localeCompare(sectionB, "pt-BR"))
+    .sort(([sectionA], [sectionB]) => {
+      const orderA = BLACK_HOUSE_SECTION_ORDER.get(sectionA);
+      const orderB = BLACK_HOUSE_SECTION_ORDER.get(sectionB);
+      if (orderA !== undefined || orderB !== undefined) {
+        return (orderA ?? Number.MAX_SAFE_INTEGER) - (orderB ?? Number.MAX_SAFE_INTEGER);
+      }
+      return sectionA.localeCompare(sectionB, "pt-BR");
+    })
     .map(
       ([section, capacity]) =>
         `> ${section}: ${soldBySection.get(section) ?? 0} - ${capacity}`,
