@@ -2037,36 +2037,12 @@ function formatReservationContextReply({
 }
 
 function formatPaymentLinkReply({
-  selectedEvent,
-  selectedSection,
-  selectedSeat,
-  reservation,
   checkout,
-  cart,
 }: {
-  selectedEvent?: TicketConversationSelectedEvent;
-  selectedSection?: TicketConversationSelectedSection;
-  selectedSeat?: TicketConversationSelectedSeat;
-  reservation?: TicketConversationReservation;
   checkout: CheckoutForReservation;
-  cart?: TicketConversationCart;
 }) {
-  const totalLabel = reservation
-    ? formatPriceWithOptionalFee(
-        reservation.totalAmountCents,
-        reservation.totalFeeCents,
-      )
-    : formatCurrencyFromCents(checkout.amountCents);
   const lines = [
     "*LINK DE PAGAMENTO GERADO*",
-    ...(selectedEvent ? [`> Evento: ${selectedEvent.title}`] : []),
-    ...(cart
-      ? formatCartSummaryLines(cart)
-      : [
-          ...(selectedSection ? [`> Setor: ${selectedSection.sectionName}`] : []),
-          ...(selectedSeat ? [`> Assento: ${selectedSeat.seatCode}`] : []),
-        ]),
-    `> Total: ${totalLabel}`,
     "",
     "Pague clicando neste link (crédito ou pix):",
     checkout.checkoutUrl,
@@ -12019,12 +11995,7 @@ export async function routeTicketMessage({
 
     return {
       reply: formatPaymentLinkReply({
-        selectedEvent: previousState.selectedEvent,
-        selectedSection: previousState.selectedSection,
-        selectedSeat: previousState.selectedSeat,
-        reservation: previousState.reservation,
         checkout: checkoutResult.checkout,
-        cart: previousState.cart,
       }),
       nextContext: {
         ...baseContext,
@@ -12147,12 +12118,7 @@ export async function routeTicketMessage({
 
     return {
       reply: formatPaymentLinkReply({
-        selectedEvent: previousState.selectedEvent,
-        selectedSection: previousState.selectedSection,
-        selectedSeat: previousState.selectedSeat,
-        reservation: previousState.reservation,
         checkout: checkoutResult.checkout,
-        cart: previousState.cart,
       }),
       nextContext: {
         ...baseContext,

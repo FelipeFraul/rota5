@@ -642,6 +642,11 @@ async function runAudit() {
   assertIncludes(checkout.text, "LINK DE PAGAMENTO GERADO", "Q COMPRAR gera checkout");
   assertIncludes(checkout.text, "/checkout/", "Q checkout tem link");
   assertIncludes(checkout.text, "Após a confirmação do pagamento", "Q mensagem não promete antes do webhook");
+  assertNotIncludes(checkout.text, "> Evento:", "Q checkout não repete evento");
+  assertNotIncludes(checkout.text, "> Setor:", "Q checkout não repete setor");
+  assertNotIncludes(checkout.text, "> Ingresso:", "Q checkout não repete ingresso");
+  assertNotIncludes(checkout.text, "> Quantidade:", "Q checkout não repete quantidade");
+  assertNotIncludes(checkout.text, "> Total:", "Q checkout não repete total");
   assertNotIncludes(checkout.text, "Após a confirmação do TEST", "Q mensagem não usa nome do evento como confirmação");
 
   const unnumberedPhone = auditPhone();
