@@ -2,8 +2,6 @@ import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-export const ADMIN_EVENTS_PAGE_SIZE = 5;
-
 export type AdminEventStatus = "draft" | "published" | "cancelled" | "finished";
 export type AdminSessionStatus =
   | "scheduled"
@@ -571,7 +569,6 @@ export async function listAdminEvents(input: {
   ownerAdminUserId?: string | null;
   canSeeAll?: boolean;
 }) {
-  const page = Math.max(input.page ?? 0, 0);
   const supabase = getSupabaseAdmin();
   const runEventsQuery = async (includeOwnership: boolean) => {
     let query = supabase
@@ -596,7 +593,6 @@ export async function listAdminEvents(input: {
 
     return query
       .order("created_at", { ascending: false })
-      .limit(50)
       .returns<EventRow[]>();
   };
 
@@ -639,13 +635,11 @@ export async function listAdminEvents(input: {
 
       return leftTime - rightTime || right.createdAt.localeCompare(left.createdAt);
     });
-  const offset = page * ADMIN_EVENTS_PAGE_SIZE;
-
   return {
     ok: true as const,
-    events: summaries.slice(offset, offset + ADMIN_EVENTS_PAGE_SIZE),
-    page,
-    hasMore: offset + ADMIN_EVENTS_PAGE_SIZE < summaries.length,
+    events: summaries,
+    page: 0,
+    hasMore: false,
   };
 }
 
@@ -685,14 +679,44 @@ export async function getAdminEventDetails(eventId: string) {
     return { ok: false as const, reason: "database_error" as const, error: sessionsError };
   }
 
-  const sectionVenueIds = Array.from(
-    new Set([event.venue_id, ...(sessions ?? []).map((session) => session.venue_id)].filter(Boolean)),
-  ) as string[];
-  const { data: sections, error: sectionsError } = sectionVenueIds.length
+  const sessionIds = (sessions ?? []).map((session) => session.id);
+  const [priceLinks, inventoryLinks] = sessionIds.length
+    ? await Promise.all([
+        supabase
+          .from("ticket_prices")
+          .select("section_id")
+          .in("session_id", sessionIds)
+          .returns<Array<{ section_id: string }>>(),
+        supabase
+          .from("session_seats")
+          .select("section_id")
+          .in("session_id", sessionIds)
+          .returns<Array<{ section_id: string }>>(),
+      ])
+    : [
+        { data: [] as Array<{ section_id: string }>, error: null },
+        { data: [] as Array<{ section_id: string }>, error: null },
+      ];
+
+  if (priceLinks.error || inventoryLinks.error) {
+    return {
+      ok: false as const,
+      reason: "database_error" as const,
+      error: priceLinks.error ?? inventoryLinks.error,
+    };
+  }
+
+  const eventSectionIds = Array.from(
+    new Set([
+      ...(priceLinks.data ?? []).map((link) => link.section_id),
+      ...(inventoryLinks.data ?? []).map((link) => link.section_id),
+    ]),
+  );
+  const { data: sections, error: sectionsError } = eventSectionIds.length
     ? await supabase
         .from("venue_sections")
         .select("id, venue_id, name, slug, capacity, has_numbered_seats, status")
-        .in("venue_id", sectionVenueIds)
+        .in("id", eventSectionIds)
         .order("sort_order", { ascending: true })
         .returns<SectionRow[]>()
     : { data: [] as SectionRow[], error: null };

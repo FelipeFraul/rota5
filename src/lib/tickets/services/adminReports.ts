@@ -363,11 +363,16 @@ function buildCapacitySummary(
     );
   }
 
-  const capacityBySection = new Map<string, number>();
+  const capacityBySection = new Map<string, { section: string; capacity: number }>();
   let totalPotential = 0;
   for (const seat of sessionSeats) {
     const section = getSectionName(seat);
-    capacityBySection.set(section, (capacityBySection.get(section) ?? 0) + 1);
+    const key = section === "Assento / item especial" && describeSpecialOffer
+      ? `special:${seat.section_id}`
+      : section;
+    const current = capacityBySection.get(key) ?? { section, capacity: 0 };
+    current.capacity += 1;
+    capacityBySection.set(key, current);
     totalPotential +=
       maximumPriceBySessionSection.get(`${seat.session_id}:${seat.section_id}`) ?? 0;
   }
@@ -375,25 +380,32 @@ function buildCapacitySummary(
   const soldBySection = new Map<string, number>();
   for (const ticket of paid) {
     const section = getSectionName(ticket);
-    soldBySection.set(section, (soldBySection.get(section) ?? 0) + 1);
+    const sectionId = first(ticket.venue_sections)?.id;
+    const key = section === "Assento / item especial" && describeSpecialOffer && sectionId
+      ? `special:${sectionId}`
+      : section;
+    soldBySection.set(key, (soldBySection.get(key) ?? 0) + 1);
   }
 
-  const specialLabels = [...new Set(
+  const specialLabelBySection = new Map(
     ticketPrices
       .filter((price) => first(price.venue_sections)?.name === "Assento / item especial")
-      .map((price) => price.label.trim())
-      .filter(Boolean),
-  )];
+      .map((price) => [price.section_id, price.label.trim()]),
+  );
 
   const sectionLines = [...capacityBySection.entries()]
-    .sort(([sectionA], [sectionB]) => compareSummarySections(sectionA, sectionB))
+    .sort(([, valueA], [, valueB]) => compareSummarySections(valueA.section, valueB.section))
     .map(
-      ([section, capacity]) => {
+      ([key, { section, capacity }]) => {
+        const specialSectionId = key.startsWith("special:") ? key.slice("special:".length) : null;
+        const specialLabel = specialSectionId
+          ? specialLabelBySection.get(specialSectionId)
+          : null;
         const label =
-          section === "Assento / item especial" && describeSpecialOffer && specialLabels.length === 1
-            ? specialLabels[0].charAt(0).toLocaleUpperCase("pt-BR") + specialLabels[0].slice(1)
+          section === "Assento / item especial" && describeSpecialOffer && specialLabel
+            ? specialLabel.charAt(0).toLocaleUpperCase("pt-BR") + specialLabel.slice(1)
             : formatSummarySectionName(section);
-        return `> ${label}: ${soldBySection.get(section) ?? 0} - ${capacity}`;
+        return `> ${label}: ${soldBySection.get(key) ?? 0} - ${capacity}`;
       },
     );
 

@@ -1870,6 +1870,158 @@ function parseAdminSubmenuOption(text: string) {
   return text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
 }
 
+type AdminEventShortcutAction =
+  | "event_summary"
+  | "section_sales"
+  | "list_courtesies"
+  | "add_courtesy"
+  | "edit_title"
+  | "edit_image";
+
+const ADMIN_EVENT_SHORTCUT_ALIASES: Array<[
+  AdminEventShortcutAction,
+  string,
+  string[],
+]> = [
+  ["event_summary", "resumo geral", ["resumo geral", "resumo", "relatorio", "relatorio do evento"]],
+  ["section_sales", "vendas por setor", ["vendas por setor", "relatorio por setor"]],
+  ["list_courtesies", "ver cortesias", ["ver cortesias", "listar cortesias", "consultar cortesias"]],
+  ["add_courtesy", "adicionar cortesia", ["adicionar cortesia", "adicionar cortesias", "criar cortesia", "gerar cortesia"]],
+  ["edit_title", "editar nome evento", ["editar nome evento", "editar nome do evento", "alterar nome evento", "editar titulo evento"]],
+  ["edit_image", "enviar foto", ["enviar foto", "alterar foto", "trocar foto", "editar foto", "trocar imagem"]],
+];
+
+function getAdminShortcutActionLabel(action: AdminEventShortcutAction) {
+  return ADMIN_EVENT_SHORTCUT_ALIASES.find(([candidate]) => candidate === action)?.[1] ?? action;
+}
+
+function textDistance(left: string, right: string) {
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+    let diagonal = previous[0];
+    previous[0] = leftIndex;
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+      const above = previous[rightIndex];
+      previous[rightIndex] = Math.min(
+        previous[rightIndex] + 1,
+        previous[rightIndex - 1] + 1,
+        diagonal + (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1),
+      );
+      diagonal = above;
+    }
+  }
+  return previous[right.length];
+}
+
+function suggestAdminShortcutActions(actionText: string) {
+  const inputWords = new Set(actionText.split(" ").filter(Boolean));
+  return ADMIN_EVENT_SHORTCUT_ALIASES
+    .map(([action, label, aliases]) => ({
+      action,
+      label,
+      overlap: Math.max(
+        ...aliases.map((alias) =>
+          alias.split(" ").filter((word) => inputWords.has(word)).length,
+        ),
+      ),
+      distance: Math.min(...aliases.map((alias) => textDistance(actionText, alias))),
+    }))
+    .sort((left, right) => right.overlap - left.overlap || left.distance - right.distance)
+    .slice(0, 3);
+}
+
+function parseAdminEventShortcut(text: string): {
+  action: AdminEventShortcutAction | null;
+  actionText: string;
+  eventQuery: string;
+} | null {
+  const separator = text.indexOf(",");
+  if (separator < 1) return null;
+
+  const actionText = normalizeAdminText(text.slice(0, separator));
+  const eventQuery = text.slice(separator + 1).trim();
+  if (!eventQuery) return null;
+
+  const action = ADMIN_EVENT_SHORTCUT_ALIASES.find(([, , names]) =>
+    names.includes(actionText),
+  )?.[0] ?? null;
+
+  if (!action) {
+    const shortcutWords = new Set([
+      "resumo",
+      "relatorio",
+      "vendas",
+      "cortesia",
+      "cortesias",
+      "editar",
+      "alterar",
+      "foto",
+      "imagem",
+      "enviar",
+      "trocar",
+      "criar",
+      "gerar",
+      "ver",
+      "listar",
+      "consultar",
+    ]);
+    const resemblesShortcut = actionText
+      .split(" ")
+      .some((word) => shortcutWords.has(word));
+    const closeToAction = Math.min(
+      ...ADMIN_EVENT_SHORTCUT_ALIASES.flatMap(([, , names]) =>
+        names.map((name) => textDistance(actionText, name)),
+      ),
+    ) <= 3;
+    if (!resemblesShortcut && !closeToAction) return null;
+  }
+
+  return { action, actionText, eventQuery };
+}
+
+async function resolveAdminShortcutEvent(
+  eventQuery: string,
+  scope: AdminEventScope,
+) {
+  const result = await listAdminEvents({
+    status: "all",
+    ownerAdminUserId: scope.adminUserId,
+    canSeeAll: scope.canSeeAllEvents,
+  });
+  if (!result.ok) return { ok: false as const, reason: "database_error" as const };
+
+  const normalizedQuery = normalizeAdminText(eventQuery);
+  const exact = result.events.filter(
+    (event) => normalizeAdminText(event.title) === normalizedQuery,
+  );
+  const matches = exact.length
+    ? exact
+    : result.events.filter((event) =>
+        normalizeAdminText(event.title).includes(normalizedQuery),
+      );
+
+  if (matches.length === 1) {
+    return { ok: true as const, event: matches[0] };
+  }
+
+  const suggestions = matches.length
+    ? matches
+    : [...result.events]
+        .map((event) => ({
+          event,
+          distance: textDistance(normalizedQuery, normalizeAdminText(event.title)),
+        }))
+        .sort((left, right) => left.distance - right.distance)
+        .slice(0, 5)
+        .map(({ event }) => event);
+
+  return {
+    ok: false as const,
+    reason: matches.length ? "ambiguous" as const : "not_found" as const,
+    matches: suggestions.slice(0, 10),
+  };
+}
+
 function buildGateCheckInReply({
   gateUrl,
   expiresAt,
@@ -3745,7 +3897,6 @@ function renderAdminEventListReply({
   const navigationLines = [
     "Responda com o",
     `> Digite o número do evento para ${actionLabel}`,
-    '> Digite "Mais" para ver mais eventos',
   ];
 
   if (!events.length) {
@@ -3923,6 +4074,7 @@ function renderCreateEventSummary(draft: Record<string, unknown>) {
 
 function renderEditEventSummary(draft: Record<string, unknown>) {
   const field = String(draft.field ?? "");
+  const eventTitle = String(draft.eventTitle ?? "").trim();
   const labelByField: Record<string, string> = {
     title: "Título",
     artist_name: "Artista",
@@ -3957,6 +4109,7 @@ function renderEditEventSummary(draft: Record<string, unknown>) {
 
   return [
     "Confirmar alteração do evento?",
+    ...(eventTitle ? [`Evento: ${eventTitle}`] : []),
     "",
     `Campo: ${labelByField[field] ?? field}`,
     `Novo valor: ${value}`,
@@ -4487,35 +4640,6 @@ async function handleAdminEventsFlow({
       };
     }
 
-    if (normalized === "mais") {
-      if (adminEvents.hasMore === false) {
-        return {
-          reply: [
-            adminEvents.listTitle ?? "*EVENTOS ENCONTRADOS:*",
-            "",
-            "Não há mais eventos para mostrar.",
-            "",
-            "Responda com o",
-            `> Digite o número do evento para ${adminEvents.listActionLabel ?? "detalhes"}`,
-            '> Digite "Mais" para ver mais eventos',
-          ].join("\n"),
-          nextContext: withAdminEventsContext(baseContext, "admin_events_list", adminEvents),
-        };
-      }
-
-      return buildAdminEventsListContext(
-        baseContext,
-        scope,
-        (adminEvents.page ?? 0) + 1,
-        null,
-        adminEvents.statusFilter,
-        {
-          title: adminEvents.listTitle,
-          actionLabel: adminEvents.listActionLabel,
-        },
-      );
-    }
-
     const eventId = getSelectedAdminEventId(text, adminEvents);
 
     if (!eventId) {
@@ -4524,7 +4648,7 @@ async function handleAdminEventsFlow({
           reply: [
             "Não encontrei essa opção na lista atual.",
             "",
-            "Digite o número do evento que aparece na lista, \"Mais\" para ver mais eventos ou \"Voltar\".",
+            "Digite o número do evento que aparece na lista ou \"Voltar\".",
           ].join("\n"),
           nextContext: withAdminEventsContext(baseContext, "admin_events_list", adminEvents),
         };
@@ -5987,6 +6111,9 @@ async function handleAdminEventsFlow({
       }
       value = { field, [field]: text.trim() };
     }
+
+    const shortcutEventTitle = String(adminEvents.draft?.eventTitle ?? "").trim();
+    if (shortcutEventTitle) value.eventTitle = shortcutEventTitle;
 
     return {
       reply: renderEditEventSummary(value),
@@ -8943,6 +9070,211 @@ export async function routeTicketMessage({
           adminUserId: adminUser.id,
           expiresAt: adminSession.expires_at,
         }),
+      };
+    }
+
+    const eventShortcut = parseAdminEventShortcut(text);
+    if (eventShortcut) {
+      if (!eventShortcut.action) {
+        const suggestions = suggestAdminShortcutActions(eventShortcut.actionText);
+        return {
+          reply: withAdminNavigationHint([
+            `Não reconheci a ação "${text.slice(0, text.indexOf(",")).trim()}".`,
+            "",
+            "Você quis dizer:",
+            ...suggestions.map(
+              ({ label }) => `- ${label}, ${eventShortcut.eventQuery}`,
+            ),
+          ].join("\n")),
+          nextContext: baseContext,
+        };
+      }
+
+      const permissionByAction: Record<AdminEventShortcutAction, AdminPermission> = {
+        event_summary: "view_reports",
+        section_sales: "view_reports",
+        list_courtesies: "manage_courtesies",
+        add_courtesy: "manage_courtesies",
+        edit_title: "manage_events",
+        edit_image: "manage_events",
+      };
+      const permission = permissionByAction[eventShortcut.action];
+
+      if (!hasAdminPermission(adminUser.role, permission)) {
+        return {
+          reply: ADMIN_MENU_UNAVAILABLE_MESSAGE,
+          nextContext: adminReplyContext({
+            state: "admin_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      const resolvedEvent = await resolveAdminShortcutEvent(
+        eventShortcut.eventQuery,
+        buildAdminEventScope(adminUser),
+      );
+
+      if (!resolvedEvent.ok) {
+        const candidates = resolvedEvent.matches ?? [];
+        const actionLabel = getAdminShortcutActionLabel(eventShortcut.action);
+        return {
+          reply: withAdminNavigationHint([
+            resolvedEvent.reason === "ambiguous"
+              ? "Encontrei mais de um evento. Digite o nome mais completo:"
+              : `Não encontrei exatamente o evento "${eventShortcut.eventQuery}". Você quis dizer:`,
+            ...(candidates.length
+              ? [
+                  "",
+                  ...candidates.map(
+                    (event) => `- ${actionLabel}, ${event.title}`,
+                  ),
+                ]
+              : []),
+          ].join("\n")),
+          nextContext: baseContext,
+        };
+      }
+
+      const freshAuth = await requireFreshAdminPermission({
+        baseContext,
+        scope: buildFreshAdminScope(adminUser),
+        permission,
+        operation: `admin_shortcut_${eventShortcut.action}`,
+      });
+      if (!freshAuth.ok) return freshAuth.response;
+
+      const selectedEvent = resolvedEvent.event;
+
+      if (
+        eventShortcut.action === "event_summary" ||
+        eventShortcut.action === "section_sales"
+      ) {
+        try {
+          const report = await buildAdminReport({
+            eventId: selectedEvent.eventId,
+            type:
+              eventShortcut.action === "section_sales"
+                ? "sales_section"
+                : "sales_event",
+            period: { label: "Todo o período" },
+          });
+          return {
+            reply: withAdminNavigationHint(report),
+            nextContext: adminReplyContext({
+              state: "admin_reports_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        } catch (error) {
+          logError("Failed to build report from admin shortcut", {
+            error,
+            eventId: selectedEvent.eventId,
+            action: eventShortcut.action,
+          });
+          return {
+            reply: TICKET_MESSAGES.adminGenericError,
+            nextContext: baseContext,
+          };
+        }
+      }
+
+      if (eventShortcut.action === "list_courtesies") {
+        const list = await listCourtesiesForEvent(selectedEvent.eventId);
+        return {
+          reply: list.ok
+            ? [
+                "*VER CORTESIAS*",
+                `Evento: ${selectedEvent.title}`,
+                "",
+                buildCourtesiesListReply(list.courtesies),
+              ].join("\n")
+            : TICKET_MESSAGES.adminGenericError,
+          nextContext: adminReplyContext({
+            state: "admin_courtesies_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (eventShortcut.action === "add_courtesy") {
+        const sessions = await listCourtesySessions(selectedEvent.eventId);
+        if (!sessions.ok || sessions.sessions.length === 0) {
+          return {
+            reply: "Nenhuma sessão disponível para gerar cortesia neste evento.",
+            nextContext: adminReplyContext({
+              state: "admin_courtesies_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        const shortcutContext = adminReplyContext({
+          state: "admin_courtesy_session_select",
+          role: adminUser.role,
+          sessionId: adminSession.id,
+          adminUserId: adminUser.id,
+          expiresAt: adminSession.expires_at,
+        });
+        return {
+          reply: [
+            "*ADICIONAR CORTESIA*",
+            `Evento: ${selectedEvent.title}`,
+            "",
+            buildCourtesySessionsReply(sessions.sessions),
+          ].join("\n"),
+          nextContext: withAdminCourtesiesContext(
+            shortcutContext,
+            "admin_courtesy_session_select",
+            {
+              mode: "generate",
+              selectedEventId: selectedEvent.eventId,
+              selectedEventTitle: selectedEvent.title,
+              lastSessions: sessions.sessions.map((session) => ({
+                option: session.option,
+                sessionId: session.sessionId,
+                startsAt: session.startsAt,
+                status: session.status,
+              })),
+            },
+          ),
+        };
+      }
+
+      const field = eventShortcut.action === "edit_title" ? "title" : "image_url";
+      const shortcutContext = adminReplyContext({
+        state: "admin_event_edit_collecting",
+        role: adminUser.role,
+        sessionId: adminSession.id,
+        adminUserId: adminUser.id,
+        expiresAt: adminSession.expires_at,
+      });
+      return {
+        reply:
+          field === "title"
+            ? `*EDITAR NOME DO EVENTO*\n\nEvento: ${selectedEvent.title}\n\nEnvie o novo nome.`
+            : `*ENVIAR FOTO DO EVENTO*\n\nEvento: ${selectedEvent.title}\n\nEnvie a nova foto ou cole uma URL pública https://...`,
+        nextContext: withAdminEventsContext(
+          shortcutContext,
+          "admin_event_edit_collecting",
+          {
+            selectedEventId: selectedEvent.eventId,
+            field,
+            draft: { eventTitle: selectedEvent.title },
+          },
+        ),
       };
     }
 

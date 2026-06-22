@@ -276,8 +276,7 @@ export async function listCourtesyEvents({
   let query = supabase
     .from("events")
     .select("id, title, city, state, status, event_sessions(id, starts_at, status)")
-    .order("created_at", { ascending: false })
-    .limit(20);
+    .order("created_at", { ascending: false });
 
   if (!canSeeAll) {
     query = query.eq("created_by_admin_user_id", ownerAdminUserId);

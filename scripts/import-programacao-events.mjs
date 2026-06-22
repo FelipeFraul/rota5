@@ -39,25 +39,32 @@ function inferTicketType(label) {
 
 function placeFor(label) {
   const text = normalize(label);
-  if (text.includes("mesa 2 lugares")) {
+  if (text === "poltrona+mesa 2 lugares (1 deste vale para 2)") {
     return { key: "table-2", name: "Poltrona+Mesa 2 lugares", capacity: 1 };
   }
-  if (text.includes("mesa 4 lugares")) {
+  if (text === "poltrona+mesa 4 lugares (1 deste vale para 4)") {
     return { key: "table-4", name: "Poltrona+Mesa 4 lugares", capacity: 1 };
   }
-  if (text.includes("fileira") || text.includes("combo premium")) {
+  if (text === "1ª fileira (com balcao) - cadeira individual") {
     return { key: "front-row", name: "1ª FILEIRA (com balcão)", capacity: 5 };
   }
-  if (text.includes("meet & greet") || text.includes("meet&greet")) {
-    return { key: "special", name: "Assento / item especial", capacity: 15 };
-  }
-  if (text.includes("todos pagam meia")) {
+  if (text === "cadeira individual (todos pagam meia)") {
     return { key: "chair-half", name: "Cadeira Individual (TODOS pagam meia)", capacity: 15 };
   }
-  if (text.includes("individual")) {
+  if (text === "cadeira individual (inteira)") {
     return { key: "chair-full", name: "Cadeira Individual (Inteira)", capacity: 15 };
   }
-  throw new Error(`Oferta sem lugar da Black House: ${label}`);
+
+  const capacity = text.includes("mesa 2 lugares") || text.includes("mesa 4 lugares")
+    ? 1
+    : text.includes("fileira") || text.includes("combo premium")
+      ? 5
+      : 15;
+  return {
+    key: `special-${slugify(label)}`,
+    name: "Assento / item especial",
+    capacity,
+  };
 }
 
 function inventoryUnitsForEvent(event) {

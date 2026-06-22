@@ -9,7 +9,6 @@ const PLACES = [
   { key: "table_2", name: "Poltrona+Mesa 2 lugares", slug: "poltrona-mesa-2-lugares", capacity: 1 },
   { key: "table_4", name: "Poltrona+Mesa 4 lugares", slug: "poltrona-mesa-4-lugares", capacity: 1 },
   { key: "chair_full", name: "Cadeira Individual (Inteira)", slug: "cadeira-individual-inteira", capacity: 15 },
-  { key: "special", name: "Assento / item especial", slug: "assento-item-especial", capacity: 15 },
 ];
 
 function normalize(value) {
@@ -23,17 +22,12 @@ function normalize(value) {
 
 function placeKeyForLabel(label) {
   const value = normalize(label);
-  if (value.includes("mesa 2 lugares")) return "table_2";
-  if (value.includes("mesa 4 lugares")) return "table_4";
-  if (value.includes("1a fileira") || value.includes("1ª fileira") || value.includes("combo premium")) {
-    return "front_row";
-  }
-  if (value.includes("meet & greet") || value.includes("meet&greet")) return "special";
-  if (value.includes("todos pagam meia")) {
-    return "chair_half";
-  }
-  if (value.includes("individual")) return "chair_full";
-  throw new Error(`Oferta sem lugar canônico: ${label}`);
+  if (value === "poltrona+mesa 2 lugares (1 deste vale para 2)") return "table_2";
+  if (value === "poltrona+mesa 4 lugares (1 deste vale para 4)") return "table_4";
+  if (value === "1ª fileira (com balcao) - cadeira individual") return "front_row";
+  if (value === "cadeira individual (todos pagam meia)") return "chair_half";
+  if (value === "cadeira individual (inteira)") return "chair_full";
+  return null;
 }
 
 const url = process.env.SUPABASE_URL;
@@ -147,9 +141,10 @@ async function verify() {
   if (sectionsError) throw sectionsError;
 
   const canonicalSectionIds = new Set((sections ?? []).map((section) => section.id));
-  const pricesOutside = scope.prices.filter((price) => !canonicalSectionIds.has(price.section_id));
+  const standardPrices = scope.prices.filter((price) => placeKeyForLabel(price.label));
+  const pricesOutside = standardPrices.filter((price) => !canonicalSectionIds.has(price.section_id));
   const expectedInventory = new Map();
-  for (const price of scope.prices) {
+  for (const price of standardPrices) {
     const keyName = placeKeyForLabel(price.label);
     expectedInventory.set(`${price.session_id}:${keyName}`, true);
   }
@@ -173,7 +168,7 @@ async function verify() {
       offers: (section.ticket_prices ?? []).length,
       inventory: (section.session_seats ?? []).length,
     })),
-    prices: scope.prices.length,
+    prices: standardPrices.length,
     pricesOutsideCanonicalSections: pricesOutside.length,
     expectedInventory: expectedInventoryCount,
     inventory: inventoryCount,
@@ -195,7 +190,9 @@ if (VERIFY) {
 }
 
 const scope = await loadScope();
-const mapping = scope.prices.map((price) => ({ ...price, placeKey: placeKeyForLabel(price.label) }));
+const mapping = scope.prices
+  .map((price) => ({ ...price, placeKey: placeKeyForLabel(price.label) }))
+  .filter((price) => price.placeKey);
 const grouped = Object.fromEntries(
   PLACES.map((place) => [
     place.name,
@@ -255,6 +252,7 @@ const { data: reservations, error: reservationsError } = await db
 if (reservationsError) throw reservationsError;
 
 const activeIndexes = new Map();
+const activeTargetsByReservation = new Map();
 for (const reservation of [...(reservations ?? [])].sort(
   (a, b) => Number(b.status === "active") - Number(a.status === "active"),
 )) {
@@ -284,12 +282,34 @@ for (const reservation of [...(reservations ?? [])].sort(
     if (updated.error) throw updated.error;
 
     if (reservation.status === "active") {
+      const activeTargets = activeTargetsByReservation.get(reservation.id) ?? new Set();
+      activeTargets.add(target.id);
+      activeTargetsByReservation.set(reservation.id, activeTargets);
       const reserved = await db
         .from("session_seats")
         .update({ status: "reserved", current_reservation_id: reservation.id })
         .eq("id", target.id);
       if (reserved.error) throw reserved.error;
     }
+  }
+}
+
+for (const [reservationId, targetIds] of activeTargetsByReservation) {
+  const { data: reservedSeats, error: reservedSeatsError } = await db
+    .from("session_seats")
+    .select("id")
+    .eq("status", "reserved")
+    .eq("current_reservation_id", reservationId);
+  if (reservedSeatsError) throw reservedSeatsError;
+  const staleIds = (reservedSeats ?? [])
+    .map((seat) => seat.id)
+    .filter((seatId) => !targetIds.has(seatId));
+  if (staleIds.length) {
+    const released = await db
+      .from("session_seats")
+      .update({ status: "available", current_reservation_id: null })
+      .in("id", staleIds);
+    if (released.error) throw released.error;
   }
 }
 
