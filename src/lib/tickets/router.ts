@@ -6874,12 +6874,10 @@ async function renderCapacityShortcutSectionsList(
   scope: AdminEventScope,
 ) {
   const details = await getScopedAdminEventDetails(eventId, scope);
-  if (!details.ok || !details.event.venueId) return "Não encontrei setores para esse evento.";
-  const result = await listAdminSections(details.event.venueId);
-  if (!result.ok) return "Não consegui listar setores.";
+  if (!details.ok) return "Não encontrei setores para esse evento.";
 
-  return result.sections.length
-    ? result.sections
+  return details.event.sections.length
+    ? details.event.sections
         .map((section, index) =>
           `> ${formatOptionLine(index + 1, section.name, { preserveCase: true })} - *capacidade: ${section.capacity ?? "não definida"}*`,
         )
