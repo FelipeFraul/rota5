@@ -911,7 +911,6 @@ export function formatAdminMenu(role: AdminRole) {
     ),
     "",
     "Responda com o número da opção.",
-    'Atalho: digite "ação, nome do evento". Ex: "resumo geral, TÔ ADORANDO".',
     'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
   ].join("\n");
 }
