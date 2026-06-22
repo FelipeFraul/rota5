@@ -1091,7 +1091,7 @@ function formatSectionsReply({
         formatPriceWithOptionalFee(ticketType.priceCents, ticketType.feeCents),
       );
       option += 1;
-      return line;
+      return `> ${line}`;
     }),
   );
 

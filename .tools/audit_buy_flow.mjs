@@ -608,6 +608,7 @@ async function runAudit() {
   assertIncludes(eventMessage.text, "*nova pesquisa*", "G anúncio mostra opção de nova pesquisa");
 
   const offers = await sendBuyerMessage(flowPhone, "1");
+  assertIncludes(offers.text, "> Digite 1", "H opções de ingresso usam citação do WhatsApp");
   assertIncludes(offers.text, "*assentos - meia* - R$ 60,00", "H lista setor + tipo de ingresso");
   assertIncludes(offers.text, "*assentos - inteira* - R$ 120,00 + R$ 10,00 taxa", "J taxa maior que zero aparece");
   assertNotIncludes(offers.text, "*assentos - meia* - R$ 60,00 +", "I taxa zero não aparece");
