@@ -2135,14 +2135,18 @@ async function resolveAdminShortcutEvent(
   if (!result.ok) return { ok: false as const, reason: "database_error" as const };
 
   const normalizedQuery = normalizeAdminText(eventQuery);
+  const eventSearchValues = (event: (typeof result.events)[number]) => [
+    normalizeAdminText(event.title),
+    normalizeAdminText(event.artistName),
+  ];
   const exact = result.events.filter(
-    (event) => normalizeAdminText(event.title) === normalizedQuery,
+    (event) => eventSearchValues(event).some((value) => value === normalizedQuery),
   );
   const matches = exact.length
     ? exact
-    : result.events.filter((event) =>
-        normalizeAdminText(event.title).includes(normalizedQuery),
-      );
+    : result.events.filter((event) => eventSearchValues(event).some(
+        (value) => value.includes(normalizedQuery),
+      ));
 
   if (matches.length === 1) {
     return { ok: true as const, event: matches[0] };
@@ -2153,7 +2157,9 @@ async function resolveAdminShortcutEvent(
     : [...result.events]
         .map((event) => ({
           event,
-          distance: textDistance(normalizedQuery, normalizeAdminText(event.title)),
+          distance: Math.min(...eventSearchValues(event).map(
+            (value) => textDistance(normalizedQuery, value),
+          )),
         }))
         .sort((left, right) => left.distance - right.distance)
         .slice(0, 5)
@@ -9469,7 +9475,10 @@ export async function routeTicketMessage({
               ? [
                   "",
                   ...candidates.map(
-                    (event) => `- ${formatAdminEventShortcutCommand(actionLabel, event.title, eventShortcut.period, eventShortcut.targetQuery)}`,
+                    (event) => [
+                      `- ${formatAdminEventShortcutCommand(actionLabel, event.title, eventShortcut.period, eventShortcut.targetQuery)}`,
+                      `  Artista: ${event.artistName}`,
+                    ].join("\n"),
                   ),
                 ]
               : []),
