@@ -1878,6 +1878,9 @@ type AdminEventShortcutAction =
   | "event_sessions"
   | "event_sections"
   | "event_prices"
+  | "increase_tickets"
+  | "create_section"
+  | "create_special_sale"
   | "event_summary"
   | "section_sales"
   | "pending_payments"
@@ -1915,6 +1918,9 @@ const ADMIN_EVENT_SHORTCUT_ALIASES: Array<[
   ["event_sessions", "datas do evento", ["datas do evento", "sessoes do evento", "editar sessoes", "gerenciar sessoes"]],
   ["event_sections", "setores e assentos", ["setores e assentos", "setores do evento", "editar setores", "editar lugares", "editar carga", "carga de ingressos"]],
   ["event_prices", "editar valores", ["editar valores", "valores do evento", "editar precos", "precos do evento"]],
+  ["increase_tickets", "aumentar ingressos", ["aumentar ingressos", "aumentar carga", "aumentar capacidade", "alterar carga do setor"]],
+  ["create_section", "criar setor", ["criar setor", "adicionar setor", "novo setor"]],
+  ["create_special_sale", "criar venda especial", ["criar venda especial", "adicionar venda especial", "novo tipo de venda", "criar oferta especial", "adicionar oferta especial"]],
   [
     "event_summary",
     "resumo geral",
@@ -1964,8 +1970,9 @@ function formatAdminEventShortcutCommand(
   actionLabel: string,
   eventTitle: string,
   period?: AdminReportPeriod,
+  targetQuery?: string,
 ) {
-  return [actionLabel, period?.label, eventTitle].filter(Boolean).join(", ");
+  return [actionLabel, period?.label ?? targetQuery, eventTitle].filter(Boolean).join(", ");
 }
 
 function textDistance(left: string, right: string) {
@@ -2034,6 +2041,7 @@ function parseAdminEventShortcut(text: string): {
   actionText: string;
   eventQuery: string;
   period?: AdminReportPeriod;
+  targetQuery?: string;
 } | null {
   const parts = text
     .split(/\s*(?:,|\|)\s*/)
@@ -2042,15 +2050,18 @@ function parseAdminEventShortcut(text: string): {
   if (parts.length < 2) return null;
 
   const actionText = normalizeAdminText(parts[0]);
-  const period = parts.length >= 3
-    ? parseAdminShortcutReportPeriod(parts[1])
-    : null;
-  const eventQuery = (period ? parts.slice(2) : parts.slice(1)).join(", ").trim();
-  if (!eventQuery) return null;
-
   const action = ADMIN_EVENT_SHORTCUT_ALIASES.find(([, , names]) =>
     names.includes(actionText),
   )?.[0] ?? null;
+  const needsTarget = action === "increase_tickets" || action === "create_special_sale";
+  const targetQuery = needsTarget && parts.length >= 3 ? parts[1] : null;
+  const period = !needsTarget && parts.length >= 3
+    ? parseAdminShortcutReportPeriod(parts[1])
+    : null;
+  const eventQuery = (
+    targetQuery || period ? parts.slice(2) : parts.slice(1)
+  ).join(", ").trim();
+  if (!eventQuery || (needsTarget && !targetQuery)) return null;
 
   if (!action) {
     const shortcutWords = new Set([
@@ -2087,6 +2098,10 @@ function parseAdminEventShortcut(text: string): {
       "checkin",
       "acessos",
       "revogar",
+      "aumentar",
+      "capacidade",
+      "especial",
+      "oferta",
     ]);
     const resemblesShortcut = actionText
       .split(" ")
@@ -2099,7 +2114,13 @@ function parseAdminEventShortcut(text: string): {
     if (!resemblesShortcut && !closeToAction) return null;
   }
 
-  return { action, actionText, eventQuery, period: period ?? undefined };
+  return {
+    action,
+    actionText,
+    eventQuery,
+    period: period ?? undefined,
+    targetQuery: targetQuery ?? undefined,
+  };
 }
 
 async function resolveAdminShortcutEvent(
@@ -2142,6 +2163,40 @@ async function resolveAdminShortcutEvent(
     ok: false as const,
     reason: matches.length ? "ambiguous" as const : "not_found" as const,
     matches: suggestions.slice(0, 10),
+  };
+}
+
+function resolveAdminShortcutSection(
+  sectionQuery: string,
+  sections: AdminEventDetails["sections"],
+) {
+  const normalizedQuery = normalizeAdminText(sectionQuery);
+  const exact = sections.filter(
+    (section) => normalizeAdminText(section.name) === normalizedQuery,
+  );
+  const matches = exact.length
+    ? exact
+    : sections.filter((section) =>
+        normalizeAdminText(section.name).includes(normalizedQuery),
+      );
+
+  if (matches.length === 1) return { ok: true as const, section: matches[0] };
+
+  const suggestions = matches.length
+    ? matches
+    : [...sections]
+        .map((section) => ({
+          section,
+          distance: textDistance(normalizedQuery, normalizeAdminText(section.name)),
+        }))
+        .sort((left, right) => left.distance - right.distance)
+        .slice(0, 5)
+        .map(({ section }) => section);
+
+  return {
+    ok: false as const,
+    reason: matches.length ? "ambiguous" as const : "not_found" as const,
+    matches: suggestions,
   };
 }
 
@@ -7473,6 +7528,65 @@ async function handleAdminEventOperationalSubmenus({
       };
     }
 
+    if (adminEvents.mode === "shortcut_capacity") {
+      const details = await getScopedAdminEventDetails(eventId, scope);
+      const sectionId = String(adminEvents.draft?.sectionId ?? "");
+      const section = details.ok
+        ? details.event.sections.find((item) => item.sectionId === sectionId)
+        : null;
+      const newCapacity = Number(text.trim());
+
+      if (
+        !section ||
+        !Number.isInteger(newCapacity) ||
+        newCapacity < 0 ||
+        newCapacity > 5000
+      ) {
+        return {
+          reply: "Carga inválida. Digite um número inteiro entre 0 e 5000. Ex: 500",
+          nextContext: withAdminEventsContext(
+            baseContext,
+            "admin_event_capacity_collecting",
+            adminEvents,
+          ),
+        };
+      }
+
+      if (section.capacity !== null && newCapacity <= section.capacity) {
+        return {
+          reply: `A nova carga precisa ser maior que a atual (${section.capacity}).`,
+          nextContext: withAdminEventsContext(
+            baseContext,
+            "admin_event_capacity_collecting",
+            adminEvents,
+          ),
+        };
+      }
+
+      return {
+        reply: [
+          "Confirmar alteração de carga?",
+          `Evento: ${details.ok ? details.event.title : ""}`,
+          `Setor: ${section.name}`,
+          `Carga atual: ${section.capacity ?? "não definida"}`,
+          `Nova carga: ${newCapacity}`,
+          "",
+          "A redução só bloqueia unidades disponíveis. Vendidos e reservados não são alterados.",
+          "",
+          "Responda CONFIRMAR ou CANCELAR.",
+        ].join("\n"),
+        nextContext: withAdminEventsContext(
+          baseContext,
+          "admin_event_capacity_collecting",
+          {
+            ...adminEvents,
+            mode: "confirm_edit_capacity",
+            draft: { sectionId, newCapacity },
+          },
+        ),
+      };
+    }
+
     const details = await getScopedAdminEventDetails(eventId, scope);
     const [sectionNumberRaw, capacityRaw] = text.split("|").map((part) => part.trim());
     const section = details.ok ? selectSectionByOption(details.event, sectionNumberRaw ?? "") : null;
@@ -8295,6 +8409,80 @@ async function handleAdminEventOperationalSubmenus({
 
     const details = await getScopedAdminEventDetails(eventId, scope);
     if (!details.ok) return null;
+
+    if (adminEvents.mode === "shortcut_special_sale") {
+      const parts = text.split("|").map((part) => part.trim());
+      const fixedSessionId = String(adminEvents.draft?.sessionId ?? "");
+      const session = fixedSessionId
+        ? details.event.sessions.find((item) => item.sessionId === fixedSessionId)
+        : details.event.sessions[Number(parts.shift()) - 1];
+      const [label, priceRaw, feeRaw, salesStartRaw, salesEndRaw] = parts;
+      const sectionId = String(adminEvents.draft?.sectionId ?? "");
+      const section = details.event.sections.find((item) => item.sectionId === sectionId);
+      const priceCents = parseMoneyToCents(priceRaw ?? "");
+      const feeCents = parseMoneyToCents(feeRaw || "0");
+      const salesStart = parseOptionalAdminDateTime(salesStartRaw);
+      const salesEnd = parseOptionalAdminDateTime(salesEndRaw);
+
+      if (
+        !session ||
+        !section ||
+        !label ||
+        priceCents === null ||
+        feeCents === null ||
+        !salesStart.ok ||
+        !salesEnd.ok ||
+        (salesStart.value &&
+          salesEnd.value &&
+          new Date(salesStart.value).getTime() >= new Date(salesEnd.value).getTime())
+      ) {
+        return {
+          reply: fixedSessionId
+            ? "Dados inválidos. Use: Lote promocional | 60,00 | 0 | - | -"
+            : "Dados inválidos. Use: 1 | Lote promocional | 60,00 | 0 | - | -",
+          nextContext: withAdminEventsContext(
+            baseContext,
+            "admin_event_price_create_collecting",
+            adminEvents,
+          ),
+        };
+      }
+
+      return {
+        reply: [
+          "Confirmar criação da venda especial?",
+          `Evento: ${details.event.title}`,
+          `Sessão: ${formatDateTime(session.startsAt)}`,
+          `Setor: ${section.name}`,
+          `Oferta: ${label}`,
+          `Preço: ${formatCurrencyFromCents(priceCents)}`,
+          `Taxa: ${formatCurrencyFromCents(feeCents)}`,
+          `Início: ${salesStart.value ? formatDateTime(salesStart.value) : "livre"}`,
+          `Fim: ${salesEnd.value ? formatDateTime(salesEnd.value) : "livre"}`,
+          "",
+          "Responda CONFIRMAR ou CANCELAR.",
+        ].join("\n"),
+        nextContext: withAdminEventsContext(
+          baseContext,
+          "admin_event_price_create_collecting",
+          {
+            ...adminEvents,
+            mode: "confirm_create_price",
+            draft: {
+              sessionId: session.sessionId,
+              sectionId: section.sectionId,
+              ticketType: "promotional",
+              label,
+              priceCents,
+              feeCents,
+              salesStartAt: salesStart.value,
+              salesEndAt: salesEnd.value,
+            },
+          },
+        ),
+      };
+    }
+
     const [
       sessionRaw,
       sectionRaw,
@@ -9206,7 +9394,7 @@ export async function routeTicketMessage({
             "",
             "Você quis dizer:",
             ...suggestions.map(
-              ({ label }) => `- ${formatAdminEventShortcutCommand(label, eventShortcut.eventQuery, eventShortcut.period)}`,
+              ({ label }) => `- ${formatAdminEventShortcutCommand(label, eventShortcut.eventQuery, eventShortcut.period, eventShortcut.targetQuery)}`,
             ),
           ].join("\n")),
           nextContext: baseContext,
@@ -9221,6 +9409,9 @@ export async function routeTicketMessage({
         event_sessions: "manage_events",
         event_sections: "manage_events",
         event_prices: "manage_events",
+        increase_tickets: "manage_events",
+        create_section: "manage_events",
+        create_special_sale: "manage_events",
         event_summary: "view_reports",
         section_sales: "view_reports",
         pending_payments: "view_reports",
@@ -9278,7 +9469,7 @@ export async function routeTicketMessage({
               ? [
                   "",
                   ...candidates.map(
-                    (event) => `- ${formatAdminEventShortcutCommand(actionLabel, event.title, eventShortcut.period)}`,
+                    (event) => `- ${formatAdminEventShortcutCommand(actionLabel, event.title, eventShortcut.period, eventShortcut.targetQuery)}`,
                   ),
                 ]
               : []),
@@ -9296,6 +9487,141 @@ export async function routeTicketMessage({
       if (!freshAuth.ok) return freshAuth.response;
 
       const selectedEvent = resolvedEvent.event;
+
+      if (eventShortcut.action === "create_section") {
+        return {
+          reply: [
+            "*CRIAR NOVO SETOR*",
+            `Evento: ${selectedEvent.title}`,
+            "",
+            "Envie: nome do setor | capacidade | numerado sim/não.",
+            "Ex: Pista Premium | 500 | não",
+          ].join("\n"),
+          nextContext: withAdminEventsContext(
+            baseContext,
+            "admin_event_section_create_collecting",
+            { selectedEventId: selectedEvent.eventId },
+          ),
+        };
+      }
+
+      if (
+        eventShortcut.action === "increase_tickets" ||
+        eventShortcut.action === "create_special_sale"
+      ) {
+        const details = await getScopedAdminEventDetails(
+          selectedEvent.eventId,
+          buildAdminEventScope(adminUser),
+        );
+        if (!details.ok) {
+          return { reply: "Não encontrei esse evento.", nextContext: baseContext };
+        }
+
+        const resolvedSection = resolveAdminShortcutSection(
+          eventShortcut.targetQuery ?? "",
+          details.event.sections,
+        );
+        if (!resolvedSection.ok) {
+          const actionLabel = getAdminShortcutActionLabel(eventShortcut.action);
+          return {
+            reply: withAdminNavigationHint([
+              resolvedSection.reason === "ambiguous"
+                ? "Encontrei mais de um setor. Digite o nome mais completo:"
+                : `Não encontrei o setor "${eventShortcut.targetQuery}". Você quis dizer:`,
+              "",
+              ...resolvedSection.matches.map(
+                (section) => `- ${formatAdminEventShortcutCommand(
+                  actionLabel,
+                  selectedEvent.title,
+                  undefined,
+                  section.name,
+                )}`,
+              ),
+            ].join("\n")),
+            nextContext: baseContext,
+          };
+        }
+
+        const section = resolvedSection.section;
+        if (eventShortcut.action === "increase_tickets") {
+          if (section.hasNumberedSeats) {
+            return {
+              reply: [
+                `Evento: ${selectedEvent.title}`,
+                `Setor: ${section.name}`,
+                "",
+                "Esse setor usa assentos marcados. Para aumentar a carga, primeiro cadastre os novos assentos.",
+              ].join("\n"),
+              nextContext: baseContext,
+            };
+          }
+          return {
+            reply: [
+              "*AUMENTAR INGRESSOS*",
+              `Evento: ${selectedEvent.title}`,
+              `Setor: ${section.name}`,
+              `Carga atual: ${section.capacity ?? "não definida"}`,
+              "",
+              "Digite a nova carga total do setor. Ex: 500",
+            ].join("\n"),
+            nextContext: withAdminEventsContext(
+              baseContext,
+              "admin_event_capacity_collecting",
+              {
+                selectedEventId: selectedEvent.eventId,
+                mode: "shortcut_capacity",
+                draft: { sectionId: section.sectionId },
+              },
+            ),
+          };
+        }
+
+        if (details.event.sessions.length === 0) {
+          return {
+            reply: "Esse evento ainda não tem sessão para receber uma venda especial.",
+            nextContext: baseContext,
+          };
+        }
+        const multipleSessions = details.event.sessions.length > 1;
+        return {
+          reply: [
+            "*CRIAR VENDA ESPECIAL*",
+            `Evento: ${selectedEvent.title}`,
+            `Setor: ${section.name}`,
+            ...(multipleSessions
+              ? [
+                  "",
+                  "Sessões:",
+                  ...details.event.sessions.map((session, index) =>
+                    `${index + 1}. ${formatDateTime(session.startsAt)}`,
+                  ),
+                ]
+              : []),
+            "",
+            multipleSessions
+              ? "Envie: sessão | nome da oferta | valor | taxa opcional | início opcional | fim opcional"
+              : "Envie: nome da oferta | valor | taxa opcional | início opcional | fim opcional",
+            multipleSessions
+              ? "Ex: 1 | Lote promocional | 60,00 | 0 | - | -"
+              : "Ex: Lote promocional | 60,00 | 0 | - | -",
+          ].join("\n"),
+          nextContext: withAdminEventsContext(
+            baseContext,
+            "admin_event_price_create_collecting",
+            {
+              selectedEventId: selectedEvent.eventId,
+              mode: "shortcut_special_sale",
+              draft: {
+                sectionId: section.sectionId,
+                sectionName: section.name,
+                sessionId: multipleSessions
+                  ? undefined
+                  : details.event.sessions[0].sessionId,
+              },
+            },
+          ),
+        };
+      }
 
       const reportTypeByShortcut: Partial<Record<
         AdminEventShortcutAction,
