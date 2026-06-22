@@ -1960,6 +1960,14 @@ function getAdminShortcutActionLabel(action: AdminEventShortcutAction) {
   return ADMIN_EVENT_SHORTCUT_ALIASES.find(([candidate]) => candidate === action)?.[1] ?? action;
 }
 
+function formatAdminEventShortcutCommand(
+  actionLabel: string,
+  eventTitle: string,
+  period?: AdminReportPeriod,
+) {
+  return [actionLabel, period?.label, eventTitle].filter(Boolean).join(", ");
+}
+
 function textDistance(left: string, right: string) {
   const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
   for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
@@ -1995,16 +2003,49 @@ function suggestAdminShortcutActions(actionText: string) {
     .slice(0, 3);
 }
 
+function parseAdminShortcutReportPeriod(input: string): AdminReportPeriod | null {
+  const normalized = normalizeAdminText(input);
+  const optionByText: Record<string, number> = {
+    hoje: 1,
+    "ultimos 7 dias": 2,
+    "7 dias": 2,
+    "ultima semana": 2,
+    "ultimos 30 dias": 3,
+    "30 dias": 3,
+    "ultimo mes": 3,
+    "todo o periodo": 4,
+    "todo periodo": 4,
+    tudo: 4,
+  };
+  const option = optionByText[normalized] ?? (
+    /^[1-4]$/.test(normalized) ? Number(normalized) : null
+  );
+
+  if (option) {
+    const period = parseAdminReportPeriodOption(String(option));
+    return period && period !== "custom" ? period : null;
+  }
+
+  return parseAdminReportCustomPeriod(input);
+}
+
 function parseAdminEventShortcut(text: string): {
   action: AdminEventShortcutAction | null;
   actionText: string;
   eventQuery: string;
+  period?: AdminReportPeriod;
 } | null {
-  const separator = text.indexOf(",");
-  if (separator < 1) return null;
+  const parts = text
+    .split(/\s*(?:,|\|)\s*/)
+    .map((part) => part.trim().replace(/^[*_'"“”]+|[*_'"“”]+$/g, "").trim())
+    .filter(Boolean);
+  if (parts.length < 2) return null;
 
-  const actionText = normalizeAdminText(text.slice(0, separator));
-  const eventQuery = text.slice(separator + 1).trim();
+  const actionText = normalizeAdminText(parts[0]);
+  const period = parts.length >= 3
+    ? parseAdminShortcutReportPeriod(parts[1])
+    : null;
+  const eventQuery = (period ? parts.slice(2) : parts.slice(1)).join(", ").trim();
   if (!eventQuery) return null;
 
   const action = ADMIN_EVENT_SHORTCUT_ALIASES.find(([, , names]) =>
@@ -2058,7 +2099,7 @@ function parseAdminEventShortcut(text: string): {
     if (!resemblesShortcut && !closeToAction) return null;
   }
 
-  return { action, actionText, eventQuery };
+  return { action, actionText, eventQuery, period: period ?? undefined };
 }
 
 async function resolveAdminShortcutEvent(
@@ -9161,11 +9202,11 @@ export async function routeTicketMessage({
         const suggestions = suggestAdminShortcutActions(eventShortcut.actionText);
         return {
           reply: withAdminNavigationHint([
-            `Não reconheci a ação "${text.slice(0, text.indexOf(",")).trim()}".`,
+            `Não reconheci a ação "${eventShortcut.actionText}".`,
             "",
             "Você quis dizer:",
             ...suggestions.map(
-              ({ label }) => `- ${label}, ${eventShortcut.eventQuery}`,
+              ({ label }) => `- ${formatAdminEventShortcutCommand(label, eventShortcut.eventQuery, eventShortcut.period)}`,
             ),
           ].join("\n")),
           nextContext: baseContext,
@@ -9237,7 +9278,7 @@ export async function routeTicketMessage({
               ? [
                   "",
                   ...candidates.map(
-                    (event) => `- ${actionLabel}, ${event.title}`,
+                    (event) => `- ${formatAdminEventShortcutCommand(actionLabel, event.title, eventShortcut.period)}`,
                   ),
                 ]
               : []),
@@ -9275,7 +9316,7 @@ export async function routeTicketMessage({
           const report = await buildAdminReport({
             eventId: selectedEvent.eventId,
             type: shortcutReportType,
-            period: { label: "Todo o período" },
+            period: eventShortcut.period ?? { label: "Todo o período" },
           });
           return {
             reply: withAdminNavigationHint(report),
