@@ -66,6 +66,7 @@ import {
   sendZapiText,
   type SendZapiMessageResult,
 } from "@/lib/zapi/client";
+import { formatSystemActionLines } from "@/lib/zapi/format";
 
 const MAX_WEBHOOK_BYTES = 256 * 1024;
 const PHONE_RATE_LIMIT = 30;
@@ -152,7 +153,7 @@ function ensureSystemMessageTitle(body: string, fallbackTitle: string) {
   const firstLineTitle = parseSystemMessageTitleLine(lines[firstContentIndex]);
   if (firstLineTitle) {
     lines[firstContentIndex] = formatSystemMessageTitle(firstLineTitle);
-    return lines.join("\n");
+    return formatSystemActionLines(lines.join("\n"));
   }
 
   const existingTitleIndex = lines.findIndex((line, index) =>
@@ -161,18 +162,18 @@ function ensureSystemMessageTitle(body: string, fallbackTitle: string) {
   if (existingTitleIndex >= 0) {
     const existingTitle = parseSystemMessageTitleLine(lines[existingTitleIndex]);
     const remainingLines = lines.filter((_, index) => index !== existingTitleIndex);
-    return [
+    return formatSystemActionLines([
       formatSystemMessageTitle(existingTitle ?? fallbackTitle),
       "",
       ...remainingLines,
-    ].join("\n").trim();
+    ].join("\n").trim());
   }
 
-  return [
+  return formatSystemActionLines([
     formatSystemMessageTitle(fallbackTitle),
     "",
     normalizedBody,
-  ].join("\n");
+  ].join("\n"));
 }
 
 function normalizeOutboundMessageTitle(

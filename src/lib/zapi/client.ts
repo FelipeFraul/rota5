@@ -2,7 +2,7 @@ import "server-only";
 
 import { getEnv } from "@/lib/env";
 import { logError, logWarn } from "@/lib/logger";
-import { formatWhatsAppUppercase } from "@/lib/zapi/format";
+import { formatSystemActionLines, formatWhatsAppUppercase } from "@/lib/zapi/format";
 
 type SendZapiTextInput = {
   phone: string;
@@ -41,10 +41,10 @@ function ensureDefaultSystemTitle(value: string) {
   const firstTitle = parseSystemTitleLine(lines[firstContentIndex]);
   if (firstTitle) {
     lines[firstContentIndex] = `**${firstTitle}**`;
-    return lines.join("\n");
+    return formatSystemActionLines(lines.join("\n"));
   }
 
-  return `**ATENDIMENTO**\n\n${body}`;
+  return formatSystemActionLines(`**ATENDIMENTO**\n\n${body}`);
 }
 
 export async function sendZapiText({
