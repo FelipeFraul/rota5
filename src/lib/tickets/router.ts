@@ -6869,6 +6869,24 @@ async function renderSectionsList(
   ].join("\n");
 }
 
+async function renderCapacityShortcutSectionsList(
+  eventId: string,
+  scope: AdminEventScope,
+) {
+  const details = await getScopedAdminEventDetails(eventId, scope);
+  if (!details.ok || !details.event.venueId) return "Não encontrei setores para esse evento.";
+  const result = await listAdminSections(details.event.venueId);
+  if (!result.ok) return "Não consegui listar setores.";
+
+  return result.sections.length
+    ? result.sections
+        .map((section, index) =>
+          `> ${formatOptionLine(index + 1, section.name, { preserveCase: true })} - *capacidade: ${section.capacity ?? "não definida"}*`,
+        )
+        .join("\n")
+    : "Nenhum setor cadastrado.";
+}
+
 async function getAdminPriceListForEvent(eventId: string, scope: AdminEventScope) {
   const details = await getScopedAdminEventDetails(eventId, scope);
   if (!details.ok) return { ok: false as const, reply: "Não encontrei esse evento." };
@@ -9532,17 +9550,13 @@ export async function routeTicketMessage({
               "*AUMENTAR INGRESSOS*",
               `Evento: ${selectedEvent.title}`,
               "",
-              await renderSectionsList(
+              await renderCapacityShortcutSectionsList(
                 selectedEvent.eventId,
                 buildAdminEventScope(adminUser),
-                undefined,
-                { selectable: true },
               ),
               "",
               "Envie: número do setor | nova carga.",
               "Ex: 1 | 500",
-              "",
-              "A redução só bloqueia unidades disponíveis. Vendidos e reservados não são alterados.",
             ].join("\n"),
             nextContext: withAdminEventsContext(baseContext, "admin_event_capacity_collecting", {
               selectedEventId: selectedEvent.eventId,
