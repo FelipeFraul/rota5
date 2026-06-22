@@ -605,7 +605,7 @@ export async function reserveUnnumberedSectionTickets({
     limit: quantity,
   });
 
-  if (seatList.seats.length < quantity && selectedSection.availableSeatsCount >= 999_999) {
+  if (seatList.seats.length < quantity && selectedSection.hasUnlimitedCapacity) {
     await createOnDemandUnnumberedSeats({
       sessionId: selectedSession.sessionId,
       sectionId: selectedSection.sectionId,
@@ -877,7 +877,7 @@ export async function reserveTicketCart({
 
     if (
       availableSeats.seats.length < sectionQuantity &&
-      section.availableSeatsCount >= 999_999
+      section.hasUnlimitedCapacity
     ) {
       await createOnDemandUnnumberedSeats({
         sessionId: selectedSession.sessionId,

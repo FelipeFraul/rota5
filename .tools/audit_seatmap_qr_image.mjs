@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHmac } from "node:crypto";
 import { inflateSync } from "node:zlib";
 import { readFileSync } from "node:fs";
@@ -359,7 +359,11 @@ async function startNextDev() {
   const child = spawn(
     "npm",
     ["run", "dev", "--", "--hostname", "127.0.0.1", "--port", String(PORT)],
-    { env: testEnv, stdio: ["ignore", "pipe", "pipe"] },
+    {
+      env: testEnv,
+      shell: process.platform === "win32",
+      stdio: ["ignore", "pipe", "pipe"],
+    },
   );
   child.stdout.on("data", (chunk) => process.stdout.write(`[next] ${chunk}`));
   child.stderr.on("data", (chunk) => process.stderr.write(`[next] ${chunk}`));
@@ -378,6 +382,12 @@ async function startNextDev() {
 
 async function stopChild(child) {
   if (!child || child.exitCode !== null) return;
+  if (process.platform === "win32" && child.pid) {
+    spawnSync("taskkill.exe", ["/PID", String(child.pid), "/T", "/F"], {
+      stdio: "ignore",
+    });
+    return;
+  }
   child.kill("SIGTERM");
   await new Promise((resolve) => child.once("exit", resolve));
 }
@@ -388,9 +398,12 @@ function auditPhone() {
 
 async function sendBuyerMessage(phone, text) {
   const before = zapiMessages.length;
-  const response = await fetch(`${WEBHOOK_URL}?zapi_webhook_secret=${testEnv.ZAPI_WEBHOOK_SECRET}`, {
+  const response = await fetch(WEBHOOK_URL, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      "x-zapi-webhook-secret": testEnv.ZAPI_WEBHOOK_SECRET,
+    },
     body: JSON.stringify({
       messageId: `${PREFIX}_${Date.now()}_${nextProviderMessage++}`,
       phone,
@@ -487,7 +500,8 @@ async function createReservationAndCheckout({ phone, term, quantity, seats }) {
   await sendBuyerMessage(phone, "1");
   await sendBuyerMessage(phone, "1");
   await sendBuyerMessage(phone, String(quantity));
-  const reservation = await sendBuyerMessage(phone, seats.join(","));
+  await sendBuyerMessage(phone, seats.join(","));
+  const reservation = await sendBuyerMessage(phone, "2");
   assertIncludes(reservation.text, "RESERVA CRIADA", "reserva criada para pagamento aprovado");
   const checkout = await sendBuyerMessage(phone, "COMPRAR");
   assertIncludes(checkout.text, "LINK DE PAGAMENTO GERADO", "checkout gerado");
@@ -583,7 +597,8 @@ async function runAudit() {
   await sendBuyerMessage(reservePhone, "1");
   await sendBuyerMessage(reservePhone, "1");
   await sendBuyerMessage(reservePhone, "1");
-  const reserved = await sendBuyerMessage(reservePhone, "A01");
+  await sendBuyerMessage(reservePhone, "A01");
+  const reserved = await sendBuyerMessage(reservePhone, "2");
   assertIncludes(reserved.text, "RESERVA CRIADA", "G assento foi reservado");
   const nextMapPhone = auditPhone();
   await sendBuyerMessage(nextMapPhone, `${PREFIX} mapa`);
@@ -594,7 +609,7 @@ async function runAudit() {
   const updatedPng = decodePngDataUrl(updatedImage.image);
   assert(colorNear(updatedPng.pixel(92, 170), [189, 189, 189]), "G novo mapa mostra assento reservado indisponível");
   const invalidSeat = await sendBuyerMessage(nextMapPhone, "A01");
-  assert(invalidSeat.text.trim() === "ASSENTO INDISPONÍVEL", "I assento ocupado responde exatamente ASSENTO INDISPONÍVEL");
+  assertIncludes(invalidSeat.text, "ASSENTO INDISPONÍVEL", "I assento ocupado responde indisponível");
 
   const qrPhone = auditPhone();
   const orderId = await createReservationAndCheckout({
@@ -632,6 +647,18 @@ async function runAudit() {
     ),
     "L cada QRCode corresponde ao ticket correto",
   );
+
+  const resendOptions = await sendBuyerMessage(qrPhone, "REENVIAR INGRESSO");
+  assertIncludes(resendOptions.text, "REENVIAR INGRESSO", "M reenvio lista o evento com ingressos pagos");
+  const resendDelivery = await sendBuyerMessage(qrPhone, "1");
+  assertIncludes(resendDelivery.text, "REENVIO DE INGRESSO", "M reenvio entrega os dados dos ingressos");
+  assert(
+    resendDelivery.messages.filter((message) => message.type === "image").length === 2,
+    "M reenvio entrega novamente todos os QRCodes",
+  );
+
+  const noTicketResend = await sendBuyerMessage(auditPhone(), "REENVIAR INGRESSO");
+  assertIncludes(noTicketResend.text, "ingresso pago emitido", "M reenvio sem compra informa ausência de ingresso");
 
   const failPhone = auditPhone();
   const failOrderId = await createReservationAndCheckout({

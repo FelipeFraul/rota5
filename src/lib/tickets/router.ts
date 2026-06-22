@@ -953,6 +953,34 @@ function formatSingleEventMoreInfoOptions() {
   ].join("\n");
 }
 
+const ALL_EVENTS_MESSAGE_MAX_LENGTH = 3_500;
+
+function buildAllEventsOutboundMessages(
+  events: Array<TicketEventSearchResult | TicketConversationEventOption>,
+) {
+  const messages: Array<{ type: "text"; body: string }> = [];
+  let current = "Encontrei estes eventos:";
+
+  events.forEach((event, index) => {
+    const block = formatSingleAllEventReply(event, index);
+    const candidate = `${current}\n\n${block}`;
+
+    if (candidate.length <= ALL_EVENTS_MESSAGE_MAX_LENGTH) {
+      current = candidate;
+      return;
+    }
+
+    messages.push({ type: "text", body: current });
+    current = `*EVENTOS — CONTINUAÇÃO*\n\n${block}`;
+  });
+
+  if (current) {
+    messages.push({ type: "text", body: current });
+  }
+
+  return messages;
+}
+
 function buildSelectedEvent(
   event: TicketEventSearchResult,
 ): TicketConversationSelectedEvent {
@@ -986,6 +1014,7 @@ function buildSectionOptions(
       sectionId: section.sectionId,
       sectionName: section.sectionName,
       hasNumberedSeats: section.hasNumberedSeats,
+      hasUnlimitedCapacity: section.hasUnlimitedCapacity,
       availableSeatsCount: section.availableSeatsCount,
       minPriceCents: section.minPriceCents,
       minFeeCents: section.minFeeCents,
@@ -1003,6 +1032,7 @@ function buildSelectedSection(
     sectionId: section.sectionId,
     sectionName: section.sectionName,
     hasNumberedSeats: section.hasNumberedSeats,
+    hasUnlimitedCapacity: section.hasUnlimitedCapacity,
     availableSeatsCount: section.availableSeatsCount,
     selectedTicketType: ticketType ?? section.ticketTypes[0],
   };
@@ -1942,7 +1972,7 @@ function formatReservationReply({
   cart,
 }: {
   selectedEvent: TicketConversationSelectedEvent;
-  selectedSection: TicketConversationSelectedSection;
+  selectedSection?: TicketConversationSelectedSection;
   selectedSeat?: TicketConversationSelectedSeat;
   reservation: ReserveSelectedSeatSuccess;
   cart?: TicketConversationCart;
@@ -1955,8 +1985,8 @@ function formatReservationReply({
     ...(cart
       ? formatCartSummaryLines(cart)
       : [
-          `> Setor: ${selectedSection.sectionName}`,
-          ...(selectedSection.selectedTicketType
+          ...(selectedSection ? [`> Setor: ${selectedSection.sectionName}`] : []),
+          ...(selectedSection?.selectedTicketType
             ? [`> Ingresso: ${selectedSection.selectedTicketType.label}`]
             : []),
           ...(selectedSeat ? [`> Assento: ${selectedSeat.seatCode}`] : []),
@@ -2122,7 +2152,7 @@ async function handlePaidTicketResendCommand({
   if (ticketsCount === 0) {
     return {
       reply:
-        "NÃ£o encontrei ingresso pago emitido para este telefone. Confira se o pagamento foi aprovado e se este Ã© o mesmo WhatsApp usado na compra.",
+        "Não encontrei ingresso pago emitido para este telefone. Confira se o pagamento foi aprovado e se este é o mesmo WhatsApp usado na compra.",
       nextContext: resetBuyerReservationContext(baseContext),
     };
   }
@@ -2176,7 +2206,7 @@ async function handlePaidTicketResendSelection({
 
   if (!selected) {
     return {
-      reply: "NÃ£o encontrei essa opÃ§Ã£o. Responda com um nÃºmero da lista.",
+      reply: "Não encontrei essa opção. Responda com um número da lista.",
       nextContext: baseContext,
     };
   }
@@ -2192,7 +2222,7 @@ async function handlePaidTicketResendSelection({
   if (!group) {
     return {
       reply:
-        "NÃ£o encontrei mais esse ingresso disponÃ­vel para reenvio. Confira com a equipe da Black House.",
+        "Não encontrei mais esse ingresso disponível para reenvio. Confira com a equipe da Black House.",
       nextContext: resetBuyerReservationContext(baseContext),
     };
   }
@@ -11876,6 +11906,7 @@ export async function routeTicketMessage({
 
     return {
       reply: formatAllEventsReply(events),
+      outboundMessages: buildAllEventsOutboundMessages(events),
       nextContext: {
         ...baseContext,
         step: "showing_events",
@@ -12142,28 +12173,55 @@ export async function routeTicketMessage({
 
   if (previousState.state === "reviewing_cart") {
     const selectedOption = /^\d+$/.test(text.trim()) ? Number(text.trim()) : null;
+    const cart = previousState.cart;
 
-    if (
-      !previousState.cart?.items.length ||
-      !previousState.selectedEvent ||
-      !previousState.selectedSection
-    ) {
+    if (!cart?.items.length) {
+      if (previousState.selectedEvent) {
+        const sectionsResult = await renderBuyerSectionsStep({
+          baseContext: { ...baseContext, cart: undefined },
+          selectedEvent: previousState.selectedEvent,
+        });
+
+        return {
+          ...sectionsResult,
+          reply: [
+            "Não encontrei itens nessa compra. Escolha o ingresso novamente.",
+            "",
+            sectionsResult.reply,
+          ].join("\n"),
+        };
+      }
+
       return {
         reply: "Não encontrei itens nessa compra. Escolha o ingresso novamente.",
         nextContext: resetBuyerReservationContext(baseContext),
       };
     }
 
+    const selectedSession = await getValidatedEventSession({
+      eventId: cart.eventId,
+      sessionId: cart.sessionId,
+    });
+
+    if (!selectedSession) {
+      return {
+        reply: TICKET_MESSAGES.sessionUnavailable,
+        nextContext: resetBuyerReservationContext(baseContext),
+      };
+    }
+
+    const selectedEvent = buildSelectedEvent(selectedSession);
+
     if (selectedOption === 1) {
       return renderBuyerSectionsStep({
         baseContext,
-        selectedEvent: previousState.selectedEvent,
+        selectedEvent,
       });
     }
 
     if (selectedOption !== 2) {
       return {
-        reply: formatCartDecisionReply({ cart: previousState.cart }),
+        reply: formatCartDecisionReply({ cart }),
         nextContext: {
           ...baseContext,
           step: "reviewing_cart",
@@ -12175,9 +12233,9 @@ export async function routeTicketMessage({
     const reservationResult = await reserveTicketCart({
       customerId: customer.id,
       conversationId: conversation.id,
-      eventId: previousState.selectedEvent.eventId,
-      sessionId: previousState.selectedEvent.sessionId,
-      items: previousState.cart.items.map((item) => ({
+      eventId: cart.eventId,
+      sessionId: cart.sessionId,
+      items: cart.items.map((item) => ({
         sectionId: item.sectionId,
         ticketPriceId: item.ticketPriceId,
         quantity: item.quantity,
@@ -12223,7 +12281,7 @@ export async function routeTicketMessage({
 
       const sectionsResult = await renderBuyerSectionsStep({
         baseContext: { ...baseContext, cart: undefined },
-        selectedEvent: previousState.selectedEvent,
+        selectedEvent,
       });
 
       return {
@@ -12261,17 +12319,19 @@ export async function routeTicketMessage({
 
     return {
       reply: formatReservationReply({
-        selectedEvent: previousState.selectedEvent,
+        selectedEvent,
         selectedSection: previousState.selectedSection,
         selectedSeat: previousState.selectedSeat,
         reservation: reservationResult.reservation,
-        cart: previousState.cart,
+        cart,
       }),
       nextContext: {
         ...baseContext,
         step: "reservation_created",
         state: "reservation_created",
-        selectedQuantity: getCartQuantity(previousState.cart),
+        selectedEvent,
+        selectedQuantity: getCartQuantity(cart),
+        cart,
         reservation: buildReservationContext(reservationResult.reservation),
         lastSeats: [],
       },
@@ -12349,7 +12409,7 @@ export async function routeTicketMessage({
     );
 
     if (
-      previousState.selectedSection.availableSeatsCount < 999_999 &&
+      !previousState.selectedSection.hasUnlimitedCapacity &&
       sectionQuantityInCart + quantity >
         previousState.selectedSection.availableSeatsCount
     ) {
@@ -12548,6 +12608,9 @@ export async function routeTicketMessage({
     if (parsedSearch.numericSelection === 2) {
       return {
         reply: formatAllEventsReply(previousState.lastEvents ?? []),
+        outboundMessages: buildAllEventsOutboundMessages(
+          previousState.lastEvents ?? [],
+        ),
         nextContext: {
           ...baseContext,
           step: "showing_events",

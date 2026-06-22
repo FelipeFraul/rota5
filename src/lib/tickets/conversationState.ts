@@ -131,6 +131,7 @@ export type TicketConversationSectionOption = {
   sectionId: string;
   sectionName: string;
   hasNumberedSeats: boolean;
+  hasUnlimitedCapacity: boolean;
   availableSeatsCount: number;
   minPriceCents: number;
   minFeeCents: number;
@@ -143,6 +144,7 @@ export type TicketConversationSelectedSection = Pick<
   | "sectionId"
   | "sectionName"
   | "hasNumberedSeats"
+  | "hasUnlimitedCapacity"
   | "availableSeatsCount"
   | "selectedTicketType"
 >;

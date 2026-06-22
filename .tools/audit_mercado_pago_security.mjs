@@ -1,6 +1,6 @@
 import { createHmac, randomUUID } from "node:crypto";
 import { createServer } from "node:http";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 
@@ -17,6 +17,8 @@ const CHECKOUT_SECRET = "audit-checkout-secret";
 const WEBHOOK_SECRET = "audit-mp-webhook-secret";
 const ACCESS_TOKEN = "APP_USR-audit-access-token";
 const CUSTOMER_PHONE = "559981399301";
+const CUSTOMER_PHONE_PREFIX = CUSTOMER_PHONE.slice(0, -2);
+let customerCounter = 0;
 
 function parseEnvFile(path) {
   const env = {};
@@ -114,7 +116,7 @@ async function cleanup() {
   const { data: customers } = await service
     .from("customers")
     .select("id")
-    .eq("whatsapp_phone", CUSTOMER_PHONE);
+    .like("whatsapp_phone", `${CUSTOMER_PHONE_PREFIX}%`);
   const customerIds = (customers ?? []).map((row) => row.id);
 
   let orderIds = [];
@@ -208,16 +210,9 @@ async function insert(table, payload) {
 }
 
 async function getAuditCustomerId() {
-  const { data: existing, error: existingError } = await service
-    .from("customers")
-    .select("id")
-    .eq("whatsapp_phone", CUSTOMER_PHONE)
-    .maybeSingle();
-  if (existingError) throw existingError;
-  if (existing) return existing.id;
-
+  customerCounter += 1;
   return insert("customers", {
-    whatsapp_phone: CUSTOMER_PHONE,
+    whatsapp_phone: `${CUSTOMER_PHONE_PREFIX}${String(customerCounter).padStart(2, "0")}`,
     name: `${PREFIX} Buyer`,
   });
 }
@@ -420,6 +415,7 @@ async function startNext() {
   const child = spawn("npm", ["run", "start", "--", "--hostname", "127.0.0.1", "--port", String(APP_PORT)], {
     cwd: process.cwd(),
     env: testEnv,
+    shell: process.platform === "win32",
     stdio: ["ignore", "pipe", "pipe"],
   });
   child.stdout.on("data", (chunk) => process.stdout.write(`[next] ${chunk}`));
@@ -430,6 +426,12 @@ async function startNext() {
 
 async function stopChild(child) {
   if (!child || child.killed) return;
+  if (process.platform === "win32" && child.pid) {
+    spawnSync("taskkill.exe", ["/PID", String(child.pid), "/T", "/F"], {
+      stdio: "ignore",
+    });
+    return;
+  }
   child.kill("SIGTERM");
   await new Promise((resolve) => child.once("exit", resolve));
 }

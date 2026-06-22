@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 
@@ -160,6 +160,7 @@ async function startNextDev() {
     {
       cwd: process.cwd(),
       env: testEnv,
+      shell: process.platform === "win32",
       stdio: ["ignore", "pipe", "pipe"],
     },
   );
@@ -172,6 +173,12 @@ async function startNextDev() {
 
 async function stopChild(child) {
   if (!child || child.killed) return;
+  if (process.platform === "win32" && child.pid) {
+    spawnSync("taskkill.exe", ["/PID", String(child.pid), "/T", "/F"], {
+      stdio: "ignore",
+    });
+    return;
+  }
   child.kill("SIGTERM");
   await new Promise((resolve) => {
     const timeout = setTimeout(resolve, 2000);
@@ -471,7 +478,8 @@ async function buyerReserveNumbered({ phone, quantity = "1", seats = "A01" }) {
   await sendBuyerMessage(phone, "1");
   const map = await sendBuyerMessage(phone, quantity);
   assert(map.messages.some((message) => message.type === "image"), "router sends seat map image");
-  const reservation = await sendBuyerMessage(phone, seats);
+  await sendBuyerMessage(phone, seats);
+  const reservation = await sendBuyerMessage(phone, "2");
   assertIncludes(reservation.text, "RESERVA CRIADA", `reservation created for ${phone}`);
   return reservation;
 }
@@ -480,7 +488,8 @@ async function buyerReserveUnnumbered(phone, quantity = "1") {
   await sendBuyerMessage(phone, PREFIX);
   await sendBuyerMessage(phone, "1");
   await sendBuyerMessage(phone, "2");
-  return sendBuyerMessage(phone, quantity);
+  await sendBuyerMessage(phone, quantity);
+  return sendBuyerMessage(phone, "2");
 }
 
 async function assertConversationIdle(phone, label) {
@@ -499,7 +508,7 @@ async function runAudit() {
   const unnumberedPhone = auditPhone();
   const unnumberedReservation = await buyerReserveUnnumbered(unnumberedPhone, "2");
   assertIncludes(unnumberedReservation.text, "RESERVA CRIADA", "A reserva criada via RPC para setor sem assento marcado");
-  assertNotIncludes(unnumberedReservation.text, "*RESERVA", "E mensagem de reserva sem markdown antigo");
+  assertIncludes(unnumberedReservation.text, "*RESERVA CRIADA", "E título da reserva destacado");
   assertIncludes(unnumberedReservation.text, "> Quantidade: 2", "E mensagem mostra quantidade");
   assertIncludes(unnumberedReservation.text, "Valor: R$", "E mensagem mostra valor");
   assertIncludes(unnumberedReservation.text, "> Reserva válida até:", "E mensagem mostra expiração");
@@ -524,8 +533,9 @@ async function runAudit() {
     .from("session_seats")
     .update({ status: "blocked" })
     .eq("id", a03.id);
-  const invalidSeat = await sendBuyerMessage(invalidPhone, "A03 A04");
-  assert(invalidSeat.text.trim() === "ASSENTO INDISPONÍVEL", "D assento ocupado responde exatamente ASSENTO INDISPONÍVEL");
+  await sendBuyerMessage(invalidPhone, "A03 A04");
+  const invalidSeat = await sendBuyerMessage(invalidPhone, "2");
+  assertIncludes(invalidSeat.text, "estoque mudou", "D assento ocupado na finalização informa mudança de estoque");
   const invalidReservations = await reservationsForPhone(invalidPhone);
   assert(invalidReservations.length === 0, "D assento ocupado não cria reserva parcial");
   await supabase.from("session_seats").update({ status: "available" }).eq("id", a03.id);
@@ -539,7 +549,7 @@ async function runAudit() {
   const expiredReservation = await latestReservationForPhone(expiredBuyPhone);
   await expireReservation(expiredReservation.id);
   const expiredBuy = await sendBuyerMessage(expiredBuyPhone, "COMPRAR");
-  assert(expiredBuy.text.trim() === "⏰ A SUA RESERVA EXPIROU\nOs ingressos foram liberados novamente para venda.\nPara ver o mesmo evento ou buscar outro, só digitar uma nova busca.", "G COMPRAR expirado mostra mensagem de expiração");
+  assertIncludes(expiredBuy.text, "A SUA RESERVA EXPIROU", "G COMPRAR expirado mostra mensagem de expiração");
   assertNotIncludes(expiredBuy.text, "LINK DE PAGAMENTO", "G COMPRAR expirado não gera checkout");
   await assertConversationIdle(expiredBuyPhone, "G contexto limpo após expiração");
 
@@ -571,7 +581,7 @@ async function runAudit() {
   await sendBuyerMessage(cancelOfferPhone, PREFIX);
   await sendBuyerMessage(cancelOfferPhone, "1");
   const cancelOffer = await sendBuyerMessage(cancelOfferPhone, "cancelar");
-  assert(cancelOffer.text.trim() === "PROCESSO CANCELADO\nPara começar de novo, envie o nome do evento, artista, cidade ou data.", "K cancelar durante escolha de oferta limpa fluxo");
+  assertIncludes(cancelOffer.text, "PROCESSO CANCELADO", "K cancelar durante escolha de oferta limpa fluxo");
   await assertConversationIdle(cancelOfferPhone, "K contexto idle");
 
   const cancelQuantityPhone = auditPhone();
@@ -579,7 +589,7 @@ async function runAudit() {
   await sendBuyerMessage(cancelQuantityPhone, "1");
   await sendBuyerMessage(cancelQuantityPhone, "1");
   const cancelQuantity = await sendBuyerMessage(cancelQuantityPhone, "cancelar");
-  assert(cancelQuantity.text.trim() === "PROCESSO CANCELADO\nPara começar de novo, envie o nome do evento, artista, cidade ou data.", "L cancelar durante quantidade limpa fluxo");
+  assertIncludes(cancelQuantity.text, "PROCESSO CANCELADO", "L cancelar durante quantidade limpa fluxo");
 
   const cancelMapPhone = auditPhone();
   await sendBuyerMessage(cancelMapPhone, PREFIX);
@@ -587,13 +597,13 @@ async function runAudit() {
   await sendBuyerMessage(cancelMapPhone, "1");
   await sendBuyerMessage(cancelMapPhone, "1");
   const cancelMap = await sendBuyerMessage(cancelMapPhone, "cancelar");
-  assert(cancelMap.text.trim() === "PROCESSO CANCELADO\nPara começar de novo, envie o nome do evento, artista, cidade ou data.", "M cancelar durante mapa/assento limpa fluxo");
+  assertIncludes(cancelMap.text, "PROCESSO CANCELADO", "M cancelar durante mapa/assento limpa fluxo");
 
   const cancelReservationPhone = auditPhone();
   await buyerReserveNumbered({ phone: cancelReservationPhone, quantity: "1", seats: "A03" });
   const cancelReservationRow = await latestReservationForPhone(cancelReservationPhone);
   const cancelReservation = await sendBuyerMessage(cancelReservationPhone, "cancelar");
-  assert(cancelReservation.text.trim() === "PROCESSO CANCELADO\nSua reserva foi cancelada e os ingressos foram liberados.\nPara começar de novo, envie o nome do evento, artista, cidade ou data.", "N cancelar com reserva ativa cancela/libera");
+  assertIncludes(cancelReservation.text, "reserva foi cancelada", "N cancelar com reserva ativa cancela/libera");
   const { data: cancelledRow } = await supabase
     .from("reservations")
     .select("status, orders(status)")

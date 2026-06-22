@@ -16,6 +16,7 @@ export type AvailableSection = {
   sectionName: string;
   venueId: string;
   hasNumberedSeats: boolean;
+  hasUnlimitedCapacity: boolean;
   availableSeatsCount: number;
   minPriceCents: number;
   minFeeCents: number;
@@ -182,9 +183,11 @@ export async function listAvailableSections(
   return filteredSections
     .flatMap((section) => {
       const ticketTypes = ticketTypesBySection.get(section.id) ?? [];
+      const hasUnlimitedCapacity =
+        !section.has_numbered_seats && section.capacity === null;
       const availableSeatsCount =
         availableSeatsBySection.get(section.id) ??
-        (!section.has_numbered_seats && section.capacity === null ? 999_999 : 0);
+        (hasUnlimitedCapacity ? 999_999 : 0);
 
       if (ticketTypes.length === 0 || availableSeatsCount <= 0) {
         return [];
@@ -200,6 +203,7 @@ export async function listAvailableSections(
           sectionName: section.name,
           venueId: section.venue_id,
           hasNumberedSeats: section.has_numbered_seats,
+          hasUnlimitedCapacity,
           availableSeatsCount,
           minPriceCents: cheapest.priceCents,
           minFeeCents: cheapest.feeCents,

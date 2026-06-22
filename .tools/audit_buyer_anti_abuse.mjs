@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 
@@ -158,6 +158,7 @@ async function startNextDev() {
     {
       cwd: process.cwd(),
       env: testEnv,
+      shell: process.platform === "win32",
       stdio: ["ignore", "pipe", "pipe"],
     },
   );
@@ -170,6 +171,12 @@ async function startNextDev() {
 
 async function stopChild(child) {
   if (!child || child.killed) return;
+  if (process.platform === "win32" && child.pid) {
+    spawnSync("taskkill.exe", ["/PID", String(child.pid), "/T", "/F"], {
+      stdio: "ignore",
+    });
+    return;
+  }
   child.kill("SIGTERM");
   await new Promise((resolve) => {
     const timeout = setTimeout(resolve, 2000);
@@ -184,11 +191,12 @@ async function stopChild(child) {
 async function sendBuyerMessage(phone, text, source = "198.51.100.10") {
   const start = zapiMessages.length;
   const response = await fetch(
-    `${WEBHOOK_URL}?zapi_webhook_secret=${encodeURIComponent(testEnv.ZAPI_WEBHOOK_SECRET)}`,
+    WEBHOOK_URL,
     {
       method: "POST",
       headers: {
         "content-type": "application/json",
+        "x-zapi-webhook-secret": testEnv.ZAPI_WEBHOOK_SECRET,
         "x-forwarded-for": source,
       },
       body: JSON.stringify({
@@ -367,7 +375,8 @@ async function runReservationFlow(phone, source = "198.51.100.10", quantity = 1)
   await sendBuyerMessage(phone, PREFIX, source);
   await sendBuyerMessage(phone, "1", source);
   await sendBuyerMessage(phone, "1", source);
-  return sendBuyerMessage(phone, String(quantity), source);
+  await sendBuyerMessage(phone, String(quantity), source);
+  return sendBuyerMessage(phone, "2", source);
 }
 
 async function runCheckoutFlow(phone, source = "198.51.100.10") {
@@ -528,7 +537,8 @@ async function runAudit() {
     "utf8",
   );
   assert(
-    adminCourtesySource.includes("skipBuyerRisk: true") &&
+    !adminCourtesySource.includes("checkReservationRisk") &&
+      !adminCourtesySource.includes("recordReservationCreated") &&
       adminTicketsSource.includes("skipBuyerRisk: true"),
     "N admin/cortesia não passam pelo bloqueio de comprador",
   );

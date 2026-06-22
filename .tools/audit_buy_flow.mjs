@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 
@@ -40,6 +40,7 @@ const testEnv = {
   ZAPI_INSTANCE_ID: "audit-instance",
   ZAPI_INSTANCE_TOKEN: "audit-token",
   ZAPI_CLIENT_TOKEN: "audit-client",
+  ZAPI_WEBHOOK_SECRET: "audit-zapi-webhook-secret",
   CHECKOUT_INTERNAL_SECRET:
     fileEnv.CHECKOUT_INTERNAL_SECRET || "audit-checkout-internal-secret",
   PAYMENT_PROVIDER: fileEnv.PAYMENT_PROVIDER || "mercado_pago",
@@ -178,6 +179,7 @@ async function startNextDev() {
     {
       cwd: process.cwd(),
       env: testEnv,
+      shell: process.platform === "win32",
       stdio: ["ignore", "pipe", "pipe"],
     },
   );
@@ -190,6 +192,12 @@ async function startNextDev() {
 
 async function stopChild(child) {
   if (!child || child.killed) return;
+  if (process.platform === "win32" && child.pid) {
+    spawnSync("taskkill.exe", ["/PID", String(child.pid), "/T", "/F"], {
+      stdio: "ignore",
+    });
+    return;
+  }
   child.kill("SIGTERM");
   await new Promise((resolve) => {
     const timeout = setTimeout(resolve, 2000);
@@ -203,9 +211,12 @@ async function stopChild(child) {
 
 async function sendBuyerMessage(phone, text) {
   const start = zapiMessages.length;
-  const response = await fetch(`${WEBHOOK_URL}?zapi_webhook_secret=${encodeURIComponent(testEnv.ZAPI_WEBHOOK_SECRET)}`, {
+  const response = await fetch(WEBHOOK_URL, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      "x-zapi-webhook-secret": testEnv.ZAPI_WEBHOOK_SECRET,
+    },
     body: JSON.stringify({
       phone,
       text,
@@ -592,14 +603,14 @@ async function runAudit() {
   assertIncludes(eventMessage.text, `🎟️ - *${PREFIX} COMPRA PRINCIPAL*`, "G título do anúncio em caixa alta");
   assertIncludes(eventMessage.text, `Artista: Test_buy_flow_audit Artista Principal`, "G restante com capitalização natural");
   assertNotIncludes(eventMessage.text, `ARTISTA PRINCIPAL`, "G artista não fica todo em caixa alta");
-  assertIncludes(eventMessage.text, "1. Comprar", "G anúncio mostra opção Comprar");
-  assertIncludes(eventMessage.text, "2. Saber mais", "G anúncio mostra opção Saber mais");
-  assertIncludes(eventMessage.text, "3. Buscar outro evento", "G anúncio mostra opção Buscar outro evento");
+  assertIncludes(eventMessage.text, "Digite 1 para *comprar*", "G anúncio mostra opção Comprar");
+  assertIncludes(eventMessage.text, "Digite 2 para *saber mais*", "G anúncio mostra opção Saber mais");
+  assertIncludes(eventMessage.text, "*nova pesquisa*", "G anúncio mostra opção de nova pesquisa");
 
   const offers = await sendBuyerMessage(flowPhone, "1");
-  assertIncludes(offers.text, "Assentos - Meia - R$ 60,00", "H lista setor + tipo de ingresso");
-  assertIncludes(offers.text, "Assentos - Inteira - R$ 120,00 + R$ 10,00 taxa", "J taxa maior que zero aparece");
-  assertNotIncludes(offers.text, "Meia - R$ 60,00 +", "I taxa zero não aparece");
+  assertIncludes(offers.text, "*assentos - meia* - R$ 60,00", "H lista setor + tipo de ingresso");
+  assertIncludes(offers.text, "*assentos - inteira* - R$ 120,00 + R$ 10,00 taxa", "J taxa maior que zero aparece");
+  assertNotIncludes(offers.text, "*assentos - meia* - R$ 60,00 +", "I taxa zero não aparece");
   assertNotIncludes(offers.text, "Inativo", "K ticket_price inactive não aparece");
   assertNotIncludes(offers.text, "Fora da janela", "K preço fora da janela não aparece");
 
@@ -616,12 +627,15 @@ async function runAudit() {
   assert(seatMap.messages.some((message) => message.type === "image"), "O mapa/lista de assentos é enviado após quantidade");
   assertIncludes(seatMap.text, "Responda com os 2 códigos", "O pede códigos após quantidade");
 
-  const reservation = await sendBuyerMessage(flowPhone, "A01 A02");
+  const cartReview = await sendBuyerMessage(flowPhone, "A01 A02");
+  assertIncludes(cartReview.text, "ITEM ADICIONADO À COMPRA", "P assentos entram no carrinho");
+  assertIncludes(cartReview.text, "> Quantidade: 2", "P carrinho mostra quantidade");
+  const reservation = await sendBuyerMessage(flowPhone, "2");
   assertIncludes(reservation.text, "RESERVA CRIADA", "P reserva criada");
   assertIncludes(reservation.text, "> Quantidade: 2", "P reserva mostra quantidade");
   assertIncludes(reservation.text, "Valor: R$ 120,00", "P reserva mostra valor correto");
   assertIncludes(reservation.text, "Reserva válida até", "P reserva mostra expiração");
-  assertIncludes(reservation.text, "digite COMPRAR", "P reserva instrui COMPRAR");
+  assertIncludes(reservation.text, "digite *COMPRAR*", "P reserva instrui COMPRAR");
   assertNotIncludes(normalizeForCheck(reservation.text), "garantido", "P reserva não diz que ingresso está garantido");
 
   const checkout = await sendBuyerMessage(flowPhone, "COMPRAR");
@@ -634,6 +648,8 @@ async function runAudit() {
   await sendBuyerMessage(unnumberedPhone, `${PREFIX} unnumbered`);
   await sendBuyerMessage(unnumberedPhone, "1");
   await sendBuyerMessage(unnumberedPhone, "1");
+  const unnumberedCart = await sendBuyerMessage(unnumberedPhone, "2");
+  assertIncludes(unnumberedCart.text, "ITEM ADICIONADO À COMPRA", "N setor livre entra no carrinho");
   const unnumberedReservation = await sendBuyerMessage(unnumberedPhone, "2");
   assertIncludes(unnumberedReservation.text, "RESERVA CRIADA", "N setor sem assento marcado reserva automaticamente");
   assertIncludes(unnumberedReservation.text, "> Quantidade: 2", "N reserva automática respeita quantidade");
@@ -643,6 +659,7 @@ async function runAudit() {
   await sendBuyerMessage(expiredPhone, "1");
   await sendBuyerMessage(expiredPhone, "1");
   await sendBuyerMessage(expiredPhone, "1");
+  await sendBuyerMessage(expiredPhone, "2");
   await expireLatestReservation(expiredPhone);
   const expiredCheckout = await sendBuyerMessage(expiredPhone, "COMPRAR");
   assertNotIncludes(expiredCheckout.text, "LINK DE PAGAMENTO GERADO", "R reserva expirada não gera checkout");
@@ -651,28 +668,29 @@ async function runAudit() {
   const cancelShowingEventsPhone = auditPhone();
   await sendBuyerMessage(cancelShowingEventsPhone, `${PREFIX} artista principal`);
   const cancelShowingEvents = await sendBuyerMessage(cancelShowingEventsPhone, "cancelar");
-  assertIncludes(cancelShowingEvents.text, "Processo reiniciado", "S cancelar zera showing_events");
+  assertIncludes(cancelShowingEvents.text, "PROCESSO CANCELADO", "S cancelar zera showing_events");
 
   const cancelShowingSectionsPhone = auditPhone();
   await sendBuyerMessage(cancelShowingSectionsPhone, `${PREFIX} artista principal`);
   await sendBuyerMessage(cancelShowingSectionsPhone, "1");
   const cancelShowingSections = await sendBuyerMessage(cancelShowingSectionsPhone, "cancela");
-  assertIncludes(cancelShowingSections.text, "Processo reiniciado", "S cancela zera showing_sections");
+  assertIncludes(cancelShowingSections.text, "PROCESSO CANCELADO", "S cancela zera showing_sections");
 
   const cancelQuantityPhone = auditPhone();
   await sendBuyerMessage(cancelQuantityPhone, `${PREFIX} artista principal`);
   await sendBuyerMessage(cancelQuantityPhone, "1");
   await sendBuyerMessage(cancelQuantityPhone, "1");
   const cancelQuantity = await sendBuyerMessage(cancelQuantityPhone, "apagar");
-  assertIncludes(cancelQuantity.text, "Processo reiniciado", "S apagar zera selecting_quantity");
+  assertIncludes(cancelQuantity.text, "PROCESSO CANCELADO", "S apagar zera selecting_quantity");
 
   const cancelReservationPhone = auditPhone();
   await sendBuyerMessage(cancelReservationPhone, `${PREFIX} unnumbered`);
   await sendBuyerMessage(cancelReservationPhone, "1");
   await sendBuyerMessage(cancelReservationPhone, "1");
   await sendBuyerMessage(cancelReservationPhone, "1");
+  await sendBuyerMessage(cancelReservationPhone, "2");
   const cancelReservation = await sendBuyerMessage(cancelReservationPhone, "sair");
-  assertIncludes(cancelReservation.text, "Reserva cancelada", "S sair cancela/zera reserva ativa");
+  assertIncludes(cancelReservation.text, "reserva foi cancelada", "S sair cancela/zera reserva ativa");
 
   const unauthProd = await fetch("https://site-phi-seven-72.vercel.app/api/webhook/zapi", {
     method: "POST",
