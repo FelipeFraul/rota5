@@ -60,10 +60,11 @@ main {
   font-family: Arial, sans-serif;
 }
 
-/* The Mercado Pago SDK may append a tracking image directly after the checkout
-   root. It has no visual role and some mobile browsers render a broken-image
-   placeholder when the request is blocked. */
-.checkout-shell ~ img {
+/* The Mercado Pago SDK may inject a tracking image anywhere under the page
+   body. It has no visual role and some browsers render a broken placeholder. */
+body:has(.checkout-shell) img,
+body:has(.checkout-success-shell) img,
+body:has(.checkout-unavailable-shell) img {
   display: none !important;
 }
 
