@@ -1100,7 +1100,7 @@ function formatSectionsReply({
     sectionLines.join("\n---\n"),
     "",
     "Responda com o número do setor para continuar.",
-    'Digite "Voltar" para voltar.',
+    'Digite "Voltar" para voltar à seção anterior.',
   ].join("\n");
 }
 
@@ -1122,7 +1122,7 @@ function formatQuantityPrompt(
     isFree
       ? "Digite o número de ingressos gratuitos, até 4 por pedido. Ex: 2"
       : "Digite o número de ingressos para compra, ex: 2",
-    'Digite "Voltar" para voltar.',
+    'Digite "Voltar" para voltar à seção anterior.',
   ].join("\n");
 }
 
