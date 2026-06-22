@@ -9,6 +9,7 @@ const PLACES = [
   { key: "table_2", name: "Poltrona+Mesa 2 lugares", slug: "poltrona-mesa-2-lugares", capacity: 1 },
   { key: "table_4", name: "Poltrona+Mesa 4 lugares", slug: "poltrona-mesa-4-lugares", capacity: 1 },
   { key: "chair_full", name: "Cadeira Individual (Inteira)", slug: "cadeira-individual-inteira", capacity: 15 },
+  { key: "special", name: "Assento / item especial", slug: "assento-item-especial", capacity: 15 },
 ];
 
 function normalize(value) {
@@ -27,7 +28,8 @@ function placeKeyForLabel(label) {
   if (value.includes("1a fileira") || value.includes("1ª fileira") || value.includes("combo premium")) {
     return "front_row";
   }
-  if (value.includes("todos pagam meia") || value.includes("meet & greet") || value.includes("meet&greet")) {
+  if (value.includes("meet & greet") || value.includes("meet&greet")) return "special";
+  if (value.includes("todos pagam meia")) {
     return "chair_half";
   }
   if (value.includes("individual")) return "chair_full";
@@ -177,7 +179,9 @@ async function verify() {
     inventory: inventoryCount,
   };
 
-  if ((sections ?? []).length !== PLACES.length) throw new Error(`Esperados 5 setores; encontrados ${(sections ?? []).length}`);
+  if ((sections ?? []).length !== PLACES.length) {
+    throw new Error(`Esperados ${PLACES.length} setores; encontrados ${(sections ?? []).length}`);
+  }
   if (pricesOutside.length) throw new Error(`${pricesOutside.length} ofertas ainda estão fora dos setores canônicos`);
   if (inventoryCount !== expectedInventoryCount) {
     throw new Error(`Estoque esperado ${expectedInventoryCount}; encontrado ${inventoryCount}`);

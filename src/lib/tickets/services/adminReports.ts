@@ -116,7 +116,9 @@ type TicketPriceRow = {
   price_cents: number;
   fee_cents: number;
   status: string;
+  label: string;
   event_sessions?: MaybeArray<{ event_id: string }>;
+  venue_sections?: MaybeArray<{ name: string }>;
 };
 
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
@@ -127,6 +129,7 @@ const BLACK_HOUSE_SECTION_ORDER = new Map([
   ["Poltrona+Mesa 2 lugares", 2],
   ["Poltrona+Mesa 4 lugares", 3],
   ["Cadeira Individual (Inteira)", 4],
+  ["Assento / item especial", 5],
 ]);
 
 function first<T>(value: MaybeArray<T>): T | null {
@@ -305,7 +308,7 @@ async function getActiveTicketPrices(eventId?: string) {
   let query = getSupabaseAdmin()
     .from("ticket_prices")
     .select(
-      "session_id, section_id, ticket_type, price_cents, fee_cents, status, event_sessions!inner(event_id)",
+      "session_id, section_id, ticket_type, label, price_cents, fee_cents, status, event_sessions!inner(event_id), venue_sections(name)",
     )
     .eq("status", "active")
     .neq("ticket_type", "free");
@@ -341,6 +344,7 @@ function buildCapacitySummary(
   sessionSeats: SessionSeatRow[],
   ticketPrices: TicketPriceRow[],
   period: AdminReportPeriod,
+  { describeSpecialOffer = false }: { describeSpecialOffer?: boolean } = {},
 ) {
   const paid = paidTickets(tickets, period);
   const issuedTickets = tickets.filter(
@@ -374,11 +378,23 @@ function buildCapacitySummary(
     soldBySection.set(section, (soldBySection.get(section) ?? 0) + 1);
   }
 
+  const specialLabels = [...new Set(
+    ticketPrices
+      .filter((price) => first(price.venue_sections)?.name === "Assento / item especial")
+      .map((price) => price.label.trim())
+      .filter(Boolean),
+  )];
+
   const sectionLines = [...capacityBySection.entries()]
     .sort(([sectionA], [sectionB]) => compareSummarySections(sectionA, sectionB))
     .map(
-      ([section, capacity]) =>
-        `> ${formatSummarySectionName(section)}: ${soldBySection.get(section) ?? 0} - ${capacity}`,
+      ([section, capacity]) => {
+        const label =
+          section === "Assento / item especial" && describeSpecialOffer && specialLabels.length === 1
+            ? specialLabels[0].charAt(0).toLocaleUpperCase("pt-BR") + specialLabels[0].slice(1)
+            : formatSummarySectionName(section);
+        return `> ${label}: ${soldBySection.get(section) ?? 0} - ${capacity}`;
+      },
     );
 
   return {
@@ -458,6 +474,7 @@ export async function buildAdminReport(input: {
       sessionSeats,
       ticketPrices,
       input.period,
+      { describeSpecialOffer: true },
     );
     const validationAllowed = periodValidations.filter(
       (validation) => validation.result === "allowed",

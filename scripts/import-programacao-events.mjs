@@ -48,7 +48,10 @@ function placeFor(label) {
   if (text.includes("fileira") || text.includes("combo premium")) {
     return { key: "front-row", name: "1ª FILEIRA (com balcão)", capacity: 5 };
   }
-  if (text.includes("todos pagam meia") || text.includes("meet & greet") || text.includes("meet&greet")) {
+  if (text.includes("meet & greet") || text.includes("meet&greet")) {
+    return { key: "special", name: "Assento / item especial", capacity: 15 };
+  }
+  if (text.includes("todos pagam meia")) {
     return { key: "chair-half", name: "Cadeira Individual (TODOS pagam meia)", capacity: 15 };
   }
   if (text.includes("individual")) {
