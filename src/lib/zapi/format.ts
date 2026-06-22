@@ -62,7 +62,7 @@ export function formatSystemActionLines(value: string) {
       if (/^\r?\n$/u.test(part) || !part.trim()) return part;
 
       const quotePattern = new RegExp(`"\\*?(${SYSTEM_BUTTON_WORDS})\\*?"`, "giu");
-      const commandPattern = new RegExp(`\\b(${SYSTEM_BUTTON_WORDS})\\b`, "giu");
+      const commandPattern = new RegExp(`\\b(${SYSTEM_BUTTON_WORDS})\\b`, "gu");
       const formattedQuotedButtons = part.replace(
         quotePattern,
         (_, button: string) => `"${formatSystemButtonToken(button)}"`,
