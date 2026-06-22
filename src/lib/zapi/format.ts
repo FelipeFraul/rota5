@@ -68,7 +68,10 @@ export function formatSystemActionLines(value: string) {
         (_, button: string) => `"${formatSystemButtonToken(button)}"`,
       );
 
-      if (!/^\s*(?:Digite|Responda)\b/iu.test(formattedQuotedButtons)) {
+      if (
+        formattedQuotedButtons !== part ||
+        !/^\s*(?:Digite|Responda)\b/iu.test(formattedQuotedButtons)
+      ) {
         return formattedQuotedButtons;
       }
 
