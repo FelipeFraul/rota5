@@ -7550,6 +7550,70 @@ async function handleAdminEventOperationalSubmenus({
       };
     }
 
+    if (adminEvents.mode === "shortcut_capacity_section_select") {
+      const sections = (adminEvents.draft?.lastSections as Array<{
+        option: number;
+        sectionId: string;
+        name: string;
+        capacity: number | null;
+        hasNumberedSeats: boolean;
+      }> | undefined) ?? [];
+      const selected = numericOption
+        ? sections.find((section) => section.option === numericOption)
+        : null;
+      const details = await getScopedAdminEventDetails(eventId, scope);
+
+      if (!selected || !details.ok) {
+        return {
+          reply: withAdminNavigationHint([
+            "Escolha uma das opções pelo número:",
+            "",
+            ...sections.map(
+              (section) =>
+                `> ${formatOptionLine(section.option, section.name, { preserveCase: true })} - *capacidade: ${section.capacity ?? "não definida"}*`,
+            ),
+          ].join("\n")),
+          nextContext: withAdminEventsContext(
+            baseContext,
+            "admin_event_capacity_collecting",
+            adminEvents,
+          ),
+        };
+      }
+
+      if (selected.hasNumberedSeats) {
+        return {
+          reply: [
+            `Evento: ${details.event.title}`,
+            `Setor: ${selected.name}`,
+            "",
+            "Esse setor usa assentos marcados. Para aumentar a carga, primeiro cadastre os novos assentos.",
+          ].join("\n"),
+          nextContext: baseContext,
+        };
+      }
+
+      return {
+        reply: [
+          "*AUMENTAR INGRESSOS*",
+          `Evento: ${details.event.title}`,
+          `Setor: ${selected.name}`,
+          `Carga atual: ${selected.capacity ?? "não definida"}`,
+          "",
+          "Digite a nova carga total do setor. Ex: 500",
+        ].join("\n"),
+        nextContext: withAdminEventsContext(
+          baseContext,
+          "admin_event_capacity_collecting",
+          {
+            ...adminEvents,
+            mode: "shortcut_capacity",
+            draft: { sectionId: selected.sectionId },
+          },
+        ),
+      };
+    }
+
     if (adminEvents.mode === "shortcut_capacity") {
       const details = await getScopedAdminEventDetails(eventId, scope);
       const sectionId = String(adminEvents.draft?.sectionId ?? "");
@@ -9587,6 +9651,38 @@ export async function routeTicketMessage({
         );
         if (!resolvedSection.ok) {
           const actionLabel = getAdminShortcutActionLabel(eventShortcut.action);
+          if (eventShortcut.action === "increase_tickets" && resolvedSection.matches.length) {
+            const sectionOptions = resolvedSection.matches.map((section, index) => ({
+              option: index + 1,
+              sectionId: section.sectionId,
+              name: section.name,
+              capacity: section.capacity,
+              hasNumberedSeats: section.hasNumberedSeats,
+            }));
+
+            return {
+              reply: withAdminNavigationHint([
+                resolvedSection.reason === "ambiguous"
+                  ? `Encontrei mais de um setor para "${eventShortcut.targetQuery}". Digite o número:`
+                  : `Não encontrei exatamente o setor "${eventShortcut.targetQuery}". Você quis dizer:`,
+                "",
+                ...sectionOptions.map(
+                  (section) =>
+                    `> ${formatOptionLine(section.option, section.name, { preserveCase: true })} - *capacidade: ${section.capacity ?? "não definida"}*`,
+                ),
+              ].join("\n")),
+              nextContext: withAdminEventsContext(
+                baseContext,
+                "admin_event_capacity_collecting",
+                {
+                  selectedEventId: selectedEvent.eventId,
+                  mode: "shortcut_capacity_section_select",
+                  draft: { lastSections: sectionOptions },
+                },
+              ),
+            };
+          }
+
           return {
             reply: withAdminNavigationHint([
               resolvedSection.reason === "ambiguous"
