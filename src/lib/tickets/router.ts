@@ -1764,16 +1764,6 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
       "Ingressos usados e não usados",
       "Cortesias",
     ],
-    optionDescriptions: [
-      "Mostra vendas, carga de ingressos por setor, check-ins e cortesias no período.",
-      "Mostra valores vendidos, pedidos pagos, ingressos, reservas e uso dos ingressos de um evento.",
-      "Detalha vendas, cortesias, disponibilidade e uso dos ingressos em cada setor.",
-      "Lista reservas ativas que ainda aguardam a confirmação do pagamento.",
-      "Lista reservas que expiraram ou foram canceladas no período.",
-      "Mostra as entradas validadas, recusadas ou já utilizadas na portaria.",
-      "Compara ingressos emitidos, usados, não usados e cancelados, com a taxa de comparecimento.",
-      "Mostra cortesias emitidas, usadas, não usadas e canceladas.",
-    ],
   },
 };
 
