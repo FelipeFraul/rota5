@@ -1871,24 +1871,89 @@ function parseAdminSubmenuOption(text: string) {
 }
 
 type AdminEventShortcutAction =
+  | "event_details"
+  | "event_edit"
+  | "event_status"
+  | "event_duplicate"
+  | "event_sessions"
+  | "event_sections"
+  | "event_prices"
   | "event_summary"
   | "section_sales"
+  | "pending_payments"
+  | "expired_reservations"
+  | "gate_checkins"
+  | "ticket_usage"
+  | "courtesy_report"
   | "list_courtesies"
   | "add_courtesy"
+  | "resend_courtesy"
+  | "cancel_courtesy"
   | "edit_title"
-  | "edit_image";
+  | "edit_artist"
+  | "edit_city"
+  | "edit_state"
+  | "edit_venue"
+  | "edit_image"
+  | "edit_datetime"
+  | "edit_description"
+  | "gate_menu"
+  | "gate_self_checkin"
+  | "gate_register"
+  | "gate_accesses"
+  | "gate_revoke";
 
 const ADMIN_EVENT_SHORTCUT_ALIASES: Array<[
   AdminEventShortcutAction,
   string,
   string[],
 ]> = [
-  ["event_summary", "resumo geral", ["resumo geral", "resumo", "relatorio", "relatorio do evento"]],
+  ["event_details", "evento", ["evento", "eventos", "meus eventos", "ver evento", "detalhes do evento", "consultar evento"]],
+  ["event_edit", "editar evento", ["editar evento", "alterar evento"]],
+  ["event_status", "ativar/pausar evento", ["ativar evento", "pausar evento", "ativar pausar evento", "status do evento", "alterar status do evento"]],
+  ["event_duplicate", "duplicar evento", ["duplicar evento", "copiar evento"]],
+  ["event_sessions", "datas do evento", ["datas do evento", "sessoes do evento", "editar sessoes", "gerenciar sessoes"]],
+  ["event_sections", "setores e assentos", ["setores e assentos", "setores do evento", "editar setores", "editar lugares", "editar carga", "carga de ingressos"]],
+  ["event_prices", "editar valores", ["editar valores", "valores do evento", "editar precos", "precos do evento"]],
+  [
+    "event_summary",
+    "resumo geral",
+    [
+      "resumo geral",
+      "resumo",
+      "relatorio",
+      "relatorios",
+      "relatorio do evento",
+      "ingressos",
+      "ingressos e pedidos",
+      "ingressos vendidos",
+      "vendas do evento",
+      "vendas por evento",
+    ],
+  ],
   ["section_sales", "vendas por setor", ["vendas por setor", "relatorio por setor"]],
-  ["list_courtesies", "ver cortesias", ["ver cortesias", "listar cortesias", "consultar cortesias"]],
+  ["pending_payments", "pagamentos pendentes", ["pagamentos pendentes", "pedidos pendentes"]],
+  ["expired_reservations", "reservas expiradas/canceladas", ["reservas expiradas", "reservas canceladas", "reservas expiradas canceladas"]],
+  ["gate_checkins", "check-ins da portaria", ["checkins da portaria", "check ins da portaria", "relatorio de checkins", "relatorio da portaria"]],
+  ["ticket_usage", "ingressos usados e não usados", ["ingressos usados", "ingressos nao usados", "ingressos usados e nao usados", "uso dos ingressos"]],
+  ["courtesy_report", "relatório de cortesias", ["relatorio de cortesias", "cortesias emitidas"]],
+  ["list_courtesies", "ver cortesias", ["cortesias", "ver cortesias", "listar cortesias", "consultar cortesias"]],
   ["add_courtesy", "adicionar cortesia", ["adicionar cortesia", "adicionar cortesias", "criar cortesia", "gerar cortesia"]],
+  ["resend_courtesy", "reenviar cortesia", ["reenviar cortesia", "reenviar cortesias"]],
+  ["cancel_courtesy", "cancelar cortesia", ["cancelar cortesia", "cancelar cortesias"]],
   ["edit_title", "editar nome evento", ["editar nome evento", "editar nome do evento", "alterar nome evento", "editar titulo evento"]],
+  ["edit_artist", "editar artista", ["editar artista", "alterar artista", "editar atracao"]],
+  ["edit_city", "editar cidade", ["editar cidade", "alterar cidade"]],
+  ["edit_state", "editar estado", ["editar estado", "alterar estado", "editar uf"]],
+  ["edit_venue", "editar local", ["editar local", "alterar local", "editar teatro"]],
   ["edit_image", "enviar foto", ["enviar foto", "alterar foto", "trocar foto", "editar foto", "trocar imagem"]],
+  ["edit_datetime", "editar data/hora", ["editar data", "editar horario", "editar data hora", "alterar data", "alterar horario"]],
+  ["edit_description", "editar informações gerais", ["editar informacoes", "editar informacoes gerais", "alterar informacoes", "editar descricao"]],
+  ["gate_menu", "portaria", ["portaria", "menu portaria"]],
+  ["gate_self_checkin", "check-in neste telefone", ["check in neste telefone", "checkin neste telefone", "abrir checkin", "fazer checkin"]],
+  ["gate_register", "definir outro telefone", ["definir outro telefone", "cadastrar telefone da portaria", "adicionar operador da portaria"]],
+  ["gate_accesses", "ver acessos", ["ver acessos", "listar acessos", "acessos da portaria"]],
+  ["gate_revoke", "revogar acessos", ["revogar acessos", "pausar acessos", "revogar acesso"]],
 ];
 
 function getAdminShortcutActionLabel(action: AdminEventShortcutAction) {
@@ -1951,6 +2016,8 @@ function parseAdminEventShortcut(text: string): {
       "resumo",
       "relatorio",
       "vendas",
+      "ingressos",
+      "vendidos",
       "cortesia",
       "cortesias",
       "editar",
@@ -1964,6 +2031,21 @@ function parseAdminEventShortcut(text: string): {
       "ver",
       "listar",
       "consultar",
+      "evento",
+      "eventos",
+      "setores",
+      "assentos",
+      "lugares",
+      "datas",
+      "sessoes",
+      "precos",
+      "valores",
+      "pagamentos",
+      "reservas",
+      "portaria",
+      "checkin",
+      "acessos",
+      "revogar",
     ]);
     const resemblesShortcut = actionText
       .split(" ")
@@ -9091,12 +9173,37 @@ export async function routeTicketMessage({
       }
 
       const permissionByAction: Record<AdminEventShortcutAction, AdminPermission> = {
+        event_details: "manage_events",
+        event_edit: "manage_events",
+        event_status: "manage_events",
+        event_duplicate: "manage_events",
+        event_sessions: "manage_events",
+        event_sections: "manage_events",
+        event_prices: "manage_events",
         event_summary: "view_reports",
         section_sales: "view_reports",
+        pending_payments: "view_reports",
+        expired_reservations: "view_reports",
+        gate_checkins: "view_reports",
+        ticket_usage: "view_reports",
+        courtesy_report: "view_reports",
         list_courtesies: "manage_courtesies",
         add_courtesy: "manage_courtesies",
+        resend_courtesy: "manage_courtesies",
+        cancel_courtesy: "manage_courtesies",
         edit_title: "manage_events",
+        edit_artist: "manage_events",
+        edit_city: "manage_events",
+        edit_state: "manage_events",
+        edit_venue: "manage_events",
         edit_image: "manage_events",
+        edit_datetime: "manage_events",
+        edit_description: "manage_events",
+        gate_menu: "manage_gate",
+        gate_self_checkin: "manage_gate",
+        gate_register: "manage_gate",
+        gate_accesses: "manage_gate",
+        gate_revoke: "manage_gate",
       };
       const permission = permissionByAction[eventShortcut.action];
 
@@ -9149,17 +9256,25 @@ export async function routeTicketMessage({
 
       const selectedEvent = resolvedEvent.event;
 
-      if (
-        eventShortcut.action === "event_summary" ||
-        eventShortcut.action === "section_sales"
-      ) {
+      const reportTypeByShortcut: Partial<Record<
+        AdminEventShortcutAction,
+        Exclude<AdminReportType, "summary">
+      >> = {
+        event_summary: "sales_event",
+        section_sales: "sales_section",
+        pending_payments: "pending_payments",
+        expired_reservations: "expired_cancelled_reservations",
+        gate_checkins: "gate_checkins",
+        ticket_usage: "ticket_usage",
+        courtesy_report: "courtesies",
+      };
+      const shortcutReportType = reportTypeByShortcut[eventShortcut.action];
+
+      if (shortcutReportType) {
         try {
           const report = await buildAdminReport({
             eventId: selectedEvent.eventId,
-            type:
-              eventShortcut.action === "section_sales"
-                ? "sales_section"
-                : "sales_event",
+            type: shortcutReportType,
             period: { label: "Todo o período" },
           });
           return {
@@ -9185,6 +9300,66 @@ export async function routeTicketMessage({
         }
       }
 
+      if (eventShortcut.action === "event_details") {
+        return showAdminEventDetails(
+          baseContext,
+          buildAdminEventScope(adminUser),
+          selectedEvent.eventId,
+        );
+      }
+
+      if (
+        eventShortcut.action === "event_sessions" ||
+        eventShortcut.action === "event_sections" ||
+        eventShortcut.action === "event_prices"
+      ) {
+        const scope = buildAdminEventScope(adminUser);
+        if (eventShortcut.action === "event_sessions") {
+          return showAdminEventSessionsMenu(baseContext, scope, selectedEvent.eventId);
+        }
+        if (eventShortcut.action === "event_sections") {
+          return showAdminEventSectionsMenu(baseContext, scope, selectedEvent.eventId);
+        }
+        return showAdminEventPricesMenu(baseContext, scope, selectedEvent.eventId);
+      }
+
+      if (
+        eventShortcut.action === "event_edit" ||
+        eventShortcut.action === "event_status" ||
+        eventShortcut.action === "event_duplicate"
+      ) {
+        const details = await getScopedAdminEventDetails(
+          selectedEvent.eventId,
+          buildAdminEventScope(adminUser),
+        );
+        if (!details.ok) {
+          return { reply: "Não encontrei esse evento.", nextContext: baseContext };
+        }
+
+        if (eventShortcut.action === "event_edit") {
+          return {
+            reply: renderAdminEventEditMenu(details.event.title),
+            nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
+              selectedEventId: selectedEvent.eventId,
+            }),
+          };
+        }
+        if (eventShortcut.action === "event_status") {
+          return {
+            reply: renderAdminEventStatusMenu(details.event),
+            nextContext: withAdminEventsContext(baseContext, "admin_event_status_select", {
+              selectedEventId: selectedEvent.eventId,
+            }),
+          };
+        }
+        return {
+          reply: renderAdminEventDuplicateConfirmReply(details.event),
+          nextContext: withAdminEventsContext(baseContext, "admin_event_duplicate_confirm", {
+            selectedEventId: selectedEvent.eventId,
+          }),
+        };
+      }
+
       if (eventShortcut.action === "list_courtesies") {
         const list = await listCourtesiesForEvent(selectedEvent.eventId);
         return {
@@ -9202,6 +9377,48 @@ export async function routeTicketMessage({
             sessionId: adminSession.id,
             adminUserId: adminUser.id,
             expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (
+        eventShortcut.action === "resend_courtesy" ||
+        eventShortcut.action === "cancel_courtesy"
+      ) {
+        const list = await listCourtesiesForEvent(selectedEvent.eventId);
+        if (!list.ok || list.courtesies.length === 0) {
+          return {
+            reply: list.ok
+              ? `Nenhuma cortesia encontrada para o evento ${selectedEvent.title}.`
+              : TICKET_MESSAGES.adminGenericError,
+            nextContext: baseContext,
+          };
+        }
+        const isResend = eventShortcut.action === "resend_courtesy";
+        const nextState = isResend
+          ? "admin_courtesy_resend_select"
+          : "admin_courtesy_cancel_select";
+        return {
+          reply: [
+            `Evento: ${selectedEvent.title}`,
+            "",
+            buildCourtesiesListReply(list.courtesies, { selectable: true }),
+            "",
+            isResend
+              ? "*QUAL CORTESIA DESEJA REENVIAR?*"
+              : "*QUAL CORTESIA DESEJA CANCELAR?*",
+            "Responda com o número da cortesia.",
+          ].join("\n"),
+          nextContext: withAdminCourtesiesContext(baseContext, nextState, {
+            mode: isResend ? "resend" : "cancel",
+            selectedEventId: selectedEvent.eventId,
+            selectedEventTitle: selectedEvent.title,
+            lastCourtesies: list.courtesies.map((courtesy, index) => ({
+              option: index + 1,
+              courtesyId: courtesy.courtesyId,
+              phone: courtesy.phone,
+              ticketCode: courtesy.ticketCode,
+            })),
           }),
         };
       }
@@ -9253,7 +9470,129 @@ export async function routeTicketMessage({
         };
       }
 
-      const field = eventShortcut.action === "edit_title" ? "title" : "image_url";
+      if (eventShortcut.action === "gate_menu") {
+        return {
+          reply: withAdminNavigationHint([
+            `*PORTARIA — ${selectedEvent.title.toUpperCase()}*`,
+            "",
+            `- check-in neste telefone, ${selectedEvent.title}`,
+            `- definir outro telefone, ${selectedEvent.title}`,
+            `- ver acessos, ${selectedEvent.title}`,
+            `- revogar acessos, ${selectedEvent.title}`,
+          ].join("\n")),
+          nextContext: baseContext,
+        };
+      }
+
+      if (eventShortcut.action === "gate_self_checkin") {
+        const gateSessionResult = await createGateSession({
+          validatorPhone: freshAuth.scope.adminPhone,
+          createdByAdminPhone: freshAuth.scope.adminPhone,
+          gateLabel: "Check-in",
+          eventId: selectedEvent.eventId,
+          replaceActiveSessions: true,
+        });
+        return {
+          reply: gateSessionResult.ok
+            ? buildGateCheckInReply({
+                gateUrl: gateSessionResult.gateUrl,
+                expiresAt: gateSessionResult.gateSession.expires_at,
+              })
+            : TICKET_MESSAGES.gateAdminCreateError,
+          nextContext: adminReplyContext({
+            state: "admin_gate_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (eventShortcut.action === "gate_register") {
+        return {
+          reply: [
+            `*DEFINIR OUTRO TELEFONE — ${selectedEvent.title.toUpperCase()}*`,
+            "",
+            renderGateValidatorPhonePrompt(),
+          ].join("\n"),
+          nextContext: withAdminGateContext(
+            baseContext,
+            "admin_gate_validator_collecting",
+            {
+              mode: "register",
+              selectedEventId: selectedEvent.eventId,
+            },
+          ),
+        };
+      }
+
+      if (eventShortcut.action === "gate_accesses") {
+        return {
+          reply: `Evento: ${selectedEvent.title}\n\n${renderGateAccessFilterMenu()}`,
+          nextContext: withAdminGateContext(
+            baseContext,
+            "admin_gate_accesses_filter",
+            {
+              mode: "list",
+              selectedEventId: selectedEvent.eventId,
+            },
+          ),
+        };
+      }
+
+      if (eventShortcut.action === "gate_revoke") {
+        const accesses = await listGateAccesses({
+          filter: "open",
+          eventId: selectedEvent.eventId,
+        });
+        if (!accesses.ok) {
+          return { reply: TICKET_MESSAGES.adminGenericError, nextContext: baseContext };
+        }
+        return {
+          reply: [
+            `Evento: ${selectedEvent.title}`,
+            "",
+            renderGateAccessesList({
+              title: "REVOGAR ACESSOS",
+              accesses: accesses.accesses,
+              selectable: true,
+            }),
+            "",
+            "Digite o número do acesso que deseja pausar.",
+          ].join("\n"),
+          nextContext: withAdminGateContext(
+            baseContext,
+            "admin_gate_revoke_select",
+            {
+              mode: "revoke",
+              selectedEventId: selectedEvent.eventId,
+              lastGateAccesses: accesses.accesses.map((access, index) => ({
+                option: index + 1,
+                gateAccessId: access.id,
+                validatorPhone: access.phone,
+                eventId: access.eventId,
+                eventTitle: access.eventTitle,
+              })),
+            },
+          ),
+        };
+      }
+
+      const editFieldByAction: Partial<Record<AdminEventShortcutAction, string>> = {
+        edit_title: "title",
+        edit_artist: "artist_name",
+        edit_city: "city",
+        edit_state: "state",
+        edit_venue: "venue",
+        edit_image: "image_url",
+        edit_datetime: "starts_at",
+        edit_description: "description",
+      };
+      const field = editFieldByAction[eventShortcut.action];
+      if (!field) {
+        return { reply: TICKET_MESSAGES.adminGenericError, nextContext: baseContext };
+      }
       const shortcutContext = adminReplyContext({
         state: "admin_event_edit_collecting",
         role: adminUser.role,
@@ -9261,11 +9600,18 @@ export async function routeTicketMessage({
         adminUserId: adminUser.id,
         expiresAt: adminSession.expires_at,
       });
+      const promptByField: Record<string, string> = {
+        title: "Envie o novo nome.",
+        artist_name: "Envie o novo artista ou atração.",
+        city: "Envie a nova cidade. Ex: Sorocaba",
+        state: "Envie o novo estado/UF. Ex: SP",
+        venue: "Envie o novo nome do local.",
+        image_url: "Envie a nova foto ou cole uma URL pública https://...",
+        starts_at: "Envie: número da sessão | nova data/hora. Ex: 1 | 10/06/2026 22:00",
+        description: "Envie as novas informações gerais do evento.",
+      };
       return {
-        reply:
-          field === "title"
-            ? `*EDITAR NOME DO EVENTO*\n\nEvento: ${selectedEvent.title}\n\nEnvie o novo nome.`
-            : `*ENVIAR FOTO DO EVENTO*\n\nEvento: ${selectedEvent.title}\n\nEnvie a nova foto ou cole uma URL pública https://...`,
+        reply: `*${getAdminShortcutActionLabel(eventShortcut.action).toUpperCase()}*\n\nEvento: ${selectedEvent.title}\n\n${promptByField[field]}`,
         nextContext: withAdminEventsContext(
           shortcutContext,
           "admin_event_edit_collecting",
