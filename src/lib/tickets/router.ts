@@ -1918,7 +1918,7 @@ const ADMIN_EVENT_SHORTCUT_ALIASES: Array<[
   ["event_sessions", "datas do evento", ["datas do evento", "sessoes do evento", "editar sessoes", "gerenciar sessoes"]],
   ["event_sections", "setores e assentos", ["setores e assentos", "setores do evento", "editar setores", "editar lugares", "editar carga", "carga de ingressos"]],
   ["event_prices", "editar valores", ["editar valores", "valores do evento", "editar precos", "precos do evento"]],
-  ["increase_tickets", "aumentar ingressos", ["aumentar ingressos", "aumentar carga", "aumentar capacidade", "alterar carga do setor"]],
+  ["increase_tickets", "aumentar ingressos", ["aumentar ingresso", "aumentar ingressos", "aumentar carga", "aumentar capacidade", "alterar carga do setor"]],
   ["create_section", "criar setor", ["criar setor", "adicionar setor", "novo setor"]],
   ["create_special_sale", "criar venda especial", ["criar venda especial", "adicionar venda especial", "novo tipo de venda", "criar oferta especial", "adicionar oferta especial"]],
   [
@@ -2061,7 +2061,7 @@ function parseAdminEventShortcut(text: string): {
   const eventQuery = (
     targetQuery || period ? parts.slice(2) : parts.slice(1)
   ).join(", ").trim();
-  if (!eventQuery || (needsTarget && !targetQuery)) return null;
+  if (!eventQuery) return null;
 
   if (!action) {
     const shortcutWords = new Set([
@@ -9524,6 +9524,49 @@ export async function routeTicketMessage({
         );
         if (!details.ok) {
           return { reply: "Não encontrei esse evento.", nextContext: baseContext };
+        }
+
+        if (eventShortcut.action === "increase_tickets" && !eventShortcut.targetQuery) {
+          return {
+            reply: [
+              "*AUMENTAR INGRESSOS*",
+              `Evento: ${selectedEvent.title}`,
+              "",
+              await renderSectionsList(
+                selectedEvent.eventId,
+                buildAdminEventScope(adminUser),
+                undefined,
+                { selectable: true },
+              ),
+              "",
+              "Envie: número do setor | nova carga.",
+              "Ex: 1 | 500",
+              "",
+              "A redução só bloqueia unidades disponíveis. Vendidos e reservados não são alterados.",
+            ].join("\n"),
+            nextContext: withAdminEventsContext(baseContext, "admin_event_capacity_collecting", {
+              selectedEventId: selectedEvent.eventId,
+            }),
+          };
+        }
+
+        if (eventShortcut.action === "create_special_sale" && !eventShortcut.targetQuery) {
+          const actionLabel = getAdminShortcutActionLabel(eventShortcut.action);
+          return {
+            reply: withAdminNavigationHint([
+              "Escolha o setor da venda especial:",
+              "",
+              ...details.event.sections.map(
+                (section) => `- ${formatAdminEventShortcutCommand(
+                  actionLabel,
+                  selectedEvent.title,
+                  undefined,
+                  section.name,
+                )}`,
+              ),
+            ].join("\n")),
+            nextContext: baseContext,
+          };
         }
 
         const resolvedSection = resolveAdminShortcutSection(
