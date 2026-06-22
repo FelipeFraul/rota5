@@ -104,6 +104,9 @@ export function GateSessionScanner({
   const [cameraStatus, setCameraStatus] = useState("Aguardando câmera...");
   const [lastResult, setLastResult] = useState("Nenhuma leitura ainda.");
   const [manualCode, setManualCode] = useState("");
+  const [consultCode, setConsultCode] = useState("");
+  const [consultLoading, setConsultLoading] = useState(false);
+  const [consultResult, setConsultResult] = useState<string | null>(null);
   const [allowedCount, setAllowedCount] = useState(0);
   const [deniedCount, setDeniedCount] = useState(0);
   const [lastAction, setLastAction] = useState<"allowed" | "denied" | null>(null);
@@ -424,6 +427,74 @@ export function GateSessionScanner({
     await submitScan(value);
   }
 
+  async function consultTicket() {
+    const ticketCode = consultCode.trim();
+    if (!ticketCode || !token || consultLoading) return;
+
+    setConsultLoading(true);
+    setConsultResult(null);
+
+    try {
+      const response = await fetch("/api/gate/session/consult", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gateSessionToken: token, ticketCode }),
+      });
+      const result = (await response.json()) as {
+        ok?: boolean;
+        reason?: string;
+        ticket?: {
+          code: string;
+          status: string;
+          eventTitle: string;
+          startsAt: string | null;
+          section: string | null;
+          seat: string | null;
+          issuedAt: string;
+          usedAt: string | null;
+          cancelledAt: string | null;
+          validations: Array<{ result: string; createdAt: string }>;
+        };
+      };
+
+      if (!response.ok || !result.ok || !result.ticket) {
+        setConsultResult(
+          result.reason === "not_found"
+            ? "Ingresso não encontrado para este evento ou sessão."
+            : "Não foi possível consultar este ingresso.",
+        );
+        return;
+      }
+
+      const ticket = result.ticket;
+      setConsultResult(
+        [
+          `Código: ${ticket.code}`,
+          `Status: ${ticket.status}`,
+          `Evento: ${ticket.eventTitle}`,
+          ticket.startsAt ? `Sessão: ${formatDateTime(ticket.startsAt)}` : null,
+          ticket.section ? `Setor: ${ticket.section}` : null,
+          ticket.seat ? `Ingresso/Assento: ${ticket.seat}` : null,
+          `Emitido em: ${formatDateTime(ticket.issuedAt)}`,
+          ticket.usedAt ? `Usado em: ${formatDateTime(ticket.usedAt)}` : null,
+          ticket.cancelledAt
+            ? `Cancelado em: ${formatDateTime(ticket.cancelledAt)}`
+            : null,
+          `Validações registradas: ${ticket.validations.length}`,
+          ...ticket.validations.map(
+            (item) => `- ${item.result} em ${formatDateTime(item.createdAt)}`,
+          ),
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      );
+    } catch {
+      setConsultResult("Não foi possível consultar este ingresso.");
+    } finally {
+      setConsultLoading(false);
+    }
+  }
+
   if (loading) {
     return (
       <main className="gate-shell">
@@ -501,7 +572,7 @@ export function GateSessionScanner({
       </section>
 
       <section className="gate-manual">
-        <label htmlFor="manual-ticket-token">Leitura manual de teste</label>
+        <label htmlFor="manual-ticket-token">Validar ingresso manualmente</label>
         <div>
           <input
             id="manual-ticket-token"
@@ -513,6 +584,22 @@ export function GateSessionScanner({
             Registrar
           </button>
         </div>
+      </section>
+
+      <section className="gate-manual">
+        <label htmlFor="consult-ticket-code">Consultar ticket sem validar</label>
+        <div>
+          <input
+            id="consult-ticket-code"
+            value={consultCode}
+            onChange={(event) => setConsultCode(event.target.value)}
+            placeholder="TCK-XXXXXXXXXXXX"
+          />
+          <button type="button" onClick={consultTicket} disabled={consultLoading}>
+            {consultLoading ? "Consultando..." : "Consultar"}
+          </button>
+        </div>
+        {consultResult ? <p className="gate-consult-result">{consultResult}</p> : null}
       </section>
 
       <section

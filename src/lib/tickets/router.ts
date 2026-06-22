@@ -118,10 +118,8 @@ import {
   findAdminPendingReservationsByInput,
   findAdminTicketByCode,
   findAdminTicketsByPhone,
-  listAdminTicketValidations,
   type AdminPendingReservationLookup,
   type AdminTicketLookup,
-  type AdminTicketValidation,
 } from "@/lib/tickets/services/adminTickets";
 import {
   buildCourtesyAdminSuccess,
@@ -1654,6 +1652,7 @@ type AdminSubmenuConfig = {
   backOption: number;
   exitOption: number;
   options: string[];
+  optionDescriptions?: string[];
 };
 
 type AdminEventScope = {
@@ -1703,7 +1702,6 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
       "Buscar ingresso por telefone",
       "Buscar ingresso por código",
       "Cancelar reserva pendente",
-      "Consultar ticket",
     ],
   },
   admin_courtesies_menu: {
@@ -1766,6 +1764,16 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
       "Ingressos usados e não usados",
       "Cortesias",
     ],
+    optionDescriptions: [
+      "Mostra vendas, carga de ingressos por setor, check-ins e cortesias no período.",
+      "Mostra valores vendidos, pedidos pagos, ingressos, reservas e uso dos ingressos de um evento.",
+      "Detalha vendas, cortesias, disponibilidade e uso dos ingressos em cada setor.",
+      "Lista reservas ativas que ainda aguardam a confirmação do pagamento.",
+      "Lista reservas que expiraram ou foram canceladas no período.",
+      "Mostra as entradas validadas, recusadas ou já utilizadas na portaria.",
+      "Compara ingressos emitidos, usados, não usados e cancelados, com a taxa de comparecimento.",
+      "Mostra cortesias emitidas, usadas, não usadas e canceladas.",
+    ],
   },
 };
 
@@ -1773,9 +1781,12 @@ function renderAdminSubmenu(config: AdminSubmenuConfig) {
   return [
     `*${config.title.toUpperCase()}*`,
     "",
-    ...config.options.map((label, index) => formatOptionLine(index + 1, label)),
-    formatOptionLine(config.backOption, "voltar"),
-    formatOptionLine(config.exitOption, "sair"),
+    ...config.options.flatMap((label, index) => [
+      formatOptionLine(index + 1, label),
+      ...(config.optionDescriptions?.[index]
+        ? [`> ${config.optionDescriptions[index]}`]
+        : []),
+    ]),
     "",
     "Responda com o número da opção.",
     'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
@@ -1794,8 +1805,6 @@ function renderAdminEventListFilterMenu() {
     formatOptionLine(2, "eventos pausados"),
     formatOptionLine(3, "eventos cancelados"),
     formatOptionLine(4, "todos os eventos"),
-    formatOptionLine(5, "voltar"),
-    formatOptionLine(6, "sair"),
     "",
     "Responda com o número da opção.",
     'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
@@ -2279,14 +2288,12 @@ function isAdminOrdersFlowState(
   | "admin_order_phone_collecting"
   | "admin_order_code_collecting"
   | "admin_order_cancel_collecting"
-  | "admin_order_cancel_confirm"
-  | "admin_ticket_consult_collecting" {
+  | "admin_order_cancel_confirm" {
   return (
     state === "admin_order_phone_collecting" ||
     state === "admin_order_code_collecting" ||
     state === "admin_order_cancel_collecting" ||
-    state === "admin_order_cancel_confirm" ||
-    state === "admin_ticket_consult_collecting"
+    state === "admin_order_cancel_confirm"
   );
 }
 
@@ -2451,8 +2458,6 @@ function renderGateAccessFilterMenu() {
     "",
     formatOptionLine(1, "ativos"),
     formatOptionLine(2, "pausados"),
-    formatOptionLine(3, "voltar"),
-    formatOptionLine(4, "sair"),
     "",
     "Responda com o número da opção.",
     'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
@@ -2620,8 +2625,6 @@ function renderAdminReportPeriodMenu() {
     formatOptionLine(3, "últimos 30 dias"),
     formatOptionLine(4, "todo o período"),
     formatOptionLine(5, "escolher datas"),
-    formatOptionLine(6, "voltar"),
-    formatOptionLine(7, "sair"),
     "",
     "Responda com o número da opção.",
     'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
@@ -2969,21 +2972,6 @@ function maskAdminPhone(value: string | null | undefined) {
   return `****${digits.slice(-4)}`;
 }
 
-function maskAdminIdentifier(value: string | null | undefined) {
-  const raw = String(value ?? "").trim();
-  const digits = raw.replace(/\D/g, "");
-
-  if (digits.length >= 8) {
-    return maskAdminPhone(digits);
-  }
-
-  if (raw.length > 12) {
-    return `${raw.slice(0, 4)}...${raw.slice(-4)}`;
-  }
-
-  return raw || "não informado";
-}
-
 function formatAdminTicket(ticket: AdminTicketLookup, index?: number) {
   const venue = ticket.venueName
     ? `${ticket.venueName} - ${ticket.city}/${ticket.state}`
@@ -3105,23 +3093,6 @@ function renderAdminPendingReservationCancelConfirm(
     "Para confirmar, responda exatamente:",
     "CANCELAR RESERVA",
   ].join("\n"));
-}
-
-function formatAdminTicketValidations(validations: AdminTicketValidation[]) {
-  if (validations.length === 0) {
-    return "Nenhuma validação registrada.";
-  }
-
-  return validations
-    .map((validation) => {
-      const gate = validation.gateLabel ? ` - ${validation.gateLabel}` : "";
-      const validator = validation.validatorIdentifier
-        ? ` (${maskAdminIdentifier(validation.validatorIdentifier)})`
-        : "";
-
-      return `- ${formatDateTime(validation.createdAt)} - ${validation.result}${gate}${validator}`;
-    })
-    .join("\n");
 }
 
 async function buildAdminCourtesyEventSelect({
@@ -3836,8 +3807,6 @@ function renderAdminEventDetails(event: AdminEventDetails) {
     formatOptionLine(1, "editar evento"),
     formatOptionLine(2, "setores e assentos"),
     formatOptionLine(3, "ativar/pausar evento"),
-    formatOptionLine(4, "voltar"),
-    formatOptionLine(5, "sair"),
   ].join("\n"));
 }
 
@@ -3877,7 +3846,6 @@ function renderAdminEventStatusMenu(event: AdminEventDetails) {
             ? "Este evento está cancelado. Reativação não está disponível por aqui."
             : "Este evento está finalizado. Alteração de publicação não está disponível por aqui.",
         ]),
-    formatOptionLine(actions.length + 1, "voltar"),
   ].join("\n"));
 }
 
@@ -4016,8 +3984,6 @@ function renderAdminEventEditMenu(eventTitle?: string) {
     formatOptionLine(9, "editar carga"),
     formatOptionLine(10, "editar valores"),
     formatOptionLine(11, "editar informações gerais"),
-    formatOptionLine(12, "voltar"),
-    formatOptionLine(13, "sair"),
   ].join("\n"));
 }
 
@@ -4047,8 +4013,6 @@ function renderAdminEventPublishSelectReply(eventTitle?: string) {
     "",
     formatOptionLine(1, "deixar como rascunho"),
     formatOptionLine(2, "publicar evento"),
-    formatOptionLine(3, "voltar"),
-    formatOptionLine(4, "sair"),
     "",
     "Responda com o número da opção.",
   ].join("\n"));
@@ -6459,8 +6423,6 @@ function renderAdminSessionsMenu(eventTitle: string) {
     formatOptionLine(3, "editar data/hora de sessão"),
     formatOptionLine(4, "pausar/abrir vendas da sessão"),
     formatOptionLine(5, "cancelar sessão"),
-    formatOptionLine(6, "voltar"),
-    formatOptionLine(7, "sair"),
   ].join("\n"));
 }
 
@@ -6496,8 +6458,6 @@ function renderAdminSectionsMenu(eventTitle: string) {
     formatOptionLine(4, "cadastrar assentos em lote"),
     formatOptionLine(5, "bloquear/desbloquear assentos"),
     formatOptionLine(6, "criar assentos da sessão"),
-    formatOptionLine(7, "voltar"),
-    formatOptionLine(8, "sair"),
   ].join("\n"));
 }
 
@@ -6529,8 +6489,6 @@ function renderAdminPricesMenu(eventTitle: string) {
     "",
     formatOptionLine(1, "ver valores"),
     formatOptionLine(2, "alterar valor"),
-    formatOptionLine(3, "voltar"),
-    formatOptionLine(4, "sair"),
   ].join("\n"));
 }
 
@@ -9079,10 +9037,7 @@ export async function routeTicketMessage({
         };
       }
 
-      if (
-        baseContext.state === "admin_order_code_collecting" ||
-        baseContext.state === "admin_ticket_consult_collecting"
-      ) {
+      if (baseContext.state === "admin_order_code_collecting") {
         const ticket = await findAdminTicketByCode(text);
 
         if (!ticket) {
@@ -9100,19 +9055,10 @@ export async function routeTicketMessage({
           };
         }
 
-        const validations =
-          baseContext.state === "admin_ticket_consult_collecting"
-            ? await listAdminTicketValidations(ticket.ticketId)
-            : [];
         const reply = [
-          baseContext.state === "admin_ticket_consult_collecting"
-            ? "*CONSULTA DE TICKET*"
-            : "*INGRESSO ENCONTRADO*",
+          "*INGRESSO ENCONTRADO*",
           "",
           formatAdminTicket(ticket),
-          ...(baseContext.state === "admin_ticket_consult_collecting"
-            ? ["", "*VALIDAÇÕES:*", formatAdminTicketValidations(validations)]
-            : []),
         ].join("\n");
 
         return {
@@ -11333,11 +11279,6 @@ export async function routeTicketMessage({
             reply:
               "*CANCELAR RESERVA PENDENTE*\n\nEnvie o telefone do comprador, o ID da reserva ou o ID do pedido.",
             state: "admin_order_cancel_collecting",
-          },
-          4: {
-            reply:
-              "*CONSULTAR TICKET*\n\nEnvie o código do ticket/ingresso. Ex: TCK-XXXXXXXXXXXX",
-            state: "admin_ticket_consult_collecting",
           },
         };
         const prompt = typeof submenuOption === "number"

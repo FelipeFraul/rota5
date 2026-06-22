@@ -887,10 +887,7 @@ export function getAdminMenuOptions(role: AdminRole) {
     },
   ];
 
-  return [
-    ...options.filter((option) => permissions.includes(option.permission)),
-    { option: 7, label: "Sair", permission: null },
-  ];
+  return options.filter((option) => permissions.includes(option.permission));
 }
 
 function formatOptionLine(option: number | string, label: string) {

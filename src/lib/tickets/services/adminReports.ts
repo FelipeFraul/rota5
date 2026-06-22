@@ -102,9 +102,20 @@ type CourtesyRow = {
 };
 
 type SessionSeatRow = {
+  session_id: string;
+  section_id: string;
   status: string;
   event_sessions: MaybeArray<{ event_id: string }>;
   venue_sections: MaybeArray<{ name: string }>;
+};
+
+type TicketPriceRow = {
+  session_id: string;
+  section_id: string;
+  ticket_type: string;
+  price_cents: number;
+  fee_cents: number;
+  status: string;
 };
 
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
@@ -250,12 +261,26 @@ async function getCourtesies(eventId?: string) {
   return data ?? [];
 }
 
-async function getSessionSeats(eventId: string) {
-  const { data, error } = await getSupabaseAdmin()
+async function getSessionSeats(eventId?: string) {
+  let query = getSupabaseAdmin()
     .from("session_seats")
-    .select("status, event_sessions!inner(event_id), venue_sections(name)")
-    .eq("event_sessions.event_id", eventId)
-    .returns<SessionSeatRow[]>();
+    .select("session_id, section_id, status, event_sessions!inner(event_id), venue_sections(name)");
+
+  if (eventId) query = query.eq("event_sessions.event_id", eventId);
+
+  const { data, error } = await query.returns<SessionSeatRow[]>();
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+async function getActiveTicketPrices() {
+  const { data, error } = await getSupabaseAdmin()
+    .from("ticket_prices")
+    .select("session_id, section_id, ticket_type, price_cents, fee_cents, status")
+    .eq("status", "active")
+    .neq("ticket_type", "free")
+    .returns<TicketPriceRow[]>();
 
   if (error) throw error;
   return data ?? [];
@@ -280,44 +305,66 @@ function courtesyTickets(tickets: TicketRow[], period: AdminReportPeriod) {
 }
 
 export async function buildAdminGeneralReport(period: AdminReportPeriod) {
-  const [tickets, reservations, validations, courtesies] = await Promise.all([
+  const [tickets, validations, courtesies, sessionSeats, ticketPrices] = await Promise.all([
     getTickets(),
-    getReservations(),
     getValidations().catch(() => [] as ValidationRow[]),
     getCourtesies().catch(() => [] as CourtesyRow[]),
+    getSessionSeats(),
+    getActiveTicketPrices(),
   ]);
   const paid = paidTickets(tickets, period);
-  const paidOrderIds = new Set(paid.map((ticket) => ticket.order_id));
-  const issued = tickets.filter((ticket) => isWithinPeriod(ticket.issued_at, period));
-  const activeReservations = reservations.filter((reservation) => reservation.status === "active");
-  const expiredReservations = reservations.filter(
-    (reservation) =>
-      reservation.status === "expired" && isWithinPeriod(reservation.updated_at, period),
-  );
-  const cancelledReservations = reservations.filter(
-    (reservation) =>
-      reservation.status === "cancelled" && isWithinPeriod(reservation.updated_at, period),
-  );
   const validationAllowed = validations.filter(
     (validation) =>
       validation.result === "allowed" && isWithinPeriod(validation.created_at, period),
   );
-  const notUsed = issued.filter((ticket) => ticket.status === "issued");
-  const total = paid.reduce((sum, ticket) => sum + getTicketAmount(ticket), 0);
+  const issuedTickets = tickets.filter(
+    (ticket) => ticket.status === "issued" || ticket.status === "used",
+  );
+  const notUsed = issuedTickets.filter((ticket) => ticket.status === "issued");
+  const totalSold = paid.reduce((sum, ticket) => sum + getTicketAmount(ticket), 0);
+
+  const maximumPriceBySessionSection = new Map<string, number>();
+  for (const price of ticketPrices) {
+    const key = `${price.session_id}:${price.section_id}`;
+    const amount = price.price_cents + price.fee_cents;
+    maximumPriceBySessionSection.set(
+      key,
+      Math.max(maximumPriceBySessionSection.get(key) ?? 0, amount),
+    );
+  }
+
+  const capacityBySection = new Map<string, number>();
+  let totalPotential = 0;
+  for (const seat of sessionSeats) {
+    const section = getSectionName(seat);
+    capacityBySection.set(section, (capacityBySection.get(section) ?? 0) + 1);
+    totalPotential +=
+      maximumPriceBySessionSection.get(`${seat.session_id}:${seat.section_id}`) ?? 0;
+  }
+
+  const soldBySection = new Map<string, number>();
+  for (const ticket of paid) {
+    const section = getSectionName(ticket);
+    soldBySection.set(section, (soldBySection.get(section) ?? 0) + 1);
+  }
+
+  const sectionLines = [...capacityBySection.entries()]
+    .sort(([sectionA], [sectionB]) => sectionA.localeCompare(sectionB, "pt-BR"))
+    .map(
+      ([section, capacity]) =>
+        `> ${section}: ${soldBySection.get(section) ?? 0} - ${capacity}`,
+    );
 
   return [
     "RESUMO GERAL",
     `> Período: ${period.label}`,
     "",
-    `> Vendas pagas: ${formatCurrencyFromCents(total)}`,
-    `> Pedidos pagos: ${paidOrderIds.size}`,
-    `> Ingressos emitidos: ${issued.length}`,
+    `> Total vendidos: ${formatCurrencyFromCents(totalSold)} - ${formatCurrencyFromCents(totalPotential)}`,
+    `> Total ingressos: ${paid.length} - ${sessionSeats.length}`,
+    ...sectionLines,
     `> Cortesias emitidas: ${courtesies.filter((courtesy) => isWithinPeriod(courtesy.created_at, period)).length}`,
-    `> Reservas ativas: ${activeReservations.length}`,
-    `> Reservas expiradas: ${expiredReservations.length}`,
-    `> Reservas canceladas: ${cancelledReservations.length}`,
-    `> Check-ins realizados: ${validationAllowed.length}`,
-    `> Ingressos não usados: ${notUsed.length}`,
+    `> Check-ins realizados: ${validationAllowed.length} - ${issuedTickets.length}`,
+    `> Ingressos não usados: ${notUsed.length} - ${issuedTickets.length}`,
   ].join("\n");
 }
 

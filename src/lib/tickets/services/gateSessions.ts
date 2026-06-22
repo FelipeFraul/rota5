@@ -60,6 +60,8 @@ export type ValidateGateSessionResult =
       valid: true;
       gateSession: {
         id: string;
+        eventId: string | null;
+        sessionId: string | null;
         gateLabel: string | null;
         eventTitle: string | null;
         sessionStartsAt: string | null;
@@ -203,13 +205,13 @@ export async function validateGateSessionToken(
   const { data, error } = await supabase
     .from("gate_sessions")
     .select(
-      "id, gate_label, validator_phone, status, expires_at, token_hash, events(title), event_sessions(starts_at)",
+      "id, event_id, session_id, gate_label, validator_phone, status, expires_at, token_hash, events(title), event_sessions(starts_at)",
     )
     .eq("token_hash", tokenHash)
     .maybeSingle<
       Pick<
         GateSession,
-        "id" | "gate_label" | "validator_phone" | "status" | "expires_at" | "token_hash"
+        "id" | "event_id" | "session_id" | "gate_label" | "validator_phone" | "status" | "expires_at" | "token_hash"
       > & {
         events: { title: string } | { title: string }[] | null;
         event_sessions: { starts_at: string } | { starts_at: string }[] | null;
@@ -248,6 +250,8 @@ export async function validateGateSessionToken(
     valid: true,
     gateSession: {
       id: data.id,
+      eventId: data.event_id,
+      sessionId: data.session_id,
       gateLabel: data.gate_label,
       eventTitle: Array.isArray(data.events)
         ? data.events[0]?.title ?? null

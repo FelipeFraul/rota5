@@ -633,6 +633,16 @@ body:has(.checkout-unavailable-shell) img {
   font-weight: 700;
 }
 
+.gate-manual button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.gate-consult-result {
+  margin: 14px 0 0;
+  white-space: pre-line;
+}
+
 .gate-result {
   margin-top: 16px;
   border: 1px solid transparent;

@@ -51,7 +51,6 @@ export type TicketConversationStep =
   | "admin_order_code_collecting"
   | "admin_order_cancel_collecting"
   | "admin_order_cancel_confirm"
-  | "admin_ticket_consult_collecting"
   | "admin_events_list"
   | "admin_event_detail"
   | "admin_event_create_collecting"
