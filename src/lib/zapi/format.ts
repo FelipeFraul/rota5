@@ -1,6 +1,5 @@
 const PROTECTED_PART_PATTERN =
-  /https?:\/\/\S+|`[^`\n]*`|(?<!\*)\*[^*\n]+\*(?!\*)/giu;
-const DOUBLE_STAR_PATTERN = /\*\*([^*\n]+)\*\*/gu;
+  /https?:\/\/\S+|`[^`\n]*`|\*\*[^*\n]+\*\*|(?<!\*)\*[^*\n]+\*(?!\*)/giu;
 const UPPERCASE_RUN_PATTERN =
   /(?<![\p{L}\p{N}_])(?:[\p{Lu}\p{M}\d][\p{Lu}\p{M}\d%+&/ªº-]*)(?:[ \t]+[\p{Lu}\p{M}\d][\p{Lu}\p{M}\d%+&/ªº-]*)*(?![\p{L}\p{N}_])/gu;
 
@@ -51,11 +50,7 @@ function formatUnprotectedText(value: string) {
 
 /** Adds WhatsApp bold markers to uppercase text in every outbound message. */
 export function formatWhatsAppUppercase(value: string) {
-  const normalizedStars = value.replace(
-    DOUBLE_STAR_PATTERN,
-    (_, content: string) => `*${content}*`,
-  );
-  const protectedValue = protectParts(normalizedStars);
+  const protectedValue = protectParts(value);
 
   return protectedValue.restore(formatUnprotectedText(protectedValue.text));
 }

@@ -25,6 +25,28 @@ export type SendZapiMessageResult =
       error: string;
     };
 
+function parseSystemTitleLine(line: string) {
+  const title = line.trim().match(/^\*{1,2}([^*\n]+)\*{1,2}$/)?.[1]?.trim();
+  return title ? title.toLocaleUpperCase("pt-BR") : null;
+}
+
+function ensureDefaultSystemTitle(value: string) {
+  const body = value.trim();
+  if (!body) return value;
+
+  const lines = body.split(/\r?\n/);
+  const firstContentIndex = lines.findIndex((line) => line.trim().length > 0);
+  if (firstContentIndex < 0) return value;
+
+  const firstTitle = parseSystemTitleLine(lines[firstContentIndex]);
+  if (firstTitle) {
+    lines[firstContentIndex] = `**${firstTitle}**`;
+    return lines.join("\n");
+  }
+
+  return `**ATENDIMENTO**\n\n${body}`;
+}
+
 export async function sendZapiText({
   phone,
   message,
@@ -46,7 +68,7 @@ export async function sendZapiText({
       },
       body: JSON.stringify({
         phone,
-        message: formatWhatsAppUppercase(message),
+        message: formatWhatsAppUppercase(ensureDefaultSystemTitle(message)),
       }),
       signal: controller.signal,
     });
@@ -109,7 +131,9 @@ export async function sendZapiImage({
       body: JSON.stringify({
         phone,
         image,
-        ...(caption ? { caption: formatWhatsAppUppercase(caption) } : {}),
+        ...(caption
+          ? { caption: formatWhatsAppUppercase(ensureDefaultSystemTitle(caption)) }
+          : {}),
         viewOnce: false,
       }),
       signal: controller.signal,

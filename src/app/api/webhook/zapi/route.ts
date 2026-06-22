@@ -101,6 +101,103 @@ type RouteOutboundMessage =
   | { type: "text"; body: string; phone?: string; persistedBody?: string; delayMs?: number }
   | { type: "image"; imageUrl: string; caption: string; phone?: string; persistedBody?: string; delayMs?: number };
 
+function getFallbackSystemMessageTitle(state?: string | null) {
+  if (!state) return "ATENDIMENTO";
+  if (state.startsWith("admin_report")) return "RELATÓRIOS";
+  if (state.startsWith("admin_event")) return "EVENTOS";
+  if (state.startsWith("admin_courtesy")) return "CORTESIAS";
+  if (state.startsWith("admin_gate") || state.startsWith("gate_")) return "PORTARIA";
+  if (state.startsWith("admin_order")) return "PEDIDOS";
+  if (state.startsWith("admin_user")) return "ADMINISTRADORES";
+  if (state.startsWith("admin")) return "ADMIN";
+  if (
+    state === "showing_events" ||
+    state === "showing_sections" ||
+    state === "showing_seats"
+  ) {
+    return "EVENTOS";
+  }
+  if (
+    state === "selecting_quantity" ||
+    state === "reviewing_cart" ||
+    state === "reservation_created" ||
+    state === "payment_pending"
+  ) {
+    return "COMPRA";
+  }
+  if (state.startsWith("help_")) return "AJUDA";
+  if (state.startsWith("ticket_resend")) return "INGRESSOS";
+  return "ATENDIMENTO";
+}
+
+function parseSystemMessageTitleLine(line: string) {
+  const trimmed = line.trim();
+  const match = trimmed.match(/^\*{1,2}([^*\n]+)\*{1,2}$/);
+  const title = match?.[1]?.trim();
+  return title ? title.toLocaleUpperCase("pt-BR") : null;
+}
+
+function formatSystemMessageTitle(title: string) {
+  return `**${title.toLocaleUpperCase("pt-BR")}**`;
+}
+
+function ensureSystemMessageTitle(body: string, fallbackTitle: string) {
+  const normalizedBody = body.trim();
+  if (!normalizedBody) return body;
+
+  const lines = normalizedBody.split(/\r?\n/);
+  const firstContentIndex = lines.findIndex((line) => line.trim().length > 0);
+  if (firstContentIndex < 0) return body;
+
+  const firstLineTitle = parseSystemMessageTitleLine(lines[firstContentIndex]);
+  if (firstLineTitle) {
+    lines[firstContentIndex] = formatSystemMessageTitle(firstLineTitle);
+    return lines.join("\n");
+  }
+
+  const existingTitleIndex = lines.findIndex((line, index) =>
+    index > firstContentIndex && Boolean(parseSystemMessageTitleLine(line)),
+  );
+  if (existingTitleIndex >= 0) {
+    const existingTitle = parseSystemMessageTitleLine(lines[existingTitleIndex]);
+    const remainingLines = lines.filter((_, index) => index !== existingTitleIndex);
+    return [
+      formatSystemMessageTitle(existingTitle ?? fallbackTitle),
+      "",
+      ...remainingLines,
+    ].join("\n").trim();
+  }
+
+  return [
+    formatSystemMessageTitle(fallbackTitle),
+    "",
+    normalizedBody,
+  ].join("\n");
+}
+
+function normalizeOutboundMessageTitle(
+  message: RouteOutboundMessage,
+  fallbackTitle: string,
+): RouteOutboundMessage {
+  if (message.type === "image") {
+    return {
+      ...message,
+      caption: ensureSystemMessageTitle(message.caption, fallbackTitle),
+      persistedBody: message.persistedBody
+        ? ensureSystemMessageTitle(message.persistedBody, fallbackTitle)
+        : message.persistedBody,
+    };
+  }
+
+  return {
+    ...message,
+    body: ensureSystemMessageTitle(message.body, fallbackTitle),
+    persistedBody: message.persistedBody
+      ? ensureSystemMessageTitle(message.persistedBody, fallbackTitle)
+      : message.persistedBody,
+  };
+}
+
 function getHeaderSecret(request: Request): string | null {
   for (const headerName of SECRET_HEADER_NAMES) {
     const value = request.headers.get(headerName);
@@ -429,22 +526,33 @@ function buildOutboundMetadata({
 function getOutboundMessages(
   routeResult: Awaited<ReturnType<typeof routeTicketMessage>>,
 ): RouteOutboundMessage[] {
+  const fallbackTitle = getFallbackSystemMessageTitle(routeResult.nextContext?.state);
   if (routeResult.outboundMessages?.length) {
-    return routeResult.outboundMessages;
+    return routeResult.outboundMessages.map((message) =>
+      normalizeOutboundMessageTitle(message, fallbackTitle),
+    );
   }
 
   if (routeResult.reply === TICKET_MESSAGES.genericHelp) {
     return [
-      { type: "text", body: TICKET_MESSAGES.genericHelp },
       {
         type: "text",
-        body: TICKET_MESSAGES.genericHelpCommands,
+        body: ensureSystemMessageTitle(TICKET_MESSAGES.genericHelp, "AJUDA"),
+      },
+      {
+        type: "text",
+        body: ensureSystemMessageTitle(TICKET_MESSAGES.genericHelpCommands, "AJUDA"),
         delayMs: 5_000,
       },
     ];
   }
 
-  return [{ type: "text", body: routeResult.reply }];
+  return [
+    {
+      type: "text",
+      body: ensureSystemMessageTitle(routeResult.reply, fallbackTitle),
+    },
+  ];
 }
 
 function sleep(ms: number) {
@@ -487,9 +595,10 @@ async function sendAndPersistText({
   phone: string;
   body: string;
 }) {
+  const titledBody = ensureSystemMessageTitle(body, "ATENDIMENTO");
   const sendResult = await sendZapiText({
     phone,
-    message: body,
+    message: titledBody,
   });
 
   const outboundResult = await saveWhatsAppMessage({
@@ -497,7 +606,7 @@ async function sendAndPersistText({
     customerId,
     direction: "outbound",
     messageType: "text",
-    body,
+    body: titledBody,
     providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
     rawMetadata: buildOutboundMetadata({
       sendResult,
