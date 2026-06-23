@@ -9,6 +9,7 @@ import {
   rateLimitResponse,
 } from "@/lib/security/rateLimit";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { verifyPublicCheckoutAccess } from "@/lib/tickets/services/checkout";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -16,6 +17,7 @@ const UUID_PATTERN =
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const orderId = url.searchParams.get("orderId") ?? "";
+  const checkoutToken = url.searchParams.get("t") ?? url.searchParams.get("token") ?? "";
 
   if (!UUID_PATTERN.test(orderId)) {
     return badRequest("Pedido inválido.");
@@ -31,6 +33,10 @@ export async function GET(request: Request) {
 
   if (!rateLimit.allowed) {
     return rateLimitResponse(rateLimit);
+  }
+
+  if (!(await verifyPublicCheckoutAccess(orderId, checkoutToken))) {
+    return badRequest("Pedido inválido.");
   }
 
   const supabase = getSupabaseAdmin();

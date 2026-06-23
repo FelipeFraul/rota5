@@ -16,6 +16,7 @@ type CheckoutOrder = {
 
 type CheckoutClientProps = {
   publicKey: string;
+  checkoutToken: string;
   order: CheckoutOrder;
 };
 
@@ -65,7 +66,11 @@ function formatCardNumber(value: string): string {
     .replace(/(\d{4})(?=\d)/g, "$1 ");
 }
 
-export default function CheckoutClient({ publicKey, order }: CheckoutClientProps) {
+export default function CheckoutClient({
+  publicKey,
+  checkoutToken,
+  order,
+}: CheckoutClientProps) {
   const [mp, setMp] = useState<MercadoPagoInstance | null>(null);
   const [mode, setMode] = useState<"pix" | "card">("pix");
   const [paymentApproved, setPaymentApproved] = useState(false);
@@ -157,7 +162,7 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
     async function checkPaymentStatus() {
       try {
         const response = await fetch(
-          `/api/checkout/status?orderId=${encodeURIComponent(order.orderId)}`,
+          `/api/checkout/status?orderId=${encodeURIComponent(order.orderId)}&t=${encodeURIComponent(checkoutToken)}`,
         );
 
         if (!response.ok) {
@@ -182,7 +187,7 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
       cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [order.orderId, paymentApproved, pixCode]);
+  }, [checkoutToken, order.orderId, paymentApproved, pixCode]);
 
   async function submitPayment(payload: Record<string, unknown>) {
     const response = await fetch(
@@ -214,6 +219,7 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
     try {
       const data = await submitPayment({
         method: "pix",
+        checkoutToken,
         orderId: order.orderId,
         orderNumber: order.orderId,
         email,
@@ -287,6 +293,7 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
 
       const data = await submitPayment({
         method: "card",
+        checkoutToken,
         orderId: order.orderId,
         orderNumber: order.orderId,
         email,

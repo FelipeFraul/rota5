@@ -34,6 +34,22 @@ function extractOrderIdFromRequestUrl(request: Request) {
   }
 }
 
+function extractCheckoutTokenFromRequestUrl(request: Request) {
+  const referer = request.headers.get("referer");
+
+  if (!referer) {
+    return null;
+  }
+
+  try {
+    const url = new URL(referer);
+
+    return url.searchParams.get("t") ?? url.searchParams.get("token");
+  } catch {
+    return null;
+  }
+}
+
 function pickValidOrderId(...values: unknown[]) {
   for (const value of values) {
     if (typeof value !== "string") {
@@ -140,6 +156,12 @@ export async function POST(request: Request) {
     extractOrderIdFromRequestUrl(request),
   );
   const rawMethod = bodyResult.body.method;
+  const rawCheckoutToken =
+    bodyResult.body.checkoutToken ??
+    bodyResult.body.checkout_token ??
+    requestUrl.searchParams.get("t") ??
+    requestUrl.searchParams.get("token") ??
+    extractCheckoutTokenFromRequestUrl(request);
   const {
     email,
     identificationNumber,
@@ -150,6 +172,8 @@ export async function POST(request: Request) {
   const resolvedOrderId = rawOrderId;
   const method =
     typeof rawMethod === "string" ? rawMethod.toLowerCase().trim() : "";
+  const checkoutToken =
+    typeof rawCheckoutToken === "string" ? rawCheckoutToken.trim() : "";
   const parsedInstallments =
     typeof installments === "number"
       ? installments
@@ -188,6 +212,7 @@ export async function POST(request: Request) {
 
   const result = await paySelfHostedCheckout({
     orderId: resolvedOrderId,
+    checkoutToken,
     method,
     email: typeof email === "string" ? email : "",
     identificationNumber:

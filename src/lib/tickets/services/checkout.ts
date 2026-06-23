@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createHash } from "crypto";
+import { createHash, createHmac, timingSafeEqual } from "crypto";
 import { createMercadoPagoPayment } from "@/lib/mercado-pago/client";
 import { getEnv } from "@/lib/env";
 import { logError, logWarn } from "@/lib/logger";
@@ -87,6 +87,7 @@ export type PublicCheckoutOrder = {
 
 export type PayCheckoutInput = {
   orderId: string;
+  checkoutToken: string;
   method: "pix" | "card";
   email: string;
   identificationNumber?: string;
@@ -168,8 +169,74 @@ function buildCheckoutUrl(baseUrl: string, path: string) {
   return `${normalizeBaseUrl(baseUrl)}${path}`;
 }
 
-function buildSelfHostedCheckoutUrl(baseUrl: string, orderId: string) {
-  return buildCheckoutUrl(baseUrl, `/checkout/${encodeURIComponent(orderId)}`);
+function buildCheckoutAccessToken({
+  orderId,
+  reservationId,
+  expiresAt,
+  secret,
+}: {
+  orderId: string;
+  reservationId: string;
+  expiresAt: string;
+  secret: string;
+}) {
+  return createHmac("sha256", secret)
+    .update(`${orderId}:${reservationId}:${expiresAt}`)
+    .digest("base64url");
+}
+
+function isCheckoutAccessTokenValid({
+  orderId,
+  reservationId,
+  expiresAt,
+  token,
+  secret,
+}: {
+  orderId: string;
+  reservationId: string;
+  expiresAt: string;
+  token: string;
+  secret: string;
+}) {
+  if (!token) return false;
+
+  const expected = buildCheckoutAccessToken({
+    orderId,
+    reservationId,
+    expiresAt,
+    secret,
+  });
+  const receivedBuffer = Buffer.from(token);
+  const expectedBuffer = Buffer.from(expected);
+
+  return (
+    receivedBuffer.length === expectedBuffer.length &&
+    timingSafeEqual(receivedBuffer, expectedBuffer)
+  );
+}
+
+function buildSelfHostedCheckoutUrl({
+  baseUrl,
+  order,
+  reservation,
+  secret,
+}: {
+  baseUrl: string;
+  order: Pick<CheckoutOrder, "id">;
+  reservation: Pick<CheckoutReservation, "id" | "expires_at">;
+  secret: string;
+}) {
+  const token = buildCheckoutAccessToken({
+    orderId: order.id,
+    reservationId: reservation.id,
+    expiresAt: reservation.expires_at,
+    secret,
+  });
+
+  return buildCheckoutUrl(
+    baseUrl,
+    `/checkout/${encodeURIComponent(order.id)}?t=${encodeURIComponent(token)}`,
+  );
 }
 
 function buildSelfHostedPreferenceId(orderId: string) {
@@ -519,6 +586,13 @@ export async function createCheckoutForReservation({
     }
   }
 
+  const checkoutUrl = buildSelfHostedCheckoutUrl({
+    baseUrl: env.APP_BASE_URL,
+    order,
+    reservation,
+    secret: env.CHECKOUT_INTERNAL_SECRET,
+  });
+
   const { data: reusablePayment, error: reusablePaymentError } = await supabase
     .from("payments")
     .select("id, provider_preference_id, checkout_url")
@@ -540,13 +614,20 @@ export async function createCheckoutForReservation({
   }
 
   if (reusablePayment?.provider_preference_id && reusablePayment.checkout_url) {
+    if (reusablePayment.checkout_url !== checkoutUrl) {
+      await supabase
+        .from("payments")
+        .update({ checkout_url: checkoutUrl })
+        .eq("id", reusablePayment.id);
+    }
+
     return {
       ok: true,
       checkout: checkoutPayload({
         order,
         reservation,
         preferenceId: reusablePayment.provider_preference_id,
-        checkoutUrl: reusablePayment.checkout_url,
+        checkoutUrl,
         amountCents: totalAmountCents,
         reused: true,
       }),
@@ -557,7 +638,6 @@ export async function createCheckoutForReservation({
     env.APP_BASE_URL,
     "/api/webhook/payment/mercado-pago",
   );
-  const checkoutUrl = buildSelfHostedCheckoutUrl(env.APP_BASE_URL, order.id);
   const preferenceId = buildSelfHostedPreferenceId(order.id);
 
   const rawMetadata = buildPaymentMetadata({
@@ -630,7 +710,9 @@ export async function createCheckoutForReservation({
 
 export async function getPublicCheckoutOrder(
   orderId: string,
+  checkoutToken: string,
 ): Promise<PublicCheckoutOrder | null> {
+  const env = getEnv();
   const supabase = getSupabaseAdmin();
   const { data: order, error: orderError } = await supabase
     .from("orders")
@@ -661,6 +743,18 @@ export async function getPublicCheckoutOrder(
     reservation.status !== "active" ||
     reservation.customer_id !== order.customer_id ||
     new Date(reservation.expires_at).getTime() <= Date.now()
+  ) {
+    return null;
+  }
+
+  if (
+    !isCheckoutAccessTokenValid({
+      orderId: order.id,
+      reservationId: reservation.id,
+      expiresAt: reservation.expires_at,
+      token: checkoutToken,
+      secret: env.CHECKOUT_INTERNAL_SECRET,
+    })
   ) {
     return null;
   }
@@ -779,8 +873,45 @@ export async function getPublicCheckoutOrder(
   };
 }
 
+export async function verifyPublicCheckoutAccess(orderId: string, checkoutToken: string) {
+  const env = getEnv();
+  const supabase = getSupabaseAdmin();
+  const { data: order, error: orderError } = await supabase
+    .from("orders")
+    .select("id, reservation_id, customer_id")
+    .eq("id", orderId)
+    .maybeSingle<Pick<CheckoutOrder, "id" | "reservation_id" | "customer_id">>();
+
+  if (orderError || !order) {
+    return false;
+  }
+
+  const { data: reservation, error: reservationError } = await supabase
+    .from("reservations")
+    .select("id, customer_id, expires_at")
+    .eq("id", order.reservation_id)
+    .maybeSingle<Pick<CheckoutReservation, "id" | "customer_id" | "expires_at">>();
+
+  if (
+    reservationError ||
+    !reservation ||
+    reservation.customer_id !== order.customer_id
+  ) {
+    return false;
+  }
+
+  return isCheckoutAccessTokenValid({
+    orderId: order.id,
+    reservationId: reservation.id,
+    expiresAt: reservation.expires_at,
+    token: checkoutToken,
+    secret: env.CHECKOUT_INTERNAL_SECRET,
+  });
+}
+
 export async function paySelfHostedCheckout({
   orderId,
+  checkoutToken,
   method,
   email,
   identificationNumber,
@@ -790,6 +921,12 @@ export async function paySelfHostedCheckout({
   sourceIdentifier,
 }: PayCheckoutInput): Promise<PayCheckoutResult> {
   const env = getEnv();
+  const order = await getPublicCheckoutOrder(orderId, checkoutToken);
+
+  if (!order) {
+    return { ok: false, reason: "order_not_payable" };
+  }
+
   const checkoutResult = await createCheckoutForReservation({
     orderId,
     sourceIdentifier,
@@ -797,12 +934,6 @@ export async function paySelfHostedCheckout({
 
   if (!checkoutResult.ok) {
     return { ok: false, reason: checkoutResult.reason };
-  }
-
-  const order = await getPublicCheckoutOrder(orderId);
-
-  if (!order) {
-    return { ok: false, reason: "order_not_payable" };
   }
 
   const trimmedEmail = email.trim().toLowerCase();
