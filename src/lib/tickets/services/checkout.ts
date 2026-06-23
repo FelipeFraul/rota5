@@ -1,7 +1,10 @@
 import "server-only";
 
 import { createHash, createHmac, timingSafeEqual } from "crypto";
-import { createMercadoPagoPayment } from "@/lib/mercado-pago/client";
+import {
+  createMercadoPagoPayment,
+  getMercadoPagoPayment,
+} from "@/lib/mercado-pago/client";
 import { getEnv } from "@/lib/env";
 import { logError, logWarn } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -9,7 +12,9 @@ import { checkCheckoutRisk } from "@/lib/tickets/services/buyerRisk";
 import {
   buildOrderExternalReference,
   centsToDecimalAmount,
+  decimalAmountToCents,
 } from "@/lib/tickets/services/payments";
+import { deliverTicketsForOrder } from "@/lib/tickets/services/ticketDelivery";
 
 const PROVIDER = "mercado_pago";
 
@@ -50,6 +55,17 @@ type PendingPayment = {
   provider_payment_id?: string | null;
   checkout_url: string | null;
   raw_metadata?: Record<string, unknown> | null;
+};
+
+type CheckoutPaymentRow = {
+  id: string;
+  provider_payment_id: string | null;
+  status: string;
+};
+
+type ConfirmPaidTicketOrderResult = {
+  idempotent?: boolean;
+  tickets_count?: number;
 };
 
 type ReservedSessionSeat = {
@@ -907,6 +923,110 @@ export async function verifyPublicCheckoutAccess(orderId: string, checkoutToken:
     token: checkoutToken,
     secret: env.CHECKOUT_INTERNAL_SECRET,
   });
+}
+
+function buildPaymentRawMetadata(payment: {
+  id: string | number;
+  status?: string;
+  external_reference?: string | null;
+  transaction_amount?: string | number | null;
+  date_approved?: string | null;
+  currency_id?: string | null;
+  payment_method_id?: string | null;
+  payment_type_id?: string | null;
+}) {
+  return {
+    id: String(payment.id),
+    status: payment.status,
+    external_reference: payment.external_reference,
+    transaction_amount: payment.transaction_amount,
+    date_approved: payment.date_approved,
+    currency_id: payment.currency_id,
+    payment_method_id: payment.payment_method_id,
+    payment_type_id: payment.payment_type_id,
+  };
+}
+
+export async function reconcileApprovedCheckoutPayment(orderId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data: order, error: orderError } = await supabase
+    .from("orders")
+    .select("id, status")
+    .eq("id", orderId)
+    .maybeSingle<{ id: string; status: string }>();
+
+  if (orderError || !order || order.status === "paid") {
+    return;
+  }
+
+  const { data: payment, error: paymentError } = await supabase
+    .from("payments")
+    .select("id, provider_payment_id, status")
+    .eq("order_id", orderId)
+    .eq("provider", PROVIDER)
+    .not("provider_payment_id", "is", null)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<CheckoutPaymentRow>();
+
+  if (paymentError || !payment?.provider_payment_id || payment.status === "approved") {
+    return;
+  }
+
+  const paymentResult = await getMercadoPagoPayment(payment.provider_payment_id);
+
+  if (!paymentResult.ok || paymentResult.payment.status !== "approved") {
+    return;
+  }
+
+  const mercadoPagoPayment = paymentResult.payment;
+  const amountCents = decimalAmountToCents(mercadoPagoPayment.transaction_amount);
+
+  if (amountCents == null) {
+    logWarn("Skipped checkout status payment reconciliation with invalid amount", {
+      orderId,
+      providerPaymentId: payment.provider_payment_id,
+    });
+    return;
+  }
+
+  const { data: confirmation, error } = await supabase.rpc(
+    "confirm_paid_ticket_order",
+    {
+      p_order_id: orderId,
+      p_provider: PROVIDER,
+      p_provider_payment_id: String(mercadoPagoPayment.id),
+      p_amount_cents: amountCents,
+      p_paid_at: mercadoPagoPayment.date_approved ?? new Date().toISOString(),
+      p_raw_metadata: buildPaymentRawMetadata(mercadoPagoPayment),
+    },
+  );
+
+  if (error) {
+    logWarn("Checkout status payment reconciliation failed", {
+      orderId,
+      providerPaymentId: payment.provider_payment_id,
+      code: error.code,
+      message: error.message,
+    });
+    return;
+  }
+
+  const confirmationResult = confirmation as ConfirmPaidTicketOrderResult | null;
+
+  if (confirmationResult?.idempotent === true) {
+    return;
+  }
+
+  const deliveryResult = await deliverTicketsForOrder(orderId);
+
+  if (!deliveryResult.ok || !deliveryResult.sent) {
+    logWarn("Checkout status payment reconciliation could not deliver tickets", {
+      orderId,
+      providerPaymentId: payment.provider_payment_id,
+      reason: deliveryResult.reason,
+    });
+  }
 }
 
 export async function paySelfHostedCheckout({
