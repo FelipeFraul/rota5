@@ -1,4 +1,5 @@
 import { AdminLoginForm } from "./AdminLoginForm";
+import BrandLogo from "@/app/BrandLogo";
 import { getAdminLoginChallengeByToken } from "@/lib/tickets/services/adminAuth";
 import { buildPublicAdminLoginChallengeDto } from "@/lib/tickets/services/publicDtos";
 
@@ -17,6 +18,7 @@ export default async function AdminLoginPage({ params }: AdminLoginPageProps) {
     return (
       <main className="admin-login-shell">
         <section className="admin-login-card">
+          <BrandLogo />
           <p className="admin-login-kicker">Login administrativo</p>
           <h1>Link inválido ou expirado</h1>
           <p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import BrandLogo from "@/app/BrandLogo";
 
 type CheckoutOrder = {
   orderId: string;
@@ -331,6 +332,7 @@ export default function CheckoutClient({
     return (
       <main className="checkout-success-shell">
         <section className="checkout-success-panel">
+          <BrandLogo />
           <div className="checkout-success-icon" aria-hidden="true">
             <span className="checkout-success-icon-stem" />
             <span className="checkout-success-icon-kick" />
@@ -352,6 +354,9 @@ export default function CheckoutClient({
 
   return (
     <main className="checkout-shell">
+      <div className="checkout-brand-header">
+        <BrandLogo />
+      </div>
       <section className="checkout-summary-panel">
         <p className="checkout-eyebrow">Checkout seguro</p>
         <h1>Finalize sua compra</h1>

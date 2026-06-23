@@ -27,6 +27,22 @@ main {
   color: #ffffff;
 }
 
+.brand-logo {
+  display: block;
+  width: min(220px, 70vw);
+  height: auto;
+  margin: 0 auto 24px;
+  object-fit: contain;
+}
+
+.checkout-brand-header {
+  grid-column: 1 / -1;
+}
+
+.checkout-brand-header .brand-logo {
+  margin-bottom: 0;
+}
+
 .checkout-unavailable-shell {
   display: flex;
   align-items: center;
@@ -83,6 +99,12 @@ body:has(.checkout-shell) img,
 body:has(.checkout-success-shell) img,
 body:has(.checkout-unavailable-shell) img {
   display: none !important;
+}
+
+body:has(.checkout-shell) img.brand-logo,
+body:has(.checkout-success-shell) img.brand-logo,
+body:has(.checkout-unavailable-shell) img.brand-logo {
+  display: block !important;
 }
 
 .checkout-summary-panel,
@@ -391,6 +413,11 @@ body:has(.checkout-unavailable-shell) img {
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
 }
 
+.admin-login-card .brand-logo {
+  width: min(190px, 64vw);
+  margin-bottom: 18px;
+}
+
 .admin-login-card h1 {
   margin: 4px 0 12px;
   color: #111827;
@@ -477,6 +504,11 @@ body:has(.checkout-unavailable-shell) img {
   width: min(100%, 760px);
   margin: 0 auto;
   padding: 24px;
+}
+
+.gate-brand-logo,
+.gate-shell > .brand-logo {
+  width: min(210px, 64vw);
 }
 
 .gate-header {

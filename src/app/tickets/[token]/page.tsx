@@ -1,3 +1,4 @@
+import BrandLogo from "@/app/BrandLogo";
 import { getTicketBySignedToken } from "@/lib/tickets/services/tickets";
 
 type TicketPageProps = {
@@ -13,6 +14,7 @@ export default async function TicketPage({ params }: TicketPageProps) {
   if (!ticket) {
     return (
       <main>
+        <BrandLogo />
         <h1>Ingresso inválido</h1>
         <p>Não foi possível validar este link de ingresso.</p>
       </main>
@@ -21,6 +23,7 @@ export default async function TicketPage({ params }: TicketPageProps) {
 
   return (
     <main>
+      <BrandLogo />
       <h1>Ingresso</h1>
       <p>Apresente este QR Code/link na entrada.</p>
       <p>A validação será feita pela equipe do evento.</p>

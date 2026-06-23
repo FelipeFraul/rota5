@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
+import BrandLogo from "@/app/BrandLogo";
 
 type GateSessionScannerProps = {
   initialValidation: GateSessionValidation;
@@ -498,6 +499,7 @@ export function GateSessionScanner({
   if (loading) {
     return (
       <main className="gate-shell">
+        <BrandLogo />
         <h1>Portaria</h1>
         <p>Validando acesso temporário...</p>
       </main>
@@ -507,6 +509,7 @@ export function GateSessionScanner({
   if (!validation?.valid) {
     return (
       <main className="gate-shell">
+        <BrandLogo />
         <h1>Acesso inválido</h1>
         <p>{describeInvalidReason(validation?.reason)}</p>
       </main>
@@ -515,6 +518,7 @@ export function GateSessionScanner({
 
   return (
     <main className="gate-shell">
+      <BrandLogo className="gate-brand-logo" />
       <section className="gate-header">
         <div>
           <p className="gate-kicker">Portaria</p>

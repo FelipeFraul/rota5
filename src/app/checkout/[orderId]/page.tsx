@@ -1,5 +1,6 @@
 import { getEnv } from "@/lib/env";
 import { getPublicCheckoutOrder } from "@/lib/tickets/services/checkout";
+import BrandLogo from "@/app/BrandLogo";
 import CheckoutClient from "./checkout-client";
 
 type CheckoutPageProps = {
@@ -33,6 +34,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
     return (
       <main className="checkout-unavailable-shell">
         <section className="checkout-unavailable-panel">
+          <BrandLogo />
           <h1>Pagamento indisponível</h1>
           <p>
             Esta reserva expirou ou já não está aguardando pagamento. Volte ao

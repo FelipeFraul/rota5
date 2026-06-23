@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useParams } from "next/navigation";
+import BrandLogo from "@/app/BrandLogo";
 
 function getRouteToken(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
@@ -51,6 +52,7 @@ export function AdminLoginForm() {
   if (code) {
     return (
       <section className="admin-login-card">
+        <BrandLogo />
         <p className="admin-login-kicker">Senha confirmada</p>
         <h1>Código de uso único</h1>
         <div className="admin-login-code" aria-label="Código de uso único">
@@ -67,6 +69,7 @@ export function AdminLoginForm() {
 
   return (
     <section className="admin-login-card">
+      <BrandLogo />
       <p className="admin-login-kicker">Login administrativo</p>
       <h1>Informe sua senha individual</h1>
       <p>
