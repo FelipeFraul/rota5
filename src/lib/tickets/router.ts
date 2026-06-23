@@ -1738,7 +1738,7 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
     state: "admin_users_menu",
     mainOption: 5,
     permission: "manage_admins",
-    backOption: 6,
+    backOption: 7,
     exitOption: 8,
     options: [
       "Listar administradores",
