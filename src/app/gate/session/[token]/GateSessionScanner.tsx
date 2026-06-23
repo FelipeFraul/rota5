@@ -496,16 +496,7 @@ export function GateSessionScanner({
           `Evento: ${ticket.eventTitle}`,
           ticket.startsAt ? `Sessão: ${formatDateTime(ticket.startsAt)}` : null,
           ticket.section ? `Setor: ${ticket.section}` : null,
-          ticket.seat ? `Ingresso/Assento: ${ticket.seat}` : null,
           `Emitido em: ${formatDateTime(ticket.issuedAt)}`,
-          ticket.usedAt ? `Usado em: ${formatDateTime(ticket.usedAt)}` : null,
-          ticket.cancelledAt
-            ? `Cancelado em: ${formatDateTime(ticket.cancelledAt)}`
-            : null,
-          `Validações registradas: ${ticket.validations.length}`,
-          ...ticket.validations.map(
-            (item) => `- ${item.result} em ${formatDateTime(item.createdAt)}`,
-          ),
         ]
           .filter(Boolean)
           .join("\n"),
