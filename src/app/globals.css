@@ -1,6 +1,11 @@
 :root {
   color-scheme: light;
-  background: #ffffff;
+  --app-bg-image: url("/bg_black_house.webp");
+  --app-bg-overlay: linear-gradient(
+    rgba(8, 13, 23, 0.62),
+    rgba(8, 13, 23, 0.62)
+  );
+  background: #0b0f18;
   color: #111827;
   font-family: Arial, Helvetica, sans-serif;
 }
@@ -11,11 +16,15 @@
 
 body {
   margin: 0;
+  background:
+    var(--app-bg-overlay),
+    var(--app-bg-image) center / cover fixed no-repeat;
 }
 
 main {
   min-height: 100vh;
   padding: 48px;
+  color: #ffffff;
 }
 
 .checkout-unavailable-shell {
@@ -24,7 +33,9 @@ main {
   justify-content: center;
   min-height: 100vh;
   padding: 24px;
-  background: #f6f7f9;
+  background:
+    linear-gradient(rgba(8, 13, 23, 0.58), rgba(8, 13, 23, 0.58)),
+    var(--app-bg-image) center / cover no-repeat;
   font-family: Arial, sans-serif;
 }
 
@@ -56,7 +67,13 @@ main {
   justify-content: center;
   min-height: 100vh;
   padding: 28px 16px;
-  background: linear-gradient(135deg, #0f172a 0%, #111827 42%, #fb7000 160%);
+  background: linear-gradient(
+      135deg,
+      rgba(15, 23, 42, 0.78) 0%,
+      rgba(17, 24, 39, 0.72) 44%,
+      rgba(251, 112, 0, 0.58) 160%
+    ),
+    var(--app-bg-image) center / cover no-repeat;
   font-family: Arial, sans-serif;
 }
 
@@ -238,7 +255,13 @@ body:has(.checkout-unavailable-shell) img {
   justify-content: center;
   min-height: 100vh;
   padding: 28px 16px;
-  background: linear-gradient(135deg, #052e1a 0%, #0f172a 58%, #16a34a 150%);
+  background: linear-gradient(
+      135deg,
+      rgba(5, 46, 26, 0.72) 0%,
+      rgba(15, 23, 42, 0.74) 58%,
+      rgba(22, 163, 74, 0.54) 150%
+    ),
+    var(--app-bg-image) center / cover no-repeat;
   font-family: Arial, sans-serif;
 }
 
@@ -354,7 +377,9 @@ body:has(.checkout-unavailable-shell) img {
   min-height: 100vh;
   place-items: center;
   padding: 24px;
-  background: #f8fafc;
+  background:
+    linear-gradient(rgba(248, 250, 252, 0.7), rgba(248, 250, 252, 0.7)),
+    var(--app-bg-image) center / cover no-repeat;
 }
 
 .admin-login-card {
@@ -460,7 +485,7 @@ body:has(.checkout-unavailable-shell) img {
   align-items: flex-start;
   justify-content: space-between;
   padding-bottom: 20px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.4);
 }
 
 .gate-header h1 {
@@ -470,10 +495,11 @@ body:has(.checkout-unavailable-shell) img {
 
 .gate-header p {
   margin: 4px 0;
-  color: #4b5563;
+  color: #e5e7eb;
 }
 
 .gate-kicker {
+  color: #fb7000;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -502,6 +528,7 @@ body:has(.checkout-unavailable-shell) img {
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   background: #ffffff;
+  color: #111827;
   transition:
     background-color 180ms ease,
     border-color 180ms ease,
@@ -603,6 +630,8 @@ body:has(.checkout-unavailable-shell) img {
   margin-top: 16px;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
 }
 
 .gate-manual label {
@@ -648,6 +677,7 @@ body:has(.checkout-unavailable-shell) img {
   border: 1px solid transparent;
   border-radius: 8px;
   background: #f3f4f6;
+  color: #111827;
   transition:
     background-color 180ms ease,
     border-color 180ms ease,
@@ -728,6 +758,16 @@ body:has(.checkout-unavailable-shell) img {
 }
 
 @media (max-width: 640px) {
+  :root {
+    --app-bg-image: url("/bg_black_house_mb.webp");
+  }
+
+  body {
+    background:
+      var(--app-bg-overlay),
+      var(--app-bg-image) center / cover no-repeat;
+  }
+
   main,
   .gate-shell {
     padding: 20px;
