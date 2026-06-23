@@ -1099,6 +1099,7 @@ function formatSectionsReply({
     sectionLines.join("\n---\n"),
     "",
     "Responda com o número do setor para continuar.",
+    "Digite *CANCELAR* para zerar o pedido de compra.",
     'Digite "Voltar" para voltar à seção anterior.',
   ].join("\n");
 }
@@ -1121,6 +1122,7 @@ function formatQuantityPrompt(
     isFree
       ? "Digite o número de ingressos gratuitos, até 4 por pedido. Ex: 2"
       : "Digite o número de ingressos para compra, ex: 2",
+    "Digite *CANCELAR* para zerar o pedido de compra.",
     'Digite "Voltar" para voltar à seção anterior.',
   ].join("\n");
 }
@@ -1278,6 +1280,7 @@ function formatCartDecisionReply({ cart }: { cart: TicketConversationCart }) {
     "",
     "Digite 1 para *continuar comprando*",
     "Digite 2 para *finalizar a compra*",
+    "Digite *CANCELAR* para zerar o pedido de compra.",
   ].join("\n");
 }
 

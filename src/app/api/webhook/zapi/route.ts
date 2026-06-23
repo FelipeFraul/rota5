@@ -139,7 +139,7 @@ function parseSystemMessageTitleLine(line: string) {
 }
 
 function formatSystemMessageTitle(title: string) {
-  return `**${title.toLocaleUpperCase("pt-BR")}**`;
+  return `*${title.toLocaleUpperCase("pt-BR")}*`;
 }
 
 function ensureSystemMessageTitle(body: string, fallbackTitle: string) {
