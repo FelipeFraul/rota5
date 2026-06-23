@@ -1,10 +1,6 @@
 :root {
   color-scheme: light;
   --app-bg-image: url("/bg_black_house.webp");
-  --app-bg-overlay: linear-gradient(
-    rgba(8, 13, 23, 0.62),
-    rgba(8, 13, 23, 0.62)
-  );
   background: #0b0f18;
   color: #111827;
   font-family: Arial, Helvetica, sans-serif;
@@ -16,9 +12,7 @@
 
 body {
   margin: 0;
-  background:
-    var(--app-bg-overlay),
-    var(--app-bg-image) center / cover fixed no-repeat;
+  background: var(--app-bg-image) center / cover fixed no-repeat;
 }
 
 main {
@@ -49,9 +43,7 @@ main {
   justify-content: center;
   min-height: 100vh;
   padding: 24px;
-  background:
-    linear-gradient(rgba(8, 13, 23, 0.58), rgba(8, 13, 23, 0.58)),
-    var(--app-bg-image) center / cover no-repeat;
+  background: var(--app-bg-image) center / cover no-repeat;
   font-family: Arial, sans-serif;
 }
 
@@ -83,13 +75,7 @@ main {
   justify-content: center;
   min-height: 100vh;
   padding: 28px 16px;
-  background: linear-gradient(
-      135deg,
-      rgba(15, 23, 42, 0.78) 0%,
-      rgba(17, 24, 39, 0.72) 44%,
-      rgba(251, 112, 0, 0.58) 160%
-    ),
-    var(--app-bg-image) center / cover no-repeat;
+  background: var(--app-bg-image) center / cover no-repeat;
   font-family: Arial, sans-serif;
 }
 
@@ -277,13 +263,7 @@ body:has(.checkout-unavailable-shell) img.brand-logo {
   justify-content: center;
   min-height: 100vh;
   padding: 28px 16px;
-  background: linear-gradient(
-      135deg,
-      rgba(5, 46, 26, 0.72) 0%,
-      rgba(15, 23, 42, 0.74) 58%,
-      rgba(22, 163, 74, 0.54) 150%
-    ),
-    var(--app-bg-image) center / cover no-repeat;
+  background: var(--app-bg-image) center / cover no-repeat;
   font-family: Arial, sans-serif;
 }
 
@@ -399,9 +379,7 @@ body:has(.checkout-unavailable-shell) img.brand-logo {
   min-height: 100vh;
   place-items: center;
   padding: 24px;
-  background:
-    linear-gradient(rgba(248, 250, 252, 0.7), rgba(248, 250, 252, 0.7)),
-    var(--app-bg-image) center / cover no-repeat;
+  background: var(--app-bg-image) center / cover no-repeat;
 }
 
 .admin-login-card {
@@ -795,9 +773,7 @@ body:has(.checkout-unavailable-shell) img.brand-logo {
   }
 
   body {
-    background:
-      var(--app-bg-overlay),
-      var(--app-bg-image) center / cover no-repeat;
+    background: var(--app-bg-image) center / cover no-repeat;
   }
 
   main,
