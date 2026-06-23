@@ -15,6 +15,10 @@ export async function generateTicketQrImage({
   filename: string;
 }> {
   const buffer = await QRCode.toBuffer(ticketUrl, {
+    color: {
+      dark: "#047857",
+      light: "#FFFFFF",
+    },
     errorCorrectionLevel: "M",
     margin: 2,
     scale: 8,

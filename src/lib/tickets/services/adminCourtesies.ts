@@ -759,6 +759,10 @@ async function ticketQrImage(ticket: TicketRow) {
   });
 
   return QRCode.toDataURL(createTicketUrl(token), {
+    color: {
+      dark: "#047857",
+      light: "#FFFFFF",
+    },
     errorCorrectionLevel: "M",
     margin: 2,
     scale: 8,
