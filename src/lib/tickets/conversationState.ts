@@ -43,6 +43,9 @@ export type TicketConversationStep =
   | "admin_user_disable_confirm"
   | "admin_user_unlock_select"
   | "admin_user_unlock_confirm"
+  | "admin_user_passphrase_select"
+  | "admin_user_passphrase_collect"
+  | "admin_user_passphrase_confirm"
   | "admin_reports_menu"
   | "admin_report_event_select"
   | "admin_report_period_select"
@@ -271,7 +274,7 @@ export type TicketConversationAdminCourtesies = {
 };
 
 export type TicketConversationAdminUsers = {
-  mode?: "add" | "role" | "disable" | "reactivate" | "unlock";
+  mode?: "add" | "role" | "disable" | "reactivate" | "unlock" | "passphrase";
   pendingRole?: TicketAdminRole;
   pendingPhone?: string;
   pendingName?: string | null;

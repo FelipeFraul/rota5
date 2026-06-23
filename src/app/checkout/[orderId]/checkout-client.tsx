@@ -44,6 +44,7 @@ declare global {
 }
 
 const mercadoPagoScriptSrc = "https://sdk.mercadopago.com/js/v2";
+const enableCardPayment = false;
 
 function onlyDigits(value: string): string {
   return value.replace(/\D/g, "");
@@ -368,22 +369,24 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
 
       <section className="checkout-payment-panel">
         <p className="checkout-section-title">Pagamento</p>
-        <div className="checkout-tabs">
-          <button
-            type="button"
-            className={mode === "pix" ? "checkout-tab is-active" : "checkout-tab"}
-            onClick={() => setMode("pix")}
-          >
-            Pix
-          </button>
-          <button
-            type="button"
-            className={mode === "card" ? "checkout-tab is-active" : "checkout-tab"}
-            onClick={() => setMode("card")}
-          >
-            Cartão
-          </button>
-        </div>
+        {enableCardPayment ? (
+          <div className="checkout-tabs">
+            <button
+              type="button"
+              className={mode === "pix" ? "checkout-tab is-active" : "checkout-tab"}
+              onClick={() => setMode("pix")}
+            >
+              Pix
+            </button>
+            <button
+              type="button"
+              className={mode === "card" ? "checkout-tab is-active" : "checkout-tab"}
+              onClick={() => setMode("card")}
+            >
+              Cartão
+            </button>
+          </div>
+        ) : null}
 
         <div className="checkout-form-block">
           <label className="checkout-label">
@@ -410,7 +413,7 @@ export default function CheckoutClient({ publicKey, order }: CheckoutClientProps
           </label>
         </div>
 
-        {mode === "card" ? (
+        {enableCardPayment && mode === "card" ? (
           <div className="checkout-form-block">
             <label className="checkout-label">
               Número do cartão

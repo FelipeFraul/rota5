@@ -431,6 +431,41 @@ export async function reactivateAdminUser({
   return { ok: true as const };
 }
 
+export async function renewAdminPassphrase({
+  adminUserId,
+  passphraseHash,
+}: {
+  adminUserId: string;
+  passphraseHash: string;
+}) {
+  const normalizedPassphraseHash = passphraseHash.trim();
+
+  if (!normalizedPassphraseHash.startsWith("pbkdf2_sha256$")) {
+    return { ok: false as const, reason: "invalid_passphrase" as const };
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data: target, error: targetError } = await supabase
+    .from("admin_users")
+    .select("id, status")
+    .eq("id", adminUserId)
+    .maybeSingle<{ id: string; status: "active" | "disabled" }>();
+
+  if (targetError) return { ok: false as const, reason: "database_error" as const, error: targetError };
+  if (!target) return { ok: false as const, reason: "not_found" as const };
+
+  const { error } = await supabase
+    .from("admin_users")
+    .update({ passphrase_hash: normalizedPassphraseHash })
+    .eq("id", adminUserId);
+
+  if (error) return { ok: false as const, reason: "database_error" as const, error };
+
+  await revokeAdminSessionsForUser(adminUserId);
+
+  return { ok: true as const };
+}
+
 export async function revokeAdminSessionsForUser(adminUserId: string) {
   const supabase = getSupabaseAdmin();
   const { error } = await supabase

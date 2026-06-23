@@ -233,7 +233,7 @@ const HELP_TOPICS: PublicHelpTopic[] = [
     question: "Depois da reserva, como pagar?",
     keywords: ["comprar", "pagar", "reserva", "pagamento", "link", "mercado"],
     answer:
-      "Após a reserva criada, responda `COMPRAR`. O sistema envia o link de checkout para pagar por Pix ou cartão, quando o ingresso não for gratuito.",
+      "Após a reserva criada, responda `COMPRAR`. O sistema envia o link de checkout para pagar por Pix, quando o ingresso não for gratuito.",
   },
   {
     id: "comandos-pagamento",
@@ -247,21 +247,14 @@ const HELP_TOPICS: PublicHelpTopic[] = [
     question: "Como pagar por Pix?",
     keywords: ["pix", "copia", "cola", "codigo", "código", "pagamento"],
     answer:
-      "Abra o link de pagamento, escolha Pix e gere o código. Copie o Pix copia e cola, pague no app do banco e aguarde a confirmação. A tela muda para pagamento aprovado quando o sistema recebe a confirmação.",
-  },
-  {
-    id: "cartao",
-    question: "Como pagar com cartão?",
-    keywords: ["cartao", "cartão", "credito", "crédito", "debito", "débito"],
-    answer:
-      "Abra o link de pagamento, escolha Cartão, preencha e-mail, CPF, dados do cartão e parcelas. Se o pagamento for aprovado, a tela mostra `Pagamento aprovado`.",
+      "Abra o link de pagamento e gere o código Pix. Copie o Pix copia e cola, pague no app do banco e aguarde a confirmação. A tela muda para pagamento aprovado quando o sistema recebe a confirmação.",
   },
   {
     id: "cpf-email",
     question: "Por que pede CPF e e-mail no pagamento?",
-    keywords: ["cpf", "email", "e-mail", "pagamento", "cartao", "pix"],
+    keywords: ["cpf", "email", "e-mail", "pagamento", "pix"],
     answer:
-      "O checkout usa CPF e e-mail para a Black House processar a tentativa de pagamento. No cartão, CPF e e-mail são obrigatórios. No Pix, CPF pode ser solicitado para validação.",
+      "O checkout usa CPF e e-mail para a Black House processar a tentativa de pagamento por Pix e validar a compra quando necessário.",
   },
   {
     id: "pagamento-aprovado",

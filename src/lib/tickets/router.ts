@@ -152,6 +152,7 @@ import {
   listAdminUsers,
   parseAdminRole,
   reactivateAdminUser,
+  renewAdminPassphrase,
   resolveBlockedAdminAuthPhone,
   resolveAdminUserId,
   unlockAdminAuthForPhone,
@@ -1738,13 +1739,14 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
     mainOption: 5,
     permission: "manage_admins",
     backOption: 6,
-    exitOption: 7,
+    exitOption: 8,
     options: [
       "Listar administradores",
       "Adicionar administrador",
       "Alterar nível de administrador",
       "Desativar administrador",
       "Liberar administrador bloqueado",
+      "Renovar palavra-chave",
     ],
   },
   admin_reports_menu: {
@@ -2034,7 +2036,7 @@ function parseAdminEventShortcut(text: string): {
   targetQuery?: string;
 } | null {
   const parts = text
-    .split(/\s*(?:,|\|)\s*/)
+    .split(/(?:\s*\|\s*|\s*,\s+)/)
     .map((part) => part.trim().replace(/^[*_'"“”]+|[*_'"“”]+$/g, "").trim())
     .filter(Boolean);
   if (parts.length < 2) return null;
@@ -2379,7 +2381,7 @@ function formatPaymentLinkReply({
   const lines = [
     "*LINK DE PAGAMENTO GERADO*",
     "",
-    "Pague clicando neste link (crédito ou pix):",
+    "Pague por Pix clicando neste link:",
     checkout.checkoutUrl,
     "",
     "Após a confirmação do pagamento, seu ingresso será emitido automaticamente.",
@@ -2677,7 +2679,10 @@ function isAdminUsersFlowState(
   | "admin_user_disable_select"
   | "admin_user_disable_confirm"
   | "admin_user_unlock_select"
-  | "admin_user_unlock_confirm" {
+  | "admin_user_unlock_confirm"
+  | "admin_user_passphrase_select"
+  | "admin_user_passphrase_collect"
+  | "admin_user_passphrase_confirm" {
   return (
     state === "admin_user_create_collect_phone" ||
     state === "admin_user_create_collect_name" ||
@@ -2691,7 +2696,10 @@ function isAdminUsersFlowState(
     state === "admin_user_disable_select" ||
     state === "admin_user_disable_confirm" ||
     state === "admin_user_unlock_select" ||
-    state === "admin_user_unlock_confirm"
+    state === "admin_user_unlock_confirm" ||
+    state === "admin_user_passphrase_select" ||
+    state === "admin_user_passphrase_collect" ||
+    state === "admin_user_passphrase_confirm"
   );
 }
 
@@ -3210,6 +3218,28 @@ function renderAdminUserDisableConfirm(user: AdminUserListItem) {
     `> Perfil: ${formatAdminRoleLabel(user.role)}`,
     "",
     "Digite DESATIVAR ADMIN para confirmar.",
+    'Digite "Cancelar" para abandonar esta tela.',
+  ].join("\n");
+}
+
+function renderAdminUserPassphraseConfirm({
+  name,
+  phone,
+  role,
+}: {
+  name?: string | null;
+  phone?: string;
+  role?: AdminRole;
+}) {
+  return [
+    "*RENOVAR PALAVRA-CHAVE*",
+    "",
+    `> Nome: ${name || "Sem nome"}`,
+    `> Telefone: ${phone ? maskAdminPhone(phone) : "não informado"}`,
+    ...(role ? [`> Perfil: ${formatAdminRoleLabel(role)}`] : []),
+    "> Nova palavra-chave: definida e protegida por hash",
+    "",
+    "Digite RENOVAR PALAVRA para confirmar.",
     'Digite "Cancelar" para abandonar esta tela.',
   ].join("\n");
 }
@@ -11892,7 +11922,8 @@ export async function routeTicketMessage({
 
       if (
         baseContext.state === "admin_user_role_select_user" ||
-        baseContext.state === "admin_user_disable_select"
+        baseContext.state === "admin_user_disable_select" ||
+        baseContext.state === "admin_user_passphrase_select"
       ) {
         const adminUsersContext = baseContext.adminUsers ?? {};
         const selectedAdminUserId = resolveAdminUserId(
@@ -11943,6 +11974,20 @@ export async function routeTicketMessage({
           };
         }
 
+        if (baseContext.state === "admin_user_passphrase_select") {
+          return {
+            reply: renderAdminUserPassphrasePrompt(),
+            nextContext: withAdminUsersContext(baseContext, "admin_user_passphrase_collect", {
+              ...adminUsersContext,
+              selectedAdminUserId,
+              selectedAdminName: selectedUser?.name ?? null,
+              selectedAdminPhone: selectedUser?.phone,
+              selectedAdminRole: selectedUser?.role,
+              selectedAdminStatus: selectedUser?.status,
+            }),
+          };
+        }
+
         return {
           reply: renderAdminUserRolePrompt(),
           nextContext: withAdminUsersContext(
@@ -11957,6 +12002,34 @@ export async function routeTicketMessage({
               selectedAdminStatus: selectedUser?.status,
             },
           ),
+        };
+      }
+
+      if (baseContext.state === "admin_user_passphrase_collect") {
+        const adminUsersContext = baseContext.adminUsers ?? {};
+        const passphrase = text.trim();
+
+        if (!adminUsersContext.selectedAdminUserId || !passphrase) {
+          return {
+            reply: renderAdminUserPassphrasePrompt(),
+            nextContext: withAdminUsersContext(
+              baseContext,
+              "admin_user_passphrase_collect",
+              adminUsersContext,
+            ),
+          };
+        }
+
+        return {
+          reply: renderAdminUserPassphraseConfirm({
+            name: adminUsersContext.selectedAdminName,
+            phone: adminUsersContext.selectedAdminPhone,
+            role: adminUsersContext.selectedAdminRole,
+          }),
+          nextContext: withAdminUsersContext(baseContext, "admin_user_passphrase_confirm", {
+            ...adminUsersContext,
+            pendingPassphraseHash: hashAdminPassphrase(passphrase),
+          }),
         };
       }
 
@@ -12204,6 +12277,74 @@ export async function routeTicketMessage({
                 "",
                 `> Nome: ${adminUsersContext.selectedAdminName || "Sem nome"}`,
                 `> Telefone: ${maskAdminPhone(adminUsersContext.selectedAdminPhone)}`,
+              ].join("\n")
+            : TICKET_MESSAGES.adminGenericError,
+          nextContext: adminReplyContext({
+            state: "admin_users_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (baseContext.state === "admin_user_passphrase_confirm") {
+        const adminUsersContext = baseContext.adminUsers ?? {};
+
+        const confirmation = normalizeAdminText(text);
+
+        if (
+          confirmation !== "renovar palavra" &&
+          confirmation !== "renovar palavra chave"
+        ) {
+          return {
+            reply: "Digite RENOVAR PALAVRA para confirmar ou CANCELAR para abandonar.",
+            nextContext: withAdminUsersContext(
+              baseContext,
+              "admin_user_passphrase_confirm",
+              adminUsersContext,
+            ),
+          };
+        }
+
+        if (!adminUsersContext.selectedAdminUserId || !adminUsersContext.pendingPassphraseHash) {
+          return {
+            reply: TICKET_MESSAGES.adminGenericError,
+            nextContext: adminReplyContext({
+              state: "admin_users_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        const freshAuth = await requireFreshAdminPermission({
+          baseContext,
+          scope: buildFreshAdminScope(adminUser),
+          permission: "manage_admins",
+          operation: "admin_user_passphrase_renew",
+        });
+        if (!freshAuth.ok) return freshAuth.response;
+
+        const result = await renewAdminPassphrase({
+          adminUserId: adminUsersContext.selectedAdminUserId,
+          passphraseHash: adminUsersContext.pendingPassphraseHash,
+        });
+
+        return {
+          reply: result.ok
+            ? [
+                "*PALAVRA-CHAVE RENOVADA*",
+                "",
+                `> Nome: ${adminUsersContext.selectedAdminName || "Sem nome"}`,
+                `> Telefone: ${adminUsersContext.selectedAdminPhone ? maskAdminPhone(adminUsersContext.selectedAdminPhone) : "não informado"}`,
+                ...(adminUsersContext.selectedAdminRole
+                  ? [`> Perfil: ${formatAdminRoleLabel(adminUsersContext.selectedAdminRole)}`]
+                  : []),
+                "> Sessões ativas revogadas",
               ].join("\n")
             : TICKET_MESSAGES.adminGenericError,
           nextContext: adminReplyContext({
@@ -12568,7 +12709,8 @@ export async function routeTicketMessage({
           submenuOption === 1 ||
           submenuOption === 3 ||
           submenuOption === 4 ||
-          submenuOption === 5
+          submenuOption === 5 ||
+          submenuOption === 6
         ) {
           if (submenuOption === 5) {
             const blockedResult = await listBlockedAdminAuths();
@@ -12656,7 +12798,7 @@ export async function routeTicketMessage({
             };
           }
 
-          if (submenuOption === 3 || submenuOption === 4) {
+          if (submenuOption === 3 || submenuOption === 4 || submenuOption === 6) {
             const selectableUsers = submenuOption === 4
               ? usersResult.users.filter((user) => user.status === "active")
               : usersResult.users;
@@ -12665,7 +12807,9 @@ export async function routeTicketMessage({
                 "*ADMINISTRADORES*",
                 submenuOption === 3
                   ? "*QUAL ADMINISTRADOR DESEJA ALTERAR?*"
-                  : "*QUAL ADMINISTRADOR DESEJA DESATIVAR?*",
+                  : submenuOption === 4
+                    ? "*QUAL ADMINISTRADOR DESEJA DESATIVAR?*"
+                    : "*QUAL ADMINISTRADOR DESEJA RENOVAR A PALAVRA-CHAVE?*",
                 "Responda com número, telefone ou ID.",
                 "",
                 renderAdminUsersSelectionList(selectableUsers).replace(
@@ -12685,9 +12829,16 @@ export async function routeTicketMessage({
                 },
                 submenuOption === 3
                   ? "admin_user_role_select_user"
-                  : "admin_user_disable_select",
+                  : submenuOption === 4
+                    ? "admin_user_disable_select"
+                    : "admin_user_passphrase_select",
                 {
-                  mode: submenuOption === 3 ? "role" : "disable",
+                  mode:
+                    submenuOption === 3
+                      ? "role"
+                      : submenuOption === 4
+                        ? "disable"
+                        : "passphrase",
                   lastUsers: selectableUsers.map((user, index) => ({
                     option: index + 1,
                     adminUserId: user.id,
