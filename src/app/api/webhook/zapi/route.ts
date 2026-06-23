@@ -557,12 +557,14 @@ function getOutboundMessages(
     return [
       {
         type: "text",
-        body: ensureSystemMessageTitle(TICKET_MESSAGES.genericHelp, "AJUDA"),
+        body: TICKET_MESSAGES.genericHelp,
+        suppressTitle: true,
       },
       {
         type: "text",
-        body: ensureSystemMessageTitle(TICKET_MESSAGES.genericHelpCommands, "AJUDA"),
+        body: TICKET_MESSAGES.genericHelpCommands,
         delayMs: 5_000,
+        suppressTitle: true,
       },
     ];
   }
