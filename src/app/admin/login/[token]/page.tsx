@@ -17,14 +17,16 @@ export default async function AdminLoginPage({ params }: AdminLoginPageProps) {
   if (!publicChallenge.ok) {
     return (
       <main className="admin-login-shell">
-        <section className="admin-login-card">
+        <div className="page-card-stack">
           <BrandLogo />
+          <section className="admin-login-card">
           <p className="admin-login-kicker">Login administrativo</p>
           <h1>Link inválido ou expirado</h1>
           <p>
             Volte ao WhatsApp e envie admin para receber um novo link de login.
           </p>
-        </section>
+          </section>
+        </div>
       </main>
     );
   }

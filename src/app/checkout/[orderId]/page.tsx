@@ -33,14 +33,16 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   if (!order) {
     return (
       <main className="checkout-unavailable-shell">
-        <section className="checkout-unavailable-panel">
+        <div className="page-card-stack">
           <BrandLogo />
+          <section className="checkout-unavailable-panel">
           <h1>Pagamento indisponível</h1>
           <p>
             Esta reserva expirou ou já não está aguardando pagamento. Volte ao
             WhatsApp e gere uma nova compra.
           </p>
-        </section>
+          </section>
+        </div>
       </main>
     );
   }

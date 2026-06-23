@@ -29,6 +29,12 @@ main {
   object-fit: contain;
 }
 
+.page-card-stack {
+  display: grid;
+  justify-items: center;
+  width: min(100%, 520px);
+}
+
 .checkout-brand-header {
   grid-column: 1 / -1;
 }
@@ -391,11 +397,6 @@ body:has(.checkout-unavailable-shell) img.brand-logo {
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
 }
 
-.admin-login-card .brand-logo {
-  width: min(190px, 64vw);
-  margin-bottom: 18px;
-}
-
 .admin-login-card h1 {
   margin: 4px 0 12px;
   color: #111827;
@@ -487,6 +488,10 @@ body:has(.checkout-unavailable-shell) img.brand-logo {
 .gate-brand-logo,
 .gate-shell > .brand-logo {
   width: min(210px, 64vw);
+}
+
+.admin-login-shell .page-card-stack {
+  width: min(100%, 420px);
 }
 
 .gate-header {

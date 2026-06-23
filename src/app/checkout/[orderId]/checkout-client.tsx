@@ -331,8 +331,9 @@ export default function CheckoutClient({
   if (paymentApproved) {
     return (
       <main className="checkout-success-shell">
-        <section className="checkout-success-panel">
+        <div className="page-card-stack">
           <BrandLogo />
+          <section className="checkout-success-panel">
           <div className="checkout-success-icon" aria-hidden="true">
             <span className="checkout-success-icon-stem" />
             <span className="checkout-success-icon-kick" />
@@ -347,7 +348,8 @@ export default function CheckoutClient({
             <span>Total pago</span>
             <strong>{order.totalLabel}</strong>
           </div>
-        </section>
+          </section>
+        </div>
       </main>
     );
   }

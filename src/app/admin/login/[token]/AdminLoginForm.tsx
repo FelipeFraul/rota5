@@ -51,8 +51,9 @@ export function AdminLoginForm() {
 
   if (code) {
     return (
-      <section className="admin-login-card">
+      <div className="page-card-stack">
         <BrandLogo />
+        <section className="admin-login-card">
         <p className="admin-login-kicker">Senha confirmada</p>
         <h1>Código de uso único</h1>
         <div className="admin-login-code" aria-label="Código de uso único">
@@ -63,13 +64,15 @@ export function AdminLoginForm() {
           administrativo.
         </p>
         <p className="admin-login-muted">Código válido por 2 minutos.</p>
-      </section>
+        </section>
+      </div>
     );
   }
 
   return (
-    <section className="admin-login-card">
+    <div className="page-card-stack">
       <BrandLogo />
+      <section className="admin-login-card">
       <p className="admin-login-kicker">Login administrativo</p>
       <h1>Informe sua senha individual</h1>
       <p>
@@ -96,6 +99,7 @@ export function AdminLoginForm() {
       </form>
 
       {error ? <p className="admin-login-error">{error}</p> : null}
-    </section>
+      </section>
+    </div>
   );
 }
