@@ -16,6 +16,11 @@ type GateSessionValidation =
         eventTitle: string | null;
         sessionStartsAt: string | null;
       };
+      summary: {
+        allowedCount: number;
+        deniedCount: number;
+        lastResult: string | null;
+      };
     }
   | {
       valid: false;
@@ -103,14 +108,22 @@ export function GateSessionScanner({
     useState<GateSessionValidation>(initialValidation);
   const [loading, setLoading] = useState(false);
   const [cameraStatus, setCameraStatus] = useState("Aguardando câmera...");
-  const [lastResult, setLastResult] = useState("Nenhuma leitura ainda.");
+  const [lastResult, setLastResult] = useState(
+    initialValidation.valid
+      ? initialValidation.summary.lastResult ?? "Nenhuma leitura ainda."
+      : "Nenhuma leitura ainda.",
+  );
   const [manualCode, setManualCode] = useState("");
   const [consultCode, setConsultCode] = useState("");
   const [consultLoading, setConsultLoading] = useState(false);
   const [consultResult, setConsultResult] = useState<string | null>(null);
   const [consultedTicketCode, setConsultedTicketCode] = useState<string | null>(null);
-  const [allowedCount, setAllowedCount] = useState(0);
-  const [deniedCount, setDeniedCount] = useState(0);
+  const [allowedCount, setAllowedCount] = useState(
+    initialValidation.valid ? initialValidation.summary.allowedCount : 0,
+  );
+  const [deniedCount, setDeniedCount] = useState(
+    initialValidation.valid ? initialValidation.summary.deniedCount : 0,
+  );
   const [lastAction, setLastAction] = useState<"allowed" | "denied" | null>(null);
   const [scanOverlay, setScanOverlay] = useState<{
     type: "allowed" | "denied";
@@ -312,6 +325,11 @@ export function GateSessionScanner({
 
         if (!cancelled) {
           setValidation(result);
+          if (result.valid) {
+            setAllowedCount(result.summary.allowedCount);
+            setDeniedCount(result.summary.deniedCount);
+            setLastResult(result.summary.lastResult ?? "Nenhuma leitura ainda.");
+          }
         }
       } catch {
         if (!cancelled) {

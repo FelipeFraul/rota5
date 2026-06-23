@@ -7,7 +7,7 @@ import {
   consumeRateLimit,
   rateLimitResponse,
 } from "@/lib/security/rateLimit";
-import { buildPublicGateSessionDto } from "@/lib/tickets/services/publicDtos";
+import { buildPublicGateSessionDtoWithSummary } from "@/lib/tickets/services/publicDtos";
 import { validateGateSessionToken } from "@/lib/tickets/services/gateSessions";
 
 async function readToken(request: Request) {
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
 
   const result = await validateGateSessionToken(token);
 
-  return jsonOk(buildPublicGateSessionDto(result));
+  return jsonOk(await buildPublicGateSessionDtoWithSummary(result));
 }
 
 export function GET() {
