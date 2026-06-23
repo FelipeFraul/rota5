@@ -677,6 +677,10 @@ body:has(.checkout-unavailable-shell) img.brand-logo {
   font-weight: 700;
 }
 
+.gate-manual button.is-validate {
+  background: #16a34a;
+}
+
 .gate-manual button:disabled {
   cursor: wait;
   opacity: 0.65;

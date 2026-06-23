@@ -108,6 +108,7 @@ export function GateSessionScanner({
   const [consultCode, setConsultCode] = useState("");
   const [consultLoading, setConsultLoading] = useState(false);
   const [consultResult, setConsultResult] = useState<string | null>(null);
+  const [consultedTicketCode, setConsultedTicketCode] = useState<string | null>(null);
   const [allowedCount, setAllowedCount] = useState(0);
   const [deniedCount, setDeniedCount] = useState(0);
   const [lastAction, setLastAction] = useState<"allowed" | "denied" | null>(null);
@@ -434,6 +435,7 @@ export function GateSessionScanner({
 
     setConsultLoading(true);
     setConsultResult(null);
+    setConsultedTicketCode(null);
 
     try {
       const response = await fetch("/api/gate/session/consult", {
@@ -468,6 +470,7 @@ export function GateSessionScanner({
       }
 
       const ticket = result.ticket;
+      setConsultedTicketCode(ticket.code);
       setConsultResult(
         [
           `Código: ${ticket.code}`,
@@ -491,6 +494,56 @@ export function GateSessionScanner({
       );
     } catch {
       setConsultResult("Não foi possível consultar este ingresso.");
+    } finally {
+      setConsultLoading(false);
+    }
+  }
+
+  async function validateConsultedTicket() {
+    const ticketCode = consultedTicketCode;
+    if (!ticketCode || !token || consultLoading) return;
+
+    setConsultLoading(true);
+
+    try {
+      const response = await fetch("/api/gate/session/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gateSessionToken: token, ticketCode }),
+      });
+      const result = (await response.json()) as {
+        allowed?: boolean;
+        message?: string;
+        section?: string | null;
+        seat?: string | null;
+      };
+
+      if (result.allowed) {
+        registerAllowedResult(result);
+        pauseScannerAfterAllowed(ticketCode, {
+          section: result.section,
+          seat: result.seat,
+        });
+        setConsultResult((current) =>
+          [current, "", "Entrada validada manualmente."].filter(Boolean).join("\n"),
+        );
+        setConsultedTicketCode(null);
+        return;
+      }
+
+      const deniedMessage = result.message ?? "Entrada recusada.";
+      registerDeniedResult(deniedMessage);
+      pauseScannerAfterDenied(deniedMessage);
+      setConsultResult((current) =>
+        [current, "", deniedMessage].filter(Boolean).join("\n"),
+      );
+    } catch {
+      const deniedMessage = "Não foi possível validar este ingresso.";
+      registerDeniedResult(deniedMessage);
+      pauseScannerAfterDenied(deniedMessage);
+      setConsultResult((current) =>
+        [current, "", deniedMessage].filter(Boolean).join("\n"),
+      );
     } finally {
       setConsultLoading(false);
     }
@@ -596,11 +649,25 @@ export function GateSessionScanner({
           <input
             id="consult-ticket-code"
             value={consultCode}
-            onChange={(event) => setConsultCode(event.target.value)}
+            onChange={(event) => {
+              setConsultCode(event.target.value);
+              setConsultedTicketCode(null);
+            }}
             placeholder="TCK-XXXXXXXXXXXX"
           />
-          <button type="button" onClick={consultTicket} disabled={consultLoading}>
-            {consultLoading ? "Consultando..." : "Consultar"}
+          <button
+            type="button"
+            className={consultedTicketCode ? "is-validate" : undefined}
+            onClick={consultedTicketCode ? validateConsultedTicket : consultTicket}
+            disabled={consultLoading}
+          >
+            {consultLoading
+              ? consultedTicketCode
+                ? "Validando..."
+                : "Consultando..."
+              : consultedTicketCode
+                ? "Validar ingresso"
+                : "Consultar"}
           </button>
         </div>
         {consultResult ? <p className="gate-consult-result">{consultResult}</p> : null}

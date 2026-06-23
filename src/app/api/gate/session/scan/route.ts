@@ -9,11 +9,15 @@ import {
   rateLimitResponse,
 } from "@/lib/security/rateLimit";
 import { buildPublicGateScanResponseDto } from "@/lib/tickets/services/publicDtos";
-import { validateGateScan } from "@/lib/tickets/services/gateValidation";
+import {
+  validateGateScan,
+  validateGateTicketCode,
+} from "@/lib/tickets/services/gateValidation";
 
 type ScanPayload = {
   gateSessionToken?: unknown;
   ticketToken?: unknown;
+  ticketCode?: unknown;
 };
 
 async function readScanPayload(request: Request) {
@@ -24,20 +28,32 @@ async function readScanPayload(request: Request) {
       return null;
     }
 
-    const { gateSessionToken, ticketToken } = payload as ScanPayload;
+    const { gateSessionToken, ticketToken, ticketCode } = payload as ScanPayload;
 
     if (
       typeof gateSessionToken !== "string" ||
-      !gateSessionToken.trim() ||
-      typeof ticketToken !== "string" ||
-      !ticketToken.trim()
+      !gateSessionToken.trim()
+    ) {
+      return null;
+    }
+
+    const normalizedTicketToken =
+      typeof ticketToken === "string" ? ticketToken.trim() : "";
+    const normalizedTicketCode =
+      typeof ticketCode === "string" ? ticketCode.trim().toUpperCase() : "";
+
+    if (
+      !normalizedTicketToken &&
+      !/^TCK-[A-Z0-9]+$/i.test(normalizedTicketCode)
     ) {
       return null;
     }
 
     return {
       gateSessionToken: gateSessionToken.trim(),
-      ticketToken: ticketToken.trim(),
+      ...(normalizedTicketToken
+        ? { ticketToken: normalizedTicketToken }
+        : { ticketCode: normalizedTicketCode }),
     };
   } catch {
     return null;
@@ -63,7 +79,16 @@ export async function POST(request: Request) {
     return rateLimitResponse(rateLimit);
   }
 
-  const result = await validateGateScan(payload);
+  const result =
+    "ticketCode" in payload
+      ? await validateGateTicketCode({
+          gateSessionToken: payload.gateSessionToken,
+          ticketCode: payload.ticketCode,
+        })
+      : await validateGateScan({
+          gateSessionToken: payload.gateSessionToken,
+          ticketToken: payload.ticketToken,
+        });
 
   return jsonOk(buildPublicGateScanResponseDto(result));
 }
