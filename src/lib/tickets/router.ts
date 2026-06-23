@@ -302,9 +302,25 @@ type RouteTicketMessageInput = {
 
 type RouteTicketMessageOutput = {
   reply: string;
+  suppressTitle?: boolean;
   outboundMessages?: Array<
-    | { type: "text"; body: string; phone?: string; persistedBody?: string; delayMs?: number }
-    | { type: "image"; imageUrl: string; caption: string; phone?: string; persistedBody?: string; delayMs?: number }
+    | {
+        type: "text";
+        body: string;
+        phone?: string;
+        persistedBody?: string;
+        delayMs?: number;
+        suppressTitle?: boolean;
+      }
+    | {
+        type: "image";
+        imageUrl: string;
+        caption: string;
+        phone?: string;
+        persistedBody?: string;
+        delayMs?: number;
+        suppressTitle?: boolean;
+      }
   >;
   nextContext: TicketConversationState;
 };
@@ -899,8 +915,8 @@ function buildEventSearchOutboundMessages(events: TicketEventSearchResult[]) {
     const caption = formatSingleEventReply(event, index, events.length);
 
     return event.imageUrl
-      ? ({ type: "image", imageUrl: event.imageUrl, caption } as const)
-      : ({ type: "text", body: caption } as const);
+      ? ({ type: "image", imageUrl: event.imageUrl, caption, suppressTitle: true } as const)
+      : ({ type: "text", body: caption, suppressTitle: true } as const);
   });
 }
 
@@ -909,8 +925,8 @@ function buildEventOptionOutboundMessages(events: TicketConversationEventOption[
     const caption = formatSingleEventOptionReply(event, index, events.length);
 
     return event.imageUrl
-      ? ({ type: "image", imageUrl: event.imageUrl, caption } as const)
-      : ({ type: "text", body: caption } as const);
+      ? ({ type: "image", imageUrl: event.imageUrl, caption, suppressTitle: true } as const)
+      : ({ type: "text", body: caption, suppressTitle: true } as const);
   });
 }
 
@@ -957,7 +973,7 @@ const ALL_EVENTS_MESSAGE_MAX_LENGTH = 3_500;
 function buildAllEventsOutboundMessages(
   events: Array<TicketEventSearchResult | TicketConversationEventOption>,
 ) {
-  const messages: Array<{ type: "text"; body: string }> = [];
+  const messages: Array<{ type: "text"; body: string; suppressTitle: true }> = [];
   let current = "Encontrei estes eventos:";
 
   events.forEach((event, index) => {
@@ -969,12 +985,12 @@ function buildAllEventsOutboundMessages(
       return;
     }
 
-    messages.push({ type: "text", body: current });
+    messages.push({ type: "text", body: current, suppressTitle: true });
     current = `*EVENTOS — CONTINUAÇÃO*\n\n${block}`;
   });
 
   if (current) {
-    messages.push({ type: "text", body: current });
+    messages.push({ type: "text", body: current, suppressTitle: true });
   }
 
   return messages;
@@ -1481,6 +1497,7 @@ function buildPublicHelpSearchResponse({
 
   return {
     reply: formatPublicHelpResults(searchResult),
+    suppressTitle: true,
     nextContext: {
       ...baseContext,
       step: searchResult.results.length > 0 ? "help_results" : "help_topic_collecting",

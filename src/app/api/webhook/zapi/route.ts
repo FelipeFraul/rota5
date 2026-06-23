@@ -99,8 +99,23 @@ type ParsedIncomingMessage = {
   mediaUrl: string | null;
 };
 type RouteOutboundMessage =
-  | { type: "text"; body: string; phone?: string; persistedBody?: string; delayMs?: number }
-  | { type: "image"; imageUrl: string; caption: string; phone?: string; persistedBody?: string; delayMs?: number };
+  | {
+      type: "text";
+      body: string;
+      phone?: string;
+      persistedBody?: string;
+      delayMs?: number;
+      suppressTitle?: boolean;
+    }
+  | {
+      type: "image";
+      imageUrl: string;
+      caption: string;
+      phone?: string;
+      persistedBody?: string;
+      delayMs?: number;
+      suppressTitle?: boolean;
+    };
 
 function getFallbackSystemMessageTitle(state?: string | null) {
   if (!state) return "ATENDIMENTO";
@@ -180,6 +195,10 @@ function normalizeOutboundMessageTitle(
   message: RouteOutboundMessage,
   fallbackTitle: string,
 ): RouteOutboundMessage {
+  if (message.suppressTitle) {
+    return message;
+  }
+
   if (message.type === "image") {
     return {
       ...message,
@@ -551,7 +570,10 @@ function getOutboundMessages(
   return [
     {
       type: "text",
-      body: ensureSystemMessageTitle(routeResult.reply, fallbackTitle),
+      body: routeResult.suppressTitle
+        ? routeResult.reply
+        : ensureSystemMessageTitle(routeResult.reply, fallbackTitle),
+      suppressTitle: routeResult.suppressTitle,
     },
   ];
 }
@@ -576,12 +598,14 @@ async function sendOutboundMessage({
       phone,
       image: message.imageUrl,
       caption: message.caption,
+      ensureTitle: !message.suppressTitle,
     });
   }
 
   return sendZapiText({
     phone,
     message: message.body,
+    ensureTitle: !message.suppressTitle,
   });
 }
 

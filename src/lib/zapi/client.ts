@@ -7,12 +7,14 @@ import { formatSystemActionLines, formatWhatsAppUppercase } from "@/lib/zapi/for
 type SendZapiTextInput = {
   phone: string;
   message: string;
+  ensureTitle?: boolean;
 };
 
 type SendZapiImageInput = {
   phone: string;
   image: string;
   caption?: string;
+  ensureTitle?: boolean;
 };
 
 export type SendZapiMessageResult =
@@ -40,16 +42,17 @@ function ensureDefaultSystemTitle(value: string) {
 
   const firstTitle = parseSystemTitleLine(lines[firstContentIndex]);
   if (firstTitle) {
-    lines[firstContentIndex] = `**${firstTitle}**`;
+    lines[firstContentIndex] = `*${firstTitle}*`;
     return formatSystemActionLines(lines.join("\n"));
   }
 
-  return formatSystemActionLines(`**ATENDIMENTO**\n\n${body}`);
+  return formatSystemActionLines(`*ATENDIMENTO*\n\n${body}`);
 }
 
 export async function sendZapiText({
   phone,
   message,
+  ensureTitle = true,
 }: SendZapiTextInput): Promise<SendZapiMessageResult> {
   const env = getEnv();
   const controller = new AbortController();
@@ -68,7 +71,9 @@ export async function sendZapiText({
       },
       body: JSON.stringify({
         phone,
-        message: formatWhatsAppUppercase(ensureDefaultSystemTitle(message)),
+        message: formatWhatsAppUppercase(
+          ensureTitle ? ensureDefaultSystemTitle(message) : formatSystemActionLines(message),
+        ),
       }),
       signal: controller.signal,
     });
@@ -112,6 +117,7 @@ export async function sendZapiImage({
   phone,
   image,
   caption,
+  ensureTitle = true,
 }: SendZapiImageInput): Promise<SendZapiMessageResult> {
   const env = getEnv();
   const controller = new AbortController();
@@ -132,7 +138,13 @@ export async function sendZapiImage({
         phone,
         image,
         ...(caption
-          ? { caption: formatWhatsAppUppercase(ensureDefaultSystemTitle(caption)) }
+          ? {
+              caption: formatWhatsAppUppercase(
+                ensureTitle
+                  ? ensureDefaultSystemTitle(caption)
+                  : formatSystemActionLines(caption),
+              ),
+            }
           : {}),
         viewOnce: false,
       }),
