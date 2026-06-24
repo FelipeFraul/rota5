@@ -3060,7 +3060,7 @@ function parseAdminReportCustomPeriod(input: string): AdminReportPeriod | null {
 
 function parseAdminDivisionWeekPeriod(input: string): AdminReportPeriod | null {
   const normalized = normalizeAdminText(input);
-  const match = normalized.match(/^semana\s+([1-5])\s+(?:de\s+)?([a-z]+)(?:\s+(\d{4}))?$/);
+  const match = normalized.match(/^(?:semana\s+([1-5]|primeira|segunda|terceira|quarta|quinta|ultima|última)|([1-5]|primeira|segunda|terceira|quarta|quinta|ultima|última)\s+semana)\s+(?:de\s+)?([a-z]+)(?:\s+(\d{4}))?$/);
   if (!match) return null;
 
   const monthByName: Record<string, number> = {
@@ -3078,13 +3078,29 @@ function parseAdminDivisionWeekPeriod(input: string): AdminReportPeriod | null {
     novembro: 10,
     dezembro: 11,
   };
-  const weekNumber = Number(match[1]);
-  const month = monthByName[match[2]];
+  const weekToken = match[1] ?? match[2];
+  const ordinalByName: Record<string, number> = {
+    primeira: 1,
+    segunda: 2,
+    terceira: 3,
+    quarta: 4,
+    quinta: 5,
+    ultima: -1,
+    última: -1,
+  };
+  const monthName = match[3];
+  const month = monthByName[monthName];
   if (month === undefined) return null;
 
-  const year = match[3] ? Number(match[3]) : new Date().getFullYear();
-  const firstDay = (weekNumber - 1) * 7 + 1;
+  const year = match[4] ? Number(match[4]) : new Date().getFullYear();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const numericWeek = /^\d+$/.test(weekToken)
+    ? Number(weekToken)
+    : ordinalByName[weekToken];
+  if (!numericWeek) return null;
+
+  const weekNumber = numericWeek === -1 ? Math.ceil(daysInMonth / 7) : numericWeek;
+  const firstDay = (weekNumber - 1) * 7 + 1;
   if (firstDay > daysInMonth) return null;
 
   const from = new Date(year, month, firstDay);
@@ -11684,13 +11700,17 @@ export async function routeTicketMessage({
                       pendingDivisionSettlement: divisionReport.settlement,
                     },
                   )
-                : adminReplyContext({
-                    state: "admin_reports_menu",
-                    role: adminUser.role,
-                    sessionId: adminSession.id,
-                    adminUserId: adminUser.id,
-                    expiresAt: adminSession.expires_at,
-                  }),
+                : withAdminReportsContext(
+                    adminReplyContext({
+                      state: "admin_report_period_select",
+                      role: adminUser.role,
+                      sessionId: adminSession.id,
+                      adminUserId: adminUser.id,
+                      expiresAt: adminSession.expires_at,
+                    }),
+                    "admin_report_period_select",
+                    { reportType: "division" },
+                  ),
             };
           }
 
