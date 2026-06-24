@@ -173,8 +173,10 @@ import {
   type AdminGateAccessListItem,
 } from "@/lib/tickets/services/gateAccesses";
 import {
+  buildAdminDivisionReport,
   buildAdminReport,
   buildAdminGeneralReport,
+  markDivisionSettlementPaid,
   type AdminReportPeriod,
   type AdminReportType,
 } from "@/lib/tickets/services/adminReports";
@@ -1663,7 +1665,8 @@ type AdminSubmenuState =
 type AdminReportFlowState =
   | "admin_report_event_select"
   | "admin_report_period_select"
-  | "admin_report_custom_period_collecting";
+  | "admin_report_custom_period_collecting"
+  | "admin_report_division_settlement_confirm";
 
 type AdminSubmenuConfig = {
   title: string;
@@ -1774,8 +1777,8 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
     state: "admin_reports_menu",
     mainOption: 6,
     permission: "view_reports",
-    backOption: 9,
-    exitOption: 10,
+    backOption: 10,
+    exitOption: 11,
     options: [
       "Resumo geral",
       "Vendas por evento",
@@ -1785,6 +1788,7 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
       "Check-ins da portaria",
       "Ingressos usados e não usados",
       "Cortesias",
+      "Divisão",
     ],
   },
 };
@@ -2759,7 +2763,8 @@ function isAdminReportsFlowState(
   return (
     state === "admin_report_event_select" ||
     state === "admin_report_period_select" ||
-    state === "admin_report_custom_period_collecting"
+    state === "admin_report_custom_period_collecting" ||
+    state === "admin_report_division_settlement_confirm"
   );
 }
 
@@ -9825,7 +9830,7 @@ export async function routeTicketMessage({
 
       const reportTypeByShortcut: Partial<Record<
         AdminEventShortcutAction,
-        Exclude<AdminReportType, "summary">
+        Exclude<AdminReportType, "summary" | "division">
       >> = {
         event_summary: "sales_event",
         section_sales: "sales_section",
@@ -11480,6 +11485,97 @@ export async function routeTicketMessage({
         };
       }
 
+      if (baseContext.state === "admin_report_division_settlement_confirm") {
+        const normalized = normalizeAdminText(text);
+        const pendingSettlement = adminReports.pendingDivisionSettlement;
+
+        if (!pendingSettlement) {
+          return {
+            reply: renderAdminSubmenu(reportsSubmenu),
+            nextContext: adminReplyContext({
+              state: "admin_reports_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+
+        if (
+          normalized !== "baixar" &&
+          normalized !== "dar baixa" &&
+          normalized !== "pago" &&
+          normalized !== "sim" &&
+          normalized !== "s"
+        ) {
+          return {
+            reply: [
+              "*DIVISÃO*",
+              "Digite *BAIXAR* para marcar este fechamento como pago.",
+              'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
+            ].join("\n"),
+            nextContext: withAdminReportsContext(
+              baseContext,
+              "admin_report_division_settlement_confirm",
+              adminReports,
+            ),
+          };
+        }
+
+        try {
+          const freshAuth = await requireFreshAdminPermission({
+            baseContext,
+            scope: buildFreshAdminScope(adminUser),
+            permission: "view_reports",
+            operation: "admin_division_settlement_paid",
+          });
+          if (!freshAuth.ok) return freshAuth.response;
+
+          const result = await markDivisionSettlementPaid({
+            settlement: pendingSettlement,
+            paidByAdminUserId: freshAuth.scope.adminUserId,
+          });
+
+          return {
+            reply: result.ok
+              ? withAdminNavigationHint([
+                  "*DIVISÃO*",
+                  "Fechamento marcado como pago.",
+                  `> Período: ${pendingSettlement.periodLabel}`,
+                  `> Valor baixado: ${new Intl.NumberFormat("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  }).format(pendingSettlement.amountDueCents / 100)}`,
+                ].join("\n"))
+              : "Não consegui gravar a baixa. A tabela de fechamentos ainda precisa ser aplicada no banco.",
+            nextContext: adminReplyContext({
+              state: "admin_reports_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        } catch (error) {
+          logError("Failed to mark division settlement as paid", {
+            error,
+            adminUserId: adminUser.id,
+          });
+
+          return {
+            reply: TICKET_MESSAGES.adminGenericError,
+            nextContext: adminReplyContext({
+              state: "admin_reports_menu",
+              role: adminUser.role,
+              sessionId: adminSession.id,
+              adminUserId: adminUser.id,
+              expiresAt: adminSession.expires_at,
+            }),
+          };
+        }
+      }
+
       if (baseContext.state === "admin_report_event_select") {
         const eventId = resolveCourtesyEventId(text, adminReports.lastEvents ?? []);
 
@@ -11526,6 +11622,30 @@ export async function routeTicketMessage({
             operation: "admin_report_generate",
           });
           if (!freshAuth.ok) return freshAuth.response;
+
+          if (adminReports.reportType === "division") {
+            const divisionReport = await buildAdminDivisionReport(period);
+
+            return {
+              reply: withAdminNavigationHint(divisionReport.text),
+              nextContext: divisionReport.canMarkPaid
+                ? withAdminReportsContext(
+                    baseContext,
+                    "admin_report_division_settlement_confirm",
+                    {
+                      reportType: "division",
+                      pendingDivisionSettlement: divisionReport.settlement,
+                    },
+                  )
+                : adminReplyContext({
+                    state: "admin_reports_menu",
+                    role: adminUser.role,
+                    sessionId: adminSession.id,
+                    adminUserId: adminUser.id,
+                    expiresAt: adminSession.expires_at,
+                  }),
+            };
+          }
 
           const report =
             adminReports.reportType === "summary"
@@ -12885,12 +13005,13 @@ export async function routeTicketMessage({
           6: "gate_checkins",
           7: "ticket_usage",
           8: "courtesies",
+          9: "division",
         };
         const reportType = typeof submenuOption === "number"
           ? reportTypeByOption[submenuOption]
           : undefined;
 
-        if (reportType === "summary") {
+        if (reportType === "summary" || reportType === "division") {
           return {
             reply: renderAdminReportPeriodMenu(),
             nextContext: withAdminReportsContext(

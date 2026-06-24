@@ -12,7 +12,8 @@ export type AdminReportType =
   | "expired_cancelled_reservations"
   | "gate_checkins"
   | "ticket_usage"
-  | "courtesies";
+  | "courtesies"
+  | "division";
 
 export type AdminReportPeriod = {
   label: string;
@@ -121,6 +122,44 @@ type TicketPriceRow = {
   venue_sections?: MaybeArray<{ name: string }>;
 };
 
+type PaymentRow = {
+  id: string;
+  order_id: string;
+  amount_cents: number;
+  paid_at: string | null;
+  created_at: string;
+  orders: MaybeArray<{
+    status: string;
+  }>;
+};
+
+type DivisionSettlementRow = {
+  id: string;
+  period_key: string;
+  period_label: string;
+  period_from: string | null;
+  period_to: string | null;
+  total_received_cents: number;
+  amount_due_cents: number;
+  percentage_basis_points: number;
+  order_count: number;
+  week_count: number;
+  status: string;
+  paid_at: string;
+  paid_by_admin_user_id: string | null;
+};
+
+export type AdminDivisionSettlementDraft = {
+  periodKey: string;
+  periodLabel: string;
+  periodFrom?: string;
+  periodTo?: string;
+  totalReceivedCents: number;
+  amountDueCents: number;
+  orderCount: number;
+  weekCount: number;
+};
+
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 const DEFAULT_LIMIT = 10;
 const BLACK_HOUSE_SECTION_ORDER = new Map([
@@ -155,6 +194,15 @@ function formatDateTime(value: string) {
     .replace(",", " às");
 }
 
+function formatDateOnly(value: Date | string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: SAO_PAULO_TIME_ZONE,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
 function formatCurrencyFromCents(cents: number) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -175,6 +223,84 @@ function isWithinPeriod(value: string | null | undefined, period: AdminReportPer
   if (period.from && date < new Date(period.from).getTime()) return false;
   if (period.to && date > new Date(period.to).getTime()) return false;
   return true;
+}
+
+function getNextFridayLabel(reference = new Date()) {
+  const weekday = new Intl.DateTimeFormat("en-US", {
+    timeZone: SAO_PAULO_TIME_ZONE,
+    weekday: "short",
+  }).format(reference);
+  const weekdayIndexes: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+  const current = weekdayIndexes[weekday] ?? reference.getDay();
+  const daysUntilFriday = (5 - current + 7) % 7;
+  const nextFriday = new Date(reference);
+  nextFriday.setDate(nextFriday.getDate() + daysUntilFriday);
+  return formatDateOnly(nextFriday);
+}
+
+function getPeriodKey(period: AdminReportPeriod) {
+  return `${period.from ?? "start"}|${period.to ?? "end"}`;
+}
+
+type DivisionWeekPeriod = {
+  key: string;
+  label: string;
+  from: string;
+  to: string;
+};
+
+function endOfNextFriday(from: Date, limit: Date) {
+  const date = new Date(from);
+  const day = date.getDay();
+  const daysUntilFriday = (5 - day + 7) % 7;
+  date.setDate(date.getDate() + daysUntilFriday);
+  date.setHours(23, 59, 59, 999);
+  return date.getTime() > limit.getTime() ? new Date(limit) : date;
+}
+
+function buildDivisionWeeks(period: AdminReportPeriod): DivisionWeekPeriod[] {
+  if (!period.from || !period.to) return [];
+
+  const finalDate = new Date(period.to);
+  let cursor = new Date(period.from);
+  const weeks: DivisionWeekPeriod[] = [];
+
+  while (cursor.getTime() <= finalDate.getTime()) {
+    const weekEnd = endOfNextFriday(cursor, finalDate);
+    const from = cursor.toISOString();
+    const to = weekEnd.toISOString();
+    weeks.push({
+      key: `week:${from.slice(0, 10)}:${to.slice(0, 10)}`,
+      label: `${formatDateOnly(from)} a ${formatDateOnly(to)}`,
+      from,
+      to,
+    });
+    cursor = new Date(weekEnd.getTime() + 1);
+  }
+
+  return weeks;
+}
+
+function isWithinIsoRange(value: string | null | undefined, from: string, to: string) {
+  if (!value) return false;
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) && time >= new Date(from).getTime() && time <= new Date(to).getTime();
+}
+
+function isMissingDivisionSettlementsTableError(error: unknown) {
+  const candidate = error as { code?: string; message?: string } | null;
+  return (
+    candidate?.code === "42P01" ||
+    String(candidate?.message ?? "").includes("division_settlements")
+  );
 }
 
 function getTicketAmount(ticket: TicketRow) {
@@ -321,6 +447,113 @@ async function getActiveTicketPrices(eventId?: string) {
   return data ?? [];
 }
 
+async function getApprovedPayments(period: AdminReportPeriod) {
+  let query = getSupabaseAdmin()
+    .from("payments")
+    .select("id, order_id, amount_cents, paid_at, created_at, orders!inner(status)")
+    .eq("status", "approved")
+    .eq("orders.status", "paid")
+    .not("paid_at", "is", null);
+
+  if (period.from) query = query.gte("paid_at", period.from);
+  if (period.to) query = query.lte("paid_at", period.to);
+
+  const { data, error } = await query.returns<PaymentRow[]>();
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+async function getDivisionSettlement(periodKey: string) {
+  const { data, error } = await getSupabaseAdmin()
+    .from("division_settlements")
+    .select(
+      "id, period_key, period_label, period_from, period_to, total_received_cents, amount_due_cents, percentage_basis_points, order_count, week_count, status, paid_at, paid_by_admin_user_id",
+    )
+    .eq("period_key", periodKey)
+    .maybeSingle<DivisionSettlementRow>();
+
+  if (error) {
+    if (isMissingDivisionSettlementsTableError(error)) return null;
+    throw error;
+  }
+
+  return data ?? null;
+}
+
+async function getDivisionSettlements(periodKeys: string[]) {
+  if (!periodKeys.length) return [] as DivisionSettlementRow[];
+
+  const { data, error } = await getSupabaseAdmin()
+    .from("division_settlements")
+    .select(
+      "id, period_key, period_label, period_from, period_to, total_received_cents, amount_due_cents, percentage_basis_points, order_count, week_count, status, paid_at, paid_by_admin_user_id",
+    )
+    .in("period_key", periodKeys)
+    .returns<DivisionSettlementRow[]>();
+
+  if (error) {
+    if (isMissingDivisionSettlementsTableError(error)) return [] as DivisionSettlementRow[];
+    throw error;
+  }
+
+  return data ?? [];
+}
+
+async function getPaidDivisionSettlements() {
+  const { data, error } = await getSupabaseAdmin()
+    .from("division_settlements")
+    .select(
+      "id, period_key, period_label, period_from, period_to, total_received_cents, amount_due_cents, percentage_basis_points, order_count, week_count, status, paid_at, paid_by_admin_user_id",
+    )
+    .eq("status", "paid")
+    .returns<DivisionSettlementRow[]>();
+
+  if (error) {
+    if (isMissingDivisionSettlementsTableError(error)) return [] as DivisionSettlementRow[];
+    throw error;
+  }
+
+  return data ?? [];
+}
+
+export async function markDivisionSettlementPaid(input: {
+  settlement: AdminDivisionSettlementDraft;
+  paidByAdminUserId: string;
+}) {
+  const { settlement, paidByAdminUserId } = input;
+  const { data, error } = await getSupabaseAdmin()
+    .from("division_settlements")
+    .upsert(
+      {
+        period_key: settlement.periodKey,
+        period_label: settlement.periodLabel,
+        period_from: settlement.periodFrom ?? null,
+        period_to: settlement.periodTo ?? null,
+        total_received_cents: settlement.totalReceivedCents,
+        amount_due_cents: settlement.amountDueCents,
+        percentage_basis_points: 500,
+        order_count: settlement.orderCount,
+        week_count: settlement.weekCount,
+        status: "paid",
+        paid_at: new Date().toISOString(),
+        paid_by_admin_user_id: paidByAdminUserId,
+      },
+      { onConflict: "period_key" },
+    )
+    .select("id")
+    .single();
+
+  if (error) {
+    if (isMissingDivisionSettlementsTableError(error)) {
+      return { ok: false as const, reason: "missing_table" as const };
+    }
+    throw error;
+  }
+
+  return { ok: true as const, settlementId: data.id as string };
+}
+
 function paidTickets(tickets: TicketRow[], period: AdminReportPeriod) {
   return tickets.filter(
     (ticket) =>
@@ -458,9 +691,177 @@ export async function buildAdminGeneralReport(period: AdminReportPeriod) {
   ].join("\n");
 }
 
+export async function buildAdminDivisionReport(period: AdminReportPeriod) {
+  const payments = await getApprovedPayments(period);
+  const weeks = buildDivisionWeeks(period);
+  const paidSettlements = await getPaidDivisionSettlements();
+  const paidWeekKeys = new Set(
+    weeks
+      .filter((week) =>
+        paidSettlements.some((settlement) =>
+          settlement.period_key === week.key ||
+          settlement.period_key.includes(week.key),
+        ),
+      )
+      .map((week) => week.key),
+  );
+  const openWeeks = weeks.filter((week) => !paidWeekKeys.has(week.key));
+  const openWeekKeys = new Set(openWeeks.map((week) => week.key));
+  const allPaymentsByOrder = new Map<string, PaymentRow>();
+  const openPaymentsByOrder = new Map<string, PaymentRow>();
+
+  for (const payment of payments) {
+    const current = allPaymentsByOrder.get(payment.order_id);
+    const currentPaidAt = current?.paid_at ? new Date(current.paid_at).getTime() : 0;
+    const nextPaidAt = payment.paid_at ? new Date(payment.paid_at).getTime() : 0;
+
+    if (!current || nextPaidAt >= currentPaidAt) {
+      allPaymentsByOrder.set(payment.order_id, payment);
+    }
+
+    const paymentWeek = weeks.find((week) =>
+      isWithinIsoRange(payment.paid_at, week.from, week.to),
+    );
+
+    if (paymentWeek && openWeekKeys.has(paymentWeek.key)) {
+      const openCurrent = openPaymentsByOrder.get(payment.order_id);
+      const openCurrentPaidAt = openCurrent?.paid_at
+        ? new Date(openCurrent.paid_at).getTime()
+        : 0;
+      if (!openCurrent || nextPaidAt >= openCurrentPaidAt) {
+        openPaymentsByOrder.set(payment.order_id, payment);
+      }
+    }
+  }
+
+  const periodReceivedCents = [...allPaymentsByOrder.values()].reduce(
+    (sum, payment) => sum + payment.amount_cents,
+    0,
+  );
+  const totalReceivedCents = [...openPaymentsByOrder.values()].reduce(
+    (sum, payment) => sum + payment.amount_cents,
+    0,
+  );
+  const amountDueCents = Math.round((totalReceivedCents * 5) / 100);
+  const isBoundedPeriod = Boolean(period.from && period.to);
+  const periodKey = `open:${openWeeks.map((week) => week.key).join("+") || getPeriodKey(period)}`;
+  const settlement: AdminDivisionSettlementDraft = {
+    periodKey,
+    periodLabel: openWeeks.length === 1
+      ? openWeeks[0].label
+      : `${openWeeks.length} semanas em aberto`,
+    periodFrom: openWeeks[0]?.from ?? period.from,
+    periodTo: openWeeks[openWeeks.length - 1]?.to ?? period.to,
+    totalReceivedCents,
+    amountDueCents,
+    orderCount: openPaymentsByOrder.size,
+    weekCount: openWeeks.length,
+  };
+
+  const text = [
+    "*DIVISÃO*",
+    `> Período: ${period.label}`,
+    "> Base: pagamentos aprovados e pedidos pagos",
+    "> Fechamento: toda sexta-feira",
+    `> Semanas no período: ${weeks.length}`,
+    `> Semanas já baixadas: ${paidWeekKeys.size}`,
+    `> Semanas em aberto: ${openWeeks.length}`,
+    `> Próximo fechamento: ${getNextFridayLabel()}`,
+    "",
+    `> Total recebido no período: ${formatCurrencyFromCents(periodReceivedCents)}`,
+    `> Total em aberto: ${formatCurrencyFromCents(totalReceivedCents)}`,
+    `> Valor a pagar (5%): ${formatCurrencyFromCents(amountDueCents)}`,
+    `> Pedidos em aberto: ${openPaymentsByOrder.size}`,
+    payments.length > allPaymentsByOrder.size
+      ? `> Pagamentos duplicados ignorados: ${payments.length - allPaymentsByOrder.size}`
+      : null,
+    openWeeks.length ? `> Período em aberto: ${settlement.periodLabel}` : null,
+    amountDueCents > 0 && isBoundedPeriod
+      ? "\nDigite *BAIXAR* para marcar as semanas em aberto como pagas."
+      : null,
+    isBoundedPeriod && weeks.length > 0 && openWeeks.length === 0
+      ? "\nTodas as semanas deste período já foram baixadas."
+      : null,
+    !isBoundedPeriod
+      ? "\nPara dar baixa, escolha um período com data inicial e final."
+      : null,
+  ].filter(Boolean).join("\n");
+
+  return {
+    text,
+    settlement,
+    canMarkPaid: amountDueCents > 0 && isBoundedPeriod && openWeeks.length > 0,
+  };
+}
+
+async function buildAdminDivisionReportLegacy(period: AdminReportPeriod) {
+  const payments = await getApprovedPayments(period);
+  const paymentsByOrder = new Map<string, PaymentRow>();
+
+  for (const payment of payments) {
+    const current = paymentsByOrder.get(payment.order_id);
+    const currentPaidAt = current?.paid_at ? new Date(current.paid_at).getTime() : 0;
+    const nextPaidAt = payment.paid_at ? new Date(payment.paid_at).getTime() : 0;
+
+    if (!current || nextPaidAt >= currentPaidAt) {
+      paymentsByOrder.set(payment.order_id, payment);
+    }
+  }
+
+  const totalReceivedCents = [...paymentsByOrder.values()].reduce(
+    (sum, payment) => sum + payment.amount_cents,
+    0,
+  );
+  const amountDueCents = Math.round((totalReceivedCents * 5) / 100);
+  const periodKey = getPeriodKey(period);
+  const existingSettlement = await getDivisionSettlement(periodKey);
+  const settlement: AdminDivisionSettlementDraft = {
+    periodKey,
+    periodLabel: period.label,
+    periodFrom: period.from,
+    periodTo: period.to,
+    totalReceivedCents,
+    amountDueCents,
+    orderCount: paymentsByOrder.size,
+    weekCount: 1,
+  };
+  const isPaid = existingSettlement?.status === "paid";
+  const isBoundedPeriod = Boolean(period.from && period.to);
+
+  const text = [
+    "*DIVISÃO*",
+    `> Período: ${period.label}`,
+    "> Base: pagamentos aprovados e pedidos pagos",
+    "> Fechamento: toda sexta-feira",
+    isPaid
+      ? `> Status: pago em ${formatDateTime(existingSettlement.paid_at)}`
+      : "> Status: pendente",
+    `> Próximo fechamento: ${getNextFridayLabel()}`,
+    "",
+    `> Total recebido: ${formatCurrencyFromCents(totalReceivedCents)}`,
+    `> Valor a pagar (5%): ${formatCurrencyFromCents(amountDueCents)}`,
+    `> Pedidos considerados: ${paymentsByOrder.size}`,
+    payments.length > paymentsByOrder.size
+      ? `> Pagamentos duplicados ignorados: ${payments.length - paymentsByOrder.size}`
+      : null,
+    !isPaid && amountDueCents > 0 && isBoundedPeriod
+      ? "\nDigite *BAIXAR* para marcar este fechamento como pago."
+      : null,
+    !isBoundedPeriod
+      ? "\nPara dar baixa, escolha um período com data inicial e final."
+      : null,
+  ].filter(Boolean).join("\n");
+
+  return {
+    text,
+    settlement,
+    canMarkPaid: !isPaid && amountDueCents > 0 && isBoundedPeriod,
+  };
+}
+
 export async function buildAdminReport(input: {
   eventId: string;
-  type: Exclude<AdminReportType, "summary">;
+  type: Exclude<AdminReportType, "summary" | "division">;
   period: AdminReportPeriod;
 }) {
   const [event, tickets, reservations, validations, courtesies, sessionSeats, ticketPrices] =

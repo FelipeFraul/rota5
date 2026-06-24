@@ -50,6 +50,7 @@ export type TicketConversationStep =
   | "admin_report_event_select"
   | "admin_report_period_select"
   | "admin_report_custom_period_collecting"
+  | "admin_report_division_settlement_confirm"
   | "admin_order_phone_collecting"
   | "admin_order_code_collecting"
   | "admin_order_cancel_collecting"
@@ -369,8 +370,19 @@ export type TicketConversationAdminReports = {
     | "expired_cancelled_reservations"
     | "gate_checkins"
     | "ticket_usage"
-    | "courtesies";
+    | "courtesies"
+    | "division";
   selectedEventId?: string;
+  pendingDivisionSettlement?: {
+    periodKey: string;
+    periodLabel: string;
+    periodFrom?: string;
+    periodTo?: string;
+    totalReceivedCents: number;
+    amountDueCents: number;
+    orderCount: number;
+    weekCount: number;
+  };
   lastEvents?: Array<{
     option: number;
     eventId: string;
