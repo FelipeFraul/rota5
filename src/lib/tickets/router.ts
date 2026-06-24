@@ -3058,6 +3058,53 @@ function parseAdminReportCustomPeriod(input: string): AdminReportPeriod | null {
   };
 }
 
+function parseAdminDivisionWeekPeriod(input: string): AdminReportPeriod | null {
+  const normalized = normalizeAdminText(input);
+  const match = normalized.match(/^semana\s+([1-5])\s+(?:de\s+)?([a-z]+)(?:\s+(\d{4}))?$/);
+  if (!match) return null;
+
+  const monthByName: Record<string, number> = {
+    janeiro: 0,
+    fevereiro: 1,
+    marco: 2,
+    março: 2,
+    abril: 3,
+    maio: 4,
+    junho: 5,
+    julho: 6,
+    agosto: 7,
+    setembro: 8,
+    outubro: 9,
+    novembro: 10,
+    dezembro: 11,
+  };
+  const weekNumber = Number(match[1]);
+  const month = monthByName[match[2]];
+  if (month === undefined) return null;
+
+  const year = match[3] ? Number(match[3]) : new Date().getFullYear();
+  const firstDay = (weekNumber - 1) * 7 + 1;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  if (firstDay > daysInMonth) return null;
+
+  const from = new Date(year, month, firstDay);
+  const to = new Date(year, month, Math.min(firstDay + 6, daysInMonth));
+  from.setHours(0, 0, 0, 0);
+  to.setHours(23, 59, 59, 999);
+
+  const monthLabel = new Intl.DateTimeFormat("pt-BR", {
+    month: "long",
+    timeZone: "America/Sao_Paulo",
+  }).format(from);
+
+  return {
+    label: `Semana ${weekNumber} de ${monthLabel}/${year}`,
+    from: from.toISOString(),
+    to: to.toISOString(),
+    compact: true,
+  };
+}
+
 function renderAdminUserTypePrompt() {
   return [
     "*QUAL NÍVEL DE ACESSO?*",
@@ -11702,7 +11749,9 @@ export async function routeTicketMessage({
       };
 
       if (baseContext.state === "admin_report_period_select") {
-        const period = parseAdminReportPeriodOption(text);
+        const period = adminReports.reportType === "division"
+          ? parseAdminDivisionWeekPeriod(text) ?? parseAdminReportPeriodOption(text)
+          : parseAdminReportPeriodOption(text);
 
         if (period === "custom") {
           return {

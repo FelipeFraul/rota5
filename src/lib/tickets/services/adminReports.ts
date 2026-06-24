@@ -19,6 +19,7 @@ export type AdminReportPeriod = {
   label: string;
   from?: string;
   to?: string;
+  compact?: boolean;
 };
 
 type EventRow = {
@@ -742,8 +743,9 @@ export async function buildAdminDivisionReport(period: AdminReportPeriod) {
     (sum, payment) => sum + payment.amount_cents,
     0,
   );
-  const amountDueCents = Math.round((totalReceivedCents * 5) / 100);
   const isBoundedPeriod = Boolean(period.from && period.to);
+  const amountBasisCents = isBoundedPeriod ? totalReceivedCents : periodReceivedCents;
+  const amountDueCents = Math.round((amountBasisCents * 5) / 100);
   const periodKey = `open:${openWeeks.map((week) => week.key).join("+") || getPeriodKey(period)}`;
   const settlement: AdminDivisionSettlementDraft = {
     periodKey,
@@ -758,39 +760,38 @@ export async function buildAdminDivisionReport(period: AdminReportPeriod) {
     weekCount: openWeeks.length,
   };
 
+  if (period.compact) {
+    return {
+      text: [
+        `> Total de compra no período: ${formatCurrencyFromCents(periodReceivedCents)}`,
+        `> Valor a repassar (5%): ${formatCurrencyFromCents(amountDueCents)}`,
+      ].join("\n"),
+      settlement,
+      canMarkPaid: false,
+    };
+  }
+
   const text = [
     "*DIVISÃO*",
     `> Período: ${period.label}`,
-    "> Base: pagamentos aprovados e pedidos pagos",
-    "> Fechamento: toda sexta-feira",
-    `> Semanas no período: ${weeks.length}`,
-    `> Semanas já baixadas: ${paidWeekKeys.size}`,
-    `> Semanas em aberto: ${openWeeks.length}`,
-    `> Próximo fechamento: ${getNextFridayLabel()}`,
+    period.compact ? null : "> Fechamento: toda sexta-feira",
+    period.compact ? null : `> Semanas em aberto: ${openWeeks.length}`,
+    period.compact ? null : `> Próximo fechamento: ${getNextFridayLabel()}`,
     "",
-    `> Total recebido no período: ${formatCurrencyFromCents(periodReceivedCents)}`,
-    `> Total em aberto: ${formatCurrencyFromCents(totalReceivedCents)}`,
-    `> Valor a pagar (5%): ${formatCurrencyFromCents(amountDueCents)}`,
-    `> Pedidos em aberto: ${openPaymentsByOrder.size}`,
-    payments.length > allPaymentsByOrder.size
-      ? `> Pagamentos duplicados ignorados: ${payments.length - allPaymentsByOrder.size}`
-      : null,
-    openWeeks.length ? `> Período em aberto: ${settlement.periodLabel}` : null,
-    amountDueCents > 0 && isBoundedPeriod
+    `> Total de compra no período: ${formatCurrencyFromCents(periodReceivedCents)}`,
+    `> Valor a repassar (5%): ${formatCurrencyFromCents(amountDueCents)}`,
+    amountDueCents > 0 && isBoundedPeriod && !period.compact
       ? "\nDigite *BAIXAR* para marcar as semanas em aberto como pagas."
       : null,
-    isBoundedPeriod && weeks.length > 0 && openWeeks.length === 0
+    isBoundedPeriod && weeks.length > 0 && openWeeks.length === 0 && !period.compact
       ? "\nTodas as semanas deste período já foram baixadas."
-      : null,
-    !isBoundedPeriod
-      ? "\nPara dar baixa, escolha um período com data inicial e final."
       : null,
   ].filter(Boolean).join("\n");
 
   return {
     text,
     settlement,
-    canMarkPaid: amountDueCents > 0 && isBoundedPeriod && openWeeks.length > 0,
+    canMarkPaid: amountDueCents > 0 && isBoundedPeriod && openWeeks.length > 0 && !period.compact,
   };
 }
 
