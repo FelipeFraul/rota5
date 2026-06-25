@@ -12802,6 +12802,38 @@ export async function routeTicketMessage({
     }
 
     if (previousState.state?.startsWith("admin_offer_create_")) {
+      const navigation = parseAdminSubmenuOption(text);
+
+      if (navigation === "back") {
+        return {
+          reply: renderAdminSubmenu(ADMIN_SUBMENUS.admin_offers_menu),
+          nextContext: adminReplyContext({
+            state: "admin_offers_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (navigation === "menu") {
+        return {
+          reply: formatAdminMenu(adminUser.role),
+          nextContext: adminReplyContext({
+            state: "admin_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (navigation === "exit") {
+        return endAdminSession();
+      }
+
       const offersContext = getAdminOffersContext(baseContext);
       const draft = offersContext.draft ?? {};
 
@@ -12981,6 +13013,38 @@ export async function routeTicketMessage({
       previousState.state === "admin_offer_select_action" ||
       previousState.state === "admin_offer_delete_confirm"
     ) {
+      const navigation = parseAdminSubmenuOption(text);
+
+      if (navigation === "back") {
+        return {
+          reply: renderAdminSubmenu(ADMIN_SUBMENUS.admin_offers_menu),
+          nextContext: adminReplyContext({
+            state: "admin_offers_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (navigation === "menu") {
+        return {
+          reply: formatAdminMenu(adminUser.role),
+          nextContext: adminReplyContext({
+            state: "admin_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      if (navigation === "exit") {
+        return endAdminSession();
+      }
+
       const offersContext = getAdminOffersContext(baseContext);
 
       if (previousState.state === "admin_offer_delete_confirm") {
