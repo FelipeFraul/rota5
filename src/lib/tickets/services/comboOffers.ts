@@ -88,6 +88,7 @@ type ComboPaymentRow = {
 type ComboOfferCandidateTicketRow = {
   id: string;
   customer_id: string;
+  issued_at: string;
   event_sessions:
     | {
         id: string;
@@ -345,6 +346,68 @@ export async function updateComboOfferStatus(
     .eq("id", offerId);
 
   return error ? { ok: false as const, error } : { ok: true as const };
+}
+
+export async function updateComboOfferDetails({
+  offerId,
+  name,
+  description,
+  priceCents,
+  timingType,
+  customOffsetMinutes,
+}: {
+  offerId: string;
+  name?: string;
+  description?: string;
+  priceCents?: number;
+  timingType?: ComboOfferTimingType;
+  customOffsetMinutes?: number | null;
+}) {
+  const payload: Record<string, unknown> = {};
+
+  if (name !== undefined) {
+    const trimmed = name.trim();
+    if (!trimmed) return { ok: false as const, reason: "invalid_input" as const };
+    payload.name = trimmed;
+  }
+
+  if (description !== undefined) {
+    const trimmed = description.trim();
+    if (!trimmed) return { ok: false as const, reason: "invalid_input" as const };
+    payload.description = trimmed;
+  }
+
+  if (priceCents !== undefined) {
+    if (!Number.isInteger(priceCents) || priceCents <= 0) {
+      return { ok: false as const, reason: "invalid_input" as const };
+    }
+    payload.price_cents = priceCents;
+  }
+
+  if (timingType !== undefined) {
+    payload.send_timing_type = timingType;
+    payload.send_offset_minutes =
+      timingType === "three_hours_before"
+        ? 180
+        : timingType === "one_hour_before"
+          ? 60
+          : timingType === "custom"
+            ? customOffsetMinutes
+            : null;
+    payload.send_time_of_day = timingType === "event_day_noon" ? "12:00:00" : null;
+  }
+
+  if (Object.keys(payload).length === 0) {
+    return { ok: false as const, reason: "invalid_input" as const };
+  }
+
+  const { error } = await getSupabaseAdmin()
+    .from("combo_offers")
+    .update(payload)
+    .eq("id", offerId)
+    .neq("status", "deleted");
+
+  return error ? { ok: false as const, reason: "database_error" as const, error } : { ok: true as const };
 }
 
 export async function duplicateComboOffer(offerId: string) {
@@ -948,9 +1011,25 @@ export async function findActiveComboOfferForEventSession(eventId: string, start
   return data?.[0] ?? null;
 }
 
-export function shouldSendComboOfferNow(offer: ComboOfferRow, startsAt: string, now = new Date()) {
+export function shouldSendComboOfferNow(
+  offer: ComboOfferRow,
+  startsAt: string,
+  now = new Date(),
+  purchasedAt?: string | null,
+) {
   const start = new Date(startsAt).getTime();
   const current = now.getTime();
+
+  if (offer.send_timing_type === "custom") {
+    const purchaseTime = purchasedAt ? new Date(purchasedAt).getTime() : Number.NaN;
+    const offset = offer.send_offset_minutes;
+
+    if (!Number.isFinite(purchaseTime) || !offset || offset <= 0) return false;
+
+    const target = purchaseTime + offset * 60_000;
+
+    return current >= target && current < target + 5 * 60_000;
+  }
 
   if (offer.send_timing_type === "event_day_noon") {
     const parts = new Intl.DateTimeFormat("en-CA", {
@@ -1073,7 +1152,7 @@ export async function sendScheduledComboOffers(limit = 100) {
   const to = new Date(now.getTime() + 3 * 60 * 60_000 + 10 * 60_000).toISOString();
   const { data, error } = await getSupabaseAdmin()
     .from("tickets")
-    .select("id, customer_id, customers(whatsapp_phone), orders!inner(status), event_sessions!inner(id, event_id, starts_at, events!inner(id, title))")
+    .select("id, customer_id, issued_at, customers(whatsapp_phone), orders!inner(status), event_sessions!inner(id, event_id, starts_at, events!inner(id, title))")
     .eq("status", "issued")
     .eq("orders.status", "paid")
     .gte("event_sessions.starts_at", from)
@@ -1105,7 +1184,7 @@ export async function sendScheduledComboOffers(limit = 100) {
       session.starts_at,
     );
 
-    if (!offer || !shouldSendComboOfferNow(offer, session.starts_at, now)) {
+    if (!offer || !shouldSendComboOfferNow(offer, session.starts_at, now, ticket.issued_at)) {
       skippedCount += 1;
       continue;
     }

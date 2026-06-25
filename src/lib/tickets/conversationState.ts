@@ -14,6 +14,8 @@ export type TicketConversationStep =
   | "admin_offer_create_price"
   | "admin_offer_create_timing"
   | "admin_offer_select_action"
+  | "admin_offer_edit_select_field"
+  | "admin_offer_edit_collect_value"
   | "admin_offer_delete_confirm"
   | "admin_courtesy_event_select"
   | "admin_courtesy_session_select"
@@ -415,7 +417,7 @@ export type TicketConversationAdminOrders = {
 };
 
 export type TicketConversationAdminOffers = {
-  mode?: "add" | "pause" | "delete" | "duplicate";
+  mode?: "add" | "edit" | "pause" | "delete" | "duplicate";
   draft?: {
     scopeType?: "all_events" | "event" | "weekday";
     eventIds?: string[];
@@ -435,6 +437,8 @@ export type TicketConversationAdminOffers = {
     name: string;
   }>;
   pendingOfferId?: string;
+  pendingOfferName?: string;
+  editField?: "name" | "description" | "price" | "timing";
 };
 
 export type TicketConversationState = {
