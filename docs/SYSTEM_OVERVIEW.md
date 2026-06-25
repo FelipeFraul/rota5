@@ -217,7 +217,7 @@ Expiração operacional:
 
 - reservas expiradas são processadas pela RPC `public.expire_reservations`;
 - existe endpoint protegido `GET` ou `POST /api/cron/expire-reservations`, exigindo `Authorization: Bearer CRON_SECRET`;
-- em produção, se o plano Vercel não permitir cron em frequência de minuto, um agendador externo deve chamar o endpoint;
+- em produção no plano Vercel Pro, `vercel.json` agenda esse endpoint a cada minuto com `* * * * *`;
 - a expiração libera apenas assentos ainda reservados pela própria reserva e não altera ingressos pagos, vendidos ou bloqueados.
 
 Cancelamento pelo comprador:

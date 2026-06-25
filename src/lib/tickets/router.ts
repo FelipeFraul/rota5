@@ -4791,20 +4791,6 @@ async function handleAdminEventsFlow({
     };
   }
 
-  if (baseContext.state === "admin_events_menu" && numericOption === 6) {
-    return {
-      reply: "__ADMIN_BACK__",
-      nextContext: withAdminEventsContext(baseContext, "admin_events_menu", adminEvents),
-    };
-  }
-
-  if (baseContext.state === "admin_events_menu" && numericOption === 7) {
-    return {
-      reply: "__ADMIN_EXIT__",
-      nextContext: withAdminEventsContext(baseContext, "admin_events_menu", adminEvents),
-    };
-  }
-
   if (normalized === "menu") {
     return {
       reply: renderAdminEventsMenu(),
@@ -4887,20 +4873,6 @@ async function handleAdminEventsFlow({
         3: "cancelled",
         4: "all",
       };
-
-      if (numericOption === 5) {
-        return {
-          reply: renderAdminEventsMenu(),
-          nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
-        };
-      }
-
-      if (numericOption === 6) {
-        return {
-          reply: "__ADMIN_EXIT__",
-          nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
-        };
-      }
 
       const statusFilter = numericOption ? filterByOption[numericOption] : undefined;
 
@@ -5142,16 +5114,6 @@ async function handleAdminEventsFlow({
           selectedEventId: eventId,
         }),
       };
-    }
-
-    if (numericOption === 4) {
-      return buildAdminEventsListContext(
-        baseContext,
-        scope,
-        adminEvents.page ?? 0,
-        null,
-        adminEvents.statusFilter,
-      );
     }
 
     if (isBackText(text) || isAbortText(text)) {
@@ -6212,14 +6174,7 @@ async function handleAdminEventsFlow({
       return showAdminEventPricesMenu(baseContext, scope, eventId);
     }
 
-    if (numericOption === 13) {
-      return {
-        reply: "__ADMIN_EXIT__",
-        nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
-      };
-    }
-
-    if (numericOption === 12 || !field) {
+    if (!field) {
       return showAdminEventDetails(baseContext, scope, eventId);
     }
 
@@ -6617,14 +6572,7 @@ async function handleAdminEventsFlow({
       };
     }
 
-    if (numericOption === 4) {
-      return {
-        reply: "__ADMIN_EXIT__",
-        nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
-      };
-    }
-
-    if (numericOption === 3 || isCancelText(text) || isBackText(text)) {
+    if (isCancelText(text) || isBackText(text)) {
       return showAdminEventDetails(baseContext, scope, eventId);
     }
 
@@ -7217,7 +7165,6 @@ async function handleAdminEventOperationalSubmenus({
         }),
       };
     }
-    if (numericOption === 6) return showAdminEventDetails(baseContext, scope, eventId);
   }
 
   if (baseContext.state === "admin_event_session_create_collecting") {
@@ -7564,7 +7511,6 @@ async function handleAdminEventOperationalSubmenus({
         nextContext: withAdminEventsContext(baseContext, "admin_event_session_seats_confirm", adminEvents),
       };
     }
-    if (numericOption === 7) return showAdminEventDetails(baseContext, scope, eventId);
   }
 
   if (baseContext.state === "admin_event_capacity_collecting") {
@@ -8346,7 +8292,6 @@ async function handleAdminEventOperationalSubmenus({
         }),
       };
     }
-    if (numericOption === 3) return showAdminEventDetails(baseContext, scope, eventId);
   }
 
   if (baseContext.state === "admin_event_price_edit_collecting") {
@@ -11033,7 +10978,7 @@ export async function routeTicketMessage({
         };
       }
 
-      if (submenuOption === "exit" || submenuOption === gateSubmenu.exitOption) {
+      if (submenuOption === "exit") {
         return endAdminSession();
       }
       if (isBackText(text)) {
@@ -11097,8 +11042,7 @@ export async function routeTicketMessage({
       }
       if (
         submenuOption === "menu" ||
-        submenuOption === "back" ||
-        submenuOption === gateSubmenu.backOption
+        submenuOption === "back"
       ) {
         return {
           reply: renderAdminSubmenu(gateSubmenu),
@@ -11347,15 +11291,6 @@ export async function routeTicketMessage({
         const option = text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
         const adminGate = baseContext.adminGate ?? {};
 
-        if (option === 4) return endAdminSession();
-        if (option === 3) {
-          return buildAdminGateEventSelect({
-            baseContext,
-            scope: buildAdminEventScope(adminUser),
-            title: "PORTARIA - ESCOLHA O EVENTO",
-          });
-        }
-
         if (option !== 1 && option !== 2) {
           return {
             reply: renderGateAccessFilterMenu(),
@@ -11528,13 +11463,8 @@ export async function routeTicketMessage({
 
       if (submenuOption === "exit") return endAdminSession();
       if (
-        baseContext.state === "admin_report_period_select" &&
-        submenuOption === 7
-      ) return endAdminSession();
-      if (
         submenuOption === "menu" ||
-        submenuOption === "back" ||
-        (baseContext.state === "admin_report_period_select" && submenuOption === 6)
+        submenuOption === "back"
       ) {
         return {
           reply: renderAdminSubmenu(reportsSubmenu),
@@ -12616,33 +12546,6 @@ export async function routeTicketMessage({
         };
       }
 
-      if (baseContext.state === "admin_events_menu" && numericOption === 6) {
-        return {
-          reply: formatAdminMenu(adminUser.role),
-          nextContext: adminReplyContext({
-            state: "admin_menu",
-            role: adminUser.role,
-            sessionId: adminSession.id,
-            adminUserId: adminUser.id,
-            expiresAt: adminSession.expires_at,
-          }),
-        };
-      }
-
-      const isEventFlowExitOption =
-        (baseContext.state === "admin_events_menu" && numericOption === 7) ||
-        (baseContext.state === "admin_events_list" &&
-          baseContext.adminEvents?.mode === "select_list_filter" &&
-          numericOption === 6) ||
-        (baseContext.state === "admin_event_detail" && numericOption === 5) ||
-        (baseContext.state === "admin_event_sessions_menu" && numericOption === 7) ||
-        (baseContext.state === "admin_event_sections_menu" && numericOption === 8) ||
-        (baseContext.state === "admin_event_prices_menu" && numericOption === 4);
-
-      if (isEventFlowExitOption) {
-        return endAdminSession();
-      }
-
       const eventFlowResult = await handleAdminEventsFlow({
         baseContext,
         scope: buildAdminEventScope(adminUser),
@@ -12785,24 +12688,8 @@ export async function routeTicketMessage({
         };
       }
 
-      if (
-        submenuOption === "exit" ||
-        submenuOption === currentSubmenu.exitOption
-      ) {
+      if (submenuOption === "exit") {
         return endAdminSession();
-      }
-
-      if (submenuOption === currentSubmenu.backOption) {
-        return {
-          reply: formatAdminMenu(adminUser.role),
-          nextContext: adminReplyContext({
-            state: "admin_menu",
-            role: adminUser.role,
-            sessionId: adminSession.id,
-            adminUserId: adminUser.id,
-            expiresAt: adminSession.expires_at,
-          }),
-        };
       }
 
       if (previousState.state === "admin_orders_menu") {

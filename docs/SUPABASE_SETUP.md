@@ -72,7 +72,7 @@ A final quality audit was completed on 2026-05-22 14:26:54 -03. Complementary te
 - `anon` cannot execute `expire_reservations`;
 - temporary audit data was removed.
 
-No automatic scheduler exists yet. A future step must add a safe cron/job that calls `expire_reservations` with service-role credentials.
+The production scheduler is configured in `vercel.json` as a Vercel Cron Job for `GET /api/cron/expire-reservations` every minute. This requires a Vercel Pro-compatible cron frequency and `CRON_SECRET` in Production.
 
 ## Confirm Paid Ticket Order Verification Query
 
@@ -2017,7 +2017,7 @@ Use temporary data only, and remove it after testing if running against a produc
 - [x] Blocked seats are not released.
 - [x] Production expiration runner exists at `GET` or `POST /api/cron/expire-reservations`.
 - [x] The route requires `Authorization: Bearer CRON_SECRET`.
-- [x] Because Vercel Hobby only permits daily cron jobs, configure an external scheduler to call the route every minute, or use a Vercel plan with frequent cron support.
+- [x] `vercel.json` schedules the production runner every minute on Vercel Pro with `* * * * *`.
 - [x] Expired reservations trigger a WhatsApp notice to the buyer after seats are released.
 
 ## Reserve Seats Manual Test Checklist

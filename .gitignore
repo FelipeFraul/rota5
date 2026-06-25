@@ -6,6 +6,7 @@ coverage
 .env
 .env*.local
 .codex-whatsapp-runner/
+.tmp/
 *.log
 .DS_Store
 tsconfig.tsbuildinfo

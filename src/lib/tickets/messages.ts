@@ -43,7 +43,9 @@ export const TICKET_MESSAGES = {
   reservationCancelled:
     `PROCESSO CANCELADO\nSua reserva foi cancelada e os ingressos foram liberados.\n\n${PUBLIC_HOME_MESSAGE}`,
   reservationExpired:
-    "⏰ A SUA RESERVA EXPIROU\nOs ingressos foram liberados novamente para venda.\nPara ver o mesmo evento ou buscar outro, só digitar uma nova busca.",
+    "Seu tempo de reserva terminou. Se desejar comprar seu ingresso, pesquise novamente o evento.",
+  buyerInterestReminder:
+    "ATENDIMENTO\n\n🚨 Últimos ingressos para {EVENTO}. Corra comprar o seu!\n> Digite 1 para comprar\n> Digite 2 para saber mais\n> Digite uma palavra para nova pesquisa",
   buyerFlowReset:
     `PROCESSO CANCELADO\n\n${PUBLIC_HOME_MESSAGE}`,
   reservationUnavailableForPayment:
@@ -71,7 +73,7 @@ export const TICKET_MESSAGES = {
   adminAuthMissingPassphrase:
     "Não foi possível autenticar este acesso. Peça ao Diretor para redefinir sua senha.",
   adminSessionExpired:
-    "Sua sessão administrativa expirou. Envie admin para autenticar novamente.",
+    "Sessão administrativa encerrada.",
   adminLogout: "Sessão administrativa encerrada.",
   adminGenericError:
     "Não consegui acessar o menu administrativo agora. Tente novamente em instantes.",

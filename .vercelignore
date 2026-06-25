@@ -4,6 +4,7 @@
 .git
 node_modules
 .next
+.tmp
 dist
 coverage
 *.log
