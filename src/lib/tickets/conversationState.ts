@@ -11,6 +11,7 @@ export type TicketConversationStep =
   | "admin_offer_create_weekday_select"
   | "admin_offer_create_name"
   | "admin_offer_create_description"
+  | "admin_offer_create_image"
   | "admin_offer_create_price"
   | "admin_offer_create_timing"
   | "admin_offer_select_action"
@@ -424,6 +425,7 @@ export type TicketConversationAdminOffers = {
     weekdays?: number[];
     name?: string;
     description?: string;
+    imageUrl?: string | null;
     priceCents?: number;
   };
   lastEvents?: Array<{
@@ -438,7 +440,7 @@ export type TicketConversationAdminOffers = {
   }>;
   pendingOfferId?: string;
   pendingOfferName?: string;
-  editField?: "name" | "description" | "price" | "timing";
+  editField?: "name" | "description" | "image" | "price" | "timing";
 };
 
 export type TicketConversationState = {

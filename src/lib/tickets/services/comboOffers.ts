@@ -31,6 +31,7 @@ export type ComboOfferSummary = {
   id: string;
   name: string;
   description: string;
+  imageUrl: string | null;
   priceCents: number;
   status: "active" | "paused" | "deleted";
   sendTimingType: ComboOfferTimingType;
@@ -41,6 +42,7 @@ type ComboOfferRow = {
   id: string;
   name: string;
   description: string;
+  image_url: string | null;
   price_cents: number;
   currency: "BRL";
   send_timing_type: ComboOfferTimingType;
@@ -72,7 +74,10 @@ type ComboOrderRow = {
   external_reference: string | null;
   checkout_token_hash: string | null;
   checkout_expires_at: string;
-  combo_offers: { name: string; description: string } | { name: string; description: string }[] | null;
+  combo_offers:
+    | { name: string; description: string; image_url: string | null }
+    | { name: string; description: string; image_url: string | null }[]
+    | null;
   customers?: { whatsapp_phone: string | null; email?: string | null } | null;
   events?: { title: string; city: string; state: string; venues?: { name: string | null } | null } | null;
   event_sessions?: { starts_at: string } | null;
@@ -185,6 +190,20 @@ function parseMaybeTime(value?: string | null) {
   return match ? `${match[1]}:${match[2]}:00` : null;
 }
 
+function normalizeOptionalImageUrl(value?: string | null) {
+  const trimmed = value?.trim();
+
+  if (!trimmed) return null;
+  if (trimmed.length > 2000) return undefined;
+
+  try {
+    const url = new URL(trimmed);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function normalizeWeekdays(weekdays: number[]) {
   return [...new Set(weekdays.filter((day) => Number.isInteger(day) && day >= 0 && day <= 6))].sort();
 }
@@ -217,6 +236,7 @@ async function insertOfferScopes(offerId: string, scope: ComboOfferScopeInput) {
 export async function createComboOffer({
   name,
   description,
+  imageUrl,
   priceCents,
   timingType,
   customOffsetMinutes,
@@ -227,6 +247,7 @@ export async function createComboOffer({
 }: {
   name: string;
   description: string;
+  imageUrl?: string | null;
   priceCents: number;
   timingType: ComboOfferTimingType;
   customOffsetMinutes?: number | null;
@@ -237,8 +258,15 @@ export async function createComboOffer({
 }) {
   const trimmedName = name.trim();
   const trimmedDescription = description.trim();
+  const normalizedImageUrl = normalizeOptionalImageUrl(imageUrl);
 
-  if (!trimmedName || !trimmedDescription || !Number.isInteger(priceCents) || priceCents <= 0) {
+  if (
+    !trimmedName ||
+    !trimmedDescription ||
+    normalizedImageUrl === undefined ||
+    !Number.isInteger(priceCents) ||
+    priceCents <= 0
+  ) {
     return { ok: false as const, reason: "invalid_input" as const };
   }
 
@@ -258,6 +286,7 @@ export async function createComboOffer({
     .insert({
       name: trimmedName,
       description: trimmedDescription,
+      image_url: normalizedImageUrl,
       price_cents: priceCents,
       send_timing_type: timingType,
       send_offset_minutes: sendOffsetMinutes,
@@ -296,7 +325,7 @@ export async function listComboOffers({
   const supabase = getSupabaseAdmin();
   let query = supabase
     .from("combo_offers")
-    .select("id, name, description, price_cents, currency, send_timing_type, send_offset_minutes, send_time_of_day, send_weekdays, status")
+    .select("id, name, description, image_url, price_cents, currency, send_timing_type, send_offset_minutes, send_time_of_day, send_weekdays, status")
     .order("created_at", { ascending: false })
     .limit(30);
 
@@ -327,6 +356,7 @@ export async function listComboOffers({
     id: offer.id,
     name: offer.name,
     description: offer.description,
+    imageUrl: offer.image_url,
     priceCents: offer.price_cents,
     status: offer.status,
     sendTimingType: offer.send_timing_type,
@@ -352,6 +382,7 @@ export async function updateComboOfferDetails({
   offerId,
   name,
   description,
+  imageUrl,
   priceCents,
   timingType,
   customOffsetMinutes,
@@ -359,6 +390,7 @@ export async function updateComboOfferDetails({
   offerId: string;
   name?: string;
   description?: string;
+  imageUrl?: string | null;
   priceCents?: number;
   timingType?: ComboOfferTimingType;
   customOffsetMinutes?: number | null;
@@ -375,6 +407,14 @@ export async function updateComboOfferDetails({
     const trimmed = description.trim();
     if (!trimmed) return { ok: false as const, reason: "invalid_input" as const };
     payload.description = trimmed;
+  }
+
+  if (imageUrl !== undefined) {
+    const normalizedImageUrl = normalizeOptionalImageUrl(imageUrl);
+    if (normalizedImageUrl === undefined) {
+      return { ok: false as const, reason: "invalid_input" as const };
+    }
+    payload.image_url = normalizedImageUrl;
   }
 
   if (priceCents !== undefined) {
@@ -414,7 +454,7 @@ export async function duplicateComboOffer(offerId: string) {
   const supabase = getSupabaseAdmin();
   const { data: offer, error } = await supabase
     .from("combo_offers")
-    .select("name, description, price_cents, send_timing_type, send_offset_minutes, send_time_of_day, send_weekdays")
+    .select("name, description, image_url, price_cents, send_timing_type, send_offset_minutes, send_time_of_day, send_weekdays")
     .eq("id", offerId)
     .maybeSingle<ComboOfferRow>();
 
@@ -433,6 +473,7 @@ export async function duplicateComboOffer(offerId: string) {
     .insert({
       name: `${offer.name} (cópia)`,
       description: offer.description,
+      image_url: offer.image_url,
       price_cents: offer.price_cents,
       send_timing_type: offer.send_timing_type,
       send_offset_minutes: offer.send_offset_minutes,
@@ -466,6 +507,7 @@ export function buildComboOfferListText(offers: ComboOfferSummary[]) {
         `${index + 1}. ${offer.name}`,
         `Status: ${offer.status}`,
         `Valor: ${formatCurrency(offer.priceCents)}`,
+        `Foto: ${offer.imageUrl ? "cadastrada" : "ausente"}`,
         `Uso: ${offer.scopes.join(", ") || "Sem escopo"}`,
       ].join("\n"),
     )
@@ -476,7 +518,7 @@ async function loadOfferForSession(offerId: string, eventId: string, sessionId: 
   const supabase = getSupabaseAdmin();
   const { data: offer, error } = await supabase
     .from("combo_offers")
-    .select("id, name, description, price_cents, currency, send_timing_type, send_offset_minutes, send_time_of_day, send_weekdays, status")
+    .select("id, name, description, image_url, price_cents, currency, send_timing_type, send_offset_minutes, send_time_of_day, send_weekdays, status")
     .eq("id", offerId)
     .eq("status", "active")
     .maybeSingle<ComboOfferRow>();
@@ -562,7 +604,7 @@ export async function createComboOrderForCheckout({
 export async function getPublicComboCheckoutOrder(orderId: string, token: string) {
   const { data: order, error } = await getSupabaseAdmin()
     .from("combo_orders")
-    .select("id, offer_id, customer_id, event_id, session_id, status, quantity, unit_amount_cents, total_amount_cents, currency, external_reference, checkout_token_hash, checkout_expires_at, combo_offers(name, description), customers(whatsapp_phone, email), events(title, city, state, venues(name)), event_sessions(starts_at)")
+    .select("id, offer_id, customer_id, event_id, session_id, status, quantity, unit_amount_cents, total_amount_cents, currency, external_reference, checkout_token_hash, checkout_expires_at, combo_offers(name, description, image_url), customers(whatsapp_phone, email), events(title, city, state, venues(name)), event_sessions(starts_at)")
     .eq("id", orderId)
     .maybeSingle<ComboOrderRow>();
 
@@ -594,6 +636,7 @@ export async function getPublicComboCheckoutOrder(orderId: string, token: string
     offer: {
       name: offer.name,
       description: offer.description,
+      imageUrl: offer.image_url,
       quantity: order.quantity,
       unitPriceCents: order.unit_amount_cents,
     },
@@ -805,7 +848,7 @@ async function generatePixQrImage(qrCode: string | null) {
 async function loadPaidComboOrder(orderId: string) {
   const { data, error } = await getSupabaseAdmin()
     .from("combo_orders")
-    .select("id, offer_id, customer_id, event_id, session_id, status, quantity, unit_amount_cents, total_amount_cents, currency, external_reference, checkout_token_hash, checkout_expires_at, combo_offers(name, description), customers(whatsapp_phone), events(title, city, state, venues(name)), event_sessions(starts_at)")
+    .select("id, offer_id, customer_id, event_id, session_id, status, quantity, unit_amount_cents, total_amount_cents, currency, external_reference, checkout_token_hash, checkout_expires_at, combo_offers(name, description, image_url), customers(whatsapp_phone), events(title, city, state, venues(name)), event_sessions(starts_at)")
     .eq("id", orderId)
     .maybeSingle<PaidComboOrderRow>();
 
@@ -998,7 +1041,7 @@ export async function findActiveComboOfferForEventSession(eventId: string, start
   const weekdayIndex = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(weekday);
   const { data, error } = await getSupabaseAdmin()
     .from("combo_offers")
-    .select("id, name, description, price_cents, currency, send_timing_type, send_offset_minutes, send_time_of_day, send_weekdays, status, combo_offer_scopes!inner(scope_type, event_id, weekday)")
+    .select("id, name, description, image_url, price_cents, currency, send_timing_type, send_offset_minutes, send_time_of_day, send_weekdays, status, combo_offer_scopes!inner(scope_type, event_id, weekday)")
     .eq("status", "active")
     .or(`scope_type.eq.all_events,event_id.eq.${eventId},weekday.eq.${weekdayIndex}`, {
       referencedTable: "combo_offer_scopes",
@@ -1232,17 +1275,26 @@ export async function sendScheduledComboOffers(limit = 100) {
       eventTitle: event.title,
       checkoutUrl: checkout.checkoutUrl,
     });
-    const sendResult = await sendZapiText({ phone, message });
+    const sendResult = offer.image_url
+      ? await sendZapiImage({
+          phone,
+          image: offer.image_url,
+          caption: message,
+          ensureTitle: true,
+        })
+      : await sendZapiText({ phone, message });
+    const messageType = offer.image_url ? "image" : "text";
     const saveResult = await saveWhatsAppMessage({
       conversationId: conversationResult.conversation.id,
       customerId: ticket.customer_id,
       direction: "outbound",
-      messageType: "text",
+      messageType,
       body: message,
       providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
       rawMetadata: {
         provider: "zapi",
-        message_type: "text",
+        message_type: messageType,
+        offer_image_url: offer.image_url,
         send_status: sendResult.ok ? "sent" : "failed",
         reason: "combo_offer",
         source_ticket_id: ticket.id,

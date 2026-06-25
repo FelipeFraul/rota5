@@ -13,6 +13,7 @@ type ComboCheckoutOrder = {
   offer: {
     name: string;
     description: string;
+    imageUrl: string | null;
     quantity: number;
     unitPriceLabel: string;
   };
@@ -170,6 +171,13 @@ export default function ComboCheckoutClient({
 
       <section className="checkout-summary-panel">
         <p className="checkout-eyebrow">Oferta e combo</p>
+        {order.offer.imageUrl ? (
+          <img
+            className="combo-checkout-offer-image"
+            src={order.offer.imageUrl}
+            alt=""
+          />
+        ) : null}
         <h1>{order.offer.name}</h1>
         <p className="checkout-muted">{order.offer.description}</p>
 

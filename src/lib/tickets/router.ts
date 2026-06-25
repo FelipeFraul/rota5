@@ -4689,6 +4689,36 @@ function buildAdminOfferNamePrompt() {
   return "*ADICIONAR OFERTA*\n\nDigite o nome da oferta:\nBLACK HOUSE COMBO";
 }
 
+function buildAdminOfferImagePrompt() {
+  return "Envie a foto da oferta pelo WhatsApp, cole uma URL publica https://... ou digite PULAR.";
+}
+
+function parseAdminOfferImageInput({
+  text,
+  mediaUrl,
+  allowRemove = false,
+}: {
+  text: string;
+  mediaUrl?: string | null;
+  allowRemove?: boolean;
+}) {
+  const normalized = normalizeAdminText(text);
+
+  if (allowRemove && ["remover", "remove", "sem foto", "tirar foto"].includes(normalized)) {
+    return { ok: true as const, imageUrl: null };
+  }
+
+  if (["pular", "sem foto", "skip"].includes(normalized)) {
+    return { ok: true as const, imageUrl: null };
+  }
+
+  const imageUrl = normalizeEventImageUrl(mediaUrl ?? text);
+
+  return imageUrl
+    ? { ok: true as const, imageUrl }
+    : { ok: false as const };
+}
+
 function buildAdminOfferTimingPrompt() {
   return [
     "Quando enviar?",
@@ -4710,6 +4740,7 @@ function buildAdminOfferEditFieldPrompt(offerName: string) {
     "2. Editar descricao",
     "3. Editar valor",
     "4. Editar quando enviar",
+    "5. Editar foto",
   ].join("\n");
 }
 
@@ -12852,6 +12883,13 @@ export async function routeTicketMessage({
 
         if (previousState.state === "admin_offer_create_price") {
           return {
+            reply: buildAdminOfferImagePrompt(),
+            nextContext: withAdminOffersContext(baseContext, "admin_offer_create_image", offersContext),
+          };
+        }
+
+        if (previousState.state === "admin_offer_create_image") {
+          return {
             reply: "Digite a descricao:\nEx: 2 cervejas + 1 x-burger",
             nextContext: withAdminOffersContext(baseContext, "admin_offer_create_description", offersContext),
           };
@@ -13050,10 +13088,29 @@ export async function routeTicketMessage({
         }
 
         return {
+          reply: buildAdminOfferImagePrompt(),
+          nextContext: withAdminOffersContext(baseContext, "admin_offer_create_image", {
+            mode: "add",
+            draft: { ...draft, description: text.trim() },
+          }),
+        };
+      }
+
+      if (previousState.state === "admin_offer_create_image") {
+        const parsedImage = parseAdminOfferImageInput({ text, mediaUrl });
+
+        if (!parsedImage.ok) {
+          return {
+            reply: "Foto invalida. Envie uma imagem pelo WhatsApp, cole uma URL publica https://... ou digite PULAR.",
+            nextContext: baseContext,
+          };
+        }
+
+        return {
           reply: "Digite o valor:\nEx: 49,90",
           nextContext: withAdminOffersContext(baseContext, "admin_offer_create_price", {
             mode: "add",
-            draft: { ...draft, description: text.trim() },
+            draft: { ...draft, imageUrl: parsedImage.imageUrl },
           }),
         };
       }
@@ -13090,6 +13147,7 @@ export async function routeTicketMessage({
         const result = await createComboOffer({
           name: draft.name,
           description: draft.description,
+          imageUrl: draft.imageUrl ?? null,
           priceCents: draft.priceCents,
           timingType: timing.timingType,
           customOffsetMinutes: timing.customOffsetMinutes ?? null,
@@ -13168,6 +13226,8 @@ export async function routeTicketMessage({
                 ? "price"
                 : option === 4
                   ? "timing"
+                  : option === 5
+                    ? "image"
                   : null;
 
         if (!field || !offersContext.pendingOfferId) {
@@ -13184,7 +13244,9 @@ export async function routeTicketMessage({
               ? "Digite a nova descricao:"
               : field === "price"
                 ? "Digite o novo valor:\nEx: 49,90"
-                : buildAdminOfferTimingPrompt();
+                : field === "timing"
+                  ? buildAdminOfferTimingPrompt()
+                  : "Envie a nova foto da oferta pelo WhatsApp, cole uma URL publica https://... ou digite REMOVER.";
 
         return {
           reply: prompt,
@@ -13213,7 +13275,22 @@ export async function routeTicketMessage({
                   offerId: offersContext.pendingOfferId,
                   priceCents: parseMoneyToCents(text) ?? 0,
                 })
-              : await (async () => {
+              : field === "image"
+                ? await (async () => {
+                    const parsedImage = parseAdminOfferImageInput({
+                      text,
+                      mediaUrl,
+                      allowRemove: true,
+                    });
+
+                    return parsedImage.ok
+                      ? updateComboOfferDetails({
+                          offerId: offersContext.pendingOfferId as string,
+                          imageUrl: parsedImage.imageUrl,
+                        })
+                      : { ok: false as const, reason: "invalid_input" as const };
+                  })()
+                : await (async () => {
                   const timing = parseComboOfferTiming(
                     text.trim().match(/^\d+$/) ? Number(text.trim()) : null,
                   );

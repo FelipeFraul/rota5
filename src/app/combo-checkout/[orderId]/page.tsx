@@ -64,6 +64,7 @@ export default async function ComboCheckoutPage({
         offer: {
           name: order.offer.name,
           description: order.offer.description,
+          imageUrl: order.offer.imageUrl,
           quantity: order.offer.quantity,
           unitPriceLabel: formatCurrency(order.offer.unitPriceCents),
         },
