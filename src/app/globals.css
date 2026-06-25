@@ -247,6 +247,21 @@ body:has(.checkout-unavailable-shell) img.brand-logo {
   background: #f9fafb;
 }
 
+.combo-checkout-pix-box {
+  border-color: rgba(220, 38, 38, 0.45);
+  background: #fff1f2;
+}
+
+.combo-checkout-pix-qr {
+  width: min(260px, 100%);
+  aspect-ratio: 1;
+  justify-self: center;
+  border-radius: 8px;
+  border: 1px solid rgba(220, 38, 38, 0.55);
+  background: #ffffff;
+  padding: 10px;
+}
+
 .checkout-textarea {
   min-height: 120px;
   padding: 12px;

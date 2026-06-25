@@ -32,6 +32,7 @@ export type AdminPermission =
   | "manage_events"
   | "manage_tickets"
   | "manage_courtesies"
+  | "manage_offers"
   | "manage_gate"
   | "view_reports";
 
@@ -95,6 +96,7 @@ export const ADMIN_ROLE_PERMISSIONS: Record<AdminRole, AdminPermission[]> = {
     "manage_events",
     "manage_tickets",
     "manage_courtesies",
+    "manage_offers",
     "manage_gate",
     "view_reports",
   ],
@@ -102,6 +104,7 @@ export const ADMIN_ROLE_PERMISSIONS: Record<AdminRole, AdminPermission[]> = {
     "manage_events",
     "manage_tickets",
     "manage_courtesies",
+    "manage_offers",
     "manage_gate",
     "view_reports",
   ],
@@ -877,11 +880,16 @@ export function getAdminMenuOptions(role: AdminRole) {
     },
     {
       option: 5,
+      label: "Ofertas e combos",
+      permission: "manage_offers" satisfies AdminPermission,
+    },
+    {
+      option: 6,
       label: "Administradores",
       permission: "manage_admins" satisfies AdminPermission,
     },
     {
-      option: 6,
+      option: 7,
       label: "Relatórios",
       permission: "view_reports" satisfies AdminPermission,
     },

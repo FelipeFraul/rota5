@@ -5,6 +5,16 @@ export type TicketConversationStep =
   | "admin_events_menu"
   | "admin_orders_menu"
   | "admin_courtesies_menu"
+  | "admin_offers_menu"
+  | "admin_offer_create_scope"
+  | "admin_offer_create_event_select"
+  | "admin_offer_create_weekday_select"
+  | "admin_offer_create_name"
+  | "admin_offer_create_description"
+  | "admin_offer_create_price"
+  | "admin_offer_create_timing"
+  | "admin_offer_select_action"
+  | "admin_offer_delete_confirm"
   | "admin_courtesy_event_select"
   | "admin_courtesy_session_select"
   | "admin_courtesy_section_select"
@@ -404,6 +414,29 @@ export type TicketConversationAdminOrders = {
   };
 };
 
+export type TicketConversationAdminOffers = {
+  mode?: "add" | "pause" | "delete" | "duplicate";
+  draft?: {
+    scopeType?: "all_events" | "event" | "weekday";
+    eventIds?: string[];
+    weekdays?: number[];
+    name?: string;
+    description?: string;
+    priceCents?: number;
+  };
+  lastEvents?: Array<{
+    option: number;
+    eventId: string;
+    title: string;
+  }>;
+  lastOffers?: Array<{
+    option: number;
+    offerId: string;
+    name: string;
+  }>;
+  pendingOfferId?: string;
+};
+
 export type TicketConversationState = {
   step: TicketConversationStep;
   state: TicketConversationStep;
@@ -411,6 +444,7 @@ export type TicketConversationState = {
   admin?: TicketConversationAdmin;
   adminEvents?: TicketConversationAdminEvents;
   adminCourtesies?: TicketConversationAdminCourtesies;
+  adminOffers?: TicketConversationAdminOffers;
   adminUsers?: TicketConversationAdminUsers;
   adminGate?: TicketConversationAdminGate;
   adminOrders?: TicketConversationAdminOrders;

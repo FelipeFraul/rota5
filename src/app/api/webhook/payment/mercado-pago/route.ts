@@ -25,6 +25,11 @@ import {
   decimalAmountToCents,
   extractOrderIdFromExternalReference,
 } from "@/lib/tickets/services/payments";
+import {
+  confirmPaidComboOrder,
+  deliverComboOrder,
+  extractComboOrderIdFromExternalReference,
+} from "@/lib/tickets/services/comboOffers";
 import { deliverTicketsForOrder } from "@/lib/tickets/services/ticketDelivery";
 
 const MAX_WEBHOOK_BYTES = 256 * 1024;
@@ -159,6 +164,21 @@ async function orderExists(orderId: string) {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("orders")
+    .select("id")
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return Boolean(data);
+}
+
+async function comboOrderExists(orderId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("combo_orders")
     .select("id")
     .eq("id", orderId)
     .maybeSingle();
@@ -315,6 +335,110 @@ export async function POST(request: Request) {
     });
   }
 
+  const amountCents = decimalAmountToCents(payment.transaction_amount);
+
+  if (amountCents == null) {
+    logWarn("Rejected Black House payment with invalid amount", {
+      providerPaymentId: paymentId,
+    });
+    return jsonError("Internal Server Error", 500);
+  }
+
+  const comboOrderId = extractComboOrderIdFromExternalReference(
+    payment.external_reference,
+  );
+
+  if (comboOrderId) {
+    let comboExists: boolean;
+
+    try {
+      comboExists = await comboOrderExists(comboOrderId);
+    } catch (error) {
+      logError("Failed to verify combo order for Black House payment", {
+        providerPaymentId: paymentId,
+        error,
+      });
+      return jsonError("Internal Server Error", 500);
+    }
+
+    if (!comboExists) {
+      await markPaymentEventProcessed(eventInsert.id);
+      logWarn("Ignored approved Black House payment for missing combo order", {
+        providerPaymentId: paymentId,
+        comboOrderId,
+      });
+      return jsonOk({
+        received: true,
+        ignored: true,
+        reason: "combo_order_not_found",
+      });
+    }
+
+    const confirmation = await confirmPaidComboOrder({
+      orderId: comboOrderId,
+      providerPaymentId: String(payment.id),
+      amountCents,
+      paidAt: payment.date_approved ?? new Date().toISOString(),
+      rawMetadata: buildPaymentRawMetadata(payment),
+    });
+
+    if (!confirmation.ok) {
+      if (
+        confirmation.reason === "order_not_found" ||
+        confirmation.reason === "order_not_payable" ||
+        confirmation.reason === "payment_amount_too_low" ||
+        confirmation.reason === "payment_already_linked"
+      ) {
+        await markPaymentEventProcessed(eventInsert.id);
+        logWarn("Ignored definitive combo payment confirmation failure", {
+          providerPaymentId: paymentId,
+          comboOrderId,
+          reason: confirmation.reason,
+        });
+        return jsonOk({
+          received: true,
+          ignored: true,
+          reason: confirmation.reason,
+        });
+      }
+
+      logError("Failed to confirm paid combo order from Black House webhook", {
+        providerPaymentId: paymentId,
+        comboOrderId,
+        reason: confirmation.reason,
+      });
+      return jsonError("Internal Server Error", 500);
+    }
+
+    const deliveryResult = confirmation.idempotent
+      ? null
+      : await deliverComboOrder(comboOrderId);
+
+    if (deliveryResult && !deliveryResult.ok) {
+      logWarn("Combo delivery could not be prepared after payment confirmation", {
+        providerPaymentId: paymentId,
+        comboOrderId,
+        reason: deliveryResult.reason,
+      });
+    } else if (deliveryResult && !deliveryResult.sent) {
+      logWarn("Combo delivery was not sent after payment confirmation", {
+        providerPaymentId: paymentId,
+        comboOrderId,
+        reason: deliveryResult.reason,
+      });
+    }
+
+    await markPaymentEventProcessed(eventInsert.id);
+
+    logInfo("Processed approved Black House combo payment", {
+      providerPaymentId: paymentId,
+      comboOrderId,
+      comboDelivered: deliveryResult?.ok && deliveryResult.sent ? 1 : 0,
+    });
+
+    return jsonOk({ received: true, processed: true, type: "combo" });
+  }
+
   const orderId = extractOrderIdFromExternalReference(
     payment.external_reference,
   );
@@ -355,15 +479,6 @@ export async function POST(request: Request) {
       ignored: true,
       reason: "order_not_found",
     });
-  }
-
-  const amountCents = decimalAmountToCents(payment.transaction_amount);
-
-  if (amountCents == null) {
-    logWarn("Rejected Black House payment with invalid amount", {
-      providerPaymentId: paymentId,
-    });
-    return jsonError("Internal Server Error", 500);
   }
 
   const supabase = getSupabaseAdmin();

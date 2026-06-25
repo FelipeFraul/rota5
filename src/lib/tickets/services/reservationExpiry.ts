@@ -7,6 +7,7 @@ import {
   updateConversationAfterMessage,
   type TicketConversation,
 } from "@/lib/tickets/services/conversations";
+import { sendScheduledComboOffers } from "@/lib/tickets/services/comboOffers";
 import { saveWhatsAppMessage } from "@/lib/tickets/services/messages";
 import { sendZapiText } from "@/lib/zapi/client";
 import { logError, logInfo, logWarn } from "@/lib/logger";
@@ -649,6 +650,15 @@ async function expireAdminSessionsAndNotify(limit: number) {
   };
 }
 
+function isMissingComboOffersMigration(error: unknown) {
+  const maybeError = error as { code?: string; message?: string } | null;
+
+  return (
+    maybeError?.code === "42P01" ||
+    maybeError?.message?.includes("combo_") === true
+  );
+}
+
 export async function expireReservationsAndNotify(limit = 100) {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase.rpc("expire_reservations", {
@@ -687,6 +697,18 @@ export async function expireReservationsAndNotify(limit = 100) {
 
   const buyerInterestResult = await sendBuyerInterestReminders(limit);
   const adminSessionResult = await expireAdminSessionsAndNotify(limit);
+  let comboOfferResult: Record<string, number | string> = {};
+
+  try {
+    comboOfferResult = await sendScheduledComboOffers(limit);
+  } catch (comboOfferError) {
+    if (!isMissingComboOffersMigration(comboOfferError)) {
+      throw comboOfferError;
+    }
+
+    comboOfferResult = { comboOfferStatus: "missing_migration" };
+    logWarn("Skipped combo offers cron because combo tables are missing");
+  }
 
   logInfo("Expired reservations cron processed", {
     expiredReservationsCount: result.expired_reservations_count ?? 0,
@@ -696,6 +718,7 @@ export async function expireReservationsAndNotify(limit = 100) {
     failedNotificationCount,
     ...buyerInterestResult,
     ...adminSessionResult,
+    ...comboOfferResult,
   });
 
   return {
@@ -706,5 +729,6 @@ export async function expireReservationsAndNotify(limit = 100) {
     failedNotificationCount,
     ...buyerInterestResult,
     ...adminSessionResult,
+    ...comboOfferResult,
   };
 }

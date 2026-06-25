@@ -181,6 +181,15 @@ import {
   type AdminReportType,
 } from "@/lib/tickets/services/adminReports";
 import {
+  buildComboOfferListText,
+  createComboOffer,
+  duplicateComboOffer,
+  listComboOffers,
+  updateComboOfferStatus,
+  type ComboOfferScopeInput,
+  type ComboOfferTimingType,
+} from "@/lib/tickets/services/comboOffers";
+import {
   ADMIN_LOGIN_LINK_REDACTED_BODY,
   consumeAdminLoginChallengeCode,
   createAdminLoginChallenge,
@@ -1658,6 +1667,7 @@ type AdminSubmenuState =
   | "admin_events_menu"
   | "admin_orders_menu"
   | "admin_courtesies_menu"
+  | "admin_offers_menu"
   | "admin_gate_menu"
   | "admin_users_menu"
   | "admin_reports_menu";
@@ -1742,6 +1752,21 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
       "Cancelar cortesia",
     ],
   },
+  admin_offers_menu: {
+    title: "Ofertas e combos",
+    state: "admin_offers_menu",
+    mainOption: 5,
+    permission: "manage_offers",
+    backOption: 6,
+    exitOption: 7,
+    options: [
+      "Adicionar oferta",
+      "Ver ofertas ativas",
+      "Pausar oferta",
+      "Excluir oferta",
+      "Duplicar oferta",
+    ],
+  },
   admin_gate_menu: {
     title: "Portaria",
     state: "admin_gate_menu",
@@ -1759,7 +1784,7 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
   admin_users_menu: {
     title: "Administradores",
     state: "admin_users_menu",
-    mainOption: 5,
+    mainOption: 6,
     permission: "manage_admins",
     backOption: 7,
     exitOption: 8,
@@ -1775,7 +1800,7 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
   admin_reports_menu: {
     title: "Relatórios",
     state: "admin_reports_menu",
-    mainOption: 6,
+    mainOption: 7,
     permission: "view_reports",
     backOption: 10,
     exitOption: 11,
@@ -1850,9 +1875,10 @@ function parseAdminMainMenuOption(text: string) {
     2: ["ingresso", "ingressos", "pedido", "pedidos"],
     3: ["cortesia", "cortesias"],
     4: ["portaria", "check-in", "checkin"],
-    5: ["administrador", "administradores", "admins"],
-    6: ["relatorio", "relatorios"],
-    7: ["sair", "logout", "encerrar"],
+    5: ["oferta", "ofertas", "combo", "combos", "ofertas e combos"],
+    6: ["administrador", "administradores", "admins"],
+    7: ["relatorio", "relatorios"],
+    8: ["sair", "logout", "encerrar"],
   };
 
   const option = Object.entries(aliases).find(([, optionAliases]) =>
@@ -4567,6 +4593,196 @@ function withAdminOrdersContext(
     step: state,
     state,
     adminOrders,
+  };
+}
+
+function withAdminOffersContext(
+  baseContext: TicketConversationState,
+  state: TicketConversationState["state"],
+  adminOffers: NonNullable<TicketConversationState["adminOffers"]>,
+) {
+  return {
+    ...baseContext,
+    step: state,
+    state,
+    adminOffers,
+  };
+}
+
+function getAdminOffersContext(baseContext: TicketConversationState) {
+  return baseContext.adminOffers ?? {};
+}
+
+function parseWeekdaysFromAdminText(text: string) {
+  const normalized = normalizeAdminText(text);
+  const labels: Record<string, number> = {
+    domingo: 0,
+    dom: 0,
+    "0": 0,
+    segunda: 1,
+    seg: 1,
+    "1": 1,
+    terca: 2,
+    terça: 2,
+    ter: 2,
+    "2": 2,
+    quarta: 3,
+    qua: 3,
+    "3": 3,
+    quinta: 4,
+    qui: 4,
+    "4": 4,
+    sexta: 5,
+    sex: 5,
+    "5": 5,
+    sabado: 6,
+    sábado: 6,
+    sab: 6,
+    "6": 6,
+  };
+  const values = normalized
+    .split(/[,\s]+/)
+    .map((part) => labels[part])
+    .filter((value): value is number => Number.isInteger(value));
+
+  return [...new Set(values)].sort();
+}
+
+function buildAdminOfferScopeFromDraft(
+  draft: NonNullable<TicketConversationState["adminOffers"]>["draft"],
+): ComboOfferScopeInput | null {
+  if (!draft?.scopeType) return null;
+  if (draft.scopeType === "all_events") return { scopeType: "all_events" };
+  if (draft.scopeType === "event" && draft.eventIds?.length) {
+    return { scopeType: "event", eventIds: draft.eventIds };
+  }
+  if (draft.scopeType === "weekday" && draft.weekdays?.length) {
+    return { scopeType: "weekday", weekdays: draft.weekdays };
+  }
+
+  return null;
+}
+
+function parseComboOfferTiming(option: number | null): ComboOfferTimingType | null {
+  if (option === 1) return "three_hours_before";
+  if (option === 2) return "one_hour_before";
+  if (option === 3) return "event_day_noon";
+  if (option === 4) return "custom";
+
+  return null;
+}
+
+function formatMoneyFromCents(cents: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(cents / 100);
+}
+
+async function buildAdminOfferEventSelect({
+  baseContext,
+  scope,
+  multi,
+}: {
+  baseContext: TicketConversationState;
+  scope: AdminEventScope;
+  multi: boolean;
+}) {
+  const result = await listAdminEvents({
+    status: "published",
+    ownerAdminUserId: scope.adminUserId,
+    canSeeAll: scope.canSeeAllEvents,
+  });
+
+  if (!result.ok) {
+    return {
+      reply: TICKET_MESSAGES.adminGenericError,
+      nextContext: withAdminOffersContext(baseContext, "admin_offers_menu", {}),
+    };
+  }
+
+  const events = result.events.slice(0, 20).map((event, index) => ({
+    option: index + 1,
+    eventId: event.eventId,
+    title: event.title,
+  }));
+
+  if (!events.length) {
+    return {
+      reply: "Nenhum evento publicado encontrado para usar na oferta.",
+      nextContext: withAdminOffersContext(baseContext, "admin_offers_menu", {}),
+    };
+  }
+
+  return {
+    reply: [
+      multi ? "*ESCOLHER VARIOS EVENTOS*" : "*ESCOLHER UM EVENTO*",
+      "",
+      ...events.map((event) =>
+        formatOptionLine(event.option, event.title, { preserveCase: true }),
+      ),
+      "",
+      multi
+        ? "Envie os numeros separados por virgula. Ex: 1, 3, 5"
+        : "Envie o numero do evento.",
+    ].join("\n"),
+    nextContext: withAdminOffersContext(baseContext, "admin_offer_create_event_select", {
+      ...getAdminOffersContext(baseContext),
+      lastEvents: events,
+      draft: {
+        ...(getAdminOffersContext(baseContext).draft ?? {}),
+        scopeType: "event",
+      },
+    }),
+  };
+}
+
+async function renderAdminOfferListForAction(
+  baseContext: TicketConversationState,
+  mode: NonNullable<TicketConversationState["adminOffers"]>["mode"],
+) {
+  const result = await listComboOffers();
+
+  if (!result.ok) {
+    return {
+      reply: TICKET_MESSAGES.adminGenericError,
+      nextContext: withAdminOffersContext(baseContext, "admin_offers_menu", {}),
+    };
+  }
+
+  const offers = result.offers
+    .filter((offer) => (mode === "pause" ? offer.status === "active" : true))
+    .slice(0, 20);
+
+  if (!offers.length) {
+    return {
+      reply: "Nenhuma oferta encontrada para esta acao.",
+      nextContext: withAdminOffersContext(baseContext, "admin_offers_menu", {}),
+    };
+  }
+
+  return {
+    reply: [
+      mode === "pause"
+        ? "*PAUSAR OFERTA*"
+        : mode === "delete"
+          ? "*EXCLUIR OFERTA*"
+          : "*DUPLICAR OFERTA*",
+      "",
+      ...offers.map((offer, index) =>
+        `${index + 1}. ${offer.name} - ${offer.status} - ${formatMoneyFromCents(offer.priceCents)}`,
+      ),
+      "",
+      "Envie o numero da oferta.",
+    ].join("\n"),
+    nextContext: withAdminOffersContext(baseContext, "admin_offer_select_action", {
+      mode,
+      lastOffers: offers.map((offer, index) => ({
+        option: index + 1,
+        offerId: offer.id,
+        name: offer.name,
+      })),
+    }),
   };
 }
 
@@ -9424,12 +9640,19 @@ export async function routeTicketMessage({
       if (state === "admin_menu") {
         delete nextContext.adminEvents;
         delete nextContext.adminCourtesies;
+        delete nextContext.adminOffers;
         delete nextContext.adminUsers;
         delete nextContext.adminGate;
         delete nextContext.adminOrders;
         delete nextContext.adminReports;
-      } else if (!state.startsWith("admin_courtesy")) {
+      } else {
+        if (!state.startsWith("admin_courtesy")) {
         delete nextContext.adminCourtesies;
+        }
+
+        if (!state.startsWith("admin_offer") && state !== "admin_offers_menu") {
+          delete nextContext.adminOffers;
+        }
       }
 
       return nextContext;
@@ -9506,7 +9729,7 @@ export async function routeTicketMessage({
       ? null
       : parseAdminMainMenuOption(text);
 
-    if (typedMainMenuOption === 7) {
+    if (typedMainMenuOption === 8) {
       return endAdminSession();
     }
 
@@ -12578,6 +12801,241 @@ export async function routeTicketMessage({
       }
     }
 
+    if (previousState.state?.startsWith("admin_offer_create_")) {
+      const offersContext = getAdminOffersContext(baseContext);
+      const draft = offersContext.draft ?? {};
+
+      if (previousState.state === "admin_offer_create_scope") {
+        const option = parseAdminSubmenuOption(text);
+
+        if (option === 1) {
+          return {
+            reply: "*ADICIONAR OFERTA*\n\nDigite o nome da oferta:\nEx: Combo Cerveja + Lanche",
+            nextContext: withAdminOffersContext(baseContext, "admin_offer_create_name", {
+              mode: "add",
+              draft: { scopeType: "all_events" },
+            }),
+          };
+        }
+
+        if (option === 2 || option === 4) {
+          return buildAdminOfferEventSelect({
+            baseContext: withAdminOffersContext(baseContext, "admin_offer_create_scope", {
+              mode: "add",
+              draft,
+            }),
+            scope: buildAdminEventScope(adminUser),
+            multi: option === 4,
+          });
+        }
+
+        if (option === 3) {
+          return {
+            reply: "*ESCOLHER POR DIAS DA SEMANA*\n\nDigite o dia da semana.\nEx: sexta",
+            nextContext: withAdminOffersContext(baseContext, "admin_offer_create_weekday_select", {
+              mode: "add",
+              draft: { scopeType: "weekday" },
+            }),
+          };
+        }
+
+        return {
+          reply: renderAdminSubmenu(ADMIN_SUBMENUS.admin_offers_menu),
+          nextContext: withAdminOffersContext(baseContext, "admin_offers_menu", {}),
+        };
+      }
+
+      if (previousState.state === "admin_offer_create_event_select") {
+        const values = text
+          .split(/[,\s]+/)
+          .map((part) => Number(part.trim()))
+          .filter((value) => Number.isInteger(value));
+        const selected = (offersContext.lastEvents ?? []).filter((event) =>
+          values.includes(event.option),
+        );
+
+        if (!selected.length) {
+          return buildAdminOfferEventSelect({
+            baseContext,
+            scope: buildAdminEventScope(adminUser),
+            multi: true,
+          });
+        }
+
+        return {
+          reply: "*ADICIONAR OFERTA*\n\nDigite o nome da oferta:\nEx: Combo Cerveja + Lanche",
+          nextContext: withAdminOffersContext(baseContext, "admin_offer_create_name", {
+            mode: "add",
+            draft: {
+              ...draft,
+              scopeType: "event",
+              eventIds: selected.map((event) => event.eventId),
+            },
+          }),
+        };
+      }
+
+      if (previousState.state === "admin_offer_create_weekday_select") {
+        const weekdays = parseWeekdaysFromAdminText(text);
+
+        if (!weekdays.length) {
+          return {
+            reply: "Nao entendi o dia. Digite algo como sexta, sabado ou 5.",
+            nextContext: baseContext,
+          };
+        }
+
+        return {
+          reply: "*ADICIONAR OFERTA*\n\nDigite o nome da oferta:\nEx: Combo Cerveja + Lanche",
+          nextContext: withAdminOffersContext(baseContext, "admin_offer_create_name", {
+            mode: "add",
+            draft: { ...draft, scopeType: "weekday", weekdays },
+          }),
+        };
+      }
+
+      if (previousState.state === "admin_offer_create_name") {
+        if (text.trim().length < 3) {
+          return { reply: "Digite um nome com pelo menos 3 caracteres.", nextContext: baseContext };
+        }
+
+        return {
+          reply: "Digite a descricao:\nEx: 2 cervejas + 1 x-burger",
+          nextContext: withAdminOffersContext(baseContext, "admin_offer_create_description", {
+            mode: "add",
+            draft: { ...draft, name: text.trim() },
+          }),
+        };
+      }
+
+      if (previousState.state === "admin_offer_create_description") {
+        if (text.trim().length < 3) {
+          return { reply: "Digite uma descricao com pelo menos 3 caracteres.", nextContext: baseContext };
+        }
+
+        return {
+          reply: "Digite o valor:\nEx: 49,90",
+          nextContext: withAdminOffersContext(baseContext, "admin_offer_create_price", {
+            mode: "add",
+            draft: { ...draft, description: text.trim() },
+          }),
+        };
+      }
+
+      if (previousState.state === "admin_offer_create_price") {
+        const priceCents = parseMoneyToCents(text);
+
+        if (!priceCents || priceCents <= 0) {
+          return { reply: "Valor invalido. Envie como 49,90.", nextContext: baseContext };
+        }
+
+        return {
+          reply: [
+            "Quando enviar?",
+            "1. 3h antes do evento",
+            "2. 1h antes do evento",
+            "3. No dia do evento as 12h",
+            "4. Personalizar",
+          ].join("\n"),
+          nextContext: withAdminOffersContext(baseContext, "admin_offer_create_timing", {
+            mode: "add",
+            draft: { ...draft, priceCents },
+          }),
+        };
+      }
+
+      if (previousState.state === "admin_offer_create_timing") {
+        const timing = parseComboOfferTiming(
+          text.trim().match(/^\d+$/) ? Number(text.trim()) : null,
+        );
+        const scope = buildAdminOfferScopeFromDraft(draft);
+
+        if (!timing || !scope || !draft.name || !draft.description || !draft.priceCents) {
+          return {
+            reply: "Nao consegui fechar esta oferta. Volte ao menu e tente novamente.",
+            nextContext: withAdminOffersContext(baseContext, "admin_offers_menu", {}),
+          };
+        }
+
+        const result = await createComboOffer({
+          name: draft.name,
+          description: draft.description,
+          priceCents: draft.priceCents,
+          timingType: timing,
+          customOffsetMinutes: timing === "custom" ? 180 : null,
+          scope,
+          adminUserId: adminUser.id,
+          adminPhone: adminUser.phone,
+        });
+
+        return {
+          reply: result.ok
+            ? "*OFERTA CADASTRADA*\n\nA oferta ja esta ativa para os envios programados."
+            : TICKET_MESSAGES.adminGenericError,
+          nextContext: withAdminOffersContext(baseContext, "admin_offers_menu", {}),
+        };
+      }
+    }
+
+    if (
+      previousState.state === "admin_offer_select_action" ||
+      previousState.state === "admin_offer_delete_confirm"
+    ) {
+      const offersContext = getAdminOffersContext(baseContext);
+
+      if (previousState.state === "admin_offer_delete_confirm") {
+        if (normalizeAdminText(text) !== "excluir oferta" || !offersContext.pendingOfferId) {
+          return {
+            reply: "Digite EXCLUIR OFERTA para confirmar ou CANCELAR para abandonar.",
+            nextContext: baseContext,
+          };
+        }
+
+        const result = await updateComboOfferStatus(
+          offersContext.pendingOfferId,
+          "deleted",
+        );
+
+        return {
+          reply: result.ok ? "*OFERTA EXCLUIDA*" : TICKET_MESSAGES.adminGenericError,
+          nextContext: withAdminOffersContext(baseContext, "admin_offers_menu", {}),
+        };
+      }
+
+      const option = text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
+      const selected = (offersContext.lastOffers ?? []).find(
+        (offer) => offer.option === option,
+      );
+
+      if (!selected || !offersContext.mode) {
+        return renderAdminOfferListForAction(baseContext, offersContext.mode ?? "pause");
+      }
+
+      if (offersContext.mode === "delete") {
+        return {
+          reply: `Digite EXCLUIR OFERTA para confirmar a exclusao de ${selected.name}.`,
+          nextContext: withAdminOffersContext(baseContext, "admin_offer_delete_confirm", {
+            mode: "delete",
+            pendingOfferId: selected.offerId,
+            lastOffers: offersContext.lastOffers,
+          }),
+        };
+      }
+
+      const result = offersContext.mode === "pause"
+        ? await updateComboOfferStatus(selected.offerId, "paused")
+        : await duplicateComboOffer(selected.offerId);
+
+      return {
+        reply: result.ok
+          ? offersContext.mode === "pause"
+            ? "*OFERTA PAUSADA*"
+            : "*OFERTA DUPLICADA*\n\nA copia foi criada pausada para revisao."
+          : TICKET_MESSAGES.adminGenericError,
+        nextContext: withAdminOffersContext(baseContext, "admin_offers_menu", {}),
+      };
+    }
+
     if (previousState.state === "admin_menu") {
       const mainMenuOption = numericOption ?? typedMainMenuOption;
 
@@ -12594,7 +13052,7 @@ export async function routeTicketMessage({
         };
       }
 
-      if (mainMenuOption === 7) {
+      if (mainMenuOption === 8) {
         return endAdminSession();
       }
 
@@ -12642,7 +13100,7 @@ export async function routeTicketMessage({
       }
 
       if (typedMainMenuOption) {
-        if (typedMainMenuOption === 7) {
+        if (typedMainMenuOption === 8) {
           return endAdminSession();
         }
 
@@ -12690,6 +13148,49 @@ export async function routeTicketMessage({
 
       if (submenuOption === "exit") {
         return endAdminSession();
+      }
+
+      if (previousState.state === "admin_offers_menu") {
+        if (submenuOption === 1) {
+          return {
+            reply: [
+              "*ADICIONAR OFERTA*",
+              "",
+              "Essa oferta sera usada em:",
+              "1. Todos os eventos",
+              "2. Escolher um evento",
+              "3. Escolher por dias da semana (toda sexta)",
+              "4. Escolher varios eventos",
+            ].join("\n"),
+            nextContext: withAdminOffersContext(baseContext, "admin_offer_create_scope", {
+              mode: "add",
+              draft: {},
+            }),
+          };
+        }
+
+        if (submenuOption === 2) {
+          const result = await listComboOffers();
+
+          return {
+            reply: result.ok
+              ? ["*OFERTAS ATIVAS*", "", buildComboOfferListText(result.offers.filter((offer) => offer.status === "active"))].join("\n")
+              : TICKET_MESSAGES.adminGenericError,
+            nextContext: withAdminOffersContext(baseContext, "admin_offers_menu", {}),
+          };
+        }
+
+        if (submenuOption === 3) {
+          return renderAdminOfferListForAction(baseContext, "pause");
+        }
+
+        if (submenuOption === 4) {
+          return renderAdminOfferListForAction(baseContext, "delete");
+        }
+
+        if (submenuOption === 5) {
+          return renderAdminOfferListForAction(baseContext, "duplicate");
+        }
       }
 
       if (previousState.state === "admin_orders_menu") {
