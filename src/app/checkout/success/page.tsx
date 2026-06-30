@@ -1,14 +1,11 @@
-import BrandLogo from "@/app/BrandLogo";
+import { InformationPage } from "@/app/InformationPage";
 
 export default function CheckoutSuccessPage() {
   return (
-    <main>
-      <BrandLogo />
-      <h1>Retorno do pagamento recebido</h1>
-      <p>
-        A confirmação final será feita após validação da Black House. O ingresso
-        será liberado somente depois do pagamento aprovado.
-      </p>
-    </main>
+    <InformationPage
+      eyebrow="Pagamento"
+      title="Retorno do pagamento recebido"
+      description="A confirmação final será feita após validação da Black House. O ingresso será liberado somente depois do pagamento aprovado."
+    />
   );
 }

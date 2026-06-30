@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import QrScanner from "qr-scanner";
 import BrandLogo from "@/app/BrandLogo";
+import { InformationPage } from "@/app/InformationPage";
 
 type ResultType = "allowed" | "denied" | "waiting";
 
@@ -161,10 +162,11 @@ export function OfferQrScanner({ initialValid }: { initialValid: boolean }) {
 
   if (!initialValid) {
     return (
-      <main className="gate-shell">
-        <h1>Acesso invalido</h1>
-        <p>Solicite um novo link do Leitor de Oferta.</p>
-      </main>
+      <InformationPage
+        eyebrow="Leitor de oferta"
+        title="Acesso inválido"
+        description="Solicite um novo link do Leitor de Oferta."
+      />
     );
   }
 

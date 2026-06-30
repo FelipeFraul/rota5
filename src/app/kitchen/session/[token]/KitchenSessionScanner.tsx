@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import BrandLogo from "@/app/BrandLogo";
+import { InformationPage } from "@/app/InformationPage";
 
 type KitchenStatus = "pending" | "preparing" | "delivered";
 type KitchenOrder = {
@@ -285,12 +286,11 @@ export function KitchenSessionScanner({
 
   if (!validation.valid) {
     return (
-      <main className="kitchen-shell">
-        <section className="kitchen-empty">
-          <h1>Acesso invalido</h1>
-          <p>Solicite um novo link do Sistema Cozinha.</p>
-        </section>
-      </main>
+      <InformationPage
+        eyebrow="Sistema cozinha"
+        title="Acesso inválido"
+        description="Solicite um novo link do Sistema Cozinha."
+      />
     );
   }
 

@@ -1,11 +1,11 @@
-import BrandLogo from "@/app/BrandLogo";
+import { InformationPage } from "@/app/InformationPage";
 
 export default function CheckoutFailurePage() {
   return (
-    <main>
-      <BrandLogo />
-      <h1>Pagamento não concluído</h1>
-      <p>A reserva só será confirmada após um pagamento aprovado.</p>
-    </main>
+    <InformationPage
+      eyebrow="Pagamento"
+      title="Pagamento não concluído"
+      description="A reserva só será confirmada após um pagamento aprovado."
+    />
   );
 }

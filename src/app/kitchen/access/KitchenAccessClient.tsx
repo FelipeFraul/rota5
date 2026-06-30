@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import BrandLogo from "@/app/BrandLogo";
+import { InformationPage } from "@/app/InformationPage";
 
 export function KitchenAccessClient({
   token,
@@ -44,17 +44,16 @@ export function KitchenAccessClient({
   }, [reader, token]);
 
   return (
-    <main className={reader ? "gate-shell" : "kitchen-shell"}>
-      <section className={reader ? "gate-header" : "kitchen-empty"}>
-        <BrandLogo className="gate-brand-logo" />
-        <h1>{reader ? "Abrindo leitor de oferta" : "Abrindo Sistema Cozinha"}</h1>
-        <p>{error ?? "Validando este navegador..."}</p>
-        {error ? (
-          <button type="button" onClick={() => window.location.reload()}>
-            Tentar novamente
-          </button>
-        ) : null}
-      </section>
-    </main>
+    <InformationPage
+      eyebrow={reader ? "Leitor de oferta" : "Sistema cozinha"}
+      title={reader ? "Abrindo leitor de oferta" : "Abrindo Sistema Cozinha"}
+      description={error ?? "Validando este navegador..."}
+    >
+      {error ? (
+        <button type="button" onClick={() => window.location.reload()}>
+          Tentar novamente
+        </button>
+      ) : null}
+    </InformationPage>
   );
 }

@@ -1,5 +1,5 @@
 import { AdminLoginForm } from "./AdminLoginForm";
-import BrandLogo from "@/app/BrandLogo";
+import { InformationPage } from "@/app/InformationPage";
 import { getAdminLoginChallengeByToken } from "@/lib/tickets/services/adminAuth";
 import { buildPublicAdminLoginChallengeDto } from "@/lib/tickets/services/publicDtos";
 
@@ -16,18 +16,11 @@ export default async function AdminLoginPage({ params }: AdminLoginPageProps) {
 
   if (!publicChallenge.ok) {
     return (
-      <main className="admin-login-shell">
-        <div className="page-card-stack">
-          <BrandLogo />
-          <section className="admin-login-card">
-          <p className="admin-login-kicker">Login administrativo</p>
-          <h1>Link inválido ou expirado</h1>
-          <p>
-            Volte ao WhatsApp e envie admin para receber um novo link de login.
-          </p>
-          </section>
-        </div>
-      </main>
+      <InformationPage
+        eyebrow="Login administrativo"
+        title="Link inválido ou expirado"
+        description="Volte ao WhatsApp e envie admin para receber um novo link de login."
+      />
     );
   }
 

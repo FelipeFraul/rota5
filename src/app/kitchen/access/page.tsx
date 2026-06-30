@@ -1,4 +1,5 @@
 import { KitchenAccessClient } from "./KitchenAccessClient";
+import { InformationPage } from "@/app/InformationPage";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -13,12 +14,11 @@ export default async function KitchenAccessPage({
 
   if (!normalizedToken) {
     return (
-      <main className="kitchen-shell">
-        <section className="kitchen-empty">
-          <h1>Link inválido</h1>
-          <p>Solicite um novo acesso pelo WhatsApp.</p>
-        </section>
-      </main>
+      <InformationPage
+        eyebrow="Sistema cozinha"
+        title="Link inválido"
+        description="Solicite um novo acesso pelo WhatsApp."
+      />
     );
   }
 

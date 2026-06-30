@@ -1,6 +1,6 @@
 import { getEnv } from "@/lib/env";
 import { getPublicCheckoutOrder } from "@/lib/tickets/services/checkout";
-import BrandLogo from "@/app/BrandLogo";
+import { InformationPage } from "@/app/InformationPage";
 import CheckoutClient from "./checkout-client";
 
 type CheckoutPageProps = {
@@ -32,18 +32,11 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
 
   if (!order) {
     return (
-      <main className="checkout-unavailable-shell">
-        <div className="page-card-stack">
-          <BrandLogo />
-          <section className="checkout-unavailable-panel">
-          <h1>Pagamento indisponível</h1>
-          <p>
-            Esta reserva expirou ou já não está aguardando pagamento. Volte ao
-            WhatsApp e gere uma nova compra.
-          </p>
-          </section>
-        </div>
-      </main>
+      <InformationPage
+        eyebrow="Pagamento"
+        title="Pagamento indisponível"
+        description="Esta reserva expirou ou já não está aguardando pagamento. Volte ao WhatsApp e gere uma nova compra."
+      />
     );
   }
 

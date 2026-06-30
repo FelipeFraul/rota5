@@ -3,7 +3,7 @@ import {
   formatComboDescription,
   getPublicComboCheckoutOrder,
 } from "@/lib/tickets/services/comboOffers";
-import BrandLogo from "@/app/BrandLogo";
+import { InformationPage } from "@/app/InformationPage";
 import ComboCheckoutClient from "./combo-checkout-client";
 
 type ComboCheckoutPageProps = {
@@ -38,18 +38,11 @@ export default async function ComboCheckoutPage({
 
   if (!order) {
     return (
-      <main className="checkout-unavailable-shell">
-        <div className="page-card-stack">
-          <BrandLogo />
-          <section className="checkout-unavailable-panel">
-            <h1>Oferta indisponivel</h1>
-            <p>
-              Esta oferta expirou ou ja nao esta aguardando pagamento. Volte ao
-              WhatsApp se quiser receber uma nova oferta.
-            </p>
-          </section>
-        </div>
-      </main>
+      <InformationPage
+        eyebrow="Oferta"
+        title="Oferta indisponível"
+        description="Esta oferta expirou ou já não está aguardando pagamento. Volte ao WhatsApp se quiser receber uma nova oferta."
+      />
     );
   }
 

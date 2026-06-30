@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import QrScanner from "qr-scanner";
 import BrandLogo from "@/app/BrandLogo";
+import { InformationPage } from "@/app/InformationPage";
 
 type GateSessionScannerProps = {
   initialValidation: GateSessionValidation;
@@ -523,21 +524,21 @@ export function GateSessionScanner({
 
   if (loading) {
     return (
-      <main className="gate-shell">
-        <BrandLogo />
-        <h1>Portaria</h1>
-        <p>Validando acesso temporário...</p>
-      </main>
+      <InformationPage
+        eyebrow="Portaria"
+        title="Validando acesso"
+        description="Aguarde enquanto validamos este acesso temporário."
+      />
     );
   }
 
   if (!validation?.valid) {
     return (
-      <main className="gate-shell">
-        <BrandLogo />
-        <h1>Acesso inválido</h1>
-        <p>{describeInvalidReason(validation?.reason)}</p>
-      </main>
+      <InformationPage
+        eyebrow="Portaria"
+        title="Acesso inválido"
+        description={describeInvalidReason(validation?.reason)}
+      />
     );
   }
 

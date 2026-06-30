@@ -3,6 +3,7 @@ import { validateKitchenOrdersToken } from "@/lib/tickets/services/comboRedempti
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { KITCHEN_DEVICE_COOKIE } from "@/lib/tickets/services/gateSessions";
+import { InformationPage } from "@/app/InformationPage";
 
 type KitchenSessionPageProps = {
   params: Promise<{
@@ -23,15 +24,15 @@ export default async function KitchenSessionPage({
   if (!deviceToken) {
     if (opened === "1") {
       return (
-        <main className="kitchen-shell">
-          <section className="kitchen-empty">
-            <h1>Não foi possível salvar o acesso</h1>
-            <p>Ative os cookies deste site e abra novamente o link da cozinha.</p>
-            <a href={`/api/kitchen/session/open?token=${encodeURIComponent(token)}`}>
-              Tentar novamente
-            </a>
-          </section>
-        </main>
+        <InformationPage
+          eyebrow="Sistema cozinha"
+          title="Não foi possível salvar o acesso"
+          description="Ative os cookies deste site e abra novamente o link da cozinha."
+        >
+          <a href={`/api/kitchen/session/open?token=${encodeURIComponent(token)}`}>
+            Tentar novamente
+          </a>
+        </InformationPage>
       );
     }
     redirect(`/api/kitchen/session/open?token=${encodeURIComponent(token)}`);
