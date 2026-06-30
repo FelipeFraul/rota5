@@ -465,6 +465,7 @@ export async function releaseComboOrdersForKitchenAfterGateEntry(input: {
     .eq("customer_id", ticket.customer_id)
     .eq("event_id", eventSession.event_id)
     .eq("session_id", ticket.session_id)
+    .eq("status", "issued")
     .eq("combo_orders.status", "paid")
     .returns<Array<{
       id: string;
