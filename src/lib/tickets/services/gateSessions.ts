@@ -393,7 +393,24 @@ export async function claimKitchenSessionDevice(
     ) {
       return { ok: true as const, deviceToken: existingDeviceToken };
     }
-    return { ok: false as const, reason: "claimed" as const };
+
+    // The physical device cannot be identified reliably when its cookie was
+    // cleared, expired, or created under another Vercel hostname. Possession
+    // of the still-valid secret session link is the recovery credential.
+    const replacementDeviceToken = createKitchenDeviceToken();
+    const replacementDeviceHash = hashKitchenDeviceToken(
+      replacementDeviceToken,
+    );
+    const { data: rebound } = await supabase
+      .from("gate_sessions")
+      .update({ [bindingColumn]: replacementDeviceHash })
+      .eq("id", session.id)
+      .eq(bindingColumn, bindingHash)
+      .select("id")
+      .maybeSingle<{ id: string }>();
+
+    if (!rebound) return { ok: false as const, reason: "claimed" as const };
+    return { ok: true as const, deviceToken: replacementDeviceToken };
   }
 
   const deviceToken = createKitchenDeviceToken();
