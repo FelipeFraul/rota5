@@ -11,9 +11,30 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const token = url.searchParams.get("token")?.trim();
   if (!token) return new NextResponse("Link da cozinha invalido.", { status: 400 });
+  const target = new URL("/kitchen/access", url.origin);
+  target.searchParams.set("token", token);
+  if (url.searchParams.get("reader") === "1") {
+    target.searchParams.set("reader", "1");
+  }
+  return NextResponse.redirect(target, {
+    headers: { "Cache-Control": "no-store, max-age=0" },
+  });
+}
 
+export async function POST(request: Request) {
+  let payload: { token?: unknown; reader?: unknown };
+  try {
+    payload = (await request.json()) as typeof payload;
+  } catch {
+    return NextResponse.json({ ok: false, reason: "invalid" }, { status: 400 });
+  }
+  const token =
+    typeof payload.token === "string" ? payload.token.trim() : "";
+  const reader = payload.reader === true;
+  if (!token) {
+    return NextResponse.json({ ok: false, reason: "invalid" }, { status: 400 });
+  }
   const cookieStore = await cookies();
-  const reader = url.searchParams.get("reader") === "1";
   const deviceCookie = reader
     ? KITCHEN_READER_DEVICE_COOKIE
     : KITCHEN_DEVICE_COOKIE;
@@ -24,22 +45,23 @@ export async function GET(request: Request) {
   );
 
   if (!claim.ok) {
-    return new NextResponse(
-      claim.reason === "claimed"
-        ? "Este acesso da cozinha ja esta vinculado a outro computador ou celular."
-        : "Link da cozinha invalido ou expirado.",
-      { status: 403, headers: { "Content-Type": "text/plain; charset=utf-8" } },
+    return NextResponse.json(
+      {
+        ok: false,
+        reason: claim.reason,
+        message:
+          claim.reason === "claimed"
+            ? "Este acesso da cozinha já está vinculado a outro navegador."
+            : "Link da cozinha inválido ou expirado.",
+      },
+      { status: 403 },
     );
   }
 
-  const response = NextResponse.redirect(
-    new URL(
-      reader
-        ? `/offer-reader/session/${encodeURIComponent(token)}?opened=1`
-        : `/kitchen/session/${encodeURIComponent(token)}?opened=1`,
-      url.origin,
-    ),
-  );
+  const target = reader
+    ? `/offer-reader/session/${encodeURIComponent(token)}?opened=1`
+    : `/kitchen/session/${encodeURIComponent(token)}?opened=1`;
+  const response = NextResponse.json({ ok: true, target });
   response.cookies.set(deviceCookie, claim.deviceToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
