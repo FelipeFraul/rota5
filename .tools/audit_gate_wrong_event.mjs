@@ -153,8 +153,8 @@ async function waitForHealth() {
 
 async function startNextDev() {
   const child = spawn(
-    "npm",
-    ["run", "dev", "--", "--hostname", "127.0.0.1", "--port", String(APP_PORT)],
+    process.execPath,
+    ["node_modules/next/dist/bin/next", "dev", "--hostname", "127.0.0.1", "--port", String(APP_PORT)],
     {
       cwd: process.cwd(),
       env: testEnv,
@@ -348,7 +348,9 @@ async function createTicket({
     customer_id: catalog.customerId,
     session_id: sessionId,
     status: "paid",
-    expires_at: new Date(Date.now() + 60 * 60_000).toISOString(),
+    // Keep enough margin for environments where the app runner and database
+    // clocks are not perfectly synchronized.
+    expires_at: new Date(Date.now() + 24 * 60 * 60_000).toISOString(),
     total_amount_cents: free ? 0 : 100,
     total_fee_cents: 0,
   });
@@ -419,10 +421,12 @@ async function createTicket({
 async function createGateSession({ eventId, sessionId = null, label }) {
   const gateSessionId = randomUUID();
   const validatorPhone = "559920000099";
-  const expiresAt = new Date(Date.now() + 60 * 60_000).toISOString();
+  // Keep enough margin for environments where the database clock is ahead of
+  // the machine running this controlled audit.
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60_000).toISOString();
   const token = createGateSessionToken();
   assertOpaqueGateToken(token, gateSessionId, validatorPhone, expiresAt);
-  await supabase.from("gate_sessions").insert({
+  const { error } = await supabase.from("gate_sessions").insert({
     id: gateSessionId,
     event_id: eventId,
     session_id: sessionId,
@@ -433,6 +437,10 @@ async function createGateSession({ eventId, sessionId = null, label }) {
     expires_at: expiresAt,
     created_by_admin_phone: "559920000098",
   });
+
+  if (error) {
+    throw new Error(`Falha ao criar sessao de portaria do teste: ${error.message}`);
+  }
 
   return { gateSessionId, token };
 }
@@ -527,7 +535,11 @@ async function runAudit() {
   });
 
   const validatedGate = await validateGateSession(gateA.token);
-  assert(validatedGate.valid === true, "API validate retorna sessao valida");
+  assert(
+    validatedGate.valid === true,
+    "API validate retorna sessao valida",
+    JSON.stringify(validatedGate),
+  );
   const validatedGateSerialized = JSON.stringify(validatedGate);
   assertNotIncludes(validatedGateSerialized, gateA.gateSessionId, "API validate nao retorna gate_session_id");
   assertNotIncludes(validatedGateSerialized, "validatorIdentifier", "API validate nao retorna validatorIdentifier");

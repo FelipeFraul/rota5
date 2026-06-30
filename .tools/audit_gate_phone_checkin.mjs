@@ -37,6 +37,7 @@ const fileEnv = parseEnvFile(".env");
 const testEnv = {
   ...process.env,
   ...fileEnv,
+  NODE_ENV: "test",
   APP_BASE_URL,
   ZAPI_BASE_URL,
   ZAPI_INSTANCE_ID: "audit-instance",
@@ -62,6 +63,8 @@ const testEnv = {
     fileEnv.GATE_SESSION_SECRET ||
     "audit-gate-session-secret-with-at-least-thirty-two-chars",
   GATE_SESSION_TTL_MINUTES: fileEnv.GATE_SESSION_TTL_MINUTES || "480",
+  ADMIN_ROOT_WHATSAPP_PHONES: "559940000001",
+  ADMIN_SESSION_TTL_MINUTES: "1440",
 };
 
 for (const key of [
@@ -363,8 +366,8 @@ async function waitForHealth() {
 
 async function startNextDev() {
   const child = spawn(
-    "npm",
-    ["run", "dev", "--", "--hostname", "127.0.0.1", "--port", String(PORT)],
+    process.execPath,
+    ["node_modules/next/dist/bin/next", "dev", "--hostname", "127.0.0.1", "--port", String(PORT)],
     {
       cwd: process.cwd(),
       env: testEnv,
@@ -521,12 +524,27 @@ async function main() {
     zapiServer = await startZapiMock();
     nextChild = await startNextDev();
 
-    assertIncludes((await sendMessage(adminPhone, "admin")).text, "palavra-chave", "admin pede senha");
-    assertIncludes((await sendMessage(adminPhone, ADMIN_PASS)).text, "MENU ADMIN", "admin autenticado abre menu");
+    const loginPrompt = await sendMessage(adminPhone, "admin");
+    assertIncludes(loginPrompt.text, "LOGIN ADMINISTRATIVO", "admin recebe login tokenizado");
+    const loginUrl = loginPrompt.text.match(/https?:\/\/\S+\/admin\/login\/[^\s]+/)?.[0];
+    assert(loginUrl, "admin recebe link temporario");
+    const loginToken = loginUrl.split("/").pop();
+    const verifyResponse = await fetch(`${APP_BASE_URL}/api/admin/login/verify`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token: loginToken, passphrase: ADMIN_PASS }),
+    });
+    const verifyBody = await verifyResponse.json();
+    assert(verifyResponse.ok && /^\d{6}$/.test(verifyBody.code), "senha web gera codigo de uso unico");
+    assertIncludes(
+      (await sendMessage(adminPhone, verifyBody.code)).text,
+      "MENU ADMIN",
+      "codigo autentica e abre menu",
+    );
     assertIncludes((await sendMessage(adminPhone, "4")).text, "PORTARIA", "menu portaria abre");
 
     const selfSelect = await sendMessage(adminPhone, "1");
-    assertIncludes(selfSelect.text, "CHECK-IN NESTE TELEFONE", "check-in neste telefone pergunta evento");
+    assertIncludes(selfSelect.text, "LEITURA NESTE TELEFONE", "check-in neste telefone pergunta evento");
     const selfLink = await sendMessage(adminPhone, `${PREFIX} Evento`);
     assertIncludes(selfLink.text, "/gate/session/", "check-in próprio gera link");
     assertNotIncludes(selfLink.text, GATE_PASS, "check-in próprio não mostra palavra-chave");
@@ -538,7 +556,7 @@ async function main() {
       "telefone sem acesso ativo recebe resposta segura",
     );
 
-    assertIncludes((await sendMessage(adminPhone, "2")).text, "CHECK-IN", "cadastro de outro telefone pergunta evento");
+    assertIncludes((await sendMessage(adminPhone, "2")).text, "LEITURA", "cadastro de outro telefone pergunta evento");
     assertIncludes((await sendMessage(adminPhone, `${PREFIX} Evento`)).text, "DEFINIR TELEFONE", "cadastro pede telefone");
     assertIncludes((await sendMessage(adminPhone, validatorPhone)).text, "PALAVRA CHAVE", "cadastro pede palavra-chave");
     const registered = await sendMessage(adminPhone, GATE_PASS);
@@ -557,7 +575,7 @@ async function main() {
     assert(access.passphrase_hash !== GATE_PASS, "palavra-chave não salva em texto puro");
     assert(access.passphrase_hash.startsWith("pbkdf2_sha256$"), "palavra-chave salva como hash PBKDF2");
 
-    assertIncludes((await sendMessage(adminPhone, "2")).text, "CHECK-IN", "duplicidade inicia novo cadastro");
+    assertIncludes((await sendMessage(adminPhone, "2")).text, "LEITURA", "duplicidade inicia novo cadastro");
     assertIncludes((await sendMessage(adminPhone, `${PREFIX} Evento`)).text, "DEFINIR TELEFONE", "duplicidade escolhe evento");
     assertIncludes((await sendMessage(adminPhone, validatorPhone)).text, "PALAVRA CHAVE", "duplicidade pede palavra-chave");
     assertIncludes(
@@ -585,7 +603,7 @@ async function main() {
     });
     assert(Boolean(secondAccessId), "fixture cria segundo acesso de portaria");
     const multiAccess = await sendMessage(validatorPhone, "Portaria");
-    assertIncludes(multiAccess.text, "Você tem acesso de portaria para estes eventos", "multiacesso lista eventos");
+    assertIncludes(multiAccess.text, "VOCÊ TEM ACESSO DE PORTARIA PARA ESTES EVENTOS", "multiacesso lista eventos");
     assertIncludes(multiAccess.text, `${PREFIX} Evento`, "multiacesso lista primeiro evento");
     assertIncludes(multiAccess.text, `${PREFIX} Segundo Evento`, "multiacesso lista segundo evento");
     const secondPrompt = await sendMessage(

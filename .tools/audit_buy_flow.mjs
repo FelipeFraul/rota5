@@ -174,12 +174,11 @@ async function waitForHealth() {
 
 async function startNextDev() {
   const child = spawn(
-    "npm",
-    ["run", "dev", "--", "--hostname", "127.0.0.1", "--port", String(PORT)],
+    process.execPath,
+    ["node_modules/next/dist/bin/next", "dev", "--hostname", "127.0.0.1", "--port", String(PORT)],
     {
       cwd: process.cwd(),
       env: testEnv,
-      shell: process.platform === "win32",
       stdio: ["ignore", "pipe", "pipe"],
     },
   );
@@ -609,7 +608,7 @@ async function runAudit() {
 
   const offers = await sendBuyerMessage(flowPhone, "1");
   assertIncludes(offers.text, "> Digite 1", "H opções de ingresso usam citação do WhatsApp");
-  assertIncludes(offers.text, 'Digite "Voltar" para voltar à seção anterior.', "H instrução de retorno indica seção anterior");
+  assertIncludes(offers.text, 'Digite "*VOLTAR*" para voltar à seção anterior.', "H instrução de retorno indica seção anterior");
   assertIncludes(offers.text, "*assentos - meia* - R$ 60,00", "H lista setor + tipo de ingresso");
   assertIncludes(offers.text, "*assentos - inteira* - R$ 120,00 + R$ 10,00 taxa", "J taxa maior que zero aparece");
   assertNotIncludes(offers.text, "*assentos - meia* - R$ 60,00 +", "I taxa zero não aparece");
@@ -623,8 +622,15 @@ async function runAudit() {
   assertIncludes(invalidQuantity.text, "Envie a quantidade", "L quantidade inválida é bloqueada");
 
   const tooManyQuantity = await sendBuyerMessage(flowPhone, "3");
-  assertIncludes(tooManyQuantity.text, "Não encontrei assentos disponíveis", "M quantidade maior que disponível é bloqueada");
+  assertIncludes(tooManyQuantity.text, "Não há ingressos suficientes", "M quantidade maior que disponível é bloqueada");
+  assertIncludes(tooManyQuantity.text, "outras opções disponíveis", "M falta de estoque devolve alternativas");
 
+  const retryQuantityPrompt = await sendBuyerMessage(flowPhone, "1");
+  assertIncludes(
+    retryQuantityPrompt.text,
+    "Digite o número de ingressos",
+    "O nova escolha volta a pedir quantidade",
+  );
   const seatMap = await sendBuyerMessage(flowPhone, "2");
   assert(seatMap.messages.some((message) => message.type === "image"), "O mapa/lista de assentos é enviado após quantidade");
   assertIncludes(seatMap.text, "Responda com os 2 códigos", "O pede códigos após quantidade");
@@ -670,7 +676,7 @@ async function runAudit() {
   await expireLatestReservation(expiredPhone);
   const expiredCheckout = await sendBuyerMessage(expiredPhone, "COMPRAR");
   assertNotIncludes(expiredCheckout.text, "LINK DE PAGAMENTO GERADO", "R reserva expirada não gera checkout");
-  assertIncludes(expiredCheckout.text, "A SUA RESERVA EXPIROU", "R reserva expirada informa expiração");
+  assertIncludes(expiredCheckout.text, "Seu tempo de reserva terminou", "R reserva expirada informa expiração");
 
   const cancelShowingEventsPhone = auditPhone();
   await sendBuyerMessage(cancelShowingEventsPhone, `${PREFIX} artista principal`);

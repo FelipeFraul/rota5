@@ -412,10 +412,9 @@ async function waitForHealth() {
 }
 
 async function startNext() {
-  const child = spawn("npm", ["run", "start", "--", "--hostname", "127.0.0.1", "--port", String(APP_PORT)], {
+  const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", String(APP_PORT)], {
     cwd: process.cwd(),
     env: testEnv,
-    shell: process.platform === "win32",
     stdio: ["ignore", "pipe", "pipe"],
   });
   child.stdout.on("data", (chunk) => process.stdout.write(`[next] ${chunk}`));
