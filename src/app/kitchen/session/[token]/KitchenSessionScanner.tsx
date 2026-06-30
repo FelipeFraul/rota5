@@ -85,6 +85,16 @@ function saoPauloDay(value: string | Date) {
   }).format(new Date(value));
 }
 
+function orderStatusTime(order: KitchenOrder) {
+  if (order.kitchenStatus === "delivered") {
+    return order.deliveredAt ?? order.usedAt ?? order.preparingAt ?? order.issuedAt;
+  }
+  if (order.kitchenStatus === "preparing") {
+    return order.preparingAt ?? order.arrivedAt ?? order.kitchenReleasedAt ?? order.issuedAt;
+  }
+  return order.arrivedAt ?? order.kitchenReleasedAt ?? order.paidAt ?? order.issuedAt;
+}
+
 function OrderCard({
   order,
   working,
@@ -100,14 +110,7 @@ function OrderCard({
     <article className="kitchen-order-card">
       <div className="kitchen-order-card-header">
         <span>Pedido {order.redemptionCode}</span>
-        <time>
-          {formatTime(
-            order.arrivedAt ??
-              order.kitchenReleasedAt ??
-              order.paidAt ??
-              order.issuedAt,
-          )}
-        </time>
+        <time>{formatTime(orderStatusTime(order))}</time>
       </div>
       <h3>{order.offerName}</h3>
 
@@ -241,17 +244,15 @@ export function KitchenSessionScanner({
       if (eventId !== "all" && order.eventId !== eventId) continue;
       initial[order.kitchenStatus].push(order);
     }
-    const arrivalTime = (order: KitchenOrder) =>
-      order.arrivedAt ??
-      order.kitchenReleasedAt ??
-      order.paidAt ??
-      order.issuedAt;
-    const byArrival = (a: KitchenOrder, b: KitchenOrder) =>
-      arrivalTime(a).localeCompare(arrivalTime(b));
-
-    initial.pending.sort(byArrival);
-    initial.preparing.sort(byArrival);
-    initial.delivered.sort(byArrival);
+    initial.pending.sort((a, b) =>
+      orderStatusTime(a).localeCompare(orderStatusTime(b)),
+    );
+    initial.preparing.sort((a, b) =>
+      orderStatusTime(b).localeCompare(orderStatusTime(a)),
+    );
+    initial.delivered.sort((a, b) =>
+      orderStatusTime(b).localeCompare(orderStatusTime(a)),
+    );
     return initial;
   }, [eventId, validation]);
 
