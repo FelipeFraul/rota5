@@ -52,6 +52,33 @@ function onlyDigits(value: string): string {
   return value.replace(/\D/g, "");
 }
 
+async function copyTextToClipboard(value: string): Promise<boolean> {
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(value);
+      return true;
+    } catch {
+      // Fall back to the selectable textarea path below.
+    }
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "true");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+
+  try {
+    return document.execCommand("copy");
+  } catch {
+    return false;
+  } finally {
+    document.body.removeChild(textarea);
+  }
+}
+
 function splitCardExpiration(value: string): { month: string; year: string } {
   const digits = onlyDigits(value);
   const month = digits.slice(0, 2);
@@ -86,6 +113,7 @@ export default function CheckoutClient({
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [pixCode, setPixCode] = useState<string | null>(null);
+  const [pixCopied, setPixCopied] = useState(false);
 
   const bin = useMemo(() => onlyDigits(cardNumber).slice(0, 6), [cardNumber]);
   const expiresAt = new Intl.DateTimeFormat("pt-BR", {
@@ -96,6 +124,10 @@ export default function CheckoutClient({
   }).format(new Date(order.expiresAt));
 
   useEffect(() => {
+    if (!enableCardPayment) {
+      return;
+    }
+
     const existing = document.querySelector<HTMLScriptElement>(
       `script[src="${mercadoPagoScriptSrc}"]`,
     );
@@ -216,6 +248,7 @@ export default function CheckoutClient({
     setLoading(true);
     setMessage(null);
     setPixCode(null);
+    setPixCopied(false);
 
     try {
       const data = await submitPayment({
@@ -233,6 +266,7 @@ export default function CheckoutClient({
       }
 
       setPixCode(data.qr_code ?? null);
+      setPixCopied(false);
       setMessage("Pix gerado. Copie o código abaixo e pague no app do banco.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Não foi possível gerar o Pix.");
@@ -321,11 +355,20 @@ export default function CheckoutClient({
     }
   }
 
-  function copyPixCode() {
-    if (pixCode) {
-      navigator.clipboard?.writeText(pixCode).catch(() => undefined);
-      setMessage("Código Pix copiado.");
+  async function copyPixCode() {
+    if (!pixCode) return;
+
+    const copied = await copyTextToClipboard(pixCode);
+
+    if (!copied) {
+      setPixCopied(false);
+      setMessage("Nao consegui copiar automaticamente. Selecione o codigo Pix e copie manualmente.");
+      return;
     }
+
+    setPixCopied(true);
+    setMessage("Codigo Pix copiado.");
+    window.setTimeout(() => setPixCopied(false), 2500);
   }
 
   if (paymentApproved) {
@@ -513,10 +556,15 @@ export default function CheckoutClient({
                 </label>
                 <button
                   type="button"
-                  className="checkout-secondary-button"
+                  className={
+                    pixCopied
+                      ? "checkout-secondary-button is-copied"
+                      : "checkout-secondary-button"
+                  }
                   onClick={copyPixCode}
+                  aria-live="polite"
                 >
-                  Copiar código Pix
+                  {pixCopied ? "Copiado" : "Copiar codigo Pix"}
                 </button>
               </div>
             ) : null}

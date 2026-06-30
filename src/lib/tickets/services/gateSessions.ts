@@ -8,9 +8,16 @@ import {
   normalizeWhatsAppPhone,
 } from "@/lib/tickets/phones";
 import {
+  createKitchenDeviceToken,
   createGateSessionToken,
   hashGateSessionToken,
+  hashKitchenDeviceToken,
 } from "@/lib/tickets/services/gateTokens";
+
+export const KITCHEN_SESSION_TTL_MINUTES = 8 * 60;
+export const KITCHEN_DEVICE_COOKIE = "kitchen_device";
+export const KITCHEN_READER_DEVICE_COOKIE = "kitchen_reader_device";
+export type KitchenDeviceRole = "board" | "reader";
 
 export type GateSession = {
   id: string;
@@ -20,6 +27,8 @@ export type GateSession = {
   validator_phone: string;
   validator_name: string | null;
   token_hash: string;
+  device_binding_hash?: string | null;
+  reader_device_binding_hash?: string | null;
   status: "active" | "revoked" | "expired";
   expires_at: string;
   created_by_admin_phone: string;
@@ -78,7 +87,8 @@ export type ValidateGateSessionResult =
         | "expired"
         | "not_found"
         | "revoked"
-        | "inactive";
+        | "inactive"
+        | "device_mismatch";
     };
 
 export function normalizeGatePhone(phone: string | null | undefined) {
@@ -89,11 +99,29 @@ function getGatePhoneLookupVariants(phone: string) {
   return buildWhatsAppPhoneCandidates(phone);
 }
 
+function isKitchenGateLabel(value: string | null | undefined) {
+  return value?.trim().toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "") === "cozinha";
+}
+
 function buildGateUrl(token: string) {
   const env = getEnv();
   const baseUrl = env.APP_BASE_URL.replace(/\/+$/, "");
 
   return `${baseUrl}/gate/session/${encodeURIComponent(token)}`;
+}
+
+export function buildKitchenUrl(token: string) {
+  const env = getEnv();
+  const baseUrl = env.APP_BASE_URL.replace(/\/+$/, "");
+
+  return `${baseUrl}/api/kitchen/session/open?token=${encodeURIComponent(token)}`;
+}
+
+export function buildOfferReaderUrl(token: string) {
+  const env = getEnv();
+  const baseUrl = env.APP_BASE_URL.replace(/\/+$/, "");
+
+  return `${baseUrl}/api/kitchen/session/open?reader=1&token=${encodeURIComponent(token)}`;
 }
 
 export async function createGateSession(input: {
@@ -125,32 +153,58 @@ export async function createGateSession(input: {
   const tokenHash = hashGateSessionToken(token);
   const supabase = getSupabaseAdmin();
   const phoneVariants = getGatePhoneLookupVariants(validatorPhone);
+  const creatingKitchenSession = isKitchenGateLabel(input.gateLabel);
 
   if (input.replaceActiveSessions) {
-    const { error: revokeError } = await supabase
+    const { data: activeSessions, error: activeSessionsError } = await supabase
       .from("gate_sessions")
-      .update({ status: "revoked" })
+      .select("id, gate_label")
       .in("validator_phone", phoneVariants)
       .eq("status", "active")
-      .gt("expires_at", new Date().toISOString());
+      .gt("expires_at", new Date().toISOString())
+      .returns<Array<{ id: string; gate_label: string | null }>>();
+
+    if (activeSessionsError) {
+      return { ok: false, reason: "insert_failed", error: activeSessionsError };
+    }
+
+    const replacedSessionIds = (activeSessions ?? [])
+      .filter(
+        (session) =>
+          isKitchenGateLabel(session.gate_label) === creatingKitchenSession,
+      )
+      .map((session) => session.id);
+
+    const { error: revokeError } = replacedSessionIds.length
+      ? await supabase
+      .from("gate_sessions")
+      .update({ status: "revoked" })
+      .in("id", replacedSessionIds)
+      : { error: null };
 
     if (revokeError) {
       return { ok: false, reason: "insert_failed", error: revokeError };
     }
   }
 
-  const { count, error: duplicateError } = await supabase
+  const { data: duplicateSessions, error: duplicateError } = await supabase
     .from("gate_sessions")
-    .select("id", { count: "exact", head: true })
+    .select("id, gate_label")
     .in("validator_phone", phoneVariants)
     .eq("status", "active")
-    .gt("expires_at", new Date().toISOString());
+    .gt("expires_at", new Date().toISOString())
+    .returns<Array<{ id: string; gate_label: string | null }>>();
 
   if (duplicateError) {
     return { ok: false, reason: "insert_failed", error: duplicateError };
   }
 
-  if ((count ?? 0) > 0) {
+  if (
+    (duplicateSessions ?? []).some(
+      (session) =>
+        isKitchenGateLabel(session.gate_label) === creatingKitchenSession,
+    )
+  ) {
     return { ok: false, reason: "already_registered" };
   }
 
@@ -191,6 +245,9 @@ export async function createGateSession(input: {
 
 export async function validateGateSessionToken(
   token: string,
+  expectedPurpose: "gate" | "kitchen" = "gate",
+  kitchenDeviceToken?: string | null,
+  kitchenDeviceRole: KitchenDeviceRole = "board",
 ): Promise<ValidateGateSessionResult> {
   const normalizedToken = token.trim();
   if (!normalizedToken) {
@@ -205,13 +262,13 @@ export async function validateGateSessionToken(
   const { data, error } = await supabase
     .from("gate_sessions")
     .select(
-      "id, event_id, session_id, gate_label, validator_phone, status, expires_at, token_hash, events(title), event_sessions(starts_at)",
+      "id, event_id, session_id, gate_label, validator_phone, status, expires_at, token_hash, device_binding_hash, reader_device_binding_hash, events(title), event_sessions(starts_at)",
     )
     .eq("token_hash", tokenHash)
     .maybeSingle<
       Pick<
         GateSession,
-        "id" | "event_id" | "session_id" | "gate_label" | "validator_phone" | "status" | "expires_at" | "token_hash"
+        "id" | "event_id" | "session_id" | "gate_label" | "validator_phone" | "status" | "expires_at" | "token_hash" | "device_binding_hash" | "reader_device_binding_hash"
       > & {
         events: { title: string } | { title: string }[] | null;
         event_sessions: { starts_at: string } | { starts_at: string }[] | null;
@@ -246,6 +303,32 @@ export async function validateGateSessionToken(
     };
   }
 
+  const isKitchenSession = isKitchenGateLabel(data.gate_label);
+
+  if (
+    (expectedPurpose === "kitchen" && !isKitchenSession) ||
+    (expectedPurpose === "gate" && isKitchenSession)
+  ) {
+    return {
+      valid: false,
+      reason: "inactive",
+    };
+  }
+
+  if (
+    expectedPurpose === "kitchen" &&
+    (!kitchenDeviceToken ||
+      !(kitchenDeviceRole === "reader"
+        ? data.reader_device_binding_hash
+        : data.device_binding_hash) ||
+      hashKitchenDeviceToken(kitchenDeviceToken) !==
+        (kitchenDeviceRole === "reader"
+          ? data.reader_device_binding_hash
+          : data.device_binding_hash))
+  ) {
+    return { valid: false, reason: "device_mismatch" };
+  }
+
   return {
     valid: true,
     gateSession: {
@@ -265,6 +348,66 @@ export async function validateGateSessionToken(
       validatorIdentifier: `whatsapp_last4:${data.validator_phone.slice(-4)}`,
     },
   };
+}
+
+export async function claimKitchenSessionDevice(
+  token: string,
+  existingDeviceToken?: string | null,
+  role: KitchenDeviceRole = "board",
+) {
+  const normalizedToken = token.trim();
+  if (!normalizedToken) return { ok: false as const, reason: "invalid" as const };
+
+  const supabase = getSupabaseAdmin();
+  const tokenHash = hashGateSessionToken(normalizedToken);
+  const { data: session } = await supabase
+    .from("gate_sessions")
+    .select("id, gate_label, status, expires_at, device_binding_hash, reader_device_binding_hash")
+    .eq("token_hash", tokenHash)
+    .maybeSingle<{
+      id: string;
+      gate_label: string | null;
+      status: string;
+      expires_at: string;
+      device_binding_hash: string | null;
+      reader_device_binding_hash: string | null;
+    }>();
+
+  if (
+    !session ||
+    !isKitchenGateLabel(session.gate_label) ||
+    session.status !== "active" ||
+    new Date(session.expires_at).getTime() <= Date.now()
+  ) {
+    return { ok: false as const, reason: "invalid" as const };
+  }
+
+  const bindingColumn =
+    role === "reader" ? "reader_device_binding_hash" : "device_binding_hash";
+  const bindingHash = session[bindingColumn];
+
+  if (bindingHash) {
+    if (
+      existingDeviceToken &&
+      hashKitchenDeviceToken(existingDeviceToken) === bindingHash
+    ) {
+      return { ok: true as const, deviceToken: existingDeviceToken };
+    }
+    return { ok: false as const, reason: "claimed" as const };
+  }
+
+  const deviceToken = createKitchenDeviceToken();
+  const deviceHash = hashKitchenDeviceToken(deviceToken);
+  const { data: claimed } = await supabase
+    .from("gate_sessions")
+    .update({ [bindingColumn]: deviceHash })
+    .eq("id", session.id)
+    .is(bindingColumn, null)
+    .select("id")
+    .maybeSingle<{ id: string }>();
+
+  if (!claimed) return { ok: false as const, reason: "claimed" as const };
+  return { ok: true as const, deviceToken };
 }
 
 export async function revokeGateSession(gateSessionId: string) {

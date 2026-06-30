@@ -77,21 +77,21 @@ O app aplica headers globais via `next.config.ts`:
 - `Referrer-Policy: strict-origin-when-cross-origin`;
 - `X-Content-Type-Options: nosniff`;
 - `X-Frame-Options: DENY`;
-- `Access-Control-Allow-Origin: https://site-phi-seven-72.vercel.app`.
+- nenhuma liberação CORS global; os fluxos do navegador são same-origin. Assets `_next/static` sobrescrevem o wildcard automático da Vercel com a origem canônica.
 
 A CSP atual é:
 
 ```text
-default-src 'none'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob: https:; font-src 'self' data:; style-src 'self' 'nonce-{request-nonce}'; script-src 'self' 'nonce-{request-nonce}' 'strict-dynamic' https://sdk.mercadopago.com; connect-src 'self' https:; media-src 'self' data: blob:; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests
+default-src 'none'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob: https:; font-src 'self' data:; style-src 'self' 'nonce-{request-nonce}'; script-src 'self' 'nonce-{request-nonce}' 'strict-dynamic' https://sdk.mercadopago.com; connect-src 'self'; media-src 'self' data: blob:; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests
 ```
 
 `frame-ancestors 'none'` impede que o site seja embutido por outros sites e substitui/fortalece a proteção histórica do `X-Frame-Options`. O header `X-Frame-Options: DENY` permanece por compatibilidade com verificadores e navegadores antigos.
 
-`img-src data:` é necessário porque QRCode e mapas de assento podem ser gerados como imagens base64. Em produção, `script-src` e `style-src` usam nonce por request gerado no `proxy`, sem `'unsafe-inline'` ou `'unsafe-eval'`; `https://sdk.mercadopago.com` permanece autorizado para o checkout no browser. `connect-src 'self' https:` permite chamadas HTTPS do browser sem fixar secrets ou domínios sensíveis na política. Em desenvolvimento local, o `proxy` pode liberar `'unsafe-eval'` e `'unsafe-inline'` apenas para compatibilidade com o React/Next dev server.
+`img-src data:` é necessário porque QRCode e mapas de assento podem ser gerados como imagens base64. Em produção, `script-src` e `style-src` usam nonce por request gerado no `proxy`, sem `'unsafe-inline'` ou `'unsafe-eval'`; `https://sdk.mercadopago.com` permanece autorizado para o checkout no browser. `connect-src 'self'` limita chamadas do browser à própria aplicação; integrações externas são executadas pelo servidor. Em desenvolvimento local, o `proxy` pode liberar `'unsafe-eval'` e `'unsafe-inline'` apenas para compatibilidade com o React/Next dev server.
 
 Em 27/05/2026, a configuração foi adicionada após scan Mozilla Observatory com nota C / 50 em `https://site-phi-seven-72.vercel.app`. Após deploy, o MDN HTTP Observatory retornou B+ / 80, com 9 de 10 testes passados, scan `97301039` em `2026-05-27T13:06:10.645Z`. SecurityHeaders.com não foi automatizado no terminal porque a página pública retornou desafio Cloudflare e a API pública exige autorização.
 
-Também em 27/05/2026, um achado ZAP/Pentest-Tools apontou `Access-Control-Allow-Origin: *` em páginas e assets estáticos. A aplicação não definia CORS wildcard em rotas, proxy, helpers HTTP ou `vercel.json`; o wildcard aparecia nas respostas estáticas/cacheadas servidas pela Vercel. Para remover o wildcard, `next.config.ts` sobrescreve o header com a origem canônica `https://site-phi-seven-72.vercel.app`. Webhooks são server-to-server e não precisam de CORS. Chamadas do browser para checkout, portaria e admin login são same-origin. Nenhuma rota usa `Access-Control-Allow-Credentials` com wildcard.
+Também em 27/05/2026, um achado ZAP/Pentest-Tools apontou CORS permissivo em páginas e assets estáticos. Páginas e APIs não emitem `Access-Control-Allow-Origin`, pois webhooks são server-to-server e as chamadas do browser para checkout, portaria e admin login são same-origin. Como a Vercel adiciona wildcard aos assets do Next, `_next/static` sobrescreve esse header com `https://blackhouseclubedecomedia.vercel.app`.
 
 Em 27/05/2026, a Fase 1 de redução de dados no front removeu timestamps exatos e dados operacionais desnecessários dos DTOs públicos. O login administrativo não envia mais `expiresAt` exato do link para `/admin/login/{token}` nem `expiresAt` exato do código em `/api/admin/login/verify`; o front mostra apenas validade genérica de 2 minutos. A portaria não expõe mais `status`, `expiresAt` exato ou final do telefone do validador no DTO público de sessão. O resultado público de scan não retorna mais `ticketCode` nem objeto `ticket`; quando permitido, retorna no máximo `section` e `seat` para conferência operacional.
 

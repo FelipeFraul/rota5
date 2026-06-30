@@ -164,11 +164,11 @@ export type AdminDivisionSettlementDraft = {
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 const DEFAULT_LIMIT = 10;
 const BLACK_HOUSE_SECTION_ORDER = new Map([
-  ["Cadeira Individual (TODOS pagam meia)", 0],
-  ["1ª FILEIRA (com balcão)", 1],
-  ["Poltrona+Mesa 2 lugares", 2],
-  ["Poltrona+Mesa 4 lugares", 3],
-  ["Cadeira Individual (Inteira)", 4],
+  ["Cadeira meia", 0],
+  ["1ª Fileira", 1],
+  ["Mesa 2 lugares", 2],
+  ["Mesa 4 lugares", 3],
+  ["Cadeira inteira", 4],
   ["Assento / item especial", 5],
 ]);
 
@@ -314,11 +314,11 @@ function getSectionName(ticket: TicketRow | SessionSeatRow) {
 }
 
 function formatSummarySectionName(section: string) {
-  if (section === "Cadeira Individual (TODOS pagam meia)") {
-    return "Cadeira Individual (*TODOS* pagam meia)";
+  if (section === "Cadeira meia") {
+    return "Cadeira meia";
   }
-  if (section === "1ª FILEIRA (com balcão)") {
-    return "*1ª FILEIRA* (com balcão)";
+  if (section === "1ª Fileira") {
+    return "*1ª Fileira*";
   }
   return section;
 }

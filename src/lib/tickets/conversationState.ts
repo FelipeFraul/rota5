@@ -35,6 +35,7 @@ export type TicketConversationStep =
   | "admin_courtesy_cancel_select"
   | "admin_courtesy_cancel_confirm"
   | "admin_gate_menu"
+  | "admin_kitchen_menu"
   | "admin_gate_register_event_select"
   | "admin_gate_validator_collecting"
   | "admin_gate_password_collecting"
@@ -315,7 +316,15 @@ export type TicketConversationAdminUsers = {
 };
 
 export type TicketConversationAdminGate = {
-  mode?: "self_checkin" | "register" | "list" | "revoke";
+  mode?:
+    | "self_checkin"
+    | "register"
+    | "list"
+    | "revoke"
+    | "kitchen_self_checkin"
+    | "kitchen_register"
+    | "kitchen_list"
+    | "kitchen_revoke";
   pendingValidatorPhone?: string;
   selectedEventId?: string;
   lastEvents?: Array<{
@@ -344,6 +353,7 @@ export type TicketConversationAdminGate = {
 };
 
 export type TicketConversationGateAccess = {
+  mode?: "gate" | "kitchen";
   selectedAccessId?: string;
   lastAccesses?: Array<{
     option: number;

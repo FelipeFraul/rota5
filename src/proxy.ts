@@ -41,7 +41,7 @@ function buildContentSecurityPolicy(nonce: string) {
     "font-src 'self' data:",
     `style-src ${styleSources.join(" ")}`,
     `script-src ${scriptSources.join(" ")}`,
-    "connect-src 'self' https:",
+    "connect-src 'self'",
     "media-src 'self' data: blob:",
     "worker-src 'self' blob:",
     "manifest-src 'self'",

@@ -880,16 +880,21 @@ export function getAdminMenuOptions(role: AdminRole) {
     },
     {
       option: 5,
+      label: "Cozinha",
+      permission: "manage_gate" satisfies AdminPermission,
+    },
+    {
+      option: 6,
       label: "Ofertas e combos",
       permission: "manage_offers" satisfies AdminPermission,
     },
     {
-      option: 6,
+      option: 7,
       label: "Administradores",
       permission: "manage_admins" satisfies AdminPermission,
     },
     {
-      option: 7,
+      option: 8,
       label: "Relatórios",
       permission: "view_reports" satisfies AdminPermission,
     },

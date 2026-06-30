@@ -1,6 +1,8 @@
 import "server-only";
 
+import { logError } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { releaseComboOrdersForKitchenAfterGateEntry } from "@/lib/tickets/services/comboRedemptions";
 import { validateGateSessionToken } from "@/lib/tickets/services/gateSessions";
 import { verifySignedTicketToken } from "@/lib/tickets/services/tickets";
 
@@ -108,6 +110,29 @@ async function validateTicketEntry(input: {
   }
 
   const result = data as GateScanResult;
+
+  if (result.allowed) {
+    try {
+      const release = await releaseComboOrdersForKitchenAfterGateEntry({
+        ticketId: input.ticketId,
+        gateSessionId: gateSession.gateSession.id,
+        gateLabel: gateSession.gateSession.gateLabel,
+        validatorIdentifier: gateSession.gateSession.validatorIdentifier,
+      });
+      if (!release.ok) {
+        logError("Failed to release combo orders after gate entry", {
+          ticketId: input.ticketId,
+          gateSessionId: gateSession.gateSession.id,
+        });
+      }
+    } catch (error) {
+      logError("Unexpected combo release error after gate entry", {
+        ticketId: input.ticketId,
+        gateSessionId: gateSession.gateSession.id,
+        error,
+      });
+    }
+  }
 
   return {
     allowed: Boolean(result.allowed),

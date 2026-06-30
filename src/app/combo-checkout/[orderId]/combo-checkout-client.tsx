@@ -29,6 +29,41 @@ function onlyDigits(value: string): string {
   return value.replace(/\D/g, "");
 }
 
+function formatRemainingTime(milliseconds: number) {
+  const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+async function copyTextToClipboard(value: string): Promise<boolean> {
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(value);
+      return true;
+    } catch {
+      // Fall back to the selectable textarea path below.
+    }
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "true");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+
+  try {
+    return document.execCommand("copy");
+  } catch {
+    return false;
+  } finally {
+    document.body.removeChild(textarea);
+  }
+}
+
 export default function ComboCheckoutClient({
   checkoutToken,
   order,
@@ -40,6 +75,10 @@ export default function ComboCheckoutClient({
   const [message, setMessage] = useState<string | null>(null);
   const [pixCode, setPixCode] = useState<string | null>(null);
   const [pixImage, setPixImage] = useState<string | null>(null);
+  const [pixCopied, setPixCopied] = useState(false);
+  const [remainingMs, setRemainingMs] = useState(() =>
+    Math.max(0, new Date(order.expiresAt).getTime() - Date.now()),
+  );
 
   const expiresAt = new Intl.DateTimeFormat("pt-BR", {
     hour: "2-digit",
@@ -53,6 +92,18 @@ export default function ComboCheckoutClient({
     day: "2-digit",
     month: "2-digit",
   }).format(new Date(order.eventDate));
+  const remainingLabel = formatRemainingTime(remainingMs);
+
+  useEffect(() => {
+    const expiresAtMs = new Date(order.expiresAt).getTime();
+    const updateRemaining = () =>
+      setRemainingMs(Math.max(0, expiresAtMs - Date.now()));
+
+    updateRemaining();
+    const intervalId = window.setInterval(updateRemaining, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [order.expiresAt]);
 
   useEffect(() => {
     if (!pixCode || paymentApproved) {
@@ -94,6 +145,7 @@ export default function ComboCheckoutClient({
     setMessage(null);
     setPixCode(null);
     setPixImage(null);
+    setPixCopied(false);
 
     try {
       const response = await fetch(
@@ -123,6 +175,7 @@ export default function ComboCheckoutClient({
 
       setPixCode(data.qr_code ?? null);
       setPixImage(data.qr_image ?? null);
+      setPixCopied(false);
       setMessage("Pix gerado. Use o QR Code vermelho ou copie o codigo.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Nao foi possivel gerar o Pix.");
@@ -131,11 +184,20 @@ export default function ComboCheckoutClient({
     }
   }
 
-  function copyPixCode() {
-    if (pixCode) {
-      navigator.clipboard?.writeText(pixCode).catch(() => undefined);
-      setMessage("Codigo Pix copiado.");
+  async function copyPixCode() {
+    if (!pixCode) return;
+
+    const copied = await copyTextToClipboard(pixCode);
+
+    if (!copied) {
+      setPixCopied(false);
+      setMessage("Nao consegui copiar automaticamente. Selecione o codigo Pix e copie manualmente.");
+      return;
     }
+
+    setPixCopied(true);
+    setMessage("Codigo Pix copiado.");
+    window.setTimeout(() => setPixCopied(false), 2500);
   }
 
   if (paymentApproved) {
@@ -179,7 +241,9 @@ export default function ComboCheckoutClient({
           />
         ) : null}
         <h1>{order.offer.name}</h1>
-        <p className="checkout-muted">{order.offer.description}</p>
+        <p className="checkout-muted combo-offer-description">
+          {order.offer.description}
+        </p>
 
         <div className="checkout-items">
           <div className="checkout-item-row">
@@ -207,6 +271,10 @@ export default function ComboCheckoutClient({
       <section className="checkout-payment-panel">
         <p className="checkout-section-title">Pagamento Pix</p>
         <p className="checkout-muted">Oferta valida ate {expiresAt}.</p>
+        <div className="checkout-countdown" aria-live="polite">
+          <span>Tempo restante</span>
+          <strong>{remainingLabel}</strong>
+        </div>
 
         <div className="checkout-form-block">
           <label className="checkout-label">
@@ -258,10 +326,15 @@ export default function ComboCheckoutClient({
               </label>
               <button
                 type="button"
-                className="checkout-secondary-button"
+                className={
+                  pixCopied
+                    ? "checkout-secondary-button is-copied"
+                    : "checkout-secondary-button"
+                }
                 onClick={copyPixCode}
+                aria-live="polite"
               >
-                Copiar codigo Pix
+                {pixCopied ? "Copiado" : "Copiar codigo Pix"}
               </button>
             </div>
           ) : null}

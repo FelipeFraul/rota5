@@ -4,11 +4,11 @@ const APPLY = process.argv.includes("--apply");
 const VERIFY = process.argv.includes("--verify");
 
 const PLACES = [
-  { key: "chair_half", name: "Cadeira Individual (TODOS pagam meia)", slug: "cadeira-individual-todos-pagam-meia", capacity: 15 },
-  { key: "front_row", name: "1ª FILEIRA (com balcão)", slug: "primeira-fileira-com-balcao", capacity: 5 },
-  { key: "table_2", name: "Poltrona+Mesa 2 lugares", slug: "poltrona-mesa-2-lugares", capacity: 1 },
-  { key: "table_4", name: "Poltrona+Mesa 4 lugares", slug: "poltrona-mesa-4-lugares", capacity: 1 },
-  { key: "chair_full", name: "Cadeira Individual (Inteira)", slug: "cadeira-individual-inteira", capacity: 15 },
+  { key: "chair_half", name: "Cadeira meia", slug: "cadeira-individual-todos-pagam-meia", capacity: 15 },
+  { key: "front_row", name: "1ª Fileira", slug: "primeira-fileira-com-balcao", capacity: 5 },
+  { key: "table_2", name: "Mesa 2 lugares", slug: "poltrona-mesa-2-lugares", capacity: 1 },
+  { key: "table_4", name: "Mesa 4 lugares", slug: "poltrona-mesa-4-lugares", capacity: 1 },
+  { key: "chair_full", name: "Cadeira inteira", slug: "cadeira-individual-inteira", capacity: 15 },
 ];
 
 function normalize(value) {

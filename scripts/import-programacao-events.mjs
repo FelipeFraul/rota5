@@ -40,19 +40,19 @@ function inferTicketType(label) {
 function placeFor(label) {
   const text = normalize(label);
   if (text === "poltrona+mesa 2 lugares (1 deste vale para 2)") {
-    return { key: "table-2", name: "Poltrona+Mesa 2 lugares", capacity: 1 };
+    return { key: "table-2", name: "Mesa 2 lugares", capacity: 1 };
   }
   if (text === "poltrona+mesa 4 lugares (1 deste vale para 4)") {
-    return { key: "table-4", name: "Poltrona+Mesa 4 lugares", capacity: 1 };
+    return { key: "table-4", name: "Mesa 4 lugares", capacity: 1 };
   }
   if (text === "1ª fileira (com balcao) - cadeira individual") {
-    return { key: "front-row", name: "1ª FILEIRA (com balcão)", capacity: 5 };
+    return { key: "front-row", name: "1ª Fileira", capacity: 5 };
   }
   if (text === "cadeira individual (todos pagam meia)") {
-    return { key: "chair-half", name: "Cadeira Individual (TODOS pagam meia)", capacity: 15 };
+    return { key: "chair-half", name: "Cadeira meia", capacity: 15 };
   }
   if (text === "cadeira individual (inteira)") {
-    return { key: "chair-full", name: "Cadeira Individual (Inteira)", capacity: 15 };
+    return { key: "chair-full", name: "Cadeira inteira", capacity: 15 };
   }
 
   const capacity = text.includes("mesa 2 lugares") || text.includes("mesa 4 lugares")

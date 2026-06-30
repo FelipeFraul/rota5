@@ -161,6 +161,8 @@ import {
   type AdminUserListItem,
 } from "@/lib/tickets/services/adminUsers";
 import {
+  buildKitchenUrl,
+  buildOfferReaderUrl,
   normalizeGatePhone,
   createGateSession,
 } from "@/lib/tickets/services/gateSessions";
@@ -260,7 +262,9 @@ const SIMPLE_PAYMENT_CONTINUATIONS = new Set([
   "bora",
   "vamos",
 ]);
-const GATE_COMMAND_PATTERN = /^portaria(?:\s+(.+))?$/i;
+const GATE_COMMAND_PATTERN =
+  /^(?:sistema\s+)?(portaria|cozinha)(?:\s+(.+))?$/i;
+const ADMIN_MAIN_EXIT_OPTION = 9;
 const ADMIN_MENU_UNAVAILABLE_MESSAGE =
   "Essa opção não está disponível para o seu nível de acesso.";
 const ADMIN_CONSTRUCTION_MESSAGE = "Essa função será ativada em breve.";
@@ -707,6 +711,7 @@ const CANONICAL_TICKET_OPTION_LABELS: Record<string, string> = {
     "Poltrona+Mesa 2 lugares (1 deste vale para 2)",
   "poltrona+mesa 4 lugares (1 deste vale para 4)":
     "Poltrona+Mesa 4 lugares (1 deste vale para 4)",
+  "cadeira individual (inteira)": "Cadeira Individual (Inteira)",
 };
 
 function formatTicketOptionLabel(label: string) {
@@ -1670,6 +1675,7 @@ type AdminSubmenuState =
   | "admin_courtesies_menu"
   | "admin_offers_menu"
   | "admin_gate_menu"
+  | "admin_kitchen_menu"
   | "admin_users_menu"
   | "admin_reports_menu";
 
@@ -1756,7 +1762,7 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
   admin_offers_menu: {
     title: "Ofertas e combos",
     state: "admin_offers_menu",
-    mainOption: 5,
+    mainOption: 6,
     permission: "manage_offers",
     backOption: 6,
     exitOption: 7,
@@ -1777,8 +1783,22 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
     backOption: 6,
     exitOption: 7,
     options: [
-      "Check-in neste telefone",
-      "Definir outro telefone para check-in",
+      "Gerar links de leitura neste telefone",
+      "Definir outro telefone para leitura",
+      "Ver todos os acessos",
+      "Revogar acessos",
+    ],
+  },
+  admin_kitchen_menu: {
+    title: "Cozinha",
+    state: "admin_kitchen_menu",
+    mainOption: 5,
+    permission: "manage_gate",
+    backOption: 5,
+    exitOption: 6,
+    options: [
+      "Gerar links de leitura neste telefone",
+      "Definir outro telefone para leitura",
       "Ver todos os acessos",
       "Revogar acessos",
     ],
@@ -1786,7 +1806,7 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
   admin_users_menu: {
     title: "Administradores",
     state: "admin_users_menu",
-    mainOption: 6,
+    mainOption: 7,
     permission: "manage_admins",
     backOption: 7,
     exitOption: 8,
@@ -1802,7 +1822,7 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
   admin_reports_menu: {
     title: "Relatórios",
     state: "admin_reports_menu",
-    mainOption: 7,
+    mainOption: 8,
     permission: "view_reports",
     backOption: 10,
     exitOption: 11,
@@ -1830,6 +1850,13 @@ function renderAdminSubmenu(config: AdminSubmenuConfig) {
         ? [`> ${config.optionDescriptions[index]}`]
         : []),
     ]),
+    ...(config.state === "admin_kitchen_menu"
+      ? [
+          "",
+          "*Atalho do sistema da cozinha:*",
+          "Digite SISTEMA COZINHA para informar a palavra-passe e receber o link de acesso.",
+        ]
+      : []),
     "",
     "Responda com o número da opção.",
     'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
@@ -1877,10 +1904,11 @@ function parseAdminMainMenuOption(text: string) {
     2: ["ingresso", "ingressos", "pedido", "pedidos"],
     3: ["cortesia", "cortesias"],
     4: ["portaria", "check-in", "checkin"],
-    5: ["oferta", "ofertas", "combo", "combos", "ofertas e combos"],
-    6: ["administrador", "administradores", "admins"],
-    7: ["relatorio", "relatorios"],
-    8: ["sair", "logout", "encerrar"],
+    5: ["cozinha", "bar"],
+    6: ["oferta", "ofertas", "combo", "combos", "ofertas e combos"],
+    7: ["administrador", "administradores", "admins"],
+    8: ["relatorio", "relatorios"],
+    9: ["sair", "logout", "encerrar"],
   };
 
   const option = Object.entries(aliases).find(([, optionAliases]) =>
@@ -1912,6 +1940,12 @@ function parseAdminSubmenuOption(text: string) {
   }
 
   return text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
+}
+
+function isKitchenAdminGateMode(
+  mode: NonNullable<TicketConversationState["adminGate"]>["mode"] | undefined,
+) {
+  return Boolean(mode?.startsWith("kitchen_"));
 }
 
 type AdminEventShortcutAction =
@@ -2260,12 +2294,40 @@ function buildGateCheckInReply({
   return [
     "Acesso de check-in criado.",
     "",
-    "Abra o link abaixo neste celular para ler QR Codes:",
+    "Portaria - ler QR Codes de ingresso:",
     gateUrl,
     "",
     `Validade: até ${formatDateTime(expiresAt)}`,
     "",
     "Esse link é temporário e deve ser usado apenas pela equipe autorizada.",
+  ].join("\n");
+}
+
+function buildKitchenCheckInReply({
+  kitchenUrl,
+  offerReaderUrl,
+  expiresAt,
+}: {
+  kitchenUrl: string;
+  offerReaderUrl?: string;
+  expiresAt: string;
+}) {
+  return [
+    "Acesso de cozinha criado.",
+    "",
+    "Sistema Cozinha - acompanhar e preparar pedidos:",
+    kitchenUrl,
+    ...(offerReaderUrl
+      ? [
+          "",
+          "Leitor de Oferta - validar QR Code e concluir entrega:",
+          offerReaderUrl,
+        ]
+      : []),
+    "",
+    `Validade: ate ${formatDateTime(expiresAt)}`,
+    "",
+    "Esse link e temporario e deve ser usado apenas pela equipe autorizada.",
   ].join("\n");
 }
 
@@ -2276,11 +2338,15 @@ function parseGateCommand(text: string) {
     return null;
   }
 
-  const rest = match[1]?.trim();
+  const purpose: "gate" | "kitchen" = normalizeAdminText(match[1] ?? "") === "cozinha"
+    ? "kitchen"
+    : "gate";
+  const rest = match[2]?.trim();
 
   if (!rest) {
     return {
       valid: false as const,
+      purpose,
     };
   }
 
@@ -2290,6 +2356,7 @@ function parseGateCommand(text: string) {
   if (!validatorPhone) {
     return {
       valid: false as const,
+      purpose,
     };
   }
 
@@ -2301,6 +2368,7 @@ function parseGateCommand(text: string) {
 
   return {
     valid: true as const,
+    purpose,
     validatorPhone,
     gateLabel,
   };
@@ -2948,17 +3016,25 @@ function renderGateValidatorPasswordPrompt() {
 function buildGateValidatorRegisteredReply({
   validatorPhone,
   passphrase,
+  purpose = "gate",
 }: {
   validatorPhone: string;
   passphrase: string;
+  purpose?: "gate" | "kitchen";
 }) {
+  const isKitchen = purpose === "kitchen";
+
   return [
-    "*NOVO TELEFONE CADASTRADO PARA CHECK-IN*",
+    isKitchen
+      ? "*NOVO TELEFONE CADASTRADO PARA COZINHA*"
+      : "*NOVO TELEFONE CADASTRADO PARA CHECK-IN*",
     "",
     `> Telefone: ${validatorPhone}`,
     `> Palavra chave: ${passphrase}`,
     "",
-    "O telefone cadastrado deve enviar uma mensagem com a palavra Portaria para o telefone 15 99642-6671",
+    isKitchen
+      ? "O telefone cadastrado deve enviar SISTEMA COZINHA para informar a palavra-passe e receber o link do painel."
+      : "O telefone cadastrado deve enviar uma mensagem com a palavra Portaria para o telefone 15 99642-6671",
   ].join("\n");
 }
 
@@ -2994,12 +3070,19 @@ function renderGateAccessSelectionFromContext(
   ].join("\n");
 }
 
-function renderGateAccessPassphrasePrompt(eventTitle?: string | null) {
+function renderGateAccessPassphrasePrompt(
+  eventTitle?: string | null,
+  purpose: "gate" | "kitchen" = "gate",
+) {
+  const isKitchen = purpose === "kitchen";
+
   return [
-    "*PALAVRA CHAVE DA PORTARIA*",
+    isKitchen ? "*PALAVRA-PASSE DA COZINHA*" : "*PALAVRA CHAVE DA PORTARIA*",
     ...(eventTitle ? [`> Evento: ${eventTitle}`] : []),
     "",
-    "Digite a palavra-chave cadastrada para liberar o check-in.",
+    isKitchen
+      ? "Digite a palavra-passe cadastrada para abrir o sistema da cozinha."
+      : "Digite a palavra-chave cadastrada para liberar o check-in.",
   ].join("\n");
 }
 
@@ -4412,7 +4495,7 @@ function renderEditEventSummary(draft: Record<string, unknown>) {
         : field === "image_url"
           ? draft.imageUrl
           : field === "starts_at"
-            ? draft.startsAt
+            ? formatDateTime(String(draft.startsAt ?? ""))
           : field === "status"
             ? draft.status
             : field === "title"
@@ -8673,6 +8756,9 @@ async function handleAdminEventOperationalSubmenus({
         price_cents: priceCents,
       });
       const details = await getScopedAdminEventDetails(eventId, scope);
+      const persistedPriceCents = result.ok
+        ? result.price.price_cents
+        : null;
 
       return {
         reply: withAdminNavigationHint([
@@ -8681,7 +8767,7 @@ async function handleAdminEventOperationalSubmenus({
             ? [
                 `> Preço: ${String(adminEvents.draft?.priceLabel ?? "Preço")}`,
                 `> Valor anterior: ${formatCurrencyFromCents(Number(adminEvents.draft?.oldPriceCents ?? 0))}`,
-                `> Novo valor: ${formatCurrencyFromCents(priceCents)}`,
+                `> Novo valor confirmado no banco: ${formatCurrencyFromCents(persistedPriceCents ?? priceCents)}`,
                 "",
                 "Reservas já criadas mantêm o valor congelado. A alteração afeta novas reservas.",
               ]
@@ -9186,6 +9272,30 @@ async function renderBuyerQuantityStep({
   };
 }
 
+async function renderNoSeatsWithAlternatives({
+  baseContext,
+  selectedEvent,
+}: {
+  baseContext: TicketConversationState;
+  selectedEvent?: TicketConversationSelectedEvent;
+}): Promise<RouteTicketMessageOutput> {
+  const alternatives = await renderBuyerSectionsStep({
+    baseContext,
+    selectedEvent,
+  });
+
+  return {
+    ...alternatives,
+    reply: [
+      TICKET_MESSAGES.noSeatsAvailable,
+      "",
+      alternatives.reply,
+      "",
+      'Digite "SAIR" para voltar ao início.',
+    ].join("\n"),
+  };
+}
+
 async function handleBuyerBack({
   baseContext,
   customerId,
@@ -9599,7 +9709,10 @@ export async function routeTicketMessage({
       }
 
       return {
-        reply: renderGateAccessPassphrasePrompt(selected.eventTitle),
+        reply: renderGateAccessPassphrasePrompt(
+          selected.eventTitle,
+          baseContext.gateAccess?.mode ?? "gate",
+        ),
         nextContext: {
           ...baseContext,
           step: "gate_access_passphrase_collecting",
@@ -9631,6 +9744,7 @@ export async function routeTicketMessage({
       accessId: selectedAccessId,
       validatorPhone: customer.whatsapp_phone,
       passphrase: text,
+      purpose: baseContext.gateAccess?.mode ?? "gate",
     });
 
     if (!gateSessionResult.ok) {
@@ -9651,11 +9765,19 @@ export async function routeTicketMessage({
       };
     }
 
+    const kitchenMode = baseContext.gateAccess?.mode === "kitchen";
+
     return {
-      reply: buildGateCheckInReply({
-        gateUrl: gateSessionResult.gateUrl,
-        expiresAt: gateSessionResult.gateSession.expires_at,
-      }),
+      reply: kitchenMode
+        ? buildKitchenCheckInReply({
+            kitchenUrl: gateSessionResult.gateUrl,
+            offerReaderUrl: buildOfferReaderUrl(gateSessionResult.token),
+            expiresAt: gateSessionResult.gateSession.expires_at,
+          })
+        : buildGateCheckInReply({
+            gateUrl: gateSessionResult.gateUrl,
+            expiresAt: gateSessionResult.gateSession.expires_at,
+          }),
       nextContext: {
         ...baseContext,
         step: "idle",
@@ -9776,6 +9898,63 @@ export async function routeTicketMessage({
     const { adminUser } = adminUserResult;
     const adminSession = sessionResult.adminSession;
 
+    if (normalizeAdminText(text) === "sistema cozinha") {
+      const kitchenMenu = ADMIN_SUBMENUS.admin_kitchen_menu;
+
+      if (!canAccessAdminMenu(adminUser.role, kitchenMenu)) {
+        return {
+          reply: ADMIN_MENU_UNAVAILABLE_MESSAGE,
+          nextContext: adminReplyContext({
+            state: "admin_menu",
+            role: adminUser.role,
+            sessionId: adminSession.id,
+            adminUserId: adminUser.id,
+            expiresAt: adminSession.expires_at,
+          }),
+        };
+      }
+
+      const shortcutContext = adminReplyContext({
+        state: "admin_kitchen_menu",
+        role: adminUser.role,
+        sessionId: adminSession.id,
+        adminUserId: adminUser.id,
+        expiresAt: adminSession.expires_at,
+      });
+      const freshAuth = await requireFreshAdminPermission({
+        baseContext: shortcutContext,
+        scope: buildFreshAdminScope(adminUser),
+        permission: "manage_gate",
+        operation: "admin_kitchen_global_session_create",
+      });
+      if (!freshAuth.ok) return freshAuth.response;
+
+      const gateSessionResult = await createGateSession({
+        validatorPhone: freshAuth.scope.adminPhone,
+        createdByAdminPhone: freshAuth.scope.adminPhone,
+        gateLabel: "Cozinha",
+        replaceActiveSessions: true,
+        ttlMinutes: 8 * 60,
+      });
+
+      return {
+        reply: gateSessionResult.ok
+          ? buildKitchenCheckInReply({
+              kitchenUrl: buildKitchenUrl(gateSessionResult.token),
+              offerReaderUrl: buildOfferReaderUrl(gateSessionResult.token),
+              expiresAt: gateSessionResult.gateSession.expires_at,
+            })
+          : TICKET_MESSAGES.gateAdminCreateError,
+        nextContext: adminReplyContext({
+          state: "admin_kitchen_menu",
+          role: adminUser.role,
+          sessionId: adminSession.id,
+          adminUserId: adminUser.id,
+          expiresAt: adminSession.expires_at,
+        }),
+      };
+    }
+
     if (isAdminHomeText(text)) {
       return {
         reply: formatAdminMenu(adminUser.role),
@@ -9796,7 +9975,7 @@ export async function routeTicketMessage({
       ? null
       : parseAdminMainMenuOption(text);
 
-    if (typedMainMenuOption === 8) {
+    if (typedMainMenuOption === ADMIN_MAIN_EXIT_OPTION) {
       return endAdminSession();
     }
 
@@ -11252,7 +11431,10 @@ export async function routeTicketMessage({
     }
 
     if (isAdminGateFlowState(baseContext.state)) {
-      const gateSubmenu = ADMIN_SUBMENUS.admin_gate_menu;
+      const adminGateContext = baseContext.adminGate ?? {};
+      const gateSubmenu = isKitchenAdminGateMode(adminGateContext.mode)
+        ? ADMIN_SUBMENUS.admin_kitchen_menu
+        : ADMIN_SUBMENUS.admin_gate_menu;
       const submenuOption = parseAdminSubmenuOption(text);
 
       if (!canAccessAdminMenu(adminUser.role, gateSubmenu)) {
@@ -11273,19 +11455,28 @@ export async function routeTicketMessage({
       }
       if (isBackText(text)) {
         if (baseContext.state === "admin_gate_accesses_filter") {
+          const adminGate = baseContext.adminGate ?? {};
+          const kitchenMode = isKitchenAdminGateMode(adminGate.mode);
           return buildAdminGateEventSelect({
             baseContext,
             scope: buildAdminEventScope(adminUser),
-            title: "PORTARIA - ESCOLHA O EVENTO",
+            title: kitchenMode
+              ? "COZINHA - ESCOLHA O EVENTO"
+              : "PORTARIA - ESCOLHA O EVENTO",
+            mode: kitchenMode ? "kitchen_list" : "list",
           });
         }
 
         if (baseContext.state === "admin_gate_revoke_select") {
+          const adminGate = baseContext.adminGate ?? {};
+          const kitchenMode = isKitchenAdminGateMode(adminGate.mode);
           return buildAdminGateEventSelect({
             baseContext,
             scope: buildAdminEventScope(adminUser),
-            title: "REVOGAR ACESSOS - ESCOLHA O EVENTO",
-            mode: "revoke",
+            title: kitchenMode
+              ? "REVOGAR ACESSOS DE COZINHA - ESCOLHA O EVENTO"
+              : "REVOGAR ACESSOS - ESCOLHA O EVENTO",
+            mode: kitchenMode ? "kitchen_revoke" : "revoke",
           });
         }
 
@@ -11337,7 +11528,7 @@ export async function routeTicketMessage({
         return {
           reply: renderAdminSubmenu(gateSubmenu),
           nextContext: adminReplyContext({
-            state: "admin_gate_menu",
+            state: gateSubmenu.state,
             role: adminUser.role,
             sessionId: adminSession.id,
             adminUserId: adminUser.id,
@@ -11381,6 +11572,7 @@ export async function routeTicketMessage({
 
       if (baseContext.state === "admin_gate_password_collecting") {
         const adminGate = baseContext.adminGate ?? {};
+        const kitchenMode = adminGate.mode === "kitchen_register";
         const passphrase = text.trim();
         const validatorPhone = adminGate.pendingValidatorPhone;
         const eventId = adminGate.selectedEventId;
@@ -11419,7 +11611,7 @@ export async function routeTicketMessage({
                 ? "Este telefone já possui acesso de portaria para este evento."
                 : TICKET_MESSAGES.gateAdminCreateError,
             nextContext: adminReplyContext({
-              state: "admin_gate_menu",
+              state: kitchenMode ? "admin_kitchen_menu" : "admin_gate_menu",
               role: adminUser.role,
               sessionId: adminSession.id,
               adminUserId: adminUser.id,
@@ -11432,9 +11624,10 @@ export async function routeTicketMessage({
           reply: buildGateValidatorRegisteredReply({
             validatorPhone,
             passphrase,
+            purpose: kitchenMode ? "kitchen" : "gate",
           }),
           nextContext: adminReplyContext({
-            state: "admin_gate_menu",
+            state: kitchenMode ? "admin_kitchen_menu" : "admin_gate_menu",
             role: adminUser.role,
             sessionId: adminSession.id,
             adminUserId: adminUser.id,
@@ -11475,32 +11668,42 @@ export async function routeTicketMessage({
           };
         }
 
-        if (adminGate.mode === "self_checkin") {
+        if (adminGate.mode === "self_checkin" || adminGate.mode === "kitchen_self_checkin") {
+          const kitchenMode = adminGate.mode === "kitchen_self_checkin";
           const freshAuth = await requireFreshAdminPermission({
             baseContext,
             scope: buildFreshAdminScope(adminUser),
             permission: "manage_gate",
-            operation: "admin_gate_self_checkin_create",
+            operation: kitchenMode
+              ? "admin_kitchen_self_checkin_create"
+              : "admin_gate_self_checkin_create",
           });
           if (!freshAuth.ok) return freshAuth.response;
 
           const gateSessionResult = await createGateSession({
             validatorPhone: freshAuth.scope.adminPhone,
             createdByAdminPhone: freshAuth.scope.adminPhone,
-            gateLabel: "Check-in",
+            gateLabel: kitchenMode ? "Cozinha" : "Check-in",
             eventId,
             replaceActiveSessions: true,
+            ttlMinutes: kitchenMode ? 8 * 60 : undefined,
           });
 
           return {
             reply: gateSessionResult.ok
-              ? buildGateCheckInReply({
-                  gateUrl: gateSessionResult.gateUrl,
-                  expiresAt: gateSessionResult.gateSession.expires_at,
-                })
+              ? kitchenMode
+                ? buildKitchenCheckInReply({
+                    kitchenUrl: buildKitchenUrl(gateSessionResult.token),
+                    offerReaderUrl: buildOfferReaderUrl(gateSessionResult.token),
+                    expiresAt: gateSessionResult.gateSession.expires_at,
+                  })
+                : buildGateCheckInReply({
+                    gateUrl: gateSessionResult.gateUrl,
+                    expiresAt: gateSessionResult.gateSession.expires_at,
+                  })
               : TICKET_MESSAGES.gateAdminCreateError,
             nextContext: adminReplyContext({
-              state: "admin_gate_menu",
+              state: kitchenMode ? "admin_kitchen_menu" : "admin_gate_menu",
               role: adminUser.role,
               sessionId: adminSession.id,
               adminUserId: adminUser.id,
@@ -11509,7 +11712,7 @@ export async function routeTicketMessage({
           };
         }
 
-        if (adminGate.mode === "revoke") {
+        if (adminGate.mode === "revoke" || adminGate.mode === "kitchen_revoke") {
           const result = await listGateAccesses({
             filter: "open",
             eventId,
@@ -11519,7 +11722,7 @@ export async function routeTicketMessage({
             return {
               reply: TICKET_MESSAGES.adminGenericError,
               nextContext: adminReplyContext({
-                state: "admin_gate_menu",
+                state: gateSubmenu.state,
                 role: adminUser.role,
                 sessionId: adminSession.id,
                 adminUserId: adminUser.id,
@@ -11602,7 +11805,7 @@ export async function routeTicketMessage({
           return {
             reply: TICKET_MESSAGES.adminGenericError,
             nextContext: adminReplyContext({
-              state: "admin_gate_menu",
+              state: gateSubmenu.state,
               role: adminUser.role,
               sessionId: adminSession.id,
               adminUserId: adminUser.id,
@@ -11684,7 +11887,7 @@ export async function routeTicketMessage({
           return {
             reply: TICKET_MESSAGES.adminGenericError,
             nextContext: adminReplyContext({
-              state: "admin_gate_menu",
+              state: gateSubmenu.state,
               role: adminUser.role,
               sessionId: adminSession.id,
               adminUserId: adminUser.id,
@@ -11723,7 +11926,7 @@ export async function routeTicketMessage({
             ? renderGateAccessPausedReply(selected)
             : TICKET_MESSAGES.adminGenericError,
           nextContext: adminReplyContext({
-            state: "admin_gate_menu",
+            state: gateSubmenu.state,
             role: adminUser.role,
             sessionId: adminSession.id,
             adminUserId: adminUser.id,
@@ -13391,7 +13594,7 @@ export async function routeTicketMessage({
         };
       }
 
-      if (mainMenuOption === 8) {
+      if (mainMenuOption === ADMIN_MAIN_EXIT_OPTION) {
         return endAdminSession();
       }
 
@@ -13439,7 +13642,7 @@ export async function routeTicketMessage({
       }
 
       if (typedMainMenuOption) {
-        if (typedMainMenuOption === 8) {
+        if (typedMainMenuOption === ADMIN_MAIN_EXIT_OPTION) {
           return endAdminSession();
         }
 
@@ -13838,7 +14041,7 @@ export async function routeTicketMessage({
         return buildAdminGateEventSelect({
           baseContext,
           scope: buildAdminEventScope(adminUser),
-          title: "CHECK-IN NESTE TELEFONE - ESCOLHA O EVENTO",
+          title: "LEITURA NESTE TELEFONE - ESCOLHA O EVENTO",
           mode: "self_checkin",
         });
       }
@@ -13850,7 +14053,7 @@ export async function routeTicketMessage({
         return buildAdminGateEventSelect({
           baseContext,
           scope: buildAdminEventScope(adminUser),
-          title: "CHECK-IN - ESCOLHA O EVENTO",
+          title: "LEITURA - ESCOLHA O EVENTO",
           nextState: "admin_gate_register_event_select",
           mode: "register",
         });
@@ -13877,6 +14080,55 @@ export async function routeTicketMessage({
           scope: buildAdminEventScope(adminUser),
           title: "REVOGAR ACESSOS - ESCOLHA O EVENTO",
           mode: "revoke",
+        });
+      }
+
+      if (
+        previousState.state === "admin_kitchen_menu" &&
+        submenuOption === 1
+      ) {
+        return buildAdminGateEventSelect({
+          baseContext,
+          scope: buildAdminEventScope(adminUser),
+          title: "COZINHA - ESCOLHA O EVENTO",
+          mode: "kitchen_self_checkin",
+        });
+      }
+
+      if (
+        previousState.state === "admin_kitchen_menu" &&
+        submenuOption === 2
+      ) {
+        return buildAdminGateEventSelect({
+          baseContext,
+          scope: buildAdminEventScope(adminUser),
+          title: "COZINHA - ESCOLHA O EVENTO",
+          nextState: "admin_gate_register_event_select",
+          mode: "kitchen_register",
+        });
+      }
+
+      if (
+        previousState.state === "admin_kitchen_menu" &&
+        submenuOption === 3
+      ) {
+        return buildAdminGateEventSelect({
+          baseContext,
+          scope: buildAdminEventScope(adminUser),
+          title: "COZINHA - ESCOLHA O EVENTO",
+          mode: "kitchen_list",
+        });
+      }
+
+      if (
+        previousState.state === "admin_kitchen_menu" &&
+        submenuOption === 4
+      ) {
+        return buildAdminGateEventSelect({
+          baseContext,
+          scope: buildAdminEventScope(adminUser),
+          title: "REVOGAR ACESSOS DE COZINHA - ESCOLHA O EVENTO",
+          mode: "kitchen_revoke",
         });
       }
 
@@ -13922,7 +14174,7 @@ export async function routeTicketMessage({
   }
 
   if (gateCommand) {
-    if (!gateCommand.valid && normalizeAdminText(text) === "portaria") {
+    if (!gateCommand.valid) {
       const accessResult = await findActiveGateAccessesForPhone(
         customer.whatsapp_phone,
       );
@@ -13931,12 +14183,16 @@ export async function routeTicketMessage({
         const access = accessResult.accesses[0];
 
         return {
-          reply: renderGateAccessPassphrasePrompt(access.eventTitle),
+          reply: renderGateAccessPassphrasePrompt(
+            access.eventTitle,
+            gateCommand.purpose,
+          ),
           nextContext: {
             ...baseContext,
             step: "gate_access_passphrase_collecting",
             state: "gate_access_passphrase_collecting",
             gateAccess: {
+              mode: gateCommand.purpose,
               selectedAccessId: access.id,
               lastAccesses: [
                 {
@@ -13958,6 +14214,7 @@ export async function routeTicketMessage({
             step: "gate_access_selecting",
             state: "gate_access_selecting",
             gateAccess: {
+              mode: gateCommand.purpose,
               lastAccesses: accessResult.accesses.map((access, index) => ({
                 option: index + 1,
                 gateAccessId: access.id,
@@ -14607,14 +14864,10 @@ export async function routeTicketMessage({
       sectionQuantityInCart + quantity >
         previousState.selectedSection.availableSeatsCount
     ) {
-      return {
-        reply: TICKET_MESSAGES.noSeatsAvailable,
-        nextContext: {
-          ...baseContext,
-          step: "selecting_quantity",
-          state: "selecting_quantity",
-        },
-      };
+      return renderNoSeatsWithAlternatives({
+        baseContext,
+        selectedEvent: previousState.selectedEvent,
+      });
     }
 
     if (previousState.selectedSection.hasNumberedSeats) {
@@ -14639,14 +14892,10 @@ export async function routeTicketMessage({
       };
 
       if (selectableSeatMap.availableSeats.length < quantity) {
-        return {
-          reply: TICKET_MESSAGES.noSeatsAvailable,
-          nextContext: {
-            ...baseContext,
-            step: "selecting_quantity",
-            state: "selecting_quantity",
-          },
-        };
+        return renderNoSeatsWithAlternatives({
+          baseContext,
+          selectedEvent: previousState.selectedEvent,
+        });
       }
 
       const seatsReply = formatSeatsReply({

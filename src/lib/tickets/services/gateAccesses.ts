@@ -7,6 +7,7 @@ import {
   verifyGateAccessPassphrase,
 } from "@/lib/tickets/services/gateAccessAuth";
 import {
+  buildKitchenUrl,
   createGateSession,
   normalizeGatePhone,
   type CreateGateSessionResult,
@@ -211,10 +212,12 @@ export async function createGateSessionForGateAccess(input: {
   accessId: string;
   validatorPhone: string;
   passphrase: string;
+  purpose?: "gate" | "kitchen";
 }): Promise<
   | {
       ok: true;
       gateUrl: string;
+      token: string;
       gateSession: Extract<CreateGateSessionResult, { ok: true }>["gateSession"];
       gateAccess: AdminGateAccessListItem;
     }
@@ -252,14 +255,16 @@ export async function createGateSessionForGateAccess(input: {
     return { ok: false, reason: "invalid_passphrase" };
   }
 
+  const purpose = input.purpose ?? "gate";
   const gateSessionResult = await createGateSession({
     validatorPhone: data.phone,
     validatorName: data.name,
     createdByAdminPhone: data.created_by_admin_phone ?? data.phone,
-    gateLabel: "Portaria",
+    gateLabel: purpose === "kitchen" ? "Cozinha" : "Portaria",
     eventId: data.event_id,
     sessionId: data.session_id,
     replaceActiveSessions: true,
+    ttlMinutes: purpose === "kitchen" ? 8 * 60 : undefined,
   });
 
   if (!gateSessionResult.ok) {
@@ -272,7 +277,11 @@ export async function createGateSessionForGateAccess(input: {
 
   return {
     ok: true,
-    gateUrl: gateSessionResult.gateUrl,
+    token: gateSessionResult.token,
+    gateUrl:
+      purpose === "kitchen"
+        ? buildKitchenUrl(gateSessionResult.token)
+        : gateSessionResult.gateUrl,
     gateSession: gateSessionResult.gateSession,
     gateAccess: toListItem(data),
   };

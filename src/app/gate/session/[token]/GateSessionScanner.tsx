@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
+import QrScanner from "qr-scanner";
 import BrandLogo from "@/app/BrandLogo";
 
 type GateSessionScannerProps = {
@@ -27,21 +28,9 @@ type GateSessionValidation =
       reason: string;
     };
 
-type BarcodeDetectorCtor = new (options?: {
-  formats?: string[];
-}) => {
-  detect(source: CanvasImageSource): Promise<Array<{ rawValue: string }>>;
-};
-
 const ALLOWED_SCAN_PAUSE_MS = 4_000;
 const REPEATED_SCAN_COOLDOWN_MS = 3_000;
 const ALLOWED_REPEAT_COOLDOWN_MS = 10_000;
-
-declare global {
-  interface Window {
-    BarcodeDetector?: BarcodeDetectorCtor;
-  }
-}
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -95,7 +84,6 @@ export function GateSessionScanner({
   const params = useParams<{ token?: string | string[] }>();
   const token = getRouteToken(params.token);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
   const lastScanRef = useRef<string | null>(null);
   const lastScanAtRef = useRef(0);
   const lastAllowedTokenRef = useRef<string | null>(null);
@@ -333,7 +321,9 @@ export function GateSessionScanner({
         }
       } catch {
         if (!cancelled) {
-          setValidation({ valid: false, reason: "request_failed" });
+          setCameraStatus(
+            "Sem conexão para atualizar a sessão. O leitor continuará tentando operar.",
+          );
         }
       } finally {
         if (!cancelled) {
@@ -361,7 +351,7 @@ export function GateSessionScanner({
     }
 
     let cancelled = false;
-    let animationFrame = 0;
+    let scanner: QrScanner | null = null;
 
     async function startCamera() {
       if (!navigator.mediaDevices?.getUserMedia) {
@@ -369,59 +359,32 @@ export function GateSessionScanner({
         return;
       }
 
-      if (!window.BarcodeDetector) {
-        setCameraStatus(
-          "Câmera pronta, mas leitura automática de QR não é suportada neste navegador. Use o campo manual abaixo.",
-        );
-      }
-
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: "environment",
-          },
-          audio: false,
-        });
-        streamRef.current = stream;
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-        }
-
-        if (!window.BarcodeDetector) {
-          return;
-        }
-
-        const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
-
-        const tick = async () => {
-          if (cancelled || !videoRef.current) {
-            return;
-          }
-
-          if (Date.now() < scanPausedUntilRef.current) {
-            animationFrame = window.requestAnimationFrame(tick);
-            return;
-          }
-
-          try {
-            const codes = await detector.detect(videoRef.current);
-            const rawValue = codes[0]?.rawValue;
-
-            if (rawValue) {
-              await submitScan(rawValue);
+        if (!videoRef.current) return;
+        scanner = new QrScanner(
+          videoRef.current,
+          (result) => {
+            if (
+              cancelled ||
+              Date.now() < scanPausedUntilRef.current ||
+              !result.data
+            ) {
+              return;
             }
-
-            setCameraStatus("Scanner ativo. Aponte para o QR Code do ingresso.");
-          } catch {
-            setCameraStatus("Câmera ativa. Aguardando QR Code legível.");
-          }
-
-          animationFrame = window.requestAnimationFrame(tick);
-        };
-
-        animationFrame = window.requestAnimationFrame(tick);
+            void submitScan(result.data);
+          },
+          {
+            preferredCamera: "environment",
+            returnDetailedScanResult: true,
+            highlightScanRegion: true,
+            highlightCodeOutline: true,
+            maxScansPerSecond: 12,
+          },
+        );
+        await scanner.start();
+        if (!cancelled) {
+          setCameraStatus("Scanner ativo. Aponte para o QR Code do ingresso.");
+        }
       } catch {
         setCameraStatus("Não foi possível acessar a câmera.");
       }
@@ -431,8 +394,8 @@ export function GateSessionScanner({
 
     return () => {
       cancelled = true;
-      window.cancelAnimationFrame(animationFrame);
-      streamRef.current?.getTracks().forEach((track) => track.stop());
+      scanner?.stop();
+      scanner?.destroy();
     };
   }, [submitScan, validation]);
 

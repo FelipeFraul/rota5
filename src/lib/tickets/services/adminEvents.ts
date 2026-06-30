@@ -47,6 +47,7 @@ export type AdminEventSummary = {
   venueId: string | null;
   venueName: string | null;
   createdAt: string;
+  wasEdited: boolean;
   createdByAdminUserId: string | null;
   createdByAdminPhone: string | null;
   sessionsCount: number;
@@ -83,6 +84,7 @@ type EventRow = {
   image_url: string | null;
   venue_id: string | null;
   created_at: string;
+  updated_at?: string | null;
   created_by_admin_user_id?: string | null;
   created_by_admin_phone?: string | null;
   venues?: {
@@ -554,6 +556,11 @@ function toSummary(event: EventRow, sessions: SessionRow[]): AdminEventSummary {
     venueId: event.venue_id,
     venueName: event.venues?.name ?? null,
     createdAt: event.created_at,
+    wasEdited:
+      Boolean(event.updated_at) &&
+      new Date(event.updated_at ?? event.created_at).getTime() -
+        new Date(event.created_at).getTime() >
+        5_000,
     createdByAdminUserId: event.created_by_admin_user_id ?? null,
     createdByAdminPhone: event.created_by_admin_phone ?? null,
     sessionsCount: eventSessions.length,
@@ -575,8 +582,8 @@ export async function listAdminEvents(input: {
       .from("events")
       .select(
         includeOwnership
-          ? "id, title, artist_name, description, city, state, status, image_url, venue_id, created_at, created_by_admin_user_id, created_by_admin_phone, venues(name)"
-          : "id, title, artist_name, description, city, state, status, image_url, venue_id, created_at, venues(name)",
+          ? "id, title, artist_name, description, city, state, status, image_url, venue_id, created_at, updated_at, created_by_admin_user_id, created_by_admin_phone, venues(name)"
+          : "id, title, artist_name, description, city, state, status, image_url, venue_id, created_at, updated_at, venues(name)",
       );
 
     if (input.status && input.status !== "all") {
@@ -626,6 +633,10 @@ export async function listAdminEvents(input: {
   const summaries = eventRows
     .map((event) => toSummary(event, sessions ?? []))
     .sort((left, right) => {
+      if (input.status === "all" && left.wasEdited !== right.wasEdited) {
+        return left.wasEdited ? 1 : -1;
+      }
+
       const leftTime = left.nextSessionStartsAt
         ? new Date(left.nextSessionStartsAt).getTime()
         : Number.MAX_SAFE_INTEGER;
@@ -2205,10 +2216,20 @@ export async function updateAdminPrice(
   }>,
 ) {
   const supabase = getSupabaseAdmin();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("ticket_prices")
     .update(values)
-    .eq("id", priceId);
+    .eq("id", priceId)
+    .select("id, price_cents, fee_cents, status")
+    .maybeSingle<{
+      id: string;
+      price_cents: number;
+      fee_cents: number;
+      status: AdminTicketPriceStatus;
+    }>();
 
-  return error ? { ok: false as const, error } : { ok: true as const };
+  if (error) return { ok: false as const, reason: "update_failed" as const, error };
+  if (!data) return { ok: false as const, reason: "not_found" as const };
+
+  return { ok: true as const, price: data };
 }

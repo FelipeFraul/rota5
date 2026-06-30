@@ -1,5 +1,8 @@
 import { getEnv } from "@/lib/env";
-import { getPublicComboCheckoutOrder } from "@/lib/tickets/services/comboOffers";
+import {
+  formatComboDescription,
+  getPublicComboCheckoutOrder,
+} from "@/lib/tickets/services/comboOffers";
 import BrandLogo from "@/app/BrandLogo";
 import ComboCheckoutClient from "./combo-checkout-client";
 
@@ -63,7 +66,7 @@ export default async function ComboCheckoutPage({
         eventDate: order.event.startsAt,
         offer: {
           name: order.offer.name,
-          description: order.offer.description,
+          description: formatComboDescription(order.offer.description),
           imageUrl: order.offer.imageUrl,
           quantity: order.offer.quantity,
           unitPriceLabel: formatCurrency(order.offer.unitPriceCents),

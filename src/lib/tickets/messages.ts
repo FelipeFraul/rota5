@@ -20,7 +20,7 @@ export const TICKET_MESSAGES = {
   sectionUnavailable:
     "Esse setor não está mais disponível. Escolha outro setor ou faça uma nova busca.",
   noSeatsAvailable:
-    "Não encontrei assentos disponíveis nesse setor no momento. Escolha outro setor ou faça uma nova busca.",
+    "*SEM DISPONIBILIDADE*\n\nNão há ingressos suficientes nesse setor para a quantidade solicitada. Veja abaixo outras opções disponíveis.",
   unnumberedSectionPending:
     "Digite o número de ingressos para compra, ex: 2",
   seatInvalidOption:
@@ -55,7 +55,7 @@ export const TICKET_MESSAGES = {
   freeTicketGenericError:
     "Não consegui emitir o ingresso gratuito agora. Tente novamente em instantes.",
   gateAdminInvalidCommand:
-    "Para criar acesso de portaria, entre no admin, escolha Portaria e depois Check-in.",
+    "Para criar acesso de portaria ou cozinha, entre no admin, escolha Portaria e cozinha e gere os links de leitura.",
   gateAdminOptionInvalid:
     "Não encontrei essa opção de portaria. Responda com um número do menu.",
   gateAdminCreateError:

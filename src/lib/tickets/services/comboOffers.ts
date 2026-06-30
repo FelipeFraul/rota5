@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
+import { createHash, randomBytes, timingSafeEqual } from "crypto";
 import QRCode from "qrcode";
 import { createMercadoPagoPayment } from "@/lib/mercado-pago/client";
 import { getEnv } from "@/lib/env";
@@ -14,7 +14,21 @@ import { sendZapiImage, sendZapiText } from "@/lib/zapi/client";
 const PROVIDER = "mercado_pago";
 const COMBO_ORDER_REFERENCE_PREFIX = "combo_order_";
 const CHECKOUT_TTL_MINUTES = 30;
+const EVENT_OFFER_LOOKAHEAD_MINUTES = 24 * 60;
+const EVENT_OFFER_SEND_GRACE_MINUTES = 5;
+const CUSTOM_OFFER_LOOKBACK_MINUTES = 180;
+const CUSTOM_OFFER_SEND_GRACE_MINUTES = 30;
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
+
+export function formatComboDescription(value: string) {
+  return value
+    .replace(/\\n/g, "\n")
+    .replace(/\s*>\s*/g, "\n")
+    .split(/\r?\n/)
+    .map((line) => line.trim().replace(/^[-•]\s*/, ""))
+    .filter(Boolean)
+    .join("\n");
+}
 
 export type ComboOfferTimingType =
   | "three_hours_before"
@@ -35,6 +49,9 @@ export type ComboOfferSummary = {
   priceCents: number;
   status: "active" | "paused" | "deleted";
   sendTimingType: ComboOfferTimingType;
+  sendOffsetMinutes: number | null;
+  sendTimeOfDay: string | null;
+  sendWeekdays: number[];
   scopes: string[];
 };
 
@@ -125,37 +142,16 @@ function hashSecret(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function buildComboCheckoutToken({
-  orderId,
-  expiresAt,
-  secret,
-}: {
-  orderId: string;
-  expiresAt: string;
-  secret: string;
-}) {
-  return createHmac("sha256", secret)
-    .update(`combo:${orderId}:${expiresAt}`)
-    .digest("base64url");
+function buildComboCheckoutToken() {
+  return randomBytes(32).toString("base64url");
 }
 
-function isCheckoutTokenValid({
-  orderId,
-  expiresAt,
-  token,
-  secret,
-}: {
-  orderId: string;
-  expiresAt: string;
-  token: string;
-  secret: string;
-}) {
-  if (!token) return false;
-  const expected = buildComboCheckoutToken({ orderId, expiresAt, secret });
-  const received = Buffer.from(token);
-  const expectedBuffer = Buffer.from(expected);
+function checkoutTokenHashMatches(token: string, storedHash: string | null) {
+  if (!token || !storedHash) return false;
+  const received = Buffer.from(hashSecret(token), "hex");
+  const expected = Buffer.from(storedHash, "hex");
 
-  return received.length === expectedBuffer.length && timingSafeEqual(received, expectedBuffer);
+  return received.length === expected.length && timingSafeEqual(received, expected);
 }
 
 export function buildComboOrderExternalReference(orderId: string) {
@@ -257,7 +253,7 @@ export async function createComboOffer({
   adminPhone?: string | null;
 }) {
   const trimmedName = name.trim();
-  const trimmedDescription = description.trim();
+  const trimmedDescription = formatComboDescription(description);
   const normalizedImageUrl = normalizeOptionalImageUrl(imageUrl);
 
   if (
@@ -360,6 +356,9 @@ export async function listComboOffers({
     priceCents: offer.price_cents,
     status: offer.status,
     sendTimingType: offer.send_timing_type,
+    sendOffsetMinutes: offer.send_offset_minutes,
+    sendTimeOfDay: offer.send_time_of_day,
+    sendWeekdays: offer.send_weekdays ?? [],
     scopes: scopesByOffer.get(offer.id) ?? [],
   }));
 
@@ -404,7 +403,7 @@ export async function updateComboOfferDetails({
   }
 
   if (description !== undefined) {
-    const trimmed = description.trim();
+    const trimmed = formatComboDescription(description);
     if (!trimmed) return { ok: false as const, reason: "invalid_input" as const };
     payload.description = trimmed;
   }
@@ -502,16 +501,56 @@ export function buildComboOfferListText(offers: ComboOfferSummary[]) {
   if (offers.length === 0) return "Nenhuma oferta cadastrada.";
 
   return offers
-    .map((offer, index) =>
-      [
+    .map((offer, index) => {
+      const customerPreview = buildComboOfferMessage({
+        offer: {
+          name: offer.name,
+          description: offer.description,
+          price_cents: offer.priceCents,
+        },
+        eventTitle: "NOME DO EVENTO",
+        checkoutUrl: "LINK DE CHECKOUT",
+      });
+
+      return [
         `${index + 1}. ${offer.name}`,
+        "",
+        "*Mensagem 1/2 - como o usuario recebe:*",
+        customerPreview,
+        "",
+        "*Mensagem 2/2 - informacoes da oferta:*",
+        `ID: ${offer.id}`,
+        `Nome: ${offer.name}`,
+        `Descricao: ${offer.description}`,
         `Status: ${offer.status}`,
         `Valor: ${formatCurrency(offer.priceCents)}`,
         `Foto: ${offer.imageUrl ? "cadastrada" : "ausente"}`,
+        ...(offer.imageUrl ? [`URL da foto: ${offer.imageUrl}`] : []),
         `Uso: ${offer.scopes.join(", ") || "Sem escopo"}`,
-      ].join("\n"),
-    )
+        `Quando enviar: ${formatComboOfferTiming(offer)}`,
+      ].join("\n");
+    })
     .join("\n\n");
+}
+
+function formatComboOfferTiming(
+  offer: Pick<
+    ComboOfferSummary,
+    "sendTimingType" | "sendOffsetMinutes" | "sendTimeOfDay" | "sendWeekdays"
+  >,
+) {
+  if (offer.sendTimingType === "three_hours_before") return "3h antes do evento";
+  if (offer.sendTimingType === "one_hour_before") return "1h antes do evento";
+  if (offer.sendTimingType === "event_day_noon") return "No dia do evento as 12h";
+
+  const parts = [
+    "Horario personalizado",
+    offer.sendOffsetMinutes !== null ? `${offer.sendOffsetMinutes} min` : null,
+    offer.sendTimeOfDay ? `as ${offer.sendTimeOfDay}` : null,
+    offer.sendWeekdays.length ? `dias ${offer.sendWeekdays.join(", ")}` : null,
+  ].filter(Boolean);
+
+  return parts.join(" - ");
 }
 
 async function loadOfferForSession(offerId: string, eventId: string, sessionId: string) {
@@ -574,11 +613,7 @@ export async function createComboOrderForCheckout({
   if (error) return { ok: false as const, reason: "database_error" as const, error };
 
   const externalReference = buildComboOrderExternalReference(order.id);
-  const token = buildComboCheckoutToken({
-    orderId: order.id,
-    expiresAt: checkoutExpiresAt,
-    secret: getEnv().CHECKOUT_INTERNAL_SECRET,
-  });
+  const token = buildComboCheckoutToken();
   const checkoutUrl = buildComboCheckoutUrl(order.id, token);
 
   const updateResult = await supabase
@@ -610,15 +645,7 @@ export async function getPublicComboCheckoutOrder(orderId: string, token: string
 
   if (error || !order || order.status !== "pending_payment") return null;
   if (new Date(order.checkout_expires_at).getTime() <= Date.now()) return null;
-  if (
-    !isCheckoutTokenValid({
-      orderId,
-      expiresAt: order.checkout_expires_at,
-      token,
-      secret: getEnv().CHECKOUT_INTERNAL_SECRET,
-    }) ||
-    order.checkout_token_hash !== hashSecret(token)
-  ) {
+  if (!checkoutTokenHashMatches(token, order.checkout_token_hash)) {
     return null;
   }
 
@@ -816,7 +843,7 @@ function formatEventDate(startsAt: string) {
   }).format(new Date(startsAt));
 }
 
-async function generateComboQrImage(token: string) {
+export async function generateComboQrImage(token: string) {
   const buffer = await QRCode.toBuffer(token, {
     color: {
       dark: "#DC2626",
@@ -909,8 +936,6 @@ export async function deliverComboOrder(orderId: string) {
     `> Data: ${formatEventDate(order.event_sessions.starts_at)}`,
     `> Local: ${event.venues?.name ?? "Black House"} - ${event.city}/${event.state}`,
     `> Código: ${redemptionCode}`,
-    "",
-    "Apresente o QR Code vermelho no bar para retirar seu combo.",
   ].join("\n");
   const textResult = await sendZapiText({ phone, message });
 
@@ -1033,7 +1058,7 @@ export async function expireComboOrders(limit = 100) {
   return ids.length;
 }
 
-export async function findActiveComboOfferForEventSession(eventId: string, startsAt: string) {
+export async function listActiveComboOffersForEventSession(eventId: string, startsAt: string) {
   const weekday = new Intl.DateTimeFormat("en-US", {
     timeZone: SAO_PAULO_TIME_ZONE,
     weekday: "short",
@@ -1047,11 +1072,10 @@ export async function findActiveComboOfferForEventSession(eventId: string, start
       referencedTable: "combo_offer_scopes",
     })
     .order("created_at", { ascending: false })
-    .limit(1)
     .returns<Array<ComboOfferRow & { combo_offer_scopes: ComboOfferScopeRow[] }>>();
 
   if (error) throw error;
-  return data?.[0] ?? null;
+  return data ?? [];
 }
 
 export function shouldSendComboOfferNow(
@@ -1071,8 +1095,11 @@ export function shouldSendComboOfferNow(
 
     const target = purchaseTime + offset * 60_000;
 
-    return current >= target && current < target + 5 * 60_000;
+    return current >= target && current < target + CUSTOM_OFFER_SEND_GRACE_MINUTES * 60_000;
   }
+
+  const eventWindowStart = start - EVENT_OFFER_LOOKAHEAD_MINUTES * 60_000;
+  if (current < eventWindowStart || current >= start) return false;
 
   if (offer.send_timing_type === "event_day_noon") {
     const parts = new Intl.DateTimeFormat("en-CA", {
@@ -1100,7 +1127,7 @@ export function shouldSendComboOfferNow(
   const offset = offer.send_offset_minutes ?? (offer.send_timing_type === "one_hour_before" ? 60 : 180);
   const target = start - offset * 60_000;
 
-  return current >= target && current < target + 5 * 60_000;
+  return current >= target && current < target + EVENT_OFFER_SEND_GRACE_MINUTES * 60_000;
 }
 
 export function buildComboOfferMessage({
@@ -1118,10 +1145,12 @@ export function buildComboOfferMessage({
     `Você tem ingresso para ${eventTitle}.`,
     "",
     `*${offer.name}*`,
-    offer.description,
+    ...formatComboDescription(offer.description)
+      .split("\n")
+      .map((item) => `- ${item}`),
     `Valor: ${formatCurrency(offer.price_cents)}`,
     "",
-    `Comprar agora: ${checkoutUrl}`,
+    `Voce tem 30 min para realizar a compra desta oferta: ${checkoutUrl}`,
   ].join("\n");
 }
 
@@ -1140,13 +1169,10 @@ export async function getComboCheckoutStatus(orderId: string, checkoutToken: str
   if (error) throw error;
   if (!data) return null;
 
-  const tokenMatches =
-    isCheckoutTokenValid({
-      orderId,
-      expiresAt: data.checkout_expires_at,
-      token: checkoutToken,
-      secret: getEnv().CHECKOUT_INTERNAL_SECRET,
-    }) && data.checkout_token_hash === hashSecret(checkoutToken);
+  const tokenMatches = checkoutTokenHashMatches(
+    checkoutToken,
+    data.checkout_token_hash,
+  );
 
   if (!tokenMatches) return null;
 
@@ -1187,26 +1213,65 @@ async function loadSentComboOfferKeys(sourceTicketIds: string[]) {
   return keys;
 }
 
+function mergeComboOfferCandidateTickets(
+  ...groups: Array<ComboOfferCandidateTicketRow[] | null | undefined>
+) {
+  const byId = new Map<string, ComboOfferCandidateTicketRow>();
+
+  for (const group of groups) {
+    for (const ticket of group ?? []) {
+      byId.set(ticket.id, ticket);
+    }
+  }
+
+  return Array.from(byId.values()).sort(
+    (left, right) =>
+      new Date(left.issued_at).getTime() - new Date(right.issued_at).getTime(),
+  );
+}
+
 export async function sendScheduledComboOffers(limit = 100) {
   await expireComboOrders(limit);
 
   const now = new Date();
-  const from = new Date(now.getTime() - 10 * 60_000).toISOString();
-  const to = new Date(now.getTime() + 3 * 60 * 60_000 + 10 * 60_000).toISOString();
-  const { data, error } = await getSupabaseAdmin()
+  const eventWindowFrom = now.toISOString();
+  const eventWindowTo = new Date(
+    now.getTime() + EVENT_OFFER_LOOKAHEAD_MINUTES * 60_000,
+  ).toISOString();
+  const recentPurchaseFrom = new Date(
+    now.getTime() - CUSTOM_OFFER_LOOKBACK_MINUTES * 60_000,
+  ).toISOString();
+  const supabase = getSupabaseAdmin();
+  const [
+    { data: eventWindowTickets, error: eventWindowError },
+    { data: recentPurchaseTickets, error: recentPurchaseError },
+  ] = await Promise.all([
+    supabase
     .from("tickets")
     .select("id, customer_id, issued_at, customers(whatsapp_phone), orders!inner(status), event_sessions!inner(id, event_id, starts_at, events!inner(id, title))")
     .eq("status", "issued")
     .eq("orders.status", "paid")
-    .gte("event_sessions.starts_at", from)
-    .lte("event_sessions.starts_at", to)
+    .gte("event_sessions.starts_at", eventWindowFrom)
+    .lte("event_sessions.starts_at", eventWindowTo)
     .order("issued_at", { ascending: true })
     .limit(limit)
-    .returns<ComboOfferCandidateTicketRow[]>();
+      .returns<ComboOfferCandidateTicketRow[]>(),
+    supabase
+      .from("tickets")
+      .select("id, customer_id, issued_at, customers(whatsapp_phone), orders!inner(status), event_sessions!inner(id, event_id, starts_at, events!inner(id, title))")
+      .eq("status", "issued")
+      .eq("orders.status", "paid")
+      .gte("issued_at", recentPurchaseFrom)
+      .gte("event_sessions.starts_at", eventWindowFrom)
+      .order("issued_at", { ascending: true })
+      .limit(limit)
+      .returns<ComboOfferCandidateTicketRow[]>(),
+  ]);
 
+  const error = eventWindowError ?? recentPurchaseError;
   if (error) throw error;
 
-  const tickets = data ?? [];
+  const tickets = mergeComboOfferCandidateTickets(eventWindowTickets, recentPurchaseTickets);
   const sentKeys = await loadSentComboOfferKeys(tickets.map((ticket) => ticket.id));
   let sentCount = 0;
   let failedCount = 0;
@@ -1222,110 +1287,117 @@ export async function sendScheduledComboOffers(limit = 100) {
       continue;
     }
 
-    const offer = await findActiveComboOfferForEventSession(
+    const offers = await listActiveComboOffersForEventSession(
       session.event_id,
       session.starts_at,
     );
 
-    if (!offer || !shouldSendComboOfferNow(offer, session.starts_at, now, ticket.issued_at)) {
+    if (!offers.length) {
       skippedCount += 1;
       continue;
     }
 
-    const dedupeKey = `${ticket.id}:${offer.id}`;
-    if (sentKeys.has(dedupeKey)) {
-      skippedCount += 1;
-      continue;
-    }
+    for (const offer of offers) {
+      if (!shouldSendComboOfferNow(offer, session.starts_at, now, ticket.issued_at)) {
+        skippedCount += 1;
+        continue;
+      }
 
-    const checkout = await createComboOrderForCheckout({
-      offerId: offer.id,
-      customerId: ticket.customer_id,
-      eventId: session.event_id,
-      sessionId: session.id,
-      sourceTicketId: ticket.id,
-    });
+      const dedupeKey = `${ticket.id}:${offer.id}`;
+      if (sentKeys.has(dedupeKey)) {
+        skippedCount += 1;
+        continue;
+      }
 
-    if (!checkout.ok) {
-      failedCount += 1;
-      logWarn("Skipped combo offer without checkout", {
-        ticketId: ticket.id,
+      const checkout = await createComboOrderForCheckout({
         offerId: offer.id,
-        reason: checkout.reason,
+        customerId: ticket.customer_id,
+        eventId: session.event_id,
+        sessionId: session.id,
+        sourceTicketId: ticket.id,
       });
-      continue;
-    }
 
-    const conversationResult = await getOrCreateOpenConversation({
-      customerId: ticket.customer_id,
-    });
+      if (!checkout.ok) {
+        failedCount += 1;
+        logWarn("Skipped combo offer without checkout", {
+          ticketId: ticket.id,
+          offerId: offer.id,
+          reason: checkout.reason,
+        });
+        continue;
+      }
 
-    if (!conversationResult.ok) {
-      failedCount += 1;
-      logWarn("Skipped combo offer without conversation", {
-        ticketId: ticket.id,
-        offerId: offer.id,
-        code: conversationResult.error.code,
+      const conversationResult = await getOrCreateOpenConversation({
+        customerId: ticket.customer_id,
       });
-      continue;
-    }
 
-    const message = buildComboOfferMessage({
-      offer,
-      eventTitle: event.title,
-      checkoutUrl: checkout.checkoutUrl,
-    });
-    const sendResult = offer.image_url
-      ? await sendZapiImage({
-          phone,
-          image: offer.image_url,
-          caption: message,
-          ensureTitle: true,
-        })
-      : await sendZapiText({ phone, message });
-    const messageType = offer.image_url ? "image" : "text";
-    const saveResult = await saveWhatsAppMessage({
-      conversationId: conversationResult.conversation.id,
-      customerId: ticket.customer_id,
-      direction: "outbound",
-      messageType,
-      body: message,
-      providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
-      rawMetadata: {
-        provider: "zapi",
-        message_type: messageType,
-        offer_image_url: offer.image_url,
-        send_status: sendResult.ok ? "sent" : "failed",
-        reason: "combo_offer",
-        source_ticket_id: ticket.id,
-        offer_id: offer.id,
-        combo_order_id: checkout.orderId,
-        event_id: session.event_id,
-        session_id: session.id,
-        customer_id: ticket.customer_id,
-        ...(sendResult.ok ? {} : { error: sendResult.error }),
-      },
-    });
+      if (!conversationResult.ok) {
+        failedCount += 1;
+        logWarn("Skipped combo offer without conversation", {
+          ticketId: ticket.id,
+          offerId: offer.id,
+          code: conversationResult.error.code,
+        });
+        continue;
+      }
 
-    if (!saveResult.ok) {
-      failedCount += 1;
-      logWarn("Failed to save combo offer message", {
-        ticketId: ticket.id,
-        offerId: offer.id,
-        code: saveResult.error?.code,
+      const message = buildComboOfferMessage({
+        offer,
+        eventTitle: event.title,
+        checkoutUrl: checkout.checkoutUrl,
       });
-      continue;
-    }
+      const sendResult = offer.image_url
+        ? await sendZapiImage({
+            phone,
+            image: offer.image_url,
+            caption: message,
+            ensureTitle: true,
+          })
+        : await sendZapiText({ phone, message });
+      const messageType = offer.image_url ? "image" : "text";
+      const saveResult = await saveWhatsAppMessage({
+        conversationId: conversationResult.conversation.id,
+        customerId: ticket.customer_id,
+        direction: "outbound",
+        messageType,
+        body: message,
+        providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
+        rawMetadata: {
+          provider: "zapi",
+          message_type: messageType,
+          offer_image_url: offer.image_url,
+          send_status: sendResult.ok ? "sent" : "failed",
+          reason: "combo_offer",
+          source_ticket_id: ticket.id,
+          offer_id: offer.id,
+          combo_order_id: checkout.orderId,
+          event_id: session.event_id,
+          session_id: session.id,
+          customer_id: ticket.customer_id,
+          ...(sendResult.ok ? {} : { error: sendResult.error }),
+        },
+      });
 
-    await updateConversationAfterMessage({
-      conversationId: conversationResult.conversation.id,
-    });
+      if (!saveResult.ok) {
+        failedCount += 1;
+        logWarn("Failed to save combo offer message", {
+          ticketId: ticket.id,
+          offerId: offer.id,
+          code: saveResult.error?.code,
+        });
+        continue;
+      }
 
-    if (sendResult.ok) {
-      sentCount += 1;
-      sentKeys.add(dedupeKey);
-    } else {
-      failedCount += 1;
+      await updateConversationAfterMessage({
+        conversationId: conversationResult.conversation.id,
+      });
+
+      if (sendResult.ok) {
+        sentCount += 1;
+        sentKeys.add(dedupeKey);
+      } else {
+        failedCount += 1;
+      }
     }
   }
 
