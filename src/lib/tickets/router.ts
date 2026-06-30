@@ -316,7 +316,7 @@ type RouteTicketMessageInput = {
   sourceIdentifier?: string | null;
 };
 
-type RouteTicketMessageOutput = {
+export type RouteTicketMessageOutput = {
   reply: string;
   suppressTitle?: boolean;
   outboundMessages?: Array<

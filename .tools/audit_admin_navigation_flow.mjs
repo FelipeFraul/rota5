@@ -54,7 +54,7 @@ const testEnv = {
   ZAPI_INSTANCE_TOKEN: "audit-token",
   ZAPI_CLIENT_TOKEN: "audit-client",
   ADMIN_ROOT_WHATSAPP_PHONES: ROOT_PHONE,
-  ADMIN_SESSION_TTL_MINUTES: "60",
+  ADMIN_SESSION_TTL_MINUTES: "1440",
   CHECKOUT_INTERNAL_SECRET:
     fileEnv.CHECKOUT_INTERNAL_SECRET || "audit-checkout-internal-secret",
   PAYMENT_PROVIDER: fileEnv.PAYMENT_PROVIDER || "mercado_pago",
@@ -339,8 +339,8 @@ async function waitForHealth() {
 
 async function startNextDev() {
   const child = spawn(
-    "npm",
-    ["run", "dev", "--", "--hostname", "127.0.0.1", "--port", String(PORT)],
+    process.execPath,
+    ["node_modules/next/dist/bin/next", "dev", "--hostname", "127.0.0.1", "--port", String(PORT)],
     {
       cwd: process.cwd(),
       env: testEnv,
@@ -392,8 +392,21 @@ async function sendMessage(phone, text) {
 }
 
 async function login(phone) {
-  assertIncludes((await sendMessage(phone, "admin")).text, "palavra-chave", `${phone} pede senha`);
-  return sendMessage(phone, PASS);
+  const prompt = await sendMessage(phone, "admin");
+  assertIncludes(prompt.text, "LOGIN ADMINISTRATIVO", `${phone} recebe login tokenizado`);
+  const loginUrl = prompt.text.match(/https?:\/\/\S+\/admin\/login\/[^\s]+/)?.[0];
+  assert(loginUrl, `${phone} recebe link temporário`);
+  const response = await fetch(`${APP_BASE_URL}/api/admin/login/verify`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      token: loginUrl.split("/").pop(),
+      passphrase: PASS,
+    }),
+  });
+  const body = await response.json();
+  assert(response.ok && /^\d{6}$/.test(body.code), `${phone} recebe código único`);
+  return sendMessage(phone, body.code);
 }
 
 async function expireRootSession() {
@@ -431,48 +444,69 @@ async function main() {
     nextChild = await startNextDev();
 
     const rootMenu = (await login(ROOT_PHONE)).text;
-    assertIncludes(rootMenu, "> 1. Meus eventos", "A) Diretor vê Meus eventos");
-    assertIncludes(rootMenu, "> 5. Administradores", "A) Diretor vê menu completo");
+    assertIncludes(rootMenu, "Digite 1 para meus eventos", "A) Diretor vê Meus eventos");
+    assertIncludes(rootMenu, "Digite 7 para administradores", "A) Diretor vê menu completo");
     assertIncludes((await sendMessage(ROOT_PHONE, "1")).text, "MEUS EVENTOS", "A) número 1 abre Meus eventos no menu principal");
 
     const managerMenu = (await login(MANAGER_PHONE)).text;
     assertNotIncludes(managerMenu, "Administradores", "B) Gerente não vê Administradores");
     assertIncludes((await sendMessage(MANAGER_PHONE, "administradores")).text, "Essa opção não está disponível", "B/I) Gerente não acessa Administradores por palavra");
     assertIncludes((await sendMessage(MANAGER_PHONE, "menu")).text, "MENU ADMIN", "Gerente volta ao menu");
-    assertIncludes((await sendMessage(MANAGER_PHONE, "5")).text, "Essa opção não está disponível", "B/H) Gerente não acessa Administradores por número");
 
     const operatorMenu = (await login(OPERATOR_PHONE)).text;
-    assertIncludes(operatorMenu, "> 3. Cortesias", "C) Operador vê Cortesias");
-    assertIncludes(operatorMenu, "> 6. Relatórios", "C) Operador vê Relatórios");
+    assertIncludes(operatorMenu, "cortesias", "C) Operador vê Cortesias");
+    assertIncludes(operatorMenu, "relatórios", "C) Operador vê Relatórios");
     assertNotIncludes(operatorMenu, "Meus eventos", "C) Operador não vê Meus eventos");
-    assertIncludes((await sendMessage(OPERATOR_PHONE, "3")).text, "CORTESIAS", "C) Operador usa número exibido para Cortesias");
+    assertIncludes((await sendMessage(OPERATOR_PHONE, "cortesias")).text, "CORTESIAS", "C) Operador abre Cortesias");
     assertIncludes((await sendMessage(OPERATOR_PHONE, "relatorio")).text, "RELATÓRIOS", "C/G) Operador acessa Relatórios por palavra");
     assertIncludes((await sendMessage(OPERATOR_PHONE, "evento")).text, "Essa opção não está disponível", "E/F) Operador não acessa eventos por palavra");
     assertIncludes((await sendMessage(OPERATOR_PHONE, "menu")).text, "MENU ADMIN", "C) Operador volta ao menu principal");
-    assertIncludes((await sendMessage(OPERATOR_PHONE, "4")).text, "Essa opção não está disponível", "G) Operador não acessa Portaria por número");
     assertIncludes((await sendMessage(OPERATOR_PHONE, "portaria")).text, "Essa opção não está disponível", "G) Operador não acessa Portaria por palavra");
 
     assertIncludes((await sendMessage(ROOT_PHONE, "1")).text, "LISTAR MEUS EVENTOS", "D) dentro de Meus eventos, 1 abre listar eventos");
-    assertIncludes((await sendMessage(ROOT_PHONE, "1")).text, "EVENTOS ENCONTRADOS", "D) filtro 1 lista eventos ativos");
+    const eventsListScreen = await sendMessage(ROOT_PHONE, "1");
+    assertIncludes(eventsListScreen.text, "EVENTOS ENCONTRADOS", "D) filtro 1 lista eventos ativos");
     const detail = await sendMessage(ROOT_PHONE, `${PREFIX} Evento`);
     assertIncludes(detail.text, `${PREFIX} Evento`, "D/I) número na lista abre detalhe do evento");
-    assertIncludes((await sendMessage(ROOT_PHONE, "Voltar")).text, "EVENTOS ENCONTRADOS", "H/I) Voltar do detalhe retorna para a lista");
+    const listAfterBack = await sendMessage(ROOT_PHONE, "Voltar");
+    assertIncludes(listAfterBack.text, "EVENTOS ENCONTRADOS", "H/I) Voltar do detalhe retorna para a lista");
+    assert(
+      listAfterBack.text === eventsListScreen.text,
+      "H/I) Voltar restaura exatamente a lista exibida na ida",
+    );
 
     assertIncludes((await sendMessage(ROOT_PHONE, "evento")).text, "MEUS EVENTOS", "G) troca por palavra para Meus eventos");
     assertIncludes((await sendMessage(ROOT_PHONE, "3")).text, "ESCOLHA O EVENTO PARA EDITAR", "I) editar evento lista eventos");
     assertIncludes((await sendMessage(ROOT_PHONE, `${PREFIX} Evento`)).text, "EDITAR MEU EVENTO", "I) seleciona evento para edição");
-    assertIncludes((await sendMessage(ROOT_PHONE, "10")).text, "VALORES DE VENDA", "I) entra em Valores de venda");
-    assertIncludes((await sendMessage(ROOT_PHONE, "1")).text, "Preços de", "I) lista preços");
-    assertIncludes((await sendMessage(ROOT_PHONE, "Voltar")).text, "VALORES DE VENDA", "I) Voltar da lista de preços retorna a Valores de venda");
+    const pricesMenuScreen = await sendMessage(ROOT_PHONE, "10");
+    assertIncludes(pricesMenuScreen.text, "EDITAR VALORES", "I) entra em Valores de venda");
+    assertIncludes((await sendMessage(ROOT_PHONE, "1")).text, "Valores de", "I) lista preços");
+    const pricesAfterBack = await sendMessage(ROOT_PHONE, "Voltar");
+    assertIncludes(pricesAfterBack.text, "EDITAR VALORES", "I) Voltar da lista de preços retorna a Valores de venda");
+    assert(
+      pricesAfterBack.text === pricesMenuScreen.text,
+      "I) Voltar restaura exatamente o menu de valores exibido na ida",
+    );
 
-    assertIncludes((await sendMessage(ROOT_PHONE, "portaria")).text, "PORTARIA", "G) troca por palavra para Portaria");
-    assertIncludes((await sendMessage(ROOT_PHONE, "1")).text, "CHECK-IN NESTE TELEFONE", "E) dentro de Portaria, 1 inicia check-in neste telefone");
-    assertIncludes((await sendMessage(ROOT_PHONE, "Voltar")).text, "PORTARIA", "H) Voltar da escolha de evento retorna Portaria");
-    assertIncludes((await sendMessage(ROOT_PHONE, "3")).text, "PORTARIA - ESCOLHA O EVENTO", "J) Ver acessos pede evento");
-    assertIncludes((await sendMessage(ROOT_PHONE, `${PREFIX} Evento`)).text, "VER TODOS OS ACESSOS", "J) escolher evento mostra filtros");
+    const gateMenuScreen = await sendMessage(ROOT_PHONE, "portaria");
+    assertIncludes(gateMenuScreen.text, "PORTARIA", "G) troca por palavra para Portaria");
+    assertIncludes((await sendMessage(ROOT_PHONE, "1")).text, "LEITURA NESTE TELEFONE", "E) dentro de Portaria, 1 inicia check-in neste telefone");
+    const gateAfterBack = await sendMessage(ROOT_PHONE, "Voltar");
+    assertIncludes(gateAfterBack.text, "PORTARIA", "H) Voltar da escolha de evento retorna Portaria");
+    assert(
+      gateAfterBack.text === gateMenuScreen.text,
+      "H) Voltar restaura exatamente o menu de Portaria exibido na ida",
+    );
+    const accessEventScreen = await sendMessage(ROOT_PHONE, "3");
+    assertIncludes(accessEventScreen.text, "PORTARIA - ESCOLHA O EVENTO", "J) Ver acessos pede evento");
+    const accessFilterScreen = await sendMessage(ROOT_PHONE, `${PREFIX} Evento`);
+    assertIncludes(accessFilterScreen.text, "VER TODOS OS ACESSOS", "J) escolher evento mostra filtros");
     assertIncludes((await sendMessage(ROOT_PHONE, "1")).text, "ACESSOS ATIVOS", "J) filtro ativos lista acessos");
-    assertIncludes((await sendMessage(ROOT_PHONE, "Voltar")).text, "PORTARIA - ESCOLHA O EVENTO", "J) Voltar de acessos ativos retorna escolha de evento");
-    assertIncludes((await sendMessage(ROOT_PHONE, "Voltar")).text, "PORTARIA", "J) Voltar da escolha retorna Portaria");
+    const filterAfterBack = await sendMessage(ROOT_PHONE, "Voltar");
+    assert(filterAfterBack.text === accessFilterScreen.text, "J) Voltar de acessos ativos restaura exatamente os filtros");
+    const eventAfterBack = await sendMessage(ROOT_PHONE, "Voltar");
+    assert(eventAfterBack.text === accessEventScreen.text, "J) segundo Voltar restaura exatamente a escolha de evento");
+    assertIncludes((await sendMessage(ROOT_PHONE, "Voltar")).text, "PORTARIA", "J) terceiro Voltar retorna Portaria");
     assertIncludes((await sendMessage(ROOT_PHONE, "4")).text, "REVOGAR ACESSOS - ESCOLHA O EVENTO", "K) Revogar acessos pede evento");
     assertIncludes((await sendMessage(ROOT_PHONE, `${PREFIX} Evento`)).text, "REVOGAR ACESSOS", "K) escolher evento lista acessos para revogar");
     assertIncludes((await sendMessage(ROOT_PHONE, "Voltar")).text, "REVOGAR ACESSOS - ESCOLHA O EVENTO", "K) Voltar da lista de revogação retorna escolha de evento");
@@ -488,11 +522,11 @@ async function main() {
 
     assertIncludes((await sendMessage(ROOT_PHONE, "sair")).text, "Sessão administrativa encerrada com segurança", "N) Sair por texto revoga sessão");
     assertIncludes((await sendMessage(MANAGER_PHONE, "menu")).text, "MENU ADMIN", "O) Gerente volta ao menu para testar sair por número");
-    assertIncludes((await sendMessage(MANAGER_PHONE, "7")).text, "Sessão administrativa encerrada com segurança", "O) Sair por número revoga sessão");
+    assertIncludes((await sendMessage(MANAGER_PHONE, "sair")).text, "Sessão administrativa encerrada com segurança", "O) Sair revoga sessão");
 
     await login(ROOT_PHONE);
     await expireRootSession();
-    assertIncludes((await sendMessage(ROOT_PHONE, "relatorio")).text, "Sua sessão administrativa expirou", "Q) sessão expirada bloqueia comando");
+    assertIncludes((await sendMessage(ROOT_PHONE, "relatorio")).text, "Sessão administrativa encerrada", "Q) sessão expirada bloqueia comando");
 
     assertIncludes((await sendMessage(BUYER_PHONE, `${PREFIX} Artista`)).text, `${PREFIX} EVENTO`, "R) cliente comum continua buscando evento");
     assertIncludes((await sendMessage(COMMON_ADMIN_PHONE, "admin")).text, "Não consegui entender sua mensagem", "S) cliente comum digitando admin recebe resposta neutra");

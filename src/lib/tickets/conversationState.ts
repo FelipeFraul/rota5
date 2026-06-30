@@ -465,6 +465,18 @@ export type TicketConversationState = {
   adminGate?: TicketConversationAdminGate;
   adminOrders?: TicketConversationAdminOrders;
   adminReports?: TicketConversationAdminReports;
+  adminNavigation?: {
+    frames: Array<{
+      context: Record<string, unknown>;
+      reply: string;
+      stackable?: boolean;
+    }>;
+    current: {
+      context: Record<string, unknown>;
+      reply: string;
+      stackable?: boolean;
+    };
+  };
   gateAccess?: TicketConversationGateAccess;
   lastSearch?: TicketConversationSearch;
   lastEvents?: TicketConversationEventOption[];

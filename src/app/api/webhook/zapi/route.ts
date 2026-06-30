@@ -43,6 +43,7 @@ import {
 } from "@/lib/tickets/codexRequests";
 import { normalizeWhatsAppPhone } from "@/lib/tickets/phones";
 import { routeTicketMessage } from "@/lib/tickets/router";
+import { reconcileAdminNavigation } from "@/lib/tickets/adminNavigation";
 import {
   getDeliveryGuard,
   getNumericPrompt,
@@ -1327,7 +1328,7 @@ export async function POST(request: Request) {
     });
   }
 
-  const routeResult = await routeTicketMessage({
+  const rawRouteResult = await routeTicketMessage({
     customer: customerResult.customer,
     conversation: {
       ...conversationResult.conversation,
@@ -1336,6 +1337,11 @@ export async function POST(request: Request) {
     text: incoming.text ?? incoming.mediaUrl ?? "",
     mediaUrl: incoming.mediaUrl,
     sourceIdentifier: getRequestSourceIdentifier(request),
+  });
+  const routeResult = reconcileAdminNavigation({
+    currentContext,
+    inboundText: incoming.text ?? incoming.mediaUrl ?? "",
+    routeResult: rawRouteResult,
   });
 
   const outboundMessages = getOutboundMessages(routeResult);
