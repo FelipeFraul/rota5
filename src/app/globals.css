@@ -687,6 +687,17 @@ body:has(.checkout-unavailable-shell) iframe {
   animation: gate-overlay-pop 260ms ease-out, gate-overlay-denied-shake 420ms ease-out 120ms;
 }
 
+.gate-access-overlay.is-waiting {
+  background: rgba(161, 98, 7, 0.92);
+}
+
+.gate-result.is-waiting {
+  border-color: #f59e0b;
+  background: #fef3c7;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.18);
+  animation: gate-pulse-denied 900ms ease-out;
+}
+
 .gate-access-overlay strong {
   font-size: clamp(28px, 8vw, 54px);
   line-height: 1;
