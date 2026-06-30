@@ -35,15 +35,15 @@ export async function GET(request: Request) {
   const response = NextResponse.redirect(
     new URL(
       reader
-        ? `/offer-reader/session/${encodeURIComponent(token)}`
-        : `/kitchen/session/${encodeURIComponent(token)}`,
+        ? `/offer-reader/session/${encodeURIComponent(token)}?opened=1`
+        : `/kitchen/session/${encodeURIComponent(token)}?opened=1`,
       url.origin,
     ),
   );
   response.cookies.set(deviceCookie, claim.deviceToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: "lax",
     path: "/",
     maxAge: KITCHEN_SESSION_TTL_MINUTES * 60,
   });
