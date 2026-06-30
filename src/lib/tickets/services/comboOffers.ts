@@ -948,7 +948,12 @@ export async function deliverComboOrder(orderId: string) {
   const imageResult = await sendZapiImage({
     phone,
     image,
-    caption: "*QRCODE DO COMBO*\nApresente no bar. Este QR Code é separado do ingresso da portaria.",
+    caption: [
+      "*QRCODE DO COMBO*",
+      `Pedido: ${redemptionCode}`,
+      "",
+      "Apresente no bar. Este QR Code é separado do ingresso da portaria.",
+    ].join("\n"),
   });
 
   if (!imageResult.ok) {

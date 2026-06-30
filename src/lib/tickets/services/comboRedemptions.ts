@@ -747,8 +747,12 @@ export async function startKitchenOrderPreparation(input: {
         const image = await generateComboQrImage(
           `combo:${redemption.id}:${newQrToken}`,
         );
-        const caption =
-          "*QRCODE DO COMBO*\nApresente este QR Code vermelho no bar para retirada.";
+        const caption = [
+          "*QRCODE DO COMBO*",
+          `Pedido: ${redemption.redemption_code}`,
+          "",
+          "Apresente este QR Code vermelho no bar para retirada.",
+        ].join("\n");
         qrResult = await sendZapiImage({
           phone: customer.whatsapp_phone,
           image,
