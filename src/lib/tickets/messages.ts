@@ -7,7 +7,7 @@ export const TICKET_MESSAGES = {
   genericHelp: PUBLIC_HOME_MESSAGE,
   genericHelpCommands: PUBLIC_HOME_COMMANDS_MESSAGE,
   noEventsFound:
-    `Não encontrei eventos com essa busca.\n\n${PUBLIC_HOME_MESSAGE}`,
+    "Não encontrei eventos com essa busca.\n\nTente pesquisar por outro nome, artista, data ou digite TODOS para ver os eventos disponíveis.",
   numericInvalidOption:
     "Não encontrei essa opção. Responda com um número da lista.",
   numericWithoutContext: PUBLIC_HOME_MESSAGE,
