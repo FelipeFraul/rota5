@@ -2571,6 +2571,7 @@ function formatReservationReply({
     `> Reserva vÃƒÂ¡lida atÃƒÂ©: ${formatTime(reservation.expiresAt)}`,
     "",
     "Para comprar, digite COMPRAR. VocÃƒÂª receberÃƒÂ¡ o link de pagamento na prÃƒÂ³xima mensagem.",
+    "Digite *CANCELAR* para zerar o pedido de compra.",
   ].join("\n");
 }
 

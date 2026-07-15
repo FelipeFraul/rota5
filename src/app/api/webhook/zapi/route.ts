@@ -68,6 +68,7 @@ import {
   type SendZapiMessageResult,
 } from "@/lib/zapi/client";
 import { formatSystemActionLines } from "@/lib/zapi/format";
+import { sanitizeWhatsAppText } from "@/lib/zapi/textEncoding";
 
 const MAX_WEBHOOK_BYTES = 256 * 1024;
 const PHONE_RATE_LIMIT = 30;
@@ -213,17 +214,6 @@ const MOJIBAKE_REPLACEMENTS: Array<[string, string]> = [
   ["Ã¢â‚¬â„¢", "’"],
   ["Ã¢â‚¬Â¦", "..."],
   ["Ã¢â€šÂ¬", "€"],
-  ["Ã¯Â¸Â", ""],
-  ["Ã°Å¸Å½Â«", ""],
-  ["Ã°Å¸Å½Å¸", ""],
-  ["Ã°Å¸â€œÂ", ""],
-  ["Ã°Å¸â€”â€œ", ""],
-  ["Ã°Å¸ÂÅ¸", ""],
-  ["Ã°Å¸Å½Â­", ""],
-  ["Ã°Å¸â€œÂ±", ""],
-  ["Ã°Å¸â€œÂ", ""],
-  ["Ã°Å¸â€œÂŠ", ""],
-  ["Ã°Å¸â€œÂˆ", ""],
 ];
 
 function sanitizeOutboundText(value: string) {
@@ -233,10 +223,7 @@ function sanitizeOutboundText(value: string) {
     sanitized = sanitized.split(broken).join(fixed);
   }
 
-  return sanitized
-    .replace(/[\u0080-\u009F]/g, "")
-    .replace(/\uFFFD/g, "")
-    .normalize("NFC");
+  return sanitizeWhatsAppText(sanitized);
 }
 
 function ensureSystemMessageTitle(body: string, fallbackTitle: string) {

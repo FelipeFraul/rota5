@@ -3,6 +3,7 @@ import "server-only";
 import { getEnv } from "@/lib/env";
 import { logError, logWarn } from "@/lib/logger";
 import { formatSystemActionLines, formatWhatsAppUppercase } from "@/lib/zapi/format";
+import { sanitizeWhatsAppText } from "@/lib/zapi/textEncoding";
 
 type SendZapiTextInput = {
   phone: string;
@@ -82,17 +83,6 @@ const MOJIBAKE_REPLACEMENTS: Array<[string, string]> = [
   ["Ã¢â‚¬â„¢", "’"],
   ["Ã¢â‚¬Â¦", "..."],
   ["Ã¢â€šÂ¬", "€"],
-  ["Ã¯Â¸Â", ""],
-  ["Ã°Å¸Å½Â«", ""],
-  ["Ã°Å¸Å½Å¸", ""],
-  ["Ã°Å¸â€œÂ", ""],
-  ["Ã°Å¸â€”â€œ", ""],
-  ["Ã°Å¸ÂÅ¸", ""],
-  ["Ã°Å¸Å½Â­", ""],
-  ["Ã°Å¸â€œÂ±", ""],
-  ["Ã°Å¸â€œÂ", ""],
-  ["Ã°Å¸â€œÂŠ", ""],
-  ["Ã°Å¸â€œÂˆ", ""],
 ];
 
 function sanitizeZapiText(value: string) {
@@ -102,10 +92,7 @@ function sanitizeZapiText(value: string) {
     sanitized = sanitized.split(broken).join(fixed);
   }
 
-  return sanitized
-    .replace(/[\u0080-\u009F]/g, "")
-    .replace(/\uFFFD/g, "")
-    .normalize("NFC");
+  return sanitizeWhatsAppText(sanitized);
 }
 
 function parseSystemTitleLine(line: string) {
