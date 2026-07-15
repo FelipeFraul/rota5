@@ -919,7 +919,7 @@ function formatSingleEventReply(
   ];
 
   return [
-    `- *${title}*`,
+    `🎟️ - *${title}*`,
     ...details,
     "",
     ...options,
@@ -945,7 +945,7 @@ function formatSingleEventOptionReply(
   ];
 
   return [
-    `- *${title}*`,
+    `🎟️ - *${title}*`,
     ...details,
     "",
     ...options,
@@ -975,7 +975,7 @@ function formatSingleAllEventReply(
   const moreInfoOption = buyOption + 1;
 
   return [
-    `- *${formatPublicEventTitle(event.title, event.artistName)}*`,
+    `🎟️ - *${formatPublicEventTitle(event.title, event.artistName)}*`,
     `| Cidade: ${formatCityState(event.city, event.state)}`,
     `| Data: ${formatEventDate(event.startsAt)}`,
     "",
@@ -1023,7 +1023,7 @@ function formatSingleEventMoreInfo(
   const description = event.description?.trim();
 
   return [
-    `- *${formatPublicEventTitle(event.title, event.artistName)}*`,
+    `🎟️ - *${formatPublicEventTitle(event.title, event.artistName)}*`,
     `| Cidade: ${formatCityState(event.city, event.state)}`,
     `| Data: ${formatEventDate(event.startsAt)}`,
     ...(event.venueName ? [`> Ã°Å¸ÂÅ¸Ã¯Â¸Â Local: ${formatProperName(event.venueName)}`] : []),
