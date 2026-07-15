@@ -165,11 +165,12 @@ const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 const DEFAULT_LIMIT = 10;
 const BLACK_HOUSE_SECTION_ORDER = new Map([
   ["Cadeira meia", 0],
-  ["1ª Fileira", 1],
-  ["Mesa 2 lugares", 2],
-  ["Mesa 4 lugares", 3],
-  ["Cadeira inteira", 4],
-  ["Assento / item especial", 5],
+  ["Crianças e adolescentes (2 a 18 anos)", 1],
+  ["1ª Fileira", 2],
+  ["Mesa 2 lugares", 3],
+  ["Mesa 4 lugares", 4],
+  ["Cadeira inteira", 5],
+  ["Assento / item especial", 6],
 ]);
 
 function first<T>(value: MaybeArray<T>): T | null {

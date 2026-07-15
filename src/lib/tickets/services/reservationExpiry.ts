@@ -43,6 +43,7 @@ type AdminSessionNotificationRow = {
   phone: string;
   status: "active" | "expired" | "revoked";
   expires_at: string;
+  metadata: { source?: string; purpose?: string } | null;
 };
 
 const BUYER_INTEREST_REMINDER_AFTER_MS = 2 * 60 * 60 * 1000;
@@ -601,7 +602,7 @@ async function expireAdminSessionsAndNotify(limit: number) {
   const now = new Date().toISOString();
   const { data, error } = await getSupabaseAdmin()
     .from("admin_sessions")
-    .select("id, admin_user_id, phone, status, expires_at")
+    .select("id, admin_user_id, phone, status, expires_at, metadata")
     .eq("status", "active")
     .lte("expires_at", now)
     .order("expires_at", { ascending: true })
@@ -620,6 +621,10 @@ async function expireAdminSessionsAndNotify(limit: number) {
   let failedNotificationCount = 0;
 
   for (const row of rows) {
+    if (row.metadata?.source === "web") {
+      continue;
+    }
+
     if (!sentNotificationIds.has(row.id)) {
       const notification = await notifyExpiredAdminSession(row);
 

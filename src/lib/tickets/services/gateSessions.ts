@@ -155,6 +155,42 @@ export async function createGateSession(input: {
   const phoneVariants = getGatePhoneLookupVariants(validatorPhone);
   const creatingKitchenSession = isKitchenGateLabel(input.gateLabel);
 
+  if (input.eventId) {
+    const { data: event, error: eventError } = await supabase
+      .from("events")
+      .select("id, status")
+      .eq("id", input.eventId)
+      .maybeSingle<{ id: string; status: string }>();
+
+    if (eventError) {
+      return { ok: false, reason: "insert_failed", error: eventError };
+    }
+
+    if (!event || event.status !== "published") {
+      return { ok: false, reason: "insert_failed" };
+    }
+  }
+
+  if (input.sessionId) {
+    const { data: session, error: sessionError } = await supabase
+      .from("event_sessions")
+      .select("id, event_id, status")
+      .eq("id", input.sessionId)
+      .maybeSingle<{ id: string; event_id: string; status: string }>();
+
+    if (sessionError) {
+      return { ok: false, reason: "insert_failed", error: sessionError };
+    }
+
+    if (
+      !session ||
+      (input.eventId && session.event_id !== input.eventId) ||
+      ["cancelled", "finished"].includes(session.status)
+    ) {
+      return { ok: false, reason: "insert_failed" };
+    }
+  }
+
   if (input.replaceActiveSessions) {
     const { data: activeSessions, error: activeSessionsError } = await supabase
       .from("gate_sessions")
@@ -262,7 +298,7 @@ export async function validateGateSessionToken(
   const { data, error } = await supabase
     .from("gate_sessions")
     .select(
-      "id, event_id, session_id, gate_label, validator_phone, status, expires_at, token_hash, device_binding_hash, reader_device_binding_hash, events(title), event_sessions(starts_at)",
+      "id, event_id, session_id, gate_label, validator_phone, status, expires_at, token_hash, device_binding_hash, reader_device_binding_hash, events(title, status), event_sessions(starts_at, status, event_id)",
     )
     .eq("token_hash", tokenHash)
     .maybeSingle<
@@ -270,8 +306,11 @@ export async function validateGateSessionToken(
         GateSession,
         "id" | "event_id" | "session_id" | "gate_label" | "validator_phone" | "status" | "expires_at" | "token_hash" | "device_binding_hash" | "reader_device_binding_hash"
       > & {
-        events: { title: string } | { title: string }[] | null;
-        event_sessions: { starts_at: string } | { starts_at: string }[] | null;
+        events: { title: string; status: string } | { title: string; status: string }[] | null;
+        event_sessions:
+          | { starts_at: string; status: string; event_id: string }
+          | { starts_at: string; status: string; event_id: string }[]
+          | null;
       }
     >();
 
@@ -300,6 +339,29 @@ export async function validateGateSessionToken(
     return {
       valid: false,
       reason: "expired",
+    };
+  }
+
+  const linkedEvent = Array.isArray(data.events) ? data.events[0] ?? null : data.events;
+  const linkedSession = Array.isArray(data.event_sessions)
+    ? data.event_sessions[0] ?? null
+    : data.event_sessions;
+
+  if (linkedEvent && linkedEvent.status !== "published") {
+    return {
+      valid: false,
+      reason: "inactive",
+    };
+  }
+
+  if (
+    linkedSession &&
+    (["cancelled", "finished"].includes(linkedSession.status) ||
+      (data.event_id && linkedSession.event_id !== data.event_id))
+  ) {
+    return {
+      valid: false,
+      reason: "inactive",
     };
   }
 
@@ -336,12 +398,8 @@ export async function validateGateSessionToken(
       eventId: data.event_id,
       sessionId: data.session_id,
       gateLabel: data.gate_label,
-      eventTitle: Array.isArray(data.events)
-        ? data.events[0]?.title ?? null
-        : data.events?.title ?? null,
-      sessionStartsAt: Array.isArray(data.event_sessions)
-        ? data.event_sessions[0]?.starts_at ?? null
-        : data.event_sessions?.starts_at ?? null,
+      eventTitle: linkedEvent?.title ?? null,
+      sessionStartsAt: linkedSession?.starts_at ?? null,
       validatorPhoneLast4: data.validator_phone.slice(-4),
       expiresAt: data.expires_at,
       status: "active",

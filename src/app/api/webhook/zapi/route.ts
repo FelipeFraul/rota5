@@ -155,11 +155,92 @@ function parseSystemMessageTitleLine(line: string) {
 }
 
 function formatSystemMessageTitle(title: string) {
-  return `*${title.toLocaleUpperCase("pt-BR")}*`;
+  return `*${sanitizeOutboundText(title).toLocaleUpperCase("pt-BR")}*`;
+}
+
+const MOJIBAKE_REPLACEMENTS: Array<[string, string]> = [
+  ["ÃƒÂ¡", "á"],
+  ["ÃƒÂ ", "à"],
+  ["ÃƒÂ¢", "â"],
+  ["ÃƒÂ£", "ã"],
+  ["ÃƒÂ©", "é"],
+  ["ÃƒÂª", "ê"],
+  ["ÃƒÂ­", "í"],
+  ["ÃƒÂ³", "ó"],
+  ["ÃƒÂ´", "ô"],
+  ["ÃƒÂµ", "õ"],
+  ["ÃƒÂº", "ú"],
+  ["ÃƒÂ¼", "ü"],
+  ["ÃƒÂ§", "ç"],
+  ["Ã¡", "á"],
+  ["Ã ", "à"],
+  ["Ã¢", "â"],
+  ["Ã£", "ã"],
+  ["Ã©", "é"],
+  ["Ãª", "ê"],
+  ["Ã­", "í"],
+  ["Ã³", "ó"],
+  ["Ã´", "ô"],
+  ["Ãµ", "õ"],
+  ["Ãº", "ú"],
+  ["Ã¼", "ü"],
+  ["Ã§", "ç"],
+  ["ÃƒÂ", "Á"],
+  ["Ãƒâ€°", "É"],
+  ["ÃƒÂ", "Í"],
+  ["Ãƒâ€œ", "Ó"],
+  ["ÃƒÅ¡", "Ú"],
+  ["Ãƒâ€¡", "Ç"],
+  ["Ã", "Á"],
+  ["Ã‰", "É"],
+  ["Ã", "Í"],
+  ["Ã“", "Ó"],
+  ["Ãš", "Ú"],
+  ["Ã‡", "Ç"],
+  ["ÃƒÅ ", "Ê"],
+  ["Ãƒâ€", "Ô"],
+  ["Ãƒâ€¢", "Õ"],
+  ["ÃƒÆ’O", "ÃO"],
+  ["ÃƒÆ’", "Ã"],
+  ["Ã‚Âº", "º"],
+  ["Ã‚Âª", "ª"],
+  ["Ã‚Â°", "°"],
+  ["Ã¢â‚¬â€", "—"],
+  ["Ã¢â‚¬â€œ", "–"],
+  ["Ã¢â‚¬Å“", "“"],
+  ["Ã¢â‚¬Â", "”"],
+  ["Ã¢â‚¬Ëœ", "‘"],
+  ["Ã¢â‚¬â„¢", "’"],
+  ["Ã¢â‚¬Â¦", "..."],
+  ["Ã¢â€šÂ¬", "€"],
+  ["Ã¯Â¸Â", ""],
+  ["Ã°Å¸Å½Â«", ""],
+  ["Ã°Å¸Å½Å¸", ""],
+  ["Ã°Å¸â€œÂ", ""],
+  ["Ã°Å¸â€”â€œ", ""],
+  ["Ã°Å¸ÂÅ¸", ""],
+  ["Ã°Å¸Å½Â­", ""],
+  ["Ã°Å¸â€œÂ±", ""],
+  ["Ã°Å¸â€œÂ", ""],
+  ["Ã°Å¸â€œÂŠ", ""],
+  ["Ã°Å¸â€œÂˆ", ""],
+];
+
+function sanitizeOutboundText(value: string) {
+  let sanitized = value;
+
+  for (const [broken, fixed] of MOJIBAKE_REPLACEMENTS) {
+    sanitized = sanitized.split(broken).join(fixed);
+  }
+
+  return sanitized
+    .replace(/[\u0080-\u009F]/g, "")
+    .replace(/\uFFFD/g, "")
+    .normalize("NFC");
 }
 
 function ensureSystemMessageTitle(body: string, fallbackTitle: string) {
-  const normalizedBody = body.trim();
+  const normalizedBody = sanitizeOutboundText(body).trim();
   if (!normalizedBody) return body;
 
   const lines = normalizedBody.split(/\r?\n/);
@@ -186,7 +267,7 @@ function ensureSystemMessageTitle(body: string, fallbackTitle: string) {
   }
 
   return formatSystemActionLines([
-    formatSystemMessageTitle(fallbackTitle),
+    formatSystemMessageTitle(sanitizeOutboundText(fallbackTitle)),
     "",
     normalizedBody,
   ].join("\n"));
@@ -203,18 +284,18 @@ function normalizeOutboundMessageTitle(
   if (message.type === "image") {
     return {
       ...message,
-      caption: ensureSystemMessageTitle(message.caption, fallbackTitle),
+      caption: sanitizeOutboundText(ensureSystemMessageTitle(message.caption, fallbackTitle)),
       persistedBody: message.persistedBody
-        ? ensureSystemMessageTitle(message.persistedBody, fallbackTitle)
+        ? sanitizeOutboundText(ensureSystemMessageTitle(message.persistedBody, fallbackTitle))
         : message.persistedBody,
     };
   }
 
   return {
     ...message,
-    body: ensureSystemMessageTitle(message.body, fallbackTitle),
+    body: sanitizeOutboundText(ensureSystemMessageTitle(message.body, fallbackTitle)),
     persistedBody: message.persistedBody
-      ? ensureSystemMessageTitle(message.persistedBody, fallbackTitle)
+      ? sanitizeOutboundText(ensureSystemMessageTitle(message.persistedBody, fallbackTitle))
       : message.persistedBody,
   };
 }
@@ -586,7 +667,7 @@ function sleep(ms: number) {
 }
 
 function getOutboundMessageText(message: RouteOutboundMessage) {
-  return message.type === "image" ? message.caption : message.body;
+  return sanitizeOutboundText(message.type === "image" ? message.caption : message.body);
 }
 
 async function sendOutboundMessage({
@@ -600,14 +681,14 @@ async function sendOutboundMessage({
     return sendZapiImage({
       phone,
       image: message.imageUrl,
-      caption: message.caption,
+      caption: sanitizeOutboundText(message.caption),
       ensureTitle: !message.suppressTitle,
     });
   }
 
   return sendZapiText({
     phone,
-    message: message.body,
+    message: sanitizeOutboundText(message.body),
     ensureTitle: !message.suppressTitle,
   });
 }
@@ -623,7 +704,7 @@ async function sendAndPersistText({
   phone: string;
   body: string;
 }) {
-  const titledBody = ensureSystemMessageTitle(body, "ATENDIMENTO");
+  const titledBody = sanitizeOutboundText(ensureSystemMessageTitle(body, "ATENDIMENTO"));
   const sendResult = await sendZapiText({
     phone,
     message: titledBody,
@@ -1429,11 +1510,12 @@ export async function POST(request: Request) {
       customerId: customerResult.customer.id,
       direction: "outbound",
       messageType: outboundMessage.type,
-      body:
+      body: sanitizeOutboundText(
         outboundMessage.persistedBody ??
-        (outboundMessage.type === "image"
-          ? outboundMessage.caption
-          : outboundMessage.body),
+          (outboundMessage.type === "image"
+            ? outboundMessage.caption
+            : outboundMessage.body),
+      ),
       providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
       rawMetadata: buildOutboundMetadata({
         sendResult,

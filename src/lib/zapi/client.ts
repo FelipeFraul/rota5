@@ -27,13 +27,94 @@ export type SendZapiMessageResult =
       error: string;
     };
 
+const MOJIBAKE_REPLACEMENTS: Array<[string, string]> = [
+  ["ÃƒÂ¡", "á"],
+  ["ÃƒÂ ", "à"],
+  ["ÃƒÂ¢", "â"],
+  ["ÃƒÂ£", "ã"],
+  ["ÃƒÂ©", "é"],
+  ["ÃƒÂª", "ê"],
+  ["ÃƒÂ­", "í"],
+  ["ÃƒÂ³", "ó"],
+  ["ÃƒÂ´", "ô"],
+  ["ÃƒÂµ", "õ"],
+  ["ÃƒÂº", "ú"],
+  ["ÃƒÂ¼", "ü"],
+  ["ÃƒÂ§", "ç"],
+  ["Ã¡", "á"],
+  ["Ã ", "à"],
+  ["Ã¢", "â"],
+  ["Ã£", "ã"],
+  ["Ã©", "é"],
+  ["Ãª", "ê"],
+  ["Ã­", "í"],
+  ["Ã³", "ó"],
+  ["Ã´", "ô"],
+  ["Ãµ", "õ"],
+  ["Ãº", "ú"],
+  ["Ã¼", "ü"],
+  ["Ã§", "ç"],
+  ["ÃƒÂ", "Á"],
+  ["Ãƒâ€°", "É"],
+  ["ÃƒÂ", "Í"],
+  ["Ãƒâ€œ", "Ó"],
+  ["ÃƒÅ¡", "Ú"],
+  ["Ãƒâ€¡", "Ç"],
+  ["ÃƒÅ ", "Ê"],
+  ["Ãƒâ€", "Ô"],
+  ["Ãƒâ€¢", "Õ"],
+  ["ÃƒÆ’O", "ÃO"],
+  ["ÃƒÆ’", "Ã"],
+  ["Ã", "Á"],
+  ["Ã‰", "É"],
+  ["Ã", "Í"],
+  ["Ã“", "Ó"],
+  ["Ãš", "Ú"],
+  ["Ã‡", "Ç"],
+  ["Ã‚Âº", "º"],
+  ["Ã‚Âª", "ª"],
+  ["Ã‚Â°", "°"],
+  ["Ã¢â‚¬â€", "—"],
+  ["Ã¢â‚¬â€œ", "–"],
+  ["Ã¢â‚¬Å“", "“"],
+  ["Ã¢â‚¬Â", "”"],
+  ["Ã¢â‚¬Ëœ", "‘"],
+  ["Ã¢â‚¬â„¢", "’"],
+  ["Ã¢â‚¬Â¦", "..."],
+  ["Ã¢â€šÂ¬", "€"],
+  ["Ã¯Â¸Â", ""],
+  ["Ã°Å¸Å½Â«", ""],
+  ["Ã°Å¸Å½Å¸", ""],
+  ["Ã°Å¸â€œÂ", ""],
+  ["Ã°Å¸â€”â€œ", ""],
+  ["Ã°Å¸ÂÅ¸", ""],
+  ["Ã°Å¸Å½Â­", ""],
+  ["Ã°Å¸â€œÂ±", ""],
+  ["Ã°Å¸â€œÂ", ""],
+  ["Ã°Å¸â€œÂŠ", ""],
+  ["Ã°Å¸â€œÂˆ", ""],
+];
+
+function sanitizeZapiText(value: string) {
+  let sanitized = value;
+
+  for (const [broken, fixed] of MOJIBAKE_REPLACEMENTS) {
+    sanitized = sanitized.split(broken).join(fixed);
+  }
+
+  return sanitized
+    .replace(/[\u0080-\u009F]/g, "")
+    .replace(/\uFFFD/g, "")
+    .normalize("NFC");
+}
+
 function parseSystemTitleLine(line: string) {
-  const title = line.trim().match(/^\*{1,2}([^*\n]+)\*{1,2}$/)?.[1]?.trim();
+  const title = sanitizeZapiText(line).trim().match(/^\*{1,2}([^*\n]+)\*{1,2}$/)?.[1]?.trim();
   return title ? title.toLocaleUpperCase("pt-BR") : null;
 }
 
 function ensureDefaultSystemTitle(value: string) {
-  const body = value.trim();
+  const body = sanitizeZapiText(value).trim();
   if (!body) return value;
 
   const lines = body.split(/\r?\n/);
@@ -72,7 +153,9 @@ export async function sendZapiText({
       body: JSON.stringify({
         phone,
         message: formatWhatsAppUppercase(
-          ensureTitle ? ensureDefaultSystemTitle(message) : formatSystemActionLines(message),
+          ensureTitle
+            ? ensureDefaultSystemTitle(message)
+            : formatSystemActionLines(sanitizeZapiText(message)),
         ),
       }),
       signal: controller.signal,
@@ -142,7 +225,7 @@ export async function sendZapiImage({
               caption: formatWhatsAppUppercase(
                 ensureTitle
                   ? ensureDefaultSystemTitle(caption)
-                  : formatSystemActionLines(caption),
+                  : formatSystemActionLines(sanitizeZapiText(caption)),
               ),
             }
           : {}),

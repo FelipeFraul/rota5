@@ -111,6 +111,7 @@ export type TicketConversationSearch = {
   city?: string;
   dateFrom?: string;
   dateTo?: string;
+  timeMinutes?: number;
   originalText?: string;
 };
 
@@ -225,6 +226,7 @@ export type TicketConversationAdmin = {
   expiresAt?: string;
   authChallengeId?: string;
   authChallengeExpiresAt?: string;
+  authChallengePurpose?: "admin_menu" | "event_editor";
 };
 
 export type TicketConversationAdminEvents = {

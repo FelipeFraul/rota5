@@ -1,4 +1,4 @@
-import "server-only";
+﻿import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -13,6 +13,26 @@ export type AdminSectionStatus = "active" | "inactive";
 export type AdminSeatStatus = "active" | "inactive" | "blocked";
 export type AdminTicketPriceStatus = "active" | "inactive";
 export type AdminTicketType = "full" | "half" | "promotional" | "free";
+export type AdminTicketSalesOverviewKey =
+  | "total"
+  | "front_row"
+  | "full_chair"
+  | "half_chair"
+  | "youth"
+  | "table_2"
+  | "table_4";
+
+type AdminTicketSalesOverviewEntry = {
+  key: string;
+  label: string;
+  shortLabel: string;
+  sold: number;
+  available: number;
+  courtesySold: number;
+  courtesyAvailable: number;
+  salesSold: number;
+  salesAvailable: number;
+};
 
 export type AdminInitialEventSectionInput = {
   name: string;
@@ -43,6 +63,7 @@ export type AdminEventSummary = {
   city: string;
   state: string;
   status: AdminEventStatus;
+  displayStatus: AdminEventStatus;
   imageUrl: string | null;
   venueId: string | null;
   venueName: string | null;
@@ -53,6 +74,7 @@ export type AdminEventSummary = {
   sessionsCount: number;
   nextSessionStartsAt: string | null;
   nextSessionStatus: AdminSessionStatus | null;
+  ticketSalesOverview: AdminTicketSalesOverviewEntry[];
 };
 
 export type AdminEventDetails = AdminEventSummary & {
@@ -137,6 +159,82 @@ type SeatStructureRow = {
   status: AdminSeatStatus;
 };
 
+type AdminTicketSalesSeatRow = {
+  status: string;
+  section_id: string;
+  event_sessions?: { event_id: string } | { event_id: string }[] | null;
+  seats?: { status: string } | { status: string }[] | null;
+  venue_sections?: {
+    name: string;
+    status: string;
+    venues?: { status: string } | { status: string }[] | null;
+  } | Array<{
+    name: string;
+    status: string;
+    venues?: { status: string } | { status: string }[] | null;
+  }> | null;
+};
+
+type AdminTicketSalesTicketRow = {
+  status: string;
+  section_id: string;
+  event_sessions?: { event_id: string } | { event_id: string }[] | null;
+  venue_sections?: { name: string; status: string } | { name: string; status: string }[] | null;
+  orders?: { status: string } | { status: string }[] | null;
+  reservation_items?: {
+    ticket_type: string;
+    price_cents: number | null;
+    fee_cents: number | null;
+  } | Array<{
+    ticket_type: string;
+    price_cents: number | null;
+    fee_cents: number | null;
+  }> | null;
+};
+
+type AdminTicketSalesPriceRow = {
+  section_id: string;
+  status: string;
+  sales_start_at: string | null;
+  sales_end_at: string | null;
+  event_sessions?: { event_id: string } | { event_id: string }[] | null;
+  venue_sections?: {
+    name: string;
+    status: string;
+    venues?: { status: string } | { status: string }[] | null;
+  } | Array<{
+    name: string;
+    status: string;
+    venues?: { status: string } | { status: string }[] | null;
+  }> | null;
+};
+
+type AdminTicketSalesCourtesyLimitRow = {
+  event_id: string;
+  section_id: string;
+  max_courtesies: number;
+  status: string;
+  venue_sections?: {
+    name: string;
+    status: string;
+    venues?: { status: string } | { status: string }[] | null;
+  } | Array<{
+    name: string;
+    status: string;
+    venues?: { status: string } | { status: string }[] | null;
+  }> | null;
+};
+
+const TICKET_SALES_OVERVIEW_ITEMS: Array<Pick<AdminTicketSalesOverviewEntry, "key" | "label" | "shortLabel">> = [
+  { key: "total", label: "Total de vendas", shortLabel: "TT" },
+  { key: "front_row", label: "1ª Fileira", shortLabel: "1ª" },
+  { key: "full_chair", label: "Cadeira inteira", shortLabel: "CI" },
+  { key: "half_chair", label: "Cadeira meia", shortLabel: "CM" },
+  { key: "table_2", label: "Mesa 2 lugares", shortLabel: "M2" },
+  { key: "table_4", label: "Mesa 4 lugares", shortLabel: "M4" },
+  { key: "youth", label: "Crianças e adolescentes", shortLabel: "CA" },
+];
+
 export function normalizeSlug(value: string) {
   return value
     .trim()
@@ -150,7 +248,7 @@ export function normalizeSlug(value: string) {
 export function parseBrazilianDateTime(value: string) {
   const match = value
     .trim()
-    .match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+|\s+às\s+)(\d{1,2}):(\d{2})$/i);
+    .match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+|\s+Ã s\s+)(\d{1,2}):(\d{2})$/i);
 
   if (!match) {
     return null;
@@ -227,7 +325,7 @@ export function parseSeatRange(value: string) {
   const match = value
     .trim()
     .match(
-      /^(?:prefixo\s+)?(?:fileira\s+)?([a-zA-Z]+)\s*,?\s*(?:(\d+)\s*assentos?)?\s*,?\s*(?:de\s+)?(\d+)\s*(?:a|até|-)\s*(\d+)$/i,
+      /^(?:prefixo\s+)?(?:fileira\s+)?([a-zA-Z]+)\s*,?\s*(?:(\d+)\s*assentos?)?\s*,?\s*(?:de\s+)?(\d+)\s*(?:a|atÃ©|-)\s*(\d+)$/i,
     );
 
   if (!match) {
@@ -273,7 +371,7 @@ function parseSeatRangeLayoutLine(value: string, rowIndex: number): ParsedSeatLa
   const match = value
     .trim()
     .match(
-      /^(?:fileira\s+)?([a-zA-Z]+)\s+(?:(\d+)\s+assentos?\s+)?(?:de\s+)?(\d+)\s*(?:a|até|-)\s*(\d+)(.*)$/i,
+      /^(?:fileira\s+)?([a-zA-Z]+)\s+(?:(\d+)\s+assentos?\s+)?(?:de\s+)?(\d+)\s*(?:a|atÃ©|-)\s*(\d+)(.*)$/i,
     );
 
   if (!match) {
@@ -533,7 +631,266 @@ function isMissingEventOwnershipColumnError(error: unknown) {
   );
 }
 
-function toSummary(event: EventRow, sessions: SessionRow[]): AdminEventSummary {
+function firstJoin<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+
+async function fetchAllRows<T>(query: { range: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }> }) {
+  const rows: T[] = [];
+  const pageSize = 1000;
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await query.range(from, from + pageSize - 1);
+    if (error) throw error;
+    const page = data ?? [];
+    rows.push(...page);
+    if (page.length < pageSize) break;
+  }
+
+  return rows;
+}
+
+function normalizeTicketSalesOverviewKey(name: string | null | undefined): AdminTicketSalesOverviewKey | null {
+  const normalized = (name ?? "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
+
+  if (!normalized) return null;
+  if (normalized.includes("1a fileira") || normalized.includes("1ª fileira")) return "front_row";
+  if (normalized.includes("mesa 4") || normalized.includes("4 lugares")) return "table_4";
+  if (normalized.includes("mesa 2") || normalized.includes("2 lugares")) return "table_2";
+  if (normalized.includes("todos pagam meia") || normalized.includes("cadeira meia")) return "half_chair";
+  if (normalized.includes("criancas e adolescentes") || normalized.includes("2 a 18 anos")) return "youth";
+  if (normalized.includes("inteira") || normalized.includes("cadeira inteira")) return "full_chair";
+
+  return null;
+}
+
+function buildSectionShortLabel(name: string | null | undefined) {
+  const words = (name ?? "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toUpperCase()
+    .match(/[A-Z0-9]+/g) ?? [];
+
+  if (!words.length) return "ST";
+
+  const ignored = new Set(["DE", "DA", "DO", "DAS", "DOS", "E", "COM", "SEM", "PARA", "POR", "O", "A"]);
+  const significantWords = words.filter((word) => !ignored.has(word));
+
+  if (significantWords.length >= 2) {
+    return significantWords.slice(0, 2).map((word) => word[0]).join("");
+  }
+
+  const base = significantWords[0] ?? words[0] ?? "ST";
+  return base.slice(0, Math.min(base.length, 3));
+}
+
+function getTicketSalesOverviewIdentity(sectionId: string | null | undefined, name: string | null | undefined) {
+  const standardKey = normalizeTicketSalesOverviewKey(name);
+  if (standardKey) return { key: standardKey, label: null, shortLabel: null };
+
+  return {
+    key: `section:${sectionId ?? normalizeSlug(name ?? "setor")}`,
+    label: name?.trim() || "Setor",
+    shortLabel: buildSectionShortLabel(name),
+  };
+}
+
+function emptyTicketSalesOverview(): AdminEventSummary["ticketSalesOverview"] {
+  return TICKET_SALES_OVERVIEW_ITEMS.map((item) => ({
+    ...item,
+    sold: 0,
+    available: 0,
+    courtesySold: 0,
+    courtesyAvailable: 0,
+    salesSold: 0,
+    salesAvailable: 0,
+  }));
+}
+
+function buildTicketSalesOverviewByEvent({
+  eventIds,
+  seats,
+  tickets,
+  prices,
+  courtesyLimits,
+}: {
+  eventIds: string[];
+  seats: AdminTicketSalesSeatRow[];
+  tickets: AdminTicketSalesTicketRow[];
+  prices: AdminTicketSalesPriceRow[];
+  courtesyLimits: AdminTicketSalesCourtesyLimitRow[];
+}) {
+  const overviewByEvent = new Map<string, AdminEventSummary["ticketSalesOverview"]>();
+  const nowIso = new Date().toISOString();
+  const sellableSectionKeys = new Set<string>();
+  const courtesySoldBySection = new Map<string, number>();
+  const ensure = (eventId: string) => {
+    const existing = overviewByEvent.get(eventId);
+    if (existing) return existing;
+    const created = emptyTicketSalesOverview();
+    overviewByEvent.set(eventId, created);
+    return created;
+  };
+  const ensureOverviewItem = (
+    eventId: string,
+    identity: ReturnType<typeof getTicketSalesOverviewIdentity> | null,
+  ) => {
+    if (!identity || identity.key === "total") return null;
+    const overview = ensure(eventId);
+    let item = overview.find((entry) => entry.key === identity.key);
+    if (!item && identity.label && identity.shortLabel) {
+      item = {
+        key: identity.key,
+        label: identity.label,
+        shortLabel: identity.shortLabel,
+        sold: 0,
+        available: 0,
+        courtesySold: 0,
+        courtesyAvailable: 0,
+        salesSold: 0,
+        salesAvailable: 0,
+      };
+      overview.push(item);
+    }
+    return item ?? null;
+  };
+  const increment = (
+    eventId: string,
+    identity: ReturnType<typeof getTicketSalesOverviewIdentity> | null,
+    field: "courtesySold" | "courtesyAvailable" | "salesSold" | "salesAvailable",
+  ) => {
+    const overview = ensure(eventId);
+    const total = overview.find((entry) => entry.key === "total");
+    if (total) {
+      total[field] += 1;
+      total.sold = total.courtesySold + total.salesSold;
+      total.available = total.salesAvailable;
+    }
+    const item = ensureOverviewItem(eventId, identity);
+    if (item) {
+      item[field] += 1;
+      item.sold = item.courtesySold + item.salesSold;
+      item.available = item.salesAvailable;
+    }
+  };
+  const addAmount = (
+    eventId: string,
+    identity: ReturnType<typeof getTicketSalesOverviewIdentity> | null,
+    field: "courtesySold" | "courtesyAvailable" | "salesSold" | "salesAvailable",
+    amount: number,
+  ) => {
+    if (amount <= 0) return;
+    const overview = ensure(eventId);
+    const total = overview.find((entry) => entry.key === "total");
+    if (total) {
+      total[field] += amount;
+      total.sold = total.courtesySold + total.salesSold;
+      total.available = total.salesAvailable;
+    }
+    const item = ensureOverviewItem(eventId, identity);
+    if (item) {
+      item[field] += amount;
+      item.sold = item.courtesySold + item.salesSold;
+      item.available = item.salesAvailable;
+    }
+  };
+
+  eventIds.forEach((eventId) => ensure(eventId));
+
+  for (const price of prices) {
+    const eventId = firstJoin(price.event_sessions)?.event_id;
+    const section = firstJoin(price.venue_sections);
+    if (!eventId) continue;
+    ensureOverviewItem(eventId, getTicketSalesOverviewIdentity(price.section_id, section?.name));
+  }
+
+  for (const seat of seats) {
+    const eventId = firstJoin(seat.event_sessions)?.event_id;
+    const section = firstJoin(seat.venue_sections);
+    if (!eventId) continue;
+    ensureOverviewItem(eventId, getTicketSalesOverviewIdentity(seat.section_id, section?.name));
+  }
+
+  for (const limit of courtesyLimits) {
+    const section = firstJoin(limit.venue_sections);
+    if (!limit.event_id) continue;
+    ensureOverviewItem(limit.event_id, getTicketSalesOverviewIdentity(limit.section_id, section?.name));
+  }
+
+  for (const price of prices) {
+    if (price.status !== "active") continue;
+    if (price.sales_start_at && price.sales_start_at > nowIso) continue;
+    if (price.sales_end_at && price.sales_end_at < nowIso) continue;
+    const eventId = firstJoin(price.event_sessions)?.event_id;
+    const section = firstJoin(price.venue_sections);
+    const venue = firstJoin(section?.venues);
+    if (!eventId || !price.section_id) continue;
+    if (section?.status !== "active" || venue?.status !== "active") continue;
+    sellableSectionKeys.add(`${eventId}:${price.section_id}`);
+  }
+
+  for (const ticket of tickets) {
+    if (ticket.status === "cancelled") continue;
+    if (firstJoin(ticket.orders)?.status !== "paid") continue;
+    const eventId = firstJoin(ticket.event_sessions)?.event_id;
+    if (!eventId) continue;
+    const item = firstJoin(ticket.reservation_items);
+    const amount = Number(item?.price_cents ?? 0) + Number(item?.fee_cents ?? 0);
+    const isCourtesy = item?.ticket_type === "free" || amount === 0;
+    const section = firstJoin(ticket.venue_sections);
+    if (!isCourtesy && !sellableSectionKeys.has(`${eventId}:${ticket.section_id}`)) continue;
+    increment(
+      eventId,
+      getTicketSalesOverviewIdentity(ticket.section_id, section?.name),
+      isCourtesy ? "courtesySold" : "salesSold",
+    );
+    if (isCourtesy) {
+      const key = `${eventId}:${ticket.section_id}`;
+      courtesySoldBySection.set(key, (courtesySoldBySection.get(key) ?? 0) + 1);
+    }
+  }
+
+  for (const limit of courtesyLimits) {
+    const section = firstJoin(limit.venue_sections);
+    const venue = firstJoin(section?.venues);
+    if (limit.status !== "active") continue;
+    if (section?.status !== "active" || venue?.status !== "active") continue;
+    const sold = courtesySoldBySection.get(`${limit.event_id}:${limit.section_id}`) ?? 0;
+    const available = Math.max(0, Number(limit.max_courtesies ?? 0) - sold);
+    addAmount(
+      limit.event_id,
+      getTicketSalesOverviewIdentity(limit.section_id, section?.name),
+      "courtesyAvailable",
+      available,
+    );
+  }
+
+  for (const seat of seats) {
+    if (seat.status !== "available") continue;
+    const eventId = firstJoin(seat.event_sessions)?.event_id;
+    const section = firstJoin(seat.venue_sections);
+    const venue = firstJoin(section?.venues);
+    const physicalSeat = firstJoin(seat.seats);
+    if (!eventId) continue;
+    if (physicalSeat?.status !== "active") continue;
+    if (section?.status !== "active" || venue?.status !== "active") continue;
+    const identity = getTicketSalesOverviewIdentity(seat.section_id, section?.name);
+    if (!sellableSectionKeys.has(`${eventId}:${seat.section_id}`)) continue;
+    increment(eventId, identity, "salesAvailable");
+  }
+
+  return overviewByEvent;
+}
+
+function toSummary(
+  event: EventRow,
+  sessions: SessionRow[],
+  ticketSalesOverview: AdminEventSummary["ticketSalesOverview"] = emptyTicketSalesOverview(),
+): AdminEventSummary {
   const eventSessions = sessions
     .filter((session) => session.event_id === event.id)
     .sort(
@@ -543,6 +900,17 @@ function toSummary(event: EventRow, sessions: SessionRow[]): AdminEventSummary {
   const futureSession =
     eventSessions.find((session) => new Date(session.starts_at).getTime() >= Date.now()) ??
     null;
+  const lastSession = eventSessions[eventSessions.length - 1] ?? null;
+  const hasOnlyPastSessions = Boolean(
+    eventSessions.length &&
+      !futureSession &&
+      eventSessions.every((session) => new Date(session.starts_at).getTime() < Date.now()),
+  );
+  const displayStatus =
+    event.status === "published" && hasOnlyPastSessions
+      ? "finished"
+      : event.status;
+  const displaySession = futureSession ?? lastSession;
 
   return {
     eventId: event.id,
@@ -552,6 +920,7 @@ function toSummary(event: EventRow, sessions: SessionRow[]): AdminEventSummary {
     city: event.city,
     state: event.state,
     status: event.status,
+    displayStatus,
     imageUrl: event.image_url,
     venueId: event.venue_id,
     venueName: event.venues?.name ?? null,
@@ -564,8 +933,9 @@ function toSummary(event: EventRow, sessions: SessionRow[]): AdminEventSummary {
     createdByAdminUserId: event.created_by_admin_user_id ?? null,
     createdByAdminPhone: event.created_by_admin_phone ?? null,
     sessionsCount: eventSessions.length,
-    nextSessionStartsAt: futureSession?.starts_at ?? null,
-    nextSessionStatus: futureSession?.status ?? null,
+    nextSessionStartsAt: displaySession?.starts_at ?? null,
+    nextSessionStatus: displaySession?.status ?? null,
+    ticketSalesOverview,
   };
 }
 
@@ -586,7 +956,7 @@ export async function listAdminEvents(input: {
           : "id, title, artist_name, description, city, state, status, image_url, venue_id, created_at, updated_at, venues(name)",
       );
 
-    if (input.status && input.status !== "all") {
+    if (input.status && input.status !== "all" && input.status !== "finished") {
       query = query.eq("status", input.status);
     }
 
@@ -606,6 +976,10 @@ export async function listAdminEvents(input: {
   let { data: events, error } = await runEventsQuery(true);
 
   if (error && isMissingEventOwnershipColumnError(error)) {
+    if (!input.canSeeAll) {
+      return { ok: false as const, reason: "ownership_unavailable" as const, error };
+    }
+
     const fallback = await runEventsQuery(false);
     events = fallback.data;
     error = fallback.error;
@@ -630,12 +1004,66 @@ export async function listAdminEvents(input: {
     return { ok: false as const, error: sessionsError };
   }
 
+  const [salesSeats, salesTickets, salesPrices, salesCourtesyLimits] = eventIds.length
+    ? await Promise.all([
+        fetchAllRows<AdminTicketSalesSeatRow>(
+          supabase
+            .from("session_seats")
+            .select("status, section_id, event_sessions!inner(event_id), seats!inner(status), venue_sections!inner(name, status, venues!inner(status))")
+            .in("event_sessions.event_id", eventIds)
+            .returns<AdminTicketSalesSeatRow[]>(),
+        ),
+        fetchAllRows<AdminTicketSalesTicketRow>(
+          supabase
+            .from("tickets")
+            .select("status, section_id, event_sessions!inner(event_id), venue_sections(name, status), orders!inner(status), reservation_items(ticket_type, price_cents, fee_cents)")
+            .in("event_sessions.event_id", eventIds)
+            .eq("orders.status", "paid")
+            .returns<AdminTicketSalesTicketRow[]>(),
+        ),
+        fetchAllRows<AdminTicketSalesPriceRow>(
+          supabase
+            .from("ticket_prices")
+            .select("section_id, status, sales_start_at, sales_end_at, event_sessions!inner(event_id), venue_sections!inner(name, status, venues!inner(status))")
+            .in("event_sessions.event_id", eventIds)
+            .neq("ticket_type", "free")
+            .returns<AdminTicketSalesPriceRow[]>(),
+        ),
+        fetchAllRows<AdminTicketSalesCourtesyLimitRow>(
+          supabase
+            .from("courtesy_section_limits")
+            .select("event_id, section_id, max_courtesies, status, venue_sections!inner(name, status, venues!inner(status))")
+            .in("event_id", eventIds)
+            .returns<AdminTicketSalesCourtesyLimitRow[]>(),
+        ),
+      ])
+    : [
+        [] as AdminTicketSalesSeatRow[],
+        [] as AdminTicketSalesTicketRow[],
+        [] as AdminTicketSalesPriceRow[],
+        [] as AdminTicketSalesCourtesyLimitRow[],
+      ];
+  const ticketSalesOverviewByEvent = buildTicketSalesOverviewByEvent({
+    eventIds,
+    seats: salesSeats,
+    tickets: salesTickets,
+    prices: salesPrices,
+    courtesyLimits: salesCourtesyLimits,
+  });
+
   const summaries = eventRows
-    .map((event) => toSummary(event, sessions ?? []))
+    .map((event) => toSummary(event, sessions ?? [], ticketSalesOverviewByEvent.get(event.id)))
+    .filter((event) => {
+      if (!input.status || input.status === "all") return true;
+      return event.displayStatus === input.status;
+    })
     .sort((left, right) => {
       if (input.status === "all" && left.wasEdited !== right.wasEdited) {
         return left.wasEdited ? 1 : -1;
       }
+
+      if (left.displayStatus === "finished" && right.displayStatus !== "finished") return 1;
+      if (left.displayStatus !== "finished" && right.displayStatus === "finished") return -1;
 
       const leftTime = left.nextSessionStartsAt
         ? new Date(left.nextSessionStartsAt).getTime()
@@ -1052,7 +1480,7 @@ export async function duplicateAdminEvent(input: {
   }
 
   const eventPayload = {
-    title: `${sourceEvent.title} - CÓPIA`,
+    title: `${sourceEvent.title} - CÃ“PIA`,
     artist_name: sourceEvent.artist_name,
     description: sourceEvent.description,
     city: sourceEvent.city,
@@ -1161,19 +1589,13 @@ export async function duplicateAdminEvent(input: {
       ...(sourceSessionSeats ?? []).map((seat) => seat.section_id),
     ]),
   );
-  const { data: sourceSections, error: sourceSectionsError } = sourceEvent.venue_id
+  const { data: sourceSections, error: sourceSectionsError } = sectionIds.length
     ? await supabase
-        .from("venue_sections")
-        .select("id, venue_id, name, slug, capacity, has_numbered_seats, status")
-        .eq("venue_id", sourceEvent.venue_id)
-        .returns<SectionRow[]>()
-    : sectionIds.length
-      ? await supabase
         .from("venue_sections")
         .select("id, venue_id, name, slug, capacity, has_numbered_seats, status")
         .in("id", sectionIds)
         .returns<SectionRow[]>()
-      : { data: [] as SectionRow[], error: null };
+    : { data: [] as SectionRow[], error: null };
 
   if (sourceSectionsError) {
     return { ok: false as const, reason: "sections_not_read" as const, error: sourceSectionsError };
@@ -1501,6 +1923,37 @@ async function createInitialEventSections(input: {
   return { ok: true as const, createdSectionsCount, createdSeatsCount, createdPricesCount };
 }
 
+export async function createAdminEventSections(input: {
+  venueId: string;
+  sessionIds: string[];
+  sections: Array<{
+    name: string;
+    capacity: number;
+    label?: string;
+    ticketType?: AdminTicketType;
+    priceCents?: number;
+    feeCents?: number;
+  }>;
+}) {
+  const sections = input.sections.map((section) => ({
+    name: section.name,
+    slug: normalizeSlug(section.name),
+    hasNumberedSeats: false,
+    capacity: section.capacity,
+    createInventorySeats: true,
+    ticketType: section.ticketType ?? "full",
+    label: section.label ?? section.name,
+    priceCents: section.priceCents ?? 0,
+    feeCents: section.feeCents ?? 0,
+  }));
+
+  return createInitialEventSections({
+    venueId: input.venueId,
+    sessionIds: input.sessionIds,
+    sections,
+  });
+}
+
 export async function updateAdminEvent(
   eventId: string,
   values: Partial<{
@@ -1772,8 +2225,69 @@ export async function updateAdminSectionCapacity(input: {
 
   const activeSeats = (seats ?? []).filter((seat) => seat.status === "active");
   const currentCapacity = activeSeats.length;
+  const ensureSessionSeatsForActiveSeats = async (
+    targetSeats: Array<{ id: string; section_id?: string | null }>,
+  ) => {
+    if (!targetSeats.length || !input.sessionIds.length) {
+      return { ok: true as const, createdCount: 0 };
+    }
+
+    const seatIds = targetSeats.map((seat) => seat.id);
+    const { data: existingSessionSeats, error: existingSessionSeatsError } = await supabase
+      .from("session_seats")
+      .select("session_id, seat_id")
+      .in("session_id", input.sessionIds)
+      .in("seat_id", seatIds)
+      .returns<Array<{ session_id: string; seat_id: string }>>();
+
+    if (existingSessionSeatsError) {
+      return {
+        ok: false as const,
+        reason: "session_seats_not_read" as const,
+        error: existingSessionSeatsError,
+      };
+    }
+
+    const existingPairs = new Set(
+      (existingSessionSeats ?? []).map((row) => `${row.session_id}:${row.seat_id}`),
+    );
+    const missingRows = targetSeats.flatMap((seat) =>
+      input.sessionIds
+        .filter((sessionId) => !existingPairs.has(`${sessionId}:${seat.id}`))
+        .map((sessionId) => ({
+          session_id: sessionId,
+          seat_id: seat.id,
+          section_id: input.sectionId,
+          status: "available",
+        })),
+    );
+
+    if (!missingRows.length) {
+      return { ok: true as const, createdCount: 0 };
+    }
+
+    const { error: missingSessionSeatsError } = await supabase
+      .from("session_seats")
+      .insert(missingRows);
+
+    if (missingSessionSeatsError) {
+      return {
+        ok: false as const,
+        reason: "session_seats_not_created" as const,
+        error: missingSessionSeatsError,
+      };
+    }
+
+    return { ok: true as const, createdCount: missingRows.length };
+  };
 
   if (input.newCapacity === currentCapacity) {
+    const ensured = await ensureSessionSeatsForActiveSeats(activeSeats);
+
+    if (!ensured.ok) {
+      return ensured;
+    }
+
     const { error } = await supabase
       .from("venue_sections")
       .update({ capacity: input.newCapacity })
@@ -1785,7 +2299,7 @@ export async function updateAdminSectionCapacity(input: {
           ok: true as const,
           currentCapacity,
           newCapacity: input.newCapacity,
-          createdCount: 0,
+          createdCount: ensured.createdCount,
           blockedCount: 0,
         };
   }
@@ -1850,6 +2364,12 @@ export async function updateAdminSectionCapacity(input: {
       };
     }
 
+    const ensured = await ensureSessionSeatsForActiveSeats(activeSeats);
+
+    if (!ensured.ok) {
+      return ensured;
+    }
+
     const { error: updateSectionError } = await supabase
       .from("venue_sections")
       .update({ capacity: input.newCapacity })
@@ -1861,7 +2381,7 @@ export async function updateAdminSectionCapacity(input: {
           ok: true as const,
           currentCapacity,
           newCapacity: input.newCapacity,
-          createdCount: sessionSeatRows.length,
+          createdCount: sessionSeatRows.length + ensured.createdCount,
           blockedCount: 0,
         };
   }
@@ -2233,3 +2753,4 @@ export async function updateAdminPrice(
 
   return { ok: true as const, price: data };
 }
+

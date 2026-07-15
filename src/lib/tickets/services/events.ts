@@ -4,8 +4,8 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { listAvailableSections } from "@/lib/tickets/services/sections";
 
 const DEFAULT_EVENT_SEARCH_LIMIT = 5;
-const DEFAULT_ALL_EVENTS_LIMIT = 50;
 const MAX_EVENT_CANDIDATES = 100;
+const DEFAULT_ALL_EVENTS_LIMIT = MAX_EVENT_CANDIDATES;
 const ACTIVE_SESSION_STATUSES = ["scheduled", "sales_open"];
 
 export type SearchEventsInput = {
@@ -13,6 +13,7 @@ export type SearchEventsInput = {
   city?: string;
   dateFrom?: string;
   dateTo?: string;
+  timeMinutes?: number;
   limit?: number;
 };
 
@@ -193,6 +194,7 @@ export async function searchEvents({
   city,
   dateFrom,
   dateTo,
+  timeMinutes,
   limit,
 }: SearchEventsInput): Promise<TicketEventSearchResult[]> {
   const supabase = getSupabaseAdmin();
@@ -243,9 +245,23 @@ export async function searchEvents({
   const matchedSessions = (sessions ?? [])
     .flatMap((session) => {
       const event = eventsById.get(session.event_id);
+      const sessionTimeParts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "America/Sao_Paulo",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+      })
+        .formatToParts(new Date(session.starts_at))
+        .reduce<Record<string, string>>((parts, part) => {
+          parts[part.type] = part.value;
+          return parts;
+        }, {});
+      const sessionTimeMinutes =
+        Number(sessionTimeParts.hour) * 60 + Number(sessionTimeParts.minute);
 
       if (
         !event ||
+        (timeMinutes !== undefined && sessionTimeMinutes !== timeMinutes) ||
         (cityTerm &&
           !eventMatchesLocationTerm({
             event,
@@ -328,6 +344,8 @@ export async function listAllPublicEventsByDate({
     .in("status", ACTIVE_SESSION_STATUSES)
     .gte("starts_at", new Date().toISOString())
     .order("starts_at", { ascending: true })
+    .order("event_id", { ascending: true })
+    .order("id", { ascending: true })
     .limit(MAX_EVENT_CANDIDATES)
     .returns<SessionRow[]>();
 

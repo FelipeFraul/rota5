@@ -91,6 +91,20 @@ export async function createGateAccess(input: {
   }
 
   const supabase = getSupabaseAdmin();
+  const { data: event, error: eventError } = await supabase
+    .from("events")
+    .select("id, status")
+    .eq("id", input.eventId)
+    .maybeSingle<{ id: string; status: string }>();
+
+  if (eventError) {
+    return { ok: false as const, reason: "insert_failed" as const, error: eventError };
+  }
+
+  if (!event || event.status !== "published") {
+    return { ok: false as const, reason: "insert_failed" as const };
+  }
+
   const { data, error } = await supabase
     .from("gate_accesses")
     .insert({
@@ -164,10 +178,11 @@ export async function findActiveGateAccessesForPhone(phoneInput: string) {
   const { data, error } = await supabase
     .from("gate_accesses")
     .select(
-      "id, event_id, session_id, phone, name, passphrase_hash, status, created_by_admin_user_id, created_by_admin_phone, created_at, updated_at, revoked_at, revoked_by_admin_user_id, events(title)",
+      "id, event_id, session_id, phone, name, passphrase_hash, status, created_by_admin_user_id, created_by_admin_phone, created_at, updated_at, revoked_at, revoked_by_admin_user_id, events!inner(title, status)",
     )
     .in("phone", getGatePhoneLookupVariants(phone))
     .eq("status", "active")
+    .eq("events.status", "published")
     .order("created_at", { ascending: false })
     .limit(20)
     .returns<GateAccessWithEvent[]>();
@@ -251,7 +266,7 @@ export async function createGateSessionForGateAccess(input: {
   if (error) return { ok: false, reason: "not_found", error };
   if (!data) return { ok: false, reason: "not_found" };
 
-  if (!verifyGateAccessPassphrase(input.passphrase.trim(), data.passphrase_hash)) {
+  if (!verifyGateAccessPassphrase(input.passphrase, data.passphrase_hash)) {
     return { ok: false, reason: "invalid_passphrase" };
   }
 

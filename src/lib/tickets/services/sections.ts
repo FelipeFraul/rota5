@@ -50,6 +50,17 @@ type TicketPriceRow = {
   sales_end_at: string | null;
 };
 
+type EventSessionRow = {
+  event_id: string;
+};
+
+type CourtesySectionLimitRow = {
+  section_id: string;
+  label: string;
+  max_courtesies: number;
+  status: string;
+};
+
 function isPriceInsideSalesWindow(price: TicketPriceRow, nowIso: string) {
   return (
     (!price.sales_start_at || price.sales_start_at <= nowIso) &&
@@ -78,6 +89,93 @@ function sortTicketTypes(
     left.label.localeCompare(right.label) ||
     left.ticketType.localeCompare(right.ticketType)
   );
+}
+
+function normalizeCourtesyLabel(label: string | null | undefined) {
+  const normalized = (label ?? "").trim();
+  return normalized || "Cortesia";
+}
+
+async function ensureCourtesyTicketPrice({
+  sessionId,
+  sectionId,
+  label,
+}: {
+  sessionId: string;
+  sectionId: string;
+  label: string;
+}) {
+  const supabase = getSupabaseAdmin();
+  const normalizedLabel = normalizeCourtesyLabel(label);
+  const { data: existingRows, error: existingError } = await supabase
+    .from("ticket_prices")
+    .select("id")
+    .eq("session_id", sessionId)
+    .eq("section_id", sectionId)
+    .eq("ticket_type", "free")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .returns<Array<{ id: string }>>();
+
+  if (existingError) throw existingError;
+
+  const existing = existingRows?.[0];
+  if (existing) {
+    const { error } = await supabase
+      .from("ticket_prices")
+      .update({
+        status: "active",
+        price_cents: 0,
+        fee_cents: 0,
+        label: normalizedLabel,
+      })
+      .eq("id", existing.id);
+
+    if (error) throw error;
+    return existing.id;
+  }
+
+  const { data, error } = await supabase
+    .from("ticket_prices")
+    .insert({
+      session_id: sessionId,
+      section_id: sectionId,
+      ticket_type: "free",
+      label: normalizedLabel,
+      price_cents: 0,
+      fee_cents: 0,
+      currency: "BRL",
+      status: "active",
+    })
+    .select("id")
+    .single<{ id: string }>();
+
+  if (error) throw error;
+  return data.id;
+}
+
+async function countIssuedFreeTicketsForSection({
+  eventId,
+  sectionId,
+}: {
+  eventId: string;
+  sectionId: string;
+}) {
+  const supabase = getSupabaseAdmin();
+  const { count, error } = await supabase
+    .from("tickets")
+    .select(
+      "id, event_sessions!inner(event_id), orders!inner(status), reservation_items!inner(ticket_type)",
+      { count: "exact", head: true },
+    )
+    .eq("event_sessions.event_id", eventId)
+    .eq("section_id", sectionId)
+    .neq("status", "cancelled")
+    .eq("orders.status", "paid")
+    .eq("reservation_items.ticket_type", "free");
+
+  if (error) throw error;
+  return count ?? 0;
 }
 
 export async function listAvailableSections(
@@ -121,10 +219,35 @@ export async function listAvailableSections(
     throw sessionPricesError;
   }
 
+  const { data: selectedSession, error: sessionError } = await supabase
+    .from("event_sessions")
+    .select("event_id")
+    .eq("id", sessionId)
+    .maybeSingle<EventSessionRow>();
+
+  if (sessionError) {
+    throw sessionError;
+  }
+
+  const { data: courtesyLimits, error: courtesyLimitsError } = selectedSession?.event_id
+    ? await supabase
+        .from("courtesy_section_limits")
+        .select("section_id, label, max_courtesies, status")
+        .eq("event_id", selectedSession.event_id)
+        .eq("status", "active")
+        .gt("max_courtesies", 0)
+        .returns<CourtesySectionLimitRow[]>()
+    : { data: [] as CourtesySectionLimitRow[], error: null };
+
+  if (courtesyLimitsError) {
+    throw courtesyLimitsError;
+  }
+
   const sectionIds = Array.from(
     new Set([
       ...availableSeatsBySection.keys(),
       ...(sessionPrices ?? []).map((price) => price.section_id),
+      ...(courtesyLimits ?? []).map((limit) => limit.section_id),
     ]),
   );
 
@@ -174,6 +297,43 @@ export async function listAvailableSections(
     });
 
     ticketTypesBySection.set(price.section_id, ticketTypes);
+  }
+
+  if (selectedSession?.event_id) {
+    for (const limit of courtesyLimits ?? []) {
+      if (!activeSectionIds.includes(limit.section_id)) {
+        continue;
+      }
+
+      const issuedFreeTickets = await countIssuedFreeTicketsForSection({
+        eventId: selectedSession.event_id,
+        sectionId: limit.section_id,
+      });
+
+      if (issuedFreeTickets >= limit.max_courtesies) {
+        continue;
+      }
+
+      const ticketPriceId = await ensureCourtesyTicketPrice({
+        sessionId,
+        sectionId: limit.section_id,
+        label: limit.label,
+      });
+      const ticketTypes = ticketTypesBySection.get(limit.section_id) ?? [];
+
+      if (!ticketTypes.some((ticketType) => ticketType.ticketPriceId === ticketPriceId)) {
+        ticketTypes.push({
+          ticketPriceId,
+          ticketType: "free",
+          label: normalizeCourtesyLabel(limit.label),
+          priceCents: 0,
+          feeCents: 0,
+          currency: "BRL",
+        });
+      }
+
+      ticketTypesBySection.set(limit.section_id, ticketTypes);
+    }
   }
 
   const sectionSortOrderById = new Map(

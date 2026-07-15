@@ -101,6 +101,15 @@ type EventRow = {
   }>;
 };
 
+type PublishedEventStatusRow = {
+  id: string;
+  event_sessions: MaybeArray<{
+    id: string;
+    starts_at: string;
+    status: string;
+  }>;
+};
+
 type CourtesyRow = {
   id: string;
   phone: string;
@@ -198,6 +207,20 @@ function mapIssueCourtesyError(
 }
 
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
+
+function getSaoPauloTodayStartIso(now = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: SAO_PAULO_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const year = Number(parts.find((part) => part.type === "year")?.value);
+  const month = Number(parts.find((part) => part.type === "month")?.value);
+  const day = Number(parts.find((part) => part.type === "day")?.value);
+
+  return new Date(Date.UTC(year, month - 1, day, 3, 0, 0, 0)).toISOString();
+}
 const QR_CODE_CAPTION = [
   "*APRESENTE O QRCODE NA PORTARIA*",
   "Esta cortesia será validada uma única vez na portaria. Por segurança, não envie para terceiros.",
@@ -242,14 +265,89 @@ export function parseCourtesyPhones(value: string) {
   ];
 }
 
+function getEventSessions(event: EventRow) {
+  return Array.isArray(event.event_sessions)
+    ? event.event_sessions
+    : event.event_sessions
+      ? [event.event_sessions]
+      : [];
+}
+
+function getEventNextSessionStartsAt(event: EventRow) {
+  const sessions = getEventSessions(event);
+  const sortedSessions = [...sessions].sort((left, right) =>
+    left.starts_at.localeCompare(right.starts_at),
+  );
+
+  return sortedSessions[0]?.starts_at ?? null;
+}
+
+function isPublishedEventPast(event: PublishedEventStatusRow, todayStartIso: string) {
+  const sessions = Array.isArray(event.event_sessions)
+    ? event.event_sessions
+    : event.event_sessions
+      ? [event.event_sessions]
+      : [];
+
+  if (!sessions.length) return false;
+
+  const latestSessionStartsAt = [...sessions].sort((left, right) =>
+    right.starts_at.localeCompare(left.starts_at),
+  )[0]?.starts_at;
+
+  return Boolean(latestSessionStartsAt && latestSessionStartsAt < todayStartIso);
+}
+
+async function finishPastPublishedEvents({
+  ownerAdminUserId,
+  canSeeAll,
+}: {
+  ownerAdminUserId: string;
+  canSeeAll: boolean;
+}) {
+  const supabase = getSupabaseAdmin();
+
+  let query = supabase
+    .from("events")
+    .select("id, event_sessions(id, starts_at, status)")
+    .eq("status", "published");
+
+  if (!canSeeAll) {
+    query = query.eq("created_by_admin_user_id", ownerAdminUserId);
+  }
+
+  const { data, error } = await query.returns<PublishedEventStatusRow[]>();
+  if (error) return { ok: false as const, error };
+
+  const todayStartIso = getSaoPauloTodayStartIso();
+  const finishedEventIds = (data ?? [])
+    .filter((event) => isPublishedEventPast(event, todayStartIso))
+    .map((event) => event.id);
+
+  if (!finishedEventIds.length) return { ok: true as const };
+
+  const { error: eventUpdateError } = await supabase
+    .from("events")
+    .update({ status: "finished" })
+    .in("id", finishedEventIds)
+    .eq("status", "published");
+
+  if (eventUpdateError) return { ok: false as const, error: eventUpdateError };
+
+  const { error: sessionUpdateError } = await supabase
+    .from("event_sessions")
+    .update({ status: "finished" })
+    .in("event_id", finishedEventIds)
+    .in("status", ["scheduled", "sales_open", "sales_closed"]);
+
+  return sessionUpdateError
+    ? { ok: false as const, error: sessionUpdateError }
+    : { ok: true as const };
+}
+
 function buildEventOptions(rows: EventRow[]) {
   return rows.map((event, index) => {
-    const sessions = Array.isArray(event.event_sessions)
-      ? event.event_sessions
-      : event.event_sessions
-        ? [event.event_sessions]
-        : [];
-    const sortedSessions = sessions.sort((left, right) =>
+    const sortedSessions = [...getEventSessions(event)].sort((left, right) =>
       left.starts_at.localeCompare(right.starts_at),
     );
 
@@ -268,11 +366,24 @@ function buildEventOptions(rows: EventRow[]) {
 export async function listCourtesyEvents({
   ownerAdminUserId,
   canSeeAll,
+  onlyPublished = false,
+  sortByNextSession = false,
 }: {
   ownerAdminUserId: string;
   canSeeAll: boolean;
+  onlyPublished?: boolean;
+  sortByNextSession?: boolean;
 }) {
   const supabase = getSupabaseAdmin();
+
+  if (onlyPublished) {
+    const finishResult = await finishPastPublishedEvents({
+      ownerAdminUserId,
+      canSeeAll,
+    });
+    if (!finishResult.ok) return finishResult;
+  }
+
   let query = supabase
     .from("events")
     .select("id, title, city, state, status, event_sessions(id, starts_at, status)")
@@ -282,13 +393,32 @@ export async function listCourtesyEvents({
     query = query.eq("created_by_admin_user_id", ownerAdminUserId);
   }
 
+  if (onlyPublished) {
+    query = query.eq("status", "published");
+  }
+
   const { data, error } = await query.returns<EventRow[]>();
 
   if (error) {
     return { ok: false as const, error };
   }
 
-  return { ok: true as const, events: buildEventOptions(data ?? []) };
+  const rows = sortByNextSession
+    ? [...(data ?? [])].sort((left, right) => {
+        const leftNextSession = getEventNextSessionStartsAt(left);
+        const rightNextSession = getEventNextSessionStartsAt(right);
+        const leftTime = leftNextSession
+          ? new Date(leftNextSession).getTime()
+          : Number.MAX_SAFE_INTEGER;
+        const rightTime = rightNextSession
+          ? new Date(rightNextSession).getTime()
+          : Number.MAX_SAFE_INTEGER;
+
+        return leftTime - rightTime || left.title.localeCompare(right.title);
+      })
+    : data ?? [];
+
+  return { ok: true as const, events: buildEventOptions(rows) };
 }
 
 export function resolveCourtesyEventId(
@@ -615,6 +745,13 @@ export async function issueAdminCourtesy(input: {
   }
 
   try {
+    const availableLimit = await assertCourtesyLimitAvailable(
+      input.eventId,
+      input.sectionId,
+      input.quantity,
+    );
+    if (!availableLimit.ok) return { ok: false, reason: availableLimit.reason };
+
     const customer = await ensureCustomer(input.beneficiaryPhone, input.beneficiaryName);
     const section = await getSectionForCourtesy(input.sessionId, input.sectionId);
     if (!section) return { ok: false, reason: "section_not_found" };
@@ -973,6 +1110,68 @@ export function resolveCourtesyCancelTarget(
   return null;
 }
 
+export type CourtesySectionLimitStatus = "active" | "inactive";
+
+export type CourtesySectionLimitInput = {
+  sectionId: string;
+  label: string;
+  maxCourtesies: number;
+  status: CourtesySectionLimitStatus;
+};
+
+type CourtesySectionLimitRow = {
+  section_id: string;
+  label: string;
+  max_courtesies: number;
+  status: CourtesySectionLimitStatus;
+};
+
+export async function listCourtesySectionLimits(eventId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("courtesy_section_limits")
+    .select("section_id, label, max_courtesies, status")
+    .eq("event_id", eventId)
+    .returns<CourtesySectionLimitRow[]>();
+
+  if (error) return { ok: false as const, error };
+  return { ok: true as const, limits: data ?? [] };
+}
+
+export async function upsertCourtesySectionLimits(
+  eventId: string,
+  limits: CourtesySectionLimitInput[],
+) {
+  if (!limits.length) return { ok: true as const };
+
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase.from("courtesy_section_limits").upsert(
+    limits.map((limit) => ({
+      event_id: eventId,
+      section_id: limit.sectionId,
+      label: limit.label.trim() || "Cortesia",
+      max_courtesies: Math.max(0, Math.trunc(limit.maxCourtesies)),
+      status: limit.status,
+    })),
+    { onConflict: "event_id,section_id" },
+  );
+
+  return error ? { ok: false as const, error } : { ok: true as const };
+}
+
+async function getCourtesySectionLimit(eventId: string, sectionId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("courtesy_section_limits")
+    .select("section_id, label, max_courtesies, status")
+    .eq("event_id", eventId)
+    .eq("section_id", sectionId)
+    .maybeSingle<CourtesySectionLimitRow>();
+
+  if (error) return { ok: false as const, error };
+  return { ok: true as const, limit: data ?? null };
+}
+
 export async function setCourtesyLimit(eventId: string, limit: number) {
   const supabase = getSupabaseAdmin();
   const { error } = await supabase.from("courtesy_limits").upsert({
@@ -993,6 +1192,50 @@ export async function getCourtesyLimit(eventId: string) {
 
   if (error) return { ok: false as const, error };
   return { ok: true as const, limit: data?.max_courtesies ?? 0 };
+}
+
+async function assertCourtesyLimitAvailable(eventId: string, sectionId: string, quantity: number) {
+  const sectionLimit = await getCourtesySectionLimit(eventId, sectionId);
+  if (!sectionLimit.ok) return { ok: false as const, reason: "issue_failed" as const };
+
+  if (sectionLimit.limit) {
+    if (sectionLimit.limit.status !== "active" || sectionLimit.limit.max_courtesies <= 0) {
+      return { ok: false as const, reason: "courtesy_limit_exceeded" as const };
+    }
+
+    const supabase = getSupabaseAdmin();
+    const { count, error } = await supabase
+      .from("courtesies")
+      .select("id, tickets!inner(section_id)", { count: "exact", head: true })
+      .eq("event_id", eventId)
+      .eq("status", "issued")
+      .eq("tickets.section_id", sectionId);
+
+    if (error) return { ok: false as const, reason: "issue_failed" as const };
+    if ((count ?? 0) + quantity > sectionLimit.limit.max_courtesies) {
+      return { ok: false as const, reason: "courtesy_limit_exceeded" as const };
+    }
+
+    return { ok: true as const };
+  }
+
+  const limit = await getCourtesyLimit(eventId);
+  if (!limit.ok) return { ok: false as const, reason: "issue_failed" as const };
+  if (limit.limit <= 0) return { ok: true as const };
+
+  const supabase = getSupabaseAdmin();
+  const { count, error } = await supabase
+    .from("courtesies")
+    .select("id", { count: "exact", head: true })
+    .eq("event_id", eventId)
+    .eq("status", "issued");
+
+  if (error) return { ok: false as const, reason: "issue_failed" as const };
+  if ((count ?? 0) + quantity > limit.limit) {
+    return { ok: false as const, reason: "courtesy_limit_exceeded" as const };
+  }
+
+  return { ok: true as const };
 }
 
 function formatOptionLine(

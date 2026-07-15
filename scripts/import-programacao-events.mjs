@@ -31,7 +31,7 @@ function parseMoney(value) {
 
 function inferTicketType(label) {
   const text = normalize(label);
-  if (/\b(meia|estudante|senior|idoso|pcd|professor)\b/.test(text)) return "half";
+  if (/\b(meia|estudante|senior|idoso|pcd|professor|crianca|criancas|adolescente|adolescentes)\b/.test(text)) return "half";
   if (/\b(cortesia|gratis|gratuito|free)\b/.test(text)) return "free";
   if (/\b(promocional|promo)\b/.test(text)) return "promotional";
   return "full";
@@ -53,6 +53,9 @@ function placeFor(label) {
   }
   if (text === "cadeira individual (inteira)") {
     return { key: "chair-full", name: "Cadeira inteira", capacity: 15 };
+  }
+  if (text === "criancas e adolescentes (2 a 18 anos)") {
+    return { key: "youth", name: "Crianças e adolescentes (2 a 18 anos)", capacity: 15 };
   }
 
   const capacity = text.includes("mesa 2 lugares") || text.includes("mesa 4 lugares")

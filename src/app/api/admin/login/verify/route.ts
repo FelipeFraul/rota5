@@ -5,19 +5,24 @@ import {
   getRequestSourceIdentifier,
   rateLimitResponse,
 } from "@/lib/security/rateLimit";
-import { logWarn } from "@/lib/logger";
-import { verifyAdminLoginChallengePassphrase } from "@/lib/tickets/services/adminAuth";
+import { logError, logWarn } from "@/lib/logger";
+import {
+  ADMIN_WEB_AUTH_COOKIES,
+  createAdminWebSession,
+  verifyAdminLoginChallengePassphrase,
+} from "@/lib/tickets/services/adminAuth";
 
 type VerifyPayload = {
   token?: unknown;
   passphrase?: unknown;
+  mode?: unknown;
 };
 
 function jsonError(message: string, status: number) {
   return NextResponse.json({ ok: false, message }, { status });
 }
 
-export async function POST(request: Request) {
+async function handlePost(request: Request) {
   let payload: VerifyPayload;
 
   try {
@@ -29,6 +34,8 @@ export async function POST(request: Request) {
   const token = typeof payload.token === "string" ? payload.token.trim() : "";
   const passphrase =
     typeof payload.passphrase === "string" ? payload.passphrase : "";
+  const mode = typeof payload.mode === "string" ? payload.mode : "";
+  const eventEditorMode = mode === "event_editor";
 
   if (!token || !passphrase) {
     return jsonError("Informe a senha individual.", 400);
@@ -54,6 +61,7 @@ export async function POST(request: Request) {
     token,
     passphrase,
     sourceIdentifier: getRequestSourceIdentifier(request.headers),
+    consumeOnPassphrase: eventEditorMode,
   });
 
   if (!result.ok) {
@@ -76,10 +84,49 @@ export async function POST(request: Request) {
     return jsonError("Não foi possível autenticar este acesso.", 401);
   }
 
-  return NextResponse.json({
+  const webSession = await createAdminWebSession(result.adminUser);
+
+  if (!webSession.ok) {
+    return jsonError("Não foi possível abrir a sessão do navegador.", 500);
+  }
+
+  const response = NextResponse.json({
     ok: true,
-    code: result.code,
+    adminUrl: "/admin/eventos",
+    ...(eventEditorMode ? {} : { code: result.code }),
   });
+
+  response.cookies.set(ADMIN_WEB_AUTH_COOKIES.session, webSession.cookieValue, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    expires: new Date(webSession.expiresAt),
+  });
+  response.cookies.set(ADMIN_WEB_AUTH_COOKIES.csrf, webSession.csrfCookieValue, {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    expires: new Date(webSession.expiresAt),
+  });
+
+  return response;
+}
+
+export async function POST(request: Request) {
+  try {
+    return await handlePost(request);
+  } catch (error) {
+    logError("Unhandled admin web login verification error", {
+      error,
+      hasCheckoutSecret: Boolean(process.env.CHECKOUT_INTERNAL_SECRET),
+      hasSupabaseUrl: Boolean(process.env.SUPABASE_URL),
+      hasSupabaseServiceRole: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+    });
+
+    return jsonError("Não foi possível autenticar este acesso agora.", 500);
+  }
 }
 
 export function GET() {
