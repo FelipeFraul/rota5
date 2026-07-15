@@ -806,23 +806,26 @@ function formatPublicEventTitle(title: string, artistName: string | null | undef
   const trimmedTitle = title.trim();
   const trimmedArtist = artistName?.trim();
 
-  if (!trimmedTitle || !trimmedArtist) return formatAnnouncementTitle(trimmedTitle);
+  if (!trimmedTitle) return formatAnnouncementTitle(trimmedArtist ?? "");
+  if (!trimmedArtist) return formatAnnouncementTitle(trimmedTitle);
 
   const normalizedTitle = normalizeDisplayComparison(trimmedTitle);
   const normalizedArtist = normalizeDisplayComparison(trimmedArtist);
-  const prefixPatterns = [
-    `${normalizedArtist} EM `,
-    `${normalizedArtist} - `,
-    `${normalizedArtist}: `,
-    `${normalizedArtist} APRESENTA `,
-  ];
-  const matchedPrefix = prefixPatterns.find((prefix) => normalizedTitle.startsWith(prefix));
 
-  if (!matchedPrefix) return formatAnnouncementTitle(trimmedTitle);
+  if (normalizedTitle === normalizedArtist) {
+    return formatAnnouncementTitle(trimmedArtist);
+  }
 
-  const wordsToDrop = matchedPrefix.trim().split(/\s+/).length;
-  const remainingTitle = trimmedTitle.split(/\s+/).slice(wordsToDrop).join(" ").trim();
-  return formatAnnouncementTitle(remainingTitle || trimmedTitle);
+  const escapedArtist = trimmedArtist
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    .replace(/\s+/g, "\\s+");
+  const artistPrefix = new RegExp(
+    `^${escapedArtist}\\s*(?:(?:-|:)\\s*|(?:em|apresenta)\\s+)`,
+    "iu",
+  );
+  const showTitle = trimmedTitle.replace(artistPrefix, "").trim();
+
+  return formatAnnouncementTitle(`${trimmedArtist} - ${showTitle || trimmedTitle}`);
 }
 
 function capitalizeNamePart(value: string) {
@@ -904,8 +907,8 @@ function formatSingleEventReply(
 ) {
   const title = formatPublicEventTitle(event.title, event.artistName);
   const details = [
-    `> Ã°Å¸â€œÂ Cidade: ${formatCityState(event.city, event.state)}`,
-    `> Ã°Å¸â€”â€œÃ¯Â¸Â Data: ${formatEventDate(event.startsAt)}`,
+    `| Cidade: ${formatCityState(event.city, event.state)}`,
+    `| Data: ${formatEventDate(event.startsAt)}`,
   ];
   const buyOption = totalEvents === 1 ? 1 : index * 2 + 1;
   const moreInfoOption = buyOption + 1;
@@ -916,7 +919,7 @@ function formatSingleEventReply(
   ];
 
   return [
-    `Ã°Å¸Å½Å¸Ã¯Â¸Â - *${title}*`,
+    `- *${title}*`,
     ...details,
     "",
     ...options,
@@ -930,8 +933,8 @@ function formatSingleEventOptionReply(
 ) {
   const title = formatPublicEventTitle(event.title, event.artistName);
   const details = [
-    `> Ã°Å¸â€œÂ Cidade: ${formatCityState(event.city, event.state)}`,
-    `> Ã°Å¸â€”â€œÃ¯Â¸Â Data: ${formatEventDate(event.startsAt)}`,
+    `| Cidade: ${formatCityState(event.city, event.state)}`,
+    `| Data: ${formatEventDate(event.startsAt)}`,
   ];
   const buyOption = totalEvents === 1 ? 1 : index * 2 + 1;
   const moreInfoOption = buyOption + 1;
@@ -942,7 +945,7 @@ function formatSingleEventOptionReply(
   ];
 
   return [
-    `Ã°Å¸Å½Å¸Ã¯Â¸Â - *${title}*`,
+    `- *${title}*`,
     ...details,
     "",
     ...options,
@@ -972,9 +975,9 @@ function formatSingleAllEventReply(
   const moreInfoOption = buyOption + 1;
 
   return [
-    `Ã°Å¸Å½Å¸Ã¯Â¸Â - *${formatPublicEventTitle(event.title, event.artistName)}*`,
-    `> Ã°Å¸â€œÂ Cidade: ${formatCityState(event.city, event.state)}`,
-    `> Ã°Å¸â€”â€œÃ¯Â¸Â Data: ${formatEventDate(event.startsAt)}`,
+    `- *${formatPublicEventTitle(event.title, event.artistName)}*`,
+    `| Cidade: ${formatCityState(event.city, event.state)}`,
+    `| Data: ${formatEventDate(event.startsAt)}`,
     "",
     formatOptionLine(buyOption, "comprar"),
     formatOptionLine(moreInfoOption, "ver mais"),
@@ -1020,9 +1023,9 @@ function formatSingleEventMoreInfo(
   const description = event.description?.trim();
 
   return [
-    `Ã°Å¸Å½Å¸Ã¯Â¸Â - *${formatPublicEventTitle(event.title, event.artistName)}*`,
-    `> Ã°Å¸â€œÂ Cidade: ${formatCityState(event.city, event.state)}`,
-    `> Ã°Å¸â€”â€œÃ¯Â¸Â Data: ${formatEventDate(event.startsAt)}`,
+    `- *${formatPublicEventTitle(event.title, event.artistName)}*`,
+    `| Cidade: ${formatCityState(event.city, event.state)}`,
+    `| Data: ${formatEventDate(event.startsAt)}`,
     ...(event.venueName ? [`> Ã°Å¸ÂÅ¸Ã¯Â¸Â Local: ${formatProperName(event.venueName)}`] : []),
     "",
     "*INFORMAÃƒâ€¡Ãƒâ€¢ES DO EVENTO*",
