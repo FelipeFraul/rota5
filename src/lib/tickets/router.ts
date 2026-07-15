@@ -1383,8 +1383,8 @@ function formatCartDecisionReply({ cart }: { cart: TicketConversationCart }) {
     "",
     `> Total da compra: ${formatPriceWithOptionalFee(totalAmountCents, totalFeeCents)}`,
     "",
-    "Digite 1 para *continuar comprando*",
-    "Digite 2 para *finalizar a compra*",
+    "Digite 1 para *para finalizar a compra do seu ingresso*",
+    "Digite 2 para *comprar outros/mais ingressos*",
     "Digite *CANCELAR* para zerar o pedido de compra.",
   ].join("\n");
 }
@@ -14939,14 +14939,14 @@ export async function routeTicketMessage({
 
     const selectedEvent = buildSelectedEvent(selectedSession);
 
-    if (selectedOption === 1) {
+    if (selectedOption === 2) {
       return renderBuyerSectionsStep({
         baseContext,
         selectedEvent,
       });
     }
 
-    if (selectedOption !== 2) {
+    if (selectedOption !== 1) {
       return {
         reply: formatCartDecisionReply({ cart }),
         nextContext: {
