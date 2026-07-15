@@ -768,6 +768,50 @@ function formatAnnouncementTitle(value: string) {
   return value.trim().toLocaleUpperCase("pt-BR");
 }
 
+function normalizeDisplayComparison(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .toLocaleUpperCase("pt-BR");
+}
+
+function formatPublicEventTitle(title: string, artistName: string | null | undefined) {
+  const trimmedTitle = title.trim();
+  const trimmedArtist = artistName?.trim();
+
+  if (!trimmedArtist) return formatAnnouncementTitle(trimmedTitle);
+  if (!trimmedTitle) return formatAnnouncementTitle(trimmedArtist);
+
+  const normalizedTitle = normalizeDisplayComparison(trimmedTitle);
+  const normalizedArtist = normalizeDisplayComparison(trimmedArtist);
+
+  if (normalizedTitle === normalizedArtist) {
+    return formatAnnouncementTitle(trimmedTitle);
+  }
+
+  if (normalizedTitle.startsWith(`${normalizedArtist} `)) {
+    const artistWordCount = normalizedArtist.split(/\s+/).length;
+    const showTitle = trimmedTitle
+      .split(/\s+/)
+      .slice(artistWordCount)
+      .join(" ")
+      .replace(/^(?:(?:em|apresenta)\s+|[-:|]\s*)/iu, "")
+      .trim();
+
+    if (showTitle) {
+      return `${formatAnnouncementTitle(trimmedArtist)} - ${formatAnnouncementTitle(showTitle)}`;
+    }
+  }
+
+  if (normalizedTitle.endsWith(` ${normalizedArtist}`)) {
+    return formatAnnouncementTitle(trimmedTitle);
+  }
+
+  return `${formatAnnouncementTitle(trimmedArtist)} - ${formatAnnouncementTitle(trimmedTitle)}`;
+}
+
 function capitalizeNamePart(value: string) {
   if (!value) return value;
   return value.charAt(0).toLocaleUpperCase("pt-BR") + value.slice(1);
@@ -845,11 +889,10 @@ function formatSingleEventReply(
   index: number,
   totalEvents: number,
 ) {
-  const title = formatAnnouncementTitle(event.title);
+  const title = formatPublicEventTitle(event.title, event.artistName);
   const details = [
-    `> 🎤 Artista: ${formatProperName(event.artistName)}`,
-    `> 📍 Cidade: ${formatCityState(event.city, event.state)}`,
-    `> 🗓️ Data: ${formatEventDate(event.startsAt)}`,
+    `| Cidade: ${formatCityState(event.city, event.state)}`,
+    `| Data: ${formatEventDate(event.startsAt)}`,
   ];
   const buyOption = totalEvents === 1 ? 1 : index * 2 + 1;
   const moreInfoOption = buyOption + 1;
@@ -872,11 +915,10 @@ function formatSingleEventOptionReply(
   index: number,
   totalEvents: number,
 ) {
-  const title = formatAnnouncementTitle(event.title);
+  const title = formatPublicEventTitle(event.title, event.artistName);
   const details = [
-    ...(event.artistName ? [`> 🎤 Artista: ${formatProperName(event.artistName)}`] : []),
-    `> 📍 Cidade: ${formatCityState(event.city, event.state)}`,
-    `> 🗓️ Data: ${formatEventDate(event.startsAt)}`,
+    `| Cidade: ${formatCityState(event.city, event.state)}`,
+    `| Data: ${formatEventDate(event.startsAt)}`,
   ];
   const buyOption = totalEvents === 1 ? 1 : index * 2 + 1;
   const moreInfoOption = buyOption + 1;
@@ -917,10 +959,9 @@ function formatSingleAllEventReply(
   const moreInfoOption = buyOption + 1;
 
   return [
-    `🎟️ - *${formatAnnouncementTitle(event.title)}*`,
-    `> 🎤 Artista: ${formatProperName(event.artistName)}`,
-    `> 📍 Cidade: ${formatCityState(event.city, event.state)}`,
-    `> 🗓️ Data: ${formatEventDate(event.startsAt)}`,
+    `🎟️ - *${formatPublicEventTitle(event.title, event.artistName)}*`,
+    `| Cidade: ${formatCityState(event.city, event.state)}`,
+    `| Data: ${formatEventDate(event.startsAt)}`,
     "",
     formatOptionLine(buyOption, "comprar"),
     formatOptionLine(moreInfoOption, "ver mais"),
@@ -966,11 +1007,10 @@ function formatSingleEventMoreInfo(
   const description = event.description?.trim();
 
   return [
-    `🎟️ - *${formatAnnouncementTitle(event.title)}*`,
-    ...(event.artistName ? [`> 🎤 Artista: ${formatProperName(event.artistName)}`] : []),
-    `> 📍 Cidade: ${formatCityState(event.city, event.state)}`,
-    `> 🗓️ Data: ${formatEventDate(event.startsAt)}`,
-    ...(event.venueName ? [`> 🏟️ Local: ${formatProperName(event.venueName)}`] : []),
+    `🎟️ - *${formatPublicEventTitle(event.title, event.artistName)}*`,
+    `| Cidade: ${formatCityState(event.city, event.state)}`,
+    `| Data: ${formatEventDate(event.startsAt)}`,
+    ...(event.venueName ? [`| Local: ${formatProperName(event.venueName)}`] : []),
     "",
     "*INFORMAÇÕES DO EVENTO*",
     description || "Nenhuma informação adicional cadastrada para este evento.",
