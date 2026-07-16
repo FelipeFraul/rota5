@@ -915,7 +915,7 @@ function formatSingleEventReply(
   const options = [
     formatOptionLine(buyOption, "comprar"),
     formatOptionLine(moreInfoOption, "saber mais"),
-    "Digite uma palavra para *nova pesquisa*",
+    "Digite uma palavra para *pesquisar o evento*",
   ];
 
   return [
@@ -941,7 +941,7 @@ function formatSingleEventOptionReply(
   const options = [
     formatOptionLine(buyOption, "comprar"),
     formatOptionLine(moreInfoOption, "saber mais"),
-    "Digite uma palavra para *nova pesquisa*",
+    "Digite uma palavra para *pesquisar o evento*",
   ];
 
   return [
@@ -1037,7 +1037,7 @@ function formatSingleEventMoreInfoOptions() {
   return [
     formatOptionLine(1, "comprar"),
     formatOptionLine(2, "voltar"),
-    "Digite uma palavra para *nova pesquisa*",
+    "Digite uma palavra para *pesquisar o evento*",
   ].join("\n");
 }
 
@@ -1206,6 +1206,7 @@ function formatSectionsReply({
     "Responda com o número do setor para continuar.",
     "Digite *CANCELAR* para zerar o pedido de compra.",
     'Digite "VOLTAR" para voltar à seção anterior.',
+    "Digite uma palavra para *pesquisar o evento*",
   ].join("\n");
 }
 

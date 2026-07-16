@@ -45,7 +45,7 @@ export const TICKET_MESSAGES = {
   reservationExpired:
     "Seu tempo de reserva terminou. Se desejar comprar seu ingresso, pesquise novamente o evento.",
   buyerInterestReminder:
-    "ATENDIMENTO\n\n🚨 Últimos ingressos para {EVENTO}. Corra comprar o seu!\n> Digite 1 para comprar\n> Digite 2 para saber mais\n> Digite uma palavra para nova pesquisa",
+    "ATENDIMENTO\n\n🚨 Últimos ingressos para {EVENTO}. Corra comprar o seu!\n> Digite 1 para comprar\n> Digite 2 para saber mais\n> Digite uma palavra para pesquisar o evento",
   buyerFlowReset:
     `PROCESSO CANCELADO\n\n${PUBLIC_HOME_MESSAGE}`,
   reservationUnavailableForPayment:
