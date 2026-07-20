@@ -1,0 +1,48 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+
+const batchService = readFileSync(
+  new URL("../src/lib/tickets/services/whatsappMessageBatches.ts", import.meta.url),
+  "utf8",
+);
+const batchCron = readFileSync(
+  new URL("../src/app/api/cron/process-whatsapp-batches/route.ts", import.meta.url),
+  "utf8",
+);
+const retryMigration = readFileSync(
+  new URL("../supabase/migrations/20260720000100_add_whatsapp_batch_retry_controls.sql", import.meta.url),
+  "utf8",
+);
+
+test("claims batches with retry-aware RPC arguments and reads attempt_count", () => {
+  assert.match(batchService, /processingTimeoutSeconds\s*=\s*300/);
+  assert.match(batchService, /maxAttempts\s*=\s*3/);
+  assert.match(batchService, /processing_timeout_seconds:\s*processingTimeoutSeconds/);
+  assert.match(batchService, /max_attempts:\s*maxAttempts/);
+  assert.match(batchService, /attemptCount:\s*row\.attempt_count/);
+});
+
+test("finishes batches with explicit error_code to avoid PostgREST overload ambiguity", () => {
+  assert.match(batchService, /errorCode\s*=\s*null/);
+  assert.match(batchService, /error_code:\s*errorCode/);
+  assert.match(retryMigration, /finish_whatsapp_message_batch\(\s*target_batch_id uuid,\s*final_status text default 'processed',\s*error_code text default null\s*\)/);
+});
+
+test("reschedules retryable batch failures and marks failed after attempt limit", () => {
+  assert.match(batchService, /reschedule_whatsapp_message_batch/);
+  assert.match(batchService, /retry_after_seconds:\s*retryAfterSeconds/);
+  assert.match(batchService, /max_attempts:\s*maxAttempts/);
+  assert.match(retryMigration, /when attempt_count >= bounded_max_attempts then 'failed'/);
+  assert.match(batchCron, /MAX_BATCH_ATTEMPTS\s*=\s*3/);
+  assert.match(batchCron, /rescheduleClaimedBatch/);
+});
+
+test("cron records success, retry, cancellation, and failure outcomes", () => {
+  assert.match(batchCron, /status:\s*"processed"/);
+  assert.match(batchCron, /status:\s*"rescheduled"/);
+  assert.match(batchCron, /status:\s*"cancelled"/);
+  assert.match(batchCron, /status:\s*"failed"/);
+  assert.match(batchCron, /finishWhatsAppMessageBatch\(\{\s*batchId,\s*status:\s*"processed"/);
+  assert.match(batchCron, /reason:\s*"reschedule_failed"/);
+});
