@@ -1284,7 +1284,8 @@ export function shouldProcessImmediately({
   if (
     intent.classification === "greeting" ||
     intent.classification === "social_reply" ||
-    intent.classification === "courtesy"
+    intent.classification === "courtesy" ||
+    (intent.classification === "purchase_support" && !hasActiveState)
   ) {
     return {
       immediate: false,
@@ -16511,6 +16512,13 @@ export async function routeTicketMessage({
   }
 
   if (incomingIntent.classification === "purchase_support") {
+    if (baseContext.state === "idle") {
+      return {
+        reply: TICKET_MESSAGES.genericHelp,
+        nextContext: resetBuyerReservationContext(baseContext),
+      };
+    }
+
     return buildPublicHelpSearchResponse({
       baseContext,
       query: "dificuldade comprar ingresso online",
