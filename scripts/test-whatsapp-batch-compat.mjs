@@ -55,10 +55,12 @@ test("cron records success, retry, cancellation, and failure outcomes", () => {
   assert.match(batchCron, /reason:\s*"reschedule_failed"/);
 });
 
-test("cron finalizes inactive conversations after outbound inactivity", () => {
+test("cron finalizes inactive open conversations without duplicating finalizers", () => {
   assert.match(batchCron, /finalizeInactiveWhatsAppConversations/);
   assert.match(batchCron, /finalizeAfterMinutes:\s*30/);
-  assert.match(conversationFinalizer, /latestMessage\?\.direction === "outbound"/);
+  assert.match(conversationFinalizer, /finalizedConversationIds/);
+  assert.match(conversationFinalizer, /!finalized\.has\(row\.id\)/);
+  assert.doesNotMatch(conversationFinalizer, /latestMessage\?\.direction === "outbound"/);
   assert.match(conversationFinalizer, /status:\s*"closed"/);
   assert.match(conversationFinalizer, /reason:\s*FINALIZER_REASON/);
   assert.match(ticketMessages, /Sessão encerrada\. Para iniciar uma nova digite olá!/);

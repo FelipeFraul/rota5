@@ -21,10 +21,8 @@ type ConversationCandidateRow = {
   } | null;
 };
 
-type LastMessageRow = {
+type FinalizerMessageRow = {
   conversation_id: string | null;
-  direction: "inbound" | "outbound";
-  created_at: string;
   raw_metadata: Record<string, unknown> | null;
 };
 
@@ -37,22 +35,20 @@ function getCutoffIso(finalizeAfterMinutes: number) {
   return new Date(Date.now() - boundedMinutes * 60_000).toISOString();
 }
 
-function latestMessageByConversation(messages: LastMessageRow[]) {
-  const latest = new Map<string, LastMessageRow>();
+function finalizedConversationIds(messages: FinalizerMessageRow[]) {
+  const finalized = new Set<string>();
 
   for (const message of messages) {
     if (!message.conversation_id) continue;
-
-    const previous = latest.get(message.conversation_id);
     if (
-      !previous ||
-      new Date(message.created_at).getTime() > new Date(previous.created_at).getTime()
+      message.raw_metadata?.reason === FINALIZER_REASON &&
+      message.raw_metadata?.send_status === "sent"
     ) {
-      latest.set(message.conversation_id, message);
+      finalized.add(message.conversation_id);
     }
   }
 
-  return latest;
+  return finalized;
 }
 
 async function loadDueConversationRows({
@@ -86,31 +82,19 @@ async function loadDueConversationRows({
 
   const { data: messages, error: messagesError } = await getSupabaseAdmin()
     .from("whatsapp_messages")
-    .select("conversation_id, direction, created_at, raw_metadata")
+    .select("conversation_id, raw_metadata")
     .in("conversation_id", conversationIds)
-    .order("created_at", { ascending: false })
-    .limit(Math.max(conversationIds.length * 4, conversationIds.length))
-    .returns<LastMessageRow[]>();
+    .eq("direction", "outbound")
+    .returns<FinalizerMessageRow[]>();
 
   if (messagesError) {
     throw messagesError;
   }
 
-  const latestMessages = latestMessageByConversation(messages ?? []);
+  const finalized = finalizedConversationIds(messages ?? []);
 
   return rows
-    .filter((row) => {
-      const latestMessage = latestMessages.get(row.id);
-
-      return (
-        Boolean(row.customers?.whatsapp_phone) &&
-        latestMessage?.direction === "outbound" &&
-        !(
-          latestMessage.raw_metadata?.reason === FINALIZER_REASON &&
-          latestMessage.raw_metadata?.send_status === "sent"
-        )
-      );
-    })
+    .filter((row) => Boolean(row.customers?.whatsapp_phone) && !finalized.has(row.id))
     .slice(0, limit);
 }
 
