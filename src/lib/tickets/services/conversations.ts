@@ -66,6 +66,28 @@ export async function getOrCreateOpenConversation({
   };
 }
 
+export async function getOpenConversationById(conversationId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data: conversation, error } = await supabase
+    .from("conversations")
+    .select("id, customer_id, status, context, last_message_at")
+    .eq("id", conversationId)
+    .eq("status", "open")
+    .maybeSingle<TicketConversation>();
+
+  if (error) {
+    return {
+      ok: false as const,
+      error,
+    };
+  }
+
+  return {
+    ok: true as const,
+    conversation,
+  };
+}
+
 export async function updateConversationAfterMessage({
   conversationId,
   context,

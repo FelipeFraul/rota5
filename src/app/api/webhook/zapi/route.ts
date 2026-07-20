@@ -19,6 +19,7 @@ import {
 } from "@/lib/tickets/services/conversations";
 import { upsertCustomerFromWhatsApp } from "@/lib/tickets/services/customers";
 import {
+  countConversationMessages,
   findInboundMessageByProviderId,
   saveWhatsAppMessage,
 } from "@/lib/tickets/services/messages";
@@ -62,6 +63,9 @@ import {
   verifyAdminUserPassphrase,
 } from "@/lib/tickets/services/adminAuth";
 import { GATE_ACCESS_REDACTED_BODY } from "@/lib/tickets/services/gateAccessAuth";
+import {
+  appendInboundMessageToBatch,
+} from "@/lib/tickets/services/whatsappMessageBatches";
 import {
   sendZapiImage,
   sendZapiText,
@@ -985,6 +989,65 @@ export async function POST(request: Request) {
   }
 
   const numericReply = parseStrictNumericReply(incoming.text);
+  const messageCountResult = await countConversationMessages(
+    conversationResult.conversation.id,
+  );
+
+  if (!messageCountResult.ok) {
+    logError("Failed to count WhatsApp conversation messages", {
+      conversationId: conversationResult.conversation.id,
+      code: messageCountResult.error?.code,
+    });
+    return jsonError("Internal Server Error", 500);
+  }
+
+  const currentStateName =
+    typeof currentContext.state === "string" ? currentContext.state : "idle";
+  const shouldDelayInitialPublicMessage =
+    !inboundRedaction &&
+    !isAllowedCodexRequestPhone(incoming.phone) &&
+    currentStateName === "idle" &&
+    currentContext.publicInitialHelpSent !== true &&
+    messageCountResult.count <= 1;
+
+  if (shouldDelayInitialPublicMessage) {
+    const batchResult = await appendInboundMessageToBatch({
+      conversationId: conversationResult.conversation.id,
+      messageId: inboundResult.message.id,
+      isActionable: false,
+    });
+
+    if (!batchResult.ok) {
+      logError("Failed to append inbound message to WhatsApp batch", {
+        conversationId: conversationResult.conversation.id,
+        error: batchResult.error,
+      });
+      return jsonError("Internal Server Error", 500);
+    }
+
+    if (!batchResult.batch.shouldProcessNow) {
+      const activityUpdate = await updateConversationAfterMessage({
+        conversationId: conversationResult.conversation.id,
+        context: currentContext,
+      });
+
+      if (!activityUpdate.ok) {
+        logError("Failed to update conversation after queued WhatsApp batch", {
+          conversationId: conversationResult.conversation.id,
+          code: activityUpdate.error.code,
+        });
+        return jsonError("Internal Server Error", 500);
+      }
+
+      return jsonOk({
+        received: true,
+        batched: true,
+        processed: false,
+        processAfter: true,
+        reason: "initial_public_message_delay",
+      });
+    }
+  }
 
   if (deliveryGuardIsFresh) {
     const pendingReply =

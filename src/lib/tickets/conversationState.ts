@@ -459,6 +459,7 @@ export type TicketConversationState = {
   step: TicketConversationStep;
   state: TicketConversationStep;
   lastInboundText?: string;
+  publicInitialHelpSent?: boolean;
   admin?: TicketConversationAdmin;
   adminEvents?: TicketConversationAdminEvents;
   adminCourtesies?: TicketConversationAdminCourtesies;

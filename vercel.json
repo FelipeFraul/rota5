@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/expire-reservations",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/process-whatsapp-batches",
+      "schedule": "* * * * *"
     }
   ]
 }
