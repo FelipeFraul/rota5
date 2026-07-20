@@ -28,6 +28,10 @@ import {
   publicInitialHelpContext as markPublicInitialHelpSent,
 } from "@/lib/tickets/publicInitialFlow";
 import {
+  buildAllEventsOutboundMessages,
+  formatAllEventsReply,
+} from "@/lib/tickets/publicAllEventsFormatting";
+import {
   createCheckoutForReservation,
   type CheckoutForReservation,
   type CreateCheckoutForReservationResult,
@@ -1560,7 +1564,7 @@ export function parseEventSearchMessage(
   };
 }
 
-function formatEventDate(startsAt: string) {
+export function formatEventDate(startsAt: string) {
   return new Intl.DateTimeFormat("pt-BR", {
     timeZone: SAO_PAULO_TIME_ZONE,
     day: "2-digit",
@@ -1601,7 +1605,7 @@ function formatCurrencyFromCents(cents: number) {
   }).format(cents / 100);
 }
 
-function formatOptionLine(
+export function formatOptionLine(
   option: number | string,
   label: string,
   { preserveCase = false }: { preserveCase?: boolean } = {},
@@ -1697,7 +1701,7 @@ function normalizeDisplayComparison(value: string) {
     .toLocaleUpperCase("pt-BR");
 }
 
-function formatPublicEventTitle(title: string, artistName: string | null | undefined) {
+export function formatPublicEventTitle(title: string, artistName: string | null | undefined) {
   const trimmedTitle = title.trim();
   const trimmedArtist = artistName?.trim();
 
@@ -1728,7 +1732,7 @@ function capitalizeNamePart(value: string) {
   return value.charAt(0).toLocaleUpperCase("pt-BR") + value.slice(1);
 }
 
-function formatProperName(value: string | null | undefined) {
+export function formatProperName(value: string | null | undefined) {
   const trimmed = value?.trim();
   if (!trimmed) return "";
 
@@ -1746,7 +1750,7 @@ function formatProperName(value: string | null | undefined) {
     .join("");
 }
 
-function formatCityState(city: string, state: string) {
+export function formatCityState(city: string, state: string) {
   return `${formatProperName(city)}/${state.trim().toLocaleUpperCase("pt-BR")}`;
 }
 
@@ -1847,37 +1851,6 @@ function formatSingleEventOptionReply(
   ].join("\n");
 }
 
-function formatAllEventsReply(
-  events: Array<TicketEventSearchResult | TicketConversationEventOption>,
-) {
-  const lines = events.flatMap((event, index) => [
-    formatSingleAllEventReply(event, index),
-    "",
-  ]);
-
-  return [
-    "Encontrei estes eventos:",
-    "",
-    ...lines,
-  ].join("\n");
-}
-
-function formatSingleAllEventReply(
-  event: TicketEventSearchResult | TicketConversationEventOption,
-  index: number,
-) {
-  const buyOption = index * 2 + 1;
-  const moreInfoOption = buyOption + 1;
-
-  return [
-    `🎟️ - *${formatPublicEventTitle(event.title, event.artistName)}*`,
-    `| Cidade: ${formatCityState(event.city, event.state)}`,
-    `| Data: ${formatEventDate(event.startsAt)}`,
-    "",
-    formatOptionLine(buyOption, "comprar"),
-    formatOptionLine(moreInfoOption, "ver mais"),
-  ].join("\n");
-}
 
 function buildEventSearchOutboundMessages(events: TicketEventSearchResult[]) {
   return events.map((event, index) => {
@@ -1934,50 +1907,6 @@ function formatSingleEventMoreInfoOptions() {
     formatOptionLine(2, "voltar"),
     "Digite uma palavra para *pesquisar o evento*",
   ].join("\n");
-}
-
-const ALL_EVENTS_MESSAGE_MAX_LENGTH = 3_500;
-const ALL_EVENTS_CONTINUATION_DELAY_MS = 1_200;
-
-function buildAllEventsOutboundMessages(
-  events: Array<TicketEventSearchResult | TicketConversationEventOption>,
-) {
-  const messages: Array<{
-    type: "text";
-    body: string;
-    suppressTitle: true;
-    delayMs?: number;
-  }> = [];
-  let current = "Encontrei estes eventos:";
-  const pushCurrentMessage = () => {
-    messages.push({
-      type: "text",
-      body: current,
-      suppressTitle: true,
-      ...(messages.length > 0
-        ? { delayMs: ALL_EVENTS_CONTINUATION_DELAY_MS }
-        : {}),
-    });
-  };
-
-  events.forEach((event, index) => {
-    const block = formatSingleAllEventReply(event, index);
-    const candidate = `${current}\n\n${block}`;
-
-    if (candidate.length <= ALL_EVENTS_MESSAGE_MAX_LENGTH) {
-      current = candidate;
-      return;
-    }
-
-    pushCurrentMessage();
-    current = `*EVENTOS Ã¢â‚¬â€ CONTINUAÃƒâ€¡ÃƒÆ’O*\n\n${block}`;
-  });
-
-  if (current) {
-    pushCurrentMessage();
-  }
-
-  return messages;
 }
 
 function buildSelectedEvent(

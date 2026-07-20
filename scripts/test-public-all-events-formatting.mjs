@@ -1,5 +1,11 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
+
+const publicAllEventsFormatting = readFileSync(
+  new URL("../src/lib/tickets/publicAllEventsFormatting.ts", import.meta.url),
+  "utf8",
+);
 
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 const ALL_EVENTS_MESSAGE_MAX_LENGTH = 3_500;
@@ -158,7 +164,7 @@ function buildAllEventsOutboundMessages(events) {
     }
 
     pushCurrentMessage();
-    current = `*EVENTOS — CONTINUAÇÃO*\n\n${block}`;
+    current = `*EVENTOS Ã¢â‚¬â€ CONTINUAÃƒâ€¡ÃƒÆ’O*\n\n${block}`;
   });
 
   if (current) {
@@ -199,6 +205,11 @@ const baseEvents = [
 ];
 
 test("TODOS sem eventos preserva a resposta atual do router", () => {
+  assert.match(publicAllEventsFormatting, /function formatAllEventsReply/);
+  assert.match(publicAllEventsFormatting, /function formatSingleAllEventReply/);
+  assert.match(publicAllEventsFormatting, /function buildAllEventsOutboundMessages/);
+  assert.match(publicAllEventsFormatting, /ALL_EVENTS_MESSAGE_MAX_LENGTH = 3_500/);
+  assert.match(publicAllEventsFormatting, /ALL_EVENTS_CONTINUATION_DELAY_MS = 1_200/);
   assert.equal(
     `Não encontrei eventos disponíveis no momento.\n\nOlá, *bem-vindo(a) à Black House*, casa de Comédia de Sorocaba!`,
     "Não encontrei eventos disponíveis no momento.\n\nOlá, *bem-vindo(a) à Black House*, casa de Comédia de Sorocaba!",
@@ -281,7 +292,7 @@ test("TODOS divide em multiplas mensagens e aplica delay nas continuacoes", () =
       })),
     ],
   );
-  assert.match(messages[1].body, /^\*EVENTOS — CONTINUAÇÃO\*/);
+  assert.match(messages[1].body, /^\*EVENTOS Ã¢â‚¬â€ CONTINUAÃƒâ€¡ÃƒÆ’O\*/);
   assert.ok(messages.every((message) => message.body.length <= ALL_EVENTS_MESSAGE_MAX_LENGTH));
   assert.deepEqual(
     [...combinedBody.matchAll(/Digite (\d+) para/g)].map((match) => Number(match[1])),
