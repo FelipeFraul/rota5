@@ -1036,14 +1036,11 @@ export async function POST(request: Request) {
     });
 
     if (!batchResult.ok) {
-      logError("Failed to append inbound message to WhatsApp batch", {
+      logWarn("Continuing without WhatsApp batch after append failure", {
         conversationId: conversationResult.conversation.id,
         error: batchResult.error,
       });
-      return jsonError("Internal Server Error", 500);
-    }
-
-    if (!batchResult.batch.shouldProcessNow) {
+    } else if (!batchResult.batch.shouldProcessNow) {
       const activityUpdate = await updateConversationAfterMessage({
         conversationId: conversationResult.conversation.id,
         context: currentContext,
@@ -1064,26 +1061,25 @@ export async function POST(request: Request) {
         processAfter: true,
         reason: immediateDecision.reason,
       });
-    }
+    } else {
+      const batchMessages = await listWhatsAppBatchMessages(
+        batchResult.batch.batchId,
+      );
 
-    const batchMessages = await listWhatsAppBatchMessages(
-      batchResult.batch.batchId,
-    );
+      if (!batchMessages.ok) {
+        logWarn("Continuing without aggregated WhatsApp batch after load failure", {
+          conversationId: conversationResult.conversation.id,
+          batchId: batchResult.batch.batchId,
+          code: batchMessages.error?.code,
+        });
+      } else {
+        const aggregatedText = buildAggregatedWhatsAppText(batchMessages.messages);
 
-    if (!batchMessages.ok) {
-      logError("Failed to load aggregated WhatsApp batch messages", {
-        conversationId: conversationResult.conversation.id,
-        batchId: batchResult.batch.batchId,
-        code: batchMessages.error?.code,
-      });
-      return jsonError("Internal Server Error", 500);
-    }
-
-    const aggregatedText = buildAggregatedWhatsAppText(batchMessages.messages);
-
-    if (aggregatedText) {
-      effectiveText = aggregatedText;
-      processedBatchId = batchResult.batch.batchId;
+        if (aggregatedText) {
+          effectiveText = aggregatedText;
+          processedBatchId = batchResult.batch.batchId;
+        }
+      }
     }
   }
 
