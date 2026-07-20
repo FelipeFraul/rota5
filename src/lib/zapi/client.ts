@@ -27,6 +27,8 @@ export type SendZapiMessageResult =
   | {
       ok: false;
       error: string;
+      retryable?: boolean;
+      status?: number;
     };
 
 const MOJIBAKE_REPLACEMENTS: Array<[string, string]> = [
@@ -165,7 +167,13 @@ export async function sendZapiText({
 
       return {
         ok: false,
-        error: "zapi_send_failed",
+        error: response.status === 429
+          ? "zapi_rate_limited"
+          : response.status >= 500
+            ? "zapi_server_error"
+            : "zapi_send_failed",
+        retryable: response.status === 429 || response.status >= 500,
+        status: response.status,
       };
     }
 
@@ -185,7 +193,10 @@ export async function sendZapiText({
 
     return {
       ok: false,
-      error: "zapi_send_error",
+      error: error instanceof DOMException && error.name === "AbortError"
+        ? "zapi_send_timeout"
+        : "zapi_send_error",
+      retryable: true,
     };
   } finally {
     clearTimeout(timeout);
@@ -238,7 +249,13 @@ export async function sendZapiImage({
 
       return {
         ok: false,
-        error: "zapi_image_send_failed",
+        error: response.status === 429
+          ? "zapi_image_rate_limited"
+          : response.status >= 500
+            ? "zapi_image_server_error"
+            : "zapi_image_send_failed",
+        retryable: response.status === 429 || response.status >= 500,
+        status: response.status,
       };
     }
 
@@ -258,7 +275,10 @@ export async function sendZapiImage({
 
     return {
       ok: false,
-      error: "zapi_image_send_error",
+      error: error instanceof DOMException && error.name === "AbortError"
+        ? "zapi_image_send_timeout"
+        : "zapi_image_send_error",
+      retryable: true,
     };
   } finally {
     clearTimeout(timeout);

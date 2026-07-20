@@ -78,6 +78,39 @@ export async function countConversationMessages(conversationId: string) {
   };
 }
 
+export async function findSentBatchReplyMessage({
+  batchId,
+  sequence,
+}: {
+  batchId: string;
+  sequence: number;
+}) {
+  const supabase = getSupabaseAdmin();
+  const { data: message, error } = await supabase
+    .from("whatsapp_messages")
+    .select("id, provider_message_id")
+    .eq("direction", "outbound")
+    .contains("raw_metadata", {
+      provider: "zapi",
+      batchId,
+      sequence,
+      sendStatus: "sent",
+    })
+    .maybeSingle<{ id: string; provider_message_id: string | null }>();
+
+  if (error) {
+    return {
+      ok: false as const,
+      error,
+    };
+  }
+
+  return {
+    ok: true as const,
+    message,
+  };
+}
+
 export async function saveWhatsAppMessage({
   conversationId,
   customerId,
