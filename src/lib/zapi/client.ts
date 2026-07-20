@@ -117,6 +117,35 @@ function ensureDefaultSystemTitle(value: string) {
   return formatSystemActionLines(`*ATENDIMENTO*\n\n${body}`);
 }
 
+function removeRetiredPublicMenu(value: string) {
+  const body = sanitizeZapiText(value).trim();
+  const normalized = body
+    .replace(/\*/g, "")
+    .replace(/\r\n/g, "\n")
+    .replace(/[ \t]+/g, " ")
+    .trim()
+    .toLocaleLowerCase("pt-BR");
+  const retiredMenu =
+    normalized.includes("como posso ajudar?") &&
+    normalized.includes("1. ver eventos") &&
+    normalized.includes("2. comprar ingresso") &&
+    normalized.includes("3. ajuda com uma compra");
+
+  if (!retiredMenu) {
+    return value;
+  }
+
+  return [
+    "Olá, *bem-vindo(a) à Black House*, casa de Comédia de Sorocaba!",
+    "Pesquise um evento por *nome, artista, data* ou...",
+    "",
+    '> Para ver todos os eventos, digite "TODOS"',
+    '> Para reenviar ingresso pago, digite "REENVIAR INGRESSO"',
+    '> Para receber ajuda a qualquer momento, digite "AJUDA"',
+    '> Para voltar à página inicial e fazer uma nova pesquisa, digite "SAIR"',
+  ].join("\n");
+}
+
 export async function sendZapiText({
   phone,
   message,
@@ -141,8 +170,8 @@ export async function sendZapiText({
         phone,
         message: formatWhatsAppUppercase(
           ensureTitle
-            ? ensureDefaultSystemTitle(message)
-            : formatSystemActionLines(sanitizeZapiText(message)),
+            ? ensureDefaultSystemTitle(removeRetiredPublicMenu(message))
+            : formatSystemActionLines(sanitizeZapiText(removeRetiredPublicMenu(message))),
         ),
       }),
       signal: controller.signal,

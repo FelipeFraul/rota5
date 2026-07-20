@@ -114,3 +114,24 @@ export async function upsertCustomerFromWhatsApp({
     customer,
   };
 }
+
+export async function getCustomerById(customerId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data: customer, error } = await supabase
+    .from("customers")
+    .select("id, whatsapp_phone, name")
+    .eq("id", customerId)
+    .maybeSingle<TicketCustomer>();
+
+  if (error) {
+    return {
+      ok: false as const,
+      error,
+    };
+  }
+
+  return {
+    ok: true as const,
+    customer,
+  };
+}

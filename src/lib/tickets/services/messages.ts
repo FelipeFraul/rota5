@@ -58,6 +58,26 @@ export async function findInboundMessageByProviderId(
   };
 }
 
+export async function countConversationMessages(conversationId: string) {
+  const supabase = getSupabaseAdmin();
+  const { count, error } = await supabase
+    .from("whatsapp_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("conversation_id", conversationId);
+
+  if (error) {
+    return {
+      ok: false as const,
+      error,
+    };
+  }
+
+  return {
+    ok: true as const,
+    count: count ?? 0,
+  };
+}
+
 export async function saveWhatsAppMessage({
   conversationId,
   customerId,
