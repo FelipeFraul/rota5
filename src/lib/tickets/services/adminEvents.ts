@@ -30,8 +30,10 @@ type AdminTicketSalesOverviewEntry = {
   available: number;
   courtesySold: number;
   courtesyAvailable: number;
+  courtesyCapacity: number;
   salesSold: number;
   salesAvailable: number;
+  salesCapacity: number;
 };
 
 export type AdminInitialEventSectionInput = {
@@ -706,8 +708,10 @@ function emptyTicketSalesOverview(): AdminEventSummary["ticketSalesOverview"] {
     available: 0,
     courtesySold: 0,
     courtesyAvailable: 0,
+    courtesyCapacity: 0,
     salesSold: 0,
     salesAvailable: 0,
+    salesCapacity: 0,
   }));
 }
 
@@ -751,8 +755,10 @@ function buildTicketSalesOverviewByEvent({
         available: 0,
         courtesySold: 0,
         courtesyAvailable: 0,
+        courtesyCapacity: 0,
         salesSold: 0,
         salesAvailable: 0,
+        salesCapacity: 0,
       };
       overview.push(item);
     }
@@ -761,7 +767,13 @@ function buildTicketSalesOverviewByEvent({
   const increment = (
     eventId: string,
     identity: ReturnType<typeof getTicketSalesOverviewIdentity> | null,
-    field: "courtesySold" | "courtesyAvailable" | "salesSold" | "salesAvailable",
+    field:
+      | "courtesySold"
+      | "courtesyAvailable"
+      | "courtesyCapacity"
+      | "salesSold"
+      | "salesAvailable"
+      | "salesCapacity",
   ) => {
     const overview = ensure(eventId);
     const total = overview.find((entry) => entry.key === "total");
@@ -780,7 +792,13 @@ function buildTicketSalesOverviewByEvent({
   const addAmount = (
     eventId: string,
     identity: ReturnType<typeof getTicketSalesOverviewIdentity> | null,
-    field: "courtesySold" | "courtesyAvailable" | "salesSold" | "salesAvailable",
+    field:
+      | "courtesySold"
+      | "courtesyAvailable"
+      | "courtesyCapacity"
+      | "salesSold"
+      | "salesAvailable"
+      | "salesCapacity",
     amount: number,
   ) => {
     if (amount <= 0) return;
@@ -867,10 +885,15 @@ function buildTicketSalesOverviewByEvent({
       "courtesyAvailable",
       available,
     );
+    addAmount(
+      limit.event_id,
+      getTicketSalesOverviewIdentity(limit.section_id, section?.name),
+      "courtesyCapacity",
+      Number(limit.max_courtesies ?? 0),
+    );
   }
 
   for (const seat of seats) {
-    if (seat.status !== "available") continue;
     const eventId = firstJoin(seat.event_sessions)?.event_id;
     const section = firstJoin(seat.venue_sections);
     const venue = firstJoin(section?.venues);
@@ -880,7 +903,10 @@ function buildTicketSalesOverviewByEvent({
     if (section?.status !== "active" || venue?.status !== "active") continue;
     const identity = getTicketSalesOverviewIdentity(seat.section_id, section?.name);
     if (!sellableSectionKeys.has(`${eventId}:${seat.section_id}`)) continue;
-    increment(eventId, identity, "salesAvailable");
+    increment(eventId, identity, "salesCapacity");
+    if (seat.status === "available") {
+      increment(eventId, identity, "salesAvailable");
+    }
   }
 
   return overviewByEvent;

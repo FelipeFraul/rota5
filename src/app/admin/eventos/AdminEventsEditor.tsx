@@ -26,8 +26,10 @@ type EventSummary = {
     available: number;
     courtesySold?: number;
     courtesyAvailable?: number;
+    courtesyCapacity?: number;
     salesSold?: number;
     salesAvailable?: number;
+    salesCapacity?: number;
   }>;
 };
 
@@ -1153,11 +1155,11 @@ function TicketSalesOverviewIcons({ event }: { event: EventSummary }) {
     <span className="admin-event-sales-overview" aria-label="Resumo rápido de vendas por setor">
       {event.ticketSalesOverview.map((item) => {
         const courtesySold = item.courtesySold ?? 0;
-        const courtesyAvailable = item.courtesyAvailable ?? item.available;
+        const courtesyCapacity = item.courtesyCapacity ?? (courtesySold + (item.courtesyAvailable ?? 0));
         const salesSold = item.salesSold ?? item.sold;
-        const salesAvailable = item.salesAvailable ?? item.available;
-        const courtesyLabel = `${formatInteger(courtesySold)}-${formatInteger(courtesyAvailable)}`;
-        const salesLabel = `${formatInteger(salesSold)}-${formatInteger(salesAvailable)}`;
+        const salesCapacity = item.salesCapacity ?? (salesSold + (item.salesAvailable ?? item.available));
+        const courtesyLabel = `${formatInteger(courtesySold)}-${formatInteger(courtesyCapacity)}`;
+        const salesLabel = `${formatInteger(salesSold)}-${formatInteger(salesCapacity)}`;
 
         return (
           <span
