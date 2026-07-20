@@ -3,6 +3,7 @@ import "server-only";
 import { getEnv } from "@/lib/env";
 import { logError, logWarn } from "@/lib/logger";
 import { formatSystemActionLines, formatWhatsAppUppercase } from "@/lib/zapi/format";
+import { replaceRetiredPublicMenu } from "@/lib/zapi/retiredPublicMenu";
 import { sanitizeWhatsAppText } from "@/lib/zapi/textEncoding";
 
 type SendZapiTextInput = {
@@ -117,35 +118,6 @@ function ensureDefaultSystemTitle(value: string) {
   return formatSystemActionLines(`*ATENDIMENTO*\n\n${body}`);
 }
 
-function removeRetiredPublicMenu(value: string) {
-  const body = sanitizeZapiText(value).trim();
-  const normalized = body
-    .replace(/\*/g, "")
-    .replace(/\r\n/g, "\n")
-    .replace(/[ \t]+/g, " ")
-    .trim()
-    .toLocaleLowerCase("pt-BR");
-  const retiredMenu =
-    normalized.includes("como posso ajudar?") &&
-    normalized.includes("1. ver eventos") &&
-    normalized.includes("2. comprar ingresso") &&
-    normalized.includes("3. ajuda com uma compra");
-
-  if (!retiredMenu) {
-    return value;
-  }
-
-  return [
-    "Olá, *bem-vindo(a) à Black House*, casa de Comédia de Sorocaba!",
-    "Pesquise um evento por *nome, artista, data* ou...",
-    "",
-    '> Para ver todos os eventos, digite "TODOS"',
-    '> Para reenviar ingresso pago, digite "REENVIAR INGRESSO"',
-    '> Para receber ajuda a qualquer momento, digite "AJUDA"',
-    '> Para voltar à página inicial e fazer uma nova pesquisa, digite "SAIR"',
-  ].join("\n");
-}
-
 export async function sendZapiText({
   phone,
   message,
@@ -160,6 +132,14 @@ export async function sendZapiText({
   );
 
   try {
+    const guardedMessage = replaceRetiredPublicMenu(message);
+
+    if (guardedMessage.replaced) {
+      logWarn("Blocked retired public WhatsApp menu before Z-API send", {
+        phoneLast4: phone.slice(-4),
+      });
+    }
+
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -170,8 +150,8 @@ export async function sendZapiText({
         phone,
         message: formatWhatsAppUppercase(
           ensureTitle
-            ? ensureDefaultSystemTitle(removeRetiredPublicMenu(message))
-            : formatSystemActionLines(sanitizeZapiText(removeRetiredPublicMenu(message))),
+            ? ensureDefaultSystemTitle(guardedMessage.message)
+            : formatSystemActionLines(sanitizeZapiText(guardedMessage.message)),
         ),
       }),
       signal: controller.signal,

@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test:whatsapp-baseline": "node scripts/test-whatsapp-baseline.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "codex:requests": "node scripts/list-codex-requests.mjs",

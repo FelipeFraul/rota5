@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { buildAggregatedWhatsAppText } from "@/lib/tickets/services/whatsappBatchCore";
 
 export type WhatsAppMessageBatchAppendResult = {
   batchId: string;
@@ -141,15 +142,7 @@ export async function listWhatsAppBatchMessages(batchId: string) {
   };
 }
 
-export function buildAggregatedWhatsAppText(messages: WhatsAppMessageBatchMessage[]) {
-  return messages
-    .map((message) => message.body?.trim())
-    .filter((body): body is string => Boolean(body))
-    .join(". ")
-    .replace(/\s+\./g, ".")
-    .replace(/\.{2,}/g, ".")
-    .trim();
-}
+export { buildAggregatedWhatsAppText };
 
 export async function finishWhatsAppMessageBatch({
   batchId,
