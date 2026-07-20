@@ -16,6 +16,7 @@ import {
   getOpenConversationById,
   updateConversationAfterMessage,
 } from "@/lib/tickets/services/conversations";
+import { finalizeInactiveWhatsAppConversations } from "@/lib/tickets/services/conversationFinalizer";
 import { getCustomerById } from "@/lib/tickets/services/customers";
 import {
   findSentBatchReplyMessage,
@@ -456,6 +457,22 @@ async function handleProcessWhatsAppBatchesCron(request: Request) {
   const rescheduled = results.filter((result) => result.status === "rescheduled").length;
   const failed = results.filter((result) => result.status === "failed").length;
   const cancelled = results.filter((result) => result.status === "cancelled").length;
+  let finalizedConversations = {
+    checked: 0,
+    closed: 0,
+    failed: 0,
+  };
+
+  try {
+    finalizedConversations = await finalizeInactiveWhatsAppConversations({
+      limit: 20,
+      finalizeAfterMinutes: 30,
+    });
+  } catch (error) {
+    logError("Failed to finalize inactive WhatsApp conversations", { error });
+    finalizedConversations.failed += 1;
+  }
+
   const hasOnlyFailures =
     claimedResult.batches.length > 0 && processed === 0 && rescheduled === 0 && cancelled === 0;
 
@@ -466,6 +483,7 @@ async function handleProcessWhatsAppBatchesCron(request: Request) {
     rescheduled,
     failed,
     cancelled,
+    finalizedConversations,
   };
 
   return hasOnlyFailures

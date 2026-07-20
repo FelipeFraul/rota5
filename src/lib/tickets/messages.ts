@@ -6,6 +6,8 @@ const PUBLIC_HOME_COMMANDS_MESSAGE =
 export const TICKET_MESSAGES = {
   genericHelp: PUBLIC_HOME_MESSAGE,
   genericHelpCommands: PUBLIC_HOME_COMMANDS_MESSAGE,
+  conversationClosed:
+    "ATENDIMENTO\n\nSessão encerrada. Para iniciar uma nova digite olá!",
   noEventsFound:
     "Não encontrei eventos com essa busca.\n\nTente pesquisar por outro nome, artista, data ou digite TODOS para ver os eventos disponíveis.",
   numericInvalidOption:

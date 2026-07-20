@@ -10,6 +10,14 @@ const batchCron = readFileSync(
   new URL("../src/app/api/cron/process-whatsapp-batches/route.ts", import.meta.url),
   "utf8",
 );
+const conversationFinalizer = readFileSync(
+  new URL("../src/lib/tickets/services/conversationFinalizer.ts", import.meta.url),
+  "utf8",
+);
+const ticketMessages = readFileSync(
+  new URL("../src/lib/tickets/messages.ts", import.meta.url),
+  "utf8",
+);
 const retryMigration = readFileSync(
   new URL("../supabase/migrations/20260720000100_add_whatsapp_batch_retry_controls.sql", import.meta.url),
   "utf8",
@@ -45,4 +53,13 @@ test("cron records success, retry, cancellation, and failure outcomes", () => {
   assert.match(batchCron, /status:\s*"failed"/);
   assert.match(batchCron, /finishWhatsAppMessageBatch\(\{\s*batchId,\s*status:\s*"processed"/);
   assert.match(batchCron, /reason:\s*"reschedule_failed"/);
+});
+
+test("cron finalizes inactive conversations after outbound inactivity", () => {
+  assert.match(batchCron, /finalizeInactiveWhatsAppConversations/);
+  assert.match(batchCron, /finalizeAfterMinutes:\s*30/);
+  assert.match(conversationFinalizer, /latestMessage\?\.direction === "outbound"/);
+  assert.match(conversationFinalizer, /status:\s*"closed"/);
+  assert.match(conversationFinalizer, /reason:\s*FINALIZER_REASON/);
+  assert.match(ticketMessages, /Sessão encerrada\. Para iniciar uma nova digite olá!/);
 });

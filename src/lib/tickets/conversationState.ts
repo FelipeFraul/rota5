@@ -539,7 +539,7 @@ export type TicketConversationState = {
   updatedAt: string;
 };
 
-export const DEFAULT_CONVERSATION_INACTIVITY_TTL_MINUTES = 60;
+export const DEFAULT_CONVERSATION_INACTIVITY_TTL_MINUTES = 30;
 
 export type ConversationContextResetReason =
   | "inactivity"

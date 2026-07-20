@@ -12,18 +12,18 @@ const context = {
 
 const inactive = resolveConversationContextForInbound({
   context,
-  lastMessageAt: "2026-06-21T10:59:59.000Z",
+  lastMessageAt: "2026-06-21T11:29:59.000Z",
   now,
-  inactivityTtlMinutes: 60,
+  inactivityTtlMinutes: 30,
 });
 assert.equal(inactive.resetReason, "inactivity");
 assert.equal(inactive.context.state, "idle");
 
 const active = resolveConversationContextForInbound({
   context,
-  lastMessageAt: "2026-06-21T11:00:01.000Z",
+  lastMessageAt: "2026-06-21T11:30:01.000Z",
   now,
-  inactivityTtlMinutes: 60,
+  inactivityTtlMinutes: 30,
 });
 assert.equal(active.resetReason, null);
 assert.equal(active.context, context);
