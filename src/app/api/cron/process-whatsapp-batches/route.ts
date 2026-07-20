@@ -384,36 +384,13 @@ async function processClaimedBatch({
   };
 }
 
-async function handleProcessWhatsAppBatchesCron(request: Request) {
-  const cronSecret = process.env.CRON_SECRET?.trim();
-
-  if (!cronSecret) {
-    logError("WhatsApp batch cron is missing CRON_SECRET");
-    return jsonError("Cron not configured", 503);
-  }
-
-  if (!isSecretMatch(getBearerToken(request), cronSecret)) {
-    logWarn("Rejected WhatsApp batch cron with invalid secret");
-    return unauthorized();
-  }
-
-  const rateLimit = await consumeRateLimit({
-    routeKey: "cron:process-whatsapp-batches",
-    limit: 30,
-    windowSeconds: 60,
-    request,
-  });
-
-  if (!rateLimit.allowed) {
-    logWarn("Rate limited WhatsApp batch cron", {
-      sourceHash: rateLimit.sourceHash,
-      count: rateLimit.count,
-    });
-    return rateLimitResponse(rateLimit);
-  }
-
+export async function processDueWhatsAppMessageBatches({
+  limit = 20,
+}: {
+  limit?: number;
+} = {}) {
   const claimedResult = await claimDueWhatsAppMessageBatches({
-    limit: 20,
+    limit,
     processingTimeoutSeconds: PROCESSING_TIMEOUT_SECONDS,
     maxAttempts: MAX_BATCH_ATTEMPTS,
   });
@@ -422,7 +399,7 @@ async function handleProcessWhatsAppBatchesCron(request: Request) {
     logError("Failed to claim due WhatsApp batches", {
       code: claimedResult.error?.code,
     });
-    return jsonError("Internal Server Error", 500);
+    throw claimedResult.error;
   }
 
   const results = [];
@@ -473,11 +450,7 @@ async function handleProcessWhatsAppBatchesCron(request: Request) {
     finalizedConversations.failed += 1;
   }
 
-  const hasOnlyFailures =
-    claimedResult.batches.length > 0 && processed === 0 && rescheduled === 0 && cancelled === 0;
-
-  const responseBody = {
-    ok: true,
+  return {
     claimed: claimedResult.batches.length,
     processed,
     rescheduled,
@@ -485,10 +458,61 @@ async function handleProcessWhatsAppBatchesCron(request: Request) {
     cancelled,
     finalizedConversations,
   };
+}
+
+async function handleProcessWhatsAppBatchesCron(request: Request) {
+  const cronSecret = process.env.CRON_SECRET?.trim();
+
+  if (!cronSecret) {
+    logError("WhatsApp batch cron is missing CRON_SECRET");
+    return jsonError("Cron not configured", 503);
+  }
+
+  if (!isSecretMatch(getBearerToken(request), cronSecret)) {
+    logWarn("Rejected WhatsApp batch cron with invalid secret");
+    return unauthorized();
+  }
+
+  const rateLimit = await consumeRateLimit({
+    routeKey: "cron:process-whatsapp-batches",
+    limit: 30,
+    windowSeconds: 60,
+    request,
+  });
+
+  if (!rateLimit.allowed) {
+    logWarn("Rate limited WhatsApp batch cron", {
+      sourceHash: rateLimit.sourceHash,
+      count: rateLimit.count,
+    });
+    return rateLimitResponse(rateLimit);
+  }
+
+  let responseBody: Awaited<ReturnType<typeof processDueWhatsAppMessageBatches>>;
+
+  try {
+    responseBody = await processDueWhatsAppMessageBatches();
+  } catch (error) {
+    logError("Failed to claim due WhatsApp batches", {
+      error,
+    });
+    return jsonError("Internal Server Error", 500);
+  }
+
+  const hasOnlyFailures =
+    responseBody.claimed > 0 &&
+    responseBody.processed === 0 &&
+    responseBody.rescheduled === 0 &&
+    responseBody.cancelled === 0;
+
+  const jsonBody = {
+    ok: true,
+    ...responseBody,
+  };
 
   return hasOnlyFailures
-    ? jsonError("WhatsApp batch cron failed", 500, responseBody)
-    : jsonOk(responseBody);
+    ? jsonError("WhatsApp batch cron failed", 500, jsonBody)
+    : jsonOk(jsonBody);
 }
 
 export async function GET(request: Request) {

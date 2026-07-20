@@ -1,4 +1,5 @@
 import { randomUUID, timingSafeEqual } from "crypto";
+import { after } from "next/server";
 import {
   jsonError,
   jsonOk,
@@ -7,6 +8,7 @@ import {
 } from "@/lib/http/responses";
 import { createGitHubIssue } from "@/lib/github/issues";
 import { logError, logInfo, logWarn } from "@/lib/logger";
+import { processDueWhatsAppMessageBatches } from "@/app/api/cron/process-whatsapp-batches/route";
 import {
   consumeRateLimit,
   hashRateLimitScope,
@@ -1059,6 +1061,26 @@ export async function POST(request: Request) {
         });
         return jsonError("Internal Server Error", 500);
       }
+
+      after(async () => {
+        await sleep(31_000);
+
+        try {
+          const result = await processDueWhatsAppMessageBatches({ limit: 20 });
+
+          logInfo("Processed WhatsApp batches after delayed webhook enqueue", {
+            conversationId: conversationResult.conversation.id,
+            batchId: batchResult.batch.batchId,
+            ...result,
+          });
+        } catch (error) {
+          logError("Failed to process delayed WhatsApp batch after webhook enqueue", {
+            conversationId: conversationResult.conversation.id,
+            batchId: batchResult.batch.batchId,
+            error,
+          });
+        }
+      });
 
       return jsonOk({
         received: true,

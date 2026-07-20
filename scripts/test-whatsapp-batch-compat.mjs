@@ -79,6 +79,9 @@ test("public initial reply waits for the 30 second batch before greeting", () =>
   assert.match(zapiWebhook, /shouldDelayPublicInitialReply/);
   assert.match(zapiWebhook, /currentStateName === "idle" && !publicInitialHelpWasSent/);
   assert.match(zapiWebhook, /isActionable:\s*shouldDelayPublicInitialReply\s*\?\s*false\s*:\s*immediateDecision\.immediate/);
+  assert.match(zapiWebhook, /after\(async \(\) =>/);
+  assert.match(zapiWebhook, /await sleep\(31_000\)/);
+  assert.match(zapiWebhook, /processDueWhatsAppMessageBatches\(\{\s*limit:\s*20\s*\}\)/);
   assert.match(ticketRouter, /intent\.classification === "purchase_support" && !hasActiveState/);
   assert.match(ticketRouter, /incomingIntent\.classification === "purchase_support"[\s\S]*baseContext\.state === "idle"[\s\S]*reply:\s*TICKET_MESSAGES\.genericHelp/);
   assert.match(ticketRouter, /function publicInitialHelpContext/);
