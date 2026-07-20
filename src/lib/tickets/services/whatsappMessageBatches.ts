@@ -52,6 +52,144 @@ type BatchMessageJoinRow = {
   } | null;
 };
 
+function isRpcCompatibilityError(error: { code?: string; message?: string } | null | undefined) {
+  return (
+    error?.code === "42702" ||
+    error?.code === "PGRST203" ||
+    /ambiguous|overload/i.test(error?.message ?? "")
+  );
+}
+
+function addSeconds(date: Date, seconds: number) {
+  return new Date(date.getTime() + seconds * 1000);
+}
+
+function minDate(a: Date, b: Date) {
+  return a.getTime() <= b.getTime() ? a : b;
+}
+
+async function appendInboundMessageToBatchFallback({
+  conversationId,
+  messageId,
+  isActionable,
+}: {
+  conversationId: string;
+  messageId: string;
+  isActionable: boolean;
+}) {
+  const supabase = getSupabaseAdmin();
+  const now = new Date();
+
+  const { data: existingBatch, error: selectError } = await supabase
+    .from("whatsapp_message_batches")
+    .select("id, first_message_at")
+    .eq("conversation_id", conversationId)
+    .eq("status", "collecting")
+    .order("first_message_at", { ascending: true })
+    .limit(1)
+    .maybeSingle<{ id: string; first_message_at: string }>();
+
+  if (selectError) {
+    return { ok: false as const, error: selectError };
+  }
+
+  let batchId: string;
+  let nextPosition = 1;
+
+  if (!existingBatch) {
+    const processAfter = addSeconds(now, 30).toISOString();
+    const { data: insertedBatch, error: insertBatchError } = await supabase
+      .from("whatsapp_message_batches")
+      .insert({
+        conversation_id: conversationId,
+        first_message_at: now.toISOString(),
+        last_message_at: now.toISOString(),
+        process_after: processAfter,
+      })
+      .select("id")
+      .single<{ id: string }>();
+
+    if (insertBatchError) {
+      return { ok: false as const, error: insertBatchError };
+    }
+
+    batchId = insertedBatch.id;
+  } else {
+    const firstMessageAtValue = existingBatch.first_message_at;
+    batchId = existingBatch.id;
+    const { count, error: countError } = await supabase
+      .from("whatsapp_message_batch_messages")
+      .select("id", { count: "exact", head: true })
+      .eq("batch_id", batchId);
+
+    if (countError) {
+      return { ok: false as const, error: countError };
+    }
+
+    nextPosition = (count ?? 0) + 1;
+
+    const firstMessageAt = new Date(firstMessageAtValue);
+    const processAfter = minDate(addSeconds(now, 30), addSeconds(firstMessageAt, 30));
+    const { error: updateBatchError } = await supabase
+      .from("whatsapp_message_batches")
+      .update({
+        last_message_at: now.toISOString(),
+        process_after: processAfter.toISOString(),
+      })
+      .eq("id", batchId);
+
+    if (updateBatchError) {
+      return { ok: false as const, error: updateBatchError };
+    }
+  }
+
+  const { error: linkError } = await supabase
+    .from("whatsapp_message_batch_messages")
+    .insert({
+      batch_id: batchId,
+      whatsapp_message_id: messageId,
+      position: nextPosition,
+    });
+
+  if (linkError && linkError.code !== "23505") {
+    return { ok: false as const, error: linkError };
+  }
+
+  if (isActionable) {
+    const { error: cancelError } = await supabase
+      .from("whatsapp_message_batches")
+      .update({
+        status: "cancelled",
+        cancelled_at: now.toISOString(),
+        process_after: now.toISOString(),
+      })
+      .eq("id", batchId)
+      .eq("status", "collecting");
+
+    if (cancelError) {
+      return { ok: false as const, error: cancelError };
+    }
+
+    return {
+      ok: true as const,
+      batch: {
+        batchId,
+        status: "cancelled" as const,
+        shouldProcessNow: true,
+      },
+    };
+  }
+
+  return {
+    ok: true as const,
+    batch: {
+      batchId,
+      status: "collecting" as const,
+      shouldProcessNow: false,
+    },
+  };
+}
+
 export async function appendInboundMessageToBatch({
   conversationId,
   messageId,
@@ -73,6 +211,14 @@ export async function appendInboundMessageToBatch({
     .returns<BatchRpcRow[]>();
 
   if (error) {
+    if (isRpcCompatibilityError(error)) {
+      return appendInboundMessageToBatchFallback({
+        conversationId,
+        messageId,
+        isActionable,
+      });
+    }
+
     return {
       ok: false as const,
       error,
@@ -99,6 +245,103 @@ export async function appendInboundMessageToBatch({
   };
 }
 
+async function claimDueWhatsAppMessageBatchesFallback({
+  limit,
+  processingTimeoutSeconds,
+  maxAttempts,
+}: {
+  limit: number;
+  processingTimeoutSeconds: number;
+  maxAttempts: number;
+}) {
+  const supabase = getSupabaseAdmin();
+  const now = new Date();
+  const timeoutCutoff = addSeconds(now, -processingTimeoutSeconds);
+  const { data: candidates, error } = await supabase
+    .from("whatsapp_message_batches")
+    .select(
+      "id, conversation_id, status, process_after, claimed_at, processing_started_at, updated_at, next_attempt_at, attempt_count",
+    )
+    .in("status", ["collecting", "processing"])
+    .order("process_after", { ascending: true })
+    .limit(Math.min(Math.max(limit * 4, limit), 100))
+    .returns<
+      {
+        id: string;
+        conversation_id: string;
+        status: "collecting" | "processing";
+        process_after: string | null;
+        claimed_at: string | null;
+        processing_started_at: string | null;
+        updated_at: string | null;
+        next_attempt_at: string | null;
+        attempt_count: number;
+      }[]
+    >();
+
+  if (error) {
+    return { ok: false as const, error };
+  }
+
+  const due = (candidates ?? [])
+    .filter((batch) => {
+      if (batch.attempt_count >= maxAttempts) return false;
+
+      const nextAttemptAt = batch.next_attempt_at ? new Date(batch.next_attempt_at) : null;
+
+      if (batch.status === "collecting") {
+        const processAfter = batch.process_after ? new Date(batch.process_after) : null;
+        return Boolean(
+          processAfter &&
+            processAfter <= now &&
+            (!nextAttemptAt || nextAttemptAt <= now),
+        );
+      }
+
+      const startedAt = new Date(
+        batch.processing_started_at ?? batch.claimed_at ?? batch.updated_at ?? 0,
+      );
+      return startedAt <= timeoutCutoff && (!nextAttemptAt || nextAttemptAt <= now);
+    })
+    .slice(0, limit);
+
+  const batches = [];
+
+  for (const batch of due) {
+    const nextAttemptCount = batch.attempt_count + 1;
+    const { data: updatedRows, error: updateError } = await supabase
+      .from("whatsapp_message_batches")
+      .update({
+        status: "processing",
+        claimed_at: now.toISOString(),
+        processing_started_at: now.toISOString(),
+        attempt_count: nextAttemptCount,
+        last_error_code: null,
+        last_error_at: null,
+      })
+      .eq("id", batch.id)
+      .in("status", ["collecting", "processing"])
+      .select("id, conversation_id, attempt_count")
+      .returns<{ id: string; conversation_id: string; attempt_count: number }[]>();
+
+    if (updateError) {
+      return { ok: false as const, error: updateError };
+    }
+
+    const updated = updatedRows?.[0];
+
+    if (updated) {
+      batches.push({
+        batchId: updated.id,
+        conversationId: updated.conversation_id,
+        attemptCount: updated.attempt_count,
+      });
+    }
+  }
+
+  return { ok: true as const, batches };
+}
+
 export async function claimDueWhatsAppMessageBatches({
   limit = 20,
   processingTimeoutSeconds = 300,
@@ -118,6 +361,14 @@ export async function claimDueWhatsAppMessageBatches({
     .returns<ClaimedBatchRpcRow[]>();
 
   if (error) {
+    if (isRpcCompatibilityError(error)) {
+      return claimDueWhatsAppMessageBatchesFallback({
+        limit,
+        processingTimeoutSeconds,
+        maxAttempts,
+      });
+    }
+
     return {
       ok: false as const,
       error,
@@ -219,6 +470,64 @@ export async function rescheduleWhatsAppMessageBatch({
     .returns<RescheduledBatchRpcRow[]>();
 
   if (error) {
+    if (isRpcCompatibilityError(error)) {
+      const supabase = getSupabaseAdmin();
+      const now = new Date();
+      const { data: currentBatch, error: selectError } = await supabase
+        .from("whatsapp_message_batches")
+        .select("id, attempt_count, process_after, cancelled_at")
+        .eq("id", batchId)
+        .eq("status", "processing")
+        .maybeSingle<{
+          id: string;
+          attempt_count: number;
+          process_after: string | null;
+          cancelled_at: string | null;
+        }>();
+
+      if (selectError) {
+        return { ok: false as const, error: selectError };
+      }
+
+      if (!currentBatch) {
+        return {
+          ok: true as const,
+          rescheduled: false,
+          failed: false,
+          attemptCount: 0,
+          nextAttemptAt: null,
+        };
+      }
+
+      const failed = currentBatch.attempt_count >= maxAttempts;
+      const nextAttemptAt = failed ? null : addSeconds(now, retryAfterSeconds).toISOString();
+      const { error: updateError } = await supabase
+        .from("whatsapp_message_batches")
+        .update({
+          status: failed ? "failed" : "collecting",
+          processing_started_at: null,
+          next_attempt_at: nextAttemptAt,
+          process_after: failed ? currentBatch.process_after : nextAttemptAt,
+          cancelled_at: failed ? now.toISOString() : currentBatch.cancelled_at,
+          last_error_code: errorCode.slice(0, 80),
+          last_error_at: now.toISOString(),
+        })
+        .eq("id", batchId)
+        .eq("status", "processing");
+
+      if (updateError) {
+        return { ok: false as const, error: updateError };
+      }
+
+      return {
+        ok: true as const,
+        rescheduled: !failed,
+        failed,
+        attemptCount: currentBatch.attempt_count,
+        nextAttemptAt,
+      };
+    }
+
     return {
       ok: false as const,
       error,
