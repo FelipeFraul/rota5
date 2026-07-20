@@ -862,7 +862,7 @@ function buildCapacitySummary(
             ? specialLabel.charAt(0).toLocaleUpperCase("pt-BR") + specialLabel.slice(1)
             : formatSummarySectionName(section);
         return capacity > 0
-          ? `> *${withoutWhatsAppBold(label)}:* *${sold} vendidos* de *${capacity} ${activeSalesOnly ? "assentos ativos" : "lugares cadastrados"}*`
+          ? `> *${withoutWhatsAppBold(label)}:* *${sold} vendidos* de *${capacity} ${activeSalesOnly ? "assentos ativos" : "lugares ativos"}*`
           : `> *${withoutWhatsAppBold(label)}:* *${sold} vendidos*`;
       },
     );
@@ -1191,10 +1191,10 @@ function buildSalesEventReport(input: {
     ...reportHeader("*VENDAS POR EVENTO*", input.event, input.period),
     "",
     summary.totalPotential > 0
-      ? `> *Total vendido:* *${formatCurrencyFromCents(summary.totalSold)}* de *${formatCurrencyFromCents(summary.totalPotential)}* em capacidade cadastrada`
+      ? `> *Total vendido:* *${formatCurrencyFromCents(summary.totalSold)}* de *${formatCurrencyFromCents(summary.totalPotential)}* em capacidade ativa`
       : `> *Total vendido:* *${formatCurrencyFromCents(summary.totalSold)}*`,
     summary.totalCapacity > 0
-      ? `> *Total ingressos:* *${summary.paid.length} vendidos* de *${summary.totalCapacity} lugares cadastrados*`
+      ? `> *Total ingressos:* *${summary.paid.length} vendidos* de *${summary.totalCapacity} lugares ativos*`
       : formatReportCount("Total ingressos", summary.paid.length),
     ...summary.sectionLines,
     courtesyCount > 0 ? formatReportCount("Cortesias emitidas", courtesyCount) : null,
@@ -1309,10 +1309,10 @@ export async function buildAdminReport(input: {
       ...reportHeader("*VENDAS POR EVENTO*", event, input.period),
       "",
       summary.totalPotential > 0
-        ? `> *Total vendido:* *${formatCurrencyFromCents(summary.totalSold)}* de *${formatCurrencyFromCents(summary.totalPotential)}* em capacidade cadastrada`
+        ? `> *Total vendido:* *${formatCurrencyFromCents(summary.totalSold)}* de *${formatCurrencyFromCents(summary.totalPotential)}* em capacidade ativa`
         : `> *Total vendido:* *${formatCurrencyFromCents(summary.totalSold)}*`,
       summary.totalCapacity > 0
-        ? `> *Total ingressos:* *${summary.paid.length} vendidos* de *${summary.totalCapacity} lugares cadastrados*`
+        ? `> *Total ingressos:* *${summary.paid.length} vendidos* de *${summary.totalCapacity} lugares ativos*`
         : formatReportCount("Total ingressos", summary.paid.length),
       ...summary.sectionLines,
       courtesyCount > 0 ? formatReportCount("Cortesias emitidas", courtesyCount) : null,
