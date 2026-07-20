@@ -16506,8 +16506,8 @@ export async function routeTicketMessage({
     previousState.state !== "payment_pending"
   ) {
     return {
-      reply: TICKET_MESSAGES.genericHelp,
-      nextContext: publicInitialHelpContext(baseContext),
+      reply: TICKET_MESSAGES.buyerFlowReset,
+      nextContext: resetBuyerReservationContext(baseContext),
     };
   }
 

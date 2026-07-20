@@ -82,7 +82,7 @@ test("public initial reply waits for the 30 second batch before greeting", () =>
   assert.match(ticketRouter, /intent\.classification === "purchase_support" && !hasActiveState/);
   assert.match(ticketRouter, /incomingIntent\.classification === "purchase_support"[\s\S]*baseContext\.state === "idle"[\s\S]*reply:\s*TICKET_MESSAGES\.genericHelp/);
   assert.match(ticketRouter, /function publicInitialHelpContext/);
-  assert.match(ticketRouter, /reply:\s*TICKET_MESSAGES\.genericHelp[\s\S]*nextContext:\s*publicInitialHelpContext\(baseContext\)/);
+  assert.match(ticketRouter, /isBuyerReservationExitIntent\(text\)[\s\S]*reply:\s*TICKET_MESSAGES\.buyerFlowReset[\s\S]*nextContext:\s*resetBuyerReservationContext\(baseContext\)/);
   assert.match(ticketRouter, /previousState\.state === "idle"[\s\S]*previousState\.publicInitialHelpSent !== true[\s\S]*reply:\s*TICKET_MESSAGES\.genericHelp/);
   assert.match(batchCron, /body:\s*TICKET_MESSAGES\.genericHelp/);
   assert.match(batchCron, /body:\s*TICKET_MESSAGES\.genericHelpCommands/);
