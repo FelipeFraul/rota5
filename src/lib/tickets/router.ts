@@ -21,6 +21,13 @@ import {
 } from "@/lib/tickets/conversationState";
 import { TICKET_MESSAGES } from "@/lib/tickets/messages";
 import {
+  isPublicInitialAllEventsCommand,
+  isPublicInitialExitCommand,
+  isPublicInitialHelpCommand,
+  isPublicInitialTicketResendCommand,
+  publicInitialHelpContext as markPublicInitialHelpSent,
+} from "@/lib/tickets/publicInitialFlow";
+import {
   createCheckoutForReservation,
   type CheckoutForReservation,
   type CreateCheckoutForReservationResult,
@@ -2345,16 +2352,7 @@ function isSimpleReservationReply(text: string) {
 }
 
 function isBuyerReservationExitIntent(text: string) {
-  const normalized = normalizeIntentText(text);
-
-  return (
-    normalized === "sair" ||
-    normalized === "cancela" ||
-    normalized === "cancelar" ||
-    normalized === "apagar" ||
-    normalized === "encerrar" ||
-    normalized === "logout"
-  );
+  return isPublicInitialExitCommand(text);
 }
 
 function isBuyerBackIntent(text: string) {
@@ -2364,15 +2362,11 @@ function isBuyerBackIntent(text: string) {
 }
 
 function isAllPublicEventsIntent(text: string) {
-  const normalized = normalizeIntentText(text);
-
-  return normalized === "todos";
+  return isPublicInitialAllEventsCommand(text);
 }
 
 function isTicketResendCommand(text: string) {
-  const normalized = normalizeIntentText(text);
-
-  return normalized === "reenviar ingresso";
+  return isPublicInitialTicketResendCommand(text);
 }
 
 function isAllPublicEventsContext(context: Partial<TicketConversationState>) {
@@ -2417,10 +2411,7 @@ function resetBuyerReservationContext(
 function publicInitialHelpContext(
   baseContext: TicketConversationState,
 ): TicketConversationState {
-  return {
-    ...resetBuyerReservationContext(baseContext),
-    publicInitialHelpSent: true,
-  };
+  return markPublicInitialHelpSent(resetBuyerReservationContext(baseContext));
 }
 
 function publicHelpReturnContext(baseContext: TicketConversationState) {
@@ -16544,7 +16535,7 @@ export async function routeTicketMessage({
     });
   }
 
-  if (incomingIntent.classification === "unknown" && incomingIntent.normalizedText === "ajuda") {
+  if (incomingIntent.classification === "unknown" && isPublicInitialHelpCommand(text)) {
     return {
       reply: formatPublicHelpPrompt(),
       nextContext: {

@@ -6,6 +6,10 @@ const router = readFileSync(
   new URL("../src/lib/tickets/router.ts", import.meta.url),
   "utf8",
 );
+const publicInitialFlow = readFileSync(
+  new URL("../src/lib/tickets/publicInitialFlow.ts", import.meta.url),
+  "utf8",
+);
 const webhook = readFileSync(
   new URL("../src/app/api/webhook/zapi/route.ts", import.meta.url),
   "utf8",
@@ -47,22 +51,24 @@ test("AJUDA no fluxo publico inicial nao entra em compra nem admin", () => {
   assert.match(router, /normalizedMessage === "ajuda"/);
   assert.match(router, /intentNormalized === "ajuda"/);
   assert.match(router, /classification:\s*"unknown"/);
-  assert.match(router, /incomingIntent\.classification === "unknown" && incomingIntent\.normalizedText === "ajuda"/);
+  assert.match(publicInitialFlow, /function isPublicInitialHelpCommand/);
+  assert.match(publicInitialFlow, /normalized === "ajuda"/);
+  assert.match(router, /incomingIntent\.classification === "unknown" && isPublicInitialHelpCommand\(text\)/);
   assert.doesNotMatch(router, /normalizedMessage === "ajuda"[\s\S]{0,600}classification:\s*"buy_/);
   assert.doesNotMatch(router, /normalizedMessage === "ajuda"[\s\S]{0,600}admin_auth_pending/);
 });
 
 test("TODOS no fluxo publico inicial segue para listagem publica", () => {
-  assert.match(router, /function isAllPublicEventsIntent/);
-  assert.match(router, /normalized === "todos"/);
+  assert.match(publicInitialFlow, /function isPublicInitialAllEventsCommand/);
+  assert.match(publicInitialFlow, /normalized === "todos"/);
   assert.match(router, /classification:\s*"list_events"/);
   assert.match(router, /incomingIntent\.classification === "list_events"[\s\S]*listAllPublicEventsByDate/);
   assert.doesNotMatch(router, /normalized === "todos"[\s\S]{0,600}admin_auth_pending/);
 });
 
 test("REENVIAR INGRESSO aciona reenvio pago e nao compra/admin", () => {
-  assert.match(router, /function isTicketResendCommand/);
-  assert.match(router, /normalized === "reenviar ingresso"/);
+  assert.match(publicInitialFlow, /function isPublicInitialTicketResendCommand/);
+  assert.match(publicInitialFlow, /normalized === "reenviar ingresso"/);
   assert.match(router, /handlePaidTicketResendCommand/);
   assert.match(router, /if \(isTicketResendCommand\(text\)\)/);
   assert.doesNotMatch(router, /normalized === "reenviar ingresso"[\s\S]{0,600}admin_auth_pending/);
@@ -70,11 +76,13 @@ test("REENVIAR INGRESSO aciona reenvio pago e nao compra/admin", () => {
 
 test("SAIR cancela e a proxima mensagem volta ao inicio", () => {
   assert.match(router, /function isBuyerReservationExitIntent/);
-  assert.match(router, /normalized === "sair"/);
+  assert.match(publicInitialFlow, /function isPublicInitialExitCommand/);
+  assert.match(publicInitialFlow, /normalized === "sair"/);
   assert.match(router, /isBuyerReservationExitIntent\(text\)[\s\S]*reply:\s*TICKET_MESSAGES\.buyerFlowReset/);
   assert.match(router, /nextContext:\s*resetBuyerReservationContext\(baseContext\)/);
   assert.match(router, /previousState\.state === "idle"[\s\S]*previousState\.publicInitialHelpSent !== true[\s\S]*reply:\s*TICKET_MESSAGES\.genericHelp/);
   assert.match(router, /nextContext:\s*publicInitialHelpContext\(baseContext\)/);
+  assert.match(publicInitialFlow, /function publicInitialHelpContext/);
 });
 
 test("mensagem antiga de busca nao aparece como resposta inicial", () => {
