@@ -45,7 +45,12 @@ type TicketRow = {
     starts_at: string;
     events?: MaybeArray<{ title: string }>;
   }>;
-  venue_sections: MaybeArray<{ id: string; name: string }>;
+  venue_sections: MaybeArray<{
+    id: string;
+    name: string;
+    status: string;
+    venues?: MaybeArray<{ status: string }>;
+  }>;
   reservation_items: MaybeArray<{
     ticket_type: string;
     price_cents: number;
@@ -457,7 +462,7 @@ async function getTickets(eventId?: string | string[]) {
   let query = getSupabaseAdmin()
     .from("tickets")
     .select(
-      "id, ticket_code, status, issued_at, used_at, cancelled_at, order_id, session_id, section_id, event_sessions!inner(event_id, starts_at, events(title)), venue_sections(id, name), reservation_items(ticket_type, price_cents, fee_cents, seat_code), orders(status, created_at, total_amount_cents, total_fee_cents, payments(status, paid_at)), customers(whatsapp_phone, name)",
+      "id, ticket_code, status, issued_at, used_at, cancelled_at, order_id, session_id, section_id, event_sessions!inner(event_id, starts_at, events(title)), venue_sections(id, name, status, venues(status)), reservation_items(ticket_type, price_cents, fee_cents, seat_code), orders(status, created_at, total_amount_cents, total_fee_cents, payments(status, paid_at)), customers(whatsapp_phone, name)",
     )
     .order("id", { ascending: true });
 
@@ -694,6 +699,17 @@ function buildCapacitySummary(
 
   const isOperationallyActive = (value: string | null | undefined) =>
     !value || value === "active";
+  const isActiveSection = (
+    section: {
+      status?: string | null;
+      venues?: MaybeArray<{ status: string }>;
+    } | null,
+  ) =>
+    Boolean(
+      section &&
+      section.status === "active" &&
+      isOperationallyActive(first(section.venues)?.status),
+    );
   const isActiveSalesContext = (
     session: {
       starts_at: string;
@@ -723,8 +739,7 @@ function buildCapacitySummary(
       eventIsEligible &&
       sessionIsEligible &&
       isOperationallyActive(first(session.venues)?.status) &&
-      section.status === "active" &&
-      isOperationallyActive(first(section.venues)?.status)
+      isActiveSection(section)
     );
   };
 
@@ -743,7 +758,9 @@ function buildCapacitySummary(
       ))
     );
   });
-  const reportTicketPrices = activeSalesOnly ? activeTicketPrices : ticketPrices;
+  const reportTicketPrices = activeSalesOnly
+    ? activeTicketPrices
+    : ticketPrices.filter((price) => isActiveSection(first(price.venue_sections)));
   const activeSessionSections = new Set(
     reportTicketPrices.map((price) => `${price.session_id}:${price.section_id}`),
   );
@@ -757,11 +774,10 @@ function buildCapacitySummary(
         ],
   );
   const periodPaidTickets = paidTickets(tickets, period);
-  const paid = activeSalesOnly
-    ? periodPaidTickets.filter((ticket) =>
-        activeSessionSections.has(`${ticket.session_id}:${ticket.section_id}`),
-      )
-    : periodPaidTickets;
+  const paid = periodPaidTickets.filter((ticket) =>
+    isActiveSection(first(ticket.venue_sections)) &&
+    (!activeSalesOnly || activeSessionSections.has(`${ticket.session_id}:${ticket.section_id}`)),
+  );
   const issuedTickets = paid.filter(
     (ticket) => ticket.status === "issued" || ticket.status === "used",
   );
@@ -772,6 +788,7 @@ function buildCapacitySummary(
     const section = first(seat.venue_sections);
 
     if (first(seat.seats)?.status === "inactive") return false;
+    if (!isActiveSection(section)) return false;
     if (!activeSalesOnly) return true;
 
     return activeSessionSections.has(`${seat.session_id}:${seat.section_id}`) &&
