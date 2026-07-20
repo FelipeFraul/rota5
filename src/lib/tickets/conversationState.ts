@@ -67,6 +67,7 @@ export type TicketConversationStep =
   | "admin_reports_menu"
   | "admin_report_event_count_select"
   | "admin_report_event_select"
+  | "admin_report_event_ambiguity_select"
   | "admin_report_period_select"
   | "admin_report_custom_period_collecting"
   | "admin_report_division_settlement_confirm"
@@ -424,6 +425,22 @@ export type TicketConversationAdminReports = {
   selectedEventIds?: string[];
   selectedEventId?: string;
   requestedEventCount?: 1 | 2 | 3;
+  pendingEventSearches?: {
+    terms: string[];
+    results: Array<Array<{
+      option: number;
+      eventId: string;
+      title: string;
+      artistName: string;
+      city: string;
+      state: string;
+      status: string;
+      sessionStartsAt: string | null;
+    }>>;
+    resolvedEventIds: string[];
+    currentIndex: number;
+    maximumSelection: 1 | 2 | 3;
+  };
   pendingDivisionSettlement?: {
     periodKey: string;
     periodLabel: string;

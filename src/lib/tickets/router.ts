@@ -196,6 +196,7 @@ import {
 } from "@/lib/tickets/services/adminReports";
 import {
   searchAdminReportEvents,
+  type AdminReportEventOption,
   validateAdminReportEventIds,
 } from "@/lib/tickets/services/adminReportEvents";
 import {
@@ -2644,6 +2645,7 @@ type AdminSubmenuState =
 type AdminReportFlowState =
   | "admin_report_event_count_select"
   | "admin_report_event_select"
+  | "admin_report_event_ambiguity_select"
   | "admin_report_period_select"
   | "admin_report_custom_period_collecting"
   | "admin_report_division_settlement_confirm";
@@ -3892,6 +3894,7 @@ function isAdminReportsFlowState(
   return (
     state === "admin_report_event_count_select" ||
     state === "admin_report_event_select" ||
+    state === "admin_report_event_ambiguity_select" ||
     state === "admin_report_period_select" ||
     state === "admin_report_custom_period_collecting" ||
     state === "admin_report_division_settlement_confirm"
@@ -4854,6 +4857,77 @@ function renderAdminReportEventSearchPrompt(requestedEventCount: 1 | 2 | 3) {
   ].join("\n");
 }
 
+function formatAdminReportEventDate(value: string | null) {
+  return value
+    ? new Intl.DateTimeFormat("pt-BR", {
+        timeZone: "America/Sao_Paulo",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(new Date(value))
+    : "sem data";
+}
+
+function renderAdminReportEventAmbiguityPrompt(input: {
+  term: string;
+  events: AdminReportEventOption[];
+  maximumSelection: 1 | 2 | 3;
+}) {
+  const limitLabel = input.maximumSelection === 1
+    ? "1 evento"
+    : `até ${input.maximumSelection} eventos`;
+
+  return [
+    "*RELATÓRIO - ESCOLHA AS DATAS*",
+    "",
+    `Encontrei ${input.events.length} shows para *${input.term}*. Você pode escolher ${limitLabel}.`,
+    "",
+    ...input.events.map((event) => [
+      `${event.option}. *${event.title}*`,
+      `> Artista: ${event.artistName}`,
+      `> Data: ${formatAdminReportEventDate(event.sessionStartsAt)}`,
+      `> Local: ${event.city}/${event.state}`,
+      `> Status: ${event.status}`,
+    ].join("\n")),
+    "",
+    input.maximumSelection > 1 ? "Digite *TODOS*, *3*, *2*, *1* ou os números desejados. Ex: 1, 3." : "Digite *1* para usar o último show ou o número da data desejada.",
+    "",
+    'Digite "VOLTAR" para voltar, "CANCELAR" para abandonar esta tela ou "SAIR" para sair da área de admin.',
+  ].join("\n");
+}
+
+function parseAdminReportAmbiguousEventSelection(input: {
+  text: string;
+  events: AdminReportEventOption[];
+  maximumSelection: 1 | 2 | 3;
+}) {
+  const normalized = normalizeAdminText(input.text);
+  const limit = input.maximumSelection;
+
+  if (["todos", "todo", "todas", "tudo"].includes(normalized)) {
+    return input.events.slice(0, limit).map((event) => event.eventId);
+  }
+
+  if (limit > 1 && /^[123]$/.test(normalized)) {
+    const count = Math.min(Number(normalized), limit, input.events.length);
+    return input.events.slice(0, count).map((event) => event.eventId);
+  }
+
+  if (!/^\d+(?:\s*[,;]\s*\d+|\s+\d+)*$/.test(input.text.trim())) {
+    return null;
+  }
+
+  const options = [...new Set(input.text.trim().split(/[\s,;]+/).filter(Boolean).map(Number))];
+  if (!options.length || options.length > limit) return null;
+
+  const selected = options.map((option) => input.events.find((event) => event.option === option));
+  if (selected.some((event) => !event)) return null;
+
+  return selected.map((event) => event!.eventId);
+}
+
 async function buildAdminReportEventSelect({
   baseContext,
   scope,
@@ -4890,9 +4964,10 @@ async function buildAdminReportEventSelect({
   }
 
   return {
-    reply: renderAdminReportEventCountPrompt(),
-    nextContext: withAdminReportsContext(baseContext, "admin_report_event_count_select", {
+    reply: renderAdminReportEventSearchPrompt(3),
+    nextContext: withAdminReportsContext(baseContext, "admin_report_event_select", {
       reportType,
+      requestedEventCount: 3,
       lastEvents: [],
     }),
   };
@@ -13657,11 +13732,17 @@ export async function routeTicketMessage({
 
         if (!requestedEventCount) {
           return {
-            reply: renderAdminReportEventCountPrompt(),
+            reply: renderAdminReportEventSearchPrompt(3),
             nextContext: withAdminReportsContext(
               baseContext,
-              "admin_report_event_count_select",
-              adminReports,
+              "admin_report_event_select",
+              {
+                reportType: "sales_event",
+                requestedEventCount: 3,
+                selectedEventIds: undefined,
+                selectedEventId: undefined,
+                lastEvents: [],
+              },
             ),
           };
         }
@@ -13676,6 +13757,117 @@ export async function routeTicketMessage({
               requestedEventCount,
               selectedEventIds: undefined,
               selectedEventId: undefined,
+              lastEvents: [],
+            },
+          ),
+        };
+      }
+
+      if (baseContext.state === "admin_report_event_ambiguity_select") {
+        const pending = adminReports.pendingEventSearches;
+        const currentEvents = pending?.results[pending.currentIndex] ?? [];
+
+        if (!pending || !currentEvents.length || pending.currentIndex >= pending.terms.length) {
+          return {
+            reply: renderAdminReportEventSearchPrompt(adminReports.requestedEventCount ?? 3),
+            nextContext: withAdminReportsContext(
+              baseContext,
+              "admin_report_event_select",
+              {
+                reportType: "sales_event",
+                requestedEventCount: adminReports.requestedEventCount ?? 3,
+                lastEvents: [],
+              },
+            ),
+          };
+        }
+
+        const remainingSlots = Math.max(
+          1,
+          pending.maximumSelection - pending.resolvedEventIds.length,
+        ) as 1 | 2 | 3;
+        const selectedEventIds = parseAdminReportAmbiguousEventSelection({
+          text,
+          events: currentEvents,
+          maximumSelection: remainingSlots,
+        });
+
+        if (!selectedEventIds) {
+          return {
+            reply: renderAdminReportEventAmbiguityPrompt({
+              term: pending.terms[pending.currentIndex] ?? "essa busca",
+              events: currentEvents,
+              maximumSelection: remainingSlots,
+            }),
+            nextContext: withAdminReportsContext(
+              baseContext,
+              "admin_report_event_ambiguity_select",
+              adminReports,
+            ),
+          };
+        }
+
+        const nextResolvedEventIds = [...new Set([
+          ...pending.resolvedEventIds,
+          ...selectedEventIds,
+        ])].slice(0, pending.maximumSelection);
+        let nextIndex = pending.currentIndex + 1;
+
+        while (
+          nextIndex < pending.results.length &&
+          pending.results[nextIndex]?.length === 1 &&
+          nextResolvedEventIds.length < pending.maximumSelection
+        ) {
+          const eventId = pending.results[nextIndex]?.[0]?.eventId;
+          if (eventId && !nextResolvedEventIds.includes(eventId)) {
+            nextResolvedEventIds.push(eventId);
+          }
+          nextIndex += 1;
+        }
+
+        if (
+          nextIndex < pending.results.length &&
+          nextResolvedEventIds.length < pending.maximumSelection
+        ) {
+          const nextEvents = pending.results[nextIndex] ?? [];
+          const nextRemainingSlots = Math.max(
+            1,
+            pending.maximumSelection - nextResolvedEventIds.length,
+          ) as 1 | 2 | 3;
+
+          return {
+            reply: renderAdminReportEventAmbiguityPrompt({
+              term: pending.terms[nextIndex] ?? "essa busca",
+              events: nextEvents,
+              maximumSelection: nextRemainingSlots,
+            }),
+            nextContext: withAdminReportsContext(
+              baseContext,
+              "admin_report_event_ambiguity_select",
+              {
+                ...adminReports,
+                selectedEventIds: nextResolvedEventIds,
+                selectedEventId: nextResolvedEventIds[0],
+                pendingEventSearches: {
+                  ...pending,
+                  resolvedEventIds: nextResolvedEventIds,
+                  currentIndex: nextIndex,
+                },
+              },
+            ),
+          };
+        }
+
+        return {
+          reply: renderAdminReportPeriodMenu(),
+          nextContext: withAdminReportsContext(
+            baseContext,
+            "admin_report_period_select",
+            {
+              ...adminReports,
+              selectedEventIds: nextResolvedEventIds,
+              selectedEventId: nextResolvedEventIds[0],
+              pendingEventSearches: undefined,
               lastEvents: [],
             },
           ),
@@ -13718,7 +13910,7 @@ export async function routeTicketMessage({
           .map((term) => term.trim())
           .filter(Boolean);
 
-        if (searchTerms.length !== maximumSelection) {
+        if (!searchTerms.length || searchTerms.length > maximumSelection) {
           return {
             reply: [
               maximumSelection === 1
@@ -13768,7 +13960,7 @@ export async function routeTicketMessage({
         if (missingSearchIndex >= 0) {
           return {
             reply: [
-              `Nenhum evento publicado encontrado para: *${searchTerms[missingSearchIndex]}*.`,
+              `Nenhum evento publicado ou realizado encontrado para: *${searchTerms[missingSearchIndex]}*.`,
               "Tente outro nome, artista ou uma data no formato DD/MM/AAAA.",
             ].join("\n"),
             nextContext: withAdminReportsContext(
@@ -13779,26 +13971,53 @@ export async function routeTicketMessage({
           };
         }
 
-        const selectedEvents = searchResults.flatMap((result) =>
-          result.ok && result.events[0] ? [result.events[0]] : [],
-        );
-        const uniqueSelectedEvents = [...new Map(
-          selectedEvents.map((event) => [event.eventId, event]),
-        ).values()];
+        const resultEvents = searchResults.map((result) => result.ok ? result.events : []);
+        const resolvedEventIds: string[] = [];
+        let ambiguousIndex = -1;
 
-        if (uniqueSelectedEvents.length !== maximumSelection) {
+        for (const [index, events] of resultEvents.entries()) {
+          if (events.length === 1) {
+            const eventId = events[0]?.eventId;
+            if (eventId && !resolvedEventIds.includes(eventId)) resolvedEventIds.push(eventId);
+            continue;
+          }
+          ambiguousIndex = index;
+          break;
+        }
+
+        if (ambiguousIndex >= 0 && resolvedEventIds.length < maximumSelection) {
+          const remainingSlots = Math.max(
+            1,
+            maximumSelection - resolvedEventIds.length,
+          ) as 1 | 2 | 3;
+
           return {
-            reply: [
-              "Cada busca precisa identificar um evento diferente.",
-              "Revise os nomes, artistas ou datas e tente novamente.",
-            ].join("\n"),
+            reply: renderAdminReportEventAmbiguityPrompt({
+              term: searchTerms[ambiguousIndex] ?? "essa busca",
+              events: resultEvents[ambiguousIndex] ?? [],
+              maximumSelection: remainingSlots,
+            }),
             nextContext: withAdminReportsContext(
               baseContext,
-              "admin_report_event_select",
-              adminReports,
+              "admin_report_event_ambiguity_select",
+              {
+                ...adminReports,
+                selectedEventIds: resolvedEventIds,
+                selectedEventId: resolvedEventIds[0],
+                pendingEventSearches: {
+                  terms: searchTerms,
+                  results: resultEvents,
+                  resolvedEventIds,
+                  currentIndex: ambiguousIndex,
+                  maximumSelection,
+                },
+                lastEvents: [],
+              },
             ),
           };
         }
+
+        const uniqueSelectedEventIds = [...new Set(resolvedEventIds)].slice(0, maximumSelection);
 
         return {
           reply: renderAdminReportPeriodMenu(),
@@ -13807,8 +14026,9 @@ export async function routeTicketMessage({
             "admin_report_period_select",
             {
               ...adminReports,
-              selectedEventIds: uniqueSelectedEvents.map((event) => event.eventId),
-              selectedEventId: uniqueSelectedEvents[0]?.eventId,
+              selectedEventIds: uniqueSelectedEventIds,
+              selectedEventId: uniqueSelectedEventIds[0],
+              pendingEventSearches: undefined,
               lastEvents: [],
             },
           ),

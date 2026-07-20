@@ -140,7 +140,7 @@ export async function searchAdminReportEvents(input: {
     let query = getSupabaseAdmin()
       .from("events")
       .select("id, title, artist_name, city, state, status, event_sessions(starts_at, status)")
-      .eq("status", "published")
+      .in("status", ["published", "finished"])
       .order("created_at", { ascending: false })
       .range(from, from + SEARCH_PAGE_SIZE - 1);
 
@@ -178,7 +178,7 @@ export async function searchAdminReportEvents(input: {
 
   scored.sort((left, right) =>
       left.score - right.score ||
-      (left.sessionStartsAt ?? "9999").localeCompare(right.sessionStartsAt ?? "9999") ||
+      (right.sessionStartsAt ?? "0000").localeCompare(left.sessionStartsAt ?? "0000") ||
       left.row.title.localeCompare(right.row.title, "pt-BR"),
     );
 
@@ -211,7 +211,7 @@ export async function validateAdminReportEventIds(input: {
   let query = getSupabaseAdmin()
     .from("events")
     .select("id")
-    .eq("status", "published")
+    .in("status", ["published", "finished"])
     .in("id", eventIds);
 
   if (!input.canSeeAll) {
