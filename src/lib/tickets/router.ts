@@ -439,11 +439,8 @@ export type ImmediateProcessingDecision = {
 };
 
 const LOW_CONFIDENCE_PUBLIC_PROMPT = [
-  "Como posso ajudar?",
-  "",
-  "1. Ver eventos",
-  "2. Comprar ingresso",
-  "3. Ajuda com uma compra",
+  TICKET_MESSAGES.genericHelp,
+  TICKET_MESSAGES.genericHelpCommands,
 ].join("\n");
 
 const PURCHASE_HELP_PATTERNS = [
@@ -10661,13 +10658,7 @@ export async function routeTicketMessage({
     incomingIntent.classification === "greeting"
   ) {
     return withIntent({
-      reply: [
-        "Olá! Tudo bem? Como posso ajudar?",
-        "",
-        "1. Ver eventos",
-        "2. Comprar ingresso",
-        "3. Ajuda com uma compra",
-      ].join("\n"),
+      reply: LOW_CONFIDENCE_PUBLIC_PROMPT,
       nextContext: baseContext,
     });
   }
@@ -10687,7 +10678,7 @@ export async function routeTicketMessage({
     incomingIntent.classification === "courtesy"
   ) {
     return withIntent({
-      reply: "Claro. Como posso ajudar?",
+      reply: LOW_CONFIDENCE_PUBLIC_PROMPT,
       nextContext: baseContext,
     });
   }

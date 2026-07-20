@@ -52,7 +52,7 @@ export async function appendInboundMessageToBatch({
       batch_message_id: messageId,
       message_is_actionable: isActionable,
       collect_seconds: 30,
-      max_window_seconds: 60,
+      max_window_seconds: 30,
     })
     .returns<BatchRpcRow[]>();
 
