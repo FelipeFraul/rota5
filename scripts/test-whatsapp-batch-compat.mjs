@@ -81,6 +81,9 @@ test("public initial reply waits for the 30 second batch before greeting", () =>
   assert.match(zapiWebhook, /isActionable:\s*shouldDelayPublicInitialReply\s*\?\s*false\s*:\s*immediateDecision\.immediate/);
   assert.match(ticketRouter, /intent\.classification === "purchase_support" && !hasActiveState/);
   assert.match(ticketRouter, /incomingIntent\.classification === "purchase_support"[\s\S]*baseContext\.state === "idle"[\s\S]*reply:\s*TICKET_MESSAGES\.genericHelp/);
+  assert.match(ticketRouter, /function hasGreetingOpening/);
+  assert.match(ticketRouter, /incomingIntent\.classification === "buy_event"[\s\S]*hasGreetingOpening\(incomingIntent\.normalizedText\)[\s\S]*reply:\s*TICKET_MESSAGES\.genericHelp/);
+  assert.match(ticketRouter, /incomingIntent\.classification === "buy_without_event"[\s\S]*hasGreetingOpening\(incomingIntent\.normalizedText\)[\s\S]*reply:\s*TICKET_MESSAGES\.genericHelp/);
   assert.match(batchCron, /body:\s*TICKET_MESSAGES\.genericHelp/);
   assert.match(batchCron, /body:\s*TICKET_MESSAGES\.genericHelpCommands/);
 });
