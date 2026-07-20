@@ -927,14 +927,6 @@ function isGreetingMessage(normalized: string) {
   return hasGreeting && !removeConversationalNoise(normalized);
 }
 
-function hasGreetingOpening(normalized: string) {
-  return (
-    GREETING_ONLY_PATTERN.test(normalized) ||
-    GREETING_PHRASES.some((phrase) => new RegExp(`\\b${phrase}\\b`).test(normalized)) ||
-    normalized.split(/\s+/).some(isGreetingToken)
-  );
-}
-
 function isSocialReplyMessage(normalized: string) {
   const hasSocialReply =
     SOCIAL_REPLY_PATTERN.test(normalized) ||
@@ -2419,6 +2411,15 @@ function resetBuyerReservationContext(
     lastEvents: [],
     publicHelp: undefined,
     ticketResend: undefined,
+  };
+}
+
+function publicInitialHelpContext(
+  baseContext: TicketConversationState,
+): TicketConversationState {
+  return {
+    ...resetBuyerReservationContext(baseContext),
+    publicInitialHelpSent: true,
   };
 }
 
@@ -16505,8 +16506,18 @@ export async function routeTicketMessage({
     previousState.state !== "payment_pending"
   ) {
     return {
-      reply: TICKET_MESSAGES.buyerFlowReset,
-      nextContext: resetBuyerReservationContext(baseContext),
+      reply: TICKET_MESSAGES.genericHelp,
+      nextContext: publicInitialHelpContext(baseContext),
+    };
+  }
+
+  if (
+    previousState.state === "idle" &&
+    previousState.publicInitialHelpSent !== true
+  ) {
+    return {
+      reply: TICKET_MESSAGES.genericHelp,
+      nextContext: publicInitialHelpContext(baseContext),
     };
   }
 
@@ -16523,7 +16534,7 @@ export async function routeTicketMessage({
     if (baseContext.state === "idle") {
       return {
         reply: TICKET_MESSAGES.genericHelp,
-        nextContext: resetBuyerReservationContext(baseContext),
+        nextContext: publicInitialHelpContext(baseContext),
       };
     }
 
@@ -16608,16 +16619,6 @@ export async function routeTicketMessage({
     previousState.state !== "reservation_created" &&
     previousState.state !== "payment_pending"
   ) {
-    if (
-      baseContext.state === "idle" &&
-      hasGreetingOpening(incomingIntent.normalizedText)
-    ) {
-      return {
-        reply: TICKET_MESSAGES.genericHelp,
-        nextContext: resetBuyerReservationContext(baseContext),
-      };
-    }
-
     return {
       reply: [
         "Para qual evento você quer comprar?",
@@ -16629,18 +16630,6 @@ export async function routeTicketMessage({
   }
 
   const parsedSearch = incomingIntent.search ?? parseEventSearchMessage(text);
-
-  if (
-    incomingIntent.classification === "buy_event" &&
-    baseContext.state === "idle" &&
-    hasGreetingOpening(incomingIntent.normalizedText) &&
-    !hasUsefulSearchEvidence(parsedSearch)
-  ) {
-    return {
-      reply: TICKET_MESSAGES.genericHelp,
-      nextContext: resetBuyerReservationContext(baseContext),
-    };
-  }
 
   if (
     previousState.state === "payment_pending" &&

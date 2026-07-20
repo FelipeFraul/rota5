@@ -553,6 +553,7 @@ export type TicketConversationState = {
     messageIds: string[];
   };
   retiredNumericMessageIds?: string[];
+  publicInitialHelpSent?: boolean;
   updatedAt: string;
 };
 
