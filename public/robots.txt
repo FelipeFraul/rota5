@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /gate/
+Disallow: /tickets/
+Disallow: /api/
+Allow: /
