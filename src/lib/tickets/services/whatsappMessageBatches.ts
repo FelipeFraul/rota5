@@ -1,12 +1,20 @@
 import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { buildAggregatedWhatsAppText } from "@/lib/tickets/services/whatsappBatchCore";
 
 export type WhatsAppMessageBatchAppendResult = {
   batchId: string;
-  status: "collecting" | "processing" | "processed" | "cancelled";
+  status: WhatsAppMessageBatchStatus;
   shouldProcessNow: boolean;
 };
+
+export type WhatsAppMessageBatchStatus =
+  | "collecting"
+  | "processing"
+  | "processed"
+  | "cancelled"
+  | "failed";
 
 export type WhatsAppMessageBatchMessage = {
   id: string;
@@ -17,13 +25,21 @@ export type WhatsAppMessageBatchMessage = {
 
 type BatchRpcRow = {
   batch_id: string;
-  batch_status: "collecting" | "processing" | "processed" | "cancelled";
+  batch_status: WhatsAppMessageBatchStatus;
   should_process_now: boolean;
 };
 
 type ClaimedBatchRpcRow = {
   batch_id: string;
   conversation_id: string;
+  attempt_count: number;
+};
+
+type RescheduledBatchRpcRow = {
+  rescheduled: boolean;
+  failed: boolean;
+  attempt_count: number;
+  next_attempt_at: string | null;
 };
 
 type BatchMessageJoinRow = {
@@ -85,11 +101,19 @@ export async function appendInboundMessageToBatch({
 
 export async function claimDueWhatsAppMessageBatches({
   limit = 20,
-}: { limit?: number } = {}) {
+  processingTimeoutSeconds = 300,
+  maxAttempts = 3,
+}: {
+  limit?: number;
+  processingTimeoutSeconds?: number;
+  maxAttempts?: number;
+} = {}) {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .rpc("claim_due_whatsapp_message_batches", {
       batch_limit: limit,
+      processing_timeout_seconds: processingTimeoutSeconds,
+      max_attempts: maxAttempts,
     })
     .returns<ClaimedBatchRpcRow[]>();
 
@@ -105,6 +129,7 @@ export async function claimDueWhatsAppMessageBatches({
     batches: (Array.isArray(data) ? data : []).map((row: ClaimedBatchRpcRow) => ({
       batchId: row.batch_id,
       conversationId: row.conversation_id,
+      attemptCount: row.attempt_count,
     })),
   };
 }
@@ -141,27 +166,22 @@ export async function listWhatsAppBatchMessages(batchId: string) {
   };
 }
 
-export function buildAggregatedWhatsAppText(messages: WhatsAppMessageBatchMessage[]) {
-  return messages
-    .map((message) => message.body?.trim())
-    .filter((body): body is string => Boolean(body))
-    .join(". ")
-    .replace(/\s+\./g, ".")
-    .replace(/\.{2,}/g, ".")
-    .trim();
-}
+export { buildAggregatedWhatsAppText };
 
 export async function finishWhatsAppMessageBatch({
   batchId,
   status = "processed",
+  errorCode = null,
 }: {
   batchId: string;
-  status?: "processed" | "cancelled";
+  status?: "processed" | "cancelled" | "failed";
+  errorCode?: string | null;
 }) {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase.rpc("finish_whatsapp_message_batch", {
     target_batch_id: batchId,
     final_status: status,
+    error_code: errorCode,
   });
 
   if (error) {
@@ -174,5 +194,44 @@ export async function finishWhatsAppMessageBatch({
   return {
     ok: true as const,
     applied: Boolean(data),
+  };
+}
+
+export async function rescheduleWhatsAppMessageBatch({
+  batchId,
+  retryAfterSeconds,
+  errorCode,
+  maxAttempts = 3,
+}: {
+  batchId: string;
+  retryAfterSeconds: number;
+  errorCode: string;
+  maxAttempts?: number;
+}) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .rpc("reschedule_whatsapp_message_batch", {
+      target_batch_id: batchId,
+      retry_after_seconds: retryAfterSeconds,
+      error_code: errorCode,
+      max_attempts: maxAttempts,
+    })
+    .returns<RescheduledBatchRpcRow[]>();
+
+  if (error) {
+    return {
+      ok: false as const,
+      error,
+    };
+  }
+
+  const row = (Array.isArray(data) ? data : [])[0];
+
+  return {
+    ok: true as const,
+    rescheduled: Boolean(row?.rescheduled),
+    failed: Boolean(row?.failed),
+    attemptCount: row?.attempt_count ?? 0,
+    nextAttemptAt: row?.next_attempt_at ?? null,
   };
 }
