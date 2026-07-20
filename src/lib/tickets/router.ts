@@ -21,6 +21,13 @@ import {
 } from "@/lib/tickets/conversationState";
 import { TICKET_MESSAGES } from "@/lib/tickets/messages";
 import {
+  formatCityState,
+  formatEventDate,
+  formatOptionLine,
+  formatProperName,
+  formatPublicEventTitle,
+} from "@/lib/tickets/eventFormatting";
+import {
   isPublicInitialAllEventsCommand,
   isPublicInitialExitCommand,
   isPublicInitialHelpCommand,
@@ -1564,19 +1571,6 @@ export function parseEventSearchMessage(
   };
 }
 
-export function formatEventDate(startsAt: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    timeZone: SAO_PAULO_TIME_ZONE,
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
-    .format(new Date(startsAt))
-    .replace(",", " ÃƒÂ s");
-}
-
 function formatTime(startsAt: string) {
   return new Intl.DateTimeFormat("pt-BR", {
     timeZone: SAO_PAULO_TIME_ZONE,
@@ -1603,25 +1597,6 @@ function formatCurrencyFromCents(cents: number) {
     style: "currency",
     currency: "BRL",
   }).format(cents / 100);
-}
-
-export function formatOptionLine(
-  option: number | string,
-  label: string,
-  { preserveCase = false }: { preserveCase?: boolean } = {},
-) {
-  const normalizedLabel =
-    preserveCase || label.length === 0
-      ? label
-      : label.charAt(0).toLocaleLowerCase("pt-BR") + label.slice(1);
-  const emphasizedLabel =
-    /\b(?:comprar|saber mais|voltar|ver mais|nova pesquisa)\b/iu.test(
-      normalizedLabel,
-    )
-      ? `*${normalizedLabel}*`
-      : normalizedLabel;
-
-  return `Digite ${option} para ${emphasizedLabel}`;
 }
 
 const CANONICAL_TICKET_OPTION_LABELS: Record<string, string> = {
@@ -1667,92 +1642,6 @@ function shouldUseTicketLabelForSingleOffer(sectionName: string) {
   return ["cadeira", "1Ã‚Âª fileira", "mesa", "mesas"].includes(normalized);
 }
 
-const LOWERCASE_NAME_PARTS = new Set([
-  "a",
-  "as",
-  "com",
-  "da",
-  "das",
-  "de",
-  "do",
-  "dos",
-  "e",
-  "em",
-  "na",
-  "nas",
-  "no",
-  "nos",
-  "o",
-  "os",
-  "para",
-  "por",
-]);
-
-function formatAnnouncementTitle(value: string) {
-  return value.trim().toLocaleUpperCase("pt-BR");
-}
-
-function normalizeDisplayComparison(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim()
-    .toLocaleUpperCase("pt-BR");
-}
-
-export function formatPublicEventTitle(title: string, artistName: string | null | undefined) {
-  const trimmedTitle = title.trim();
-  const trimmedArtist = artistName?.trim();
-
-  if (!trimmedTitle) return formatAnnouncementTitle(trimmedArtist ?? "");
-  if (!trimmedArtist) return formatAnnouncementTitle(trimmedTitle);
-
-  const normalizedTitle = normalizeDisplayComparison(trimmedTitle);
-  const normalizedArtist = normalizeDisplayComparison(trimmedArtist);
-
-  if (normalizedTitle === normalizedArtist) {
-    return formatAnnouncementTitle(trimmedArtist);
-  }
-
-  const escapedArtist = trimmedArtist
-    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-    .replace(/\s+/g, "\\s+");
-  const artistPrefix = new RegExp(
-    `^${escapedArtist}\\s*(?:(?:-|:)\\s*|(?:em|apresenta)\\s+)`,
-    "iu",
-  );
-  const showTitle = trimmedTitle.replace(artistPrefix, "").trim();
-
-  return formatAnnouncementTitle(`${trimmedArtist} - ${showTitle || trimmedTitle}`);
-}
-
-function capitalizeNamePart(value: string) {
-  if (!value) return value;
-  return value.charAt(0).toLocaleUpperCase("pt-BR") + value.slice(1);
-}
-
-export function formatProperName(value: string | null | undefined) {
-  const trimmed = value?.trim();
-  if (!trimmed) return "";
-
-  return trimmed
-    .toLocaleLowerCase("pt-BR")
-    .split(/(\s+|-)/)
-    .map((part, index) => {
-      if (!part.trim() || part === "-") return part;
-      if (index > 0 && LOWERCASE_NAME_PARTS.has(part)) return part;
-      return part
-        .split("/")
-        .map((piece) => capitalizeNamePart(piece))
-        .join("/");
-    })
-    .join("");
-}
-
-export function formatCityState(city: string, state: string) {
-  return `${formatProperName(city)}/${state.trim().toLocaleUpperCase("pt-BR")}`;
-}
 
 function buildEventOptions(
   events: TicketEventSearchResult[],

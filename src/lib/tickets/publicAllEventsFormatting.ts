@@ -4,7 +4,7 @@ import {
   formatEventDate,
   formatOptionLine,
   formatPublicEventTitle,
-} from "@/lib/tickets/router";
+} from "@/lib/tickets/eventFormatting";
 import type { TicketEventSearchResult } from "@/lib/tickets/services/events";
 
 export const ALL_EVENTS_MESSAGE_MAX_LENGTH = 3_500;
