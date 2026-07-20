@@ -184,23 +184,6 @@ function buildAggregatedWhatsAppText(messages) {
     .trim();
 }
 
-function isRetiredPublicMenu(value) {
-  const lines = value
-    .replace(/\*/g, "")
-    .replace(/\r\n/g, "\n")
-    .split("\n")
-    .map((line) => line.replace(/[ \t]+/g, " ").trim().toLocaleLowerCase("pt-BR"))
-    .filter(Boolean);
-  const body = lines.join("\n");
-
-  return (
-    body.includes("como posso ajudar?") &&
-    lines.includes("1. ver eventos") &&
-    lines.includes("2. comprar ingresso") &&
-    lines.includes("3. ajuda com uma compra")
-  );
-}
-
 function shouldDelayInitialPublicMessage({
   inboundRedaction = false,
   allowedCodexPhone = false,
@@ -404,20 +387,6 @@ test("preserves publicInitialHelpSent and delays only the first public idle mess
   assert.equal(shouldDelayInitialPublicMessage({ messageCount: 2 }), false);
   assert.equal(shouldDelayInitialPublicMessage({ state: "showing_events" }), false);
   assert.equal(shouldDelayInitialPublicMessage({ publicInitialHelpSent: true }), false);
-});
-
-test("blocks the retired public menu and allows legitimate messages", () => {
-  assert.equal(isRetiredPublicMenu([
-    "ATENDIMENTO",
-    "",
-    "Como posso ajudar?",
-    "",
-    "1. Ver eventos",
-    "2. Comprar ingresso",
-    "3. Ajuda com uma compra",
-  ].join("\n")), true);
-  assert.equal(isRetiredPublicMenu("Como posso ajudar com sua compra paga?"), false);
-  assert.equal(isRetiredPublicMenu("1. Ver eventos disponíveis"), false);
 });
 
 test("duplicate webhook provider message does not append twice", () => {

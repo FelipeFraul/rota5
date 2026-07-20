@@ -3,7 +3,6 @@ import "server-only";
 import { getEnv } from "@/lib/env";
 import { logError, logWarn } from "@/lib/logger";
 import { formatSystemActionLines, formatWhatsAppUppercase } from "@/lib/zapi/format";
-import { replaceRetiredPublicMenu } from "@/lib/zapi/retiredPublicMenu";
 import { sanitizeWhatsAppText } from "@/lib/zapi/textEncoding";
 
 type SendZapiTextInput = {
@@ -134,14 +133,6 @@ export async function sendZapiText({
   );
 
   try {
-    const guardedMessage = replaceRetiredPublicMenu(message);
-
-    if (guardedMessage.replaced) {
-      logWarn("Blocked retired public WhatsApp menu before Z-API send", {
-        phoneLast4: phone.slice(-4),
-      });
-    }
-
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -152,8 +143,8 @@ export async function sendZapiText({
         phone,
         message: formatWhatsAppUppercase(
           ensureTitle
-            ? ensureDefaultSystemTitle(guardedMessage.message)
-            : formatSystemActionLines(sanitizeZapiText(guardedMessage.message)),
+            ? ensureDefaultSystemTitle(message)
+            : formatSystemActionLines(sanitizeZapiText(message)),
         ),
       }),
       signal: controller.signal,
