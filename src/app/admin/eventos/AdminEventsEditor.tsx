@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, type MouseEvent, useCallback, useEffect, useState } from "react";
 import BrandLogo from "@/app/BrandLogo";
 
 type ActiveTab = "event" | "sessions" | "sections" | "prices" | "courtesy";
@@ -36,6 +36,8 @@ type EventFilterStatus = EventStatus | "all" | "paused";
 type SessionStatus = "scheduled" | "sales_open" | "sales_closed" | "cancelled" | "finished";
 type SectionStatus = "active" | "inactive";
 type PriceStatus = "active" | "inactive";
+
+type ContactActivityContact = EventDashboard["contactActivity"]["contacts"][number];
 
 type EventDetails = EventSummary & {
   description: string | null;
@@ -807,6 +809,79 @@ function ContactActivitySection({
   );
 }
 
+function closeOnOverlayClick(
+  event: MouseEvent<HTMLDivElement>,
+  onClose: () => void,
+) {
+  if (event.target === event.currentTarget) {
+    onClose();
+  }
+}
+
+function ConversationModal({
+  contact,
+  onClose,
+}: {
+  contact: ContactActivityContact;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  const messages = contact.conversationMessages.length
+    ? contact.conversationMessages
+    : null;
+
+  return (
+    <div
+      className="admin-event-modal admin-conversation-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Conversa com ${contact.name?.trim() || "contato"}`}
+      onMouseDown={(event) => closeOnOverlayClick(event, onClose)}
+    >
+      <section className="admin-conversation-panel">
+        <header className="admin-dashboard-header">
+          <div>
+            <p className="admin-events-kicker">WhatsApp</p>
+            <h2>{contact.name?.trim() || "Nome não informado"}</h2>
+            <span>{formatContactPhone(contact.phone)} · {formatInteger(contact.messageCount)} {contact.messageCount === 1 ? "mensagem" : "mensagens"}</span>
+          </div>
+          <button type="button" className="admin-event-icon-button" onClick={onClose} aria-label="Fechar conversa">&times;</button>
+        </header>
+        <div className="admin-conversation-content">
+          {messages ? messages.map((message, index) => (
+            <span
+              key={`${message.createdAt}-${index}`}
+              className={`admin-contact-message-bubble ${message.direction === "outbound" ? "is-system" : "is-client"}`}
+            >
+              <b>{message.direction === "outbound" ? "Sistema" : "Cliente"} · {formatContactDateTime(message.createdAt)}</b>
+              {message.body}
+            </span>
+          )) : (
+            <>
+              <span className="admin-contact-message-bubble is-client">
+                <b>Cliente</b>
+                {contact.lastInboundMessage ?? "Sem mensagem recebida registrada."}
+              </span>
+              <span className="admin-contact-message-bubble is-system">
+                <b>Sistema</b>
+                {contact.lastOutboundMessage ?? "Sem resposta do sistema registrada."}
+              </span>
+            </>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function ContactsModal({
   activity,
   title,
@@ -816,8 +891,32 @@ function ContactsModal({
   title: string;
   onClose: () => void;
 }) {
+  const [conversationContact, setConversationContact] = useState<ContactActivityContact | null>(null);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        if (conversationContact) {
+          setConversationContact(null);
+          return;
+        }
+
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [conversationContact, onClose]);
+
   return (
-    <div className="admin-event-modal admin-contacts-modal" role="dialog" aria-modal="true" aria-label={title}>
+    <div
+      className="admin-event-modal admin-contacts-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      onMouseDown={(event) => closeOnOverlayClick(event, onClose)}
+    >
       <section className="admin-contacts-panel">
         <header className="admin-dashboard-header">
           <div>
@@ -842,31 +941,13 @@ function ContactsModal({
                 </div>
                 <div className="admin-contact-stop">
                   <span><b>Parou em:</b> {contact.stoppedAtLabel}</span>
-                  <span className="admin-contact-message-popover" tabIndex={0}>
-                    <span className="admin-contact-message-link">Ver conversa</span>
-                    <div className="admin-contact-message-card" role="tooltip">
-                      {contact.conversationMessages.length ? contact.conversationMessages.map((message, index) => (
-                        <span
-                          key={`${message.createdAt}-${index}`}
-                          className={`admin-contact-message-bubble ${message.direction === "outbound" ? "is-system" : "is-client"}`}
-                        >
-                          <b>{message.direction === "outbound" ? "Sistema" : "Cliente"} · {formatContactDateTime(message.createdAt)}</b>
-                          {message.body}
-                        </span>
-                      )) : (
-                        <>
-                          <span className="admin-contact-message-bubble is-client">
-                            <b>Cliente</b>
-                            {contact.lastInboundMessage ?? "Sem mensagem recebida registrada."}
-                          </span>
-                          <span className="admin-contact-message-bubble is-system">
-                            <b>Sistema</b>
-                            {contact.lastOutboundMessage ?? "Sem resposta do sistema registrada."}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </span>
+                  <button
+                    type="button"
+                    className="admin-contact-message-link"
+                    onClick={() => setConversationContact(contact)}
+                  >
+                    Ver conversa
+                  </button>
                 </div>
                 {contact.purchasedEvents.length ? (
                   <div className="admin-contact-purchases">
@@ -882,6 +963,12 @@ function ContactsModal({
           )) : <p className="admin-dashboard-empty">Nenhum contato recebido no período.</p>}
         </div>
       </section>
+      {conversationContact ? (
+        <ConversationModal
+          contact={conversationContact}
+          onClose={() => setConversationContact(null)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -1322,6 +1409,21 @@ function GeneralDashboardModal({
   const { rows, summary } = getGeneralRangeRows(dashboard, range);
 
   useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+
+      if (contactsOpen) {
+        return;
+      }
+
+      onClose();
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [contactsOpen, onClose]);
+
+  useEffect(() => {
     const controller = new AbortController();
 
     void fetch(`/api/admin/events?contacts=1&range=${range}`, {
@@ -1350,7 +1452,13 @@ function GeneralDashboardModal({
   }, [range]);
 
   return (
-    <div className="admin-event-modal admin-dashboard-modal" role="dialog" aria-modal="true" aria-label="Geral de todos os eventos">
+    <div
+      className="admin-event-modal admin-dashboard-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Geral de todos os eventos"
+      onMouseDown={(event) => closeOnOverlayClick(event, onClose)}
+    >
       <section className="admin-dashboard-panel admin-general-panel">
         <header className="admin-dashboard-header">
           <div>
@@ -1455,6 +1563,28 @@ export function AdminEventsEditor() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("event");
   const [contactsOpen, setContactsOpen] = useState(false);
   const [eventDashboardRangeLoading, setEventDashboardRangeLoading] = useState(false);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+
+      if (contactsOpen) {
+        return;
+      }
+
+      if (dashboard) {
+        setDashboard(null);
+        return;
+      }
+
+      if (selected) {
+        setSelected(null);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [contactsOpen, dashboard, selected]);
 
   const loadEvents = useCallback(async () => {
     setLoading(true);
@@ -1808,7 +1938,16 @@ export function AdminEventsEditor() {
       </section>
 
       {dashboard ? (
-        <div className="admin-event-modal admin-dashboard-modal" role="dialog" aria-modal="true" aria-label="Dashboard do evento">
+        <div
+          className="admin-event-modal admin-dashboard-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Dashboard do evento"
+          onMouseDown={(event) => closeOnOverlayClick(event, () => {
+            setContactsOpen(false);
+            setDashboard(null);
+          })}
+        >
           <section className="admin-dashboard-panel">
             <header className="admin-dashboard-header">
               <div>
@@ -1960,7 +2099,13 @@ export function AdminEventsEditor() {
       ) : null}
 
       {selected && draft ? (
-        <div className="admin-event-modal" role="dialog" aria-modal="true" aria-label="Editar evento">
+        <div
+          className="admin-event-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Editar evento"
+          onMouseDown={(event) => closeOnOverlayClick(event, () => setSelected(null))}
+        >
           <form className="admin-event-modal-panel" onSubmit={saveEvent}>
             <header>
               <div>

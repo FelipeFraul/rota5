@@ -1906,6 +1906,10 @@ body:has(.checkout-unavailable-shell) iframe {
 }
 
 .admin-contact-message-link {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: #6d28d9;
   cursor: pointer;
   font-size: 12px;
@@ -1914,10 +1918,42 @@ body:has(.checkout-unavailable-shell) iframe {
 }
 
 .admin-contact-message-link:hover,
+.admin-contact-message-link:focus-visible,
 .admin-contact-message-popover:focus .admin-contact-message-link,
 .admin-contact-message-popover:focus-within .admin-contact-message-link {
   color: #4c1d95;
+  outline: none;
   text-decoration: underline;
+}
+
+.admin-conversation-modal {
+  z-index: 70;
+}
+
+.admin-conversation-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(680px, 100%);
+  max-height: min(760px, calc(100vh - 36px));
+  overflow: hidden;
+  border: 1px solid rgba(226, 232, 240, 0.92);
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #0f172a;
+  box-shadow: 0 32px 96px rgba(0, 0, 0, 0.4);
+}
+
+.admin-conversation-content {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px;
+  background:
+    linear-gradient(rgba(239, 246, 255, 0.86), rgba(239, 246, 255, 0.86)),
+    #efeae2;
 }
 
 .admin-contact-message-card {
