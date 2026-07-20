@@ -12,6 +12,7 @@ type ReportEventRow = {
   city: string;
   state: string;
   status: string;
+  search_text: string | null;
   event_sessions: MaybeArray<{
     starts_at: string;
     status: string;
@@ -139,7 +140,7 @@ export async function searchAdminReportEvents(input: {
   for (let from = 0; ; from += SEARCH_PAGE_SIZE) {
     let query = getSupabaseAdmin()
       .from("events")
-      .select("id, title, artist_name, city, state, status, event_sessions(starts_at, status)")
+      .select("id, title, artist_name, city, state, status, search_text, event_sessions(starts_at, status)")
       .in("status", ["published", "finished"])
       .order("created_at", { ascending: false })
       .range(from, from + SEARCH_PAGE_SIZE - 1);
@@ -158,7 +159,7 @@ export async function searchAdminReportEvents(input: {
       if (!eventMatchesDate(row, searchedDate)) return false;
       if (!normalizedQuery) return true;
 
-      return [row.title, row.artist_name]
+      return [row.title, row.artist_name, row.search_text ?? ""]
         .map(normalizeAdminText)
         .some((value) => value.includes(normalizedQuery));
       })

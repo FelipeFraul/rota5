@@ -4827,6 +4827,7 @@ async function buildAdminCourtesyEventSelect({
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function renderAdminReportEventCountPrompt() {
   return [
     "*VENDAS POR EVENTO*",
@@ -4940,7 +4941,7 @@ async function buildAdminReportEventSelect({
   if (reportType !== "sales_event") {
     const result = await listCourtesyEvents({
       ownerAdminUserId: scope.adminUserId,
-      canSeeAll: scope.canSeeAllEvents,
+      canSeeAll: true,
     });
 
     if (!result.ok) {
@@ -13606,13 +13607,13 @@ export async function routeTicketMessage({
         adminReports.reportType === "sales_event"
       ) {
         return {
-          reply: renderAdminReportEventCountPrompt(),
+          reply: renderAdminReportEventSearchPrompt(3),
           nextContext: withAdminReportsContext(
             baseContext,
-            "admin_report_event_count_select",
+            "admin_report_event_select",
             {
               reportType: "sales_event",
-              requestedEventCount: adminReports.requestedEventCount,
+              requestedEventCount: 3,
               lastEvents: [],
             },
           ),
@@ -13931,7 +13932,7 @@ export async function routeTicketMessage({
           searchTerms.map((query) => searchAdminReportEvents({
             query,
             ownerAdminUserId: reportEventScope.adminUserId,
-            canSeeAll: reportEventScope.canSeeAllEvents,
+            canSeeAll: true,
           })),
         );
         const failedSearch = searchResults.find((result) => !result.ok);
@@ -14098,7 +14099,7 @@ export async function routeTicketMessage({
             const validation = await validateAdminReportEventIds({
               eventIds: selectedEventIds,
               ownerAdminUserId: reportEventScope.adminUserId,
-              canSeeAll: reportEventScope.canSeeAllEvents,
+              canSeeAll: true,
             });
 
             if (!validation.ok) throw validation.error;
