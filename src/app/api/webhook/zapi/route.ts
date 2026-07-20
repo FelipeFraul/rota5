@@ -1029,10 +1029,16 @@ export async function POST(request: Request) {
       message: incoming.text,
       activeState: currentStateName,
     });
+    const publicInitialHelpWasSent =
+      currentContext.publicInitialHelpSent === true;
+    const shouldDelayPublicInitialReply =
+      currentStateName === "idle" && !publicInitialHelpWasSent;
     const batchResult = await appendInboundMessageToBatch({
       conversationId: conversationResult.conversation.id,
       messageId: inboundResult.message.id,
-      isActionable: immediateDecision.immediate,
+      isActionable: shouldDelayPublicInitialReply
+        ? false
+        : immediateDecision.immediate,
     });
 
     if (!batchResult.ok) {

@@ -10,6 +10,10 @@ const batchCron = readFileSync(
   new URL("../src/app/api/cron/process-whatsapp-batches/route.ts", import.meta.url),
   "utf8",
 );
+const zapiWebhook = readFileSync(
+  new URL("../src/app/api/webhook/zapi/route.ts", import.meta.url),
+  "utf8",
+);
 const conversationFinalizer = readFileSync(
   new URL("../src/lib/tickets/services/conversationFinalizer.ts", import.meta.url),
   "utf8",
@@ -64,4 +68,13 @@ test("cron finalizes inactive open conversations without duplicating finalizers"
   assert.match(conversationFinalizer, /status:\s*"closed"/);
   assert.match(conversationFinalizer, /reason:\s*FINALIZER_REASON/);
   assert.match(ticketMessages, /Sessão encerrada\. Para iniciar uma nova digite olá!/);
+});
+
+test("public initial reply waits for the 30 second batch before greeting", () => {
+  assert.match(zapiWebhook, /publicInitialHelpWasSent/);
+  assert.match(zapiWebhook, /shouldDelayPublicInitialReply/);
+  assert.match(zapiWebhook, /currentStateName === "idle" && !publicInitialHelpWasSent/);
+  assert.match(zapiWebhook, /isActionable:\s*shouldDelayPublicInitialReply\s*\?\s*false\s*:\s*immediateDecision\.immediate/);
+  assert.match(batchCron, /body:\s*TICKET_MESSAGES\.genericHelp/);
+  assert.match(batchCron, /body:\s*TICKET_MESSAGES\.genericHelpCommands/);
 });
