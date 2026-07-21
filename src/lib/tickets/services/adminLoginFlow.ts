@@ -331,3 +331,25 @@ export function buildAdminAuthFailureAlertMessage({
     ].join("\n"),
   };
 }
+
+export function buildAdminAuthFailureReply({
+  failureResult,
+}: {
+  failureResult:
+    | {
+        hardLocked?: boolean;
+        temporaryLocked?: boolean;
+        retryAfterMinutes?: number | null;
+      }
+    | null
+    | undefined;
+}) {
+  return failureResult?.hardLocked
+    ? TICKET_MESSAGES.adminAuthHardLocked
+    : failureResult?.temporaryLocked
+      ? TICKET_MESSAGES.adminAuthTemporaryLocked.replace(
+          "{minutes}",
+          String(failureResult.retryAfterMinutes ?? 15),
+        )
+      : TICKET_MESSAGES.adminAuthInvalid;
+}

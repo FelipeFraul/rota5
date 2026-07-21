@@ -270,7 +270,11 @@ test("admin_auth_pending falha de challenge escolhe resposta antes de outbound",
 
   assert.match(
     challengeFailureBlock,
-    /const authFailureReply = failureResult\?\.ok && failureResult\.hardLocked\s*\? TICKET_MESSAGES\.adminAuthHardLocked\s*: failureResult\?\.ok && failureResult\.temporaryLocked\s*\? TICKET_MESSAGES\.adminAuthTemporaryLocked\.replace\(\s*"\{minutes\}",\s*String\(failureResult\.retryAfterMinutes \?\? 15\),\s*\)\s*: TICKET_MESSAGES\.adminAuthInvalid;/,
+    /const authFailureReply = buildAdminAuthFailureReply\(\{ failureResult \}\);/,
+  );
+  assert.match(
+    adminLoginFlow,
+    /return failureResult\?\.hardLocked\s*\? TICKET_MESSAGES\.adminAuthHardLocked\s*: failureResult\?\.temporaryLocked\s*\? TICKET_MESSAGES\.adminAuthTemporaryLocked\.replace\(\s*"\{minutes\}",\s*String\(failureResult\.retryAfterMinutes \?\? 15\),\s*\)\s*: TICKET_MESSAGES\.adminAuthInvalid;/,
   );
   assert.match(
     challengeFailureBlock,

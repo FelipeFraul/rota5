@@ -83,6 +83,7 @@ import {
   buildAdminAuthPendingCancelResponse,
   buildAdminAuthPendingRestartResponse,
   buildAdminAuthFailureAlertMessage,
+  buildAdminAuthFailureReply,
   consumePendingAdminChallenge,
   startAdminLogin,
 } from "@/lib/tickets/services/adminLoginFlow";
@@ -10436,14 +10437,7 @@ export async function routeTicketMessage({
         failureResult,
         phoneNumber: customer.whatsapp_phone,
       });
-      const authFailureReply = failureResult?.ok && failureResult.hardLocked
-          ? TICKET_MESSAGES.adminAuthHardLocked
-        : failureResult?.ok && failureResult.temporaryLocked
-          ? TICKET_MESSAGES.adminAuthTemporaryLocked.replace(
-              "{minutes}",
-              String(failureResult.retryAfterMinutes ?? 15),
-            )
-          : TICKET_MESSAGES.adminAuthInvalid;
+      const authFailureReply = buildAdminAuthFailureReply({ failureResult });
 
       return {
         reply: authFailureReply,
