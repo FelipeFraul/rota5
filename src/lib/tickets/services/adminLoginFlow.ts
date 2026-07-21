@@ -5,6 +5,7 @@ import {
 import { TICKET_MESSAGES } from "@/lib/tickets/messages";
 import {
   ADMIN_LOGIN_LINK_REDACTED_BODY,
+  consumeAdminLoginChallengeCode,
   createAdminLoginChallenge,
   getAdminAuthBlockStatus,
   getAdminUserByPhone,
@@ -257,4 +258,23 @@ export async function buildAdminAuthPendingBlockResponse({
       }),
     },
   };
+}
+
+export function consumePendingAdminChallenge({
+  phoneNumber,
+  text,
+  challengeId,
+  sourceIdentifier,
+}: {
+  phoneNumber: string;
+  text: string;
+  challengeId?: string;
+  sourceIdentifier?: string | null;
+}) {
+  return consumeAdminLoginChallengeCode({
+    phone: phoneNumber,
+    code: text,
+    challengeId,
+    sourceIdentifier,
+  });
 }

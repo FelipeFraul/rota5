@@ -87,7 +87,7 @@ test("admin_auth_pending reinicia login em comando admin reservado antes de vali
   );
   assert.match(
     adminAuthPendingBlock,
-    /const authRestartResponse = await buildAdminAuthPendingRestartResponse[\s\S]*const codeResult = await consumeAdminLoginChallengeCode\(\{/,
+    /const authRestartResponse = await buildAdminAuthPendingRestartResponse[\s\S]*const codeResult = await consumePendingAdminChallenge\(\{/,
   );
 });
 
@@ -112,7 +112,7 @@ test("admin_auth_pending valida administrador ativo antes de bloqueio e codigo",
   );
   assert.match(
     adminAuthPendingBlock,
-    /const adminUser = activeAdminResponse\.adminUser;[\s\S]*const codeResult = await consumeAdminLoginChallengeCode\(\{/,
+    /const adminUser = activeAdminResponse\.adminUser;[\s\S]*const codeResult = await consumePendingAdminChallenge\(\{/,
   );
   assert.match(
     adminLoginFlow,
@@ -161,7 +161,7 @@ test("admin_auth_pending bloqueio administrativo ativo retorna antes de validar 
   );
   assert.match(
     adminAuthPendingBlock,
-    /const blockResponse = await buildAdminAuthPendingBlockResponse[\s\S]*if \(blockResponse\) \{[\s\S]*return blockResponse;[\s\S]*\}[\s\S]*const codeResult = await consumeAdminLoginChallengeCode\(\{/,
+    /const blockResponse = await buildAdminAuthPendingBlockResponse[\s\S]*if \(blockResponse\) \{[\s\S]*return blockResponse;[\s\S]*\}[\s\S]*const codeResult = await consumePendingAdminChallenge\(\{/,
   );
 });
 
@@ -186,18 +186,22 @@ test("admin_auth_pending consome challenge apos cancelamento reinicio admin ativ
   );
   assert.match(
     adminAuthPendingBlock,
-    /const blockResponse = await buildAdminAuthPendingBlockResponse[\s\S]*if \(blockResponse\) \{\s*return blockResponse;\s*\}[\s\S]*const codeResult = await consumeAdminLoginChallengeCode\(\{\s*phone: customer\.whatsapp_phone,\s*code: text,\s*challengeId: previousState\.admin\?\.authChallengeId,\s*sourceIdentifier,\s*\}\);/,
+    /const blockResponse = await buildAdminAuthPendingBlockResponse[\s\S]*if \(blockResponse\) \{\s*return blockResponse;\s*\}[\s\S]*const codeResult = await consumePendingAdminChallenge\(\{\s*phoneNumber: customer\.whatsapp_phone,\s*text,\s*challengeId: previousState\.admin\?\.authChallengeId,\s*sourceIdentifier,\s*\}\);/,
   );
   assert.match(
     adminAuthPendingBlock,
-    /const codeResult = await consumeAdminLoginChallengeCode\(\{[\s\S]*\}\);[\s\S]*if \(!codeResult\.ok\) \{/,
+    /const codeResult = await consumePendingAdminChallenge\(\{[\s\S]*\}\);[\s\S]*if \(!codeResult\.ok\) \{/,
   );
   assert.match(
     adminAuthPendingBlock,
-    /const codeResult = await consumeAdminLoginChallengeCode\(\{[\s\S]*\}\);[\s\S]*const sessionResult = await createAdminSession\(codeResult\.adminUser\);/,
+    /const codeResult = await consumePendingAdminChallenge\(\{[\s\S]*\}\);[\s\S]*const sessionResult = await createAdminSession\(codeResult\.adminUser\);/,
   );
   assert.match(
     adminAuthPendingBlock,
-    /const codeResult = await consumeAdminLoginChallengeCode\(\{[\s\S]*\}\);[\s\S]*reply: formatAdminMenu\(codeResult\.adminUser\.role\),/,
+    /const codeResult = await consumePendingAdminChallenge\(\{[\s\S]*\}\);[\s\S]*reply: formatAdminMenu\(codeResult\.adminUser\.role\),/,
+  );
+  assert.match(
+    adminLoginFlow,
+    /return consumeAdminLoginChallengeCode\(\{\s*phone: phoneNumber,\s*code: text,\s*challengeId,\s*sourceIdentifier,\s*\}\);/,
   );
 });

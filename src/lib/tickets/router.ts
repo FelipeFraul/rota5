@@ -82,6 +82,7 @@ import {
   buildAdminAuthPendingBlockResponse,
   buildAdminAuthPendingCancelResponse,
   buildAdminAuthPendingRestartResponse,
+  consumePendingAdminChallenge,
   startAdminLogin,
 } from "@/lib/tickets/services/adminLoginFlow";
 import {
@@ -10420,9 +10421,9 @@ export async function routeTicketMessage({
       return blockResponse;
     }
 
-    const codeResult = await consumeAdminLoginChallengeCode({
-      phone: customer.whatsapp_phone,
-      code: text,
+    const codeResult = await consumePendingAdminChallenge({
+      phoneNumber: customer.whatsapp_phone,
+      text,
       challengeId: previousState.admin?.authChallengeId,
       sourceIdentifier,
     });
