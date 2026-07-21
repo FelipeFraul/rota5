@@ -22,6 +22,7 @@ import {
   findInboundMessageByProviderId,
   saveWhatsAppMessage,
 } from "@/lib/tickets/services/messages";
+import { buildWhatsAppOutboundMetadata } from "@/lib/tickets/services/outboundMessages";
 import {
   CODEX_AUTH_REDACTED_BODY,
   buildApprovedCodexRequestBody,
@@ -604,29 +605,6 @@ function getInboundRedaction(context: Record<string, unknown>) {
   return null;
 }
 
-function buildOutboundMetadata({
-  sendResult,
-  messageType,
-}: {
-  sendResult: SendZapiMessageResult;
-  messageType: RouteOutboundMessage["type"];
-}) {
-  if (sendResult.ok) {
-    return {
-      provider: "zapi",
-      message_type: messageType,
-      send_status: "sent",
-    };
-  }
-
-  return {
-    provider: "zapi",
-    message_type: messageType,
-    send_status: "failed",
-    error: sendResult.error,
-  };
-}
-
 function getOutboundMessages(
   routeResult: Awaited<ReturnType<typeof routeTicketMessage>>,
 ): RouteOutboundMessage[] {
@@ -703,9 +681,10 @@ async function sendAndPersistText({
     messageType: "text",
     body: titledBody,
     providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
-    rawMetadata: buildOutboundMetadata({
+    rawMetadata: buildWhatsAppOutboundMetadata({
       sendResult,
       messageType: "text",
+      reason: "webhook_reply",
     }),
   });
 
@@ -1521,9 +1500,10 @@ export async function POST(request: Request) {
             : outboundMessage.body),
       ),
       providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
-      rawMetadata: buildOutboundMetadata({
+      rawMetadata: buildWhatsAppOutboundMetadata({
         sendResult,
         messageType: outboundMessage.type,
+        reason: "webhook_reply",
       }),
     });
 

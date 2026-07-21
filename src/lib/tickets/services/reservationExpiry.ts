@@ -9,6 +9,7 @@ import {
 } from "@/lib/tickets/services/conversations";
 import { sendScheduledComboOffers } from "@/lib/tickets/services/comboOffers";
 import { saveWhatsAppMessage } from "@/lib/tickets/services/messages";
+import { buildWhatsAppOutboundMetadata } from "@/lib/tickets/services/outboundMessages";
 import { sendZapiText } from "@/lib/zapi/client";
 import { logError, logInfo, logWarn } from "@/lib/logger";
 
@@ -191,15 +192,15 @@ async function notifyExpiredReservation(row: ExpiredReservationNotificationRow) 
     messageType: "text",
     body: message,
     providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
-    rawMetadata: {
-      provider: "zapi",
-      message_type: "text",
-      send_status: sendResult.ok ? "sent" : "failed",
+    rawMetadata: buildWhatsAppOutboundMetadata({
+      sendResult,
+      messageType: "text",
       reason: "reservation_expired",
-      reservation_id: row.id,
-      order_id: firstOrder(row)?.id,
-      ...(sendResult.ok ? {} : { error: sendResult.error }),
-    },
+      businessContext: {
+        reservation_id: row.id,
+        order_id: firstOrder(row)?.id,
+      },
+    }),
   });
 
   if (!outboundResult.ok) {
@@ -401,15 +402,15 @@ async function notifyBuyerInterest(row: InterestReminderConversationRow) {
     messageType: "text",
     body: message,
     providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
-    rawMetadata: {
-      provider: "zapi",
-      message_type: "text",
-      send_status: sendResult.ok ? "sent" : "failed",
+    rawMetadata: buildWhatsAppOutboundMetadata({
+      sendResult,
+      messageType: "text",
       reason: "buyer_interest_no_purchase",
-      event_id: event.eventId,
-      reminder_after_minutes: 120,
-      ...(sendResult.ok ? {} : { error: sendResult.error }),
-    },
+      businessContext: {
+        event_id: event.eventId,
+        reminder_after_minutes: 120,
+      },
+    }),
   });
 
   if (!outboundResult.ok) {
@@ -551,15 +552,15 @@ async function notifyExpiredAdminSession(row: AdminSessionNotificationRow) {
     messageType: "text",
     body: message,
     providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
-    rawMetadata: {
-      provider: "zapi",
-      message_type: "text",
-      send_status: sendResult.ok ? "sent" : "failed",
+    rawMetadata: buildWhatsAppOutboundMetadata({
+      sendResult,
+      messageType: "text",
       reason: "admin_session_expired",
-      admin_session_id: row.id,
-      admin_user_id: row.admin_user_id,
-      ...(sendResult.ok ? {} : { error: sendResult.error }),
-    },
+      businessContext: {
+        admin_session_id: row.id,
+        admin_user_id: row.admin_user_id,
+      },
+    }),
   });
 
   if (!outboundResult.ok) {

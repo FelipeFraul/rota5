@@ -8,6 +8,7 @@ import {
   updateConversationAfterMessage,
 } from "@/lib/tickets/services/conversations";
 import { saveWhatsAppMessage } from "@/lib/tickets/services/messages";
+import { buildWhatsAppOutboundMetadata } from "@/lib/tickets/services/outboundMessages";
 import {
   createSignedTicketToken,
   createTicketUrl,
@@ -297,15 +298,15 @@ export async function deliverTicketsForOrder(
     messageType: "text",
     body: message,
     providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
-    rawMetadata: {
-      provider: "zapi",
-      message_type: "text",
-      send_status: sendResult.ok ? "sent" : "failed",
+    rawMetadata: buildWhatsAppOutboundMetadata({
+      sendResult,
+      messageType: "text",
       reason: "paid_ticket_delivery",
-      order_id: orderId,
-      tickets_count: tickets.length,
-      ...(sendResult.ok ? {} : { error: sendResult.error }),
-    },
+      businessContext: {
+        order_id: orderId,
+        tickets_count: tickets.length,
+      },
+    }),
   });
 
   if (!textSaveResult.ok) {
@@ -373,16 +374,16 @@ export async function deliverTicketsForOrder(
       providerMessageId: imageSendResult.ok
         ? imageSendResult.providerMessageId
         : null,
-      rawMetadata: {
-        provider: "zapi",
-        message_type: "image",
-        send_status: imageSendResult.ok ? "sent" : "failed",
+      rawMetadata: buildWhatsAppOutboundMetadata({
+        sendResult: imageSendResult,
+        messageType: "image",
         reason: "paid_ticket_qr_delivery",
-        order_id: orderId,
-        ticket_id: ticket.ticketId,
-        ticket_code: ticket.ticketCode,
-        ...(imageSendResult.ok ? {} : { error: imageSendResult.error }),
-      },
+        businessContext: {
+          order_id: orderId,
+          ticket_id: ticket.ticketId,
+          ticket_code: ticket.ticketCode,
+        },
+      }),
     });
 
     if (!imageSaveResult.ok) {

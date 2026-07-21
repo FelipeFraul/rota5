@@ -8,6 +8,7 @@ import { logInfo, logWarn } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getOrCreateOpenConversation, updateConversationAfterMessage } from "@/lib/tickets/services/conversations";
 import { saveWhatsAppMessage } from "@/lib/tickets/services/messages";
+import { buildWhatsAppOutboundMetadata } from "@/lib/tickets/services/outboundMessages";
 import { centsToDecimalAmount, decimalAmountToCents } from "@/lib/tickets/services/payments";
 import { sendZapiImage, sendZapiText } from "@/lib/zapi/client";
 
@@ -956,18 +957,18 @@ export async function deliverComboOrder(orderId: string) {
     messageType: "text",
     body: message,
     providerMessageId: textResult.ok ? textResult.providerMessageId : null,
-    rawMetadata: {
-      provider: "zapi",
-      message_type: "text",
-      send_status: textResult.ok ? "sent" : "failed",
+    rawMetadata: buildWhatsAppOutboundMetadata({
+      sendResult: textResult,
+      messageType: "text",
       reason: "paid_combo_delivery",
-      combo_order_id: order.id,
-      combo_redemption_id: redemptionId,
-      offer_id: order.offer_id,
-      event_id: order.event_id,
-      session_id: order.session_id,
-      ...(textResult.ok ? {} : { error: textResult.error }),
-    },
+      businessContext: {
+        combo_order_id: order.id,
+        combo_redemption_id: redemptionId,
+        offer_id: order.offer_id,
+        event_id: order.event_id,
+        session_id: order.session_id,
+      },
+    }),
   });
 
   if (!textSaveResult.ok) {
@@ -1002,18 +1003,18 @@ export async function deliverComboOrder(orderId: string) {
     messageType: "image",
     body: qrCaption,
     providerMessageId: imageResult.ok ? imageResult.providerMessageId : null,
-    rawMetadata: {
-      provider: "zapi",
-      message_type: "image",
-      send_status: imageResult.ok ? "sent" : "failed",
+    rawMetadata: buildWhatsAppOutboundMetadata({
+      sendResult: imageResult,
+      messageType: "image",
       reason: "paid_combo_qr_delivery",
-      combo_order_id: order.id,
-      combo_redemption_id: redemptionId,
-      offer_id: order.offer_id,
-      event_id: order.event_id,
-      session_id: order.session_id,
-      ...(imageResult.ok ? {} : { error: imageResult.error }),
-    },
+      businessContext: {
+        combo_order_id: order.id,
+        combo_redemption_id: redemptionId,
+        offer_id: order.offer_id,
+        event_id: order.event_id,
+        session_id: order.session_id,
+      },
+    }),
   });
 
   if (!imageSaveResult.ok) {
@@ -1435,20 +1436,20 @@ export async function sendScheduledComboOffers(limit = 100) {
         messageType,
         body: message,
         providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
-        rawMetadata: {
-          provider: "zapi",
-          message_type: messageType,
-          offer_image_url: offer.image_url,
-          send_status: sendResult.ok ? "sent" : "failed",
+        rawMetadata: buildWhatsAppOutboundMetadata({
+          sendResult,
+          messageType,
           reason: "combo_offer",
-          source_ticket_id: ticket.id,
-          offer_id: offer.id,
-          combo_order_id: checkout.orderId,
-          event_id: session.event_id,
-          session_id: session.id,
-          customer_id: ticket.customer_id,
-          ...(sendResult.ok ? {} : { error: sendResult.error }),
-        },
+          businessContext: {
+            offer_image_url: offer.image_url,
+            source_ticket_id: ticket.id,
+            offer_id: offer.id,
+            combo_order_id: checkout.orderId,
+            event_id: session.event_id,
+            session_id: session.id,
+            customer_id: ticket.customer_id,
+          },
+        }),
       });
 
       if (!saveResult.ok) {

@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { buildInitialConversationState } from "@/lib/tickets/conversationState";
 import { TICKET_MESSAGES } from "@/lib/tickets/messages";
 import { saveWhatsAppMessage } from "@/lib/tickets/services/messages";
+import { buildWhatsAppOutboundMetadata } from "@/lib/tickets/services/outboundMessages";
 import { sendZapiText } from "@/lib/zapi/client";
 import { sanitizeWhatsAppText } from "@/lib/zapi/textEncoding";
 
@@ -170,14 +171,14 @@ async function finalizeConversation({
     messageType: "text",
     body,
     providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
-    rawMetadata: {
-      provider: "zapi",
-      message_type: "text",
-      send_status: sendResult.ok ? "sent" : "failed",
+    rawMetadata: buildWhatsAppOutboundMetadata({
+      sendResult,
+      messageType: "text",
       reason: FINALIZER_REASON,
-      inactivity_after_minutes: finalizeAfterMinutes,
-      ...(sendResult.ok ? {} : { error: sendResult.error }),
-    },
+      businessContext: {
+        inactivity_after_minutes: finalizeAfterMinutes,
+      },
+    }),
   });
 
   if (!outboundResult.ok) {

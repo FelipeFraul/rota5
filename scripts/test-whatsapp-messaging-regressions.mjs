@@ -18,6 +18,10 @@ const messagesService = readFileSync(
   new URL("../src/lib/tickets/services/messages.ts", import.meta.url),
   "utf8",
 );
+const outboundMessagesService = readFileSync(
+  new URL("../src/lib/tickets/services/outboundMessages.ts", import.meta.url),
+  "utf8",
+);
 
 function sliceBetween(source, startPattern, endPattern) {
   const start = source.search(startPattern);
@@ -129,7 +133,8 @@ test("full outbound contract is preserved instead of collapsing to routeResult.r
 });
 
 test("failed delivery remains explicitly failed and cannot be treated as delivered", () => {
-  assert.match(webhook, /send_status:\s*"failed"/);
+  assert.match(webhook, /buildWhatsAppOutboundMetadata/);
+  assert.match(outboundMessagesService, /send_status:\s*\(sendResult\.ok \? "sent" : "failed"\)/);
   assert.doesNotMatch(
     batchCron,
     /sendStatus:\s*sendResult\.ok \? "sent" : "failed"/,
