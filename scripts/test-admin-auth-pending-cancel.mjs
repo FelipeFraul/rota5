@@ -164,3 +164,40 @@ test("admin_auth_pending bloqueio administrativo ativo retorna antes de validar 
     /const blockResponse = await buildAdminAuthPendingBlockResponse[\s\S]*if \(blockResponse\) \{[\s\S]*return blockResponse;[\s\S]*\}[\s\S]*const codeResult = await consumeAdminLoginChallengeCode\(\{/,
   );
 });
+
+test("admin_auth_pending consome challenge apos cancelamento reinicio admin ativo e bloqueio", () => {
+  const adminAuthPendingBlock = sliceBetween(
+    router,
+    /if \(previousState\.state === "admin_auth_pending"\) \{/,
+    /\n    const publicHelpResult = handlePublicHelpMessage/,
+  );
+
+  assert.match(
+    adminAuthPendingBlock,
+    /const authCancelResponse = buildAdminAuthPendingCancelResponse\(\{ text \}\);[\s\S]*const authRestartResponse = await buildAdminAuthPendingRestartResponse/,
+  );
+  assert.match(
+    adminAuthPendingBlock,
+    /const authRestartResponse = await buildAdminAuthPendingRestartResponse[\s\S]*const activeAdminResponse = await buildAdminAuthPendingActiveAdminResponse/,
+  );
+  assert.match(
+    adminAuthPendingBlock,
+    /const activeAdminResponse = await buildAdminAuthPendingActiveAdminResponse[\s\S]*const blockResponse = await buildAdminAuthPendingBlockResponse/,
+  );
+  assert.match(
+    adminAuthPendingBlock,
+    /const blockResponse = await buildAdminAuthPendingBlockResponse[\s\S]*if \(blockResponse\) \{\s*return blockResponse;\s*\}[\s\S]*const codeResult = await consumeAdminLoginChallengeCode\(\{\s*phone: customer\.whatsapp_phone,\s*code: text,\s*challengeId: previousState\.admin\?\.authChallengeId,\s*sourceIdentifier,\s*\}\);/,
+  );
+  assert.match(
+    adminAuthPendingBlock,
+    /const codeResult = await consumeAdminLoginChallengeCode\(\{[\s\S]*\}\);[\s\S]*if \(!codeResult\.ok\) \{/,
+  );
+  assert.match(
+    adminAuthPendingBlock,
+    /const codeResult = await consumeAdminLoginChallengeCode\(\{[\s\S]*\}\);[\s\S]*const sessionResult = await createAdminSession\(codeResult\.adminUser\);/,
+  );
+  assert.match(
+    adminAuthPendingBlock,
+    /const codeResult = await consumeAdminLoginChallengeCode\(\{[\s\S]*\}\);[\s\S]*reply: formatAdminMenu\(codeResult\.adminUser\.role\),/,
+  );
+});
