@@ -43,6 +43,16 @@ function buildAdminContext({
   };
 }
 
+function maskAdminPhone(value: string | null | undefined) {
+  const digits = String(value ?? "").replace(/\D/g, "");
+
+  if (digits.length < 4) {
+    return "nÃƒÆ’Ã‚Â£o informado";
+  }
+
+  return `****${digits.slice(-4)}`;
+}
+
 export async function startAdminLogin({
   phoneNumber,
   baseContext,
@@ -277,4 +287,47 @@ export function consumePendingAdminChallenge({
     challengeId,
     sourceIdentifier,
   });
+}
+
+export function buildAdminAuthFailureAlertMessage({
+  failureResult,
+  phoneNumber,
+}: {
+  failureResult:
+    | {
+        ok: true;
+        alertPhone?: string | null;
+        failedAttempts: number;
+        hardLocked?: boolean;
+        retryAfterMinutes?: number | null;
+      }
+    | {
+        ok: false;
+        alertPhone?: string | null;
+        failedAttempts?: number;
+        hardLocked?: boolean;
+        retryAfterMinutes?: number | null;
+      }
+    | null
+    | undefined;
+  phoneNumber: string;
+}) {
+  if (!failureResult?.ok || !failureResult.alertPhone) {
+    return null;
+  }
+
+  return {
+    type: "text" as const,
+    phone: failureResult.alertPhone,
+    body: [
+      "*ALERTA DE ACESSO ADMIN*",
+      "",
+      `O telefone ${maskAdminPhone(phoneNumber)} teve ${failureResult.failedAttempts} tentativas incorretas de login administrativo.`,
+      failureResult.hardLocked
+        ? "O acesso foi bloqueado atÃƒÂ© liberaÃƒÂ§ÃƒÂ£o manual por Diretor."
+        : `O acesso foi bloqueado temporariamente por ${failureResult.retryAfterMinutes ?? 15} minutos.`,
+      "",
+      "Entre em Administradores > Liberar administrador bloqueado se reconhecer o acesso.",
+    ].join("\n"),
+  };
 }

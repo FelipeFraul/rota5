@@ -219,9 +219,9 @@ test("admin_auth_pending falha de challenge monta alerta sem criar sessao ou con
     /\n    const sessionResult = await createAdminSession/,
   );
   const alertMessageBlock = sliceBetween(
-    challengeFailureBlock,
-    /const alertMessage =/,
-    /\n      const authFailureReply =/,
+    adminLoginFlow,
+    /export function buildAdminAuthFailureAlertMessage/,
+    /\n  };\n}/,
   );
 
   assert.match(
@@ -229,16 +229,24 @@ test("admin_auth_pending falha de challenge monta alerta sem criar sessao ou con
     /const failureResult =\s*"failureResult" in codeResult \? codeResult\.failureResult : null;/,
   );
   assert.match(
-    alertMessageBlock,
-    /^const alertMessage =\s*failureResult\?\.ok && failureResult\.alertPhone\s*\?\s*\{\s*type: "text" as const,\s*phone: failureResult\.alertPhone,/,
+    challengeFailureBlock,
+    /const alertMessage = buildAdminAuthFailureAlertMessage\(\{\s*failureResult,\s*phoneNumber: customer\.whatsapp_phone,\s*\}\);/,
   );
   assert.match(
     alertMessageBlock,
-    /body: \[\s*"\*ALERTA DE ACESSO ADMIN\*",\s*"",\s*`O telefone \$\{maskAdminPhone\(customer\.whatsapp_phone\)\} teve \$\{failureResult\.failedAttempts\} tentativas incorretas de login administrativo\.`,\s*failureResult\.hardLocked\s*\?\s*"O acesso foi bloqueado atÃƒÂ© liberaÃƒÂ§ÃƒÂ£o manual por Diretor\."\s*:\s*`O acesso foi bloqueado temporariamente por \$\{failureResult\.retryAfterMinutes \?\? 15\} minutos\.`,\s*"",\s*"Entre em Administradores > Liberar administrador bloqueado se reconhecer o acesso\.",\s*\]\.join\("\\n"\),/,
+    /if \(!failureResult\?\.ok \|\| !failureResult\.alertPhone\) \{\s*return null;\s*\}/,
   );
   assert.match(
     alertMessageBlock,
-    /\}\s*: null;/,
+    /type: "text" as const,\s*phone: failureResult\.alertPhone,/,
+  );
+  assert.match(
+    alertMessageBlock,
+    /body: \[\s*"\*ALERTA DE ACESSO ADMIN\*",\s*"",\s*`O telefone \$\{maskAdminPhone\(phoneNumber\)\} teve \$\{failureResult\.failedAttempts\} tentativas incorretas de login administrativo\.`,\s*failureResult\.hardLocked\s*\?\s*"O acesso foi bloqueado atÃƒÂ© liberaÃƒÂ§ÃƒÂ£o manual por Diretor\."\s*:\s*`O acesso foi bloqueado temporariamente por \$\{failureResult\.retryAfterMinutes \?\? 15\} minutos\.`,\s*"",\s*"Entre em Administradores > Liberar administrador bloqueado se reconhecer o acesso\.",\s*\]\.join\("\\n"\),/,
+  );
+  assert.match(
+    challengeFailureBlock,
+    /outboundMessages: alertMessage\s*\? \[\{ type: "text", body: authFailureReply \}, alertMessage\]\s*: undefined,/,
   );
   assert.doesNotMatch(alertMessageBlock, /createAdminSession/);
   assert.doesNotMatch(

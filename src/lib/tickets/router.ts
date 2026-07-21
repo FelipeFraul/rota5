@@ -82,6 +82,7 @@ import {
   buildAdminAuthPendingBlockResponse,
   buildAdminAuthPendingCancelResponse,
   buildAdminAuthPendingRestartResponse,
+  buildAdminAuthFailureAlertMessage,
   consumePendingAdminChallenge,
   startAdminLogin,
 } from "@/lib/tickets/services/adminLoginFlow";
@@ -10431,23 +10432,10 @@ export async function routeTicketMessage({
     if (!codeResult.ok) {
       const failureResult =
         "failureResult" in codeResult ? codeResult.failureResult : null;
-      const alertMessage =
-        failureResult?.ok && failureResult.alertPhone
-          ? {
-              type: "text" as const,
-              phone: failureResult.alertPhone,
-              body: [
-                "*ALERTA DE ACESSO ADMIN*",
-                "",
-                `O telefone ${maskAdminPhone(customer.whatsapp_phone)} teve ${failureResult.failedAttempts} tentativas incorretas de login administrativo.`,
-                failureResult.hardLocked
-                  ? "O acesso foi bloqueado atÃƒÂ© liberaÃƒÂ§ÃƒÂ£o manual por Diretor."
-                  : `O acesso foi bloqueado temporariamente por ${failureResult.retryAfterMinutes ?? 15} minutos.`,
-                "",
-                "Entre em Administradores > Liberar administrador bloqueado se reconhecer o acesso.",
-              ].join("\n"),
-            }
-          : null;
+      const alertMessage = buildAdminAuthFailureAlertMessage({
+        failureResult,
+        phoneNumber: customer.whatsapp_phone,
+      });
       const authFailureReply = failureResult?.ok && failureResult.hardLocked
           ? TICKET_MESSAGES.adminAuthHardLocked
         : failureResult?.ok && failureResult.temporaryLocked
