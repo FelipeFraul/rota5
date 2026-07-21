@@ -86,3 +86,28 @@ test("admin_auth_pending reinicia login em comando admin reservado antes de vali
     /const authRestartResponse = await buildAdminAuthPendingRestartResponse[\s\S]*const codeResult = await consumeAdminLoginChallengeCode\(\{/,
   );
 });
+
+test("admin_auth_pending valida administrador ativo antes de bloqueio e codigo", () => {
+  const adminAuthPendingBlock = sliceBetween(
+    router,
+    /if \(previousState\.state === "admin_auth_pending"\) \{/,
+    /\n    const publicHelpResult = handlePublicHelpMessage/,
+  );
+
+  assert.match(
+    adminAuthPendingBlock,
+    /const authRestartResponse = await buildAdminAuthPendingRestartResponse[\s\S]*const adminUserResult = await getAdminUserByPhone\(customer\.whatsapp_phone\);/,
+  );
+  assert.match(
+    adminAuthPendingBlock,
+    /if \(\s*!adminUserResult\.ok \|\|\s*!adminUserResult\.adminUser \|\|\s*adminUserResult\.adminUser\.status !== "active"\s*\) \{\s*return \{\s*reply: TICKET_MESSAGES\.adminReservedNeutral,\s*nextContext: \{\s*\.\.\.baseContext,\s*step: "idle",\s*state: "idle",\s*admin: undefined,\s*\},\s*\};\s*\}/,
+  );
+  assert.match(
+    adminAuthPendingBlock,
+    /adminUserResult\.adminUser\.status !== "active"[\s\S]*const blockStatus = await getAdminAuthBlockStatus\(customer\.whatsapp_phone\);/,
+  );
+  assert.match(
+    adminAuthPendingBlock,
+    /adminUserResult\.adminUser\.status !== "active"[\s\S]*const codeResult = await consumeAdminLoginChallengeCode\(\{/,
+  );
+});
