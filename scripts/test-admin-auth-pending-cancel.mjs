@@ -75,14 +75,14 @@ test("admin_auth_pending reinicia login em comando admin reservado antes de vali
   );
   assert.match(
     adminAuthPendingBlock,
-    /if \(reservedAdminCommand\) \{\s*return startAdminLogin\(\{\s*phoneNumber: customer\.whatsapp_phone,\s*baseContext,\s*sourceIdentifier,\s*\}\);\s*\}/,
+    /const authRestartResponse = await buildAdminAuthPendingRestartResponse\(\{\s*text,\s*phoneNumber: customer\.whatsapp_phone,\s*baseContext,\s*sourceIdentifier,\s*\}\);[\s\S]*if \(authRestartResponse\) \{\s*return authRestartResponse;\s*\}/,
   );
   assert.match(
     adminAuthPendingBlock,
-    /if \(reservedAdminCommand\)[\s\S]*const adminUserResult = await getAdminUserByPhone\(customer\.whatsapp_phone\);/,
+    /const authRestartResponse = await buildAdminAuthPendingRestartResponse[\s\S]*const adminUserResult = await getAdminUserByPhone\(customer\.whatsapp_phone\);/,
   );
   assert.match(
     adminAuthPendingBlock,
-    /if \(reservedAdminCommand\)[\s\S]*const codeResult = await consumeAdminLoginChallengeCode\(\{/,
+    /const authRestartResponse = await buildAdminAuthPendingRestartResponse[\s\S]*const codeResult = await consumeAdminLoginChallengeCode\(\{/,
   );
 });

@@ -9,6 +9,7 @@ import {
   getAdminAuthBlockStatus,
   getAdminUserByPhone,
   isAdminLogoutCommand,
+  isReservedAdminCommand,
   type AdminRole,
 } from "@/lib/tickets/services/adminAuth";
 
@@ -153,4 +154,26 @@ export function buildAdminAuthPendingCancelResponse({ text }: { text: string }) 
       updatedAt: new Date().toISOString(),
     },
   };
+}
+
+export async function buildAdminAuthPendingRestartResponse({
+  text,
+  phoneNumber,
+  baseContext,
+  sourceIdentifier,
+}: {
+  text: string;
+  phoneNumber: string;
+  baseContext: TicketConversationState;
+  sourceIdentifier?: string | null;
+}) {
+  if (!isReservedAdminCommand(text)) {
+    return null;
+  }
+
+  return startAdminLogin({
+    phoneNumber,
+    baseContext,
+    sourceIdentifier,
+  });
 }

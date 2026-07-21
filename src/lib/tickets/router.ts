@@ -79,6 +79,7 @@ import {
 } from "@/lib/tickets/services/tickets";
 import {
   buildAdminAuthPendingCancelResponse,
+  buildAdminAuthPendingRestartResponse,
   startAdminLogin,
 } from "@/lib/tickets/services/adminLoginFlow";
 import {
@@ -10386,12 +10387,15 @@ export async function routeTicketMessage({
       return authCancelResponse;
     }
 
-    if (reservedAdminCommand) {
-      return startAdminLogin({
-        phoneNumber: customer.whatsapp_phone,
-        baseContext,
-        sourceIdentifier,
-      });
+    const authRestartResponse = await buildAdminAuthPendingRestartResponse({
+      text,
+      phoneNumber: customer.whatsapp_phone,
+      baseContext,
+      sourceIdentifier,
+    });
+
+    if (authRestartResponse) {
+      return authRestartResponse;
     }
 
     const adminUserResult = await getAdminUserByPhone(customer.whatsapp_phone);
