@@ -926,6 +926,17 @@ export async function deliverComboOrder(orderId: string) {
 
   if (!phone) return { ok: true as const, sent: false as const, reason: "missing_phone" as const };
 
+  const conversationResult = await getOrCreateOpenConversation({
+    customerId: order.customer_id,
+  });
+  if (!conversationResult.ok) {
+    return {
+      ok: false as const,
+      reason: "database_error" as const,
+      error: conversationResult.error,
+    };
+  }
+
   const event = order.events;
   const message = [
     "*COMBO CONFIRMADO*",
@@ -938,23 +949,80 @@ export async function deliverComboOrder(orderId: string) {
     `> Código: ${redemptionCode}`,
   ].join("\n");
   const textResult = await sendZapiText({ phone, message });
+  const textSaveResult = await saveWhatsAppMessage({
+    conversationId: conversationResult.conversation.id,
+    customerId: order.customer_id,
+    direction: "outbound",
+    messageType: "text",
+    body: message,
+    providerMessageId: textResult.ok ? textResult.providerMessageId : null,
+    rawMetadata: {
+      provider: "zapi",
+      message_type: "text",
+      send_status: textResult.ok ? "sent" : "failed",
+      reason: "paid_combo_delivery",
+      combo_order_id: order.id,
+      combo_redemption_id: redemptionId,
+      offer_id: order.offer_id,
+      event_id: order.event_id,
+      session_id: order.session_id,
+      ...(textResult.ok ? {} : { error: textResult.error }),
+    },
+  });
+
+  if (!textSaveResult.ok) {
+    return {
+      ok: false as const,
+      reason: "database_error" as const,
+      error: textSaveResult.error,
+    };
+  }
 
   if (!textResult.ok) {
     logWarn("Combo text delivery failed", { comboOrderId: order.id, phoneLast4: phone.slice(-4), error: textResult.error });
     return { ok: true as const, sent: false as const, reason: "zapi_failed" as const };
   }
 
+  const qrCaption = [
+    "*QRCODE DO COMBO*",
+    `Pedido: ${redemptionCode}`,
+    "",
+    "Apresente no bar. Este QR Code é separado do ingresso da portaria.",
+  ].join("\n");
   const image = await generateComboQrImage(`combo:${redemptionId}:${token}`);
   const imageResult = await sendZapiImage({
     phone,
     image,
-    caption: [
-      "*QRCODE DO COMBO*",
-      `Pedido: ${redemptionCode}`,
-      "",
-      "Apresente no bar. Este QR Code é separado do ingresso da portaria.",
-    ].join("\n"),
+    caption: qrCaption,
   });
+  const imageSaveResult = await saveWhatsAppMessage({
+    conversationId: conversationResult.conversation.id,
+    customerId: order.customer_id,
+    direction: "outbound",
+    messageType: "image",
+    body: qrCaption,
+    providerMessageId: imageResult.ok ? imageResult.providerMessageId : null,
+    rawMetadata: {
+      provider: "zapi",
+      message_type: "image",
+      send_status: imageResult.ok ? "sent" : "failed",
+      reason: "paid_combo_qr_delivery",
+      combo_order_id: order.id,
+      combo_redemption_id: redemptionId,
+      offer_id: order.offer_id,
+      event_id: order.event_id,
+      session_id: order.session_id,
+      ...(imageResult.ok ? {} : { error: imageResult.error }),
+    },
+  });
+
+  if (!imageSaveResult.ok) {
+    return {
+      ok: false as const,
+      reason: "database_error" as const,
+      error: imageSaveResult.error,
+    };
+  }
 
   if (!imageResult.ok) {
     logWarn("Combo QR delivery failed", { comboOrderId: order.id, phoneLast4: phone.slice(-4), error: imageResult.error });

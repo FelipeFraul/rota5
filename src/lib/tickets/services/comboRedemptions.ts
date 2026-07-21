@@ -511,31 +511,34 @@ export async function releaseComboOrdersForKitchenAfterGateEntry(input: {
         typeof metadata.arrival_preparation_notified_at !== "string" &&
         customer?.whatsapp_phone
       ) {
-        const sendResult = await sendZapiText({
-          phone: customer.whatsapp_phone,
-          message,
+        const conversation = await getOrCreateOpenConversation({
+          customerId: customer.id,
         });
-        notificationSent = sendResult.ok;
-
-        if (sendResult.ok) {
-          const conversation = await getOrCreateOpenConversation({
-            customerId: customer.id,
+        if (conversation.ok) {
+          const sendResult = await sendZapiText({
+            phone: customer.whatsapp_phone,
+            message,
           });
-          if (conversation.ok) {
-            await saveWhatsAppMessage({
-              conversationId: conversation.conversation.id,
-              customerId: customer.id,
-              direction: "outbound",
-              messageType: "text",
-              body: message,
-              providerMessageId: sendResult.providerMessageId,
-              rawMetadata: {
-                provider: "zapi",
-                reason: "offer_preparation_started_on_arrival",
-                combo_order_id: redemption.combo_order_id,
-                combo_redemption_id: redemption.id,
-              },
-            });
+          notificationSent = sendResult.ok;
+
+          await saveWhatsAppMessage({
+            conversationId: conversation.conversation.id,
+            customerId: customer.id,
+            direction: "outbound",
+            messageType: "text",
+            body: message,
+            providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
+            rawMetadata: {
+              provider: "zapi",
+              message_type: "text",
+              send_status: sendResult.ok ? "sent" : "failed",
+              reason: "offer_preparation_started_on_arrival",
+              combo_order_id: redemption.combo_order_id,
+              combo_redemption_id: redemption.id,
+              ...(sendResult.ok ? {} : { error: sendResult.error }),
+            },
+          });
+          if (sendResult.ok) {
             await updateConversationAfterMessage({
               conversationId: conversation.conversation.id,
             });
@@ -700,10 +703,13 @@ export async function startKitchenOrderPreparation(input: {
         : []),
       ...(event?.title ? [`Evento: ${event.title}`] : []),
     ].join("\n");
-    const textResult = await sendZapiText({
-      phone: customer.whatsapp_phone,
-      message,
+    const conversation = await getOrCreateOpenConversation({
+      customerId: customer.id,
     });
+    let textResult: Awaited<ReturnType<typeof sendZapiText>> = {
+      ok: false,
+      error: "conversation_not_available",
+    };
     let qrResult: Awaited<ReturnType<typeof sendZapiImage>> = {
       ok: false,
       error: "qr_not_sent",
@@ -711,25 +717,32 @@ export async function startKitchenOrderPreparation(input: {
     const newQrToken = randomBytes(32).toString("base64url");
     const newQrTokenHash = hashSecret(newQrToken);
 
-    if (textResult.ok) {
-      const conversation = await getOrCreateOpenConversation({
-        customerId: customer.id,
+    if (conversation.ok) {
+      textResult = await sendZapiText({
+        phone: customer.whatsapp_phone,
+        message,
       });
+      await saveWhatsAppMessage({
+        conversationId: conversation.conversation.id,
+        customerId: customer.id,
+        direction: "outbound",
+        messageType: "text",
+        body: message,
+        providerMessageId: textResult.ok ? textResult.providerMessageId : null,
+        rawMetadata: {
+          provider: "zapi",
+          message_type: "text",
+          send_status: textResult.ok ? "sent" : "failed",
+          reason: "combo_ready_at_bar",
+          combo_order_id: redemption.combo_order_id,
+          combo_redemption_id: redemption.id,
+          ...(textResult.ok ? {} : { error: textResult.error }),
+        },
+      });
+    }
+
+    if (textResult.ok) {
       if (conversation.ok) {
-        await saveWhatsAppMessage({
-          conversationId: conversation.conversation.id,
-          customerId: customer.id,
-          direction: "outbound",
-          messageType: "text",
-          body: message,
-          providerMessageId: textResult.providerMessageId,
-          rawMetadata: {
-            provider: "zapi",
-            reason: "combo_ready_at_bar",
-            combo_order_id: redemption.combo_order_id,
-            combo_redemption_id: redemption.id,
-          },
-        });
         await updateConversationAfterMessage({
           conversationId: conversation.conversation.id,
         });
@@ -759,24 +772,29 @@ export async function startKitchenOrderPreparation(input: {
           caption,
         });
 
-        if (qrResult.ok && conversation.ok) {
+        if (conversation.ok) {
           await saveWhatsAppMessage({
             conversationId: conversation.conversation.id,
             customerId: customer.id,
             direction: "outbound",
             messageType: "image",
             body: caption,
-            providerMessageId: qrResult.providerMessageId,
+            providerMessageId: qrResult.ok ? qrResult.providerMessageId : null,
             rawMetadata: {
               provider: "zapi",
+              message_type: "image",
+              send_status: qrResult.ok ? "sent" : "failed",
               reason: "combo_ready_qr",
               combo_order_id: redemption.combo_order_id,
               combo_redemption_id: redemption.id,
+              ...(qrResult.ok ? {} : { error: qrResult.error }),
             },
           });
-          await updateConversationAfterMessage({
-            conversationId: conversation.conversation.id,
-          });
+          if (qrResult.ok) {
+            await updateConversationAfterMessage({
+              conversationId: conversation.conversation.id,
+            });
+          }
         }
 
         if (!qrResult.ok) {
@@ -949,12 +967,10 @@ export async function validateComboRedemptionScan(input: {
         : []),
       ...(event?.title ? [`Evento: ${event.title}`] : []),
     ].join("\n");
-    const sendResult = await sendZapiText({
-      phone: customer.whatsapp_phone,
-      message,
+    const conversation = await getOrCreateOpenConversation({
+      customerId: customer.id,
     });
-
-    if (!sendResult.ok) {
+    if (!conversation.ok) {
       return {
         allowed: false,
         result: "denied",
@@ -963,27 +979,40 @@ export async function validateComboRedemptionScan(input: {
       };
     }
 
-    const conversation = await getOrCreateOpenConversation({
-      customerId: customer.id,
+    const sendResult = await sendZapiText({
+      phone: customer.whatsapp_phone,
+      message,
     });
-    if (conversation.ok) {
-      await saveWhatsAppMessage({
-        conversationId: conversation.conversation.id,
-        customerId: customer.id,
-        direction: "outbound",
-        messageType: "text",
-        body: message,
-        providerMessageId: sendResult.providerMessageId,
-        rawMetadata: {
-          provider: "zapi",
-          reason: "combo_ready_notification_recovered_at_scan",
-          combo_order_id: scannedRedemption.combo_order_id,
-          combo_redemption_id: scannedRedemption.id,
-        },
-      });
+    await saveWhatsAppMessage({
+      conversationId: conversation.conversation.id,
+      customerId: customer.id,
+      direction: "outbound",
+      messageType: "text",
+      body: message,
+      providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
+      rawMetadata: {
+        provider: "zapi",
+        message_type: "text",
+        send_status: sendResult.ok ? "sent" : "failed",
+        reason: "combo_ready_notification_recovered_at_scan",
+        combo_order_id: scannedRedemption.combo_order_id,
+        combo_redemption_id: scannedRedemption.id,
+        ...(sendResult.ok ? {} : { error: sendResult.error }),
+      },
+    });
+    if (sendResult.ok) {
       await updateConversationAfterMessage({
         conversationId: conversation.conversation.id,
       });
+    }
+
+    if (!sendResult.ok) {
+      return {
+        allowed: false,
+        result: "denied",
+        message:
+          "PEDIDO EM PREPARO, MAS O AVISO AO CLIENTE FALHOU. A entrega nao foi concluida; reenvie o aviso pela cozinha.",
+      };
     }
 
     const notifiedAt = new Date().toISOString();
@@ -1035,31 +1064,34 @@ export async function validateComboRedemptionScan(input: {
         "Seu pedido ainda nao esta em preparo.",
         "Em breve enviaremos uma mensagem avisando quando seus produtos estiverem disponiveis para retirada.",
       ].join("\n");
-      const sendResult = await sendZapiText({
-        phone: customer.whatsapp_phone,
-        message,
+      const conversation = await getOrCreateOpenConversation({
+        customerId: customer.id,
       });
-      notificationSent = sendResult.ok;
-
-      if (sendResult.ok) {
-        const conversation = await getOrCreateOpenConversation({
-          customerId: customer.id,
+      if (conversation.ok) {
+        const sendResult = await sendZapiText({
+          phone: customer.whatsapp_phone,
+          message,
         });
-        if (conversation.ok) {
-          await saveWhatsAppMessage({
-            conversationId: conversation.conversation.id,
-            customerId: customer.id,
-            direction: "outbound",
-            messageType: "text",
-            body: message,
-            providerMessageId: sendResult.providerMessageId,
-            rawMetadata: {
-              provider: "zapi",
-              reason: "combo_awaiting_preparation",
-              combo_order_id: scannedRedemption.combo_order_id,
-              combo_redemption_id: scannedRedemption.id,
-            },
-          });
+        notificationSent = sendResult.ok;
+
+        await saveWhatsAppMessage({
+          conversationId: conversation.conversation.id,
+          customerId: customer.id,
+          direction: "outbound",
+          messageType: "text",
+          body: message,
+          providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
+          rawMetadata: {
+            provider: "zapi",
+            message_type: "text",
+            send_status: sendResult.ok ? "sent" : "failed",
+            reason: "combo_awaiting_preparation",
+            combo_order_id: scannedRedemption.combo_order_id,
+            combo_redemption_id: scannedRedemption.id,
+            ...(sendResult.ok ? {} : { error: sendResult.error }),
+          },
+        });
+        if (sendResult.ok) {
           await updateConversationAfterMessage({
             conversationId: conversation.conversation.id,
           });

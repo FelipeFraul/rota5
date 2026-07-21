@@ -3,7 +3,11 @@ import "server-only";
 import { logError, logInfo, logWarn } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { buildInitialConversationState } from "@/lib/tickets/conversationState";
-import { updateConversationAfterMessage } from "@/lib/tickets/services/conversations";
+import {
+  getOrCreateOpenConversation,
+  updateConversationAfterMessage,
+} from "@/lib/tickets/services/conversations";
+import { saveWhatsAppMessage } from "@/lib/tickets/services/messages";
 import {
   createSignedTicketToken,
   createTicketUrl,
@@ -273,7 +277,45 @@ export async function deliverTicketsForOrder(
   }
 
   const message = buildTicketDeliveryMessage(tickets);
+  const conversationResult = await getOrCreateOpenConversation({
+    customerId: order.customer_id,
+  });
+  if (!conversationResult.ok) {
+    logError("Failed to load conversation for ticket WhatsApp delivery", {
+      orderId,
+      customerId: order.customer_id,
+      code: conversationResult.error.code,
+    });
+    return { ok: false, reason: "internal_error" };
+  }
+
   const sendResult = await sendZapiText({ phone, message });
+  const textSaveResult = await saveWhatsAppMessage({
+    conversationId: conversationResult.conversation.id,
+    customerId: order.customer_id,
+    direction: "outbound",
+    messageType: "text",
+    body: message,
+    providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
+    rawMetadata: {
+      provider: "zapi",
+      message_type: "text",
+      send_status: sendResult.ok ? "sent" : "failed",
+      reason: "paid_ticket_delivery",
+      order_id: orderId,
+      tickets_count: tickets.length,
+      ...(sendResult.ok ? {} : { error: sendResult.error }),
+    },
+  });
+
+  if (!textSaveResult.ok) {
+    logError("Failed to save ticket WhatsApp delivery message", {
+      orderId,
+      conversationId: conversationResult.conversation.id,
+      code: textSaveResult.error?.code,
+    });
+    return { ok: false, reason: "internal_error" };
+  }
 
   if (!sendResult.ok) {
     logWarn("Ticket WhatsApp delivery failed after payment confirmation", {
@@ -322,6 +364,36 @@ export async function deliverTicketsForOrder(
       image: qrImage,
       caption: QR_CODE_CAPTION,
     });
+    const imageSaveResult = await saveWhatsAppMessage({
+      conversationId: conversationResult.conversation.id,
+      customerId: order.customer_id,
+      direction: "outbound",
+      messageType: "image",
+      body: QR_CODE_CAPTION,
+      providerMessageId: imageSendResult.ok
+        ? imageSendResult.providerMessageId
+        : null,
+      rawMetadata: {
+        provider: "zapi",
+        message_type: "image",
+        send_status: imageSendResult.ok ? "sent" : "failed",
+        reason: "paid_ticket_qr_delivery",
+        order_id: orderId,
+        ticket_id: ticket.ticketId,
+        ticket_code: ticket.ticketCode,
+        ...(imageSendResult.ok ? {} : { error: imageSendResult.error }),
+      },
+    });
+
+    if (!imageSaveResult.ok) {
+      logError("Failed to save ticket QR WhatsApp delivery message", {
+        orderId,
+        ticketId: ticket.ticketId,
+        conversationId: conversationResult.conversation.id,
+        code: imageSaveResult.error?.code,
+      });
+      return { ok: false, reason: "internal_error" };
+    }
 
     if (!imageSendResult.ok) {
       logWarn("Ticket QR Code WhatsApp delivery failed after payment confirmation", {
