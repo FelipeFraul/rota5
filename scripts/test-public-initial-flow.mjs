@@ -36,15 +36,27 @@ function sliceBetween(source, startPattern, endPattern) {
   return rest.slice(0, end);
 }
 
-test("primeira mensagem publica fica em batch e saudacao sai pelo cron", () => {
-  assert.match(webhook, /currentStateName === "idle" && !publicInitialHelpWasSent/);
-  assert.match(webhook, /isActionable:\s*shouldDelayPublicInitialReply\s*\?\s*false\s*:\s*immediateDecision\.immediate/);
+test("primeira mensagem publica responde imediatamente sem depender do batch", () => {
+  assert.match(webhook, /const effectiveText = incoming\.text \?\? ""/);
+  assert.match(webhook, /routeTicketMessage\(\{[\s\S]*text:\s*effectiveText/);
+  assert.doesNotMatch(webhook, /appendInboundMessageToBatch/);
+  assert.doesNotMatch(webhook, /buildAggregatedWhatsAppText/);
+  assert.doesNotMatch(webhook, /batched:\s*true/);
   assert.match(batchCron, /resolvedState === "idle"/);
-  assert.match(batchCron, /body:\s*TICKET_MESSAGES\.genericHelp/);
-  assert.match(batchCron, /body:\s*TICKET_MESSAGES\.genericHelpCommands/);
+  assert.match(batchCron, /body:\s*TICKET_MESSAGES\.genericHelpPrompt/);
+  assert.doesNotMatch(batchCron, /body:\s*TICKET_MESSAGES\.genericHelpCommands/);
   assert.match(batchCron, /publicInitialHelpSent:\s*true/);
   assert.match(messages, homeMessage);
   assert.match(messages, homeCommands);
+});
+
+test("mensagens publicas posteriores tambem seguem pelo caminho imediato", () => {
+  assert.match(webhook, /resolveIncomingMessageIntent\(\{[\s\S]*text:\s*effectiveText/);
+  assert.match(webhook, /shouldProcessImmediately\(\{/);
+  assert.match(webhook, /reconcileAdminNavigation\(\{/);
+  assert.match(webhook, /const outboundMessages = getOutboundMessages\(routeResult\)/);
+  assert.doesNotMatch(webhook, /processAfter:\s*true/);
+  assert.doesNotMatch(webhook, /listWhatsAppBatchMessages/);
 });
 
 test("AJUDA no fluxo publico inicial nao entra em compra nem admin", () => {

@@ -1,5 +1,4 @@
 import { randomUUID, timingSafeEqual } from "crypto";
-import { after } from "next/server";
 import {
   jsonError,
   jsonOk,
@@ -8,7 +7,6 @@ import {
 } from "@/lib/http/responses";
 import { createGitHubIssue } from "@/lib/github/issues";
 import { logError, logInfo, logWarn } from "@/lib/logger";
-import { processDueWhatsAppMessageBatches } from "@/app/api/cron/process-whatsapp-batches/route";
 import {
   consumeRateLimit,
   hashRateLimitScope,
@@ -24,7 +22,6 @@ import {
   findInboundMessageByProviderId,
   saveWhatsAppMessage,
 } from "@/lib/tickets/services/messages";
-import { TICKET_MESSAGES } from "@/lib/tickets/messages";
 import {
   CODEX_AUTH_REDACTED_BODY,
   buildApprovedCodexRequestBody,
@@ -68,12 +65,6 @@ import {
   verifyAdminUserPassphrase,
 } from "@/lib/tickets/services/adminAuth";
 import { GATE_ACCESS_REDACTED_BODY } from "@/lib/tickets/services/gateAccessAuth";
-import {
-  appendInboundMessageToBatch,
-  buildAggregatedWhatsAppText,
-  finishWhatsAppMessageBatch,
-  listWhatsAppBatchMessages,
-} from "@/lib/tickets/services/whatsappMessageBatches";
 import {
   sendZapiImage,
   sendZapiText,
@@ -646,22 +637,6 @@ function getOutboundMessages(
     );
   }
 
-  if (routeResult.reply === TICKET_MESSAGES.genericHelp) {
-    return [
-      {
-        type: "text",
-        body: TICKET_MESSAGES.genericHelp,
-        suppressTitle: true,
-      },
-      {
-        type: "text",
-        body: TICKET_MESSAGES.genericHelpCommands,
-        delayMs: 5_000,
-        suppressTitle: true,
-      },
-    ];
-  }
-
   return [
     {
       type: "text",
@@ -1008,108 +983,20 @@ export async function POST(request: Request) {
     return jsonError("Internal Server Error", 500);
   }
 
-  let effectiveText = incoming.text ?? "";
-  let processedBatchId: string | null = null;
+  const effectiveText = incoming.text ?? "";
   const numericReply = parseStrictNumericReply(incoming.text);
   const currentStateName =
     typeof currentContext.state === "string" ? currentContext.state : "idle";
-  const shouldSkipAggregation =
-    Boolean(inboundRedaction) ||
-    isAllowedCodexRequestPhone(incoming.phone) ||
-    (deliveryGuardIsFresh && numericReply !== null) ||
-    currentStateName.startsWith("admin") ||
-    currentStateName.startsWith("gate");
-
-  if (!shouldSkipAggregation) {
-    const incomingIntent = resolveIncomingMessageIntent({
-      text: incoming.text ?? "",
-      messageType: incoming.messageType,
-      conversationState: currentContext,
-    });
-    const immediateDecision = shouldProcessImmediately({
-      intent: incomingIntent,
-      message: incoming.text,
-      activeState: currentStateName,
-    });
-    const publicInitialHelpWasSent =
-      currentContext.publicInitialHelpSent === true;
-    const shouldDelayPublicInitialReply =
-      currentStateName === "idle" && !publicInitialHelpWasSent;
-    const batchResult = await appendInboundMessageToBatch({
-      conversationId: conversationResult.conversation.id,
-      messageId: inboundResult.message.id,
-      isActionable: shouldDelayPublicInitialReply
-        ? false
-        : immediateDecision.immediate,
-    });
-
-    if (!batchResult.ok) {
-      logWarn("Continuing without WhatsApp batch after append failure", {
-        conversationId: conversationResult.conversation.id,
-        error: batchResult.error,
-      });
-    } else if (!batchResult.batch.shouldProcessNow) {
-      const activityUpdate = await updateConversationAfterMessage({
-        conversationId: conversationResult.conversation.id,
-        context: currentContext,
-      });
-
-      if (!activityUpdate.ok) {
-        logError("Failed to update conversation after queued WhatsApp batch", {
-          conversationId: conversationResult.conversation.id,
-          code: activityUpdate.error.code,
-        });
-        return jsonError("Internal Server Error", 500);
-      }
-
-      after(async () => {
-        await sleep(31_000);
-
-        try {
-          const result = await processDueWhatsAppMessageBatches({ limit: 20 });
-
-          logInfo("Processed WhatsApp batches after delayed webhook enqueue", {
-            conversationId: conversationResult.conversation.id,
-            batchId: batchResult.batch.batchId,
-            ...result,
-          });
-        } catch (error) {
-          logError("Failed to process delayed WhatsApp batch after webhook enqueue", {
-            conversationId: conversationResult.conversation.id,
-            batchId: batchResult.batch.batchId,
-            error,
-          });
-        }
-      });
-
-      return jsonOk({
-        received: true,
-        batched: true,
-        processed: false,
-        processAfter: true,
-        reason: immediateDecision.reason,
-      });
-    } else {
-      const batchMessages = await listWhatsAppBatchMessages(
-        batchResult.batch.batchId,
-      );
-
-      if (!batchMessages.ok) {
-        logWarn("Continuing without aggregated WhatsApp batch after load failure", {
-          conversationId: conversationResult.conversation.id,
-          batchId: batchResult.batch.batchId,
-          code: batchMessages.error?.code,
-        });
-      } else {
-        const aggregatedText = buildAggregatedWhatsAppText(batchMessages.messages);
-
-        if (aggregatedText) {
-          effectiveText = aggregatedText;
-          processedBatchId = batchResult.batch.batchId;
-        }
-      }
-    }
-  }
+  const incomingIntent = resolveIncomingMessageIntent({
+    text: effectiveText,
+    messageType: incoming.messageType,
+    conversationState: currentContext,
+  });
+  const immediateDecision = shouldProcessImmediately({
+    intent: incomingIntent,
+    message: incoming.text,
+    activeState: currentStateName,
+  });
 
   if (
     deliveryGuardIsFresh &&
@@ -1712,26 +1599,12 @@ export async function POST(request: Request) {
     return jsonError("Internal Server Error", 500);
   }
 
-  if (processedBatchId) {
-    const finishBatchResult = await finishWhatsAppMessageBatch({
-      batchId: processedBatchId,
-      status: "processed",
-    });
-
-    if (!finishBatchResult.ok) {
-      logError("Failed to mark WhatsApp message batch as processed", {
-        conversationId: conversationResult.conversation.id,
-        batchId: processedBatchId,
-        code: finishBatchResult.error?.code,
-      });
-      return jsonError("Internal Server Error", 500);
-    }
-  }
-
   logInfo("Processed Z-API inbound message", {
     conversationId: conversationResult.conversation.id,
     phoneLast4: incoming.phone.slice(-4),
     providerMessageId: incoming.providerMessageId,
+    intentClassification: incomingIntent.classification,
+    immediateReason: immediateDecision.reason,
     zapiSent: sendResults.every((sendResult) => sendResult.ok),
     outboundCount: outboundMessages.length,
   });

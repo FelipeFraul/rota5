@@ -36,7 +36,8 @@ test("isolated greeting in idle is routed once immediately and is not queued for
   );
 
   assert.match(webhook, /routeTicketMessage\(/);
-  assert.match(webhook, /shouldReplyImmediatelyToPublicInitial/);
+  assert.match(webhook, /const effectiveText = incoming\.text \?\? ""/);
+  assert.match(webhook, /routeTicketMessage\(\{[\s\S]*text:\s*effectiveText/);
   assert.doesNotMatch(
     batchingBlock,
     /appendInboundMessageToBatch\(/,

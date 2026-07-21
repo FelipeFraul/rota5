@@ -74,19 +74,21 @@ test("cron finalizes inactive open conversations without duplicating finalizers"
   assert.match(ticketMessages, /Sessão encerrada\. Para iniciar uma nova digite olá!/);
 });
 
-test("public initial reply waits for the 30 second batch before greeting", () => {
-  assert.match(zapiWebhook, /publicInitialHelpWasSent/);
-  assert.match(zapiWebhook, /shouldDelayPublicInitialReply/);
-  assert.match(zapiWebhook, /currentStateName === "idle" && !publicInitialHelpWasSent/);
-  assert.match(zapiWebhook, /isActionable:\s*shouldDelayPublicInitialReply\s*\?\s*false\s*:\s*immediateDecision\.immediate/);
-  assert.match(zapiWebhook, /after\(async \(\) =>/);
-  assert.match(zapiWebhook, /await sleep\(31_000\)/);
-  assert.match(zapiWebhook, /processDueWhatsAppMessageBatches\(\{\s*limit:\s*20\s*\}\)/);
+test("public initial reply is sent immediately instead of waiting for the batch", () => {
+  assert.match(zapiWebhook, /const effectiveText = incoming\.text \?\? ""/);
+  assert.match(zapiWebhook, /routeTicketMessage\(\{[\s\S]*text:\s*effectiveText/);
+  assert.doesNotMatch(zapiWebhook, /appendInboundMessageToBatch/);
+  assert.doesNotMatch(zapiWebhook, /buildAggregatedWhatsAppText/);
+  assert.doesNotMatch(zapiWebhook, /listWhatsAppBatchMessages/);
+  assert.doesNotMatch(zapiWebhook, /finishWhatsAppMessageBatch/);
+  assert.doesNotMatch(zapiWebhook, /after\(async \(\) =>/);
+  assert.doesNotMatch(zapiWebhook, /await sleep\(31_000\)/);
+  assert.doesNotMatch(zapiWebhook, /processAfter:\s*true/);
   assert.match(ticketRouter, /intent\.classification === "purchase_support" && !hasActiveState/);
-  assert.match(ticketRouter, /incomingIntent\.classification === "purchase_support"[\s\S]*baseContext\.state === "idle"[\s\S]*reply:\s*TICKET_MESSAGES\.genericHelp/);
+  assert.match(ticketRouter, /incomingIntent\.classification === "purchase_support"[\s\S]*baseContext\.state === "idle"[\s\S]*reply:\s*TICKET_MESSAGES\.genericHelpPrompt/);
   assert.match(ticketRouter, /function publicInitialHelpContext/);
   assert.match(ticketRouter, /isBuyerReservationExitIntent\(text\)[\s\S]*reply:\s*TICKET_MESSAGES\.buyerFlowReset[\s\S]*nextContext:\s*resetBuyerReservationContext\(baseContext\)/);
-  assert.match(ticketRouter, /previousState\.state === "idle"[\s\S]*previousState\.publicInitialHelpSent !== true[\s\S]*reply:\s*TICKET_MESSAGES\.genericHelp/);
-  assert.match(batchCron, /body:\s*TICKET_MESSAGES\.genericHelp/);
-  assert.match(batchCron, /body:\s*TICKET_MESSAGES\.genericHelpCommands/);
+  assert.match(ticketRouter, /previousState\.state === "idle"[\s\S]*previousState\.publicInitialHelpSent !== true[\s\S]*reply:\s*TICKET_MESSAGES\.genericHelpPrompt/);
+  assert.match(batchCron, /body:\s*TICKET_MESSAGES\.genericHelpPrompt/);
+  assert.doesNotMatch(batchCron, /body:\s*TICKET_MESSAGES\.genericHelpCommands/);
 });
