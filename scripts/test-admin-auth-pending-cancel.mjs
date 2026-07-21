@@ -254,3 +254,26 @@ test("admin_auth_pending falha de challenge monta alerta sem criar sessao ou con
     /nextContext: \{\s*\.\.\.baseContext,/,
   );
 });
+
+test("admin_auth_pending falha de challenge escolhe resposta antes de outbound", () => {
+  const adminAuthPendingBlock = sliceBetween(
+    router,
+    /if \(previousState\.state === "admin_auth_pending"\) \{/,
+    /\n    const publicHelpResult = handlePublicHelpMessage/,
+  );
+
+  const challengeFailureBlock = sliceBetween(
+    adminAuthPendingBlock,
+    /if \(!codeResult\.ok\) \{/,
+    /\n    const sessionResult = await createAdminSession/,
+  );
+
+  assert.match(
+    challengeFailureBlock,
+    /const authFailureReply = failureResult\?\.ok && failureResult\.hardLocked\s*\? TICKET_MESSAGES\.adminAuthHardLocked\s*: failureResult\?\.ok && failureResult\.temporaryLocked\s*\? TICKET_MESSAGES\.adminAuthTemporaryLocked\.replace\(\s*"\{minutes\}",\s*String\(failureResult\.retryAfterMinutes \?\? 15\),\s*\)\s*: TICKET_MESSAGES\.adminAuthInvalid;/,
+  );
+  assert.match(
+    challengeFailureBlock,
+    /reply: authFailureReply,\s*outboundMessages: alertMessage\s*\? \[\{ type: "text", body: authFailureReply \}, alertMessage\]\s*: undefined,/,
+  );
+});
