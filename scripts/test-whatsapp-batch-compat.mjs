@@ -65,9 +65,10 @@ test("cron records success, retry, cancellation, and failure outcomes", () => {
 
 test("cron finalizes inactive open conversations without duplicating finalizers", () => {
   assert.match(batchCron, /finalizeInactiveWhatsAppConversations/);
-  assert.match(batchCron, /finalizeAfterMinutes:\s*30/);
+  assert.match(conversationFinalizer, /CONVERSATION_INACTIVITY_TTL_MINUTES/);
+  assert.match(conversationFinalizer, /DEFAULT_FINALIZE_AFTER_MINUTES\s*=\s*30/);
   assert.match(conversationFinalizer, /finalizedConversationIds/);
-  assert.match(conversationFinalizer, /!finalized\.has\(row\.id\)/);
+  assert.match(conversationFinalizer, /finalized\.has\(row\.id\)/);
   assert.doesNotMatch(conversationFinalizer, /latestMessage\?\.direction === "outbound"/);
   assert.match(conversationFinalizer, /status:\s*"closed"/);
   assert.match(conversationFinalizer, /reason:\s*FINALIZER_REASON/);
