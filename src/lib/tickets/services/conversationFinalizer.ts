@@ -16,9 +16,10 @@ type ConversationCandidateRow = {
   customer_id: string;
   context: Record<string, unknown>;
   last_message_at: string | null;
-  customers: {
-    whatsapp_phone: string;
-  } | null;
+};
+
+type FinalizerConversationRow = ConversationCandidateRow & {
+  whatsapp_phone: string;
 };
 
 type FinalizerMessageRow = {
@@ -33,6 +34,14 @@ function getCutoffIso(finalizeAfterMinutes: number) {
       : DEFAULT_FINALIZE_AFTER_MINUTES;
 
   return new Date(Date.now() - boundedMinutes * 60_000).toISOString();
+}
+
+function getConfiguredFinalizeAfterMinutes() {
+  const configured = Number(process.env.CONVERSATION_INACTIVITY_TTL_MINUTES);
+
+  return Number.isInteger(configured) && configured > 0
+    ? configured
+    : DEFAULT_FINALIZE_AFTER_MINUTES;
 }
 
 function finalizedConversationIds(messages: FinalizerMessageRow[]) {
@@ -61,7 +70,7 @@ async function loadDueConversationRows({
   const cutoff = getCutoffIso(finalizeAfterMinutes);
   const { data: candidates, error } = await getSupabaseAdmin()
     .from("conversations")
-    .select("id, customer_id, context, last_message_at, customers(whatsapp_phone)")
+    .select("id, customer_id, context, last_message_at")
     .eq("status", "open")
     .not("last_message_at", "is", null)
     .lte("last_message_at", cutoff)
@@ -80,7 +89,25 @@ async function loadDueConversationRows({
     return [];
   }
 
-  const { data: messages, error: messagesError } = await getSupabaseAdmin()
+  const supabase = getSupabaseAdmin();
+  const customerIds = [...new Set(rows.map((row) => row.customer_id))];
+  const { data: customers, error: customersError } = await supabase
+    .from("customers")
+    .select("id, whatsapp_phone")
+    .in("id", customerIds)
+    .returns<Array<{ id: string; whatsapp_phone: string }>>();
+
+  if (customersError) {
+    throw customersError;
+  }
+
+  const phonesByCustomerId = new Map(
+    (customers ?? [])
+      .filter((customer) => customer.whatsapp_phone)
+      .map((customer) => [customer.id, customer.whatsapp_phone]),
+  );
+
+  const { data: messages, error: messagesError } = await supabase
     .from("whatsapp_messages")
     .select("conversation_id, raw_metadata")
     .in("conversation_id", conversationIds)
@@ -94,7 +121,19 @@ async function loadDueConversationRows({
   const finalized = finalizedConversationIds(messages ?? []);
 
   return rows
-    .filter((row) => Boolean(row.customers?.whatsapp_phone) && !finalized.has(row.id))
+    .map((row): FinalizerConversationRow | null => {
+      const whatsappPhone = phonesByCustomerId.get(row.customer_id);
+
+      if (!whatsappPhone || finalized.has(row.id)) {
+        return null;
+      }
+
+      return {
+        ...row,
+        whatsapp_phone: whatsappPhone,
+      };
+    })
+    .filter((row): row is FinalizerConversationRow => row !== null)
     .slice(0, limit);
 }
 
@@ -114,13 +153,14 @@ async function closeConversationAfterFinalizer(conversationId: string) {
   }
 }
 
-async function finalizeConversation(row: ConversationCandidateRow) {
-  const phone = row.customers?.whatsapp_phone;
-
-  if (!phone) {
-    return { closed: false, failed: true };
-  }
-
+async function finalizeConversation({
+  row,
+  finalizeAfterMinutes,
+}: {
+  row: FinalizerConversationRow;
+  finalizeAfterMinutes: number;
+}) {
+  const phone = row.whatsapp_phone;
   const body = sanitizeWhatsAppText(TICKET_MESSAGES.conversationClosed);
   const sendResult = await sendZapiText({ phone, message: body });
   const outboundResult = await saveWhatsAppMessage({
@@ -135,7 +175,7 @@ async function finalizeConversation(row: ConversationCandidateRow) {
       message_type: "text",
       send_status: sendResult.ok ? "sent" : "failed",
       reason: FINALIZER_REASON,
-      inactivity_after_minutes: DEFAULT_FINALIZE_AFTER_MINUTES,
+      inactivity_after_minutes: finalizeAfterMinutes,
       ...(sendResult.ok ? {} : { error: sendResult.error }),
     },
   });
@@ -163,7 +203,7 @@ async function finalizeConversation(row: ConversationCandidateRow) {
 
 export async function finalizeInactiveWhatsAppConversations({
   limit = 20,
-  finalizeAfterMinutes = DEFAULT_FINALIZE_AFTER_MINUTES,
+  finalizeAfterMinutes = getConfiguredFinalizeAfterMinutes(),
 }: {
   limit?: number;
   finalizeAfterMinutes?: number;
@@ -174,7 +214,7 @@ export async function finalizeInactiveWhatsAppConversations({
 
   for (const row of rows) {
     try {
-      const result = await finalizeConversation(row);
+      const result = await finalizeConversation({ row, finalizeAfterMinutes });
       if (result.closed) closed += 1;
       if (result.failed) failed += 1;
     } catch (error) {
