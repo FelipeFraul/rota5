@@ -79,6 +79,7 @@ import {
 } from "@/lib/tickets/services/tickets";
 import {
   buildAdminAuthPendingActiveAdminResponse,
+  buildAdminAuthPendingBlockResponse,
   buildAdminAuthPendingCancelResponse,
   buildAdminAuthPendingRestartResponse,
   startAdminLogin,
@@ -246,7 +247,6 @@ import {
   createAdminSession,
   formatAdminMenu,
   getActiveAdminSession,
-  getAdminAuthBlockStatus,
   getAdminUserByPhone,
   hasAdminPermission,
   isAdminLogoutCommand,
@@ -10410,27 +10410,14 @@ export async function routeTicketMessage({
 
     const adminUser = activeAdminResponse.adminUser;
 
-    const blockStatus = await getAdminAuthBlockStatus(customer.whatsapp_phone);
+    const blockResponse = await buildAdminAuthPendingBlockResponse({
+      phoneNumber: customer.whatsapp_phone,
+      baseContext,
+      adminUser,
+    });
 
-    if (blockStatus.ok && blockStatus.blocked) {
-      return {
-        reply:
-          blockStatus.type === "temporary"
-            ? TICKET_MESSAGES.adminAuthTemporaryLocked.replace(
-                "{minutes}",
-                String(blockStatus.retryAfterMinutes),
-              )
-            : TICKET_MESSAGES.adminAuthHardLocked,
-        nextContext: {
-          ...baseContext,
-          step: "admin_auth_pending",
-          state: "admin_auth_pending",
-          admin: buildAdminContext({
-            adminUserId: adminUser.id,
-            role: adminUser.role,
-          }),
-        },
-      };
+    if (blockResponse) {
+      return blockResponse;
     }
 
     const codeResult = await consumeAdminLoginChallengeCode({

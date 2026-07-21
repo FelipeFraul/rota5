@@ -223,3 +223,38 @@ export async function buildAdminAuthPendingActiveAdminResponse({
     adminUser: adminUserResult.adminUser,
   };
 }
+
+export async function buildAdminAuthPendingBlockResponse({
+  phoneNumber,
+  baseContext,
+  adminUser,
+}: {
+  phoneNumber: string;
+  baseContext: TicketConversationState;
+  adminUser: AdminUser;
+}) {
+  const blockStatus = await getAdminAuthBlockStatus(phoneNumber);
+
+  if (!blockStatus.ok || !blockStatus.blocked) {
+    return null;
+  }
+
+  return {
+    reply:
+      blockStatus.type === "temporary"
+        ? TICKET_MESSAGES.adminAuthTemporaryLocked.replace(
+            "{minutes}",
+            String(blockStatus.retryAfterMinutes),
+          )
+        : TICKET_MESSAGES.adminAuthHardLocked,
+    nextContext: {
+      ...baseContext,
+      step: "admin_auth_pending" as const,
+      state: "admin_auth_pending" as const,
+      admin: buildAdminContext({
+        adminUserId: adminUser.id,
+        role: adminUser.role,
+      }),
+    },
+  };
+}
