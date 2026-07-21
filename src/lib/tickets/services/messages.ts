@@ -23,7 +23,7 @@ type SaveWhatsAppMessageDuplicateResult = {
 };
 
 type SaveWhatsAppMessageInput = {
-  conversationId: string;
+  conversationId: string | null;
   customerId: string;
   direction: WhatsAppMessageDirection;
   messageType?: WhatsAppMessageType;
@@ -120,6 +120,17 @@ export async function saveWhatsAppMessage({
   providerMessageId = null,
   rawMetadata = {},
 }: SaveWhatsAppMessageInput) {
+  if (!conversationId && (direction === "inbound" || messageType === "system")) {
+    return {
+      ok: false as const,
+      duplicate: false as const,
+      error: {
+        code: "conversation_id_required",
+        message: "conversationId is required for inbound and system WhatsApp messages",
+      },
+    };
+  }
+
   const supabase = getSupabaseAdmin();
   const { data: message, error } = await supabase
     .from("whatsapp_messages")
