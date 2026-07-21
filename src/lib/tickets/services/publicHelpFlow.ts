@@ -280,3 +280,44 @@ export function buildPublicHelpExitResponse({ text }: { text: string }) {
     nextContext: buildInitialConversationState(),
   };
 }
+
+export function buildActivePublicHelpResponse({
+  baseContext,
+  text,
+}: {
+  baseContext: TicketConversationState;
+  text: string;
+}) {
+  if (!isPublicHelpFlowState(baseContext.state)) {
+    return null;
+  }
+
+  const backResponse = buildPublicHelpBackResponse({
+    baseContext,
+    text,
+  });
+
+  if (backResponse) {
+    return backResponse;
+  }
+
+  const exitResponse = buildPublicHelpExitResponse({ text });
+
+  if (exitResponse) {
+    return exitResponse;
+  }
+
+  const resultsResponse = buildPublicHelpResultsResponse({
+    baseContext,
+    text,
+  });
+
+  if (resultsResponse) {
+    return resultsResponse;
+  }
+
+  return buildPublicHelpFallbackSearchResponse({
+    baseContext,
+    text,
+  });
+}

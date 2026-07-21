@@ -320,24 +320,14 @@ export function buildPublicHelpExitResponse({ text }: { text: string }) {
     nextContext: buildInitialConversationState(),
   };
 }
-`;
 
-const expectedHelpFlowBlock = `function handlePublicHelpMessage({
+export function buildActivePublicHelpResponse({
   baseContext,
   text,
 }: {
   baseContext: TicketConversationState;
   text: string;
-}): RouteTicketMessageOutput | null {
-  const helpCommandResponse = buildPublicHelpCommandResponse({
-    baseContext,
-    text,
-  });
-
-  if (helpCommandResponse) {
-    return helpCommandResponse;
-  }
-
+}) {
   if (!isPublicHelpFlowState(baseContext.state)) {
     return null;
   }
@@ -370,6 +360,35 @@ const expectedHelpFlowBlock = `function handlePublicHelpMessage({
     baseContext,
     text,
   });
+}
+`;
+
+const expectedHelpFlowBlock = `function handlePublicHelpMessage({
+  baseContext,
+  text,
+}: {
+  baseContext: TicketConversationState;
+  text: string;
+}): RouteTicketMessageOutput | null {
+  const helpCommandResponse = buildPublicHelpCommandResponse({
+    baseContext,
+    text,
+  });
+
+  if (helpCommandResponse) {
+    return helpCommandResponse;
+  }
+
+  const activeHelpResponse = buildActivePublicHelpResponse({
+    baseContext,
+    text,
+  });
+
+  if (activeHelpResponse) {
+    return activeHelpResponse;
+  }
+
+  return null;
 }
 
 `;
@@ -509,7 +528,7 @@ test("VOLTAR retorna ao estado anterior salvo no publicHelp", () => {
 });
 
 test("fluxo de ajuda nao intercepta fora dos estados de ajuda", () => {
-  assert.match(helpFlowBlock, /if \(!isPublicHelpFlowState\(baseContext\.state\)\)/);
+  assert.match(helpSearchBlock, /if \(!isPublicHelpFlowState\(baseContext\.state\)\)/);
   assert.match(helpFlowBlock, /return null/);
   assert.match(router, /const publicHelpResult = handlePublicHelpMessage/);
   assert.match(router, /if \(publicHelpResult\) \{\s*return publicHelpResult;/);

@@ -81,11 +81,8 @@ import {
   formatPublicHelpPrompt,
 } from "@/lib/tickets/services/publicHelp";
 import {
-  buildPublicHelpFallbackSearchResponse,
-  buildPublicHelpBackResponse,
+  buildActivePublicHelpResponse,
   buildPublicHelpCommandResponse,
-  buildPublicHelpExitResponse,
-  buildPublicHelpResultsResponse,
   buildPublicHelpSearchResponse,
   isPublicHelpBackIntent,
   isPublicHelpFlowState,
@@ -2251,38 +2248,16 @@ function handlePublicHelpMessage({
     return helpCommandResponse;
   }
 
-  if (!isPublicHelpFlowState(baseContext.state)) {
-    return null;
-  }
-
-  const backResponse = buildPublicHelpBackResponse({
+  const activeHelpResponse = buildActivePublicHelpResponse({
     baseContext,
     text,
   });
 
-  if (backResponse) {
-    return backResponse;
+  if (activeHelpResponse) {
+    return activeHelpResponse;
   }
 
-  const exitResponse = buildPublicHelpExitResponse({ text });
-
-  if (exitResponse) {
-    return exitResponse;
-  }
-
-  const resultsResponse = buildPublicHelpResultsResponse({
-    baseContext,
-    text,
-  });
-
-  if (resultsResponse) {
-    return resultsResponse;
-  }
-
-  return buildPublicHelpFallbackSearchResponse({
-    baseContext,
-    text,
-  });
+  return null;
 }
 
 function parseTicketQuantity(text: string) {
