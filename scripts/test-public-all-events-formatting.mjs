@@ -168,7 +168,7 @@ function buildAllEventsOutboundMessages(events) {
     }
 
     pushCurrentMessage();
-    current = `*EVENTOS Ã¢â‚¬â€ CONTINUAÃƒâ€¡ÃƒÆ’O*\n\n${block}`;
+    current = `*EVENTOS - CONTINUACAO*\n\n${block}`;
   });
 
   if (current) {
@@ -293,7 +293,7 @@ test("TODOS divide em multiplas mensagens e aplica delay nas continuacoes", () =
       })),
     ],
   );
-  assert.match(messages[1].body, /^\*EVENTOS Ã¢â‚¬â€ CONTINUAÃƒâ€¡ÃƒÆ’O\*/);
+  assert.match(messages[1].body, /^\*EVENTOS - CONTINUACAO\*/);
   assert.ok(messages.every((message) => message.body.length <= ALL_EVENTS_MESSAGE_MAX_LENGTH));
   assert.deepEqual(
     [...combinedBody.matchAll(/Digite (\d+) para/g)].map((match) => Number(match[1])),

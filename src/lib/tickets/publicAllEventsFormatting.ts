@@ -73,7 +73,7 @@ export function buildAllEventsOutboundMessages(
     }
 
     pushCurrentMessage();
-    current = `*EVENTOS Ã¢â‚¬â€ CONTINUAÃƒâ€¡ÃƒÆ’O*\n\n${block}`;
+    current = `*EVENTOS - CONTINUACAO*\n\n${block}`;
   });
 
   if (current) {
