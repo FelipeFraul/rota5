@@ -208,6 +208,38 @@ export function buildPublicHelpMoreResultsResponse({
   });
 }
 
+export function buildPublicHelpResultsResponse({
+  baseContext,
+  text,
+}: {
+  baseContext: TicketConversationState;
+  text: string;
+}) {
+  if (baseContext.state !== "help_results") {
+    return null;
+  }
+
+  const moreResultsResponse = buildPublicHelpMoreResultsResponse({
+    baseContext,
+    text,
+  });
+
+  if (moreResultsResponse) {
+    return moreResultsResponse;
+  }
+
+  const selectedTopicResponse = buildPublicHelpSelectedTopicResponse({
+    baseContext,
+    text,
+  });
+
+  if (selectedTopicResponse) {
+    return selectedTopicResponse;
+  }
+
+  return null;
+}
+
 export function buildPublicHelpFallbackSearchResponse({
   baseContext,
   text,

@@ -85,8 +85,7 @@ import {
   buildPublicHelpBackResponse,
   buildPublicHelpCommandResponse,
   buildPublicHelpExitResponse,
-  buildPublicHelpMoreResultsResponse,
-  buildPublicHelpSelectedTopicResponse,
+  buildPublicHelpResultsResponse,
   buildPublicHelpSearchResponse,
   isPublicHelpBackIntent,
   isPublicHelpFlowState,
@@ -2271,24 +2270,13 @@ function handlePublicHelpMessage({
     return exitResponse;
   }
 
-  if (baseContext.state === "help_results") {
-    const moreResultsResponse = buildPublicHelpMoreResultsResponse({
-      baseContext,
-      text,
-    });
+  const resultsResponse = buildPublicHelpResultsResponse({
+    baseContext,
+    text,
+  });
 
-    if (moreResultsResponse) {
-      return moreResultsResponse;
-    }
-
-    const selectedTopicResponse = buildPublicHelpSelectedTopicResponse({
-      baseContext,
-      text,
-    });
-
-    if (selectedTopicResponse) {
-      return selectedTopicResponse;
-    }
+  if (resultsResponse) {
+    return resultsResponse;
   }
 
   return buildPublicHelpFallbackSearchResponse({

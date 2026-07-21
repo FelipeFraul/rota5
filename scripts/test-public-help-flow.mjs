@@ -248,6 +248,38 @@ export function buildPublicHelpMoreResultsResponse({
   });
 }
 
+export function buildPublicHelpResultsResponse({
+  baseContext,
+  text,
+}: {
+  baseContext: TicketConversationState;
+  text: string;
+}) {
+  if (baseContext.state !== "help_results") {
+    return null;
+  }
+
+  const moreResultsResponse = buildPublicHelpMoreResultsResponse({
+    baseContext,
+    text,
+  });
+
+  if (moreResultsResponse) {
+    return moreResultsResponse;
+  }
+
+  const selectedTopicResponse = buildPublicHelpSelectedTopicResponse({
+    baseContext,
+    text,
+  });
+
+  if (selectedTopicResponse) {
+    return selectedTopicResponse;
+  }
+
+  return null;
+}
+
 export function buildPublicHelpFallbackSearchResponse({
   baseContext,
   text,
@@ -325,24 +357,13 @@ const expectedHelpFlowBlock = `function handlePublicHelpMessage({
     return exitResponse;
   }
 
-  if (baseContext.state === "help_results") {
-    const moreResultsResponse = buildPublicHelpMoreResultsResponse({
-      baseContext,
-      text,
-    });
+  const resultsResponse = buildPublicHelpResultsResponse({
+    baseContext,
+    text,
+  });
 
-    if (moreResultsResponse) {
-      return moreResultsResponse;
-    }
-
-    const selectedTopicResponse = buildPublicHelpSelectedTopicResponse({
-      baseContext,
-      text,
-    });
-
-    if (selectedTopicResponse) {
-      return selectedTopicResponse;
-    }
+  if (resultsResponse) {
+    return resultsResponse;
   }
 
   return buildPublicHelpFallbackSearchResponse({
