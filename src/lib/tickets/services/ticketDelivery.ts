@@ -62,6 +62,14 @@ export type DeliverTicketsForOrderResult =
     };
 
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
+function getDeliveryStateUpdateFailureCode(result: {
+  ok: false;
+  error?: { code?: string | null } | null;
+  reason?: string;
+}) {
+  return result.error?.code ?? result.reason ?? "delivery_state_update_failed";
+}
+
 const QR_CODE_CAPTION = [
   "*APRESENTE O QRCODE NA PORTARIA*",
   "Este ingresso será validado uma única vez na portaria. Por segurança, não envie para terceiros.",
@@ -369,10 +377,17 @@ export async function deliverTicketsForOrder(
     });
 
     if (!textSaveResult.ok) {
-      await markWhatsAppOutboundDeliveryFailed({
+      const markFailedResult = await markWhatsAppOutboundDeliveryFailed({
         deliveryId: textDelivery.delivery.id,
         error: textSaveResult.error?.code ?? "whatsapp_message_persist_failed",
       });
+      if (!markFailedResult.ok) {
+        logError("Failed to mark ticket WhatsApp delivery text as failed", {
+          orderId,
+          code: getDeliveryStateUpdateFailureCode(markFailedResult),
+          originalCode: textSaveResult.error?.code,
+        });
+      }
       logError("Failed to save ticket WhatsApp delivery message", {
         orderId,
         conversationId,
@@ -390,10 +405,17 @@ export async function deliverTicketsForOrder(
     }
 
     if (!sendResult.ok) {
-      await markWhatsAppOutboundDeliveryFailed({
+      const markFailedResult = await markWhatsAppOutboundDeliveryFailed({
         deliveryId: textDelivery.delivery.id,
         error: sendResult.error,
       });
+      if (!markFailedResult.ok) {
+        logError("Failed to mark ticket WhatsApp delivery text as failed", {
+          orderId,
+          code: getDeliveryStateUpdateFailureCode(markFailedResult),
+          originalCode: sendResult.error,
+        });
+      }
       logWarn("Ticket WhatsApp delivery failed after payment confirmation", {
         orderId,
         phoneLast4: phone.slice(-4),
@@ -409,10 +431,17 @@ export async function deliverTicketsForOrder(
       };
     }
 
-    await markWhatsAppOutboundDeliverySent({
+    const markSentResult = await markWhatsAppOutboundDeliverySent({
       deliveryId: textDelivery.delivery.id,
       providerMessageId: sendResult.providerMessageId,
     });
+    if (!markSentResult.ok) {
+      logError("Failed to mark ticket WhatsApp delivery text as sent", {
+        orderId,
+        code: getDeliveryStateUpdateFailureCode(markSentResult),
+      });
+      return { ok: false, reason: "internal_error" };
+    }
   }
 
   let deliveryInProgress = false;
@@ -517,10 +546,18 @@ export async function deliverTicketsForOrder(
     });
 
     if (!imageSaveResult.ok) {
-      await markWhatsAppOutboundDeliveryFailed({
+      const markFailedResult = await markWhatsAppOutboundDeliveryFailed({
         deliveryId: imageDelivery.delivery.id,
         error: imageSaveResult.error?.code ?? "whatsapp_message_persist_failed",
       });
+      if (!markFailedResult.ok) {
+        logError("Failed to mark ticket QR WhatsApp delivery as failed", {
+          orderId,
+          ticketId: ticket.ticketId,
+          code: getDeliveryStateUpdateFailureCode(markFailedResult),
+          originalCode: imageSaveResult.error?.code,
+        });
+      }
       logError("Failed to save ticket QR WhatsApp delivery message", {
         orderId,
         ticketId: ticket.ticketId,
@@ -539,10 +576,18 @@ export async function deliverTicketsForOrder(
     }
 
     if (!imageSendResult.ok) {
-      await markWhatsAppOutboundDeliveryFailed({
+      const markFailedResult = await markWhatsAppOutboundDeliveryFailed({
         deliveryId: imageDelivery.delivery.id,
         error: imageSendResult.error,
       });
+      if (!markFailedResult.ok) {
+        logError("Failed to mark ticket QR WhatsApp delivery as failed", {
+          orderId,
+          ticketId: ticket.ticketId,
+          code: getDeliveryStateUpdateFailureCode(markFailedResult),
+          originalCode: imageSendResult.error,
+        });
+      }
       logWarn("Ticket QR Code WhatsApp delivery failed after payment confirmation", {
         orderId,
         phoneLast4: phone.slice(-4),
@@ -558,10 +603,18 @@ export async function deliverTicketsForOrder(
       };
     }
 
-    await markWhatsAppOutboundDeliverySent({
+    const markSentResult = await markWhatsAppOutboundDeliverySent({
       deliveryId: imageDelivery.delivery.id,
       providerMessageId: imageSendResult.providerMessageId,
     });
+    if (!markSentResult.ok) {
+      logError("Failed to mark ticket QR WhatsApp delivery as sent", {
+        orderId,
+        ticketId: ticket.ticketId,
+        code: getDeliveryStateUpdateFailureCode(markSentResult),
+      });
+      return { ok: false, reason: "internal_error" };
+    }
   }
 
   if (deliveryInProgress) {

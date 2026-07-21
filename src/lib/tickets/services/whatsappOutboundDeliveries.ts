@@ -90,14 +90,9 @@ export async function getOrCreateWhatsAppOutboundDelivery({
 
 export async function claimWhatsAppOutboundDelivery(deliveryId: string) {
   const { data, error } = await getSupabaseAdmin()
-    .from("whatsapp_outbound_deliveries")
-    .update({
-      status: "sending",
-      claimed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+    .rpc("claim_whatsapp_outbound_delivery", {
+      p_delivery_id: deliveryId,
     })
-    .eq("id", deliveryId)
-    .in("status", ["pending", "failed"])
     .select(DELIVERY_SELECT)
     .maybeSingle<WhatsAppOutboundDelivery>();
 
@@ -109,24 +104,10 @@ export async function claimWhatsAppOutboundDelivery(deliveryId: string) {
     return { ok: true as const, claimed: false as const };
   }
 
-  const attemptResult = await getSupabaseAdmin()
-    .from("whatsapp_outbound_deliveries")
-    .update({
-      attempt_count: data.attempt_count + 1,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", deliveryId)
-    .select(DELIVERY_SELECT)
-    .single<WhatsAppOutboundDelivery>();
-
-  if (attemptResult.error) {
-    return { ok: false as const, error: attemptResult.error };
-  }
-
   return {
     ok: true as const,
     claimed: true as const,
-    delivery: attemptResult.data,
+    delivery: data,
   };
 }
 
@@ -137,7 +118,7 @@ export async function markWhatsAppOutboundDeliverySent({
   deliveryId: string;
   providerMessageId?: string | null;
 }) {
-  const { error } = await getSupabaseAdmin()
+  const { data, error } = await getSupabaseAdmin()
     .from("whatsapp_outbound_deliveries")
     .update({
       status: "sent",
@@ -146,9 +127,21 @@ export async function markWhatsAppOutboundDeliverySent({
       sent_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
-    .eq("id", deliveryId);
+    .eq("id", deliveryId)
+    .eq("status", "sending")
+    .select("id")
+    .maybeSingle<{ id: string }>();
 
-  return error ? { ok: false as const, error } : { ok: true as const };
+  if (error) return { ok: false as const, error };
+  if (!data) {
+    return {
+      ok: false as const,
+      conflict: true as const,
+      reason: "invalid_state" as const,
+    };
+  }
+
+  return { ok: true as const };
 }
 
 export async function markWhatsAppOutboundDeliveryFailed({
@@ -158,16 +151,26 @@ export async function markWhatsAppOutboundDeliveryFailed({
   deliveryId: string;
   error: string;
 }) {
-  const { error: updateError } = await getSupabaseAdmin()
+  const { data, error: updateError } = await getSupabaseAdmin()
     .from("whatsapp_outbound_deliveries")
     .update({
       status: "failed",
       last_error: error,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", deliveryId);
+    .eq("id", deliveryId)
+    .eq("status", "sending")
+    .select("id")
+    .maybeSingle<{ id: string }>();
 
-  return updateError
-    ? { ok: false as const, error: updateError }
-    : { ok: true as const };
+  if (updateError) return { ok: false as const, error: updateError };
+  if (!data) {
+    return {
+      ok: false as const,
+      conflict: true as const,
+      reason: "invalid_state" as const,
+    };
+  }
+
+  return { ok: true as const };
 }

@@ -4,7 +4,7 @@ import { createHash, randomBytes, timingSafeEqual } from "crypto";
 import QRCode from "qrcode";
 import { createMercadoPagoPayment } from "@/lib/mercado-pago/client";
 import { getEnv } from "@/lib/env";
-import { logInfo, logWarn } from "@/lib/logger";
+import { logError, logInfo, logWarn } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getOrCreateOpenConversation, updateConversationAfterMessage } from "@/lib/tickets/services/conversations";
 import { saveWhatsAppMessage } from "@/lib/tickets/services/messages";
@@ -26,6 +26,14 @@ const EVENT_OFFER_SEND_GRACE_MINUTES = 5;
 const CUSTOM_OFFER_LOOKBACK_MINUTES = 180;
 const CUSTOM_OFFER_SEND_GRACE_MINUTES = 30;
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
+
+function getDeliveryStateUpdateFailureCode(result: {
+  ok: false;
+  error?: { code?: string | null } | null;
+  reason?: string;
+}) {
+  return result.error?.code ?? result.reason ?? "delivery_state_update_failed";
+}
 
 export function formatComboDescription(value: string) {
   return value
@@ -1024,10 +1032,17 @@ export async function deliverComboOrder(orderId: string) {
     });
 
     if (!textSaveResult.ok) {
-      await markWhatsAppOutboundDeliveryFailed({
+      const markFailedResult = await markWhatsAppOutboundDeliveryFailed({
         deliveryId: textDelivery.delivery.id,
         error: textSaveResult.error?.code ?? "whatsapp_message_persist_failed",
       });
+      if (!markFailedResult.ok) {
+        logError("Failed to mark combo text WhatsApp delivery as failed", {
+          comboOrderId: order.id,
+          code: getDeliveryStateUpdateFailureCode(markFailedResult),
+          originalCode: textSaveResult.error?.code,
+        });
+      }
       if (!textResult.ok) {
         return { ok: true as const, sent: false as const, reason: "zapi_failed" as const };
       }
@@ -1039,18 +1054,35 @@ export async function deliverComboOrder(orderId: string) {
     }
 
     if (!textResult.ok) {
-      await markWhatsAppOutboundDeliveryFailed({
+      const markFailedResult = await markWhatsAppOutboundDeliveryFailed({
         deliveryId: textDelivery.delivery.id,
         error: textResult.error,
       });
+      if (!markFailedResult.ok) {
+        logError("Failed to mark combo text WhatsApp delivery as failed", {
+          comboOrderId: order.id,
+          code: getDeliveryStateUpdateFailureCode(markFailedResult),
+          originalCode: textResult.error,
+        });
+      }
       logWarn("Combo text delivery failed", { comboOrderId: order.id, phoneLast4: phone.slice(-4), error: textResult.error });
       return { ok: true as const, sent: false as const, reason: "zapi_failed" as const };
     }
 
-    await markWhatsAppOutboundDeliverySent({
+    const markSentResult = await markWhatsAppOutboundDeliverySent({
       deliveryId: textDelivery.delivery.id,
       providerMessageId: textResult.providerMessageId,
     });
+    if (!markSentResult.ok) {
+      logError("Failed to mark combo text WhatsApp delivery as sent", {
+        comboOrderId: order.id,
+        code: getDeliveryStateUpdateFailureCode(markSentResult),
+      });
+      return {
+        ok: false as const,
+        reason: "database_error" as const,
+      };
+    }
   }
 
   const qrCaption = [
@@ -1133,10 +1165,18 @@ export async function deliverComboOrder(orderId: string) {
   });
 
   if (!imageSaveResult.ok) {
-    await markWhatsAppOutboundDeliveryFailed({
+    const markFailedResult = await markWhatsAppOutboundDeliveryFailed({
       deliveryId: imageDelivery.delivery.id,
       error: imageSaveResult.error?.code ?? "whatsapp_message_persist_failed",
     });
+    if (!markFailedResult.ok) {
+      logError("Failed to mark combo QR WhatsApp delivery as failed", {
+        comboOrderId: order.id,
+        comboRedemptionId: redemptionId,
+        code: getDeliveryStateUpdateFailureCode(markFailedResult),
+        originalCode: imageSaveResult.error?.code,
+      });
+    }
     if (!imageResult.ok) {
       return { ok: true as const, sent: false as const, reason: "zapi_failed" as const };
     }
@@ -1148,18 +1188,37 @@ export async function deliverComboOrder(orderId: string) {
   }
 
   if (!imageResult.ok) {
-    await markWhatsAppOutboundDeliveryFailed({
+    const markFailedResult = await markWhatsAppOutboundDeliveryFailed({
       deliveryId: imageDelivery.delivery.id,
       error: imageResult.error,
     });
+    if (!markFailedResult.ok) {
+      logError("Failed to mark combo QR WhatsApp delivery as failed", {
+        comboOrderId: order.id,
+        comboRedemptionId: redemptionId,
+        code: getDeliveryStateUpdateFailureCode(markFailedResult),
+        originalCode: imageResult.error,
+      });
+    }
     logWarn("Combo QR delivery failed", { comboOrderId: order.id, phoneLast4: phone.slice(-4), error: imageResult.error });
     return { ok: true as const, sent: false as const, reason: "zapi_failed" as const };
   }
 
-  await markWhatsAppOutboundDeliverySent({
+  const markSentResult = await markWhatsAppOutboundDeliverySent({
     deliveryId: imageDelivery.delivery.id,
     providerMessageId: imageResult.providerMessageId,
   });
+  if (!markSentResult.ok) {
+    logError("Failed to mark combo QR WhatsApp delivery as sent", {
+      comboOrderId: order.id,
+      comboRedemptionId: redemptionId,
+      code: getDeliveryStateUpdateFailureCode(markSentResult),
+    });
+    return {
+      ok: false as const,
+      reason: "database_error" as const,
+    };
+  }
 
   logInfo("Delivered paid combo by WhatsApp", { comboOrderId: order.id, phoneLast4: phone.slice(-4) });
   return { ok: true as const, sent: true as const };

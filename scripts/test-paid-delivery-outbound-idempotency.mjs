@@ -6,6 +6,10 @@ const migration = readFileSync(
   new URL("../supabase/migrations/20260721000100_create_whatsapp_outbound_deliveries.sql", import.meta.url),
   "utf8",
 );
+const claimMigration = readFileSync(
+  new URL("../supabase/migrations/20260721000200_add_claim_whatsapp_outbound_delivery_rpc.sql", import.meta.url),
+  "utf8",
+);
 const service = readFileSync(
   new URL("../src/lib/tickets/services/whatsappOutboundDeliveries.ts", import.meta.url),
   "utf8",
@@ -60,13 +64,37 @@ test("migration creates outbound delivery execution units with required constrai
 test("outbound delivery service creates, claims, and marks paid delivery executions", () => {
   assert.match(service, /getOrCreateWhatsAppOutboundDelivery/);
   assert.match(service, /claimWhatsAppOutboundDelivery/);
-  assert.match(service, /\.in\("status", \["pending", "failed"\]\)/);
-  assert.match(service, /attempt_count: data\.attempt_count \+ 1/);
+  assert.match(service, /\.rpc\("claim_whatsapp_outbound_delivery"/);
   assert.match(service, /markWhatsAppOutboundDeliverySent/);
   assert.match(service, /status: "sent"/);
   assert.match(service, /provider_message_id: providerMessageId \?\? null/);
   assert.match(service, /markWhatsAppOutboundDeliveryFailed/);
   assert.match(service, /status: "failed"/);
+});
+
+test("claim is atomic and produces a single winner for concurrent executions", () => {
+  assert.match(claimMigration, /create or replace function public\.claim_whatsapp_outbound_delivery/);
+  assert.match(claimMigration, /status = 'sending'/);
+  assert.match(claimMigration, /attempt_count = attempt_count \+ 1/);
+  assert.match(claimMigration, /where id = p_delivery_id\s+and status in \('pending', 'failed'\)/);
+  assert.match(claimMigration, /returning \*/);
+  assert.match(service, /if \(!data\) {\s+return { ok: true as const, claimed: false as const };/);
+  assert.doesNotMatch(service, /attempt_count: data\.attempt_count \+ 1/);
+});
+
+test("sent and failed transitions only update deliveries currently in sending", () => {
+  for (const marker of [
+    "markWhatsAppOutboundDeliverySent",
+    "markWhatsAppOutboundDeliveryFailed",
+  ]) {
+    const markerIndex = service.indexOf(`export async function ${marker}`);
+    assert.notEqual(markerIndex, -1, `${marker} must exist`);
+    const block = service.slice(markerIndex, markerIndex + 1200);
+    assert.match(block, /\.eq\("id", deliveryId\)/);
+    assert.match(block, /\.eq\("status", "sending"\)/);
+    assert.match(block, /conflict: true as const/);
+    assert.match(block, /reason: "invalid_state" as const/);
+  }
 });
 
 test("ticket delivery uses required idempotency keys and skips sent or sending executions", () => {
@@ -100,6 +128,20 @@ test("combo delivery uses independent idempotency keys for text and QR", () => {
   assert.match(comboOffers, /reason: "delivery_in_progress"/);
   assert.match(comboOffers, /markWhatsAppOutboundDeliverySent/);
   assert.match(comboOffers, /markWhatsAppOutboundDeliveryFailed/);
+});
+
+test("ticket and combo callers check mark sent and mark failed results", () => {
+  for (const source of [ticketDelivery, comboOffers]) {
+    assert.match(source, /const markSentResult = await markWhatsAppOutboundDeliverySent/);
+    assert.match(source, /if \(!markSentResult\.ok\)/);
+    assert.match(source, /const markFailedResult = await markWhatsAppOutboundDeliveryFailed/);
+    assert.match(source, /if \(!markFailedResult\.ok\)/);
+    assert.match(source, /getDeliveryStateUpdateFailureCode/);
+  }
+  assert.match(ticketDelivery, /Failed to mark ticket WhatsApp delivery text as sent/);
+  assert.match(ticketDelivery, /Failed to mark ticket QR WhatsApp delivery as sent/);
+  assert.match(comboOffers, /Failed to mark combo text WhatsApp delivery as sent/);
+  assert.match(comboOffers, /Failed to mark combo QR WhatsApp delivery as sent/);
 });
 
 test("failed send and failed persistence mark delivery failed without changing whatsapp_messages history role", () => {
