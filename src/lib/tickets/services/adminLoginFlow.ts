@@ -11,6 +11,7 @@ import {
   isAdminLogoutCommand,
   isReservedAdminCommand,
   type AdminRole,
+  type AdminUser,
 } from "@/lib/tickets/services/adminAuth";
 
 function buildAdminContext({
@@ -176,4 +177,49 @@ export async function buildAdminAuthPendingRestartResponse({
     baseContext,
     sourceIdentifier,
   });
+}
+
+export async function buildAdminAuthPendingActiveAdminResponse({
+  phoneNumber,
+  baseContext,
+}: {
+  phoneNumber: string;
+  baseContext: TicketConversationState;
+}): Promise<
+  | {
+      response: {
+        reply: string;
+        nextContext: TicketConversationState;
+      };
+      adminUser?: never;
+    }
+  | {
+      response: null;
+      adminUser: AdminUser;
+    }
+> {
+  const adminUserResult = await getAdminUserByPhone(phoneNumber);
+
+  if (
+    !adminUserResult.ok ||
+    !adminUserResult.adminUser ||
+    adminUserResult.adminUser.status !== "active"
+  ) {
+    return {
+      response: {
+        reply: TICKET_MESSAGES.adminReservedNeutral,
+        nextContext: {
+          ...baseContext,
+          step: "idle" as const,
+          state: "idle" as const,
+          admin: undefined,
+        },
+      },
+    };
+  }
+
+  return {
+    response: null,
+    adminUser: adminUserResult.adminUser,
+  };
 }

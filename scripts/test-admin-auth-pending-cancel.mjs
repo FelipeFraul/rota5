@@ -8,6 +8,10 @@ const router = readFileSync(
   new URL("../src/lib/tickets/router.ts", import.meta.url),
   "utf8",
 );
+const adminLoginFlow = readFileSync(
+  new URL("../src/lib/tickets/services/adminLoginFlow.ts", import.meta.url),
+  "utf8",
+);
 
 function sliceBetween(source, startPattern, endPattern) {
   const start = source.search(startPattern);
@@ -79,7 +83,7 @@ test("admin_auth_pending reinicia login em comando admin reservado antes de vali
   );
   assert.match(
     adminAuthPendingBlock,
-    /const authRestartResponse = await buildAdminAuthPendingRestartResponse[\s\S]*const adminUserResult = await getAdminUserByPhone\(customer\.whatsapp_phone\);/,
+    /const authRestartResponse = await buildAdminAuthPendingRestartResponse[\s\S]*const activeAdminResponse = await buildAdminAuthPendingActiveAdminResponse/,
   );
   assert.match(
     adminAuthPendingBlock,
@@ -96,18 +100,30 @@ test("admin_auth_pending valida administrador ativo antes de bloqueio e codigo",
 
   assert.match(
     adminAuthPendingBlock,
-    /const authRestartResponse = await buildAdminAuthPendingRestartResponse[\s\S]*const adminUserResult = await getAdminUserByPhone\(customer\.whatsapp_phone\);/,
+    /const activeAdminResponse = await buildAdminAuthPendingActiveAdminResponse\(\{\s*phoneNumber: customer\.whatsapp_phone,\s*baseContext,\s*\}\);/,
   );
   assert.match(
     adminAuthPendingBlock,
-    /if \(\s*!adminUserResult\.ok \|\|\s*!adminUserResult\.adminUser \|\|\s*adminUserResult\.adminUser\.status !== "active"\s*\) \{\s*return \{\s*reply: TICKET_MESSAGES\.adminReservedNeutral,\s*nextContext: \{\s*\.\.\.baseContext,\s*step: "idle",\s*state: "idle",\s*admin: undefined,\s*\},\s*\};\s*\}/,
+    /if \(activeAdminResponse\.response\) \{\s*return activeAdminResponse\.response;\s*\}\s*const adminUser = activeAdminResponse\.adminUser;/,
   );
   assert.match(
     adminAuthPendingBlock,
-    /adminUserResult\.adminUser\.status !== "active"[\s\S]*const blockStatus = await getAdminAuthBlockStatus\(customer\.whatsapp_phone\);/,
+    /const adminUser = activeAdminResponse\.adminUser;[\s\S]*const blockStatus = await getAdminAuthBlockStatus\(customer\.whatsapp_phone\);/,
   );
   assert.match(
     adminAuthPendingBlock,
-    /adminUserResult\.adminUser\.status !== "active"[\s\S]*const codeResult = await consumeAdminLoginChallengeCode\(\{/,
+    /const adminUser = activeAdminResponse\.adminUser;[\s\S]*const codeResult = await consumeAdminLoginChallengeCode\(\{/,
+  );
+  assert.match(
+    adminLoginFlow,
+    /const adminUserResult = await getAdminUserByPhone\(phoneNumber\);/,
+  );
+  assert.match(
+    adminLoginFlow,
+    /if \(\s*!adminUserResult\.ok \|\|\s*!adminUserResult\.adminUser \|\|\s*adminUserResult\.adminUser\.status !== "active"\s*\) \{\s*return \{\s*response: \{\s*reply: TICKET_MESSAGES\.adminReservedNeutral,\s*nextContext: \{\s*\.\.\.baseContext,\s*step: "idle" as const,\s*state: "idle" as const,\s*admin: undefined,\s*\},\s*\},\s*\};\s*\}/,
+  );
+  assert.match(
+    adminLoginFlow,
+    /return \{\s*response: null,\s*adminUser: adminUserResult\.adminUser,\s*\};/,
   );
 });

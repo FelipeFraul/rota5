@@ -78,6 +78,7 @@ import {
   type PaidTicketResendGroup,
 } from "@/lib/tickets/services/tickets";
 import {
+  buildAdminAuthPendingActiveAdminResponse,
   buildAdminAuthPendingCancelResponse,
   buildAdminAuthPendingRestartResponse,
   startAdminLogin,
@@ -10398,23 +10399,16 @@ export async function routeTicketMessage({
       return authRestartResponse;
     }
 
-    const adminUserResult = await getAdminUserByPhone(customer.whatsapp_phone);
+    const activeAdminResponse = await buildAdminAuthPendingActiveAdminResponse({
+      phoneNumber: customer.whatsapp_phone,
+      baseContext,
+    });
 
-    if (
-      !adminUserResult.ok ||
-      !adminUserResult.adminUser ||
-      adminUserResult.adminUser.status !== "active"
-    ) {
-      return {
-        reply: TICKET_MESSAGES.adminReservedNeutral,
-        nextContext: {
-          ...baseContext,
-          step: "idle",
-          state: "idle",
-          admin: undefined,
-        },
-      };
+    if (activeAdminResponse.response) {
+      return activeAdminResponse.response;
     }
+
+    const adminUser = activeAdminResponse.adminUser;
 
     const blockStatus = await getAdminAuthBlockStatus(customer.whatsapp_phone);
 
@@ -10432,8 +10426,8 @@ export async function routeTicketMessage({
           step: "admin_auth_pending",
           state: "admin_auth_pending",
           admin: buildAdminContext({
-            adminUserId: adminUserResult.adminUser.id,
-            role: adminUserResult.adminUser.role,
+            adminUserId: adminUser.id,
+            role: adminUser.role,
           }),
         },
       };
@@ -10485,8 +10479,8 @@ export async function routeTicketMessage({
           step: "admin_auth_pending",
           state: "admin_auth_pending",
           admin: buildAdminContext({
-            adminUserId: adminUserResult.adminUser.id,
-            role: adminUserResult.adminUser.role,
+            adminUserId: adminUser.id,
+            role: adminUser.role,
             authChallengeId: previousState.admin?.authChallengeId,
             authChallengeExpiresAt: previousState.admin?.authChallengeExpiresAt,
           }),
