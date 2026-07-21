@@ -282,17 +282,22 @@ export async function deliverTicketsForOrder(
     customerId: order.customer_id,
   });
   if (!conversationResult.ok) {
-    logError("Failed to load conversation for ticket WhatsApp delivery", {
+    logWarn("Continuing ticket WhatsApp delivery without conversation", {
       orderId,
       customerId: order.customer_id,
       code: conversationResult.error.code,
     });
-    return { ok: false, reason: "internal_error" };
   }
+  const conversationId = conversationResult.ok
+    ? conversationResult.conversation.id
+    : null;
+  const conversationFallbackMetadata = conversationResult.ok
+    ? {}
+    : { conversation_status: "unavailable" };
 
   const sendResult = await sendZapiText({ phone, message });
   const textSaveResult = await saveWhatsAppMessage({
-    conversationId: conversationResult.conversation.id,
+    conversationId,
     customerId: order.customer_id,
     direction: "outbound",
     messageType: "text",
@@ -305,6 +310,7 @@ export async function deliverTicketsForOrder(
       businessContext: {
         order_id: orderId,
         tickets_count: tickets.length,
+        ...conversationFallbackMetadata,
       },
     }),
   });
@@ -312,7 +318,7 @@ export async function deliverTicketsForOrder(
   if (!textSaveResult.ok) {
     logError("Failed to save ticket WhatsApp delivery message", {
       orderId,
-      conversationId: conversationResult.conversation.id,
+      conversationId,
       code: textSaveResult.error?.code,
     });
     return { ok: false, reason: "internal_error" };
@@ -366,7 +372,7 @@ export async function deliverTicketsForOrder(
       caption: QR_CODE_CAPTION,
     });
     const imageSaveResult = await saveWhatsAppMessage({
-      conversationId: conversationResult.conversation.id,
+      conversationId,
       customerId: order.customer_id,
       direction: "outbound",
       messageType: "image",
@@ -382,6 +388,7 @@ export async function deliverTicketsForOrder(
           order_id: orderId,
           ticket_id: ticket.ticketId,
           ticket_code: ticket.ticketCode,
+          ...conversationFallbackMetadata,
         },
       }),
     });
@@ -390,7 +397,7 @@ export async function deliverTicketsForOrder(
       logError("Failed to save ticket QR WhatsApp delivery message", {
         orderId,
         ticketId: ticket.ticketId,
-        conversationId: conversationResult.conversation.id,
+        conversationId,
         code: imageSaveResult.error?.code,
       });
       return { ok: false, reason: "internal_error" };

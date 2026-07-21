@@ -931,12 +931,18 @@ export async function deliverComboOrder(orderId: string) {
     customerId: order.customer_id,
   });
   if (!conversationResult.ok) {
-    return {
-      ok: false as const,
-      reason: "database_error" as const,
-      error: conversationResult.error,
-    };
+    logWarn("Continuing paid combo WhatsApp delivery without conversation", {
+      comboOrderId: order.id,
+      customerId: order.customer_id,
+      code: conversationResult.error.code,
+    });
   }
+  const conversationId = conversationResult.ok
+    ? conversationResult.conversation.id
+    : null;
+  const conversationFallbackMetadata = conversationResult.ok
+    ? {}
+    : { conversation_status: "unavailable" };
 
   const event = order.events;
   const message = [
@@ -951,7 +957,7 @@ export async function deliverComboOrder(orderId: string) {
   ].join("\n");
   const textResult = await sendZapiText({ phone, message });
   const textSaveResult = await saveWhatsAppMessage({
-    conversationId: conversationResult.conversation.id,
+    conversationId,
     customerId: order.customer_id,
     direction: "outbound",
     messageType: "text",
@@ -967,6 +973,7 @@ export async function deliverComboOrder(orderId: string) {
         offer_id: order.offer_id,
         event_id: order.event_id,
         session_id: order.session_id,
+        ...conversationFallbackMetadata,
       },
     }),
   });
@@ -997,7 +1004,7 @@ export async function deliverComboOrder(orderId: string) {
     caption: qrCaption,
   });
   const imageSaveResult = await saveWhatsAppMessage({
-    conversationId: conversationResult.conversation.id,
+    conversationId,
     customerId: order.customer_id,
     direction: "outbound",
     messageType: "image",
@@ -1013,6 +1020,7 @@ export async function deliverComboOrder(orderId: string) {
         offer_id: order.offer_id,
         event_id: order.event_id,
         session_id: order.session_id,
+        ...conversationFallbackMetadata,
       },
     }),
   });
