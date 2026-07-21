@@ -78,6 +78,10 @@ import {
   type PaidTicketResendGroup,
 } from "@/lib/tickets/services/tickets";
 import {
+  buildPublicEntryGateResponse,
+  LOW_CONFIDENCE_PUBLIC_PROMPT,
+} from "@/lib/tickets/services/publicEntryGate";
+import {
   formatPublicHelpPrompt,
 } from "@/lib/tickets/services/publicHelp";
 import {
@@ -458,11 +462,6 @@ export type ImmediateProcessingDecision = {
     search?: ParsedEventSearchMessage;
   };
 };
-
-const LOW_CONFIDENCE_PUBLIC_PROMPT = [
-  TICKET_MESSAGES.genericHelp,
-  TICKET_MESSAGES.genericHelpCommands,
-].join("\n");
 
 const PURCHASE_HELP_PATTERNS = [
   /\bnao\s+(?:estou\s+)?(?:consigo|conseguindo|consegui)\s+(?:comprar|pagar|finalizar|acessar)\b/,
@@ -10367,64 +10366,14 @@ export async function routeTicketMessage({
   });
   const gateCommand = parseGateCommand(text);
   const reservedAdminCommand = isReservedAdminCommand(text);
-  const stateName = previousState.state ?? "idle";
-  const isOperationalState =
-    stateName.startsWith("admin") ||
-    stateName.startsWith("gate") ||
-    stateName === "reservation_created" ||
-    stateName === "payment_pending";
 
-  const withIntent = (
-    output: Omit<RouteTicketMessageOutput, "intentResolution">,
-  ): RouteTicketMessageOutput => ({
-    ...output,
-    intentResolution: incomingIntent,
+  const publicEntryGateResponse = buildPublicEntryGateResponse({
+    incomingIntent,
+    baseContext,
   });
 
-  if (incomingIntent.classification === "empty_message") {
-    return withIntent({
-      reply:
-        "Não consegui identificar sua mensagem. Você pode escrever o que deseja ou digitar *TODOS* para ver os eventos.",
-      nextContext: baseContext,
-    });
-  }
-
-  if (incomingIntent.classification === "unsupported_media") {
-    return withIntent({
-      reply:
-        "Não consegui identificar sua mensagem. Você pode escrever o que deseja ou digitar *TODOS* para ver os eventos.",
-      nextContext: baseContext,
-    });
-  }
-
-  if (
-    !isOperationalState &&
-    incomingIntent.classification === "greeting"
-  ) {
-    return withIntent({
-      reply: LOW_CONFIDENCE_PUBLIC_PROMPT,
-      nextContext: baseContext,
-    });
-  }
-
-  if (
-    !isOperationalState &&
-    incomingIntent.classification === "social_reply"
-  ) {
-    return withIntent({
-      reply: LOW_CONFIDENCE_PUBLIC_PROMPT,
-      nextContext: baseContext,
-    });
-  }
-
-  if (
-    !isOperationalState &&
-    incomingIntent.classification === "courtesy"
-  ) {
-    return withIntent({
-      reply: LOW_CONFIDENCE_PUBLIC_PROMPT,
-      nextContext: baseContext,
-    });
+  if (publicEntryGateResponse) {
+    return publicEntryGateResponse;
   }
 
   const startAdminLogin = async (): Promise<RouteTicketMessageOutput> => {
