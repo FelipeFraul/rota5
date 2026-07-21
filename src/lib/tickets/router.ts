@@ -80,11 +80,14 @@ import {
 import {
   formatPublicHelpAnswer,
   formatPublicHelpPrompt,
-  formatPublicHelpResults,
   getPublicHelpTopicById,
   isPublicHelpCommand,
-  searchPublicHelpTopics,
 } from "@/lib/tickets/services/publicHelp";
+import {
+  buildPublicHelpSearchResponse,
+  isPublicHelpFlowState,
+  publicHelpReturnContext,
+} from "@/lib/tickets/services/publicHelpFlow";
 import {
   createAdminEvent,
   duplicateAdminEvent,
@@ -2230,88 +2233,6 @@ function publicInitialHelpContext(
   baseContext: TicketConversationState,
 ): TicketConversationState {
   return markPublicInitialHelpSent(resetBuyerReservationContext(baseContext));
-}
-
-function publicHelpReturnContext(baseContext: TicketConversationState) {
-  const returnState = baseContext.publicHelp?.returnState;
-  const returnStep = baseContext.publicHelp?.returnStep ?? returnState;
-
-  return {
-    ...baseContext,
-    step: returnStep ?? "idle",
-    state: returnState ?? returnStep ?? "idle",
-    publicHelp: undefined,
-  };
-}
-
-function isPublicHelpFlowState(state?: string) {
-  return state === "help_topic_collecting" || state === "help_results";
-}
-
-function hasEnoughHelpTerms(text: string) {
-  return normalizeIntentText(text)
-    .split(" ")
-    .filter((word) => word.length >= 2).length >= 2;
-}
-
-function buildPublicHelpSearchResponse({
-  baseContext,
-  query,
-  page = 0,
-  returnStep,
-  returnState,
-}: {
-  baseContext: TicketConversationState;
-  query: string;
-  page?: number;
-  returnStep?: TicketConversationStep;
-  returnState?: TicketConversationStep;
-}): RouteTicketMessageOutput {
-  if (!hasEnoughHelpTerms(query)) {
-    return {
-      reply: [
-        formatPublicHelpPrompt(),
-        "",
-        "Exemplos:",
-        "> pagamento pix",
-        "> qr invalido",
-        "> reserva expirada",
-      ].join("\n"),
-      nextContext: {
-        ...baseContext,
-        step: "help_topic_collecting",
-        state: "help_topic_collecting",
-        publicHelp: {
-          returnStep: returnStep ?? baseContext.publicHelp?.returnStep ?? baseContext.step,
-          returnState: returnState ?? baseContext.publicHelp?.returnState ?? baseContext.state,
-        },
-      },
-    };
-  }
-
-  const searchResult = searchPublicHelpTopics(query, page);
-
-  return {
-    reply: formatPublicHelpResults(searchResult),
-    suppressTitle: true,
-    nextContext: {
-      ...baseContext,
-      step: searchResult.results.length > 0 ? "help_results" : "help_topic_collecting",
-      state: searchResult.results.length > 0 ? "help_results" : "help_topic_collecting",
-      publicHelp: {
-        query,
-        hasMore: searchResult.hasMore,
-        page: searchResult.page,
-        returnStep: returnStep ?? baseContext.publicHelp?.returnStep ?? baseContext.step,
-        returnState: returnState ?? baseContext.publicHelp?.returnState ?? baseContext.state,
-        lastResults: searchResult.results.map((result) => ({
-          option: result.option,
-          id: result.id,
-          question: result.question,
-        })),
-      },
-    },
-  };
 }
 
 function handlePublicHelpMessage({

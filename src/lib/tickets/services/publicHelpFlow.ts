@@ -1,0 +1,103 @@
+import {
+  type TicketConversationState,
+  type TicketConversationStep,
+} from "@/lib/tickets/conversationState";
+import {
+  formatPublicHelpPrompt,
+  formatPublicHelpResults,
+  searchPublicHelpTopics,
+} from "@/lib/tickets/services/publicHelp";
+
+function normalizeHelpFlowText(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/\s+/g, " ");
+}
+
+export function publicHelpReturnContext(baseContext: TicketConversationState) {
+  const returnState = baseContext.publicHelp?.returnState;
+  const returnStep = baseContext.publicHelp?.returnStep ?? returnState;
+
+  return {
+    ...baseContext,
+    step: returnStep ?? "idle",
+    state: returnState ?? returnStep ?? "idle",
+    publicHelp: undefined,
+  };
+}
+
+export function isPublicHelpFlowState(state?: string) {
+  return state === "help_topic_collecting" || state === "help_results";
+}
+
+export function hasEnoughHelpTerms(text: string) {
+  return normalizeHelpFlowText(text)
+    .split(" ")
+    .filter((word) => word.length >= 2).length >= 2;
+}
+
+export function buildPublicHelpSearchResponse({
+  baseContext,
+  query,
+  page = 0,
+  returnStep,
+  returnState,
+}: {
+  baseContext: TicketConversationState;
+  query: string;
+  page?: number;
+  returnStep?: TicketConversationStep;
+  returnState?: TicketConversationStep;
+}) {
+  if (!hasEnoughHelpTerms(query)) {
+    return {
+      reply: [
+        formatPublicHelpPrompt(),
+        "",
+        "Exemplos:",
+        "> pagamento pix",
+        "> qr invalido",
+        "> reserva expirada",
+      ].join("\n"),
+      nextContext: {
+        ...baseContext,
+        step: "help_topic_collecting" as const,
+        state: "help_topic_collecting" as const,
+        publicHelp: {
+          returnStep: returnStep ?? baseContext.publicHelp?.returnStep ?? baseContext.step,
+          returnState: returnState ?? baseContext.publicHelp?.returnState ?? baseContext.state,
+        },
+      },
+    };
+  }
+
+  const searchResult = searchPublicHelpTopics(query, page);
+  const nextHelpState: TicketConversationStep = searchResult.results.length > 0
+    ? "help_results"
+    : "help_topic_collecting";
+
+  return {
+    reply: formatPublicHelpResults(searchResult),
+    suppressTitle: true,
+    nextContext: {
+      ...baseContext,
+      step: nextHelpState,
+      state: nextHelpState,
+      publicHelp: {
+        query,
+        hasMore: searchResult.hasMore,
+        page: searchResult.page,
+        returnStep: returnStep ?? baseContext.publicHelp?.returnStep ?? baseContext.step,
+        returnState: returnState ?? baseContext.publicHelp?.returnState ?? baseContext.state,
+        lastResults: searchResult.results.map((result) => ({
+          option: result.option,
+          id: result.id,
+          question: result.question,
+        })),
+      },
+    },
+  };
+}

@@ -18,6 +18,10 @@ const publicHelp = readFileSync(
   new URL("../src/lib/tickets/services/publicHelp.ts", import.meta.url),
   "utf8",
 );
+const publicHelpFlow = readFileSync(
+  new URL("../src/lib/tickets/services/publicHelpFlow.ts", import.meta.url),
+  "utf8",
+);
 
 function sliceBetween(source, startPattern, endPattern) {
   const start = source.search(startPattern);
@@ -26,6 +30,12 @@ function sliceBetween(source, startPattern, endPattern) {
   const end = rest.search(endPattern);
   assert.notEqual(end, -1, `end pattern not found: ${endPattern}`);
   return rest.slice(0, end);
+}
+
+function sliceFrom(source, startPattern) {
+  const start = source.search(startPattern);
+  assert.notEqual(start, -1, `start pattern not found: ${startPattern}`);
+  return source.slice(start);
 }
 
 function normalizeNewlines(value) {
@@ -37,18 +47,17 @@ const helpFlowBlock = sliceBetween(
   /function handlePublicHelpMessage/,
   /function parseTicketQuantity/,
 );
-const helpSearchBlock = sliceBetween(
-  router,
-  /function buildPublicHelpSearchResponse/,
-  /function handlePublicHelpMessage/,
+const helpSearchBlock = sliceFrom(
+  publicHelpFlow,
+  /export function buildPublicHelpSearchResponse/,
 );
 const publicHelpReturnContextBlock = sliceBetween(
-  router,
-  /function publicHelpReturnContext/,
-  /function isPublicHelpFlowState/,
+  publicHelpFlow,
+  /export function publicHelpReturnContext/,
+  /export function isPublicHelpFlowState/,
 );
 
-const expectedPublicHelpReturnContextBlock = `function publicHelpReturnContext(baseContext: TicketConversationState) {
+const expectedPublicHelpReturnContextBlock = `export function publicHelpReturnContext(baseContext: TicketConversationState) {
   const returnState = baseContext.publicHelp?.returnState;
   const returnStep = baseContext.publicHelp?.returnStep ?? returnState;
 
@@ -62,7 +71,7 @@ const expectedPublicHelpReturnContextBlock = `function publicHelpReturnContext(b
 
 `;
 
-const expectedHelpSearchBlock = `function buildPublicHelpSearchResponse({
+const expectedHelpSearchBlock = `export function buildPublicHelpSearchResponse({
   baseContext,
   query,
   page = 0,
@@ -74,7 +83,7 @@ const expectedHelpSearchBlock = `function buildPublicHelpSearchResponse({
   page?: number;
   returnStep?: TicketConversationStep;
   returnState?: TicketConversationStep;
-}): RouteTicketMessageOutput {
+}) {
   if (!hasEnoughHelpTerms(query)) {
     return {
       reply: [
@@ -87,8 +96,8 @@ const expectedHelpSearchBlock = `function buildPublicHelpSearchResponse({
       ].join("\\n"),
       nextContext: {
         ...baseContext,
-        step: "help_topic_collecting",
-        state: "help_topic_collecting",
+        step: "help_topic_collecting" as const,
+        state: "help_topic_collecting" as const,
         publicHelp: {
           returnStep: returnStep ?? baseContext.publicHelp?.returnStep ?? baseContext.step,
           returnState: returnState ?? baseContext.publicHelp?.returnState ?? baseContext.state,
@@ -98,14 +107,17 @@ const expectedHelpSearchBlock = `function buildPublicHelpSearchResponse({
   }
 
   const searchResult = searchPublicHelpTopics(query, page);
+  const nextHelpState: TicketConversationStep = searchResult.results.length > 0
+    ? "help_results"
+    : "help_topic_collecting";
 
   return {
     reply: formatPublicHelpResults(searchResult),
     suppressTitle: true,
     nextContext: {
       ...baseContext,
-      step: searchResult.results.length > 0 ? "help_results" : "help_topic_collecting",
-      state: searchResult.results.length > 0 ? "help_results" : "help_topic_collecting",
+      step: nextHelpState,
+      state: nextHelpState,
       publicHelp: {
         query,
         hasMore: searchResult.hasMore,
@@ -121,7 +133,6 @@ const expectedHelpSearchBlock = `function buildPublicHelpSearchResponse({
     },
   };
 }
-
 `;
 
 const expectedHelpFlowBlock = `function handlePublicHelpMessage({
