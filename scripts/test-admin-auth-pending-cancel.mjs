@@ -127,3 +127,28 @@ test("admin_auth_pending valida administrador ativo antes de bloqueio e codigo",
     /return \{\s*response: null,\s*adminUser: adminUserResult\.adminUser,\s*\};/,
   );
 });
+
+test("admin_auth_pending bloqueio administrativo ativo retorna antes de validar codigo", () => {
+  const adminAuthPendingBlock = sliceBetween(
+    router,
+    /if \(previousState\.state === "admin_auth_pending"\) \{/,
+    /\n    const publicHelpResult = handlePublicHelpMessage/,
+  );
+
+  assert.match(
+    adminAuthPendingBlock,
+    /const blockStatus = await getAdminAuthBlockStatus\(customer\.whatsapp_phone\);/,
+  );
+  assert.match(
+    adminAuthPendingBlock,
+    /if \(blockStatus\.ok && blockStatus\.blocked\) \{\s*return \{\s*reply:\s*blockStatus\.type === "temporary"\s*\? TICKET_MESSAGES\.adminAuthTemporaryLocked\.replace\(\s*"\{minutes\}",\s*String\(blockStatus\.retryAfterMinutes\),\s*\)\s*: TICKET_MESSAGES\.adminAuthHardLocked,/,
+  );
+  assert.match(
+    adminAuthPendingBlock,
+    /nextContext: \{\s*\.\.\.baseContext,\s*step: "admin_auth_pending",\s*state: "admin_auth_pending",\s*admin: buildAdminContext\(\{\s*adminUserId: adminUser\.id,\s*role: adminUser\.role,\s*\}\),\s*\},\s*\};\s*\}/,
+  );
+  assert.match(
+    adminAuthPendingBlock,
+    /const blockStatus = await getAdminAuthBlockStatus\(customer\.whatsapp_phone\);[\s\S]*if \(blockStatus\.ok && blockStatus\.blocked\) \{[\s\S]*return \{[\s\S]*\};\s*\}[\s\S]*const codeResult = await consumeAdminLoginChallengeCode\(\{/,
+  );
+});
