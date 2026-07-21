@@ -94,25 +94,56 @@ test("SAIR cancela e a proxima mensagem volta ao inicio", () => {
   assert.match(publicInitialFlow, /normalized === "sair"/);
   assert.match(router, /isBuyerReservationExitIntent\(text\)[\s\S]*reply:\s*TICKET_MESSAGES\.buyerFlowReset/);
   assert.match(router, /nextContext:\s*resetBuyerReservationContext\(baseContext\)/);
-  assert.match(router, /previousState\.state === "idle"[\s\S]*previousState\.publicInitialHelpSent !== true[\s\S]*reply:\s*TICKET_MESSAGES\.genericHelpPrompt/);
+  assert.match(router, /function buildPublicInitialHelpResponse/);
   assert.match(router, /nextContext:\s*publicInitialHelpContext\(baseContext\)/);
   assert.match(publicInitialFlow, /function publicInitialHelpContext/);
 });
 
-test("mensagem antiga de busca nao aparece como resposta inicial", () => {
+test("abertura publica inicial usa duas mensagens separadas sem titulo atendimento", () => {
+  assert.match(router, /function buildPublicInitialHelpOutboundMessages/);
+  assert.match(router, /body:\s*TICKET_MESSAGES\.genericHelp/);
+  assert.match(router, /body:\s*TICKET_MESSAGES\.genericHelpCommands/);
+  assert.match(router, /suppressTitle:\s*true/);
+  assert.match(router, /function shouldSendPublicInitialHelp/);
+  assert.match(router, /function buildPublicInitialHelpResponse/);
+  assert.doesNotMatch(
+    router,
+    /function buildPublicInitialHelpResponse[\s\S]{0,400}genericHelpPrompt/,
+  );
+});
+
+test("saudacao social inicial chama bootstrap oficial e nao genericHelpPrompt", () => {
   const initialIdleBlock = sliceBetween(
     router,
-    /previousState\.state === "idle"/,
+    /shouldSendPublicInitialHelp\(previousState\)/,
     /const publicHelpResult/,
   );
 
+  assert.match(initialIdleBlock, /incomingIntent\.classification === "greeting"/);
+  assert.match(initialIdleBlock, /incomingIntent\.classification === "social_reply"/);
+  assert.match(initialIdleBlock, /incomingIntent\.classification === "courtesy"/);
+  assert.match(initialIdleBlock, /return buildPublicInitialHelpResponse\(baseContext\)/);
+  assert.doesNotMatch(initialIdleBlock, /genericHelpPrompt/);
+});
+
+test("primeira busca e primeiro TODOS recebem bootstrap sem repetir depois", () => {
+  const searchSuccessBlock = sliceBetween(
+    router,
+    /return {\s*reply:\s*formatEventsReply\(events\)/,
+    /eventMoreInfoShown:\s*undefined/,
+  );
+  const allEventsBlock = sliceBetween(
+    router,
+    /return {\s*reply:\s*formatAllEventsReply\(events\)/,
+    /eventMoreInfoShown:\s*undefined/,
+  );
+
+  for (const block of [searchSuccessBlock, allEventsBlock]) {
+    assert.match(block, /shouldSendPublicInitialHelp\(previousState\)/);
+    assert.match(block, /buildPublicInitialHelpOutboundMessages\(\)/);
+    assert.match(block, /publicInitialHelpContext\(baseContext\)/);
+  }
+  assert.match(router, /previousState\.publicInitialHelpSent !== true/);
   assert.match(messages, /noEventsFound:/);
   assert.match(router, /if \(events\.length === 0\)[\s\S]*reply:\s*TICKET_MESSAGES\.noEventsFound/);
-  assert.match(initialIdleBlock, /previousState\.publicInitialHelpSent !== true/);
-  assert.match(initialIdleBlock, /reply:\s*TICKET_MESSAGES\.genericHelpPrompt/);
-  assert.doesNotMatch(initialIdleBlock, /reply:\s*TICKET_MESSAGES\.noEventsFound/);
-  assert.doesNotMatch(
-    batchCron,
-    /resolvedState === "idle"[\s\S]*body:\s*TICKET_MESSAGES\.noEventsFound/,
-  );
 });

@@ -102,10 +102,11 @@ test("public initial reply is sent immediately instead of waiting for the batch"
   assert.doesNotMatch(zapiWebhook, /await sleep\(31_000\)/);
   assert.doesNotMatch(zapiWebhook, /processAfter:\s*true/);
   assert.match(ticketRouter, /intent\.classification === "purchase_support" && !hasActiveState/);
-  assert.match(ticketRouter, /incomingIntent\.classification === "purchase_support"[\s\S]*baseContext\.state === "idle"[\s\S]*reply:\s*TICKET_MESSAGES\.genericHelpPrompt/);
+  assert.match(ticketRouter, /incomingIntent\.classification === "purchase_support"[\s\S]*baseContext\.state === "idle"[\s\S]*return buildPublicInitialHelpResponse\(baseContext\)/);
   assert.match(ticketRouter, /function publicInitialHelpContext/);
   assert.match(ticketRouter, /isBuyerReservationExitIntent\(text\)[\s\S]*reply:\s*TICKET_MESSAGES\.buyerFlowReset[\s\S]*nextContext:\s*resetBuyerReservationContext\(baseContext\)/);
-  assert.match(ticketRouter, /previousState\.state === "idle"[\s\S]*previousState\.publicInitialHelpSent !== true[\s\S]*reply:\s*TICKET_MESSAGES\.genericHelpPrompt/);
+  assert.match(ticketRouter, /function shouldSendPublicInitialHelp/);
+  assert.match(ticketRouter, /function buildPublicInitialHelpResponse/);
   assert.doesNotMatch(batchCron, /routeTicketMessage/);
   assert.doesNotMatch(batchCron, /genericHelpPrompt/);
   assert.doesNotMatch(batchCron, /routeResult\.reply/);

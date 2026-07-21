@@ -1760,6 +1760,38 @@ function buildEventSearchOutboundMessages(events: TicketEventSearchResult[]) {
   });
 }
 
+function shouldSendPublicInitialHelp(previousState: Partial<TicketConversationState>) {
+  return (
+    previousState.state === "idle" &&
+    previousState.publicInitialHelpSent !== true
+  );
+}
+
+function buildPublicInitialHelpOutboundMessages() {
+  return [
+    {
+      type: "text",
+      body: TICKET_MESSAGES.genericHelp,
+      suppressTitle: true,
+    },
+    {
+      type: "text",
+      body: TICKET_MESSAGES.genericHelpCommands,
+      suppressTitle: true,
+    },
+  ] satisfies NonNullable<RouteTicketMessageOutput["outboundMessages"]>;
+}
+
+function buildPublicInitialHelpResponse(
+  baseContext: TicketConversationState,
+): RouteTicketMessageOutput {
+  return {
+    reply: TICKET_MESSAGES.genericHelp,
+    outboundMessages: buildPublicInitialHelpOutboundMessages(),
+    nextContext: publicInitialHelpContext(baseContext),
+  };
+}
+
 function buildEventOptionOutboundMessages(events: TicketConversationEventOption[]) {
   return events.map((event, index) => {
     const caption = formatSingleEventOptionReply(event, index, events.length);
@@ -16001,13 +16033,14 @@ export async function routeTicketMessage({
   }
 
   if (
-    previousState.state === "idle" &&
-    previousState.publicInitialHelpSent !== true
+    shouldSendPublicInitialHelp(previousState) &&
+    (
+      incomingIntent.classification === "greeting" ||
+      incomingIntent.classification === "social_reply" ||
+      incomingIntent.classification === "courtesy"
+    )
   ) {
-    return {
-      reply: TICKET_MESSAGES.genericHelpPrompt,
-      nextContext: publicInitialHelpContext(baseContext),
-    };
+    return buildPublicInitialHelpResponse(baseContext);
   }
 
   const publicHelpResult = handlePublicHelpMessage({
@@ -16021,10 +16054,7 @@ export async function routeTicketMessage({
 
   if (incomingIntent.classification === "purchase_support") {
     if (baseContext.state === "idle") {
-      return {
-        reply: TICKET_MESSAGES.genericHelpPrompt,
-        nextContext: publicInitialHelpContext(baseContext),
-      };
+      return buildPublicInitialHelpResponse(baseContext);
     }
 
     return buildPublicHelpSearchResponse({
@@ -16080,9 +16110,16 @@ export async function routeTicketMessage({
 
     return {
       reply: formatAllEventsReply(events),
-      outboundMessages: buildAllEventsOutboundMessages(events),
+      outboundMessages: [
+        ...(shouldSendPublicInitialHelp(previousState)
+          ? buildPublicInitialHelpOutboundMessages()
+          : []),
+        ...buildAllEventsOutboundMessages(events),
+      ],
       nextContext: {
-        ...baseContext,
+        ...(shouldSendPublicInitialHelp(previousState)
+          ? publicInitialHelpContext(baseContext)
+          : baseContext),
         step: "showing_events",
         state: "showing_events",
         lastSearch: {
@@ -17393,8 +17430,20 @@ export async function routeTicketMessage({
   if (events.length === 0) {
     return {
       reply: TICKET_MESSAGES.noEventsFound,
+      outboundMessages: shouldSendPublicInitialHelp(previousState)
+        ? [
+            ...buildPublicInitialHelpOutboundMessages(),
+            {
+              type: "text",
+              body: TICKET_MESSAGES.noEventsFound,
+              suppressTitle: true,
+            },
+          ]
+        : undefined,
       nextContext: {
-        ...baseContext,
+        ...(shouldSendPublicInitialHelp(previousState)
+          ? publicInitialHelpContext(baseContext)
+          : baseContext),
         step: "idle",
         state: "idle",
         lastSearch: parsedSearch,
@@ -17406,9 +17455,16 @@ export async function routeTicketMessage({
 
   return {
     reply: formatEventsReply(events),
-    outboundMessages: buildEventSearchOutboundMessages(events),
+    outboundMessages: [
+      ...(shouldSendPublicInitialHelp(previousState)
+        ? buildPublicInitialHelpOutboundMessages()
+        : []),
+      ...buildEventSearchOutboundMessages(events),
+    ],
     nextContext: {
-      ...baseContext,
+      ...(shouldSendPublicInitialHelp(previousState)
+        ? publicInitialHelpContext(baseContext)
+        : baseContext),
       step: "showing_events",
       state: "showing_events",
       lastSearch: parsedSearch,
