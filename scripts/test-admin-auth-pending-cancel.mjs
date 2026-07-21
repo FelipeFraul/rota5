@@ -205,3 +205,44 @@ test("admin_auth_pending consome challenge apos cancelamento reinicio admin ativ
     /return consumeAdminLoginChallengeCode\(\{\s*phone: phoneNumber,\s*code: text,\s*challengeId,\s*sourceIdentifier,\s*\}\);/,
   );
 });
+
+test("admin_auth_pending falha de challenge monta alerta sem criar sessao ou contexto", () => {
+  const adminAuthPendingBlock = sliceBetween(
+    router,
+    /if \(previousState\.state === "admin_auth_pending"\) \{/,
+    /\n    const publicHelpResult = handlePublicHelpMessage/,
+  );
+
+  const challengeFailureBlock = sliceBetween(
+    adminAuthPendingBlock,
+    /if \(!codeResult\.ok\) \{/,
+    /\n    const sessionResult = await createAdminSession/,
+  );
+  const alertMessageBlock = sliceBetween(
+    challengeFailureBlock,
+    /const alertMessage =/,
+    /\n      const authFailureReply =/,
+  );
+
+  assert.match(
+    challengeFailureBlock,
+    /const failureResult =\s*"failureResult" in codeResult \? codeResult\.failureResult : null;/,
+  );
+  assert.match(
+    alertMessageBlock,
+    /^const alertMessage =\s*failureResult\?\.ok && failureResult\.alertPhone\s*\?\s*\{\s*type: "text" as const,\s*phone: failureResult\.alertPhone,/,
+  );
+  assert.match(
+    alertMessageBlock,
+    /body: \[\s*"\*ALERTA DE ACESSO ADMIN\*",\s*"",\s*`O telefone \$\{maskAdminPhone\(customer\.whatsapp_phone\)\} teve \$\{failureResult\.failedAttempts\} tentativas incorretas de login administrativo\.`,\s*failureResult\.hardLocked\s*\?\s*"O acesso foi bloqueado atÃƒÂ© liberaÃƒÂ§ÃƒÂ£o manual por Diretor\."\s*:\s*`O acesso foi bloqueado temporariamente por \$\{failureResult\.retryAfterMinutes \?\? 15\} minutos\.`,\s*"",\s*"Entre em Administradores > Liberar administrador bloqueado se reconhecer o acesso\.",\s*\]\.join\("\\n"\),/,
+  );
+  assert.match(
+    alertMessageBlock,
+    /\}\s*: null;/,
+  );
+  assert.doesNotMatch(alertMessageBlock, /createAdminSession/);
+  assert.doesNotMatch(
+    alertMessageBlock,
+    /nextContext: \{\s*\.\.\.baseContext,/,
+  );
+});
