@@ -48,6 +48,7 @@ test("isolated greeting in idle is routed once immediately and is not queued for
     /resolvedState === "idle"[\s\S]*TICKET_MESSAGES\.genericHelpPrompt/,
     "idle must not force the initial prompt from the batch worker without routing the inbound",
   );
+  assert.match(batchCron, /customer_reply_pipeline_disabled/);
 });
 
 test("separate inbound messages are never semantically merged with punctuation before classification", () => {
@@ -69,20 +70,19 @@ test("separate inbound messages are never semantically merged with punctuation b
 });
 
 test("idle context never bypasses routeTicketMessage for a valid inbound", () => {
-  const idleBranch = sliceBetween(
+  assert.doesNotMatch(
     batchCron,
-    /if \(resolvedState === "idle"\)/,
-    /} else \{/,
-  );
-
-  assert.match(
-    idleBranch,
-    /routeTicketMessage\(/,
-    "a valid inbound in idle must be routed, even in deferred processing",
+    /resolvedState === "idle"/,
+    "batch worker must not branch on idle to answer customer-facing messages",
   );
   assert.doesNotMatch(
-    idleBranch,
-    /body:\s*TICKET_MESSAGES\.genericHelpPrompt/,
+    batchCron,
+    /routeTicketMessage\(/,
+    "batch worker must not route stale customer-facing batches",
+  );
+  assert.doesNotMatch(
+    batchCron,
+    /genericHelpPrompt/,
     "batch worker must not send genericHelpPrompt only because the loaded state is idle",
   );
 });
@@ -98,6 +98,8 @@ test("one inbound has only one response path and cannot be answered by both webh
     /sendAndSaveBatchReply\(/,
     "batch worker must not have an independent customer-facing send path for the same inbound",
   );
+  assert.match(batchCron, /finishWhatsAppMessageBatch\(\{[\s\S]*status:\s*"cancelled"/);
+  assert.match(batchCron, /customer_reply_pipeline_disabled/);
 });
 
 test("full outbound contract is preserved instead of collapsing to routeResult.reply", () => {

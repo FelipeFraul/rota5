@@ -9,34 +9,20 @@ import {
   consumeRateLimit,
   rateLimitResponse,
 } from "@/lib/security/rateLimit";
-import { resolveConversationContextForInbound } from "@/lib/tickets/conversationState";
-import { TICKET_MESSAGES } from "@/lib/tickets/messages";
-import { routeTicketMessage } from "@/lib/tickets/router";
-import {
-  getOpenConversationById,
-  updateConversationAfterMessage,
-} from "@/lib/tickets/services/conversations";
 import { finalizeInactiveWhatsAppConversations } from "@/lib/tickets/services/conversationFinalizer";
-import { getCustomerById } from "@/lib/tickets/services/customers";
 import {
-  findSentBatchReplyMessage,
-  saveWhatsAppMessage,
-} from "@/lib/tickets/services/messages";
-import {
-  buildAggregatedWhatsAppText,
   claimDueWhatsAppMessageBatches,
   finishWhatsAppMessageBatch,
-  listWhatsAppBatchMessages,
   rescheduleWhatsAppMessageBatch,
 } from "@/lib/tickets/services/whatsappMessageBatches";
-import { sendZapiText, type SendZapiMessageResult } from "@/lib/zapi/client";
-import { sanitizeWhatsAppText } from "@/lib/zapi/textEncoding";
 
 export const runtime = "nodejs";
 
 const PROCESSING_TIMEOUT_SECONDS = 5 * 60;
 const MAX_BATCH_ATTEMPTS = 3;
 const RETRY_BACKOFF_SECONDS = [60, 5 * 60, 15 * 60] as const;
+const CUSTOMER_REPLY_PIPELINE_DISABLED_REASON =
+  "customer_reply_pipeline_disabled";
 
 type BatchProcessingResult =
   | { status: "processed"; sent: boolean }
@@ -61,25 +47,10 @@ function isSecretMatch(received: string, expected: string) {
   );
 }
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 function getRetryBackoffSeconds(attemptCount: number) {
   return RETRY_BACKOFF_SECONDS[
     Math.max(0, Math.min(attemptCount - 1, RETRY_BACKOFF_SECONDS.length - 1))
   ];
-}
-
-function sanitizeBatchErrorCode(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9_:-]+/g, "_")
-    .slice(0, 80);
-}
-
-function getSendFailureCode(sendResult: SendZapiMessageResult) {
-  return sendResult.ok ? null : sanitizeBatchErrorCode(sendResult.error);
 }
 
 async function rescheduleClaimedBatch({
@@ -115,273 +86,24 @@ async function rescheduleClaimedBatch({
   };
 }
 
-async function sendAndSaveBatchReply({
-  conversationId,
-  customerId,
-  phone,
-  batchId,
-  body,
-  sequence,
-}: {
-  conversationId: string;
-  customerId: string;
-  phone: string;
-  batchId: string;
-  body: string;
-  sequence: number;
-}) {
-  const existingSentResult = await findSentBatchReplyMessage({
-    batchId,
-    sequence,
-  });
-
-  if (!existingSentResult.ok) {
-    throw existingSentResult.error;
-  }
-
-  if (existingSentResult.message) {
-    return {
-      ok: true as const,
-      deduped: true,
-    };
-  }
-
-  const outboundText = sanitizeWhatsAppText(body);
-  const sendResult = await sendZapiText({
-    phone,
-    message: outboundText,
-  });
-  const outboundResult = await saveWhatsAppMessage({
-    conversationId,
-    customerId,
-    direction: "outbound",
-    messageType: "text",
-    body: outboundText,
-    providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
-    rawMetadata: {
-      provider: "zapi",
-      batchId,
-      batchExpired: true,
-      sequence,
-      sendStatus: sendResult.ok ? "sent" : "failed",
-      ...(!sendResult.ok ? { error: sendResult.error } : {}),
-    },
-  });
-
-  if (!outboundResult.ok) {
-    throw outboundResult.error;
-  }
-
-  if (!sendResult.ok) {
-    return {
-      ok: false as const,
-      retryable: true,
-      errorCode: getSendFailureCode(sendResult) ?? "zapi_send_failed",
-    };
-  }
-
-  return {
-    ok: true as const,
-    deduped: false,
-  };
-}
-
 async function processClaimedBatch({
   batchId,
-  conversationId,
-  attemptCount,
 }: {
   batchId: string;
   conversationId: string;
   attemptCount: number;
 }): Promise<BatchProcessingResult> {
-  const conversationResult = await getOpenConversationById(conversationId);
-
-  if (!conversationResult.ok || !conversationResult.conversation) {
-    const finishResult = await finishWhatsAppMessageBatch({
-      batchId,
-      status: "cancelled",
-      errorCode: "conversation_not_found",
-    });
-
-    if (!finishResult.ok) {
-      throw finishResult.error;
-    }
-
-    return { status: "cancelled", reason: "conversation_not_found" };
-  }
-
-  const customerResult = await getCustomerById(
-    conversationResult.conversation.customer_id,
-  );
-
-  if (!customerResult.ok || !customerResult.customer) {
-    const finishResult = await finishWhatsAppMessageBatch({
-      batchId,
-      status: "cancelled",
-      errorCode: "customer_not_found",
-    });
-
-    if (!finishResult.ok) {
-      throw finishResult.error;
-    }
-
-    return { status: "cancelled", reason: "customer_not_found" };
-  }
-
-  const messagesResult = await listWhatsAppBatchMessages(batchId);
-
-  if (!messagesResult.ok) {
-    throw messagesResult.error;
-  }
-
-  const resolvedContext = resolveConversationContextForInbound({
-    context: conversationResult.conversation.context,
-    lastMessageAt: conversationResult.conversation.last_message_at,
-  });
-  const resolvedState =
-    typeof resolvedContext.context.state === "string"
-      ? resolvedContext.context.state
-      : "idle";
-  let routeNextContext = resolvedContext.context;
-  let allSent = false;
-
-  if (resolvedState === "idle") {
-    const firstSent = await sendAndSaveBatchReply({
-      conversationId: conversationResult.conversation.id,
-      customerId: customerResult.customer.id,
-      phone: customerResult.customer.whatsapp_phone,
-      batchId,
-      body: TICKET_MESSAGES.genericHelp,
-      sequence: 1,
-    });
-
-    if (!firstSent.ok) {
-      if (!firstSent.retryable) {
-        const finishResult = await finishWhatsAppMessageBatch({
-          batchId,
-          status: "failed",
-          errorCode: firstSent.errorCode,
-        });
-
-        if (!finishResult.ok) {
-          throw finishResult.error;
-        }
-
-        return { status: "failed", reason: firstSent.errorCode };
-      }
-
-      return rescheduleClaimedBatch({
-        batchId,
-        attemptCount,
-        errorCode: firstSent.errorCode,
-      });
-    }
-
-    await sleep(5_000);
-    const secondSent = await sendAndSaveBatchReply({
-      conversationId: conversationResult.conversation.id,
-      customerId: customerResult.customer.id,
-      phone: customerResult.customer.whatsapp_phone,
-      batchId,
-      body: TICKET_MESSAGES.genericHelpCommands,
-      sequence: 2,
-    });
-
-    if (!secondSent.ok) {
-      if (!secondSent.retryable) {
-        const finishResult = await finishWhatsAppMessageBatch({
-          batchId,
-          status: "failed",
-          errorCode: secondSent.errorCode,
-        });
-
-        if (!finishResult.ok) {
-          throw finishResult.error;
-        }
-
-        return { status: "failed", reason: secondSent.errorCode };
-      }
-
-      return rescheduleClaimedBatch({
-        batchId,
-        attemptCount,
-        errorCode: secondSent.errorCode,
-      });
-    }
-
-    allSent = true;
-    routeNextContext = {
-      ...resolvedContext.context,
-      publicInitialHelpSent: true,
-    };
-  } else {
-    const aggregatedText = buildAggregatedWhatsAppText(messagesResult.messages);
-    const routeResult = await routeTicketMessage({
-      customer: customerResult.customer,
-      conversation: {
-        ...conversationResult.conversation,
-        context: resolvedContext.context,
-      },
-      text: aggregatedText,
-    });
-    const sendResult = await sendAndSaveBatchReply({
-      conversationId: conversationResult.conversation.id,
-      customerId: customerResult.customer.id,
-      phone: customerResult.customer.whatsapp_phone,
-      batchId,
-      body: routeResult.reply,
-      sequence: 1,
-    });
-
-    if (!sendResult.ok) {
-      if (!sendResult.retryable) {
-        const finishResult = await finishWhatsAppMessageBatch({
-          batchId,
-          status: "failed",
-          errorCode: sendResult.errorCode,
-        });
-
-        if (!finishResult.ok) {
-          throw finishResult.error;
-        }
-
-        return { status: "failed", reason: sendResult.errorCode };
-      }
-
-      return rescheduleClaimedBatch({
-        batchId,
-        attemptCount,
-        errorCode: sendResult.errorCode,
-      });
-    }
-
-    allSent = true;
-    routeNextContext = routeResult.nextContext;
-  }
-
-  const updateResult = await updateConversationAfterMessage({
-    conversationId: conversationResult.conversation.id,
-    context: routeNextContext,
-  });
-
-  if (!updateResult.ok) {
-    throw updateResult.error;
-  }
-
   const finishResult = await finishWhatsAppMessageBatch({
     batchId,
-    status: "processed",
+    status: "cancelled",
+    errorCode: CUSTOMER_REPLY_PIPELINE_DISABLED_REASON,
   });
 
   if (!finishResult.ok) {
     throw finishResult.error;
   }
 
-  return {
-    status: "processed",
-    sent: allSent,
-  };
+  return { status: "cancelled", reason: CUSTOMER_REPLY_PIPELINE_DISABLED_REASON };
 }
 
 export async function processDueWhatsAppMessageBatches({
@@ -443,7 +165,6 @@ export async function processDueWhatsAppMessageBatches({
   try {
     finalizedConversations = await finalizeInactiveWhatsAppConversations({
       limit: 20,
-      finalizeAfterMinutes: 30,
     });
   } catch (error) {
     logError("Failed to finalize inactive WhatsApp conversations", { error });

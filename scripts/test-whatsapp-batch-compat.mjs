@@ -55,11 +55,11 @@ test("reschedules retryable batch failures and marks failed after attempt limit"
 });
 
 test("cron records success, retry, cancellation, and failure outcomes", () => {
-  assert.match(batchCron, /status:\s*"processed"/);
   assert.match(batchCron, /status:\s*"rescheduled"/);
   assert.match(batchCron, /status:\s*"cancelled"/);
   assert.match(batchCron, /status:\s*"failed"/);
-  assert.match(batchCron, /finishWhatsAppMessageBatch\(\{\s*batchId,\s*status:\s*"processed"/);
+  assert.match(batchCron, /CUSTOMER_REPLY_PIPELINE_DISABLED_REASON\s*=\s*"customer_reply_pipeline_disabled"/);
+  assert.match(batchCron, /finishWhatsAppMessageBatch\(\{\s*batchId,\s*status:\s*"cancelled"/);
   assert.match(batchCron, /reason:\s*"reschedule_failed"/);
 });
 
@@ -90,6 +90,12 @@ test("public initial reply is sent immediately instead of waiting for the batch"
   assert.match(ticketRouter, /function publicInitialHelpContext/);
   assert.match(ticketRouter, /isBuyerReservationExitIntent\(text\)[\s\S]*reply:\s*TICKET_MESSAGES\.buyerFlowReset[\s\S]*nextContext:\s*resetBuyerReservationContext\(baseContext\)/);
   assert.match(ticketRouter, /previousState\.state === "idle"[\s\S]*previousState\.publicInitialHelpSent !== true[\s\S]*reply:\s*TICKET_MESSAGES\.genericHelpPrompt/);
-  assert.match(batchCron, /body:\s*TICKET_MESSAGES\.genericHelpPrompt/);
-  assert.doesNotMatch(batchCron, /body:\s*TICKET_MESSAGES\.genericHelpCommands/);
+  assert.doesNotMatch(batchCron, /routeTicketMessage/);
+  assert.doesNotMatch(batchCron, /genericHelpPrompt/);
+  assert.doesNotMatch(batchCron, /routeResult\.reply/);
+  assert.doesNotMatch(batchCron, /sendAndSaveBatchReply/);
+  assert.doesNotMatch(batchCron, /sendZapiText/);
+  assert.doesNotMatch(batchCron, /sendZapiImage/);
+  assert.doesNotMatch(batchCron, /updateConversationAfterMessage/);
+  assert.match(batchCron, /customer_reply_pipeline_disabled/);
 });
