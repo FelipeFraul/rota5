@@ -230,6 +230,8 @@ type EventDashboard = {
         direction: "inbound" | "outbound";
         body: string;
         createdAt: string;
+        outboundStatus?: "sent" | "failed" | "unknown";
+        providerMessageId?: string | null;
       }>;
       purchasedEvents: Array<{
         sessionId: string;
@@ -840,6 +842,29 @@ function ConversationModal({
     ? contact.conversationMessages
     : null;
 
+  function getMessageLabel(
+    message: ContactActivityContact["conversationMessages"][number],
+  ) {
+    if (message.direction === "inbound") return "Cliente";
+    if (message.outboundStatus === "sent") return "Sistema · aceito pela Z-API";
+    if (message.outboundStatus === "failed") {
+      return "Falha no envio · cliente pode não ter recebido";
+    }
+    return "Sistema · status desconhecido";
+  }
+
+  function getMessageStyle(
+    message: ContactActivityContact["conversationMessages"][number],
+  ) {
+    return message.direction === "outbound" && message.outboundStatus === "failed"
+      ? {
+          borderColor: "#dc2626",
+          background: "#fef2f2",
+          color: "#7f1d1d",
+        }
+      : undefined;
+  }
+
   return (
     <div
       className="admin-event-modal admin-conversation-modal"
@@ -862,8 +887,9 @@ function ConversationModal({
             <span
               key={`${message.createdAt}-${index}`}
               className={`admin-contact-message-bubble ${message.direction === "outbound" ? "is-system" : "is-client"}`}
+              style={getMessageStyle(message)}
             >
-              <b>{message.direction === "outbound" ? "Sistema" : "Cliente"} · {formatContactDateTime(message.createdAt)}</b>
+              <b>{getMessageLabel(message)} · {formatContactDateTime(message.createdAt)}</b>
               {message.body}
             </span>
           )) : (

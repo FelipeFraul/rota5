@@ -11,6 +11,8 @@ type InboundMessageRow = {
   direction: "inbound" | "outbound";
   body: string | null;
   created_at: string;
+  provider_message_id: string | null;
+  raw_metadata: Record<string, unknown> | null;
   customers: MaybeArray<{
     name: string | null;
     whatsapp_phone: string;
@@ -80,6 +82,8 @@ export type AdminContactActivity = {
       direction: "inbound" | "outbound";
       body: string;
       createdAt: string;
+      outboundStatus?: "sent" | "failed" | "unknown";
+      providerMessageId?: string | null;
     }>;
     purchasedEvents: Array<{
       sessionId: string;
@@ -94,6 +98,12 @@ export type AdminContactRange = "day" | "week" | "30" | "60" | "total";
 function first<T>(value: MaybeArray<T>): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
   return value ?? null;
+}
+
+function normalizeOutboundSendStatus(metadata: Record<string, unknown> | null) {
+  const status = metadata?.send_status;
+
+  return status === "sent" || status === "failed" ? status : "unknown";
 }
 
 function getSaoPauloDayKey(value: string | Date) {
@@ -239,7 +249,7 @@ export async function getAdminContactActivity(input: {
   const rangeStart = getRangeStart(range, new Date(startIso));
   let messagesQuery = supabase
     .from("whatsapp_messages")
-    .select("conversation_id, customer_id, direction, body, created_at, customers(name, whatsapp_phone), conversations(context, status)")
+    .select("conversation_id, customer_id, direction, body, created_at, provider_message_id, raw_metadata, customers(name, whatsapp_phone), conversations(context, status)")
     .eq("direction", "inbound")
     .lt("created_at", endIso)
     .order("created_at", { ascending: true });
@@ -247,7 +257,7 @@ export async function getAdminContactActivity(input: {
   const typedMessagesQuery = messagesQuery.returns<InboundMessageRow[]>();
   let outboundMessagesQuery = supabase
     .from("whatsapp_messages")
-    .select("conversation_id, customer_id, direction, body, created_at, customers(name, whatsapp_phone), conversations(context, status)")
+    .select("conversation_id, customer_id, direction, body, created_at, provider_message_id, raw_metadata, customers(name, whatsapp_phone), conversations(context, status)")
     .eq("direction", "outbound")
     .lt("created_at", endIso)
     .order("created_at", { ascending: true });
@@ -352,6 +362,12 @@ export async function getAdminContactActivity(input: {
       direction: message.direction === "outbound" ? "outbound" : "inbound",
       body: formatConversationMessageBody(message.body),
       createdAt: message.created_at,
+      ...(message.direction === "outbound"
+        ? {
+            outboundStatus: normalizeOutboundSendStatus(message.raw_metadata),
+            providerMessageId: message.provider_message_id,
+          }
+        : {}),
     });
     conversationMessagesByCustomer.set(message.customer_id, existing);
   }
