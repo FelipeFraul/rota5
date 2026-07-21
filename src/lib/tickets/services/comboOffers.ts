@@ -10,6 +10,12 @@ import { getOrCreateOpenConversation, updateConversationAfterMessage } from "@/l
 import { saveWhatsAppMessage } from "@/lib/tickets/services/messages";
 import { buildWhatsAppOutboundMetadata } from "@/lib/tickets/services/outboundMessages";
 import { centsToDecimalAmount, decimalAmountToCents } from "@/lib/tickets/services/payments";
+import {
+  claimWhatsAppOutboundDelivery,
+  getOrCreateWhatsAppOutboundDelivery,
+  markWhatsAppOutboundDeliveryFailed,
+  markWhatsAppOutboundDeliverySent,
+} from "@/lib/tickets/services/whatsappOutboundDeliveries";
 import { sendZapiImage, sendZapiText } from "@/lib/zapi/client";
 
 const PROVIDER = "mercado_pago";
@@ -955,40 +961,96 @@ export async function deliverComboOrder(orderId: string) {
     `> Local: ${event.venues?.name ?? "Black House"} - ${event.city}/${event.state}`,
     `> Código: ${redemptionCode}`,
   ].join("\n");
-  const textResult = await sendZapiText({ phone, message });
-  const textSaveResult = await saveWhatsAppMessage({
-    conversationId,
+  const textBusinessContext = {
+    combo_order_id: order.id,
+    combo_redemption_id: redemptionId,
+    offer_id: order.offer_id,
+    event_id: order.event_id,
+    session_id: order.session_id,
+    ...conversationFallbackMetadata,
+  };
+  const textDelivery = await getOrCreateWhatsAppOutboundDelivery({
+    idempotencyKey: `paid-combo-order:${order.id}:text:v1`,
     customerId: order.customer_id,
-    direction: "outbound",
+    conversationId,
+    recipientPhone: phone,
     messageType: "text",
-    body: message,
-    providerMessageId: textResult.ok ? textResult.providerMessageId : null,
-    rawMetadata: buildWhatsAppOutboundMetadata({
-      sendResult: textResult,
-      messageType: "text",
-      reason: "paid_combo_delivery",
-      businessContext: {
-        combo_order_id: order.id,
-        combo_redemption_id: redemptionId,
-        offer_id: order.offer_id,
-        event_id: order.event_id,
-        session_id: order.session_id,
-        ...conversationFallbackMetadata,
-      },
-    }),
+    reason: "paid_combo_delivery",
+    businessContext: textBusinessContext,
   });
 
-  if (!textSaveResult.ok) {
+  if (!textDelivery.ok) {
     return {
       ok: false as const,
       reason: "database_error" as const,
-      error: textSaveResult.error,
+      error: textDelivery.error,
     };
   }
 
-  if (!textResult.ok) {
-    logWarn("Combo text delivery failed", { comboOrderId: order.id, phoneLast4: phone.slice(-4), error: textResult.error });
-    return { ok: true as const, sent: false as const, reason: "zapi_failed" as const };
+  if (textDelivery.delivery.status === "sent") {
+    logInfo("Skipped already sent paid combo WhatsApp delivery text", {
+      comboOrderId: order.id,
+    });
+  } else {
+    const textClaim = await claimWhatsAppOutboundDelivery(textDelivery.delivery.id);
+    if (!textClaim.ok) {
+      return {
+        ok: false as const,
+        reason: "database_error" as const,
+        error: textClaim.error,
+      };
+    }
+    if (!textClaim.claimed) {
+      logWarn("Skipped paid combo WhatsApp delivery text already in progress", {
+        comboOrderId: order.id,
+      });
+      return { ok: true as const, sent: false as const, reason: "delivery_in_progress" as const };
+    }
+
+    const textResult = await sendZapiText({ phone, message });
+    const textSaveResult = await saveWhatsAppMessage({
+      conversationId,
+      customerId: order.customer_id,
+      direction: "outbound",
+      messageType: "text",
+      body: message,
+      providerMessageId: textResult.ok ? textResult.providerMessageId : null,
+      rawMetadata: buildWhatsAppOutboundMetadata({
+        sendResult: textResult,
+        messageType: "text",
+        reason: "paid_combo_delivery",
+        businessContext: textBusinessContext,
+      }),
+    });
+
+    if (!textSaveResult.ok) {
+      await markWhatsAppOutboundDeliveryFailed({
+        deliveryId: textDelivery.delivery.id,
+        error: textSaveResult.error?.code ?? "whatsapp_message_persist_failed",
+      });
+      if (!textResult.ok) {
+        return { ok: true as const, sent: false as const, reason: "zapi_failed" as const };
+      }
+      return {
+        ok: false as const,
+        reason: "database_error" as const,
+        error: textSaveResult.error,
+      };
+    }
+
+    if (!textResult.ok) {
+      await markWhatsAppOutboundDeliveryFailed({
+        deliveryId: textDelivery.delivery.id,
+        error: textResult.error,
+      });
+      logWarn("Combo text delivery failed", { comboOrderId: order.id, phoneLast4: phone.slice(-4), error: textResult.error });
+      return { ok: true as const, sent: false as const, reason: "zapi_failed" as const };
+    }
+
+    await markWhatsAppOutboundDeliverySent({
+      deliveryId: textDelivery.delivery.id,
+      providerMessageId: textResult.providerMessageId,
+    });
   }
 
   const qrCaption = [
@@ -998,6 +1060,58 @@ export async function deliverComboOrder(orderId: string) {
     "Apresente no bar. Este QR Code é separado do ingresso da portaria.",
   ].join("\n");
   const image = await generateComboQrImage(`combo:${redemptionId}:${token}`);
+  const imageBusinessContext = {
+    combo_order_id: order.id,
+    combo_redemption_id: redemptionId,
+    offer_id: order.offer_id,
+    event_id: order.event_id,
+    session_id: order.session_id,
+    ...conversationFallbackMetadata,
+  };
+  const imageDelivery = await getOrCreateWhatsAppOutboundDelivery({
+    idempotencyKey: `paid-combo-redemption:${redemptionId}:qr:v1`,
+    customerId: order.customer_id,
+    conversationId,
+    recipientPhone: phone,
+    messageType: "image",
+    reason: "paid_combo_qr_delivery",
+    businessContext: imageBusinessContext,
+  });
+
+  if (!imageDelivery.ok) {
+    return {
+      ok: false as const,
+      reason: "database_error" as const,
+      error: imageDelivery.error,
+    };
+  }
+
+  if (imageDelivery.delivery.status === "sent") {
+    logInfo("Skipped already sent paid combo QR WhatsApp delivery", {
+      comboOrderId: order.id,
+      comboRedemptionId: redemptionId,
+    });
+    logInfo("Delivered paid combo by WhatsApp", { comboOrderId: order.id, phoneLast4: phone.slice(-4) });
+    return { ok: true as const, sent: true as const };
+  }
+
+  const imageClaim = await claimWhatsAppOutboundDelivery(imageDelivery.delivery.id);
+  if (!imageClaim.ok) {
+    return {
+      ok: false as const,
+      reason: "database_error" as const,
+      error: imageClaim.error,
+    };
+  }
+
+  if (!imageClaim.claimed) {
+    logWarn("Skipped paid combo QR WhatsApp delivery already in progress", {
+      comboOrderId: order.id,
+      comboRedemptionId: redemptionId,
+    });
+    return { ok: true as const, sent: false as const, reason: "delivery_in_progress" as const };
+  }
+
   const imageResult = await sendZapiImage({
     phone,
     image,
@@ -1014,18 +1128,18 @@ export async function deliverComboOrder(orderId: string) {
       sendResult: imageResult,
       messageType: "image",
       reason: "paid_combo_qr_delivery",
-      businessContext: {
-        combo_order_id: order.id,
-        combo_redemption_id: redemptionId,
-        offer_id: order.offer_id,
-        event_id: order.event_id,
-        session_id: order.session_id,
-        ...conversationFallbackMetadata,
-      },
+      businessContext: imageBusinessContext,
     }),
   });
 
   if (!imageSaveResult.ok) {
+    await markWhatsAppOutboundDeliveryFailed({
+      deliveryId: imageDelivery.delivery.id,
+      error: imageSaveResult.error?.code ?? "whatsapp_message_persist_failed",
+    });
+    if (!imageResult.ok) {
+      return { ok: true as const, sent: false as const, reason: "zapi_failed" as const };
+    }
     return {
       ok: false as const,
       reason: "database_error" as const,
@@ -1034,9 +1148,18 @@ export async function deliverComboOrder(orderId: string) {
   }
 
   if (!imageResult.ok) {
+    await markWhatsAppOutboundDeliveryFailed({
+      deliveryId: imageDelivery.delivery.id,
+      error: imageResult.error,
+    });
     logWarn("Combo QR delivery failed", { comboOrderId: order.id, phoneLast4: phone.slice(-4), error: imageResult.error });
     return { ok: true as const, sent: false as const, reason: "zapi_failed" as const };
   }
+
+  await markWhatsAppOutboundDeliverySent({
+    deliveryId: imageDelivery.delivery.id,
+    providerMessageId: imageResult.providerMessageId,
+  });
 
   logInfo("Delivered paid combo by WhatsApp", { comboOrderId: order.id, phoneLast4: phone.slice(-4) });
   return { ok: true as const, sent: true as const };

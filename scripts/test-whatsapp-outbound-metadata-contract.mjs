@@ -147,8 +147,24 @@ function assertReasonContract(source, contract) {
     `${contract.reason} must preserve message type`,
   );
 
+  const businessContextMatch = block.match(/businessContext:\s*([A-Za-z][A-Za-z0-9_]*)/);
+  let referencedBusinessContext = "";
+  if (businessContextMatch) {
+    const declarationIndex = source.indexOf(`const ${businessContextMatch[1]} = {`);
+    assert.notEqual(
+      declarationIndex,
+      -1,
+      `${contract.reason} must define ${businessContextMatch[1]}`,
+    );
+    referencedBusinessContext = source.slice(declarationIndex, declarationIndex + 650);
+  }
+
   for (const field of contract.businessFields) {
-    assert.match(block, new RegExp(`${field}:`), `${contract.reason} must preserve ${field}`);
+    assert.match(
+      `${block}\n${referencedBusinessContext}`,
+      new RegExp(`${field}:`),
+      `${contract.reason} must preserve ${field}`,
+    );
   }
 }
 
