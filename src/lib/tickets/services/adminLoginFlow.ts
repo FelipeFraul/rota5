@@ -1,10 +1,14 @@
-import { type TicketConversationState } from "@/lib/tickets/conversationState";
+import {
+  buildInitialConversationState,
+  type TicketConversationState,
+} from "@/lib/tickets/conversationState";
 import { TICKET_MESSAGES } from "@/lib/tickets/messages";
 import {
   ADMIN_LOGIN_LINK_REDACTED_BODY,
   createAdminLoginChallenge,
   getAdminAuthBlockStatus,
   getAdminUserByPhone,
+  isAdminLogoutCommand,
   type AdminRole,
 } from "@/lib/tickets/services/adminAuth";
 
@@ -133,6 +137,20 @@ export async function startAdminLogin({
         authChallengeExpiresAt: challengeResult.expiresAt,
         authChallengePurpose: "admin_menu",
       }),
+    },
+  };
+}
+
+export function buildAdminAuthPendingCancelResponse({ text }: { text: string }) {
+  if (!isAdminLogoutCommand(text)) {
+    return null;
+  }
+
+  return {
+    reply: "Login administrativo cancelado. Para acessar novamente, envie admin.",
+    nextContext: {
+      ...buildInitialConversationState(),
+      updatedAt: new Date().toISOString(),
     },
   };
 }

@@ -77,7 +77,10 @@ import {
   listPaidTicketResendGroupsForPhone,
   type PaidTicketResendGroup,
 } from "@/lib/tickets/services/tickets";
-import { startAdminLogin } from "@/lib/tickets/services/adminLoginFlow";
+import {
+  buildAdminAuthPendingCancelResponse,
+  startAdminLogin,
+} from "@/lib/tickets/services/adminLoginFlow";
 import {
   buildPublicEntryGateResponse,
   LOW_CONFIDENCE_PUBLIC_PROMPT,
@@ -10377,14 +10380,10 @@ export async function routeTicketMessage({
   }
 
   if (previousState.state === "admin_auth_pending") {
-    if (isAdminLogoutCommand(text)) {
-      return {
-        reply: "Login administrativo cancelado. Para acessar novamente, envie admin.",
-        nextContext: {
-          ...buildInitialConversationState(),
-          updatedAt: new Date().toISOString(),
-        },
-      };
+    const authCancelResponse = buildAdminAuthPendingCancelResponse({ text });
+
+    if (authCancelResponse) {
+      return authCancelResponse;
     }
 
     if (reservedAdminCommand) {
