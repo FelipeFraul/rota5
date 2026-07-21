@@ -277,6 +277,17 @@ export function buildPublicHelpBackResponse({
     nextContext: publicHelpReturnContext(baseContext),
   };
 }
+
+export function buildPublicHelpExitResponse({ text }: { text: string }) {
+  if (!isPublicInitialExitCommand(text)) {
+    return null;
+  }
+
+  return {
+    reply: TICKET_MESSAGES.genericHelp,
+    nextContext: buildInitialConversationState(),
+  };
+}
 `;
 
 const expectedHelpFlowBlock = `function handlePublicHelpMessage({
@@ -308,11 +319,10 @@ const expectedHelpFlowBlock = `function handlePublicHelpMessage({
     return backResponse;
   }
 
-  if (isBuyerReservationExitIntent(text)) {
-    return {
-      reply: TICKET_MESSAGES.genericHelp,
-      nextContext: buildInitialConversationState(),
-    };
+  const exitResponse = buildPublicHelpExitResponse({ text });
+
+  if (exitResponse) {
+    return exitResponse;
   }
 
   if (baseContext.state === "help_results") {

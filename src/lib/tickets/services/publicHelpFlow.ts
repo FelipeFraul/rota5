@@ -1,7 +1,10 @@
 import {
+  buildInitialConversationState,
   type TicketConversationState,
   type TicketConversationStep,
 } from "@/lib/tickets/conversationState";
+import { TICKET_MESSAGES } from "@/lib/tickets/messages";
+import { isPublicInitialExitCommand } from "@/lib/tickets/publicInitialFlow";
 import {
   formatPublicHelpAnswer,
   formatPublicHelpPrompt,
@@ -232,5 +235,16 @@ export function buildPublicHelpBackResponse({
   return {
     reply: "Voltando ao atendimento anterior.",
     nextContext: publicHelpReturnContext(baseContext),
+  };
+}
+
+export function buildPublicHelpExitResponse({ text }: { text: string }) {
+  if (!isPublicInitialExitCommand(text)) {
+    return null;
+  }
+
+  return {
+    reply: TICKET_MESSAGES.genericHelp,
+    nextContext: buildInitialConversationState(),
   };
 }

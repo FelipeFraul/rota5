@@ -84,6 +84,7 @@ import {
   buildPublicHelpFallbackSearchResponse,
   buildPublicHelpBackResponse,
   buildPublicHelpCommandResponse,
+  buildPublicHelpExitResponse,
   buildPublicHelpMoreResultsResponse,
   buildPublicHelpSelectedTopicResponse,
   buildPublicHelpSearchResponse,
@@ -2264,11 +2265,10 @@ function handlePublicHelpMessage({
     return backResponse;
   }
 
-  if (isBuyerReservationExitIntent(text)) {
-    return {
-      reply: TICKET_MESSAGES.genericHelp,
-      nextContext: buildInitialConversationState(),
-    };
+  const exitResponse = buildPublicHelpExitResponse({ text });
+
+  if (exitResponse) {
+    return exitResponse;
   }
 
   if (baseContext.state === "help_results") {
