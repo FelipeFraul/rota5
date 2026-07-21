@@ -9,19 +9,17 @@ import type { TicketEventSearchResult } from "@/lib/tickets/services/events";
 
 export const ALL_EVENTS_MESSAGE_MAX_LENGTH = 3_500;
 export const ALL_EVENTS_CONTINUATION_DELAY_MS = 1_200;
+const ALL_EVENTS_SEPARATOR = "--";
 
 export function formatAllEventsReply(
   events: Array<TicketEventSearchResult | TicketConversationEventOption>,
 ) {
-  const lines = events.flatMap((event, index) => [
-    formatSingleAllEventReply(event, index),
-    "",
-  ]);
+  const blocks = events.map((event, index) => formatSingleAllEventReply(event, index));
 
   return [
     "Encontrei estes eventos:",
     "",
-    ...lines,
+    blocks.join(`\n\n${ALL_EVENTS_SEPARATOR}\n\n`),
   ].join("\n");
 }
 
@@ -65,7 +63,10 @@ export function buildAllEventsOutboundMessages(
 
   events.forEach((event, index) => {
     const block = formatSingleAllEventReply(event, index);
-    const candidate = `${current}\n\n${block}`;
+    const separator = current === "Encontrei estes eventos:" || current === "*EVENTOS - CONTINUACAO*"
+      ? "\n\n"
+      : `\n\n${ALL_EVENTS_SEPARATOR}\n\n`;
+    const candidate = `${current}${separator}${block}`;
 
     if (candidate.length <= ALL_EVENTS_MESSAGE_MAX_LENGTH) {
       current = candidate;

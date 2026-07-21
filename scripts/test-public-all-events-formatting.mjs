@@ -14,6 +14,7 @@ const router = readFileSync(
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 const ALL_EVENTS_MESSAGE_MAX_LENGTH = 3_500;
 const ALL_EVENTS_CONTINUATION_DELAY_MS = 1_200;
+const ALL_EVENTS_SEPARATOR = "--";
 const LOWERCASE_NAME_PARTS = new Set([
   "da",
   "das",
@@ -132,15 +133,12 @@ function formatSingleAllEventReply(event, index) {
 }
 
 function formatAllEventsReply(events) {
-  const lines = events.flatMap((event, index) => [
-    formatSingleAllEventReply(event, index),
-    "",
-  ]);
+  const blocks = events.map((event, index) => formatSingleAllEventReply(event, index));
 
   return [
     "Encontrei estes eventos:",
     "",
-    ...lines,
+    blocks.join(`\n\n${ALL_EVENTS_SEPARATOR}\n\n`),
   ].join("\n");
 }
 
@@ -160,7 +158,10 @@ function buildAllEventsOutboundMessages(events) {
 
   events.forEach((event, index) => {
     const block = formatSingleAllEventReply(event, index);
-    const candidate = `${current}\n\n${block}`;
+    const separator = current === "Encontrei estes eventos:" || current === "*EVENTOS - CONTINUACAO*"
+      ? "\n\n"
+      : `\n\n${ALL_EVENTS_SEPARATOR}\n\n`;
+    const candidate = `${current}${separator}${block}`;
 
     if (candidate.length <= ALL_EVENTS_MESSAGE_MAX_LENGTH) {
       current = candidate;
@@ -234,7 +235,6 @@ test("TODOS com um evento formata titulo, cidade, data e opcoes", () => {
       "",
       "Digite 1 para *comprar*",
       "Digite 2 para *ver mais*",
-      "",
     ].join("\n"),
   );
 });
@@ -252,6 +252,8 @@ test("TODOS com varios eventos preserva ordem e numeracao", () => {
       "Digite 1 para *comprar*",
       "Digite 2 para *ver mais*",
       "",
+      "--",
+      "",
       "🎟️ - *XANDA DIAS*",
       "| Cidade: Ribeirão Preto/SP",
       "| Data: 02/08/2026 às 19:30",
@@ -259,13 +261,14 @@ test("TODOS com varios eventos preserva ordem e numeracao", () => {
       "Digite 3 para *comprar*",
       "Digite 4 para *ver mais*",
       "",
+      "--",
+      "",
       "🎟️ - *NOITE DOS AMIGOS*",
       "| Cidade: Rio de Janeiro/RJ",
       "| Data: 02/08/2026 às 22:00",
       "",
       "Digite 5 para *comprar*",
       "Digite 6 para *ver mais*",
-      "",
     ].join("\n"),
   );
 });
@@ -299,6 +302,7 @@ test("TODOS divide em multiplas mensagens e aplica delay nas continuacoes", () =
     ],
   );
   assert.match(messages[1].body, /^\*EVENTOS - CONTINUACAO\*/);
+  assert.match(combinedBody, /\n--\n/);
   assert.ok(messages.every((message) => message.body.length <= ALL_EVENTS_MESSAGE_MAX_LENGTH));
   assert.deepEqual(
     [...combinedBody.matchAll(/Digite (\d+) para/g)].map((match) => Number(match[1])),
