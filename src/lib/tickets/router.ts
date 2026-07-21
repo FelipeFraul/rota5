@@ -77,6 +77,7 @@ import {
   listPaidTicketResendGroupsForPhone,
   type PaidTicketResendGroup,
 } from "@/lib/tickets/services/tickets";
+import { startAdminLogin } from "@/lib/tickets/services/adminLoginFlow";
 import {
   buildPublicEntryGateResponse,
   LOW_CONFIDENCE_PUBLIC_PROMPT,
@@ -237,7 +238,6 @@ import {
   ADMIN_LOGIN_LINK_REDACTED_BODY,
   consumeAdminLoginChallengeCode,
   createAdminEventEditorDirectLink,
-  createAdminLoginChallenge,
   createAdminSession,
   formatAdminMenu,
   getActiveAdminSession,
@@ -10376,99 +10376,6 @@ export async function routeTicketMessage({
     return publicEntryGateResponse;
   }
 
-  const startAdminLogin = async (): Promise<RouteTicketMessageOutput> => {
-    const adminUserResult = await getAdminUserByPhone(customer.whatsapp_phone);
-
-    if (
-      !adminUserResult.ok ||
-      !adminUserResult.adminUser ||
-      adminUserResult.adminUser.status !== "active"
-    ) {
-      return {
-        reply: TICKET_MESSAGES.adminReservedNeutral,
-        nextContext: {
-          ...baseContext,
-          step: "idle",
-          state: "idle",
-          admin: undefined,
-        },
-      };
-    }
-
-    const blockStatus = await getAdminAuthBlockStatus(customer.whatsapp_phone);
-
-    if (blockStatus.ok && blockStatus.blocked) {
-      return {
-        reply:
-          blockStatus.type === "temporary"
-            ? TICKET_MESSAGES.adminAuthTemporaryLocked.replace(
-                "{minutes}",
-                String(blockStatus.retryAfterMinutes),
-              )
-            : TICKET_MESSAGES.adminAuthHardLocked,
-        nextContext: {
-          ...baseContext,
-          step: "admin_auth_pending",
-          state: "admin_auth_pending",
-          admin: buildAdminContext({
-            adminUserId: adminUserResult.adminUser.id,
-            role: adminUserResult.adminUser.role,
-          }),
-        },
-      };
-    }
-
-    const challengeResult = await createAdminLoginChallenge({
-      adminUser: adminUserResult.adminUser,
-      sourceIdentifier,
-    });
-
-    if (!challengeResult.ok) {
-      return {
-        reply: TICKET_MESSAGES.adminGenericError,
-        nextContext: {
-          ...baseContext,
-          step: "idle",
-          state: "idle",
-          admin: undefined,
-        },
-      };
-    }
-
-    const authReply = [
-      "*LOGIN ADMINISTRATIVO*",
-      "",
-      "Abra este link para informar sua senha individual:",
-      challengeResult.loginUrl,
-      "",
-      `O link expira em ${challengeResult.expiresInMinutes} minutos.`,
-      "Depois de confirmar a senha, envie aqui o cÃƒÂ³digo de uso ÃƒÂºnico exibido na pÃƒÂ¡gina.",
-    ].join("\n");
-
-    return {
-      reply: authReply,
-      outboundMessages: [
-        {
-          type: "text",
-          body: authReply,
-          persistedBody: ADMIN_LOGIN_LINK_REDACTED_BODY,
-        },
-      ],
-      nextContext: {
-        ...baseContext,
-        step: "admin_auth_pending",
-        state: "admin_auth_pending",
-        admin: buildAdminContext({
-          adminUserId: adminUserResult.adminUser.id,
-          role: adminUserResult.adminUser.role,
-          authChallengeId: challengeResult.challengeId,
-          authChallengeExpiresAt: challengeResult.expiresAt,
-          authChallengePurpose: "admin_menu",
-        }),
-      },
-    };
-  };
-
   if (previousState.state === "admin_auth_pending") {
     if (isAdminLogoutCommand(text)) {
       return {
@@ -10481,7 +10388,11 @@ export async function routeTicketMessage({
     }
 
     if (reservedAdminCommand) {
-      return startAdminLogin();
+      return startAdminLogin({
+        phoneNumber: customer.whatsapp_phone,
+        baseContext,
+        sourceIdentifier,
+      });
     }
 
     const adminUserResult = await getAdminUserByPhone(customer.whatsapp_phone);
@@ -10844,7 +10755,11 @@ export async function routeTicketMessage({
     !isAdminSubmenuState(previousState.state) &&
     !previousState.admin?.sessionId
   ) {
-    return startAdminLogin();
+    return startAdminLogin({
+      phoneNumber: customer.whatsapp_phone,
+      baseContext,
+      sourceIdentifier,
+    });
   }
 
   if (
