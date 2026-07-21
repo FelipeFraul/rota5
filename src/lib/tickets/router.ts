@@ -79,9 +79,9 @@ import {
 } from "@/lib/tickets/services/tickets";
 import {
   formatPublicHelpPrompt,
-  isPublicHelpCommand,
 } from "@/lib/tickets/services/publicHelp";
 import {
+  buildPublicHelpCommandResponse,
   buildPublicHelpMoreResultsResponse,
   buildPublicHelpSelectedTopicResponse,
   buildPublicHelpSearchResponse,
@@ -2242,19 +2242,13 @@ function handlePublicHelpMessage({
   baseContext: TicketConversationState;
   text: string;
 }): RouteTicketMessageOutput | null {
-  if (isPublicHelpCommand(text)) {
-    return {
-      reply: formatPublicHelpPrompt(),
-      nextContext: {
-        ...baseContext,
-        step: "help_topic_collecting",
-        state: "help_topic_collecting",
-        publicHelp: {
-          returnStep: isPublicHelpFlowState(baseContext.state) ? baseContext.publicHelp?.returnStep : baseContext.step,
-          returnState: isPublicHelpFlowState(baseContext.state) ? baseContext.publicHelp?.returnState : baseContext.state,
-        },
-      },
-    };
+  const helpCommandResponse = buildPublicHelpCommandResponse({
+    baseContext,
+    text,
+  });
+
+  if (helpCommandResponse) {
+    return helpCommandResponse;
   }
 
   if (!isPublicHelpFlowState(baseContext.state)) {

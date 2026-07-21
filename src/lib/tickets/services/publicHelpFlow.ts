@@ -7,6 +7,7 @@ import {
   formatPublicHelpPrompt,
   formatPublicHelpResults,
   getPublicHelpTopicById,
+  isPublicHelpCommand,
   searchPublicHelpTopics,
 } from "@/lib/tickets/services/publicHelp";
 
@@ -39,6 +40,31 @@ export function hasEnoughHelpTerms(text: string) {
   return normalizeHelpFlowText(text)
     .split(" ")
     .filter((word) => word.length >= 2).length >= 2;
+}
+
+export function buildPublicHelpCommandResponse({
+  baseContext,
+  text,
+}: {
+  baseContext: TicketConversationState;
+  text: string;
+}) {
+  if (!isPublicHelpCommand(text)) {
+    return null;
+  }
+
+  return {
+    reply: formatPublicHelpPrompt(),
+    nextContext: {
+      ...baseContext,
+      step: "help_topic_collecting" as const,
+      state: "help_topic_collecting" as const,
+      publicHelp: {
+        returnStep: isPublicHelpFlowState(baseContext.state) ? baseContext.publicHelp?.returnStep : baseContext.step,
+        returnState: isPublicHelpFlowState(baseContext.state) ? baseContext.publicHelp?.returnState : baseContext.state,
+      },
+    },
+  };
 }
 
 export function buildPublicHelpSearchResponse({

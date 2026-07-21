@@ -56,6 +56,11 @@ const publicHelpReturnContextBlock = sliceBetween(
   /export function publicHelpReturnContext/,
   /export function isPublicHelpFlowState/,
 );
+const helpCommandBlock = sliceBetween(
+  publicHelpFlow,
+  /export function buildPublicHelpCommandResponse/,
+  /export function buildPublicHelpSearchResponse/,
+);
 
 const expectedPublicHelpReturnContextBlock = `export function publicHelpReturnContext(baseContext: TicketConversationState) {
   const returnState = baseContext.publicHelp?.returnState;
@@ -66,6 +71,33 @@ const expectedPublicHelpReturnContextBlock = `export function publicHelpReturnCo
     step: returnStep ?? "idle",
     state: returnState ?? returnStep ?? "idle",
     publicHelp: undefined,
+  };
+}
+
+`;
+
+const expectedHelpCommandBlock = `export function buildPublicHelpCommandResponse({
+  baseContext,
+  text,
+}: {
+  baseContext: TicketConversationState;
+  text: string;
+}) {
+  if (!isPublicHelpCommand(text)) {
+    return null;
+  }
+
+  return {
+    reply: formatPublicHelpPrompt(),
+    nextContext: {
+      ...baseContext,
+      step: "help_topic_collecting" as const,
+      state: "help_topic_collecting" as const,
+      publicHelp: {
+        returnStep: isPublicHelpFlowState(baseContext.state) ? baseContext.publicHelp?.returnStep : baseContext.step,
+        returnState: isPublicHelpFlowState(baseContext.state) ? baseContext.publicHelp?.returnState : baseContext.state,
+      },
+    },
   };
 }
 
@@ -211,19 +243,13 @@ const expectedHelpFlowBlock = `function handlePublicHelpMessage({
   baseContext: TicketConversationState;
   text: string;
 }): RouteTicketMessageOutput | null {
-  if (isPublicHelpCommand(text)) {
-    return {
-      reply: formatPublicHelpPrompt(),
-      nextContext: {
-        ...baseContext,
-        step: "help_topic_collecting",
-        state: "help_topic_collecting",
-        publicHelp: {
-          returnStep: isPublicHelpFlowState(baseContext.state) ? baseContext.publicHelp?.returnStep : baseContext.step,
-          returnState: isPublicHelpFlowState(baseContext.state) ? baseContext.publicHelp?.returnState : baseContext.state,
-        },
-      },
-    };
+  const helpCommandResponse = buildPublicHelpCommandResponse({
+    baseContext,
+    text,
+  });
+
+  if (helpCommandResponse) {
+    return helpCommandResponse;
   }
 
   if (!isPublicHelpFlowState(baseContext.state)) {
@@ -274,6 +300,7 @@ const expectedHelpFlowBlock = `function handlePublicHelpMessage({
 
 test("blocos de contexto da ajuda publica permanecem identicos", () => {
   assert.equal(normalizeNewlines(publicHelpReturnContextBlock), expectedPublicHelpReturnContextBlock);
+  assert.equal(normalizeNewlines(helpCommandBlock), expectedHelpCommandBlock);
   assert.equal(normalizeNewlines(helpSearchBlock), expectedHelpSearchBlock);
   assert.equal(normalizeNewlines(helpFlowBlock), expectedHelpFlowBlock);
 });
