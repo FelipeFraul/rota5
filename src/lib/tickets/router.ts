@@ -82,12 +82,13 @@ import {
 } from "@/lib/tickets/services/publicHelp";
 import {
   buildPublicHelpFallbackSearchResponse,
+  buildPublicHelpBackResponse,
   buildPublicHelpCommandResponse,
   buildPublicHelpMoreResultsResponse,
   buildPublicHelpSelectedTopicResponse,
   buildPublicHelpSearchResponse,
+  isPublicHelpBackIntent,
   isPublicHelpFlowState,
-  publicHelpReturnContext,
 } from "@/lib/tickets/services/publicHelpFlow";
 import {
   createAdminEvent,
@@ -2178,9 +2179,7 @@ function isBuyerReservationExitIntent(text: string) {
 }
 
 function isBuyerBackIntent(text: string) {
-  const normalized = normalizeIntentText(text);
-
-  return normalized === "voltar" || normalized === "volta";
+  return isPublicHelpBackIntent(text);
 }
 
 function isAllPublicEventsIntent(text: string) {
@@ -2256,11 +2255,13 @@ function handlePublicHelpMessage({
     return null;
   }
 
-  if (isBuyerBackIntent(text)) {
-    return {
-      reply: "Voltando ao atendimento anterior.",
-      nextContext: publicHelpReturnContext(baseContext),
-    };
+  const backResponse = buildPublicHelpBackResponse({
+    baseContext,
+    text,
+  });
+
+  if (backResponse) {
+    return backResponse;
   }
 
   if (isBuyerReservationExitIntent(text)) {

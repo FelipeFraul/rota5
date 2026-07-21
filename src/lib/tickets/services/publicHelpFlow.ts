@@ -42,6 +42,12 @@ export function hasEnoughHelpTerms(text: string) {
     .filter((word) => word.length >= 2).length >= 2;
 }
 
+export function isPublicHelpBackIntent(text: string) {
+  const normalized = normalizeHelpFlowText(text);
+
+  return normalized === "voltar" || normalized === "volta";
+}
+
 export function buildPublicHelpCommandResponse({
   baseContext,
   text,
@@ -210,4 +216,21 @@ export function buildPublicHelpFallbackSearchResponse({
     baseContext,
     query: text,
   });
+}
+
+export function buildPublicHelpBackResponse({
+  baseContext,
+  text,
+}: {
+  baseContext: TicketConversationState;
+  text: string;
+}) {
+  if (!isPublicHelpBackIntent(text)) {
+    return null;
+  }
+
+  return {
+    reply: "Voltando ao atendimento anterior.",
+    nextContext: publicHelpReturnContext(baseContext),
+  };
 }

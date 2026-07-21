@@ -61,6 +61,11 @@ const helpCommandBlock = sliceBetween(
   /export function buildPublicHelpCommandResponse/,
   /export function buildPublicHelpSearchResponse/,
 );
+const helpBackIntentBlock = sliceBetween(
+  publicHelpFlow,
+  /export function isPublicHelpBackIntent/,
+  /export function buildPublicHelpCommandResponse/,
+);
 
 const expectedPublicHelpReturnContextBlock = `export function publicHelpReturnContext(baseContext: TicketConversationState) {
   const returnState = baseContext.publicHelp?.returnState;
@@ -99,6 +104,14 @@ const expectedHelpCommandBlock = `export function buildPublicHelpCommandResponse
       },
     },
   };
+}
+
+`;
+
+const expectedHelpBackIntentBlock = `export function isPublicHelpBackIntent(text: string) {
+  const normalized = normalizeHelpFlowText(text);
+
+  return normalized === "voltar" || normalized === "volta";
 }
 
 `;
@@ -247,6 +260,23 @@ export function buildPublicHelpFallbackSearchResponse({
     query: text,
   });
 }
+
+export function buildPublicHelpBackResponse({
+  baseContext,
+  text,
+}: {
+  baseContext: TicketConversationState;
+  text: string;
+}) {
+  if (!isPublicHelpBackIntent(text)) {
+    return null;
+  }
+
+  return {
+    reply: "Voltando ao atendimento anterior.",
+    nextContext: publicHelpReturnContext(baseContext),
+  };
+}
 `;
 
 const expectedHelpFlowBlock = `function handlePublicHelpMessage({
@@ -269,11 +299,13 @@ const expectedHelpFlowBlock = `function handlePublicHelpMessage({
     return null;
   }
 
-  if (isBuyerBackIntent(text)) {
-    return {
-      reply: "Voltando ao atendimento anterior.",
-      nextContext: publicHelpReturnContext(baseContext),
-    };
+  const backResponse = buildPublicHelpBackResponse({
+    baseContext,
+    text,
+  });
+
+  if (backResponse) {
+    return backResponse;
   }
 
   if (isBuyerReservationExitIntent(text)) {
@@ -313,6 +345,7 @@ const expectedHelpFlowBlock = `function handlePublicHelpMessage({
 
 test("blocos de contexto da ajuda publica permanecem identicos", () => {
   assert.equal(normalizeNewlines(publicHelpReturnContextBlock), expectedPublicHelpReturnContextBlock);
+  assert.equal(normalizeNewlines(helpBackIntentBlock), expectedHelpBackIntentBlock);
   assert.equal(normalizeNewlines(helpCommandBlock), expectedHelpCommandBlock);
   assert.equal(normalizeNewlines(helpSearchBlock), expectedHelpSearchBlock);
   assert.equal(normalizeNewlines(helpFlowBlock), expectedHelpFlowBlock);
