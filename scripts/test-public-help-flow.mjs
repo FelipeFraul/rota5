@@ -133,6 +133,34 @@ const expectedHelpSearchBlock = `export function buildPublicHelpSearchResponse({
     },
   };
 }
+
+export function buildPublicHelpSelectedTopicResponse({
+  baseContext,
+  text,
+}: {
+  baseContext: TicketConversationState;
+  text: string;
+}) {
+  const selectedOption = text.trim().match(/^\\d+$/) ? Number(text.trim()) : null;
+  const selected = selectedOption
+    ? baseContext.publicHelp?.lastResults?.find(
+        (result) => result.option === selectedOption,
+      )
+    : null;
+
+  if (selected) {
+    const topic = getPublicHelpTopicById(selected.id);
+
+    if (topic) {
+      return {
+        reply: formatPublicHelpAnswer(topic),
+        nextContext: baseContext,
+      };
+    }
+  }
+
+  return null;
+}
 `;
 
 const expectedHelpFlowBlock = `function handlePublicHelpMessage({
@@ -207,22 +235,13 @@ const expectedHelpFlowBlock = `function handlePublicHelpMessage({
       });
     }
 
-    const selectedOption = text.trim().match(/^\\d+$/) ? Number(text.trim()) : null;
-    const selected = selectedOption
-      ? baseContext.publicHelp?.lastResults?.find(
-          (result) => result.option === selectedOption,
-        )
-      : null;
+    const selectedTopicResponse = buildPublicHelpSelectedTopicResponse({
+      baseContext,
+      text,
+    });
 
-    if (selected) {
-      const topic = getPublicHelpTopicById(selected.id);
-
-      if (topic) {
-        return {
-          reply: formatPublicHelpAnswer(topic),
-          nextContext: baseContext,
-        };
-      }
+    if (selectedTopicResponse) {
+      return selectedTopicResponse;
     }
   }
 

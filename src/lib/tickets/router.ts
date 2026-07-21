@@ -78,12 +78,11 @@ import {
   type PaidTicketResendGroup,
 } from "@/lib/tickets/services/tickets";
 import {
-  formatPublicHelpAnswer,
   formatPublicHelpPrompt,
-  getPublicHelpTopicById,
   isPublicHelpCommand,
 } from "@/lib/tickets/services/publicHelp";
 import {
+  buildPublicHelpSelectedTopicResponse,
   buildPublicHelpSearchResponse,
   isPublicHelpFlowState,
   publicHelpReturnContext,
@@ -2307,22 +2306,13 @@ function handlePublicHelpMessage({
       });
     }
 
-    const selectedOption = text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
-    const selected = selectedOption
-      ? baseContext.publicHelp?.lastResults?.find(
-          (result) => result.option === selectedOption,
-        )
-      : null;
+    const selectedTopicResponse = buildPublicHelpSelectedTopicResponse({
+      baseContext,
+      text,
+    });
 
-    if (selected) {
-      const topic = getPublicHelpTopicById(selected.id);
-
-      if (topic) {
-        return {
-          reply: formatPublicHelpAnswer(topic),
-          nextContext: baseContext,
-        };
-      }
+    if (selectedTopicResponse) {
+      return selectedTopicResponse;
     }
   }
 

@@ -3,8 +3,10 @@ import {
   type TicketConversationStep,
 } from "@/lib/tickets/conversationState";
 import {
+  formatPublicHelpAnswer,
   formatPublicHelpPrompt,
   formatPublicHelpResults,
+  getPublicHelpTopicById,
   searchPublicHelpTopics,
 } from "@/lib/tickets/services/publicHelp";
 
@@ -100,4 +102,32 @@ export function buildPublicHelpSearchResponse({
       },
     },
   };
+}
+
+export function buildPublicHelpSelectedTopicResponse({
+  baseContext,
+  text,
+}: {
+  baseContext: TicketConversationState;
+  text: string;
+}) {
+  const selectedOption = text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
+  const selected = selectedOption
+    ? baseContext.publicHelp?.lastResults?.find(
+        (result) => result.option === selectedOption,
+      )
+    : null;
+
+  if (selected) {
+    const topic = getPublicHelpTopicById(selected.id);
+
+    if (topic) {
+      return {
+        reply: formatPublicHelpAnswer(topic),
+        nextContext: baseContext,
+      };
+    }
+  }
+
+  return null;
 }
