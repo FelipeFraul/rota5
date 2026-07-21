@@ -6,6 +6,14 @@ const batchService = readFileSync(
   new URL("../src/lib/tickets/services/whatsappMessageBatches.ts", import.meta.url),
   "utf8",
 );
+const batchCore = readFileSync(
+  new URL("../src/lib/tickets/services/whatsappBatchCore.ts", import.meta.url),
+  "utf8",
+);
+const messagesService = readFileSync(
+  new URL("../src/lib/tickets/services/messages.ts", import.meta.url),
+  "utf8",
+);
 const batchCron = readFileSync(
   new URL("../src/app/api/cron/process-whatsapp-batches/route.ts", import.meta.url),
   "utf8",
@@ -43,6 +51,14 @@ test("finishes batches with explicit error_code to avoid PostgREST overload ambi
   assert.match(batchService, /errorCode\s*=\s*null/);
   assert.match(batchService, /error_code:\s*errorCode/);
   assert.match(retryMigration, /finish_whatsapp_message_batch\(\s*target_batch_id uuid,\s*final_status text default 'processed',\s*error_code text default null\s*\)/);
+});
+
+test("legacy batch aggregation and send metadata do not invent customer-facing state", () => {
+  assert.doesNotMatch(batchCore, /\.join\("\. "\)/);
+  assert.doesNotMatch(batchCore, /replace\(\/\\s\+\\\.\//);
+  assert.match(batchCore, /\.join\("\\n"\)/);
+  assert.match(messagesService, /send_status:\s*"sent"/);
+  assert.doesNotMatch(messagesService, /sendStatus:\s*"sent"/);
 });
 
 test("reschedules retryable batch failures and marks failed after attempt limit", () => {

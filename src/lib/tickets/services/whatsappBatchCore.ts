@@ -4,8 +4,6 @@ export function buildAggregatedWhatsAppText(messages: WhatsAppMessageBatchMessag
   return messages
     .map((message) => message.body?.trim())
     .filter((body): body is string => Boolean(body))
-    .join(". ")
-    .replace(/\s+\./g, ".")
-    .replace(/\.{2,}/g, ".")
+    .join("\n")
     .trim();
 }

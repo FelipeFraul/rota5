@@ -57,6 +57,11 @@ test("separate inbound messages are never semantically merged with punctuation b
     /\.join\("\. "\)/,
     "batch aggregation must not transform `Bom dia` + `Gostaria...` into `Bom dia. Gostaria...`",
   );
+  assert.match(
+    batchCore,
+    /\.join\("\\n"\)/,
+    "legacy batch aggregation may preserve order but must not add semantic punctuation",
+  );
   assert.doesNotMatch(
     webhook,
     /buildAggregatedWhatsAppText\(/,

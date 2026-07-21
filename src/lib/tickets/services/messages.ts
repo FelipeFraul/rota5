@@ -94,7 +94,7 @@ export async function findSentBatchReplyMessage({
       provider: "zapi",
       batchId,
       sequence,
-      sendStatus: "sent",
+      send_status: "sent",
     })
     .maybeSingle<{ id: string; provider_message_id: string | null }>();
 
