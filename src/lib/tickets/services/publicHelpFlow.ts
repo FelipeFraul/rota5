@@ -198,3 +198,16 @@ export function buildPublicHelpMoreResultsResponse({
     page: (baseContext.publicHelp.page ?? 0) + 1,
   });
 }
+
+export function buildPublicHelpFallbackSearchResponse({
+  baseContext,
+  text,
+}: {
+  baseContext: TicketConversationState;
+  text: string;
+}) {
+  return buildPublicHelpSearchResponse({
+    baseContext,
+    query: text,
+  });
+}

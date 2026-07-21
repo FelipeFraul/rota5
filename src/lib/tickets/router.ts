@@ -81,6 +81,7 @@ import {
   formatPublicHelpPrompt,
 } from "@/lib/tickets/services/publicHelp";
 import {
+  buildPublicHelpFallbackSearchResponse,
   buildPublicHelpCommandResponse,
   buildPublicHelpMoreResultsResponse,
   buildPublicHelpSelectedTopicResponse,
@@ -2289,9 +2290,9 @@ function handlePublicHelpMessage({
     }
   }
 
-  return buildPublicHelpSearchResponse({
+  return buildPublicHelpFallbackSearchResponse({
     baseContext,
-    query: text,
+    text,
   });
 }
 
