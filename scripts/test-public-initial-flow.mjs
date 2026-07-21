@@ -42,10 +42,12 @@ test("primeira mensagem publica responde imediatamente sem depender do batch", (
   assert.doesNotMatch(webhook, /appendInboundMessageToBatch/);
   assert.doesNotMatch(webhook, /buildAggregatedWhatsAppText/);
   assert.doesNotMatch(webhook, /batched:\s*true/);
-  assert.match(batchCron, /resolvedState === "idle"/);
-  assert.match(batchCron, /body:\s*TICKET_MESSAGES\.genericHelpPrompt/);
-  assert.doesNotMatch(batchCron, /body:\s*TICKET_MESSAGES\.genericHelpCommands/);
-  assert.match(batchCron, /publicInitialHelpSent:\s*true/);
+  assert.doesNotMatch(batchCron, /resolvedState === "idle"/);
+  assert.doesNotMatch(batchCron, /genericHelpPrompt/);
+  assert.doesNotMatch(batchCron, /sendZapiText/);
+  assert.doesNotMatch(batchCron, /sendZapiImage/);
+  assert.match(batchCron, /customer_reply_pipeline_disabled/);
+  assert.match(batchCron, /finalizeInactiveWhatsAppConversations/);
   assert.match(messages, homeMessage);
   assert.match(messages, homeCommands);
 });
