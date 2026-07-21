@@ -6,6 +6,10 @@ const publicAllEventsFormatting = readFileSync(
   new URL("../src/lib/tickets/publicAllEventsFormatting.ts", import.meta.url),
   "utf8",
 );
+const router = readFileSync(
+  new URL("../src/lib/tickets/router.ts", import.meta.url),
+  "utf8",
+);
 
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 const ALL_EVENTS_MESSAGE_MAX_LENGTH = 3_500;
@@ -210,10 +214,7 @@ test("TODOS sem eventos preserva a resposta atual do router", () => {
   assert.match(publicAllEventsFormatting, /function buildAllEventsOutboundMessages/);
   assert.match(publicAllEventsFormatting, /ALL_EVENTS_MESSAGE_MAX_LENGTH = 3_500/);
   assert.match(publicAllEventsFormatting, /ALL_EVENTS_CONTINUATION_DELAY_MS = 1_200/);
-  assert.equal(
-    `Não encontrei eventos disponíveis no momento.\n\nOlá, *bem-vindo(a) à Black House*, casa de Comédia de Sorocaba!`,
-    "Não encontrei eventos disponíveis no momento.\n\nOlá, *bem-vindo(a) à Black House*, casa de Comédia de Sorocaba!",
-  );
+  assert.match(router, /events\.length === 0[\s\S]*reply:\s*`[^`]*\$\{TICKET_MESSAGES\.genericHelpPrompt\}`/);
 });
 
 test("TODOS com um evento formata titulo, cidade, data e opcoes", () => {

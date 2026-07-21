@@ -316,7 +316,7 @@ export function buildPublicHelpExitResponse({ text }: { text: string }) {
   }
 
   return {
-    reply: TICKET_MESSAGES.genericHelp,
+    reply: TICKET_MESSAGES.genericHelpPrompt,
     nextContext: buildInitialConversationState(),
   };
 }

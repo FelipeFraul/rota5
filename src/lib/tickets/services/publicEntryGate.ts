@@ -11,10 +11,7 @@ type PublicEntryGateIntent = {
     | string;
 };
 
-export const LOW_CONFIDENCE_PUBLIC_PROMPT = [
-  TICKET_MESSAGES.genericHelp,
-  TICKET_MESSAGES.genericHelpCommands,
-].join("\n");
+export const LOW_CONFIDENCE_PUBLIC_PROMPT = TICKET_MESSAGES.genericHelpPrompt;
 
 function isOperationalState(state?: string) {
   return (

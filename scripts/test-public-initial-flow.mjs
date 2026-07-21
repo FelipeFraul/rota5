@@ -80,7 +80,7 @@ test("SAIR cancela e a proxima mensagem volta ao inicio", () => {
   assert.match(publicInitialFlow, /normalized === "sair"/);
   assert.match(router, /isBuyerReservationExitIntent\(text\)[\s\S]*reply:\s*TICKET_MESSAGES\.buyerFlowReset/);
   assert.match(router, /nextContext:\s*resetBuyerReservationContext\(baseContext\)/);
-  assert.match(router, /previousState\.state === "idle"[\s\S]*previousState\.publicInitialHelpSent !== true[\s\S]*reply:\s*TICKET_MESSAGES\.genericHelp/);
+  assert.match(router, /previousState\.state === "idle"[\s\S]*previousState\.publicInitialHelpSent !== true[\s\S]*reply:\s*TICKET_MESSAGES\.genericHelpPrompt/);
   assert.match(router, /nextContext:\s*publicInitialHelpContext\(baseContext\)/);
   assert.match(publicInitialFlow, /function publicInitialHelpContext/);
 });
@@ -95,7 +95,7 @@ test("mensagem antiga de busca nao aparece como resposta inicial", () => {
   assert.match(messages, /noEventsFound:/);
   assert.match(router, /if \(events\.length === 0\)[\s\S]*reply:\s*TICKET_MESSAGES\.noEventsFound/);
   assert.match(initialIdleBlock, /previousState\.publicInitialHelpSent !== true/);
-  assert.match(initialIdleBlock, /reply:\s*TICKET_MESSAGES\.genericHelp/);
+  assert.match(initialIdleBlock, /reply:\s*TICKET_MESSAGES\.genericHelpPrompt/);
   assert.doesNotMatch(initialIdleBlock, /reply:\s*TICKET_MESSAGES\.noEventsFound/);
   assert.doesNotMatch(
     batchCron,

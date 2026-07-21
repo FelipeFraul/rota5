@@ -3,9 +3,15 @@ const PUBLIC_HOME_MESSAGE =
 const PUBLIC_HOME_COMMANDS_MESSAGE =
   '> Pesquise um evento por *nome, artista, data* ou...\n> Para ver todos os eventos, digite "TODOS"\n> Para reenviar ingresso pago, digite "REENVIAR INGRESSO"\n> Para receber ajuda a qualquer momento, digite "AJUDA"\n> Para voltar à página inicial e fazer uma nova pesquisa, digite "SAIR"';
 
+const PUBLIC_HOME_PROMPT = [
+  PUBLIC_HOME_MESSAGE,
+  PUBLIC_HOME_COMMANDS_MESSAGE,
+].join("\n");
+
 export const TICKET_MESSAGES = {
   genericHelp: PUBLIC_HOME_MESSAGE,
   genericHelpCommands: PUBLIC_HOME_COMMANDS_MESSAGE,
+  genericHelpPrompt: PUBLIC_HOME_PROMPT,
   conversationClosed:
     "ATENDIMENTO\n\nSessão encerrada. Para iniciar uma nova digite olá!",
   noEventsFound:

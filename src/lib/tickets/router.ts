@@ -3312,7 +3312,7 @@ async function handlePaidTicketResendSelection({
 
   if (isBuyerBackIntent(text) || isBuyerReservationExitIntent(text)) {
     return {
-      reply: TICKET_MESSAGES.genericHelp,
+      reply: TICKET_MESSAGES.genericHelpPrompt,
       nextContext: resetBuyerReservationContext(baseContext),
     };
   }
@@ -10091,7 +10091,7 @@ async function renderBuyerSectionsStep({
 }): Promise<RouteTicketMessageOutput> {
   if (!selectedEvent) {
     return {
-      reply: TICKET_MESSAGES.genericHelp,
+      reply: TICKET_MESSAGES.genericHelpPrompt,
       nextContext: resetBuyerReservationContext(baseContext),
     };
   }
@@ -10242,7 +10242,7 @@ async function handleBuyerBack({
 
   if (baseContext.state === "showing_events") {
     return {
-      reply: TICKET_MESSAGES.genericHelp,
+      reply: TICKET_MESSAGES.genericHelpPrompt,
       nextContext: resetBuyerReservationContext(baseContext),
     };
   }
@@ -10281,7 +10281,7 @@ async function handleBuyerBack({
     }
 
     return {
-      reply: TICKET_MESSAGES.genericHelp,
+      reply: TICKET_MESSAGES.genericHelpPrompt,
       nextContext: resetBuyerReservationContext(baseContext),
     };
   }
@@ -16005,7 +16005,7 @@ export async function routeTicketMessage({
     previousState.publicInitialHelpSent !== true
   ) {
     return {
-      reply: TICKET_MESSAGES.genericHelp,
+      reply: TICKET_MESSAGES.genericHelpPrompt,
       nextContext: publicInitialHelpContext(baseContext),
     };
   }
@@ -16022,7 +16022,7 @@ export async function routeTicketMessage({
   if (incomingIntent.classification === "purchase_support") {
     if (baseContext.state === "idle") {
       return {
-        reply: TICKET_MESSAGES.genericHelp,
+        reply: TICKET_MESSAGES.genericHelpPrompt,
         nextContext: publicInitialHelpContext(baseContext),
       };
     }
@@ -16073,7 +16073,7 @@ export async function routeTicketMessage({
 
     if (events.length === 0) {
       return {
-        reply: `NÃƒÂ£o encontrei eventos disponÃƒÂ­veis no momento.\n\n${TICKET_MESSAGES.genericHelp}`,
+        reply: `NÃƒÂ£o encontrei eventos disponÃƒÂ­veis no momento.\n\n${TICKET_MESSAGES.genericHelpPrompt}`,
         nextContext: resetBuyerReservationContext(baseContext),
       };
     }
@@ -16794,7 +16794,7 @@ export async function routeTicketMessage({
 
     if (parsedSearch.numericSelection === 3) {
       return {
-        reply: TICKET_MESSAGES.genericHelp,
+        reply: TICKET_MESSAGES.genericHelpPrompt,
         nextContext: resetBuyerReservationContext(baseContext),
       };
     }
@@ -17128,7 +17128,7 @@ export async function routeTicketMessage({
     }
 
     return {
-      reply: TICKET_MESSAGES.genericHelp,
+      reply: TICKET_MESSAGES.genericHelpPrompt,
       nextContext: {
         ...baseContext,
         step: "idle",
@@ -17369,7 +17369,7 @@ export async function routeTicketMessage({
 
   if (parsedSearch.isGeneric && !hasUsefulSearchEvidence(parsedSearch)) {
     return {
-      reply: TICKET_MESSAGES.genericHelp,
+      reply: TICKET_MESSAGES.genericHelpPrompt,
       nextContext: baseContext,
     };
   }
