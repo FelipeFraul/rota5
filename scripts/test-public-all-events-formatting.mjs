@@ -214,7 +214,12 @@ test("TODOS sem eventos preserva a resposta atual do router", () => {
   assert.match(publicAllEventsFormatting, /function buildAllEventsOutboundMessages/);
   assert.match(publicAllEventsFormatting, /ALL_EVENTS_MESSAGE_MAX_LENGTH = 3_500/);
   assert.match(publicAllEventsFormatting, /ALL_EVENTS_CONTINUATION_DELAY_MS = 1_200/);
-  assert.match(router, /events\.length === 0[\s\S]*reply:\s*`[^`]*\$\{TICKET_MESSAGES\.genericHelpPrompt\}`/);
+  assert.match(router, /events\.length === 0[\s\S]*bootstrap\.initialMessages/);
+  assert.match(router, /events\.length === 0[\s\S]*resetBuyerReservationContext\(bootstrap\.nextContext\)/);
+  assert.doesNotMatch(
+    router,
+    /events\.length === 0[\s\S]*reply:\s*`[^`]*\$\{TICKET_MESSAGES\.genericHelpPrompt\}`/,
+  );
 });
 
 test("TODOS com um evento formata titulo, cidade, data e opcoes", () => {

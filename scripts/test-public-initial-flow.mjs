@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { buildInitialConversationState } from "../src/lib/tickets/conversationState.ts";
+import { TICKET_MESSAGES } from "../src/lib/tickets/messages.ts";
+import { routeTicketMessage } from "../src/lib/tickets/router.ts";
 
 const router = readFileSync(
   new URL("../src/lib/tickets/router.ts", import.meta.url),
@@ -27,6 +30,35 @@ const homeMessage = /PUBLIC_HOME_MESSAGE\s*=\s*[\s\S]*bem-vindo\(a\)[\s\S]*Black
 const homeCommands =
   /PUBLIC_HOME_COMMANDS_MESSAGE\s*=[\s\S]*TODOS[\s\S]*REENVIAR INGRESSO[\s\S]*AJUDA[\s\S]*SAIR/;
 
+const customer = {
+  id: "customer-public-initial",
+  whatsapp_phone: "5515999999999",
+  name: null,
+};
+
+function routePublicText(text, context = buildInitialConversationState()) {
+  return routeTicketMessage({
+    customer,
+    conversation: {
+      id: "conversation-public-initial",
+      context,
+    },
+    text,
+    messageType: "text",
+  });
+}
+
+function assertInitialOpeningMessages(result) {
+  assert.equal(result.outboundMessages?.length, 2);
+  assert.equal(result.outboundMessages[0].type, "text");
+  assert.equal(result.outboundMessages[0].body, TICKET_MESSAGES.genericHelp);
+  assert.equal(result.outboundMessages[0].suppressTitle, true);
+  assert.equal(result.outboundMessages[1].type, "text");
+  assert.equal(result.outboundMessages[1].body, TICKET_MESSAGES.genericHelpCommands);
+  assert.equal(result.outboundMessages[1].suppressTitle, true);
+  assert.equal(result.nextContext.publicInitialHelpSent, true);
+}
+
 function sliceBetween(source, startPattern, endPattern) {
   const start = source.search(startPattern);
   assert.notEqual(start, -1, `start pattern not found: ${startPattern}`);
@@ -50,6 +82,40 @@ test("primeira mensagem publica responde imediatamente sem depender do batch", (
   assert.match(batchCron, /finalizeInactiveWhatsAppConversations/);
   assert.match(messages, homeMessage);
   assert.match(messages, homeCommands);
+});
+
+test("execucao real: primeira saudacao envia duas mensagens e marca contexto", async () => {
+  const result = await routePublicText("Oi");
+
+  assertInitialOpeningMessages(result);
+  assert.doesNotMatch(
+    result.outboundMessages.map((message) => message.body).join("\n"),
+    /ATENDIMENTO/,
+  );
+});
+
+test("execucao real: saudacao posterior e purchase support nao repetem abertura", async () => {
+  const greeting = await routePublicText("Oi");
+  const secondGreeting = await routePublicText("bom dia", greeting.nextContext);
+  const purchaseSupport = await routePublicText(
+    "nao consigo comprar ingresso online",
+    greeting.nextContext,
+  );
+
+  assertInitialOpeningMessages(greeting);
+  assert.notEqual(secondGreeting.outboundMessages?.[0]?.body, TICKET_MESSAGES.genericHelp);
+  assert.notEqual(purchaseSupport.outboundMessages?.[0]?.body, TICKET_MESSAGES.genericHelp);
+  assert.equal(purchaseSupport.nextContext.publicInitialHelpSent, true);
+});
+
+test("execucao real: purchase support inicial inclui abertura uma unica vez e resposta especifica", async () => {
+  const result = await routePublicText("nao consigo comprar ingresso online");
+
+  assert.equal(result.outboundMessages?.length, 3);
+  assert.equal(result.outboundMessages[0].body, TICKET_MESSAGES.genericHelp);
+  assert.equal(result.outboundMessages[1].body, TICKET_MESSAGES.genericHelpCommands);
+  assert.equal(result.outboundMessages[2].body, result.reply);
+  assert.equal(result.nextContext.publicInitialHelpSent, true);
 });
 
 test("mensagens publicas posteriores tambem seguem pelo caminho imediato", () => {
@@ -101,6 +167,7 @@ test("SAIR cancela e a proxima mensagem volta ao inicio", () => {
 
 test("abertura publica inicial usa duas mensagens separadas sem titulo atendimento", () => {
   assert.match(router, /function buildPublicInitialHelpOutboundMessages/);
+  assert.match(router, /function resolvePublicInitialHelpBootstrap/);
   assert.match(router, /body:\s*TICKET_MESSAGES\.genericHelp/);
   assert.match(router, /body:\s*TICKET_MESSAGES\.genericHelpCommands/);
   assert.match(router, /suppressTitle:\s*true/);
@@ -139,11 +206,34 @@ test("primeira busca e primeiro TODOS recebem bootstrap sem repetir depois", () 
   );
 
   for (const block of [searchSuccessBlock, allEventsBlock]) {
-    assert.match(block, /shouldSendPublicInitialHelp\(previousState\)/);
-    assert.match(block, /buildPublicInitialHelpOutboundMessages\(\)/);
-    assert.match(block, /publicInitialHelpContext\(baseContext\)/);
+    assert.match(block, /bootstrap\.initialMessages/);
+    assert.match(block, /bootstrap\.nextContext/);
+    assert.doesNotMatch(block, /buildPublicInitialHelpOutboundMessages\(\)/);
+    assert.doesNotMatch(block, /publicInitialHelpContext\(baseContext\)/);
   }
+  assert.match(router, /const bootstrap = resolvePublicInitialHelpBootstrap\(baseContext\)/);
   assert.match(router, /previousState\.publicInitialHelpSent !== true/);
   assert.match(messages, /noEventsFound:/);
   assert.match(router, /if \(events\.length === 0\)[\s\S]*reply:\s*TICKET_MESSAGES\.noEventsFound/);
+});
+
+test("TODOS sem eventos e purchase support usam bootstrap sem genericHelpPrompt", () => {
+  const allEventsEmptyBlock = sliceBetween(
+    router,
+    /if \(events\.length === 0\) \{/,
+    /return {\s*reply:\s*formatAllEventsReply\(events\)/,
+  );
+  const purchaseSupportBlock = sliceBetween(
+    router,
+    /if \(incomingIntent\.classification === "purchase_support"\)/,
+    /if \(incomingIntent\.classification === "unknown" && isPublicInitialHelpCommand/,
+  );
+
+  assert.match(allEventsEmptyBlock, /bootstrap\.initialMessages/);
+  assert.match(allEventsEmptyBlock, /resetBuyerReservationContext\(bootstrap\.nextContext\)/);
+  assert.doesNotMatch(allEventsEmptyBlock, /genericHelpPrompt/);
+  assert.match(purchaseSupportBlock, /const bootstrap = resolvePublicInitialHelpBootstrap\(baseContext\)/);
+  assert.match(purchaseSupportBlock, /supportResponse\.reply/);
+  assert.match(purchaseSupportBlock, /bootstrap\.initialMessages/);
+  assert.doesNotMatch(purchaseSupportBlock, /buildPublicInitialHelpResponse\(baseContext\)/);
 });

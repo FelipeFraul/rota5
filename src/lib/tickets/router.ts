@@ -1782,13 +1782,33 @@ function buildPublicInitialHelpOutboundMessages() {
   ] satisfies NonNullable<RouteTicketMessageOutput["outboundMessages"]>;
 }
 
+function resolvePublicInitialHelpBootstrap(
+  baseContext: TicketConversationState,
+) {
+  if (!shouldSendPublicInitialHelp(baseContext)) {
+    return {
+      applied: false as const,
+      initialMessages: [] satisfies NonNullable<RouteTicketMessageOutput["outboundMessages"]>,
+      nextContext: baseContext,
+    };
+  }
+
+  return {
+    applied: true as const,
+    initialMessages: buildPublicInitialHelpOutboundMessages(),
+    nextContext: publicInitialHelpContext(baseContext),
+  };
+}
+
 function buildPublicInitialHelpResponse(
   baseContext: TicketConversationState,
 ): RouteTicketMessageOutput {
+  const bootstrap = resolvePublicInitialHelpBootstrap(baseContext);
+
   return {
     reply: TICKET_MESSAGES.genericHelp,
-    outboundMessages: buildPublicInitialHelpOutboundMessages(),
-    nextContext: publicInitialHelpContext(baseContext),
+    outboundMessages: bootstrap.initialMessages,
+    nextContext: bootstrap.nextContext,
   };
 }
 
@@ -10413,6 +10433,20 @@ export async function routeTicketMessage({
   });
 
   if (publicEntryGateResponse) {
+    if (
+      shouldSendPublicInitialHelp(baseContext) &&
+      (
+        incomingIntent.classification === "greeting" ||
+        incomingIntent.classification === "social_reply" ||
+        incomingIntent.classification === "courtesy"
+      )
+    ) {
+      return {
+        ...buildPublicInitialHelpResponse(baseContext),
+        intentResolution: incomingIntent,
+      };
+    }
+
     return publicEntryGateResponse;
   }
 
@@ -16053,14 +16087,32 @@ export async function routeTicketMessage({
   }
 
   if (incomingIntent.classification === "purchase_support") {
-    if (baseContext.state === "idle") {
-      return buildPublicInitialHelpResponse(baseContext);
-    }
-
-    return buildPublicHelpSearchResponse({
+    const supportResponse = buildPublicHelpSearchResponse({
       baseContext,
       query: "dificuldade comprar ingresso online",
     });
+
+    if (baseContext.state !== "idle") {
+      return supportResponse;
+    }
+
+    const bootstrap = resolvePublicInitialHelpBootstrap(baseContext);
+
+    return {
+      ...supportResponse,
+      outboundMessages: [
+        ...bootstrap.initialMessages,
+        {
+          type: "text",
+          body: supportResponse.reply,
+          suppressTitle: true,
+        },
+      ],
+      nextContext: {
+        ...supportResponse.nextContext,
+        publicInitialHelpSent: bootstrap.nextContext.publicInitialHelpSent,
+      },
+    };
   }
 
   if (incomingIntent.classification === "unknown" && isPublicInitialHelpCommand(text)) {
@@ -16100,26 +16152,33 @@ export async function routeTicketMessage({
     previousState.state !== "payment_pending"
   ) {
     const events = await listAllPublicEventsByDate();
+    const bootstrap = resolvePublicInitialHelpBootstrap(baseContext);
 
     if (events.length === 0) {
+      const noPublicEventsReply =
+        "NÃƒÂ£o encontrei eventos disponÃƒÂ­veis no momento.";
       return {
-        reply: `NÃƒÂ£o encontrei eventos disponÃƒÂ­veis no momento.\n\n${TICKET_MESSAGES.genericHelpPrompt}`,
-        nextContext: resetBuyerReservationContext(baseContext),
+        reply: noPublicEventsReply,
+        outboundMessages: [
+          ...bootstrap.initialMessages,
+          {
+            type: "text",
+            body: noPublicEventsReply,
+            suppressTitle: true,
+          },
+        ],
+        nextContext: resetBuyerReservationContext(bootstrap.nextContext),
       };
     }
 
     return {
       reply: formatAllEventsReply(events),
       outboundMessages: [
-        ...(shouldSendPublicInitialHelp(previousState)
-          ? buildPublicInitialHelpOutboundMessages()
-          : []),
+        ...bootstrap.initialMessages,
         ...buildAllEventsOutboundMessages(events),
       ],
       nextContext: {
-        ...(shouldSendPublicInitialHelp(previousState)
-          ? publicInitialHelpContext(baseContext)
-          : baseContext),
+        ...bootstrap.nextContext,
         step: "showing_events",
         state: "showing_events",
         lastSearch: {
@@ -17426,24 +17485,21 @@ export async function routeTicketMessage({
         ? "buy_event"
         : "search_event",
   });
+  const bootstrap = resolvePublicInitialHelpBootstrap(baseContext);
 
   if (events.length === 0) {
     return {
       reply: TICKET_MESSAGES.noEventsFound,
-      outboundMessages: shouldSendPublicInitialHelp(previousState)
-        ? [
-            ...buildPublicInitialHelpOutboundMessages(),
-            {
-              type: "text",
-              body: TICKET_MESSAGES.noEventsFound,
-              suppressTitle: true,
-            },
-          ]
-        : undefined,
+      outboundMessages: [
+        ...bootstrap.initialMessages,
+        {
+          type: "text",
+          body: TICKET_MESSAGES.noEventsFound,
+          suppressTitle: true,
+        },
+      ],
       nextContext: {
-        ...(shouldSendPublicInitialHelp(previousState)
-          ? publicInitialHelpContext(baseContext)
-          : baseContext),
+        ...bootstrap.nextContext,
         step: "idle",
         state: "idle",
         lastSearch: parsedSearch,
@@ -17456,15 +17512,11 @@ export async function routeTicketMessage({
   return {
     reply: formatEventsReply(events),
     outboundMessages: [
-      ...(shouldSendPublicInitialHelp(previousState)
-        ? buildPublicInitialHelpOutboundMessages()
-        : []),
+      ...bootstrap.initialMessages,
       ...buildEventSearchOutboundMessages(events),
     ],
     nextContext: {
-      ...(shouldSendPublicInitialHelp(previousState)
-        ? publicInitialHelpContext(baseContext)
-        : baseContext),
+      ...bootstrap.nextContext,
       step: "showing_events",
       state: "showing_events",
       lastSearch: parsedSearch,
