@@ -23,9 +23,24 @@ type InboundMessageRow = {
   }>;
 };
 
+type HistoryMessageRow = {
+  id: string;
+  conversation_id: string | null;
+  customer_id: string | null;
+  direction: "inbound" | "outbound";
+  body: string | null;
+  created_at: string;
+  provider_message_id: string | null;
+  raw_metadata: Record<string, unknown> | null;
+};
+
 type PaidReservationRow = {
   conversation_id: string | null;
   customer_id: string;
+  customers: MaybeArray<{
+    name: string | null;
+    whatsapp_phone: string;
+  }>;
   event_sessions: MaybeArray<{
     id: string;
     starts_at: string;
@@ -227,6 +242,35 @@ async function fetchAllRows<T>(
   return rows;
 }
 
+async function fetchHistoryMessagesForCustomers({
+  supabase,
+  customerIds,
+  endIso,
+}: {
+  supabase: ReturnType<typeof getSupabaseAdmin>;
+  customerIds: string[];
+  endIso: string;
+}) {
+  const rows: HistoryMessageRow[] = [];
+  const chunkSize = 100;
+
+  for (let index = 0; index < customerIds.length; index += chunkSize) {
+    const chunk = customerIds.slice(index, index + chunkSize);
+    const query = supabase
+      .from("whatsapp_messages")
+      .select("id, conversation_id, customer_id, direction, body, created_at, provider_message_id, raw_metadata")
+      .in("customer_id", chunk)
+      .in("direction", ["inbound", "outbound"])
+      .lt("created_at", endIso)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .returns<HistoryMessageRow[]>();
+    rows.push(...await fetchAllRows(query));
+  }
+
+  return rows;
+}
+
 function addPhoneWithCandidates(target: Set<string>, phone: string | null | undefined) {
   for (const candidate of buildWhatsAppPhoneCandidates(phone)) {
     target.add(candidate);
@@ -255,14 +299,6 @@ export async function getAdminContactActivity(input: {
     .order("created_at", { ascending: true });
   if (rangeStart) messagesQuery = messagesQuery.gte("created_at", rangeStart.toISOString());
   const typedMessagesQuery = messagesQuery.returns<InboundMessageRow[]>();
-  let outboundMessagesQuery = supabase
-    .from("whatsapp_messages")
-    .select("conversation_id, customer_id, direction, body, created_at, provider_message_id, raw_metadata, customers(name, whatsapp_phone), conversations(context, status)")
-    .eq("direction", "outbound")
-    .lt("created_at", endIso)
-    .order("created_at", { ascending: true });
-  if (rangeStart) outboundMessagesQuery = outboundMessagesQuery.gte("created_at", rangeStart.toISOString());
-  const typedOutboundMessagesQuery = outboundMessagesQuery.returns<InboundMessageRow[]>();
   const adminPhonesQuery = supabase
     .from("admin_users")
     .select("phone")
@@ -280,7 +316,7 @@ export async function getAdminContactActivity(input: {
   if (input.eventIds.length) {
     const paidReservationsQuery = supabase
       .from("reservations")
-      .select("conversation_id, customer_id, event_sessions!inner(id, event_id, starts_at, events!inner(title, artist_name)), orders!inner(status, total_amount_cents)")
+      .select("conversation_id, customer_id, customers(name, whatsapp_phone), event_sessions!inner(id, event_id, starts_at, events!inner(title, artist_name)), orders!inner(status, total_amount_cents)")
       .in("event_sessions.event_id", input.eventIds)
       .eq("orders.status", "paid")
       .gt("orders.total_amount_cents", 0)
@@ -288,9 +324,13 @@ export async function getAdminContactActivity(input: {
     paidReservations = await fetchAllRows(paidReservationsQuery);
   }
 
-  const [allMessages, allOutboundMessages, adminPhoneRows, gatePhoneRows, fixedGatePhoneRows] = await Promise.all([
+  const [
+    allMessages,
+    adminPhoneRows,
+    gatePhoneRows,
+    fixedGatePhoneRows,
+  ] = await Promise.all([
     fetchAllRows(typedMessagesQuery),
-    fetchAllRows(typedOutboundMessagesQuery),
     fetchAllRows(adminPhonesQuery),
     fetchAllRows(gatePhonesQuery),
     fetchAllRows(fixedGatePhonesQuery),
@@ -299,12 +339,14 @@ export async function getAdminContactActivity(input: {
   for (const row of adminPhoneRows) addPhoneWithCandidates(operationalPhones, row.phone);
   for (const row of gatePhoneRows) addPhoneWithCandidates(operationalPhones, row.phone);
   for (const row of fixedGatePhoneRows) addPhoneWithCandidates(operationalPhones, row.phone);
-  const paidConversationIds = new Set(
-    paidReservations.map((reservation) => reservation.conversation_id).filter((id): id is string => Boolean(id)),
-  );
   const paidCustomerIds = new Set(paidReservations.map((reservation) => reservation.customer_id));
+  const customerInfoById = new Map<string, { name: string | null; whatsapp_phone: string }>();
   const purchasedEventsByCustomer = new Map<string, AdminContactActivity["contacts"][number]["purchasedEvents"]>();
   for (const reservation of paidReservations) {
+    const customer = first(reservation.customers);
+    if (customer?.whatsapp_phone && !phoneMatches(operationalPhones, customer.whatsapp_phone)) {
+      customerInfoById.set(reservation.customer_id, customer);
+    }
     const session = first(reservation.event_sessions);
     const event = first(session?.events);
     if (!session || !event) continue;
@@ -321,14 +363,9 @@ export async function getAdminContactActivity(input: {
   }
   const userMessages = allMessages.filter((message) => {
     const customer = first(message.customers);
-    return Boolean(
-      message.customer_id &&
-      customer?.whatsapp_phone &&
-      !phoneMatches(operationalPhones, customer.whatsapp_phone),
-    );
-  });
-  const userOutboundMessages = allOutboundMessages.filter((message) => {
-    const customer = first(message.customers);
+    if (message.customer_id && customer?.whatsapp_phone && !phoneMatches(operationalPhones, customer.whatsapp_phone)) {
+      customerInfoById.set(message.customer_id, customer);
+    }
     return Boolean(
       message.customer_id &&
       customer?.whatsapp_phone &&
@@ -337,24 +374,37 @@ export async function getAdminContactActivity(input: {
   });
   const messages = input.includeAllContacts
     ? userMessages
-    : userMessages.filter((message) => Boolean(message.conversation_id && paidConversationIds.has(message.conversation_id)));
-  const outboundMessages = input.includeAllContacts
-    ? userOutboundMessages
-    : userOutboundMessages.filter((message) => Boolean(message.conversation_id && paidConversationIds.has(message.conversation_id)));
-  const lastOutboundMessageByCustomer = new Map<string, { body: string | null; createdAt: string }>();
-  for (const message of outboundMessages) {
+    : userMessages.filter((message) => Boolean(message.customer_id && paidCustomerIds.has(message.customer_id)));
+  const displayedCustomerIds = new Set<string>();
+  for (const message of messages) {
+    if (message.customer_id) displayedCustomerIds.add(message.customer_id);
+  }
+  if (!input.includeAllContacts) {
+    for (const customerId of paidCustomerIds) {
+      if (customerInfoById.has(customerId)) displayedCustomerIds.add(customerId);
+    }
+  }
+  const historyMessages = await fetchHistoryMessagesForCustomers({
+    supabase,
+    customerIds: [...displayedCustomerIds],
+    endIso,
+  });
+  const lastOutboundMessageByCustomer = new Map<string, { body: string | null; createdAt: string; id: string }>();
+  for (const message of historyMessages) {
+    if (message.direction !== "outbound") continue;
     if (!message.customer_id) continue;
     const existing = lastOutboundMessageByCustomer.get(message.customer_id);
-    if (!existing || message.created_at > existing.createdAt) {
+    if (!existing || message.created_at > existing.createdAt || (message.created_at === existing.createdAt && message.id > existing.id)) {
       lastOutboundMessageByCustomer.set(message.customer_id, {
         body: compactMessageBody(message.body),
         createdAt: message.created_at,
+        id: message.id,
       });
     }
   }
   const conversationMessagesByCustomer = new Map<string, AdminContactActivity["contacts"][number]["conversationMessages"]>();
-  for (const message of [...messages, ...outboundMessages].sort((left, right) =>
-    left.created_at.localeCompare(right.created_at),
+  for (const message of historyMessages.sort((left, right) =>
+    left.created_at.localeCompare(right.created_at) || left.id.localeCompare(right.id),
   )) {
     if (!message.customer_id) continue;
     const existing = conversationMessagesByCustomer.get(message.customer_id) ?? [];
@@ -425,6 +475,40 @@ export async function getAdminContactActivity(input: {
     messagesByDay.set(messageDayKey, (messagesByDay.get(messageDayKey) ?? 0) + 1);
   }
 
+  if (!input.includeAllContacts) {
+    for (const customerId of displayedCustomerIds) {
+      if (contactByCustomer.has(customerId)) continue;
+      const customer = customerInfoById.get(customerId);
+      if (!customer) continue;
+      const conversationMessages = conversationMessagesByCustomer.get(customerId) ?? [];
+      const fallbackDate = purchasedEventsByCustomer.get(customerId)?.[0]?.startsAt ?? endIso;
+      const firstContactAt = conversationMessages[0]?.createdAt ?? fallbackDate;
+      const lastContactAt = conversationMessages.at(-1)?.createdAt ?? firstContactAt;
+      const lastInbound = [...historyMessages]
+        .reverse()
+        .find((message) => message.customer_id === customerId && message.direction === "inbound");
+      contactByCustomer.set(customerId, {
+        customerId,
+        name: customer.name,
+        phone: customer.whatsapp_phone,
+        messageCount: 0,
+        firstContactAt,
+        lastContactAt,
+        purchasedTicket: paidCustomerIds.has(customerId),
+        stoppedAtState: "idle",
+        stoppedAtLabel: getStoppedAtLabel("idle", paidCustomerIds.has(customerId)),
+        lastInboundMessage: compactMessageBody(lastInbound?.body),
+        lastOutboundMessage: lastOutboundMessageByCustomer.get(customerId)?.body ?? null,
+        conversationMessages,
+        purchasedEvents: purchasedEventsByCustomer.get(customerId) ?? [],
+      });
+    }
+  }
+
+  for (const contact of contactByCustomer.values()) {
+    contact.messageCount = contact.conversationMessages.length || contact.messageCount;
+  }
+
   const intervals = [6, 12, 18, 24].map((endHour) => ({
     endHour,
     uniqueContacts: contactIdsByInterval.get(endHour)?.size ?? 0,
@@ -479,7 +563,7 @@ export async function getAdminContactActivity(input: {
     range,
     periodLabel: periodLabels[range],
     dayKey: todayKey,
-    totalUniqueContacts: contactByCustomer.size,
+    totalUniqueContacts: new Set(messages.map((message) => message.customer_id).filter(Boolean)).size,
     totalMessages: messages.length,
     peakEndHour: peak.uniqueContacts > 0 ? peak.endHour : null,
     peakUniqueContacts: peak.uniqueContacts,
