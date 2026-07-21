@@ -82,6 +82,7 @@ import {
   isPublicHelpCommand,
 } from "@/lib/tickets/services/publicHelp";
 import {
+  buildPublicHelpMoreResultsResponse,
   buildPublicHelpSelectedTopicResponse,
   buildPublicHelpSearchResponse,
   isPublicHelpFlowState,
@@ -2275,35 +2276,13 @@ function handlePublicHelpMessage({
   }
 
   if (baseContext.state === "help_results") {
-    const normalizedText = normalizeIntentText(text);
+    const moreResultsResponse = buildPublicHelpMoreResultsResponse({
+      baseContext,
+      text,
+    });
 
-    if (normalizedText === "ver mais" || normalizedText === "mais") {
-      const previousQuery = baseContext.publicHelp?.query;
-
-      if (!previousQuery) {
-        return {
-          reply: formatPublicHelpPrompt(),
-          nextContext: {
-            ...baseContext,
-            step: "help_topic_collecting",
-            state: "help_topic_collecting",
-          },
-        };
-      }
-
-      if (!baseContext.publicHelp?.hasMore) {
-        return {
-          reply:
-            "NÃƒÂ£o encontrei outros tÃƒÂ³picos para essa pesquisa. Digite outras duas palavras para uma nova busca de ajuda ou *VOLTAR* para voltar onde estava.",
-          nextContext: baseContext,
-        };
-      }
-
-      return buildPublicHelpSearchResponse({
-        baseContext,
-        query: previousQuery,
-        page: (baseContext.publicHelp.page ?? 0) + 1,
-      });
+    if (moreResultsResponse) {
+      return moreResultsResponse;
     }
 
     const selectedTopicResponse = buildPublicHelpSelectedTopicResponse({

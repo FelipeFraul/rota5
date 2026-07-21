@@ -131,3 +131,44 @@ export function buildPublicHelpSelectedTopicResponse({
 
   return null;
 }
+
+export function buildPublicHelpMoreResultsResponse({
+  baseContext,
+  text,
+}: {
+  baseContext: TicketConversationState;
+  text: string;
+}) {
+  const normalizedText = normalizeHelpFlowText(text);
+
+  if (normalizedText !== "ver mais" && normalizedText !== "mais") {
+    return null;
+  }
+
+  const previousQuery = baseContext.publicHelp?.query;
+
+  if (!previousQuery) {
+    return {
+      reply: formatPublicHelpPrompt(),
+      nextContext: {
+        ...baseContext,
+        step: "help_topic_collecting" as const,
+        state: "help_topic_collecting" as const,
+      },
+    };
+  }
+
+  if (!baseContext.publicHelp?.hasMore) {
+    return {
+      reply:
+        "NÃƒÂ£o encontrei outros tÃƒÂ³picos para essa pesquisa. Digite outras duas palavras para uma nova busca de ajuda ou *VOLTAR* para voltar onde estava.",
+      nextContext: baseContext,
+    };
+  }
+
+  return buildPublicHelpSearchResponse({
+    baseContext,
+    query: previousQuery,
+    page: (baseContext.publicHelp.page ?? 0) + 1,
+  });
+}
