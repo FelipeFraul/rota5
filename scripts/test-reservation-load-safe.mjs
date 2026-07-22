@@ -3,10 +3,20 @@ import path from "node:path";
 import { performance } from "node:perf_hooks";
 import { createClient } from "@supabase/supabase-js";
 
-const READ_CONCURRENCY = [50, 100, 300];
-const RESERVE_CONCURRENCY = [10, 50, 100, 300];
-const MAX_STAGE_MS = 45_000;
-const SEAT_COUNT = 300;
+const LOAD_PROFILES = {
+  full: {
+    seatCount: 300,
+    readConcurrency: [50, 100, 300],
+    reserveConcurrency: [10, 50, 100, 300],
+    maxStageMs: 45_000,
+  },
+  smoke: {
+    seatCount: 10,
+    readConcurrency: [5],
+    reserveConcurrency: [5],
+    maxStageMs: 45_000,
+  },
+};
 
 function parseEnvFile(filePath) {
   const values = {};
@@ -41,16 +51,47 @@ const env = {
   ...process.env,
 };
 
-if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+function resolveLoadConfig(rawProfile) {
+  const normalizedProfile = rawProfile?.trim() || "full";
+  const config = LOAD_PROFILES[normalizedProfile];
+
+  if (!config) {
+    console.error(
+      JSON.stringify(
+        {
+          ok: false,
+          error: "invalid_reservation_load_profile",
+          received: rawProfile,
+          accepted: Object.keys(LOAD_PROFILES),
+        },
+        null,
+        2,
+      ),
+    );
+    process.exitCode = 1;
+    return null;
+  }
+
+  return {
+    loadProfile: normalizedProfile,
+    ...config,
+  };
+}
+
+const loadConfig = resolveLoadConfig(env.RESERVATION_LOAD_PROFILE);
+
+if (loadConfig && (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY)) {
   throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.");
 }
 
-const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-  },
-});
+const supabase = loadConfig
+  ? createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    })
+  : null;
 
 const runId = `LOAD_RESERVATION_${Date.now()}`;
 const created = {
@@ -102,12 +143,12 @@ function classifyError(error) {
   return "unexpected";
 }
 
-async function must(label, query) {
+async function must(label, queryFactory) {
   let lastError = null;
 
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      const { data, error } = await query;
+      const { data, error } = await queryFactory();
 
       if (error) {
         lastError = error;
@@ -158,7 +199,7 @@ async function timed(fn) {
 async function setupCatalog() {
   const venue = await must(
     "insert venue",
-    supabase
+    () => supabase
       .from("venues")
       .insert({
         name: `${runId} Venue`,
@@ -174,7 +215,7 @@ async function setupCatalog() {
 
   const event = await must(
     "insert event",
-    supabase
+    () => supabase
       .from("events")
       .insert({
         title: `${runId} Event`,
@@ -191,7 +232,7 @@ async function setupCatalog() {
 
   const session = await must(
     "insert session",
-    supabase
+    () => supabase
       .from("event_sessions")
       .insert({
         event_id: event.id,
@@ -206,13 +247,13 @@ async function setupCatalog() {
 
   const section = await must(
     "insert section",
-    supabase
+    () => supabase
       .from("venue_sections")
       .insert({
         venue_id: venue.id,
         name: `${runId} Section`,
         slug: runId.toLowerCase().replace(/_/g, "-"),
-        capacity: SEAT_COUNT,
+        capacity: loadConfig.seatCount,
         has_numbered_seats: true,
         status: "active",
       })
@@ -223,7 +264,7 @@ async function setupCatalog() {
 
   const price = await must(
     "insert price",
-    supabase
+    () => supabase
       .from("ticket_prices")
       .insert({
         session_id: session.id,
@@ -242,10 +283,10 @@ async function setupCatalog() {
 
   const seats = await must(
     "insert seats",
-    supabase
+    () => supabase
       .from("seats")
       .insert(
-        Array.from({ length: SEAT_COUNT }, (_, index) => ({
+        Array.from({ length: loadConfig.seatCount }, (_, index) => ({
           venue_id: venue.id,
           section_id: section.id,
           row_label: "A",
@@ -261,7 +302,7 @@ async function setupCatalog() {
 
   const sessionSeats = await must(
     "insert session seats",
-    supabase
+    () => supabase
       .from("session_seats")
       .insert(
         created.seatIds.map((seatId) => ({
@@ -280,7 +321,7 @@ async function setupCatalog() {
 async function readScenario() {
   const events = await must(
     "read events",
-    supabase
+    () => supabase
       .from("events")
       .select("id, title, event_sessions!inner(id, status, starts_at)")
       .eq("id", created.eventId)
@@ -291,7 +332,7 @@ async function readScenario() {
 
   const sections = await must(
     "read sections and prices",
-    supabase
+    () => supabase
       .from("venue_sections")
       .select("id, name, has_numbered_seats, ticket_prices!inner(id, ticket_type, price_cents, fee_cents, status)")
       .eq("id", created.sectionId)
@@ -302,7 +343,7 @@ async function readScenario() {
 
   const seats = await must(
     "read seat availability",
-    supabase
+    () => supabase
       .from("session_seats")
       .select("id", { count: "exact", head: true })
       .eq("session_id", created.sessionId)
@@ -351,7 +392,7 @@ async function runReadLoad(concurrency) {
   );
   const summary = summarizeResults("read", concurrency, results);
   summary.stageMs = round(performance.now() - stageStart);
-  summary.over45s = summary.stageMs > MAX_STAGE_MS;
+  summary.over45s = summary.stageMs > loadConfig.maxStageMs;
   return summary;
 }
 
@@ -363,7 +404,7 @@ function phoneFor(stage, index) {
 async function createCustomers(stage, count) {
   const customers = await must(
     "insert customers",
-    supabase
+    () => supabase
       .from("customers")
       .insert(
         Array.from({ length: count }, (_, index) => ({
@@ -385,7 +426,7 @@ async function createCustomers(stage, count) {
 async function reserveScenario(customerId, seatId) {
   const data = await must(
     "reserve seats",
-    supabase.rpc("reserve_seats", {
+    () => supabase.rpc("reserve_seats", {
       p_customer_id: customerId,
       p_conversation_id: null,
       p_session_id: created.sessionId,
@@ -404,7 +445,7 @@ async function reserveScenario(customerId, seatId) {
 async function validateReservationStage(customerIds) {
   const reservations = await must(
     "load stage reservations",
-    supabase
+    () => supabase
       .from("reservations")
       .select("id, customer_id, status, orders(id, status), reservation_items(id, seat_id, session_seat_id)")
       .in("customer_id", customerIds)
@@ -452,7 +493,7 @@ async function validateReservationStage(customerIds) {
 
   const sessionSeats = await must(
     "load session seats",
-    supabase
+    () => supabase
       .from("session_seats")
       .select("seat_id, status, current_reservation_id")
       .eq("session_id", created.sessionId)
@@ -481,7 +522,7 @@ async function cancelReservations(reservationIds) {
       timed(async () =>
         must(
           "cancel reservation",
-          supabase.rpc("cancel_pending_reservation", {
+          () => supabase.rpc("cancel_pending_reservation", {
             p_reservation_id: reservationId,
             p_customer_id: null,
             p_reason: "load_test_cleanup",
@@ -516,7 +557,7 @@ async function runReserveLoad(concurrency, stage) {
   const validationAfterCleanup = await validateReservationStage(customerIds);
 
   summary.stageMs = round(performance.now() - stageStart);
-  summary.over45s = summary.stageMs > MAX_STAGE_MS;
+  summary.over45s = summary.stageMs > loadConfig.maxStageMs;
   summary.validationBeforeCleanup = validationBeforeCleanup;
   summary.cleanup = cleanup;
   summary.validationAfterCleanup = validationAfterCleanup;
@@ -530,59 +571,65 @@ async function finalCleanup() {
   if (reservationIds.length > 0) {
     await must(
       "cleanup orders",
-      supabase.from("orders").delete().in("reservation_id", reservationIds),
+      () => supabase.from("orders").delete().in("reservation_id", reservationIds),
     );
     await must(
       "cleanup reservations",
-      supabase.from("reservations").delete().in("id", reservationIds),
+      () => supabase.from("reservations").delete().in("id", reservationIds),
     );
   }
 
   if (created.sessionId) {
     await must(
       "cleanup session seats",
-      supabase.from("session_seats").delete().eq("session_id", created.sessionId),
+      () => supabase.from("session_seats").delete().eq("session_id", created.sessionId),
     );
   }
 
   if (created.seatIds.length > 0) {
-    await must("cleanup seats", supabase.from("seats").delete().in("id", created.seatIds));
+    await must("cleanup seats", () =>
+      supabase.from("seats").delete().in("id", created.seatIds),
+    );
   }
 
   if (created.ticketPriceId) {
     await must(
       "cleanup ticket price",
-      supabase.from("ticket_prices").delete().eq("id", created.ticketPriceId),
+      () => supabase.from("ticket_prices").delete().eq("id", created.ticketPriceId),
     );
   }
 
   if (created.sectionId) {
     await must(
       "cleanup section",
-      supabase.from("venue_sections").delete().eq("id", created.sectionId),
+      () => supabase.from("venue_sections").delete().eq("id", created.sectionId),
     );
   }
 
   if (created.sessionId) {
     await must(
       "cleanup session",
-      supabase.from("event_sessions").delete().eq("id", created.sessionId),
+      () => supabase.from("event_sessions").delete().eq("id", created.sessionId),
     );
   }
 
   if (created.eventId) {
-    await must("cleanup event", supabase.from("events").delete().eq("id", created.eventId));
+    await must("cleanup event", () =>
+      supabase.from("events").delete().eq("id", created.eventId),
+    );
   }
 
   if (created.venueId) {
-    await must("cleanup venue", supabase.from("venues").delete().eq("id", created.venueId));
+    await must("cleanup venue", () =>
+      supabase.from("venues").delete().eq("id", created.venueId),
+    );
   }
 
   const customerIds = [...created.customerIds];
   if (customerIds.length > 0) {
     await must(
       "cleanup customers",
-      supabase.from("customers").delete().in("id", customerIds),
+      () => supabase.from("customers").delete().in("id", customerIds),
     );
   }
 
@@ -603,7 +650,7 @@ async function verifyCleanup() {
     created.sessionId
       ? must(
           "verify session seats",
-          supabase
+          () => supabase
             .from("session_seats")
             .select("id", { count: "exact", head: true })
             .eq("session_id", created.sessionId),
@@ -612,7 +659,7 @@ async function verifyCleanup() {
     created.reservationIds.size
       ? must(
           "verify reservations",
-          supabase
+          () => supabase
             .from("reservations")
             .select("id, status")
             .in("id", [...created.reservationIds])
@@ -622,7 +669,7 @@ async function verifyCleanup() {
     created.customerIds.size
       ? must(
           "verify customers",
-          supabase
+          () => supabase
             .from("customers")
             .select("id")
             .in("id", [...created.customerIds]),
@@ -638,11 +685,19 @@ async function verifyCleanup() {
 }
 
 async function main() {
+  if (!loadConfig) {
+    return;
+  }
+
   const startedAt = new Date().toISOString();
   const results = {
     runId,
     startedAt,
-    seatCount: SEAT_COUNT,
+    loadProfile: loadConfig.loadProfile,
+    seatCount: loadConfig.seatCount,
+    readConcurrency: loadConfig.readConcurrency,
+    reserveConcurrency: loadConfig.reserveConcurrency,
+    maxStageMs: loadConfig.maxStageMs,
     read: [],
     reserve: [],
     cleanup: null,
@@ -651,12 +706,12 @@ async function main() {
   try {
     await setupCatalog();
 
-    for (const concurrency of READ_CONCURRENCY) {
+    for (const concurrency of loadConfig.readConcurrency) {
       const summary = await runReadLoad(concurrency);
       results.read.push(summary);
     }
 
-    for (const concurrency of RESERVE_CONCURRENCY) {
+    for (const concurrency of loadConfig.reserveConcurrency) {
       if (concurrency > created.seatIds.length) {
         results.reserve.push({
           name: "reserve",
@@ -691,6 +746,10 @@ async function main() {
     results.cleanup.sessionSeatsRemaining === 0;
 
   console.log(JSON.stringify(results, null, 2));
+
+  if (!results.pass) {
+    process.exitCode = 1;
+  }
 }
 
 main().catch((error) => {
@@ -705,5 +764,5 @@ main().catch((error) => {
       2,
     ),
   );
-  process.exit(1);
+  process.exitCode = 1;
 });
