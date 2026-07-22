@@ -10427,6 +10427,18 @@ export async function routeTicketMessage({
   const gateCommand = parseGateCommand(text);
   const reservedAdminCommand = isReservedAdminCommand(text);
 
+  if (
+    shouldSendPublicInitialHelp(baseContext) &&
+    previousState.state !== "admin_auth_pending" &&
+    previousState.state !== "admin_menu" &&
+    !isAdminSubmenuState(previousState.state) &&
+    !previousState.admin?.sessionId &&
+    !isFixedGateAccessFlowState(previousState.state) &&
+    !isGateAccessFlowState(previousState.state)
+  ) {
+    return buildPublicInitialHelpResponse(baseContext);
+  }
+
   const publicEntryGateResponse = buildPublicEntryGateResponse({
     incomingIntent,
     baseContext,

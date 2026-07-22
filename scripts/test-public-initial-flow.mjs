@@ -36,7 +36,7 @@ const customer = {
   name: null,
 };
 
-function routePublicText(text, context = buildInitialConversationState()) {
+function routePublicText(text, context = buildInitialConversationState(), messageType = "text") {
   return routeTicketMessage({
     customer,
     conversation: {
@@ -44,7 +44,7 @@ function routePublicText(text, context = buildInitialConversationState()) {
       context,
     },
     text,
-    messageType: "text",
+    messageType,
   });
 }
 
@@ -57,6 +57,24 @@ function assertInitialOpeningMessages(result) {
   assert.equal(result.outboundMessages[1].body, TICKET_MESSAGES.genericHelpCommands);
   assert.equal(result.outboundMessages[1].suppressTitle, true);
   assert.equal(result.nextContext.publicInitialHelpSent, true);
+}
+
+function assertNotInitialOpeningMessages(result) {
+  assert.notDeepEqual(
+    result.outboundMessages?.map((message) => message.body),
+    [TICKET_MESSAGES.genericHelp, TICKET_MESSAGES.genericHelpCommands],
+  );
+}
+
+async function assertActiveContextDoesNotBootstrap(text, context) {
+  try {
+    const result = await routePublicText(text, context);
+    assertNotInitialOpeningMessages(result);
+    return result;
+  } catch (error) {
+    assert.match(String(error), /supabase|env|environment|url|key/i);
+    return null;
+  }
 }
 
 function sliceBetween(source, startPattern, endPattern) {
@@ -108,14 +126,100 @@ test("execucao real: saudacao posterior e purchase support nao repetem abertura"
   assert.equal(purchaseSupport.nextContext.publicInitialHelpSent, true);
 });
 
-test("execucao real: purchase support inicial inclui abertura uma unica vez e resposta especifica", async () => {
-  const result = await routePublicText("nao consigo comprar ingresso online");
+test("execucao real: primeiro contato publico sempre envia somente abertura oficial", async () => {
+  const cases = [
+    ["Oi", {}],
+    ["AJUDA", {}],
+    ["cortesia", {}],
+    ["", {}],
+    ["1", {}],
+    ["Willian", {}],
+    ["TODOS", {}],
+  ];
 
-  assert.equal(result.outboundMessages?.length, 3);
-  assert.equal(result.outboundMessages[0].body, TICKET_MESSAGES.genericHelp);
-  assert.equal(result.outboundMessages[1].body, TICKET_MESSAGES.genericHelpCommands);
-  assert.equal(result.outboundMessages[2].body, result.reply);
-  assert.equal(result.nextContext.publicInitialHelpSent, true);
+  for (const [text, context] of cases) {
+    const result = await routePublicText(text, context);
+    assertInitialOpeningMessages(result);
+    assert.equal(result.reply, TICKET_MESSAGES.genericHelp);
+  }
+
+  const mediaResult = await routePublicText("", {}, "image");
+  assertInitialOpeningMessages(mediaResult);
+  assert.equal(mediaResult.reply, TICKET_MESSAGES.genericHelp);
+});
+
+test("execucao real: bootstrap nao se repete apos contexto inicializado", async () => {
+  const initializedContext = {
+    ...buildInitialConversationState(),
+    publicInitialHelpSent: true,
+  };
+  const help = await routePublicText("AJUDA", initializedContext);
+
+  assert.notEqual(help.outboundMessages?.[0]?.body, TICKET_MESSAGES.genericHelp);
+});
+
+test("execucao real: excecao admin_auth_pending nao recebe bootstrap", async () => {
+  const result = await routePublicText("sair", {
+    ...buildInitialConversationState(),
+    state: "admin_auth_pending",
+    step: "admin_auth_pending",
+    admin: {
+      authChallengeId: "challenge-public-initial",
+      authChallengeExpiresAt: new Date(Date.now() + 60_000).toISOString(),
+    },
+  });
+
+  assertNotInitialOpeningMessages(result);
+  assert.equal(result.nextContext.state, "idle");
+});
+
+test("execucao real: excecoes administrativas ativas nao recebem bootstrap", async () => {
+  const adminMenuContext = {
+    ...buildInitialConversationState(),
+    state: "admin_menu",
+    step: "admin_menu",
+  };
+  const adminSubmenuContext = {
+    ...buildInitialConversationState(),
+    state: "admin_events_menu",
+    step: "admin_events_menu",
+  };
+  const adminSessionContext = {
+    ...buildInitialConversationState(),
+    admin: {
+      sessionId: "session-public-initial",
+    },
+  };
+
+  await assertActiveContextDoesNotBootstrap("menu", adminMenuContext);
+  await assertActiveContextDoesNotBootstrap("menu", adminSubmenuContext);
+  await assertActiveContextDoesNotBootstrap("Oi", adminSessionContext);
+});
+
+test("execucao real: excecoes de portaria e cozinha ativas nao recebem bootstrap", async () => {
+  const fixedGateResult = await routePublicText("senha", {
+    ...buildInitialConversationState(),
+    state: "fixed_gate_passphrase_collecting",
+    step: "fixed_gate_passphrase_collecting",
+  });
+  const gateSelectionResult = await routePublicText("99", {
+    ...buildInitialConversationState(),
+    state: "gate_access_selecting",
+    step: "gate_access_selecting",
+    gateAccess: {
+      mode: "gate",
+      lastAccesses: [],
+    },
+  });
+  const gatePassphraseResult = await routePublicText("senha", {
+    ...buildInitialConversationState(),
+    state: "gate_access_passphrase_collecting",
+    step: "gate_access_passphrase_collecting",
+  });
+
+  assertNotInitialOpeningMessages(fixedGateResult);
+  assertNotInitialOpeningMessages(gateSelectionResult);
+  assertNotInitialOpeningMessages(gatePassphraseResult);
 });
 
 test("mensagens publicas posteriores tambem seguem pelo caminho imediato", () => {
@@ -179,18 +283,34 @@ test("abertura publica inicial usa duas mensagens separadas sem titulo atendimen
   );
 });
 
-test("saudacao social inicial chama bootstrap oficial e nao genericHelpPrompt", () => {
+test("primeiro contato publico chama bootstrap oficial antes de caminhos publicos", () => {
   const initialIdleBlock = sliceBetween(
     router,
-    /shouldSendPublicInitialHelp\(previousState\)/,
-    /const publicHelpResult/,
+    /const reservedAdminCommand = isReservedAdminCommand\(text\)/,
+    /const publicEntryGateResponse/,
   );
 
-  assert.match(initialIdleBlock, /incomingIntent\.classification === "greeting"/);
-  assert.match(initialIdleBlock, /incomingIntent\.classification === "social_reply"/);
-  assert.match(initialIdleBlock, /incomingIntent\.classification === "courtesy"/);
+  assert.match(initialIdleBlock, /shouldSendPublicInitialHelp\(baseContext\)/);
   assert.match(initialIdleBlock, /return buildPublicInitialHelpResponse\(baseContext\)/);
+  assert.match(initialIdleBlock, /previousState\.state !== "admin_auth_pending"/);
+  assert.match(initialIdleBlock, /previousState\.state !== "admin_menu"/);
+  assert.match(initialIdleBlock, /!isAdminSubmenuState\(previousState\.state\)/);
+  assert.match(initialIdleBlock, /!previousState\.admin\?\.sessionId/);
+  assert.match(initialIdleBlock, /!isFixedGateAccessFlowState\(previousState\.state\)/);
+  assert.match(initialIdleBlock, /!isGateAccessFlowState\(previousState\.state\)/);
   assert.doesNotMatch(initialIdleBlock, /genericHelpPrompt/);
+});
+
+test("caminhos publicos normais ficam depois da guarda de bootstrap inicial", () => {
+  const bootstrapIndex = router.indexOf("if (\n    shouldSendPublicInitialHelp(baseContext)");
+  const publicEntryIndex = router.indexOf("const publicEntryGateResponse = buildPublicEntryGateResponse");
+  const earlyHelpIndex = router.indexOf("const publicHelpResult = handlePublicHelpMessage");
+  const courtesyIndex = router.indexOf('if (normalizeAdminText(text) === "cortesia")');
+
+  assert.ok(bootstrapIndex > 0);
+  assert.ok(publicEntryIndex > bootstrapIndex);
+  assert.ok(earlyHelpIndex > bootstrapIndex);
+  assert.ok(courtesyIndex > bootstrapIndex);
 });
 
 test("primeira busca e primeiro TODOS recebem bootstrap sem repetir depois", () => {
