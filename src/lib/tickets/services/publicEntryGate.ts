@@ -13,6 +13,31 @@ type PublicEntryGateIntent = {
 
 export const LOW_CONFIDENCE_PUBLIC_PROMPT = TICKET_MESSAGES.genericHelpPrompt;
 
+function buildSeparatedPublicPrompt(baseContext: TicketConversationState) {
+  const outboundMessages: Array<{
+    type: "text";
+    body: string;
+    suppressTitle: boolean;
+  }> = [
+    {
+      type: "text",
+      body: TICKET_MESSAGES.genericHelp,
+      suppressTitle: true,
+    },
+    {
+      type: "text",
+      body: TICKET_MESSAGES.genericHelpCommands,
+      suppressTitle: true,
+    },
+  ];
+
+  return {
+    reply: TICKET_MESSAGES.genericHelp,
+    outboundMessages,
+    nextContext: baseContext,
+  };
+}
+
 function isOperationalState(state?: string) {
   return (
     state?.startsWith("admin") ||
@@ -32,6 +57,11 @@ export function buildPublicEntryGateResponse<TIntent extends PublicEntryGateInte
   const withIntent = (output: {
     reply: string;
     nextContext: TicketConversationState;
+    outboundMessages?: Array<{
+      type: "text";
+      body: string;
+      suppressTitle?: boolean;
+    }>;
   }) => ({
     ...output,
     intentResolution: incomingIntent,
@@ -57,30 +87,21 @@ export function buildPublicEntryGateResponse<TIntent extends PublicEntryGateInte
     !isOperationalState(baseContext.state) &&
     incomingIntent.classification === "greeting"
   ) {
-    return withIntent({
-      reply: LOW_CONFIDENCE_PUBLIC_PROMPT,
-      nextContext: baseContext,
-    });
+    return withIntent(buildSeparatedPublicPrompt(baseContext));
   }
 
   if (
     !isOperationalState(baseContext.state) &&
     incomingIntent.classification === "social_reply"
   ) {
-    return withIntent({
-      reply: LOW_CONFIDENCE_PUBLIC_PROMPT,
-      nextContext: baseContext,
-    });
+    return withIntent(buildSeparatedPublicPrompt(baseContext));
   }
 
   if (
     !isOperationalState(baseContext.state) &&
     incomingIntent.classification === "courtesy"
   ) {
-    return withIntent({
-      reply: LOW_CONFIDENCE_PUBLIC_PROMPT,
-      nextContext: baseContext,
-    });
+    return withIntent(buildSeparatedPublicPrompt(baseContext));
   }
 
   return null;

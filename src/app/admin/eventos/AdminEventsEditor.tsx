@@ -1,9 +1,11 @@
 ﻿"use client";
 
 import { FormEvent, type MouseEvent, useCallback, useEffect, useState } from "react";
+import { AdminTableMapCalibrator } from "@/app/admin/AdminTableMapCalibrator";
 import BrandLogo from "@/app/BrandLogo";
+import { OFFICIAL_TABLE_MAP_PLACES } from "@/lib/tickets/tableMap/officialPlaces";
 
-type ActiveTab = "event" | "sessions" | "sections" | "prices" | "courtesy";
+type ActiveTab = "event" | "sessions" | "sections" | "prices" | "courtesy" | "tableMap";
 
 type EventSummary = {
   eventId: string;
@@ -1001,11 +1003,6 @@ function ContactsModal({
   );
 }
 
-function draftChanged(event: EventDetails | null, draft: Draft | null) {
-  if (!event || !draft) return false;
-  return JSON.stringify(buildDraft(event)) !== JSON.stringify(draft);
-}
-
 function sortDraftRowsBySectionOrder<T extends { sectionId: string | null }>(
   rows: T[],
   sections: Draft["sections"],
@@ -1706,21 +1703,9 @@ export function AdminEventsEditor() {
     await persistDraft();
   }
 
-  async function changeTab(nextTab: ActiveTab) {
+  function changeTab(nextTab: ActiveTab) {
     if (nextTab === activeTab || saving) return;
-
-    if (!draftChanged(selected, draft)) {
-      setActiveTab(nextTab);
-      return;
-    }
-
-    const saved = await persistDraft({
-      successMessage: "Alterações salvas. Dados atualizados para a próxima etapa.",
-    });
-
-    if (saved) {
-      setActiveTab(nextTab);
-    }
+    setActiveTab(nextTab);
   }
 
   async function deleteEvent(eventId: string) {
@@ -2144,14 +2129,15 @@ export function AdminEventsEditor() {
             </header>
 
             <nav className="admin-event-tabs" aria-label="Áreas do evento">
-              <button type="button" className={activeTab === "event" ? "is-active" : ""} disabled={saving} onClick={() => void changeTab("event")}>Evento</button>
-              <button type="button" className={activeTab === "sessions" ? "is-active" : ""} disabled={saving} onClick={() => void changeTab("sessions")}>Sessões</button>
-              <button type="button" className={activeTab === "sections" ? "is-active" : ""} disabled={saving} onClick={() => void changeTab("sections")}>Setores</button>
-              <button type="button" className={activeTab === "prices" ? "is-active" : ""} disabled={saving} onClick={() => void changeTab("prices")}>Preços</button>
-              <button type="button" className={activeTab === "courtesy" ? "is-active" : ""} disabled={saving} onClick={() => void changeTab("courtesy")}>Cortesia</button>
+              <button type="button" className={activeTab === "event" ? "is-active" : ""} disabled={saving} onClick={() => changeTab("event")}>Evento</button>
+              <button type="button" className={activeTab === "sessions" ? "is-active" : ""} disabled={saving} onClick={() => changeTab("sessions")}>Sessões</button>
+              <button type="button" className={activeTab === "sections" ? "is-active" : ""} disabled={saving} onClick={() => changeTab("sections")}>Setores</button>
+              <button type="button" className={activeTab === "prices" ? "is-active" : ""} disabled={saving} onClick={() => changeTab("prices")}>Preços</button>
+              <button type="button" className={activeTab === "courtesy" ? "is-active" : ""} disabled={saving} onClick={() => changeTab("courtesy")}>Cortesia</button>
+              <button type="button" className={activeTab === "tableMap" ? "is-active" : ""} disabled={saving} onClick={() => changeTab("tableMap")}>Mapa de Mesas</button>
             </nav>
 
-            <div className="admin-event-modal-content">
+            <div className={`admin-event-modal-content ${activeTab === "tableMap" ? "is-table-map" : ""}`}>
               {activeTab === "event" ? (
                 <div className="admin-event-form-grid">
                   <label>Título<input value={draft.event.title} onChange={(event) => setDraft({ ...draft, event: { ...draft.event, title: event.target.value } })} /></label>
@@ -2313,6 +2299,10 @@ export function AdminEventsEditor() {
                     </div>
                   ))}
                 </div>
+              ) : null}
+
+              {activeTab === "tableMap" ? (
+                <AdminTableMapCalibrator places={OFFICIAL_TABLE_MAP_PLACES} embedded />
               ) : null}
             </div>
 

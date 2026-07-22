@@ -33,7 +33,7 @@ export function formatSingleAllEventReply(
   return [
     `🎟️ - *${formatPublicEventTitle(event.title, event.artistName)}*`,
     `| Cidade: ${formatCityState(event.city, event.state)}`,
-    `| Data: ${formatEventDate(event.startsAt)}`,
+    `*| Data: ${formatEventDate(event.startsAt)}*`,
     "",
     formatOptionLine(buyOption, "comprar"),
     formatOptionLine(moreInfoOption, "ver mais"),
@@ -43,6 +43,49 @@ export function formatSingleAllEventReply(
 export function buildAllEventsOutboundMessages(
   events: Array<TicketEventSearchResult | TicketConversationEventOption>,
 ) {
+  if (events.some((event) => event.imageUrl)) {
+    return [
+      {
+        type: "text",
+        body: "Encontrei estes eventos:",
+        suppressTitle: true,
+      },
+      ...events.map((event, index) => {
+        const body = formatSingleAllEventReply(event, index);
+        const delayMs = (index + 1) * ALL_EVENTS_CONTINUATION_DELAY_MS;
+
+      return event.imageUrl
+        ? {
+            type: "image",
+            imageUrl: event.imageUrl,
+            caption: body,
+            suppressTitle: true,
+            delayMs,
+          } as const
+        : {
+            type: "text",
+            body,
+            suppressTitle: true,
+            delayMs,
+          } as const;
+    }),
+  ] satisfies Array<
+      | {
+          type: "text";
+          body: string;
+          suppressTitle: true;
+          delayMs?: number;
+        }
+      | {
+          type: "image";
+          imageUrl: string;
+          caption: string;
+          suppressTitle: true;
+          delayMs?: number;
+        }
+    >;
+  }
+
   const messages: Array<{
     type: "text";
     body: string;

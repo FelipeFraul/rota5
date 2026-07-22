@@ -25,16 +25,22 @@ const LOWERCASE_NAME_PARTS = new Set([
 ]);
 
 function formatEventDate(startsAt) {
-  return new Intl.DateTimeFormat("pt-BR", {
+  const date = new Date(startsAt);
+  const weekday = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: SAO_PAULO_TIME_ZONE,
+    weekday: "long",
+  }).format(date);
+  const dayAndTime = new Intl.DateTimeFormat("pt-BR", {
     timeZone: SAO_PAULO_TIME_ZONE,
     day: "2-digit",
     month: "2-digit",
-    year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
   })
-    .format(new Date(startsAt))
+    .format(date)
     .replace(",", " às");
+
+  return `${weekday.charAt(0).toLocaleUpperCase("pt-BR") + weekday.slice(1)} ${dayAndTime}`;
 }
 
 function formatOptionLine(option, label, { preserveCase = false } = {}) {
@@ -125,7 +131,7 @@ function formatSingleAllEventReply(event, index) {
   return [
     `🎟️ - *${formatPublicEventTitle(event.title, event.artistName)}*`,
     `| Cidade: ${formatCityState(event.city, event.state)}`,
-    `| Data: ${formatEventDate(event.startsAt)}`,
+    `*| Data: ${formatEventDate(event.startsAt)}*`,
     "",
     formatOptionLine(buyOption, "comprar"),
     formatOptionLine(moreInfoOption, "ver mais"),
@@ -143,6 +149,35 @@ function formatAllEventsReply(events) {
 }
 
 function buildAllEventsOutboundMessages(events) {
+  if (events.some((event) => event.imageUrl)) {
+    return [
+      {
+        type: "text",
+        body: "Encontrei estes eventos:",
+        suppressTitle: true,
+      },
+      ...events.map((event, index) => {
+        const body = formatSingleAllEventReply(event, index);
+        const delayMs = (index + 1) * ALL_EVENTS_CONTINUATION_DELAY_MS;
+
+        return event.imageUrl
+          ? {
+              type: "image",
+              imageUrl: event.imageUrl,
+              caption: body,
+              suppressTitle: true,
+              delayMs,
+            }
+          : {
+              type: "text",
+              body,
+              suppressTitle: true,
+              delayMs,
+            };
+      }),
+    ];
+  }
+
   const messages = [];
   let current = "Encontrei estes eventos:";
   const pushCurrentMessage = () => {
@@ -231,7 +266,7 @@ test("TODOS com um evento formata titulo, cidade, data e opcoes", () => {
       "",
       "🎟️ - *YURI MARÇAL - SOLO NOVO*",
       "| Cidade: Sorocaba/SP",
-      "| Data: 01/08/2026 às 20:00",
+      "*| Data: Sábado 01/08 às 20:00*",
       "",
       "Digite 1 para *comprar*",
       "Digite 2 para *ver mais*",
@@ -247,7 +282,7 @@ test("TODOS com varios eventos preserva ordem e numeracao", () => {
       "",
       "🎟️ - *YURI MARÇAL - SOLO NOVO*",
       "| Cidade: Sorocaba/SP",
-      "| Data: 01/08/2026 às 20:00",
+      "*| Data: Sábado 01/08 às 20:00*",
       "",
       "Digite 1 para *comprar*",
       "Digite 2 para *ver mais*",
@@ -256,7 +291,7 @@ test("TODOS com varios eventos preserva ordem e numeracao", () => {
       "",
       "🎟️ - *XANDA DIAS*",
       "| Cidade: Ribeirão Preto/SP",
-      "| Data: 02/08/2026 às 19:30",
+      "*| Data: Domingo 02/08 às 19:30*",
       "",
       "Digite 3 para *comprar*",
       "Digite 4 para *ver mais*",
@@ -265,7 +300,7 @@ test("TODOS com varios eventos preserva ordem e numeracao", () => {
       "",
       "🎟️ - *NOITE DOS AMIGOS*",
       "| Cidade: Rio de Janeiro/RJ",
-      "| Data: 02/08/2026 às 22:00",
+      "*| Data: Domingo 02/08 às 22:00*",
       "",
       "Digite 5 para *comprar*",
       "Digite 6 para *ver mais*",
@@ -307,5 +342,55 @@ test("TODOS divide em multiplas mensagens e aplica delay nas continuacoes", () =
   assert.deepEqual(
     [...combinedBody.matchAll(/Digite (\d+) para/g)].map((match) => Number(match[1])),
     longEvents.flatMap((_, index) => [index * 2 + 1, index * 2 + 2]),
+  );
+});
+
+test("TODOS envia foto dos eventos quando houver imageUrl", () => {
+  const events = [
+    {
+      ...baseEvents[0],
+      imageUrl: "https://example.com/evento-1.jpg",
+    },
+    {
+      ...baseEvents[1],
+    },
+  ];
+  const messages = buildAllEventsOutboundMessages(events);
+
+  assert.deepEqual(
+    messages.map((message) => ({
+      type: message.type,
+      imageUrl: message.imageUrl,
+      body: message.body,
+      caption: message.caption,
+      suppressTitle: message.suppressTitle,
+      delayMs: message.delayMs,
+    })),
+    [
+      {
+        type: "text",
+        imageUrl: undefined,
+        body: "Encontrei estes eventos:",
+        caption: undefined,
+        suppressTitle: true,
+        delayMs: undefined,
+      },
+      {
+        type: "image",
+        imageUrl: "https://example.com/evento-1.jpg",
+        body: undefined,
+        caption: formatSingleAllEventReply(events[0], 0),
+        suppressTitle: true,
+        delayMs: ALL_EVENTS_CONTINUATION_DELAY_MS,
+      },
+      {
+        type: "text",
+        imageUrl: undefined,
+        body: formatSingleAllEventReply(events[1], 1),
+        caption: undefined,
+        suppressTitle: true,
+        delayMs: ALL_EVENTS_CONTINUATION_DELAY_MS * 2,
+      },
+    ],
   );
 });

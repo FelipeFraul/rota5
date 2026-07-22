@@ -1,16 +1,22 @@
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 
 export function formatEventDate(startsAt: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
+  const date = new Date(startsAt);
+  const weekday = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: SAO_PAULO_TIME_ZONE,
+    weekday: "long",
+  }).format(date);
+  const dayAndTime = new Intl.DateTimeFormat("pt-BR", {
     timeZone: SAO_PAULO_TIME_ZONE,
     day: "2-digit",
     month: "2-digit",
-    year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
   })
-    .format(new Date(startsAt))
-    .replace(",", " ÃƒÆ’Ã‚Â s");
+    .format(date)
+    .replace(",", " às");
+
+  return `${weekday.charAt(0).toLocaleUpperCase("pt-BR") + weekday.slice(1)} ${dayAndTime}`;
 }
 
 export function formatOptionLine(

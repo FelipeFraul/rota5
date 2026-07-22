@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { buildInitialConversationState } from "../src/lib/tickets/conversationState.ts";
+import { TICKET_MESSAGES } from "../src/lib/tickets/messages.ts";
 import { routeTicketMessage } from "../src/lib/tickets/router.ts";
 
 const router = readFileSync(
@@ -89,6 +90,76 @@ test("admin_auth_pending reinicia login em comando admin reservado antes de vali
     adminAuthPendingBlock,
     /const authRestartResponse = await buildAdminAuthPendingRestartResponse[\s\S]*const codeResult = await consumePendingAdminChallenge\(\{/,
   );
+});
+
+test("admin_auth_pending e comando admin têm prioridade sobre bootstrap público", async () => {
+  const startAdminLoginIndex = router.indexOf("return startAdminLogin({");
+  const bootstrapIndex = router.indexOf("return buildPublicInitialHelpResponse(baseContext);");
+  const adminAuthPendingIndex = router.indexOf('if (previousState.state === "admin_auth_pending") {');
+  const publicEntryIndex = router.indexOf("const publicEntryGateResponse = buildPublicEntryGateResponse({");
+
+  assert.ok(startAdminLoginIndex > 0, "entrada de login admin nao encontrada");
+  assert.ok(bootstrapIndex > 0, "bootstrap publico nao encontrado");
+  assert.ok(adminAuthPendingIndex > 0, "estado admin_auth_pending nao encontrado");
+  assert.ok(publicEntryIndex > 0, "public entry gate nao encontrado");
+  assert.ok(
+    startAdminLoginIndex < bootstrapIndex,
+    "primeira mensagem admin deve iniciar login antes do bootstrap publico",
+  );
+  assert.ok(
+    adminAuthPendingIndex < publicEntryIndex,
+    "mensagens durante admin_auth_pending devem ser tratadas antes do public entry gate",
+  );
+
+  const initialAdminBlock = sliceBetween(
+    router,
+    /if \(\s*reservedAdminCommand &&\s*previousState\.state !== "admin_auth_pending"/,
+    /\n  if \(\s*shouldSendPublicInitialHelp\(baseContext\)/,
+  );
+  assert.match(initialAdminBlock, /return startAdminLogin\(\{/);
+  assert.doesNotMatch(initialAdminBlock, /buildPublicInitialHelpResponse/);
+
+  const initialBootstrapBlock = sliceBetween(
+    router,
+    /if \(\s*shouldSendPublicInitialHelp\(baseContext\)/,
+    /\n  if \(previousState\.state === "admin_auth_pending"\)/,
+  );
+  assert.match(initialBootstrapBlock, /!reservedAdminCommand/);
+  assert.match(initialBootstrapBlock, /previousState\.state !== "admin_auth_pending"/);
+  assert.match(initialBootstrapBlock, /previousState\.state !== "admin_menu"/);
+  assert.match(initialBootstrapBlock, /!isAdminSubmenuState\(previousState\.state\)/);
+  assert.match(initialBootstrapBlock, /!previousState\.admin\?\.sessionId/);
+
+  const adminAuthPendingBlock = sliceBetween(
+    router,
+    /if \(previousState\.state === "admin_auth_pending"\) \{/,
+    /\n  const publicEntryGateResponse = buildPublicEntryGateResponse/,
+  );
+  assert.match(adminAuthPendingBlock, /const authRestartResponse = await buildAdminAuthPendingRestartResponse/);
+  assert.match(adminAuthPendingBlock, /const codeResult = await consumePendingAdminChallenge\(\{/);
+  assert.match(adminAuthPendingBlock, /const authFailureReply = buildAdminAuthFailureReply\(\{ failureResult \}\);/);
+  assert.match(adminAuthPendingBlock, /reply: authFailureReply,/);
+  assert.match(adminAuthPendingBlock, /state: "admin_auth_pending"/);
+  assert.match(adminAuthPendingBlock, /const sessionResult = await createAdminSession\(codeResult\.adminUser\);/);
+  assert.match(adminAuthPendingBlock, /reply: formatAdminMenu\(codeResult\.adminUser\.role\),/);
+  assert.doesNotMatch(adminAuthPendingBlock, /buildPublicInitialHelpResponse/);
+  assert.doesNotMatch(adminAuthPendingBlock, /TICKET_MESSAGES\.genericHelp/);
+
+  const publicResult = await routeTicketMessage({
+    customer: {
+      id: "customer-public-no-active-state",
+      whatsapp_phone: "5511888888888",
+    },
+    conversation: {
+      id: "conversation-public-no-active-state",
+      context: buildInitialConversationState(),
+    },
+    text: "oi",
+  });
+
+  assert.equal(publicResult.reply, TICKET_MESSAGES.genericHelp);
+  assert.equal(publicResult.outboundMessages?.[0]?.body, TICKET_MESSAGES.genericHelp);
+  assert.equal(publicResult.outboundMessages?.[1]?.body, TICKET_MESSAGES.genericHelpCommands);
 });
 
 test("admin_auth_pending valida administrador ativo antes de bloqueio e codigo", () => {

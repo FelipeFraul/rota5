@@ -31,6 +31,8 @@ import {
   isPublicInitialAllEventsCommand,
   isPublicInitialExitCommand,
   isPublicInitialHelpCommand,
+  isPublicInitialNewCommand,
+  isPublicInitialNextEventCommand,
   isPublicInitialTicketResendCommand,
   publicInitialHelpContext as markPublicInitialHelpSent,
 } from "@/lib/tickets/publicInitialFlow";
@@ -490,6 +492,7 @@ const BUY_EVENT_PATTERNS = [
 ];
 
 const LIST_ALL_EVENT_PATTERNS = [
+  /^all$/,
   /^todos$/,
   /^todos\s+(?:os\s+)?(?:eventos|shows)$/,
   /^shows?\s+disponiveis$/,
@@ -1121,7 +1124,9 @@ export function classifyPublicMessageIntent(
 
   if (
     normalizeIntentText(originalText) === "ajuda" ||
+    normalizeIntentText(originalText) === "help" ||
     intentNormalized === "ajuda" ||
+    intentNormalized === "help" ||
     intentNormalized === "menu" ||
     intentNormalized === "inicio"
   ) {
@@ -1328,9 +1333,13 @@ export function shouldProcessImmediately({
 
   if (
     normalizedMessage === "ajuda" ||
+    normalizedMessage === "help" ||
     normalizedMessage === "menu" ||
     normalizedMessage === "inicio" ||
+    normalizedMessage === "new" ||
     normalizedMessage === "sair" ||
+    normalizedMessage === "again" ||
+    normalizedMessage === "reenviar" ||
     normalizedMessage === "reenviar ingresso"
   ) {
     return {
@@ -1705,7 +1714,7 @@ function formatSingleEventReply(
   const title = formatPublicEventTitle(event.title, event.artistName);
   const details = [
     `| Cidade: ${formatCityState(event.city, event.state)}`,
-    `| Data: ${formatEventDate(event.startsAt)}`,
+    `*| Data: ${formatEventDate(event.startsAt)}*`,
   ];
   const buyOption = totalEvents === 1 ? 1 : index * 2 + 1;
   const moreInfoOption = buyOption + 1;
@@ -1731,7 +1740,7 @@ function formatSingleEventOptionReply(
   const title = formatPublicEventTitle(event.title, event.artistName);
   const details = [
     `| Cidade: ${formatCityState(event.city, event.state)}`,
-    `| Data: ${formatEventDate(event.startsAt)}`,
+    `*| Data: ${formatEventDate(event.startsAt)}*`,
   ];
   const buyOption = totalEvents === 1 ? 1 : index * 2 + 1;
   const moreInfoOption = buyOption + 1;
@@ -1843,7 +1852,7 @@ function formatSingleEventMoreInfo(
   return [
     `🎟️ - *${formatPublicEventTitle(event.title, event.artistName)}*`,
     `| Cidade: ${formatCityState(event.city, event.state)}`,
-    `| Data: ${formatEventDate(event.startsAt)}`,
+    `*| Data: ${formatEventDate(event.startsAt)}*`,
     ...(event.venueName ? [`> Ã°Å¸ÂÅ¸Ã¯Â¸Â Local: ${formatProperName(event.venueName)}`] : []),
     "",
     "*INFORMAÃƒâ€¡Ãƒâ€¢ES DO EVENTO*",
@@ -2232,6 +2241,10 @@ function isSimpleReservationReply(text: string) {
 
 function isBuyerReservationExitIntent(text: string) {
   return isPublicInitialExitCommand(text);
+}
+
+function isBuyerNewIntent(text: string) {
+  return isPublicInitialNewCommand(text);
 }
 
 function isBuyerBackIntent(text: string) {
@@ -10119,10 +10132,16 @@ function formatCheckoutFailureMessage(
 function messageForBuyerReservationCancellation({
   expired,
   cancelResult,
+  resetToReentry = false,
 }: {
   expired: boolean;
   cancelResult: Awaited<ReturnType<typeof cancelPendingReservationForCustomer>>;
+  resetToReentry?: boolean;
 }) {
+  if (resetToReentry && !expired) {
+    return TICKET_MESSAGES.reentryPrompt;
+  }
+
   if (expired || (cancelResult.ok && cancelResult.status === "expired")) {
     return TICKET_MESSAGES.reservationExpired;
   }
@@ -10428,7 +10447,22 @@ export async function routeTicketMessage({
   const reservedAdminCommand = isReservedAdminCommand(text);
 
   if (
+    reservedAdminCommand &&
+    previousState.state !== "admin_auth_pending" &&
+    previousState.state !== "admin_menu" &&
+    !isAdminSubmenuState(previousState.state) &&
+    !previousState.admin?.sessionId
+  ) {
+    return startAdminLogin({
+      phoneNumber: customer.whatsapp_phone,
+      baseContext,
+      sourceIdentifier,
+    });
+  }
+
+  if (
     shouldSendPublicInitialHelp(baseContext) &&
+    !reservedAdminCommand &&
     previousState.state !== "admin_auth_pending" &&
     previousState.state !== "admin_menu" &&
     !isAdminSubmenuState(previousState.state) &&
@@ -10437,29 +10471,6 @@ export async function routeTicketMessage({
     !isGateAccessFlowState(previousState.state)
   ) {
     return buildPublicInitialHelpResponse(baseContext);
-  }
-
-  const publicEntryGateResponse = buildPublicEntryGateResponse({
-    incomingIntent,
-    baseContext,
-  });
-
-  if (publicEntryGateResponse) {
-    if (
-      shouldSendPublicInitialHelp(baseContext) &&
-      (
-        incomingIntent.classification === "greeting" ||
-        incomingIntent.classification === "social_reply" ||
-        incomingIntent.classification === "courtesy"
-      )
-    ) {
-      return {
-        ...buildPublicInitialHelpResponse(baseContext),
-        intentResolution: incomingIntent,
-      };
-    }
-
-    return publicEntryGateResponse;
   }
 
   if (previousState.state === "admin_auth_pending") {
@@ -10792,19 +10803,6 @@ export async function routeTicketMessage({
         gateAccess: undefined,
       },
     };
-  }
-
-  if (
-    reservedAdminCommand &&
-    previousState.state !== "admin_menu" &&
-    !isAdminSubmenuState(previousState.state) &&
-    !previousState.admin?.sessionId
-  ) {
-    return startAdminLogin({
-      phoneNumber: customer.whatsapp_phone,
-      baseContext,
-      sourceIdentifier,
-    });
   }
 
   if (
@@ -16011,6 +16009,29 @@ export async function routeTicketMessage({
     };
   }
 
+  const publicEntryGateResponse = buildPublicEntryGateResponse({
+    incomingIntent,
+    baseContext,
+  });
+
+  if (publicEntryGateResponse) {
+    if (
+      shouldSendPublicInitialHelp(baseContext) &&
+      (
+        incomingIntent.classification === "greeting" ||
+        incomingIntent.classification === "social_reply" ||
+        incomingIntent.classification === "courtesy"
+      )
+    ) {
+      return {
+        ...buildPublicInitialHelpResponse(baseContext),
+        intentResolution: incomingIntent,
+      };
+    }
+
+    return publicEntryGateResponse;
+  }
+
   const paidTicketResendSelection = await handlePaidTicketResendSelection({
     baseContext,
     phone: customer.whatsapp_phone,
@@ -16062,6 +16083,7 @@ export async function routeTicketMessage({
       reply: messageForBuyerReservationCancellation({
         expired: reservationContextExpired,
         cancelResult,
+        resetToReentry: isBuyerNewIntent(text),
       }),
       nextContext: resetBuyerReservationContext(baseContext),
     };
@@ -16073,7 +16095,9 @@ export async function routeTicketMessage({
     previousState.state !== "payment_pending"
   ) {
     return {
-      reply: TICKET_MESSAGES.buyerFlowReset,
+      reply: isBuyerNewIntent(text)
+        ? TICKET_MESSAGES.reentryPrompt
+        : TICKET_MESSAGES.buyerFlowReset,
       nextContext: resetBuyerReservationContext(baseContext),
     };
   }
@@ -16155,6 +16179,59 @@ export async function routeTicketMessage({
         LOW_CONFIDENCE_PUBLIC_PROMPT,
       ].join("\n"),
       nextContext: baseContext,
+    };
+  }
+
+  if (
+    isPublicInitialNextEventCommand(text) &&
+    previousState.state !== "reservation_created" &&
+    previousState.state !== "payment_pending"
+  ) {
+    const events = await listAllPublicEventsByDate({ limit: 1 });
+    const bootstrap = resolvePublicInitialHelpBootstrap(baseContext);
+
+    if (events.length === 0) {
+      const noPublicEventsReply =
+        "Não encontrei eventos disponíveis no momento.";
+      return {
+        reply: noPublicEventsReply,
+        outboundMessages: [
+          ...bootstrap.initialMessages,
+          {
+            type: "text",
+            body: noPublicEventsReply,
+            suppressTitle: true,
+          },
+        ],
+        nextContext: resetBuyerReservationContext(bootstrap.nextContext),
+      };
+    }
+
+    return {
+      reply: formatEventsReply(events),
+      outboundMessages: [
+        ...bootstrap.initialMessages,
+        ...buildEventSearchOutboundMessages(events),
+      ],
+      nextContext: {
+        ...bootstrap.nextContext,
+        step: "showing_events",
+        state: "showing_events",
+        lastSearch: {
+          originalText: text.trim(),
+        },
+        lastEvents: buildEventOptions(events),
+        selectedEvent: undefined,
+        selectedSection: undefined,
+        selectedSeat: undefined,
+        selectedQuantity: undefined,
+        cart: undefined,
+        eventMoreInfoShown: undefined,
+        reservation: undefined,
+        payment: undefined,
+        lastSections: [],
+        lastSeats: [],
+      },
     };
   }
 
@@ -16250,6 +16327,7 @@ export async function routeTicketMessage({
         reply: messageForBuyerReservationCancellation({
           expired: reservationContextExpired,
           cancelResult,
+          resetToReentry: shouldExitReservationFlow && isBuyerNewIntent(text),
         }),
         nextContext: resetBuyerReservationContext(baseContext),
       };
@@ -16373,6 +16451,7 @@ export async function routeTicketMessage({
         reply: messageForBuyerReservationCancellation({
           expired: reservationContextExpired,
           cancelResult,
+          resetToReentry: shouldExitReservationFlow && isBuyerNewIntent(text),
         }),
         nextContext: resetBuyerReservationContext(baseContext),
       };

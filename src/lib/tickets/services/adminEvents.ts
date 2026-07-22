@@ -13,15 +13,6 @@ export type AdminSectionStatus = "active" | "inactive";
 export type AdminSeatStatus = "active" | "inactive" | "blocked";
 export type AdminTicketPriceStatus = "active" | "inactive";
 export type AdminTicketType = "full" | "half" | "promotional" | "free";
-export type AdminTicketSalesOverviewKey =
-  | "total"
-  | "front_row"
-  | "full_chair"
-  | "half_chair"
-  | "youth"
-  | "table_2"
-  | "table_4";
-
 type AdminTicketSalesOverviewEntry = {
   key: string;
   label: string;
@@ -226,16 +217,6 @@ type AdminTicketSalesCourtesyLimitRow = {
     venues?: { status: string } | { status: string }[] | null;
   }> | null;
 };
-
-const TICKET_SALES_OVERVIEW_ITEMS: Array<Pick<AdminTicketSalesOverviewEntry, "key" | "label" | "shortLabel">> = [
-  { key: "total", label: "Total de vendas", shortLabel: "TT" },
-  { key: "front_row", label: "1ª Fileira", shortLabel: "1ª" },
-  { key: "full_chair", label: "Cadeira inteira", shortLabel: "CI" },
-  { key: "half_chair", label: "Cadeira meia", shortLabel: "CM" },
-  { key: "table_2", label: "Mesa 2 lugares", shortLabel: "M2" },
-  { key: "table_4", label: "Mesa 4 lugares", shortLabel: "M4" },
-  { key: "youth", label: "Crianças e adolescentes", shortLabel: "CA" },
-];
 
 export function normalizeSlug(value: string) {
   return value
@@ -653,23 +634,6 @@ async function fetchAllRows<T>(query: { range: (from: number, to: number) => Pro
   return rows;
 }
 
-function normalizeTicketSalesOverviewKey(name: string | null | undefined): AdminTicketSalesOverviewKey | null {
-  const normalized = (name ?? "")
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase();
-
-  if (!normalized) return null;
-  if (normalized.includes("1a fileira") || normalized.includes("1ª fileira")) return "front_row";
-  if (normalized.includes("mesa 4") || normalized.includes("4 lugares")) return "table_4";
-  if (normalized.includes("mesa 2") || normalized.includes("2 lugares")) return "table_2";
-  if (normalized.includes("todos pagam meia") || normalized.includes("cadeira meia")) return "half_chair";
-  if (normalized.includes("criancas e adolescentes") || normalized.includes("2 a 18 anos")) return "youth";
-  if (normalized.includes("inteira") || normalized.includes("cadeira inteira")) return "full_chair";
-
-  return null;
-}
-
 function buildSectionShortLabel(name: string | null | undefined) {
   const words = (name ?? "")
     .normalize("NFD")
@@ -687,13 +651,10 @@ function buildSectionShortLabel(name: string | null | undefined) {
   }
 
   const base = significantWords[0] ?? words[0] ?? "ST";
-  return base.slice(0, Math.min(base.length, 3));
+  return base.slice(0, Math.min(base.length, 2));
 }
 
 function getTicketSalesOverviewIdentity(sectionId: string | null | undefined, name: string | null | undefined) {
-  const standardKey = normalizeTicketSalesOverviewKey(name);
-  if (standardKey) return { key: standardKey, label: null, shortLabel: null };
-
   return {
     key: `section:${sectionId ?? normalizeSlug(name ?? "setor")}`,
     label: name?.trim() || "Setor",
@@ -702,17 +663,21 @@ function getTicketSalesOverviewIdentity(sectionId: string | null | undefined, na
 }
 
 function emptyTicketSalesOverview(): AdminEventSummary["ticketSalesOverview"] {
-  return TICKET_SALES_OVERVIEW_ITEMS.map((item) => ({
-    ...item,
-    sold: 0,
-    available: 0,
-    courtesySold: 0,
-    courtesyAvailable: 0,
-    courtesyCapacity: 0,
-    salesSold: 0,
-    salesAvailable: 0,
-    salesCapacity: 0,
-  }));
+  return [
+    {
+      key: "total",
+      label: "Total de vendas",
+      shortLabel: "TT",
+      sold: 0,
+      available: 0,
+      courtesySold: 0,
+      courtesyAvailable: 0,
+      courtesyCapacity: 0,
+      salesSold: 0,
+      salesAvailable: 0,
+      salesCapacity: 0,
+    },
+  ];
 }
 
 function buildTicketSalesOverviewByEvent({
@@ -743,7 +708,7 @@ function buildTicketSalesOverviewByEvent({
     eventId: string,
     identity: ReturnType<typeof getTicketSalesOverviewIdentity> | null,
   ) => {
-    if (!identity || identity.key === "total") return null;
+    if (!identity) return null;
     const overview = ensure(eventId);
     let item = overview.find((entry) => entry.key === identity.key);
     if (!item && identity.label && identity.shortLabel) {

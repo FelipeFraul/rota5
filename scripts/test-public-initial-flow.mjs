@@ -26,9 +26,9 @@ const messages = readFileSync(
   "utf8",
 );
 
-const homeMessage = /PUBLIC_HOME_MESSAGE\s*=\s*[\s\S]*bem-vindo\(a\)[\s\S]*Black House/;
+const homeMessage = /PUBLIC_HOME_MESSAGE\s*=\s*[\s\S]*bem-vindo\(a\)[\s\S]*RockBar\* Pub/;
 const homeCommands =
-  /PUBLIC_HOME_COMMANDS_MESSAGE\s*=[\s\S]*TODOS[\s\S]*REENVIAR INGRESSO[\s\S]*AJUDA[\s\S]*SAIR/;
+  /PUBLIC_HOME_COMMANDS_MESSAGE\s*=[\s\S]*SHOW[\s\S]*ALL[\s\S]*AGAIN[\s\S]*HELP[\s\S]*NEW/;
 
 const customer = {
   id: "customer-public-initial",
@@ -112,7 +112,7 @@ test("execucao real: primeira saudacao envia duas mensagens e marca contexto", a
   );
 });
 
-test("execucao real: saudacao posterior e purchase support nao repetem abertura", async () => {
+test("execucao real: saudacao posterior tambem envia abertura em duas mensagens", async () => {
   const greeting = await routePublicText("Oi");
   const secondGreeting = await routePublicText("bom dia", greeting.nextContext);
   const purchaseSupport = await routePublicText(
@@ -121,7 +121,11 @@ test("execucao real: saudacao posterior e purchase support nao repetem abertura"
   );
 
   assertInitialOpeningMessages(greeting);
-  assert.notEqual(secondGreeting.outboundMessages?.[0]?.body, TICKET_MESSAGES.genericHelp);
+  assertInitialOpeningMessages(secondGreeting);
+  assert.doesNotMatch(
+    secondGreeting.outboundMessages.map((message) => message.body).join("\n"),
+    /ATENDIMENTO|EVENTOS/,
+  );
   assert.notEqual(purchaseSupport.outboundMessages?.[0]?.body, TICKET_MESSAGES.genericHelp);
   assert.equal(purchaseSupport.nextContext.publicInitialHelpSent, true);
 });
@@ -156,6 +160,21 @@ test("execucao real: bootstrap nao se repete apos contexto inicializado", async 
   const help = await routePublicText("AJUDA", initializedContext);
 
   assert.notEqual(help.outboundMessages?.[0]?.body, TICKET_MESSAGES.genericHelp);
+});
+
+test("execucao real: atalho new retorna reentrada atendimento", async () => {
+  const result = await routePublicText("NEW", {
+    ...buildInitialConversationState(),
+    publicInitialHelpSent: true,
+    state: "showing_events",
+    step: "showing_events",
+  });
+
+  assert.equal(result.reply, TICKET_MESSAGES.reentryPrompt);
+  assert.match(result.reply, /^ATENDIMENTO\n\n>/);
+  assert.doesNotMatch(result.reply, /bem-vindo\(a\)/);
+  assert.equal(result.nextContext.state, "idle");
+  assert.match(webhook, /routeResult\.reply === TICKET_MESSAGES\.reentryPrompt[\s\S]{0,180}suppressTitle:\s*true/);
 });
 
 test("execucao real: excecao admin_auth_pending nao recebe bootstrap", async () => {
@@ -233,9 +252,12 @@ test("mensagens publicas posteriores tambem seguem pelo caminho imediato", () =>
 
 test("AJUDA no fluxo publico inicial nao entra em compra nem admin", () => {
   assert.match(router, /normalizedMessage === "ajuda"/);
+  assert.match(router, /normalizedMessage === "help"/);
   assert.match(router, /intentNormalized === "ajuda"/);
+  assert.match(router, /intentNormalized === "help"/);
   assert.match(router, /classification:\s*"unknown"/);
   assert.match(publicInitialFlow, /function isPublicInitialHelpCommand/);
+  assert.match(publicInitialFlow, /normalized === "help"/);
   assert.match(publicInitialFlow, /normalized === "ajuda"/);
   assert.match(router, /incomingIntent\.classification === "unknown" && isPublicInitialHelpCommand\(text\)/);
   assert.doesNotMatch(router, /normalizedMessage === "ajuda"[\s\S]{0,600}classification:\s*"buy_/);
@@ -244,15 +266,26 @@ test("AJUDA no fluxo publico inicial nao entra em compra nem admin", () => {
 
 test("TODOS no fluxo publico inicial segue para listagem publica", () => {
   assert.match(publicInitialFlow, /function isPublicInitialAllEventsCommand/);
+  assert.match(publicInitialFlow, /normalized === "all"/);
   assert.match(publicInitialFlow, /normalized === "todos"/);
+  assert.match(router, /\^all\$/);
   assert.match(router, /classification:\s*"list_events"/);
   assert.match(router, /incomingIntent\.classification === "list_events"[\s\S]*listAllPublicEventsByDate/);
   assert.doesNotMatch(router, /normalized === "todos"[\s\S]{0,600}admin_auth_pending/);
 });
 
-test("REENVIAR INGRESSO aciona reenvio pago e nao compra/admin", () => {
+test("SHOW no fluxo publico inicial mostra o proximo evento", () => {
+  assert.match(publicInitialFlow, /function isPublicInitialNextEventCommand/);
+  assert.match(publicInitialFlow, /normalized === "show"/);
+  assert.match(router, /isPublicInitialNextEventCommand\(text\)[\s\S]*listAllPublicEventsByDate\(\{ limit: 1 \}\)/);
+  assert.match(router, /isPublicInitialNextEventCommand\(text\)[\s\S]*buildEventSearchOutboundMessages\(events\)/);
+  assert.doesNotMatch(router, /normalized === "show"[\s\S]{0,600}admin_auth_pending/);
+});
+
+test("REENVIAR aciona reenvio pago e nao compra/admin", () => {
   assert.match(publicInitialFlow, /function isPublicInitialTicketResendCommand/);
-  assert.match(publicInitialFlow, /normalized === "reenviar ingresso"/);
+  assert.match(publicInitialFlow, /normalized === "again"/);
+  assert.match(publicInitialFlow, /normalized === "reenviar"/);
   assert.match(router, /handlePaidTicketResendCommand/);
   assert.match(router, /if \(isTicketResendCommand\(text\)\)/);
   assert.doesNotMatch(router, /normalized === "reenviar ingresso"[\s\S]{0,600}admin_auth_pending/);
@@ -260,9 +293,12 @@ test("REENVIAR INGRESSO aciona reenvio pago e nao compra/admin", () => {
 
 test("SAIR cancela e a proxima mensagem volta ao inicio", () => {
   assert.match(router, /function isBuyerReservationExitIntent/);
+  assert.match(router, /function isBuyerNewIntent/);
   assert.match(publicInitialFlow, /function isPublicInitialExitCommand/);
+  assert.match(publicInitialFlow, /function isPublicInitialNewCommand/);
+  assert.match(publicInitialFlow, /normalized === "new"/);
   assert.match(publicInitialFlow, /normalized === "sair"/);
-  assert.match(router, /isBuyerReservationExitIntent\(text\)[\s\S]*reply:\s*TICKET_MESSAGES\.buyerFlowReset/);
+  assert.match(router, /isBuyerNewIntent\(text\)[\s\S]*TICKET_MESSAGES\.reentryPrompt[\s\S]*TICKET_MESSAGES\.buyerFlowReset/);
   assert.match(router, /nextContext:\s*resetBuyerReservationContext\(baseContext\)/);
   assert.match(router, /function buildPublicInitialHelpResponse/);
   assert.match(router, /nextContext:\s*publicInitialHelpContext\(baseContext\)/);

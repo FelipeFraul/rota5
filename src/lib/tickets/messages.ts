@@ -1,19 +1,24 @@
 const PUBLIC_HOME_MESSAGE =
-  "Olá, *bem-vindo(a) à Black House*, casa de Comédia de Sorocaba!";
+  "Olá, *bem-vindo(a) ao RockBar* Pub! 🤘";
 const PUBLIC_HOME_COMMANDS_MESSAGE =
-  '> Pesquise um evento por *nome, artista, data* ou...\n> Para ver todos os eventos, digite "TODOS"\n> Para reenviar ingresso pago, digite "REENVIAR INGRESSO"\n> Para receber ajuda a qualquer momento, digite "AJUDA"\n> Para voltar à página inicial e fazer uma nova pesquisa, digite "SAIR"';
+  '> Digite "SHOW" para ver o próximo show\n> Para ver todos, digite "ALL"\n> Reenviar seu ingresso, digite "AGAIN"\n> Para ajuda, digite "HELP"\n> Para uma nova pesquisa, "NEW"';
 
 const PUBLIC_HOME_PROMPT = [
   PUBLIC_HOME_MESSAGE,
   PUBLIC_HOME_COMMANDS_MESSAGE,
 ].join("\n");
+const PUBLIC_REENTRY_PROMPT = [
+  "ATENDIMENTO",
+  PUBLIC_HOME_COMMANDS_MESSAGE,
+].join("\n\n");
 
 export const TICKET_MESSAGES = {
   genericHelp: PUBLIC_HOME_MESSAGE,
   genericHelpCommands: PUBLIC_HOME_COMMANDS_MESSAGE,
   genericHelpPrompt: PUBLIC_HOME_PROMPT,
+  reentryPrompt: PUBLIC_REENTRY_PROMPT,
   conversationClosed:
-    "ATENDIMENTO\n\nSessão encerrada. Para iniciar uma nova digite olá!",
+    "Sessão encerrada. Para iniciar uma nova digite olá!",
   noEventsFound:
     "Não encontrei eventos com essa busca.\n\nTente pesquisar por outro nome, artista, data ou digite TODOS para ver os eventos disponíveis.",
   numericInvalidOption:

@@ -73,6 +73,7 @@ import {
 } from "@/lib/zapi/client";
 import { formatSystemActionLines } from "@/lib/zapi/format";
 import { sanitizeWhatsAppText } from "@/lib/zapi/textEncoding";
+import { TICKET_MESSAGES } from "@/lib/tickets/messages";
 
 const MAX_WEBHOOK_BYTES = 256 * 1024;
 const PHONE_RATE_LIMIT = 30;
@@ -615,6 +616,31 @@ function getOutboundMessages(
     );
   }
 
+  if (routeResult.reply === TICKET_MESSAGES.genericHelpPrompt) {
+    return [
+      {
+        type: "text",
+        body: TICKET_MESSAGES.genericHelp,
+        suppressTitle: true,
+      },
+      {
+        type: "text",
+        body: TICKET_MESSAGES.genericHelpCommands,
+        suppressTitle: true,
+      },
+    ];
+  }
+
+  if (routeResult.reply === TICKET_MESSAGES.reentryPrompt) {
+    return [
+      {
+        type: "text",
+        body: TICKET_MESSAGES.reentryPrompt,
+        suppressTitle: true,
+      },
+    ];
+  }
+
   return [
     {
       type: "text",
@@ -830,6 +856,8 @@ export async function POST(request: Request) {
       messageKeys: limitedKeys(message),
       textKeys: limitedKeys(firstRecord(payloadResult.payload.text, message.text)),
     });
+
+    return jsonOk({ received: true, ignored: true, reason: "empty_message" });
   }
 
   const phoneRateLimit = await consumeRateLimit({

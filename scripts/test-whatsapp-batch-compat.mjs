@@ -88,7 +88,9 @@ test("cron finalizes inactive open conversations without duplicating finalizers"
   assert.doesNotMatch(conversationFinalizer, /latestMessage\?\.direction === "outbound"/);
   assert.match(conversationFinalizer, /status:\s*"closed"/);
   assert.match(conversationFinalizer, /reason:\s*FINALIZER_REASON/);
-  assert.match(ticketMessages, /Sessão encerrada\. Para iniciar uma nova digite olá!/);
+  assert.match(ticketMessages, /conversationClosed:\s*"[^"]*encerrada\. Para iniciar uma nova digite ol[^"]*"/);
+  assert.match(ticketMessages, /adminLogout:\s*"[^"]*administrativa encerrada\."/);
+  assert.doesNotMatch(ticketMessages, /conversationClosed:\s*"ATENDIMENTO/);
 });
 
 test("public initial reply is sent immediately instead of waiting for the batch", () => {
@@ -104,7 +106,7 @@ test("public initial reply is sent immediately instead of waiting for the batch"
   assert.match(ticketRouter, /intent\.classification === "purchase_support" && !hasActiveState/);
   assert.match(ticketRouter, /incomingIntent\.classification === "purchase_support"[\s\S]*const bootstrap = resolvePublicInitialHelpBootstrap\(baseContext\)/);
   assert.match(ticketRouter, /function publicInitialHelpContext/);
-  assert.match(ticketRouter, /isBuyerReservationExitIntent\(text\)[\s\S]*reply:\s*TICKET_MESSAGES\.buyerFlowReset[\s\S]*nextContext:\s*resetBuyerReservationContext\(baseContext\)/);
+  assert.match(ticketRouter, /isBuyerReservationExitIntent\(text\)\s*&&[\s\S]*previousState\.state !== "reservation_created"[\s\S]*previousState\.state !== "payment_pending"[\s\S]*reply:\s*isBuyerNewIntent\(text\)\s*\?\s*TICKET_MESSAGES\.reentryPrompt\s*:\s*TICKET_MESSAGES\.buyerFlowReset[\s\S]*nextContext:\s*resetBuyerReservationContext\(baseContext\)/);
   assert.match(ticketRouter, /function shouldSendPublicInitialHelp/);
   assert.match(ticketRouter, /function buildPublicInitialHelpResponse/);
   assert.doesNotMatch(batchCron, /routeTicketMessage/);
