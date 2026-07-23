@@ -1030,7 +1030,7 @@ function syncDraftWithSections(draft: Draft, sections: Draft["sections"]): Draft
       draft.prices.map((price) => {
         const sectionName = price.sectionId ? sectionNameById.get(price.sectionId) : null;
         return sectionName
-          ? { ...price, sectionName, label: sectionName }
+          ? { ...price, sectionName }
           : price;
       }),
       sections,
@@ -2249,7 +2249,11 @@ export function AdminEventsEditor() {
                   {draft.prices.map((price, index) => (
                       <div key={price.priceId} className="admin-event-edit-row admin-event-price-row">
                         <label>Setor<input value={getDraftPriceSectionName(draft, price)} readOnly /></label>
-                        <label>Nome no ingresso<input value={price.label} readOnly /></label>
+                        <label>Nome no ingresso<input value={price.label} onChange={(event) => {
+                          const prices = [...draft.prices];
+                          prices[index] = { ...price, label: event.target.value };
+                          setDraft({ ...draft, prices });
+                        }} /></label>
                         <label>Valor<input value={price.price} onChange={(event) => {
                           const prices = [...draft.prices];
                           prices[index] = { ...price, price: event.target.value };

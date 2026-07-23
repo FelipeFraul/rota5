@@ -765,10 +765,6 @@ export async function PATCH(request: Request, context: RouteContext) {
     return jsonForbidden();
   }
 
-  const updatedSectionNameById = new Map(
-    parsed.data.sections.map((section) => [section.sectionId, section.name]),
-  );
-
   const keepsCurrentVenue = Boolean(
     existing.venueId &&
       sameVenueValue(existing.venueName, parsed.data.event.venueName) &&
@@ -913,7 +909,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     const updated = await updateAdminPrice(price.priceId, {
-      label: updatedSectionNameById.get(priceSectionIdById.get(price.priceId) ?? "") ?? price.label,
+      label: price.label,
       price_cents: priceCents,
       fee_cents: feeCents,
       sales_start_at: price.salesStartAt,
