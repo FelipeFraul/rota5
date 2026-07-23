@@ -25,6 +25,7 @@ const EVENT_OFFER_LOOKAHEAD_MINUTES = 24 * 60;
 const EVENT_OFFER_SEND_GRACE_MINUTES = 5;
 const CUSTOM_OFFER_LOOKBACK_MINUTES = 180;
 const CUSTOM_OFFER_SEND_GRACE_MINUTES = 30;
+const COMBO_OFFER_EVENT_LOCK_TTL_SECONDS = 90;
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 
 function getDeliveryStateUpdateFailureCode(result: {
@@ -62,6 +63,7 @@ export type ComboOfferSummary = {
   description: string;
   imageUrl: string | null;
   priceCents: number;
+  displayPriority: number;
   status: "active" | "paused" | "deleted";
   sendTimingType: ComboOfferTimingType;
   sendOffsetMinutes: number | null;
@@ -76,19 +78,24 @@ type ComboOfferRow = {
   description: string;
   image_url: string | null;
   price_cents: number;
+  display_priority?: number | null;
   currency: "BRL";
   send_timing_type: ComboOfferTimingType;
   send_offset_minutes: number | null;
   send_time_of_day: string | null;
   send_weekdays: number[] | null;
   status: "active" | "paused" | "deleted";
+  created_at?: string;
 };
 
 type ComboOfferScopeRow = {
+  id?: string;
   offer_id: string;
   scope_type: "all_events" | "event" | "weekday";
   event_id: string | null;
   weekday: number | null;
+  display_priority?: number | null;
+  created_at?: string;
   events?: { title: string } | { title: string }[] | null;
 };
 
@@ -126,6 +133,10 @@ type ComboOfferCandidateTicketRow = {
   id: string;
   customer_id: string;
   issued_at: string;
+  orders:
+    | { id: string; created_at: string; status: string }
+    | { id: string; created_at: string; status: string }[]
+    | null;
   event_sessions:
     | {
         id: string;
@@ -155,6 +166,10 @@ function firstJoin<T>(value: T | T[] | null | undefined) {
 
 function hashSecret(value: string) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function buildLockToken() {
+  return randomBytes(16).toString("hex");
 }
 
 function buildComboCheckoutToken() {
@@ -219,17 +234,39 @@ function normalizeWeekdays(weekdays: number[]) {
   return [...new Set(weekdays.filter((day) => Number.isInteger(day) && day >= 0 && day <= 6))].sort();
 }
 
+function normalizeDisplayPriority(value: number | null | undefined) {
+  if (typeof value !== "number") return 1;
+  return Number.isInteger(value) && value > 0 && value <= 1000 ? value : 1;
+}
+
+async function getNextEventOfferPriority(eventId: string) {
+  const { data, error } = await getSupabaseAdmin()
+    .from("combo_offer_scopes")
+    .select("display_priority")
+    .eq("scope_type", "event")
+    .eq("event_id", eventId)
+    .order("display_priority", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ display_priority: number | null }>();
+
+  if (error) throw error;
+  return normalizeDisplayPriority(data?.display_priority) + 1;
+}
+
 async function insertOfferScopes(offerId: string, scope: ComboOfferScopeInput) {
   const supabase = getSupabaseAdmin();
   const rows =
     scope.scopeType === "all_events"
       ? [{ offer_id: offerId, scope_type: "all_events" }]
       : scope.scopeType === "event"
-        ? [...new Set(scope.eventIds)].map((eventId) => ({
-            offer_id: offerId,
-            scope_type: "event",
-            event_id: eventId,
-          }))
+        ? await Promise.all(
+            [...new Set(scope.eventIds)].map(async (eventId) => ({
+              offer_id: offerId,
+              scope_type: "event",
+              event_id: eventId,
+              display_priority: await getNextEventOfferPriority(eventId),
+            })),
+          )
         : normalizeWeekdays(scope.weekdays).map((weekday) => ({
             offer_id: offerId,
             scope_type: "weekday",
@@ -242,6 +279,81 @@ async function insertOfferScopes(offerId: string, scope: ComboOfferScopeInput) {
 
   const { error } = await supabase.from("combo_offer_scopes").insert(rows);
   if (error) throw error;
+}
+
+async function renumberEventScopedOfferPriorities(
+  offerId: string,
+  requestedPriority: number,
+) {
+  const supabase = getSupabaseAdmin();
+  const { data: targetScopes, error: targetError } = await supabase
+    .from("combo_offer_scopes")
+    .select("event_id")
+    .eq("offer_id", offerId)
+    .eq("scope_type", "event")
+    .not("event_id", "is", null)
+    .returns<Array<{ event_id: string | null }>>();
+
+  if (targetError) throw targetError;
+
+  const eventIds = [...new Set((targetScopes ?? []).map((scope) => scope.event_id).filter(Boolean) as string[])];
+  if (!eventIds.length) {
+    const { error } = await supabase
+      .from("combo_offers")
+      .update({ display_priority: requestedPriority })
+      .eq("id", offerId)
+      .neq("status", "deleted");
+    if (error) throw error;
+    return;
+  }
+
+  for (const eventId of eventIds) {
+    const { data: scopes, error } = await supabase
+      .from("combo_offer_scopes")
+      .select("id, offer_id, display_priority, created_at, combo_offers!inner(status)")
+      .eq("scope_type", "event")
+      .eq("event_id", eventId)
+      .neq("combo_offers.status", "deleted")
+      .returns<Array<ComboOfferScopeRow & { id: string }>>();
+
+    if (error) throw error;
+
+    const others = (scopes ?? [])
+      .filter((scope) => scope.offer_id !== offerId)
+      .sort((left, right) =>
+        normalizeDisplayPriority(left.display_priority) - normalizeDisplayPriority(right.display_priority) ||
+        String(left.created_at ?? "").localeCompare(String(right.created_at ?? "")) ||
+        left.offer_id.localeCompare(right.offer_id),
+      );
+    const insertAt = Math.min(Math.max(requestedPriority, 1), others.length + 1) - 1;
+    const ordered = [
+      ...others.slice(0, insertAt),
+      ...(scopes ?? []).filter((scope) => scope.offer_id === offerId),
+      ...others.slice(insertAt),
+    ];
+
+    for (const [index, scope] of ordered.entries()) {
+      await supabase
+        .from("combo_offer_scopes")
+        .update({ display_priority: 10_000 + index })
+        .eq("id", scope.id)
+        .throwOnError();
+    }
+
+    for (const [index, scope] of ordered.entries()) {
+      const nextPriority = index + 1;
+      await supabase
+        .from("combo_offer_scopes")
+        .update({ display_priority: nextPriority })
+        .eq("id", scope.id)
+        .throwOnError();
+      await supabase
+        .from("combo_offers")
+        .update({ display_priority: nextPriority })
+        .eq("id", scope.offer_id)
+        .throwOnError();
+    }
+  }
 }
 
 export async function createComboOffer({
@@ -336,7 +448,8 @@ export async function listComboOffers({
   const supabase = getSupabaseAdmin();
   let query = supabase
     .from("combo_offers")
-    .select("id, name, description, image_url, price_cents, currency, send_timing_type, send_offset_minutes, send_time_of_day, send_weekdays, status")
+    .select("id, name, description, image_url, price_cents, display_priority, currency, send_timing_type, send_offset_minutes, send_time_of_day, send_weekdays, status")
+    .order("display_priority", { ascending: true })
     .order("created_at", { ascending: false })
     .limit(30);
 
@@ -369,6 +482,7 @@ export async function listComboOffers({
     description: offer.description,
     imageUrl: offer.image_url,
     priceCents: offer.price_cents,
+    displayPriority: normalizeDisplayPriority(offer.display_priority),
     status: offer.status,
     sendTimingType: offer.send_timing_type,
     sendOffsetMinutes: offer.send_offset_minutes,
@@ -398,6 +512,7 @@ export async function updateComboOfferDetails({
   description,
   imageUrl,
   priceCents,
+  displayPriority,
   timingType,
   customOffsetMinutes,
 }: {
@@ -406,6 +521,7 @@ export async function updateComboOfferDetails({
   description?: string;
   imageUrl?: string | null;
   priceCents?: number;
+  displayPriority?: number;
   timingType?: ComboOfferTimingType;
   customOffsetMinutes?: number | null;
 }) {
@@ -438,6 +554,12 @@ export async function updateComboOfferDetails({
     payload.price_cents = priceCents;
   }
 
+  if (displayPriority !== undefined) {
+    if (!Number.isInteger(displayPriority) || displayPriority <= 0 || displayPriority > 1000) {
+      return { ok: false as const, reason: "invalid_input" as const };
+    }
+  }
+
   if (timingType !== undefined) {
     payload.send_timing_type = timingType;
     payload.send_offset_minutes =
@@ -451,24 +573,79 @@ export async function updateComboOfferDetails({
     payload.send_time_of_day = timingType === "event_day_noon" ? "12:00:00" : null;
   }
 
-  if (Object.keys(payload).length === 0) {
+  if (Object.keys(payload).length === 0 && displayPriority === undefined) {
     return { ok: false as const, reason: "invalid_input" as const };
   }
 
-  const { error } = await getSupabaseAdmin()
-    .from("combo_offers")
-    .update(payload)
-    .eq("id", offerId)
-    .neq("status", "deleted");
+  if (Object.keys(payload).length > 0) {
+    const { error } = await getSupabaseAdmin()
+      .from("combo_offers")
+      .update(payload)
+      .eq("id", offerId)
+      .neq("status", "deleted");
 
-  return error ? { ok: false as const, reason: "database_error" as const, error } : { ok: true as const };
+    if (error) return { ok: false as const, reason: "database_error" as const, error };
+  }
+
+  if (displayPriority !== undefined) {
+    try {
+      await renumberEventScopedOfferPriorities(offerId, displayPriority);
+    } catch (error) {
+      return { ok: false as const, reason: "database_error" as const, error };
+    }
+  }
+
+  return { ok: true as const };
 }
 
-export async function duplicateComboOffer(offerId: string) {
+export async function updateComboOfferScope(offerId: string, scope: ComboOfferScopeInput) {
+  const supabase = getSupabaseAdmin();
+  const normalizedScope =
+    scope.scopeType === "all_events"
+      ? scope
+      : scope.scopeType === "event"
+        ? { scopeType: "event" as const, eventIds: [...new Set(scope.eventIds)].filter(Boolean) }
+        : { scopeType: "weekday" as const, weekdays: normalizeWeekdays(scope.weekdays) };
+
+  if (normalizedScope.scopeType === "event" && normalizedScope.eventIds.length === 0) {
+    return { ok: false as const, reason: "invalid_input" as const };
+  }
+  if (normalizedScope.scopeType === "weekday" && normalizedScope.weekdays.length === 0) {
+    return { ok: false as const, reason: "invalid_input" as const };
+  }
+
+  const { error: deleteError } = await supabase
+    .from("combo_offer_scopes")
+    .delete()
+    .eq("offer_id", offerId);
+  if (deleteError) return { ok: false as const, reason: "database_error" as const, error: deleteError };
+
+  try {
+    await insertOfferScopes(offerId, normalizedScope);
+  } catch (error) {
+    return { ok: false as const, reason: "database_error" as const, error };
+  }
+
+  if (normalizedScope.scopeType === "weekday") {
+    await supabase
+      .from("combo_offers")
+      .update({ send_weekdays: normalizedScope.weekdays })
+      .eq("id", offerId);
+  } else {
+    await supabase
+      .from("combo_offers")
+      .update({ send_weekdays: [] })
+      .eq("id", offerId);
+  }
+
+  return { ok: true as const };
+}
+
+export async function duplicateComboOffer(offerId: string, adminUserId?: string | null) {
   const supabase = getSupabaseAdmin();
   const { data: offer, error } = await supabase
     .from("combo_offers")
-    .select("name, description, image_url, price_cents, send_timing_type, send_offset_minutes, send_time_of_day, send_weekdays")
+    .select("name, description, image_url, price_cents, display_priority, send_timing_type, send_offset_minutes, send_time_of_day, send_weekdays")
     .eq("id", offerId)
     .maybeSingle<ComboOfferRow>();
 
@@ -476,7 +653,7 @@ export async function duplicateComboOffer(offerId: string) {
 
   const { data: scopes, error: scopesError } = await supabase
     .from("combo_offer_scopes")
-    .select("scope_type, event_id, weekday")
+    .select("scope_type, event_id, weekday, display_priority")
     .eq("offer_id", offerId)
     .returns<ComboOfferScopeRow[]>();
 
@@ -489,11 +666,13 @@ export async function duplicateComboOffer(offerId: string) {
       description: offer.description,
       image_url: offer.image_url,
       price_cents: offer.price_cents,
+      display_priority: normalizeDisplayPriority(offer.display_priority),
       send_timing_type: offer.send_timing_type,
       send_offset_minutes: offer.send_offset_minutes,
       send_time_of_day: offer.send_time_of_day,
       send_weekdays: offer.send_weekdays ?? [],
       source_offer_id: offerId,
+      created_by_admin_user_id: adminUserId ?? null,
       status: "paused",
     })
     .select("id")
@@ -501,13 +680,31 @@ export async function duplicateComboOffer(offerId: string) {
 
   if (copyError) return { ok: false as const, reason: "database_error" as const, error: copyError };
 
-  const rows = (scopes ?? []).map((scope) => ({
-    offer_id: copy.id,
-    scope_type: scope.scope_type,
-    event_id: scope.event_id,
-    weekday: scope.weekday,
-  }));
-  if (rows.length) await supabase.from("combo_offer_scopes").insert(rows);
+  const rows = await Promise.all(
+    (scopes ?? []).map(async (scope) => ({
+      offer_id: copy.id,
+      scope_type: scope.scope_type,
+      event_id: scope.event_id,
+      weekday: scope.weekday,
+      display_priority:
+        scope.scope_type === "event" && scope.event_id
+          ? await getNextEventOfferPriority(scope.event_id)
+          : normalizeDisplayPriority(scope.display_priority),
+    })),
+  );
+  if (rows.length) {
+    const { error: insertScopesError } = await supabase.from("combo_offer_scopes").insert(rows);
+    if (insertScopesError) {
+      await supabase.from("combo_offers").delete().eq("id", copy.id);
+      return { ok: false as const, reason: "database_error" as const, error: insertScopesError };
+    }
+
+    const firstPriority = normalizeDisplayPriority(rows[0]?.display_priority);
+    await supabase
+      .from("combo_offers")
+      .update({ display_priority: firstPriority })
+      .eq("id", copy.id);
+  }
 
   return { ok: true as const, offerId: copy.id };
 }
@@ -557,6 +754,18 @@ function formatComboOfferTiming(
   if (offer.sendTimingType === "three_hours_before") return "3h antes do evento";
   if (offer.sendTimingType === "one_hour_before") return "1h antes do evento";
   if (offer.sendTimingType === "event_day_noon") return "No dia do evento as 12h";
+  if (offer.sendTimingType === "custom" && offer.sendOffsetMinutes === 3) {
+    return "3 minutos após a compra";
+  }
+  if (offer.sendTimingType === "custom" && offer.sendOffsetMinutes === 15) {
+    return "15 minutos apos a compra";
+  }
+  if (offer.sendTimingType === "custom" && offer.sendOffsetMinutes === 120) {
+    return "2h após a compra";
+  }
+  if (offer.sendTimingType === "custom" && offer.sendOffsetMinutes === 1440) {
+    return "24h após a compra";
+  }
 
   const parts = [
     "Horario personalizado",
@@ -572,7 +781,7 @@ async function loadOfferForSession(offerId: string, eventId: string, sessionId: 
   const supabase = getSupabaseAdmin();
   const { data: offer, error } = await supabase
     .from("combo_offers")
-    .select("id, name, description, image_url, price_cents, currency, send_timing_type, send_offset_minutes, send_time_of_day, send_weekdays, status")
+    .select("id, name, description, image_url, price_cents, display_priority, currency, send_timing_type, send_offset_minutes, send_time_of_day, send_weekdays, status")
     .eq("id", offerId)
     .eq("status", "active")
     .maybeSingle<ComboOfferRow>();
@@ -596,12 +805,14 @@ export async function createComboOrderForCheckout({
   customerId,
   eventId,
   sessionId,
+  sourceOrderId,
   sourceTicketId,
 }: {
   offerId: string;
   customerId: string;
   eventId: string;
   sessionId: string;
+  sourceOrderId?: string | null;
   sourceTicketId?: string | null;
 }) {
   const offer = await loadOfferForSession(offerId, eventId, sessionId);
@@ -609,6 +820,49 @@ export async function createComboOrderForCheckout({
 
   const checkoutExpiresAt = new Date(Date.now() + CHECKOUT_TTL_MINUTES * 60_000).toISOString();
   const supabase = getSupabaseAdmin();
+  if (sourceOrderId) {
+    const { data: existingOrder, error: existingError } = await supabase
+      .from("combo_orders")
+      .select("id, checkout_token_hash, checkout_expires_at, status")
+      .eq("source_order_id", sourceOrderId)
+      .eq("offer_id", offer.id)
+      .in("status", ["pending_payment", "expired"])
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle<{
+        id: string;
+        checkout_token_hash: string | null;
+        checkout_expires_at: string;
+        status: string;
+      }>();
+
+    if (existingError) return { ok: false as const, reason: "database_error" as const, error: existingError };
+
+    if (existingOrder) {
+      const token = buildComboCheckoutToken();
+      const nextExpiresAt = new Date(existingOrder.status === "expired" ? Date.now() + CHECKOUT_TTL_MINUTES * 60_000 : new Date(existingOrder.checkout_expires_at).getTime()).toISOString();
+      const updateResult = await supabase
+        .from("combo_orders")
+        .update({
+          checkout_token_hash: hashSecret(token),
+          checkout_expires_at: nextExpiresAt,
+          status: "pending_payment",
+        })
+        .eq("id", existingOrder.id);
+
+      if (updateResult.error) return { ok: false as const, reason: "database_error" as const, error: updateResult.error };
+
+      return {
+        ok: true as const,
+        orderId: existingOrder.id,
+        checkoutUrl: buildComboCheckoutUrl(existingOrder.id, token),
+        expiresAt: nextExpiresAt,
+        offerName: offer.name,
+        priceCents: offer.price_cents,
+      };
+    }
+  }
+
   const { data: order, error } = await supabase
     .from("combo_orders")
     .insert({
@@ -616,6 +870,7 @@ export async function createComboOrderForCheckout({
       customer_id: customerId,
       event_id: eventId,
       session_id: sessionId,
+      source_order_id: sourceOrderId ?? null,
       source_ticket_id: sourceTicketId ?? null,
       unit_amount_cents: offer.price_cents,
       total_amount_cents: offer.price_cents,
@@ -1330,16 +1585,74 @@ export async function listActiveComboOffersForEventSession(eventId: string, star
   const weekdayIndex = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(weekday);
   const { data, error } = await getSupabaseAdmin()
     .from("combo_offers")
-    .select("id, name, description, image_url, price_cents, currency, send_timing_type, send_offset_minutes, send_time_of_day, send_weekdays, status, combo_offer_scopes!inner(scope_type, event_id, weekday)")
+    .select("id, name, description, image_url, price_cents, display_priority, currency, send_timing_type, send_offset_minutes, send_time_of_day, send_weekdays, status, created_at, combo_offer_scopes!inner(scope_type, event_id, weekday, display_priority)")
     .eq("status", "active")
     .or(`scope_type.eq.all_events,event_id.eq.${eventId},weekday.eq.${weekdayIndex}`, {
       referencedTable: "combo_offer_scopes",
     })
+    .order("display_priority", { ascending: true })
     .order("created_at", { ascending: false })
     .returns<Array<ComboOfferRow & { combo_offer_scopes: ComboOfferScopeRow[] }>>();
 
   if (error) throw error;
-  return data ?? [];
+  return resolveEffectiveComboOffersForEvent(data ?? [], eventId);
+}
+
+function getComboOfferPriorityForEvent(
+  offer: ComboOfferRow & { combo_offer_scopes?: ComboOfferScopeRow[] },
+  eventId: string,
+) {
+  const eventScope = (offer.combo_offer_scopes ?? []).find(
+    (scope) => scope.scope_type === "event" && scope.event_id === eventId,
+  );
+
+  return normalizeDisplayPriority(eventScope?.display_priority ?? offer.display_priority);
+}
+
+function getComboOfferScopeRankForEvent(
+  offer: ComboOfferRow & { combo_offer_scopes?: ComboOfferScopeRow[] },
+  eventId: string,
+) {
+  const scopes = offer.combo_offer_scopes ?? [];
+  if (scopes.some((scope) => scope.scope_type === "event" && scope.event_id === eventId)) return 0;
+  if (scopes.some((scope) => scope.scope_type === "weekday")) return 1;
+  return 2;
+}
+
+function resolveEffectiveComboOffersForEvent<T extends ComboOfferRow & { combo_offer_scopes?: ComboOfferScopeRow[] }>(
+  offers: T[],
+  eventId: string,
+) {
+  const byPriority = new Map<number, T>();
+
+  for (const offer of offers) {
+    const priority = getComboOfferPriorityForEvent(offer, eventId);
+    const existing = byPriority.get(priority);
+
+    if (!existing) {
+      byPriority.set(priority, offer);
+      continue;
+    }
+
+    const offerRank = getComboOfferScopeRankForEvent(offer, eventId);
+    const existingRank = getComboOfferScopeRankForEvent(existing, eventId);
+    const offerTime = new Date(offer.created_at ?? 0).getTime();
+    const existingTime = new Date(existing.created_at ?? 0).getTime();
+
+    if (
+      offerRank < existingRank ||
+      (offerRank === existingRank && (
+        offerTime > existingTime ||
+        (offerTime === existingTime && offer.id.localeCompare(existing.id) < 0)
+      ))
+    ) {
+      byPriority.set(priority, offer);
+    }
+  }
+
+  return [...byPriority.entries()]
+    .sort((left, right) => left[0] - right[0])
+    .map(([, offer]) => offer);
 }
 
 export function shouldSendComboOfferNow(
@@ -1451,15 +1764,27 @@ export async function getComboCheckoutStatus(orderId: string, checkoutToken: str
   return null;
 }
 
-async function loadSentComboOfferKeys(sourceTicketIds: string[]) {
-  if (!sourceTicketIds.length) return new Set<string>();
+function buildComboOfferDedupeKey({
+  customerId,
+  eventId,
+  offerId,
+}: {
+  customerId: string;
+  eventId: string;
+  offerId: string;
+}) {
+  return `${customerId}:${eventId}:${offerId}`;
+}
+
+async function loadSentComboOfferKeys(customerIds: string[]) {
+  if (!customerIds.length) return new Set<string>();
 
   const { data, error } = await getSupabaseAdmin()
     .from("whatsapp_messages")
     .select("raw_metadata")
     .eq("direction", "outbound")
-    .contains("raw_metadata", { reason: "combo_offer" })
-    .in("raw_metadata->>source_ticket_id", sourceTicketIds);
+    .contains("raw_metadata", { reason: "combo_offer", send_status: "sent" })
+    .in("customer_id", Array.from(new Set(customerIds)));
 
   if (error) throw error;
 
@@ -1467,11 +1792,15 @@ async function loadSentComboOfferKeys(sourceTicketIds: string[]) {
 
   for (const row of data ?? []) {
     const metadata = row.raw_metadata as Record<string, unknown> | null;
-    const sourceTicketId =
-      typeof metadata?.source_ticket_id === "string" ? metadata.source_ticket_id : null;
+    const customerId =
+      typeof metadata?.customer_id === "string" ? metadata.customer_id : null;
+    const eventId =
+      typeof metadata?.event_id === "string" ? metadata.event_id : null;
     const offerId = typeof metadata?.offer_id === "string" ? metadata.offer_id : null;
 
-    if (sourceTicketId && offerId) keys.add(`${sourceTicketId}:${offerId}`);
+    if (customerId && eventId && offerId) {
+      keys.add(buildComboOfferDedupeKey({ customerId, eventId, offerId }));
+    }
   }
 
   return keys;
@@ -1494,6 +1823,123 @@ function mergeComboOfferCandidateTickets(
   );
 }
 
+function uniqueComboOfferCandidateTicketsByOrder(
+  tickets: ComboOfferCandidateTicketRow[],
+) {
+  const byOrder = new Map<string, ComboOfferCandidateTicketRow>();
+
+  for (const ticket of tickets) {
+    const order = firstJoin(ticket.orders);
+
+    if (!order) {
+      continue;
+    }
+
+    if (!byOrder.has(order.id)) {
+      byOrder.set(order.id, ticket);
+    }
+  }
+
+  return Array.from(byOrder.values());
+}
+
+async function getPaidTicketPurchaseNumberForEvent({
+  customerId,
+  eventId,
+  currentOrderId,
+  currentOrderCreatedAt,
+}: {
+  customerId: string;
+  eventId: string;
+  currentOrderId: string;
+  currentOrderCreatedAt: string;
+}) {
+  const { data, error } = await getSupabaseAdmin()
+    .from("orders")
+    .select("id, created_at, tickets!inner(customer_id, event_sessions!inner(event_id))")
+    .eq("status", "paid")
+    .eq("tickets.customer_id", customerId)
+    .eq("tickets.event_sessions.event_id", eventId)
+    .lte("created_at", currentOrderCreatedAt)
+    .order("created_at", { ascending: true })
+    .returns<Array<{ id: string; created_at: string }>>();
+
+  if (error) throw error;
+
+  const orderedIds = [...new Set((data ?? []).map((order) => order.id))];
+  const index = orderedIds.indexOf(currentOrderId);
+
+  return index >= 0 ? index + 1 : orderedIds.length + 1;
+}
+
+async function acquireComboOfferEventLock({
+  customerId,
+  eventId,
+}: {
+  customerId: string;
+  eventId: string;
+}) {
+  const supabase = getSupabaseAdmin();
+  const lockToken = buildLockToken();
+  const lockedUntil = new Date(Date.now() + COMBO_OFFER_EVENT_LOCK_TTL_SECONDS * 1000).toISOString();
+  const insert = await supabase
+    .from("combo_offer_event_locks")
+    .insert({
+      customer_id: customerId,
+      event_id: eventId,
+      lock_token: lockToken,
+      locked_until: lockedUntil,
+    });
+
+  if (!insert.error) return { acquired: true as const, lockToken };
+
+  const update = await supabase
+    .from("combo_offer_event_locks")
+    .update({ lock_token: lockToken, locked_until: lockedUntil })
+    .eq("customer_id", customerId)
+    .eq("event_id", eventId)
+    .lte("locked_until", new Date().toISOString());
+
+  if (update.error) throw update.error;
+
+  const { data, error } = await supabase
+    .from("combo_offer_event_locks")
+    .select("lock_token")
+    .eq("customer_id", customerId)
+    .eq("event_id", eventId)
+    .maybeSingle<{ lock_token: string }>();
+
+  if (error) throw error;
+  return data?.lock_token === lockToken
+    ? { acquired: true as const, lockToken }
+    : { acquired: false as const };
+}
+
+async function releaseComboOfferEventLock({
+  customerId,
+  eventId,
+  lockToken,
+}: {
+  customerId: string;
+  eventId: string;
+  lockToken: string;
+}) {
+  const { error } = await getSupabaseAdmin()
+    .from("combo_offer_event_locks")
+    .delete()
+    .eq("customer_id", customerId)
+    .eq("event_id", eventId)
+    .eq("lock_token", lockToken);
+
+  if (error) {
+    logWarn("Failed to release combo offer event lock", {
+      customerId,
+      eventId,
+      error,
+    });
+  }
+}
+
 export async function sendScheduledComboOffers(limit = 100) {
   await expireComboOrders(limit);
 
@@ -1512,7 +1958,7 @@ export async function sendScheduledComboOffers(limit = 100) {
   ] = await Promise.all([
     supabase
     .from("tickets")
-    .select("id, customer_id, issued_at, customers(whatsapp_phone), orders!inner(status), event_sessions!inner(id, event_id, starts_at, events!inner(id, title))")
+    .select("id, customer_id, issued_at, customers(whatsapp_phone), orders!inner(id, created_at, status), event_sessions!inner(id, event_id, starts_at, events!inner(id, title))")
     .eq("status", "issued")
     .eq("orders.status", "paid")
     .gte("event_sessions.starts_at", eventWindowFrom)
@@ -1522,7 +1968,7 @@ export async function sendScheduledComboOffers(limit = 100) {
       .returns<ComboOfferCandidateTicketRow[]>(),
     supabase
       .from("tickets")
-      .select("id, customer_id, issued_at, customers(whatsapp_phone), orders!inner(status), event_sessions!inner(id, event_id, starts_at, events!inner(id, title))")
+      .select("id, customer_id, issued_at, customers(whatsapp_phone), orders!inner(id, created_at, status), event_sessions!inner(id, event_id, starts_at, events!inner(id, title))")
       .eq("status", "issued")
       .eq("orders.status", "paid")
       .gte("issued_at", recentPurchaseFrom)
@@ -1535,21 +1981,41 @@ export async function sendScheduledComboOffers(limit = 100) {
   const error = eventWindowError ?? recentPurchaseError;
   if (error) throw error;
 
-  const tickets = mergeComboOfferCandidateTickets(eventWindowTickets, recentPurchaseTickets);
-  const sentKeys = await loadSentComboOfferKeys(tickets.map((ticket) => ticket.id));
+  const tickets = uniqueComboOfferCandidateTicketsByOrder(
+    mergeComboOfferCandidateTickets(eventWindowTickets, recentPurchaseTickets),
+  );
   let sentCount = 0;
   let failedCount = 0;
   let skippedCount = 0;
 
   for (const ticket of tickets) {
     const session = firstJoin(ticket.event_sessions);
+    const order = firstJoin(ticket.orders);
     const event = session?.events;
     const phone = ticket.customers?.whatsapp_phone;
 
-    if (!session || !event || !phone) {
+    if (!session || !order || !event || !phone) {
       skippedCount += 1;
       continue;
     }
+
+    const eventLock = await acquireComboOfferEventLock({
+      customerId: ticket.customer_id,
+      eventId: session.event_id,
+    });
+
+    if (!eventLock.acquired) {
+      skippedCount += 1;
+      continue;
+    }
+
+    try {
+    const purchaseNumber = await getPaidTicketPurchaseNumberForEvent({
+      customerId: ticket.customer_id,
+      eventId: session.event_id,
+      currentOrderId: order.id,
+      currentOrderCreatedAt: order.created_at,
+    });
 
     const offers = await listActiveComboOffersForEventSession(
       session.event_id,
@@ -1561,14 +2027,27 @@ export async function sendScheduledComboOffers(limit = 100) {
       continue;
     }
 
-    for (const offer of offers) {
+    const offer = offers.find(
+      (offer) => getComboOfferPriorityForEvent(offer, session.event_id) === purchaseNumber,
+    );
+
+    if (!offer) {
+      skippedCount += 1;
+      continue;
+    }
+
       if (!shouldSendComboOfferNow(offer, session.starts_at, now, ticket.issued_at)) {
         skippedCount += 1;
         continue;
       }
 
-      const dedupeKey = `${ticket.id}:${offer.id}`;
-      if (sentKeys.has(dedupeKey)) {
+      const dedupeKey = buildComboOfferDedupeKey({
+        customerId: ticket.customer_id,
+        eventId: session.event_id,
+        offerId: offer.id,
+      });
+      const currentSentKeys = await loadSentComboOfferKeys([ticket.customer_id]);
+      if (currentSentKeys.has(dedupeKey)) {
         skippedCount += 1;
         continue;
       }
@@ -1578,6 +2057,7 @@ export async function sendScheduledComboOffers(limit = 100) {
         customerId: ticket.customer_id,
         eventId: session.event_id,
         sessionId: session.id,
+        sourceOrderId: order.id,
         sourceTicketId: ticket.id,
       });
 
@@ -1634,6 +2114,8 @@ export async function sendScheduledComboOffers(limit = 100) {
             offer_image_url: offer.image_url,
             source_ticket_id: ticket.id,
             offer_id: offer.id,
+            offer_priority: getComboOfferPriorityForEvent(offer, session.event_id),
+            event_purchase_number: purchaseNumber,
             combo_order_id: checkout.orderId,
             event_id: session.event_id,
             session_id: session.id,
@@ -1658,10 +2140,15 @@ export async function sendScheduledComboOffers(limit = 100) {
 
       if (sendResult.ok) {
         sentCount += 1;
-        sentKeys.add(dedupeKey);
       } else {
         failedCount += 1;
       }
+    } finally {
+      await releaseComboOfferEventLock({
+        customerId: ticket.customer_id,
+        eventId: session.event_id,
+        lockToken: eventLock.lockToken,
+      });
     }
   }
 

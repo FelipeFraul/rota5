@@ -35,11 +35,50 @@ type EventSummary = {
   }>;
 };
 
+type ComboOfferSummary = {
+  offerId: string;
+  name: string;
+  description: string;
+  imageUrl: string | null;
+  priceCents: number;
+  displayPriority: number;
+  status: "active" | "paused" | string;
+  sendTimingType: ComboOfferTimingType;
+  sendOffsetMinutes: number | null;
+  timingLabel: string;
+  scopeLabel: string;
+  scopeType: "all_events" | "event" | "weekday";
+  eventIds: string[];
+  weekdays: number[];
+  createdAt: string;
+  paidOrders: number;
+  impressions: number;
+  clicks: number;
+  itemsSold: number;
+  revenueCents: number;
+};
+
 type EventStatus = "draft" | "published" | "cancelled" | "finished";
 type EventFilterStatus = EventStatus | "all" | "paused";
 type SessionStatus = "scheduled" | "sales_open" | "sales_closed" | "cancelled" | "finished";
 type SectionStatus = "active" | "inactive";
 type PriceStatus = "active" | "inactive";
+type AdminViewFilter = "tickets" | "combos" | "all";
+type ComboOfferTimingType = "three_hours_before" | "one_hour_before" | "event_day_noon" | "custom";
+
+type ComboOfferDraft = {
+  name: string;
+  description: string;
+  imageUrl: string;
+  price: string;
+  displayPriority: number;
+  status: "active" | "paused";
+  timingType: ComboOfferTimingType;
+  customOffsetMinutes: number;
+  scopeType: "all_events" | "event" | "weekday";
+  eventIds: string[];
+  weekdays: number[];
+};
 
 type ContactActivityContact = EventDashboard["contactActivity"]["contacts"][number];
 
@@ -332,6 +371,13 @@ function fromDateTimeLocal(value: string) {
 
 function moneyFromCents(cents: number) {
   return (cents / 100).toFixed(2).replace(".", ",");
+}
+
+function decimalInputToCents(value: string) {
+  const normalized = value.trim().replace(/\./g, "").replace(",", ".");
+  const amount = Number(normalized);
+
+  return Number.isFinite(amount) ? Math.round(amount * 100) : null;
 }
 
 function formatCurrency(cents: number) {
@@ -1574,14 +1620,20 @@ function GeneralDashboardModal({
 
 export function AdminEventsEditor() {
   const [events, setEvents] = useState<EventSummary[]>([]);
+  const [comboOffers, setComboOffers] = useState<ComboOfferSummary[]>([]);
+  const [viewFilter, setViewFilter] = useState<AdminViewFilter>("all");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<EventFilterStatus>("published");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [selected, setSelected] = useState<EventDetails | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [selectedComboOffer, setSelectedComboOffer] = useState<ComboOfferSummary | null>(null);
+  const [comboDraft, setComboDraft] = useState<ComboOfferDraft | null>(null);
+  const [comboSaving, setComboSaving] = useState(false);
   const [saving, setSaving] = useState(false);
   const [duplicatingEventId, setDuplicatingEventId] = useState<string | null>(null);
+  const [comboActionId, setComboActionId] = useState<string | null>(null);
   const [dashboard, setDashboard] = useState<DashboardState | null>(null);
   const [generalDashboard, setGeneralDashboard] = useState<GeneralDashboard | null>(null);
   const [generalDashboardOpen, setGeneralDashboardOpen] = useState(false);
@@ -1602,6 +1654,12 @@ export function AdminEventsEditor() {
         return;
       }
 
+      if (selectedComboOffer) {
+        setSelectedComboOffer(null);
+        setComboDraft(null);
+        return;
+      }
+
       if (selected) {
         setSelected(null);
       }
@@ -1609,7 +1667,7 @@ export function AdminEventsEditor() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [contactsOpen, dashboard, selected]);
+  }, [contactsOpen, dashboard, selected, selectedComboOffer]);
 
   const loadEvents = useCallback(async () => {
     setLoading(true);
@@ -1623,16 +1681,28 @@ export function AdminEventsEditor() {
       const data = await response.json() as {
         ok?: boolean;
         events?: EventSummary[];
+        comboOffers?: ComboOfferSummary[];
         dashboard?: GeneralDashboard | null;
         message?: string;
       };
 
       if (!response.ok || !data.ok) {
-        setMessage(data.message ?? "Não foi possível carregar os eventos.");
+        const sessionMessage =
+          response.status === 401 || response.status === 403
+            ? "Sessão expirada. Abra um novo link pelo WhatsApp."
+            : null;
+
+        setMessage(data.message ?? sessionMessage ?? "Não foi possível carregar os eventos.");
+        if (sessionMessage) {
+          setEvents([]);
+          setComboOffers([]);
+          setGeneralDashboard(null);
+        }
         return;
       }
 
       setEvents(data.events ?? []);
+      setComboOffers(data.comboOffers ?? []);
       setGeneralDashboard(data.dashboard ?? null);
     } catch {
       setMessage("Não foi possível carregar os eventos.");
@@ -1701,6 +1771,140 @@ export function AdminEventsEditor() {
   async function saveEvent(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await persistDraft();
+  }
+
+  function openComboOffer(offer: ComboOfferSummary) {
+    setSelectedComboOffer(offer);
+    setComboDraft({
+      name: offer.name,
+      description: offer.description,
+      imageUrl: offer.imageUrl ?? "",
+      price: moneyFromCents(offer.priceCents),
+      displayPriority: offer.displayPriority || 1,
+      status: offer.status === "active" ? "active" : "paused",
+      timingType: offer.sendTimingType,
+      customOffsetMinutes: offer.sendOffsetMinutes ?? 3,
+      scopeType: offer.scopeType,
+      eventIds: offer.eventIds,
+      weekdays: offer.weekdays,
+    });
+  }
+
+  async function saveComboOffer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedComboOffer || !comboDraft) return;
+
+    const priceCents = decimalInputToCents(comboDraft.price);
+    if (!priceCents || priceCents <= 0) {
+      setMessage("Informe um valor válido para o combo.");
+      return;
+    }
+
+    setComboSaving(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch(`/api/admin/combo-offers/${selectedComboOffer.offerId}`, {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: {
+          "content-type": "application/json",
+          "x-admin-csrf": decodeURIComponent(getCsrfToken()),
+        },
+        body: JSON.stringify({
+          name: comboDraft.name,
+          description: comboDraft.description,
+          imageUrl: comboDraft.imageUrl || null,
+          priceCents,
+          displayPriority: comboDraft.displayPriority,
+          status: comboDraft.status,
+          timingType: comboDraft.timingType,
+          customOffsetMinutes: comboDraft.timingType === "custom" ? comboDraft.customOffsetMinutes : undefined,
+          scope: comboDraft.scopeType === "all_events"
+            ? { scopeType: "all_events" }
+            : comboDraft.scopeType === "event"
+              ? { scopeType: "event", eventIds: comboDraft.eventIds }
+              : { scopeType: "weekday", weekdays: comboDraft.weekdays },
+        }),
+      });
+      const result = await response.json() as { ok?: boolean; message?: string };
+
+      if (!response.ok || !result.ok) {
+        setMessage(result.message ?? "Não foi possível salvar o combo.");
+        return;
+      }
+
+      setMessage("Combo salvo com segurança.");
+      setSelectedComboOffer(null);
+      setComboDraft(null);
+      await loadEvents();
+    } catch {
+      setMessage("Não foi possível salvar o combo.");
+    } finally {
+      setComboSaving(false);
+    }
+  }
+
+  async function duplicateComboOfferCard(offer: ComboOfferSummary) {
+    const confirmed = window.confirm("Duplicar este combo como inativo?");
+    if (!confirmed) return;
+
+    setComboActionId(offer.offerId);
+    setMessage(null);
+
+    try {
+      const response = await fetch(`/api/admin/combo-offers/${offer.offerId}`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "x-admin-csrf": decodeURIComponent(getCsrfToken()),
+        },
+      });
+      const result = await response.json() as { ok?: boolean; message?: string };
+
+      if (!response.ok || !result.ok) {
+        setMessage(result.message ?? "Não foi possível duplicar o combo.");
+        return;
+      }
+
+      setMessage("Combo duplicado como inativo.");
+      await loadEvents();
+    } catch {
+      setMessage("Não foi possível duplicar o combo.");
+    } finally {
+      setComboActionId(null);
+    }
+  }
+
+  async function deleteComboOfferCard(offer: ComboOfferSummary) {
+    const confirmed = window.confirm("Excluir este combo da venda? O histórico será preservado.");
+    if (!confirmed) return;
+
+    setComboActionId(offer.offerId);
+    setMessage(null);
+
+    try {
+      const response = await fetch(`/api/admin/combo-offers/${offer.offerId}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: {
+          "x-admin-csrf": decodeURIComponent(getCsrfToken()),
+        },
+      });
+      const result = await response.json() as { ok?: boolean; message?: string };
+
+      if (!response.ok || !result.ok) {
+        setMessage(result.message ?? "Não foi possível excluir o combo.");
+        return;
+      }
+
+      setMessage("Combo excluído da venda e preservado no histórico.");
+      await loadEvents();
+    } catch {
+      setMessage("Não foi possível excluir o combo.");
+    } finally {
+      setComboActionId(null);
+    }
   }
 
   function changeTab(nextTab: ActiveTab) {
@@ -1859,6 +2063,11 @@ export function AdminEventsEditor() {
           />
           <button type="submit">Buscar</button>
         </form>
+        <div className="admin-view-filter" aria-label="Filtro de visualização">
+          <button type="button" className={viewFilter === "tickets" ? "is-active" : ""} onClick={() => setViewFilter("tickets")}>Ver ingressos</button>
+          <button type="button" className={viewFilter === "combos" ? "is-active" : ""} onClick={() => setViewFilter("combos")}>Ver combo</button>
+          <button type="button" className={viewFilter === "all" ? "is-active" : ""} onClick={() => setViewFilter("all")}>Ver tudo</button>
+        </div>
         <select value={status} onChange={(event) => setStatus(event.target.value as EventFilterStatus)}>
           <option value="all">Todos</option>
           <option value="draft">Rascunhos</option>
@@ -1871,10 +2080,11 @@ export function AdminEventsEditor() {
 
       {message ? <p className="admin-events-message">{message}</p> : null}
 
-      <section className="admin-events-grid" aria-live="polite">
-        {loading ? <p className="admin-events-empty">Carregando eventos...</p> : null}
-        {!loading && events.length === 0 ? <p className="admin-events-empty">Nenhum evento encontrado.</p> : null}
-        {events.map((event) => (
+      {viewFilter !== "combos" ? (
+        <section className="admin-events-grid" aria-live="polite">
+          {loading ? <p className="admin-events-empty">Carregando eventos...</p> : null}
+          {!loading && events.length === 0 ? <p className="admin-events-empty">Nenhum evento encontrado.</p> : null}
+          {events.map((event) => (
           <article
             key={event.eventId}
             className="admin-event-card"
@@ -1947,8 +2157,81 @@ export function AdminEventsEditor() {
               <TicketSalesOverviewIcons event={event} />
             </span>
           </article>
-        ))}
-      </section>
+          ))}
+        </section>
+      ) : null}
+
+      {viewFilter !== "tickets" ? (
+        <section className="admin-combo-offers-section" aria-label="Ofertas e combos">
+        <div className="admin-events-grid admin-combo-offers-grid">
+          {loading ? <p className="admin-events-empty">Carregando combos...</p> : null}
+          {!loading && comboOffers.length === 0 ? <p className="admin-events-empty">Nenhum combo encontrado.</p> : null}
+          {comboOffers.map((offer) => (
+            <article key={offer.offerId} className="admin-event-card admin-combo-offer-card">
+              <span
+                className="admin-event-card-image admin-combo-offer-image"
+                style={offer.imageUrl ? { backgroundImage: `url("${offer.imageUrl}")` } : undefined}
+              />
+              <span className="admin-event-card-body">
+                <span className="admin-event-card-actions">
+                  <span className={`admin-event-status is-${offer.status === "active" ? "published" : "draft"}`}>
+                    {offer.status === "active" ? "Ativo" : "Inativo"}
+                  </span>
+                  <button
+                    type="button"
+                    className="admin-event-action-button"
+                    aria-label={`Editar combo ${offer.name}`}
+                    data-tooltip="Editar"
+                    onClick={() => openComboOffer(offer)}
+                  >
+                    <EditIcon />
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-event-action-button"
+                    aria-label={`Duplicar combo ${offer.name}`}
+                    data-tooltip="Duplicar"
+                    disabled={comboActionId === offer.offerId}
+                    onClick={() => void duplicateComboOfferCard(offer)}
+                  >
+                    <DuplicateIcon />
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-event-action-button"
+                    aria-label={`Dashboard do combo ${offer.name}`}
+                    data-tooltip="Dashboard"
+                    disabled
+                  >
+                    <ChartIcon />
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-event-action-button is-danger"
+                    aria-label={`Excluir combo ${offer.name}`}
+                    data-tooltip="Excluir"
+                    disabled={comboActionId === offer.offerId}
+                    onClick={() => void deleteComboOfferCard(offer)}
+                  >
+                    <DeleteIcon />
+                  </button>
+                </span>
+                <strong>{offer.name}</strong>
+                <small>Prioridade {formatInteger(offer.displayPriority || 1)}</small>
+                <small>{formatCurrency(offer.priceCents)} · {offer.timingLabel}</small>
+                <small>{offer.scopeLabel}</small>
+                <span className="admin-combo-offer-metrics">
+                  <span><b>{formatInteger(offer.itemsSold)}</b> vendidos</span>
+                  <span><b>{formatCurrency(offer.revenueCents)}</b> receita</span>
+                  <span><b>{formatInteger(offer.impressions)}</b> impressões</span>
+                  <span><b>{formatInteger(offer.clicks)}</b> cliques</span>
+                </span>
+              </span>
+            </article>
+          ))}
+        </div>
+        </section>
+      ) : null}
 
       {dashboard ? (
         <div
@@ -2109,6 +2392,115 @@ export function AdminEventsEditor() {
 
       {generalDashboardOpen && generalDashboard ? (
         <GeneralDashboardModal dashboard={generalDashboard} onClose={() => setGeneralDashboardOpen(false)} />
+      ) : null}
+
+      {selectedComboOffer && comboDraft ? (
+        <div
+          className="admin-event-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Editar combo"
+          onMouseDown={(event) => closeOnOverlayClick(event, () => {
+            if (!comboSaving) {
+              setSelectedComboOffer(null);
+              setComboDraft(null);
+            }
+          })}
+        >
+          <form className="admin-event-modal-panel admin-combo-offer-modal-panel" onSubmit={saveComboOffer}>
+            <header>
+              <div>
+                <p className="admin-events-kicker">Editando combo</p>
+                <h2>{selectedComboOffer.name}</h2>
+              </div>
+              <button
+                type="button"
+                className="admin-event-icon-button"
+                disabled={comboSaving}
+                onClick={() => {
+                  setSelectedComboOffer(null);
+                  setComboDraft(null);
+                }}
+                aria-label="Fechar"
+              >
+                &times;
+              </button>
+            </header>
+
+            <div className="admin-event-modal-content">
+              <div className="admin-event-form-grid">
+                <label>Nome<input value={comboDraft.name} onChange={(event) => setComboDraft({ ...comboDraft, name: event.target.value })} /></label>
+                <label>Valor<input value={comboDraft.price} onChange={(event) => setComboDraft({ ...comboDraft, price: event.target.value })} /></label>
+                <label>Prioridade<input type="number" min={1} max={1000} value={comboDraft.displayPriority} onChange={(event) => setComboDraft({ ...comboDraft, displayPriority: Math.max(1, Number(event.target.value) || 1) })} /></label>
+                <label>Status<select value={comboDraft.status} onChange={(event) => setComboDraft({ ...comboDraft, status: event.target.value as ComboOfferDraft["status"] })}>
+                  <option value="active">Ativo</option>
+                  <option value="paused">Inativo</option>
+                </select></label>
+                <label>
+                  Escopo
+                  <select value={comboDraft.scopeType} onChange={(event) => setComboDraft({
+                    ...comboDraft,
+                    scopeType: event.target.value as ComboOfferDraft["scopeType"],
+                    eventIds: event.target.value === "event" ? [comboDraft.eventIds[0] ?? events[0]?.eventId ?? ""] : comboDraft.eventIds,
+                    weekdays: event.target.value === "weekday" ? [comboDraft.weekdays[0] ?? 5] : comboDraft.weekdays,
+                  })}>
+                    <option value="all_events">Todos</option>
+                    <option value="event">Evento</option>
+                    <option value="weekday">Dia da semana</option>
+                  </select>
+                </label>
+                {comboDraft.scopeType === "event" ? (
+                  <label>
+                    Evento
+                    <select value={comboDraft.eventIds[0] ?? ""} onChange={(event) => setComboDraft({ ...comboDraft, eventIds: event.target.value ? [event.target.value] : [] })}>
+                      {events.map((event) => (
+                        <option key={event.eventId} value={event.eventId}>{event.title}</option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+                {comboDraft.scopeType === "weekday" ? (
+                  <label>
+                    Dia
+                    <select value={comboDraft.weekdays[0] ?? 5} onChange={(event) => setComboDraft({ ...comboDraft, weekdays: [Number(event.target.value)] })}>
+                      <option value={0}>Domingo</option>
+                      <option value={1}>Segunda</option>
+                      <option value={2}>Terça</option>
+                      <option value={3}>Quarta</option>
+                      <option value={4}>Quinta</option>
+                      <option value={5}>Sexta</option>
+                      <option value={6}>Sábado</option>
+                    </select>
+                  </label>
+                ) : null}
+                <label className={comboDraft.timingType === "custom" ? "admin-combo-send-field" : ""}>
+                  Envio
+                  <span className="admin-combo-send-controls">
+                    <select value={comboDraft.timingType} onChange={(event) => setComboDraft({ ...comboDraft, timingType: event.target.value as ComboOfferTimingType })}>
+                      <option value="custom">Após compra</option>
+                      <option value="one_hour_before">1h antes do evento</option>
+                      <option value="three_hours_before">3h antes do evento</option>
+                      <option value="event_day_noon">Meio-dia do evento</option>
+                    </select>
+                    {comboDraft.timingType === "custom" ? (
+                      <span className="admin-combo-minutes-input">
+                        <input type="number" min={1} max={10080} value={comboDraft.customOffsetMinutes} onChange={(event) => setComboDraft({ ...comboDraft, customOffsetMinutes: Math.max(1, Number(event.target.value) || 1) })} />
+                        <span>min</span>
+                      </span>
+                    ) : null}
+                  </span>
+                </label>
+                <label className="admin-event-field-wide">URL da foto<input value={comboDraft.imageUrl} onChange={(event) => setComboDraft({ ...comboDraft, imageUrl: event.target.value })} /></label>
+                <label className="admin-event-field-wide">Descrição<textarea value={comboDraft.description} onChange={(event) => setComboDraft({ ...comboDraft, description: event.target.value })} /></label>
+              </div>
+            </div>
+
+            <footer>
+              <span>Pedidos já gerados continuam com os dados da compra original.</span>
+              <button type="submit" disabled={comboSaving}>{comboSaving ? "Salvando..." : "Salvar combo"}</button>
+            </footer>
+          </form>
+        </div>
       ) : null}
 
       {selected && draft ? (
