@@ -21,6 +21,7 @@ type ComboOfferPatchPayload = {
   name?: unknown;
   description?: unknown;
   imageUrl?: unknown;
+  originalPriceCents?: unknown;
   priceCents?: unknown;
   displayPriority?: unknown;
   status?: unknown;
@@ -81,6 +82,7 @@ function getPayloadLogShape(payload: ComboOfferPatchPayload | null) {
     descriptionLength: typeof payload.description === "string" ? payload.description.trim().length : null,
     imageUrlType: payload.imageUrl === null ? "null" : typeof payload.imageUrl,
     hasImageUrl: typeof payload.imageUrl === "string" ? payload.imageUrl.trim().length > 0 : false,
+    originalPriceCents: payload.originalPriceCents,
     priceCents: payload.priceCents,
     displayPriority: payload.displayPriority,
     status: payload.status,
@@ -127,13 +129,15 @@ async function requireEditableComboOffer(request: Request, offerId: string) {
 
   const { data: offer, error: offerError } = await getSupabaseAdmin()
     .from("combo_offers")
-    .select("id, created_by_admin_user_id, status")
+    .select("id, created_by_admin_user_id, status, original_price_cents, price_cents")
     .eq("id", offerId)
     .neq("status", "deleted")
     .maybeSingle<{
       id: string;
       created_by_admin_user_id: string | null;
       status: string;
+      original_price_cents: number | null;
+      price_cents: number;
     }>();
 
   if (offerError) {
@@ -179,6 +183,32 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ ok: false, message: "Preço inválido." }, { status: 400 });
   }
 
+  const originalPriceCents = payload.originalPriceCents === undefined
+    ? undefined
+    : payload.originalPriceCents === null
+      ? null
+      : parsePriceCents(payload.originalPriceCents);
+  if (
+    payload.originalPriceCents !== undefined &&
+    payload.originalPriceCents !== null &&
+    !originalPriceCents
+  ) {
+    logComboOfferPatchFailure(offerId, "invalid_original_price_cents", payload);
+    return NextResponse.json({ ok: false, message: "Preço original inválido." }, { status: 400 });
+  }
+
+  const nextPriceCents = priceCents ?? editable.offer.price_cents;
+  const nextOriginalPriceCents = originalPriceCents === undefined
+    ? editable.offer.original_price_cents
+    : originalPriceCents;
+  if (nextOriginalPriceCents !== null && nextOriginalPriceCents <= nextPriceCents) {
+    logComboOfferPatchFailure(offerId, "original_price_not_greater_than_price", payload, {
+      nextOriginalPriceCents,
+      nextPriceCents,
+    });
+    return NextResponse.json({ ok: false, message: "O valor De precisa ser maior que o valor Por." }, { status: 400 });
+  }
+
   const displayPriority = payload.displayPriority === undefined
     ? undefined
     : parseDisplayPriority(payload.displayPriority);
@@ -208,6 +238,7 @@ export async function PATCH(request: Request, { params }: Params) {
     typeof payload.description === "string" ||
     typeof payload.imageUrl === "string" ||
     payload.imageUrl === null ||
+    originalPriceCents !== undefined ||
     priceCents !== undefined ||
     displayPriority !== undefined ||
     timingType !== undefined;
@@ -218,6 +249,7 @@ export async function PATCH(request: Request, { params }: Params) {
       name: typeof payload.name === "string" ? payload.name : undefined,
       description: typeof payload.description === "string" ? payload.description : undefined,
       imageUrl: typeof payload.imageUrl === "string" || payload.imageUrl === null ? payload.imageUrl : undefined,
+      originalPriceCents,
       priceCents: priceCents ?? undefined,
       displayPriority: displayPriority ?? undefined,
       timingType: timingType ?? undefined,

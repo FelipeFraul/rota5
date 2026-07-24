@@ -85,6 +85,7 @@ function buildDraftFromOffer(offer: ComboOfferSummary): ComboOfferDraft {
     name: offer.name,
     description: offer.description,
     imageUrl: offer.imageUrl ?? "",
+    originalPrice: offer.originalPriceCents ? moneyFromCents(offer.originalPriceCents) : "",
     price: moneyFromCents(offer.priceCents),
     displayPriority: offer.displayPriority || 1,
     status: offer.status === "active" ? "active" : "paused",
@@ -96,12 +97,19 @@ function buildDraftFromOffer(offer: ComboOfferSummary): ComboOfferDraft {
   };
 }
 
-function applyDraftToOffer(offer: ComboOfferSummary, draft: ComboOfferDraft, priceCents: number | null, events: EventSummary[]): ComboOfferSummary {
+function applyDraftToOffer(
+  offer: ComboOfferSummary,
+  draft: ComboOfferDraft,
+  originalPriceCents: number | null | undefined,
+  priceCents: number | null,
+  events: EventSummary[],
+): ComboOfferSummary {
   return {
     ...offer,
     name: draft.name.trim(),
     description: draft.description,
     imageUrl: draft.imageUrl || null,
+    originalPriceCents: originalPriceCents === undefined ? offer.originalPriceCents : originalPriceCents,
     priceCents: priceCents ?? offer.priceCents,
     displayPriority: draft.displayPriority,
     status: draft.status,
@@ -244,6 +252,19 @@ export default function AdminComboOffersSection({ events, visible }: AdminComboO
       return;
     }
 
+    const hasOriginalPrice = comboDraft.originalPrice.trim().length > 0;
+    const originalPriceCents = hasOriginalPrice
+      ? decimalInputToCents(comboDraft.originalPrice)
+      : null;
+    if (hasOriginalPrice && (!originalPriceCents || originalPriceCents <= 0)) {
+      setComboMessage("Informe um valor De válido ou deixe o campo vazio.");
+      return;
+    }
+    if (originalPriceCents !== null && priceCents !== null && originalPriceCents <= priceCents) {
+      setComboMessage("O valor De precisa ser maior que o valor Por.");
+      return;
+    }
+
     setComboSaving(true);
     setComboMessage(null);
     setSaveFeedback({ state: "loading", label: "Salvando combo" });
@@ -260,6 +281,7 @@ export default function AdminComboOffersSection({ events, visible }: AdminComboO
           name,
           description: comboDraft.description,
           imageUrl: comboDraft.imageUrl || null,
+          originalPriceCents,
           ...(priceCents ? { priceCents } : {}),
           displayPriority: comboDraft.displayPriority,
           status: comboDraft.status,
@@ -280,7 +302,7 @@ export default function AdminComboOffersSection({ events, visible }: AdminComboO
         return;
       }
 
-      const updatedOffer = applyDraftToOffer(selectedComboOffer, comboDraft, priceCents, events);
+      const updatedOffer = applyDraftToOffer(selectedComboOffer, comboDraft, originalPriceCents, priceCents, events);
       setComboOffers((current) => current.map((offer) => offer.offerId === updatedOffer.offerId ? updatedOffer : offer));
       setComboMessage(null);
       setSaveFeedback({ state: "success", label: "Salvo" });

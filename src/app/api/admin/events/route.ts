@@ -53,6 +53,7 @@ type AdminComboOfferRow = {
   name: string;
   description: string;
   image_url: string | null;
+  original_price_cents: number | null;
   price_cents: number;
   display_priority?: number | null;
   status: string;
@@ -545,7 +546,7 @@ async function listAdminComboOffers(input: { ownerAdminUserId: string; canSeeAll
   const supabase = getSupabaseAdmin();
   let offersQuery = supabase
     .from("combo_offers")
-    .select("id, name, description, image_url, price_cents, display_priority, status, send_timing_type, send_offset_minutes, send_time_of_day, created_at, created_by_admin_user_id, combo_offer_scopes(scope_type, event_id, weekday, display_priority, events(title))")
+    .select("id, name, description, image_url, original_price_cents, price_cents, display_priority, status, send_timing_type, send_offset_minutes, send_time_of_day, created_at, created_by_admin_user_id, combo_offer_scopes(scope_type, event_id, weekday, display_priority, events(title))")
     .neq("status", "deleted")
     .order("display_priority", { ascending: true })
     .order("created_at", { ascending: false })
@@ -634,6 +635,7 @@ async function listAdminComboOffers(input: { ownerAdminUserId: string; canSeeAll
       name: offer.name,
       description: offer.description,
       imageUrl: offer.image_url,
+      originalPriceCents: offer.original_price_cents === null ? null : safeCents(offer.original_price_cents),
       priceCents: safeCents(offer.price_cents),
       displayPriority: safeDisplayPriority(offer.display_priority),
       status: offer.status,

@@ -56,7 +56,8 @@ export default function ComboOfferModal({
         <div className="admin-event-modal-content">
           <div className="admin-event-form-grid">
             <label>Nome<input value={draft.name} onChange={(event) => onDraftChange({ ...draft, name: event.target.value })} /></label>
-            <label>Valor<input value={draft.price} onChange={(event) => onDraftChange({ ...draft, price: event.target.value })} /></label>
+            <label>De: R$<input value={draft.originalPrice} onChange={(event) => onDraftChange({ ...draft, originalPrice: event.target.value })} /></label>
+            <label>Por: R$<input value={draft.price} onChange={(event) => onDraftChange({ ...draft, price: event.target.value })} /></label>
             <label>Prioridade<input type="number" min={1} max={1000} value={draft.displayPriority} onChange={(event) => onDraftChange({ ...draft, displayPriority: Math.max(1, Number(event.target.value) || 1) })} /></label>
             <label>Status<select value={draft.status} onChange={(event) => onDraftChange({ ...draft, status: event.target.value as ComboOfferDraft["status"] })}>
               <option value="active">Ativo</option>

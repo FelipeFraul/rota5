@@ -55,6 +55,7 @@ export type ComboOfferSummary = {
   name: string;
   description: string;
   imageUrl: string | null;
+  originalPriceCents: number | null;
   priceCents: number;
   displayPriority: number;
   status: "active" | "paused" | string;
@@ -85,6 +86,7 @@ export type ComboOfferDraft = {
   name: string;
   description: string;
   imageUrl: string;
+  originalPrice: string;
   price: string;
   displayPriority: number;
   status: "active" | "paused";
