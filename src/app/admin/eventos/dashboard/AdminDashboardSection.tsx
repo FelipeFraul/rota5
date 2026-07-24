@@ -186,6 +186,10 @@ function AdminDashboardSectionComponent({
     }
   }, [generalDashboard, generalDashboardLoading]);
 
+  useEffect(() => {
+    void loadGeneralDashboard();
+  }, [loadGeneralDashboard]);
+
   const loadGeneralContacts = useCallback(async (range: ContactRange) => {
     if (generalContactActivityByRange[range] || generalContactsLoadingRange === range) return;
     setGeneralContactsLoadingRange(range);
