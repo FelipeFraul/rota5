@@ -1,7 +1,7 @@
 const PUBLIC_HOME_MESSAGE =
   "Olá, *bem-vindo(a) ao RockBar* Pub! 🤘";
 const PUBLIC_HOME_COMMANDS_MESSAGE =
-  '> Digite "SHOW" para ver o próximo show\n> Para ver todos, digite "ALL"\n> Reenviar seu ingresso, digite "AGAIN"\n> Para ajuda, digite "HELP"\n> Para uma nova pesquisa, "NEW"';
+  '> Digite *"SHOW"* para ver o próximo show\n> Para ver todos, digite *"ALL"*\n> Reenviar seu ingresso, digite *"AGAIN"*\n> Para ajuda, digite *"HELP"*\n> Para uma nova pesquisa, *"NEW"*';
 
 const PUBLIC_HOME_PROMPT = [
   PUBLIC_HOME_MESSAGE,
@@ -18,7 +18,7 @@ export const TICKET_MESSAGES = {
   genericHelpPrompt: PUBLIC_HOME_PROMPT,
   reentryPrompt: PUBLIC_REENTRY_PROMPT,
   conversationClosed:
-    "Sessão encerrada. Para iniciar uma nova digite olá!",
+    'Sessão encerrada. Para iniciar uma nova digite *"NEW"*',
   noEventsFound:
     "Não encontrei eventos com essa busca.\n\nTente pesquisar por outro nome, artista, data ou digite TODOS para ver os eventos disponíveis.",
   numericInvalidOption:
@@ -35,7 +35,7 @@ export const TICKET_MESSAGES = {
   noSeatsAvailable:
     "*SEM DISPONIBILIDADE*\n\nNão há ingressos suficientes nesse setor para a quantidade solicitada. Veja abaixo outras opções disponíveis.",
   unnumberedSectionPending:
-    "Digite o número de ingressos para compra, ex: 2",
+    'Digite o número de ingressos, *"EX: 4"*',
   seatInvalidOption:
     "ASSENTO INDISPONÍVEL",
   seatUnavailable:
@@ -56,9 +56,9 @@ export const TICKET_MESSAGES = {
   reservationCancelled:
     `PROCESSO CANCELADO\nSua reserva foi cancelada e os ingressos foram liberados.\n\n${PUBLIC_HOME_MESSAGE}`,
   reservationExpired:
-    "Seu tempo de reserva terminou. Se desejar comprar seu ingresso, pesquise novamente o evento.",
+    'Seu tempo de reserva terminou. Digite *"NEW"* para uma nova pesquisa.',
   buyerInterestReminder:
-    "ATENDIMENTO\n\n🚨 Últimos ingressos para {EVENTO}. Corra comprar o seu!\n> Digite 1 para comprar\n> Digite 2 para saber mais\n> Digite uma palavra para pesquisar o evento",
+    'ATENDIMENTO\n\n🚨 Últimos ingressos para {EVENTO}. Corra comprar o seu!\n> Digite *"1"* para comprar\n> Digite *"2"* para saber mais\n> Para uma nova pesquisa, *"NEW"*',
   buyerFlowReset:
     `PROCESSO CANCELADO\n\n${PUBLIC_HOME_MESSAGE}`,
   reservationUnavailableForPayment:
@@ -93,3 +93,4 @@ export const TICKET_MESSAGES = {
   adminOptionUnavailable:
     "Essa opção administrativa ainda está em construção.",
 } as const;
+

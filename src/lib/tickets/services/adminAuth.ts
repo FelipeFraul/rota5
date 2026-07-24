@@ -899,7 +899,7 @@ function encodeAdminWebSessionCookie(payload: {
   return `${body}.${signature}`;
 }
 
-function decodeAdminWebSessionCookie(value: string | null | undefined) {
+export function decodeAdminWebSessionCookie(value: string | null | undefined) {
   if (!value) return null;
   const secret = getAdminWebSessionSecret();
   if (!secret) return null;
@@ -1430,6 +1430,13 @@ export async function createAdminWebSession(adminUser: AdminUser) {
 }
 
 export async function getAdminWebSessionFromCookie(cookieValue: string | null | undefined) {
+  return getAdminWebSessionFromCookieWithOptions(cookieValue, { touchLastUsed: true });
+}
+
+export async function getAdminWebSessionFromCookieWithOptions(
+  cookieValue: string | null | undefined,
+  options: { touchLastUsed?: boolean } = {},
+) {
   const cookie = decodeAdminWebSessionCookie(cookieValue);
 
   if (!cookie || new Date(cookie.expiresAt).getTime() <= Date.now()) {
@@ -1439,13 +1446,17 @@ export async function getAdminWebSessionFromCookie(cookieValue: string | null | 
   const supabase = getSupabaseAdmin();
   const { data: adminSession, error: sessionError } = await supabase
     .from("admin_sessions")
-    .select("id, admin_user_id, phone, status, expires_at, created_at, last_used_at, metadata")
+    .select("id, admin_user_id, phone, status, expires_at, created_at, last_used_at, metadata, admin_users!inner(id, phone, role, status, name, last_login_at)")
     .eq("id", cookie.sessionId)
     .eq("admin_user_id", cookie.adminUserId)
     .eq("phone", cookie.phone)
     .eq("status", "active")
+    .eq("admin_users.status", "active")
     .gt("expires_at", new Date().toISOString())
-    .maybeSingle<AdminSession & { metadata?: { source?: string } | null }>();
+    .maybeSingle<AdminSession & {
+      metadata?: { source?: string } | null;
+      admin_users?: (Omit<AdminUser, "role"> & { role: string }) | Array<Omit<AdminUser, "role"> & { role: string }> | null;
+    }>();
 
   if (sessionError) {
     return { ok: false as const, reason: "database_error" as const, error: sessionError };
@@ -1455,15 +1466,9 @@ export async function getAdminWebSessionFromCookie(cookieValue: string | null | 
     return { ok: true as const, adminWebSession: null };
   }
 
-  const { data: adminUser, error: userError } = await supabase
-    .from("admin_users")
-    .select("id, phone, role, status, name, last_login_at, courtesy_send_limit, courtesy_receive_limit")
-    .eq("id", adminSession.admin_user_id)
-    .maybeSingle<Omit<AdminUser, "role"> & { role: string }>();
-
-  if (userError) {
-    return { ok: false as const, reason: "database_error" as const, error: userError };
-  }
+  const adminUser = Array.isArray(adminSession.admin_users)
+    ? adminSession.admin_users[0] ?? null
+    : adminSession.admin_users ?? null;
 
   if (
     !adminUser ||
@@ -1474,10 +1479,12 @@ export async function getAdminWebSessionFromCookie(cookieValue: string | null | 
     return { ok: true as const, adminWebSession: null };
   }
 
-  await supabase
-    .from("admin_sessions")
-    .update({ last_used_at: new Date().toISOString() })
-    .eq("id", adminSession.id);
+  if (options.touchLastUsed !== false) {
+    await supabase
+      .from("admin_sessions")
+      .update({ last_used_at: new Date().toISOString() })
+      .eq("id", adminSession.id);
+  }
 
   return {
     ok: true as const,
@@ -1489,7 +1496,16 @@ export async function getAdminWebSessionFromCookie(cookieValue: string | null | 
       expires_at: adminSession.expires_at,
       created_at: adminSession.created_at,
       last_used_at: adminSession.last_used_at,
-      adminUser: { ...adminUser, role: adminUser.role },
+      adminUser: {
+        id: adminUser.id,
+        phone: adminUser.phone,
+        role: adminUser.role,
+        status: adminUser.status,
+        name: adminUser.name,
+        last_login_at: adminUser.last_login_at,
+        courtesy_send_limit: null,
+        courtesy_receive_limit: null,
+      },
       csrfToken: cookie.csrfToken,
     } satisfies AdminWebSession,
   };

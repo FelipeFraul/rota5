@@ -88,7 +88,7 @@ test("cron finalizes inactive open conversations without duplicating finalizers"
   assert.doesNotMatch(conversationFinalizer, /latestMessage\?\.direction === "outbound"/);
   assert.match(conversationFinalizer, /status:\s*"closed"/);
   assert.match(conversationFinalizer, /reason:\s*FINALIZER_REASON/);
-  assert.match(ticketMessages, /conversationClosed:\s*"[^"]*encerrada\. Para iniciar uma nova digite ol[^"]*"/);
+  assert.match(ticketMessages, /conversationClosed:\s*['"][\s\S]*?encerrada\. Para iniciar uma nova digite \*"NEW"\*/);
   assert.match(ticketMessages, /adminLogout:\s*"[^"]*administrativa encerrada\."/);
   assert.doesNotMatch(ticketMessages, /conversationClosed:\s*"ATENDIMENTO/);
 });

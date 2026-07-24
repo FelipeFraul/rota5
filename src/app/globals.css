@@ -752,7 +752,8 @@ body:has(.checkout-unavailable-shell) iframe {
 
 .admin-events-toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 190px;
+  grid-template-columns: minmax(0, 1fr) auto 190px;
+  align-items: center;
   gap: 12px;
   width: min(1320px, 100%);
   margin: 0 auto 16px;
@@ -1122,12 +1123,81 @@ body:has(.checkout-unavailable-shell) iframe {
   font-weight: 700;
 }
 
+.admin-view-filter {
+  display: inline-flex;
+  gap: 4px;
+  width: auto;
+  margin: 0;
+  padding: 4px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.admin-view-filter button {
+  width: auto;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #475569;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.admin-view-filter button.is-active {
+  background: #0f172a;
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+}
+
+.admin-view-filter button:hover {
+  background: #e2e8f0;
+  box-shadow: none;
+  transform: none;
+}
+
+.admin-view-filter button.is-active:hover {
+  background: #0f172a;
+}
+
 .admin-events-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
   gap: 16px;
   width: min(1320px, 100%);
   margin: 0 auto;
+}
+
+.admin-combo-offers-section {
+  width: min(1320px, 100%);
+  margin: 28px auto 0;
+}
+
+.admin-combo-offers-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.admin-combo-offers-heading h2 {
+  margin: 2px 0 0;
+  color: #0f172a;
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+.admin-combo-offers-heading span {
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.admin-combo-offers-grid {
+  width: 100%;
 }
 
 .admin-event-card {
@@ -1154,6 +1224,16 @@ body:has(.checkout-unavailable-shell) iframe {
   transform: translateY(-2px);
 }
 
+.admin-combo-offer-card {
+  cursor: default;
+}
+
+.admin-combo-offer-card:hover {
+  border-color: rgba(226, 232, 240, 0.92);
+  box-shadow: 0 16px 46px rgba(0, 0, 0, 0.12);
+  transform: none;
+}
+
 .admin-event-card img,
 .admin-event-card-image {
   display: block;
@@ -1161,6 +1241,11 @@ body:has(.checkout-unavailable-shell) iframe {
   height: 136px;
   background: #dbe2ea;
   object-fit: cover;
+}
+
+.admin-combo-offer-image {
+  background-position: center;
+  background-size: cover;
 }
 
 .admin-event-card-body {
@@ -1180,6 +1265,35 @@ body:has(.checkout-unavailable-shell) iframe {
 .admin-event-card small {
   color: #4b5563;
   font-weight: 400;
+}
+
+.admin-card-funnel-metrics,
+.admin-combo-offer-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.admin-card-funnel-metrics span,
+.admin-combo-offer-metrics span {
+  min-height: 42px;
+  padding: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.admin-card-funnel-metrics b,
+.admin-combo-offer-metrics b {
+  display: block;
+  margin-bottom: 2px;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 900;
 }
 
 .admin-event-sales-overview {
@@ -2573,6 +2687,77 @@ body:has(.checkout-unavailable-shell) iframe {
   opacity: 0.65;
 }
 
+.admin-save-feedback-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(2, 6, 23, 0.42);
+}
+
+.admin-save-feedback-panel {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: min(320px, 100%);
+  padding: 28px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
+  text-align: center;
+}
+
+.admin-save-feedback-panel strong {
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.admin-save-feedback-panel small {
+  color: #475569;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.admin-save-feedback-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: 4px solid #0f766e;
+  border-right-color: transparent;
+  border-radius: 999px;
+  color: #0f766e;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1;
+  animation: admin-save-spin 760ms linear infinite;
+}
+
+.admin-save-feedback-icon.is-success {
+  border-color: #0f766e;
+  animation: admin-save-pop 220ms ease-out both;
+}
+
+@keyframes admin-save-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes admin-save-pop {
+  0% {
+    transform: scale(0.72);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
 .admin-event-icon-button {
   width: 40px;
   height: 40px;
@@ -2642,6 +2827,36 @@ body:has(.checkout-unavailable-shell) iframe {
 
 .admin-event-field-wide {
   grid-column: 1 / -1;
+}
+
+.admin-combo-send-field {
+  grid-column: 1 / -1;
+}
+
+.admin-combo-send-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 180px);
+  gap: 10px;
+}
+
+.admin-combo-minutes-input {
+  position: relative;
+  display: block;
+}
+
+.admin-combo-minutes-input input {
+  padding-right: 48px;
+}
+
+.admin-combo-minutes-input span {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 900;
+  pointer-events: none;
 }
 
 .admin-event-form-grid textarea {
@@ -2760,6 +2975,15 @@ body:has(.checkout-unavailable-shell) iframe {
 
   .admin-events-header {
     align-items: flex-start;
+  }
+
+  .admin-view-filter {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .admin-combo-send-controls {
+    grid-template-columns: 1fr;
   }
 
   .admin-event-tabs {
@@ -3592,6 +3816,17 @@ body:has(.checkout-unavailable-shell) iframe {
   border-color: #64748b;
 }
 
+.admin-table-map-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.admin-table-map-message {
+  margin: 0;
+  color: #475569;
+  font-size: 0.85rem;
+}
+
 .admin-table-map-toggle {
   display: inline-flex;
   border: 1px solid #cbd5e1;
@@ -3623,38 +3858,47 @@ body:has(.checkout-unavailable-shell) iframe {
 }
 
 .admin-table-map-image-frame {
-  position: relative;
   width: 100%;
-  max-height: calc(100vh - 130px);
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid #cbd5e1;
   background: #ffffff;
-  touch-action: none;
+  display: flex;
+  justify-content: center;
 }
 
 .admin-table-map-calibrator.is-embedded .admin-table-map-image-frame {
-  max-height: calc(100vh - 250px);
+  max-height: none;
+}
+
+.admin-table-map-surface {
+  position: relative;
+  width: min(calc(100% - 200px), 886px);
+  flex: 0 0 auto;
+  cursor: crosshair;
 }
 
 .admin-table-map-image-frame img {
   display: block;
   width: 100%;
-  height: 100%;
-  object-fit: contain;
+  height: auto;
   user-select: none;
   pointer-events: none;
 }
 
 .admin-table-map-marker {
   position: absolute;
-  width: 34px;
-  height: 28px;
+  width: 64px;
+  height: 52px;
   transform: translate(-50%, -50%);
   border: 0;
   border-radius: 4px;
   background: transparent;
-  color: #111827;
-  font: 900 16px/1 Arial, Helvetica, sans-serif;
+  color: #064106;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font: 700 40px/1 Arial, Helvetica, sans-serif;
   text-shadow:
     -1px -1px 0 #ffffff,
     1px -1px 0 #ffffff,
@@ -3666,7 +3910,7 @@ body:has(.checkout-unavailable-shell) iframe {
 
 .admin-table-map-marker.is-unavailable {
   color: #dc2626;
-  font-size: 17px;
+  font-size: 44px;
   text-shadow:
     -1px -1px 0 #7f1d1d,
     1px -1px 0 #7f1d1d,
@@ -3770,6 +4014,10 @@ body:has(.checkout-unavailable-shell) iframe {
 
   .admin-table-map-image-frame {
     max-height: none;
+  }
+
+  .admin-table-map-surface {
+    width: 100%;
   }
 }
 

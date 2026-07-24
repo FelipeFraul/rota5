@@ -2,6 +2,7 @@ import { getEnv } from "@/lib/env";
 import {
   formatComboDescription,
   getPublicComboCheckoutOrder,
+  trackComboCheckoutClick,
 } from "@/lib/tickets/services/comboOffers";
 import { InformationPage } from "@/app/InformationPage";
 import ComboCheckoutClient from "./combo-checkout-client";
@@ -29,9 +30,11 @@ export default async function ComboCheckoutPage({
 }: ComboCheckoutPageProps) {
   const { orderId } = await params;
   const query = await searchParams;
+  const decodedOrderId = decodeURIComponent(orderId);
   const checkoutToken = query.t ?? query.token ?? "";
+  await trackComboCheckoutClick(decodedOrderId);
   const order = await getPublicComboCheckoutOrder(
-    decodeURIComponent(orderId),
+    decodedOrderId,
     checkoutToken,
   );
   const publicKey = getEnv().NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY;

@@ -61,6 +61,7 @@ type CheckoutPaymentRow = {
   id: string;
   provider_payment_id: string | null;
   status: string;
+  raw_metadata?: Record<string, unknown> | null;
 };
 
 type ConfirmPaidTicketOrderResult = {
@@ -368,17 +369,23 @@ function getCheckoutAttempt(metadata: Record<string, unknown> | null | undefined
     : null;
 }
 
+function getMercadoPagoAccessTokenFingerprint(accessToken: string) {
+  return createHash("sha256").update(accessToken).digest("hex").slice(0, 16);
+}
+
 function buildPaymentIdempotencyKey({
   localPaymentId,
   method,
+  accessTokenFingerprint,
   token,
 }: {
   localPaymentId: string;
   method: "pix" | "card";
+  accessTokenFingerprint: string;
   token?: string;
 }) {
   if (method === "pix") {
-    return `${localPaymentId}:pix`;
+    return `${localPaymentId}:pix:${accessTokenFingerprint}`;
   }
 
   const tokenHash = createHash("sha256")
@@ -386,7 +393,7 @@ function buildPaymentIdempotencyKey({
     .digest("hex")
     .slice(0, 24);
 
-  return `${localPaymentId}:card:${tokenHash}`;
+  return `${localPaymentId}:card:${accessTokenFingerprint}:${tokenHash}`;
 }
 
 function buildTechnicalPayerEmail(orderId: string) {
@@ -611,7 +618,7 @@ export async function createCheckoutForReservation({
 
   const { data: reusablePayment, error: reusablePaymentError } = await supabase
     .from("payments")
-    .select("id, provider_preference_id, checkout_url")
+    .select("id, provider_preference_id, checkout_url, raw_metadata")
     .eq("order_id", order.id)
     .eq("provider", PROVIDER)
     .eq("status", "pending")
@@ -666,13 +673,13 @@ export async function createCheckoutForReservation({
 
   const { data: pendingPayment, error: pendingPaymentError } = await supabase
     .from("payments")
-    .select("id")
+    .select("id, raw_metadata")
     .eq("order_id", order.id)
     .eq("provider", PROVIDER)
     .eq("status", "pending")
     .order("created_at", { ascending: true })
     .limit(1)
-    .maybeSingle<{ id: string }>();
+    .maybeSingle<{ id: string; raw_metadata: Record<string, unknown> | null }>();
 
   if (pendingPaymentError) {
     logError("Failed to load pending checkout payment", {
@@ -688,7 +695,10 @@ export async function createCheckoutForReservation({
     amount_cents: totalAmountCents,
     currency: "BRL",
     checkout_url: checkoutUrl,
-    raw_metadata: rawMetadata,
+    raw_metadata: {
+      ...(pendingPayment?.raw_metadata ?? {}),
+      ...rawMetadata,
+    },
     updated_at: new Date().toISOString(),
   };
 
@@ -889,6 +899,35 @@ export async function getPublicCheckoutOrder(
   };
 }
 
+export async function trackTicketCheckoutClick(orderId: string) {
+  const supabase = getSupabaseAdmin();
+  const clickedAt = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("payments")
+    .select("id, raw_metadata")
+    .eq("order_id", orderId)
+    .not("checkout_url", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ id: string; raw_metadata: Record<string, unknown> | null }>();
+
+  if (error || !data) return;
+
+  const metadata = data.raw_metadata ?? {};
+  const currentCount = Number(metadata.checkout_click_count ?? 0);
+
+  await supabase
+    .from("payments")
+    .update({
+      raw_metadata: {
+        ...metadata,
+        checkout_clicked_at: clickedAt,
+        checkout_click_count: Number.isFinite(currentCount) ? currentCount + 1 : 1,
+      },
+    })
+    .eq("id", data.id);
+}
+
 export async function verifyPublicCheckoutAccess(orderId: string, checkoutToken: string) {
   const env = getEnv();
   const supabase = getSupabaseAdmin();
@@ -961,7 +1000,7 @@ export async function reconcileApprovedCheckoutPayment(orderId: string) {
 
   const { data: payment, error: paymentError } = await supabase
     .from("payments")
-    .select("id, provider_payment_id, status")
+    .select("id, provider_payment_id, status, raw_metadata")
     .eq("order_id", orderId)
     .eq("provider", PROVIDER)
     .not("provider_payment_id", "is", null)
@@ -998,7 +1037,10 @@ export async function reconcileApprovedCheckoutPayment(orderId: string) {
       p_provider_payment_id: String(mercadoPagoPayment.id),
       p_amount_cents: amountCents,
       p_paid_at: mercadoPagoPayment.date_approved ?? new Date().toISOString(),
-      p_raw_metadata: buildPaymentRawMetadata(mercadoPagoPayment),
+      p_raw_metadata: {
+        ...(payment.raw_metadata ?? {}),
+        ...buildPaymentRawMetadata(mercadoPagoPayment),
+      },
     },
   );
 
@@ -1041,6 +1083,9 @@ export async function paySelfHostedCheckout({
   sourceIdentifier,
 }: PayCheckoutInput): Promise<PayCheckoutResult> {
   const env = getEnv();
+  const accessTokenFingerprint = getMercadoPagoAccessTokenFingerprint(
+    env.MERCADO_PAGO_ACCESS_TOKEN,
+  );
   const order = await getPublicCheckoutOrder(orderId, checkoutToken);
 
   if (!order) {
@@ -1114,10 +1159,15 @@ export async function paySelfHostedCheckout({
     existingAttempt?.method === "pix" || existingAttempt?.method === "card"
       ? existingAttempt.method
       : null;
+  const existingAccessTokenFingerprint =
+    typeof existingAttempt?.access_token_fingerprint === "string"
+      ? existingAttempt.access_token_fingerprint
+      : null;
 
   if (
     existingPaymentId &&
     existingStatus &&
+    existingAccessTokenFingerprint === accessTokenFingerprint &&
     ACTIVE_MERCADO_PAGO_ATTEMPT_STATUSES.has(existingStatus)
   ) {
     return {
@@ -1169,6 +1219,7 @@ export async function paySelfHostedCheckout({
     buildPaymentIdempotencyKey({
       localPaymentId: pendingPayment.id,
       method,
+      accessTokenFingerprint,
       token,
     }),
   );
@@ -1189,6 +1240,7 @@ export async function paySelfHostedCheckout({
   const ticketUrl =
     payment.point_of_interaction?.transaction_data?.ticket_url ?? null;
   const safeMetadata = {
+    ...(pendingPayment.raw_metadata ?? {}),
     ...buildSafePaymentMetadata({
       orderId: order.orderId,
       reservationId: order.reservationId,
@@ -1203,6 +1255,7 @@ export async function paySelfHostedCheckout({
       method,
       status: payment.status ?? paymentStatus,
       provider_payment_id: providerPaymentId,
+      access_token_fingerprint: accessTokenFingerprint,
       ...(method === "pix" ? { qr_code: qrCode, ticket_url: ticketUrl } : {}),
     },
   };

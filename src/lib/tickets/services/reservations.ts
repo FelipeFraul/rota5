@@ -523,6 +523,7 @@ export async function reserveSelectedSeat({
     p_seat_ids: validSelectedSeats.map((selectedSeat) => selectedSeat.seatId),
     p_ticket_type: ticketType,
     p_ttl_minutes: env.TICKET_RESERVATION_TTL_MINUTES,
+    p_source_identifier: sourceIdentifier ?? null,
   });
 
   if (error) {
@@ -650,6 +651,7 @@ export async function reserveUnnumberedSectionTickets({
     p_seat_ids: seatList.seats.slice(0, quantity).map((seat) => seat.seatId),
     p_ticket_type: ticketType,
     p_ttl_minutes: env.TICKET_RESERVATION_TTL_MINUTES,
+    p_source_identifier: sourceIdentifier ?? null,
   });
 
   if (error) {

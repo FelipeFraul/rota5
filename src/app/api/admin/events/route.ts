@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   getAdminContactActivity,
@@ -6,6 +7,10 @@ import {
 } from "@/lib/tickets/services/adminContactAnalytics";
 import { requireAdminEventEditorSession } from "@/lib/tickets/services/adminWebAuth";
 import { listAdminEvents } from "@/lib/tickets/services/adminEvents";
+import {
+  ADMIN_WEB_AUTH_COOKIES,
+  decodeAdminWebSessionCookie,
+} from "@/lib/tickets/services/adminAuth";
 
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 
@@ -120,6 +125,17 @@ type GeneralSummary = {
   comboOrdersPending: number;
   checkins: number;
   courtesyTickets: number;
+};
+
+type AdminEventsFastRpcResponse = {
+  ok?: boolean;
+  reason?: string;
+  events?: unknown[];
+  metrics?: {
+    sqlMs?: number;
+    eventsSqlMs?: number;
+    supabaseOperations?: number;
+  };
 };
 
 function first<T>(value: MaybeArray<T>): T | null {
@@ -496,8 +512,8 @@ async function buildGeneralDashboard(input: { ownerAdminUserId: string; canSeeAl
 function formatComboOfferTiming(offer: AdminComboOfferRow) {
   if (offer.send_timing_type === "custom") {
     return offer.send_offset_minutes
-      ? `${offer.send_offset_minutes} min após compra`
-      : "Após compra";
+      ? `${offer.send_offset_minutes} min apÃ³s compra`
+      : "ApÃ³s compra";
   }
   if (offer.send_timing_type === "event_day_noon") return "Meio-dia do evento";
   if (offer.send_timing_type === "one_hour_before") return "1h antes do evento";
@@ -516,7 +532,7 @@ function formatComboOfferScope(scope: AdminComboOfferRow["combo_offer_scopes"]) 
     .filter(Boolean);
   if (eventNames.length) return eventNames.slice(0, 2).join(", ") + (eventNames.length > 2 ? ` +${eventNames.length - 2}` : "");
 
-  const weekdays = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+  const weekdays = ["domingo", "segunda", "terÃ§a", "quarta", "quinta", "sexta", "sÃ¡bado"];
   const weekdayNames = scopes
     .filter((item) => item.scope_type === "weekday")
     .map((item) => weekdays[item.weekday ?? -1])
@@ -641,16 +657,124 @@ async function listAdminComboOffers(input: { ownerAdminUserId: string; canSeeAll
 }
 
 export async function GET(request: Request) {
+  const startedAt = performance.now();
+  const url = new URL(request.url);
+  const search = url.searchParams.get("search");
+  const status = url.searchParams.get("status");
+  const fast = url.searchParams.get("fast") === "1";
+  const normalizedStatus = status === "paused" ? "draft" : status;
+  const safeStatus =
+    normalizedStatus === "draft" ||
+    normalizedStatus === "published" ||
+    normalizedStatus === "cancelled" ||
+    normalizedStatus === "finished" ||
+    normalizedStatus === "all"
+      ? normalizedStatus
+      : "all";
+
+  if (fast) {
+    const cookieReadStartedAt = performance.now();
+    const cookieStore = await cookies();
+    const cookie = decodeAdminWebSessionCookie(
+      cookieStore.get(ADMIN_WEB_AUTH_COOKIES.session)?.value,
+    );
+    const cookieReadAt = performance.now();
+
+    if (!cookie || new Date(cookie.expiresAt).getTime() <= Date.now()) {
+      return NextResponse.json(
+        { ok: false, message: "Sessao expirada. Abra um novo link pelo WhatsApp." },
+        { status: 401 },
+      );
+    }
+
+    const rpcStartedAt = performance.now();
+    const { data, error } = await getSupabaseAdmin().rpc("list_admin_events_fast", {
+      p_session_id: cookie.sessionId,
+      p_admin_user_id: cookie.adminUserId,
+      p_phone: cookie.phone,
+      p_status: safeStatus,
+      p_search: search?.trim() || null,
+    });
+    const rpcCompletedAt = performance.now();
+
+    if (error) {
+      console.error("[admin-events] fast rpc failed", error);
+      return NextResponse.json(
+        { ok: false, message: "Nao foi possivel listar os eventos." },
+        { status: 500 },
+      );
+    }
+
+    const rpcResult = data as AdminEventsFastRpcResponse | null;
+    if (!rpcResult?.ok) {
+      return NextResponse.json(
+        { ok: false, message: "Sessao expirada. Abra um novo link pelo WhatsApp." },
+        { status: rpcResult?.reason === "forbidden" ? 403 : 401 },
+      );
+    }
+
+    const serializeStartedAt = performance.now();
+    const payload = JSON.stringify({
+      ok: true,
+      events: rpcResult.events ?? [],
+      dashboard: null,
+      comboOffers: [],
+    });
+    const serializedAt = performance.now();
+
+    console.info("[admin-events] fast rpc timing", {
+      cookieMs: Math.round(cookieReadAt - cookieReadStartedAt),
+      rpcMs: Math.round(rpcCompletedAt - rpcStartedAt),
+      sqlMs: rpcResult.metrics?.sqlMs ?? null,
+      eventsSqlMs: rpcResult.metrics?.eventsSqlMs ?? null,
+      serializationMs: Math.round(serializedAt - serializeStartedAt),
+      totalMs: Math.round(serializedAt - startedAt),
+      status: safeStatus,
+      eventsCount: rpcResult.events?.length ?? 0,
+      payloadBytes: Buffer.byteLength(payload),
+      supabaseOperations: 1,
+    });
+
+    return new Response(payload, {
+      headers: {
+        "content-type": "application/json; charset=utf-8",
+      },
+    });
+  }
+
   const auth = await requireAdminEventEditorSession();
 
   if (!auth.ok) {
     return NextResponse.json(
-      { ok: false, message: "Sessão expirada. Abra um novo link pelo WhatsApp." },
+      { ok: false, message: "Sessao expirada. Abra um novo link pelo WhatsApp." },
       { status: auth.reason === "forbidden" ? 403 : 401 },
     );
   }
 
-  const url = new URL(request.url);
+  if (url.searchParams.get("generalDashboard") === "1") {
+    try {
+      const { data, error } = await getSupabaseAdmin().rpc("get_admin_general_dashboard_summary", {
+        p_owner_admin_user_id: auth.session.adminUser.id,
+        p_can_see_all: auth.session.adminUser.role === "root",
+      });
+
+      if (error) throw error;
+
+      const result = data as { ok?: boolean; dashboard?: unknown } | null;
+      if (!result?.ok || !result.dashboard) {
+        throw new Error("general_dashboard_rpc_failed");
+      }
+
+      return NextResponse.json({ ok: true, dashboard: result.dashboard });
+    } catch (error) {
+      console.error("[admin-events] failed to build general dashboard", error);
+      return NextResponse.json(
+        { ok: false, message: "Nao foi possivel carregar o dashboard geral." },
+        { status: 500 },
+      );
+    }
+  }
+
   if (url.searchParams.get("contacts") === "1") {
     const requestedRange = url.searchParams.get("range");
     const range: AdminContactRange =
@@ -684,45 +808,26 @@ export async function GET(request: Request) {
     } catch (error) {
       console.error("[admin-events] failed to load contact activity", error);
       return NextResponse.json(
-        { ok: false, message: "Não foi possível carregar os contatos." },
+        { ok: false, message: "Nao foi possivel carregar os contatos." },
         { status: 500 },
       );
     }
   }
-
-  const search = url.searchParams.get("search");
-  const status = url.searchParams.get("status");
-  const normalizedStatus = status === "paused" ? "draft" : status;
-  const safeStatus =
-    normalizedStatus === "draft" ||
-    normalizedStatus === "published" ||
-    normalizedStatus === "cancelled" ||
-    normalizedStatus === "finished" ||
-    normalizedStatus === "all"
-      ? normalizedStatus
-      : "all";
 
   const result = await listAdminEvents({
     search,
     status: safeStatus,
     ownerAdminUserId: auth.session.adminUser.id,
     canSeeAll: auth.session.adminUser.role === "root",
+    includeSalesOverview: true,
   });
 
   if (!result.ok) {
     return NextResponse.json(
-      { ok: false, message: "Não foi possível listar os eventos." },
+      { ok: false, message: "Nao foi possivel listar os eventos." },
       { status: 500 },
     );
   }
-
-  try {
-    const dashboard = await buildGeneralDashboard({
-      ownerAdminUserId: auth.session.adminUser.id,
-      canSeeAll: auth.session.adminUser.role === "root",
-    });
-  }
-
   try {
     const [dashboard, comboOffers] = await Promise.all([
       buildGeneralDashboard({

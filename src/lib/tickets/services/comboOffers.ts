@@ -385,7 +385,6 @@ export async function createComboOffer({
 
   if (
     !trimmedName ||
-    !trimmedDescription ||
     normalizedImageUrl === undefined ||
     !Number.isInteger(priceCents) ||
     priceCents <= 0
@@ -535,7 +534,6 @@ export async function updateComboOfferDetails({
 
   if (description !== undefined) {
     const trimmed = formatComboDescription(description);
-    if (!trimmed) return { ok: false as const, reason: "invalid_input" as const };
     payload.description = trimmed;
   }
 
@@ -736,6 +734,7 @@ export function buildComboOfferListText(offers: ComboOfferSummary[]) {
         `Descricao: ${offer.description}`,
         `Status: ${offer.status}`,
         `Valor: ${formatCurrency(offer.priceCents)}`,
+        `Prioridade: ${offer.displayPriority}`,
         `Foto: ${offer.imageUrl ? "cadastrada" : "ausente"}`,
         ...(offer.imageUrl ? [`URL da foto: ${offer.imageUrl}`] : []),
         `Uso: ${offer.scopes.join(", ") || "Sem escopo"}`,
@@ -947,6 +946,31 @@ export async function getPublicComboCheckoutOrder(orderId: string, token: string
   };
 }
 
+export async function trackComboCheckoutClick(orderId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("combo_orders")
+    .select("raw_metadata")
+    .eq("id", orderId)
+    .maybeSingle<{ raw_metadata: Record<string, unknown> | null }>();
+
+  if (error || !data) return;
+
+  const metadata = data.raw_metadata ?? {};
+  const currentCount = Number(metadata.checkout_click_count ?? 0);
+
+  await supabase
+    .from("combo_orders")
+    .update({
+      raw_metadata: {
+        ...metadata,
+        checkout_clicked_at: new Date().toISOString(),
+        checkout_click_count: Number.isFinite(currentCount) ? currentCount + 1 : 1,
+      },
+    })
+    .eq("id", orderId);
+}
+
 function buildPaymentDescription(order: NonNullable<Awaited<ReturnType<typeof getPublicComboCheckoutOrder>>>) {
   return `${order.offer.name} - ${order.event.title}`;
 }
@@ -956,6 +980,10 @@ function getCheckoutAttempt(metadata: Record<string, unknown> | null | undefined
   return attempt && typeof attempt === "object" && !Array.isArray(attempt)
     ? (attempt as Record<string, unknown>)
     : null;
+}
+
+function getMercadoPagoAccessTokenFingerprint(accessToken: string) {
+  return createHash("sha256").update(accessToken).digest("hex").slice(0, 16);
 }
 
 export async function payComboCheckout({
@@ -969,6 +997,10 @@ export async function payComboCheckout({
   email: string;
   identificationNumber?: string;
 }) {
+  const env = getEnv();
+  const accessTokenFingerprint = getMercadoPagoAccessTokenFingerprint(
+    env.MERCADO_PAGO_ACCESS_TOKEN,
+  );
   const order = await getPublicComboCheckoutOrder(orderId, checkoutToken);
   if (!order) return { ok: false as const, reason: "order_not_payable" as const };
 
@@ -994,8 +1026,17 @@ export async function payComboCheckout({
       : existingPayment?.provider_payment_id;
   const qrCode = typeof attempt?.qr_code === "string" ? attempt.qr_code : null;
   const activeStatus = typeof attempt?.status === "string" ? attempt.status : existingPayment?.status;
+  const attemptAccessTokenFingerprint =
+    typeof attempt?.access_token_fingerprint === "string"
+      ? attempt.access_token_fingerprint
+      : null;
 
-  if (providerPaymentId && activeStatus && ["pending", "in_process", "approved"].includes(activeStatus)) {
+  if (
+    providerPaymentId &&
+    activeStatus &&
+    attemptAccessTokenFingerprint === accessTokenFingerprint &&
+    ["pending", "in_process", "approved"].includes(activeStatus)
+  ) {
     return {
       ok: true as const,
       status: activeStatus,
@@ -1042,13 +1083,13 @@ export async function payComboCheckout({
           : {}),
       },
       external_reference: externalReference,
-      notification_url: `${getEnv().APP_BASE_URL.replace(/\/$/, "")}/api/webhook/payment/mercado-pago`,
+      notification_url: `${env.APP_BASE_URL.replace(/\/$/, "")}/api/webhook/payment/mercado-pago`,
       metadata: {
         combo_order_id: order.orderId,
         checkout_type: "combo",
       },
     },
-    `${paymentRow.id}:combo:pix`,
+    `${paymentRow.id}:combo:pix:${accessTokenFingerprint}`,
   );
 
   if (!paymentResult.ok) return { ok: false as const, reason: "payment_create_failed" as const };
@@ -1085,6 +1126,7 @@ export async function payComboCheckout({
           method: "pix",
           status,
           provider_payment_id: String(payment.id),
+          access_token_fingerprint: accessTokenFingerprint,
           qr_code: newQrCode,
           ticket_url: payment.point_of_interaction?.transaction_data?.ticket_url ?? null,
         },
@@ -1111,6 +1153,25 @@ function formatEventDate(startsAt: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(startsAt));
+}
+
+function formatOfferEventDate(startsAt: string) {
+  const date = new Date(startsAt);
+  const weekday = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: SAO_PAULO_TIME_ZONE,
+    weekday: "long",
+  }).format(date);
+  const dayTime = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: SAO_PAULO_TIME_ZONE,
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+    .format(date)
+    .replace(",", " Ã s");
+
+  return `${weekday.charAt(0).toLocaleUpperCase("pt-BR")}${weekday.slice(1)} ${dayTime}`;
 }
 
 export async function generateComboQrImage(token: string) {
@@ -1710,24 +1771,30 @@ export function shouldSendComboOfferNow(
 export function buildComboOfferMessage({
   offer,
   eventTitle,
+  eventStartsAt,
   checkoutUrl,
 }: {
   offer: Pick<ComboOfferRow, "name" | "description" | "price_cents">;
   eventTitle: string;
+  eventStartsAt?: string | null;
   checkoutUrl: string;
 }) {
+  const originalPriceCents = offer.price_cents + 2000;
+
   return [
-    "*OFERTA PARA HOJE*",
-    "",
-    `Você tem ingresso para ${eventTitle}.`,
+    "*OFERTA ROCKBAR, BABY 🤘*",
     "",
     `*${offer.name}*`,
     ...formatComboDescription(offer.description)
       .split("\n")
-      .map((item) => `- ${item}`),
-    `Valor: ${formatCurrency(offer.price_cents)}`,
+      .map((item) => `> ${item}`),
+    `> De ~${formatCurrency(originalPriceCents)}~ por ${formatCurrency(offer.price_cents)}`,
     "",
-    `Voce tem 30 min para realizar a compra desta oferta: ${checkoutUrl}`,
+    `Você tem 30 min para comprar: ${checkoutUrl}`,
+    "",
+    "Oferta válida para:",
+    `| ${eventTitle}`,
+    ...(eventStartsAt ? [`| ${formatOfferEventDate(eventStartsAt)}`] : []),
   ].join("\n");
 }
 
@@ -2088,6 +2155,7 @@ export async function sendScheduledComboOffers(limit = 100) {
       const message = buildComboOfferMessage({
         offer,
         eventTitle: event.title,
+        eventStartsAt: session.starts_at,
         checkoutUrl: checkout.checkoutUrl,
       });
       const sendResult = offer.image_url

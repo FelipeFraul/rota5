@@ -482,6 +482,14 @@ export async function POST(request: Request) {
   }
 
   const supabase = getSupabaseAdmin();
+  const { data: existingPayment } = await supabase
+    .from("payments")
+    .select("raw_metadata")
+    .eq("order_id", orderId)
+    .eq("provider", PROVIDER)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ raw_metadata: Record<string, unknown> | null }>();
   const { data: confirmation, error } = await supabase.rpc(
     "confirm_paid_ticket_order",
     {
@@ -490,7 +498,10 @@ export async function POST(request: Request) {
       p_provider_payment_id: String(payment.id),
       p_amount_cents: amountCents,
       p_paid_at: payment.date_approved ?? new Date().toISOString(),
-      p_raw_metadata: buildPaymentRawMetadata(payment),
+      p_raw_metadata: {
+        ...(existingPayment?.raw_metadata ?? {}),
+        ...buildPaymentRawMetadata(payment),
+      },
     },
   );
 

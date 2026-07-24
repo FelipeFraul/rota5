@@ -6,7 +6,6 @@ import {
   requireAdminEventEditorSession,
 } from "@/lib/tickets/services/adminWebAuth";
 import {
-  listCourtesySectionLimits,
   upsertCourtesySectionLimits,
 } from "@/lib/tickets/services/adminCourtesies";
 import {
@@ -256,66 +255,42 @@ async function loadEventForAdmin(eventId: string) {
 }
 
 async function buildEventPayload(eventId: string) {
-  const loaded = await loadEventForAdmin(eventId);
-  if (!loaded.ok) return loaded;
+  const auth = await requireAdminEventEditorSession();
 
-  const prices = await Promise.all(
-    loaded.event.sessions.map(async (session) => {
-      const result = await listAdminPrices({ sessionId: session.sessionId });
+  if (!auth.ok) {
+    return { ok: false as const, response: NextResponse.json({ ok: false, message: "Não autorizado." }, { status: 401 }) };
+  }
 
-      return result.ok
-        ? result.prices.map((price) => ({
-            priceId: price.id,
-            sessionId: price.session_id,
-            sectionId: price.section_id,
-            sectionName: price.venue_sections?.[0]?.name ?? null,
-            ticketType: price.ticket_type,
-            label: price.label,
-            priceCents: price.price_cents,
-            feeCents: price.fee_cents,
-            currency: price.currency,
-            salesStartAt: price.sales_start_at,
-            salesEndAt: price.sales_end_at,
-            status: price.status,
-          }))
-        : [];
-    }),
-  );
-  const courtesyLimits = await listCourtesySectionLimits(eventId);
+  const { data, error } = await getSupabaseAdmin().rpc("get_admin_event_editor_payload", {
+    p_event_id: eventId,
+  });
 
-  if (!courtesyLimits.ok) {
+  if (error) {
+    console.error("[admin-event] optimized detail rpc failed", error);
     return {
       ok: false as const,
       response: NextResponse.json(
-        { ok: false, message: "Não foi possível carregar as cortesias." },
+        { ok: false, message: "Não foi possível carregar o evento." },
         { status: 500 },
       ),
     };
   }
 
-  const courtesyLimitBySection = new Map(
-    courtesyLimits.limits.map((limit) => [limit.section_id, limit]),
-  );
+  const result = data as { ok?: boolean; reason?: string; event?: { createdByAdminUserId?: string | null } } | null;
+  if (!result?.ok || !result.event) {
+    return { ok: false as const, response: NextResponse.json({ ok: false, message: "Evento não encontrado." }, { status: 404 }) };
+  }
+
+  if (!canEditEvent(auth.session.adminUser.role, auth.session.adminUser.id, {
+    createdByAdminUserId: result.event.createdByAdminUserId ?? null,
+  })) {
+    return { ok: false as const, response: jsonForbidden() };
+  }
 
   return {
     ok: true as const,
-    auth: loaded.auth,
-    event: {
-      ...loaded.event,
-      prices: prices.flat(),
-      courtesy: {
-        sections: loaded.event.sections.map((section) => {
-          const limit = courtesyLimitBySection.get(section.sectionId);
-          return {
-            sectionId: section.sectionId,
-            sectionName: section.name,
-            label: limit?.label ?? "Cortesia",
-            limit: limit?.max_courtesies ?? 0,
-            status: limit?.status ?? section.status,
-          };
-        }),
-      },
-    },
+    auth: auth.session,
+    event: result.event,
   };
 }
 

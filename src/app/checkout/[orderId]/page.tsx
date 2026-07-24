@@ -1,5 +1,8 @@
 import { getEnv } from "@/lib/env";
-import { getPublicCheckoutOrder } from "@/lib/tickets/services/checkout";
+import {
+  getPublicCheckoutOrder,
+  trackTicketCheckoutClick,
+} from "@/lib/tickets/services/checkout";
 import { InformationPage } from "@/app/InformationPage";
 import CheckoutClient from "./checkout-client";
 
@@ -23,9 +26,11 @@ function formatCurrency(cents: number) {
 export default async function CheckoutPage({ params, searchParams }: CheckoutPageProps) {
   const { orderId } = await params;
   const query = await searchParams;
+  const decodedOrderId = decodeURIComponent(orderId);
   const checkoutToken = query.t ?? query.token ?? "";
+  await trackTicketCheckoutClick(decodedOrderId);
   const order = await getPublicCheckoutOrder(
-    decodeURIComponent(orderId),
+    decodedOrderId,
     checkoutToken,
   );
   const publicKey = getEnv().NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY;

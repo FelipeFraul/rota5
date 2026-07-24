@@ -433,6 +433,7 @@ async function reserveScenario(customerId, seatId) {
       p_seat_ids: [seatId],
       p_ticket_type: "full",
       p_ttl_minutes: 30,
+      p_source_identifier: runId,
     }),
   );
 

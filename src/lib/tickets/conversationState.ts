@@ -103,6 +103,7 @@ export type TicketConversationStep =
   | "showing_sections"
   | "selecting_quantity"
   | "showing_seats"
+  | "selecting_table_map_place"
   | "reviewing_cart"
   | "reservation_created"
   | "help_topic_collecting"
@@ -206,6 +207,14 @@ export type TicketConversationCart = {
   eventId: string;
   sessionId: string;
   items: TicketConversationCartItem[];
+  tableMapPlace?: TicketConversationTableMapPlace;
+};
+
+export type TicketConversationTableMapPlace = {
+  code: string;
+  type: "bistro" | "table";
+  environment: "ground_floor" | "mezzanine";
+  capacity?: 2 | 4 | 6;
 };
 
 export type TicketConversationReservation = {
@@ -535,6 +544,7 @@ export type TicketConversationState = {
   selectedSeat?: TicketConversationSelectedSeat;
   selectedQuantity?: number;
   cart?: TicketConversationCart;
+  tableMapPlace?: TicketConversationTableMapPlace;
   eventMoreInfoShown?: boolean;
   publicHelp?: TicketConversationPublicHelp;
   ticketResend?: TicketConversationTicketResend;

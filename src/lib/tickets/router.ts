@@ -16,6 +16,7 @@ import {
   type TicketConversationSelectedSection,
   type TicketConversationSelectedEvent,
   type TicketConversationSelectedSeat,
+  type TicketConversationTableMapPlace,
   type TicketConversationStep,
   type TicketConversationState,
 } from "@/lib/tickets/conversationState";
@@ -62,6 +63,12 @@ import {
   type SeatMap,
 } from "@/lib/tickets/services/seats";
 import { buildSeatMapPngDataUrl } from "@/lib/tickets/services/seatMapImage";
+import {
+  buildOfficialTableMapAvailabilityImage,
+  getOfficialTableMapPlaceByInput,
+  isOfficialTableMapPlaceAllowedForQuantity,
+  reserveOfficialTableMapPlace,
+} from "@/lib/tickets/services/officialTableMapReservations";
 import {
   cancelPendingReservationForCustomer,
   reserveTicketCart,
@@ -517,7 +524,7 @@ const SOCIAL_REPLY_PATTERN =
 const COURTESY_PATTERN =
   /^(?:por favor|obrigado|obrigada|valeu|obg|brigado|brigada)$/;
 const ACTIVE_FLOW_REPLY_PATTERN =
-  /^(?:\d+|sim|s|nao|não|n|esse|essa|quero esse|quero essa|duas|dois|uma|um|meia|inteira|comprar|voltar|cancelar)$/;
+  /^(?:\d+|sim|s|nao|não|n|esse|essa|quero esse|quero essa|duas|dois|uma|um|meia|inteira|comprar|voltar|back|cancelar)$/;
 const CONVERSATIONAL_FILLER_WORDS = new Set([
   "amigo",
   "amiga",
@@ -1647,7 +1654,7 @@ function formatTicketOptionLine(
   label: string,
   priceLabel: string,
 ) {
-  return `Digite ${option} *${formatTicketOptionLabel(label)}* - ${priceLabel}`;
+  return `Digite *"${option}"* ${formatTicketOptionLabel(label)} - ${priceLabel}`;
 }
 
 function shouldUseTicketLabelForSingleOffer(sectionName: string) {
@@ -1719,9 +1726,9 @@ function formatSingleEventReply(
   const buyOption = totalEvents === 1 ? 1 : index * 2 + 1;
   const moreInfoOption = buyOption + 1;
   const options = [
-    formatOptionLine(buyOption, "comprar"),
-    formatOptionLine(moreInfoOption, "saber mais"),
-    "Digite uma palavra para *pesquisar o evento*",
+    `Digite *"${buyOption}"* para comprar`,
+    `Digite *"${moreInfoOption}"* para saber mais`,
+    'Para uma nova pesquisa, *"NEW"*',
   ];
 
   return [
@@ -1745,9 +1752,9 @@ function formatSingleEventOptionReply(
   const buyOption = totalEvents === 1 ? 1 : index * 2 + 1;
   const moreInfoOption = buyOption + 1;
   const options = [
-    formatOptionLine(buyOption, "comprar"),
-    formatOptionLine(moreInfoOption, "saber mais"),
-    "Digite uma palavra para *pesquisar o evento*",
+    `Digite *"${buyOption}"* para comprar`,
+    `Digite *"${moreInfoOption}"* para saber mais`,
+    'Para uma nova pesquisa, *"NEW"*',
   ];
 
   return [
@@ -1862,9 +1869,8 @@ function formatSingleEventMoreInfo(
 
 function formatSingleEventMoreInfoOptions() {
   return [
-    formatOptionLine(1, "comprar"),
-    formatOptionLine(2, "voltar"),
-    "Digite uma palavra para *pesquisar o evento*",
+    'Digite *"1"* para comprar',
+    'Para uma nova pesquisa, *"NEW"*',
   ].join("\n");
 }
 
@@ -1984,12 +1990,11 @@ function formatSectionsReply({
 
   return [
     "*ESCOLHA SEU INGRESSO/SETOR*",
+    "",
     sectionLines.join("\n---\n"),
     "",
-    "Responda com o número do setor para continuar.",
-    "Digite *CANCELAR* para zerar o pedido de compra.",
-    'Digite "VOLTAR" para voltar à seção anterior.',
-    "Digite uma palavra para *pesquisar o evento*",
+    'Digite *"BACK"* para voltar.',
+    'Para uma nova pesquisa, *"NEW"*',
   ].join("\n");
 }
 
@@ -2003,16 +2008,16 @@ function formatQuantityPrompt(
     : formatSectionPrice(section);
 
   return [
-    `*${section.sectionName.toLocaleUpperCase("pt-BR")}*`,
+    "*INGRESSOS*",
     "",
-    ...(ticketType ? [`> Ingresso: ${ticketType.label}`] : []),
-    `> Valor: ${selectedPrice}`,
+    ...(ticketType ? [`> Ingresso: *${ticketType.label}*`] : []),
+    `> Valor: *${selectedPrice}*`,
     "",
     isFree
       ? "Digite o número de ingressos gratuitos, até 4 por pedido. Ex: 2"
-      : "Digite o número de ingressos para compra, ex: 2",
-    "Digite *CANCELAR* para zerar o pedido de compra.",
-    'Digite "VOLTAR" para voltar à seção anterior.',
+      : 'Digite o número de ingressos, *"EX: 4"*',
+    'Digite *"BACK"* para voltar.',
+    'Para uma nova pesquisa, *"NEW"*',
   ].join("\n");
 }
 
@@ -2134,6 +2139,7 @@ function addSelectionToCart({
     eventId: selectedEvent.eventId,
     sessionId: selectedEvent.sessionId,
     items: nextItems,
+    ...(cart?.tableMapPlace ? { tableMapPlace: cart.tableMapPlace } : {}),
   } satisfies TicketConversationCart;
 }
 
@@ -2148,29 +2154,225 @@ function formatCartDecisionReply({ cart }: { cart: TicketConversationCart }) {
   );
   const cartItemLines = cart.items.flatMap((item, index) => [
     ...(index > 0 ? ["---"] : []),
-    `> Item ${index + 1}: ${item.ticketLabel}`,
-    `> Quantidade: ${item.quantity}`,
+    `> Item ${index + 1}: *${item.ticketLabel}*`,
+    `> Quantidade: *${item.quantity}*`,
     ...(item.seats?.length
       ? [`> Assentos: ${item.seats.map((seat) => seat.seatCode).join(", ")}`]
       : []),
-    `> Subtotal: ${formatPriceWithOptionalFee(
-      item.priceCents * item.quantity,
-      item.feeCents * item.quantity,
-    )}`,
   ]);
 
   return [
-    "*ITEM ADICIONADO Ãƒâ‚¬ COMPRA*",
-    "",
     "*ITENS NA COMPRA*",
+    "",
     ...cartItemLines,
+    `> Total da compra: *${formatPriceWithOptionalFee(totalAmountCents, totalFeeCents)}*`,
+    ...(cart.tableMapPlace
+      ? [`> Mesa/Bistrô: ${formatTableMapPlaceLabel(cart.tableMapPlace)}`]
+      : []),
     "",
-    `> Total da compra: ${formatPriceWithOptionalFee(totalAmountCents, totalFeeCents)}`,
-    "",
-    "Digite 1 para *para finalizar a compra do seu ingresso*",
-    "Digite 2 para *comprar outros/mais ingressos*",
-    "Digite *CANCELAR* para zerar o pedido de compra.",
+    'Digite *"1"* para para finalizar a compra',
+    'Digite *"BACK"* para voltar.',
+    'Para uma nova pesquisa, *"NEW"*',
   ].join("\n");
+}
+
+function formatTableMapSelectionReply({
+  availableCount,
+}: {
+  availableCount: number;
+}) {
+  return [
+    "*ESCOLHA SUA MESA OU BISTRÔ*",
+    "",
+    `> Mesas/bistrô disponiveis: *${availableCount}*`,
+    "> Mesas/bistrô com X: *indisponiveis*",
+    "",
+    'Digite o número da mesa ou o bistrô, *"EX: 12"*',
+    'Digite *"0"* se não quer mesa ou bistrô.',
+    'Digite *"BACK"* para voltar.',
+    'Para uma nova pesquisa, *"NEW"*',
+  ].join("\n");
+}
+
+function formatTableMapPlaceUnavailableReply() {
+  return [
+    "*LUGAR INDISPONIVEL*",
+    "",
+    "*Mesa/bistrô não disponivel*",
+    "Digite outra opção do mapa",
+    "Digite *0* para continuar sem mesa/bistro.",
+  ].join("\n");
+}
+
+async function finalizeTicketCartReservation({
+  cart,
+  selectedEvent,
+  selectedSection,
+  selectedSeat,
+  customer,
+  conversation,
+  baseContext,
+  sourceIdentifier,
+}: {
+  cart: TicketConversationCart;
+  selectedEvent: TicketConversationSelectedEvent;
+  selectedSection?: TicketConversationSelectedSection;
+  selectedSeat?: TicketConversationSelectedSeat;
+  customer: RouteTicketMessageInput["customer"];
+  conversation: RouteTicketMessageInput["conversation"];
+  baseContext: TicketConversationState;
+  sourceIdentifier?: string | null;
+}): Promise<RouteTicketMessageOutput> {
+  const reservationResult = await reserveTicketCart({
+    customerId: customer.id,
+    conversationId: conversation.id,
+    eventId: cart.eventId,
+    sessionId: cart.sessionId,
+    items: cart.items.map((item) => ({
+      sectionId: item.sectionId,
+      ticketPriceId: item.ticketPriceId,
+      quantity: item.quantity,
+      priceCents: item.priceCents,
+      feeCents: item.feeCents,
+      currency: item.currency,
+      ...(item.seats?.length
+        ? { seatIds: item.seats.map((seat) => seat.seatId) }
+        : {}),
+    })),
+    sourceIdentifier,
+  });
+
+  if (!reservationResult.ok) {
+    if (reservationResult.reason === "active_reservation_exists") {
+      return {
+        reply: messageForReservationFailure(reservationResult),
+        nextContext: {
+          ...baseContext,
+          step: "reservation_created",
+          state: "reservation_created",
+          reservation: reservationResult.reservation,
+          cart: undefined,
+          selectedEvent: undefined,
+          selectedSection: undefined,
+          selectedSeat: undefined,
+          selectedQuantity: undefined,
+          tableMapPlace: undefined,
+          lastSeats: [],
+        },
+      };
+    }
+
+    if (reservationResult.reason === "buyer_risk_limited") {
+      return {
+        reply: messageForReservationFailure(reservationResult),
+        nextContext: {
+          ...baseContext,
+          step: "reviewing_cart",
+          state: "reviewing_cart",
+        },
+      };
+    }
+
+    const sectionsResult = await renderBuyerSectionsStep({
+      baseContext: { ...baseContext, cart: undefined },
+      selectedEvent,
+    });
+
+    return {
+      ...sectionsResult,
+      reply: [
+        "O estoque mudou antes da finalizacao e a reserva nao foi criada. Selecione os ingressos novamente.",
+        "",
+        sectionsResult.reply,
+      ].join("\n"),
+    };
+  }
+
+  if (cart.tableMapPlace) {
+    const tableMapReservationResult = await reserveOfficialTableMapPlace({
+      code: cart.tableMapPlace.code,
+      reservationId: reservationResult.reservation.reservationId,
+      orderId: reservationResult.reservation.orderId,
+      customerId: customer.id,
+    });
+
+    if (!tableMapReservationResult.ok) {
+      await cancelPendingReservationForCustomer({
+        customerId: customer.id,
+        reservationId: reservationResult.reservation.reservationId,
+        orderId: reservationResult.reservation.orderId,
+        sourceIdentifier,
+      });
+
+      const availability = await buildOfficialTableMapAvailabilityImage({
+        quantity: getCartQuantity(cart),
+      });
+      const reply =
+        tableMapReservationResult.reason === "place_not_available"
+          ? formatTableMapPlaceUnavailableReply()
+          : "Nao consegui reservar essa mesa/bistro agora. Escolha outro codigo ou digite 0 para continuar sem mesa/bistro.";
+
+      return {
+        reply,
+        outboundMessages: [
+          {
+            type: "image",
+            imageUrl: availability.imageUrl,
+            caption: reply,
+          },
+        ],
+        nextContext: {
+          ...baseContext,
+          step: "selecting_table_map_place",
+          state: "selecting_table_map_place",
+        },
+      };
+    }
+  }
+
+  if (
+    reservationResult.reservation.totalAmountCents === 0 &&
+    reservationResult.reservation.totalFeeCents === 0
+  ) {
+    const issueResult = await issuePublicFreeTicketsForOrder({
+      orderId: reservationResult.reservation.orderId,
+      customerId: customer.id,
+    });
+
+    if (!issueResult.ok) {
+      return {
+        reply: formatPublicFreeTicketFailureMessage(issueResult),
+        nextContext: resetBuyerReservationContext(baseContext),
+      };
+    }
+
+    return {
+      reply: issueResult.delivery.message,
+      outboundMessages: buildPublicFreeTicketOutboundMessages(issueResult),
+      nextContext: resetBuyerReservationContext(baseContext),
+    };
+  }
+
+  return {
+    reply: formatReservationReply({
+      selectedEvent,
+      selectedSection,
+      selectedSeat,
+      reservation: reservationResult.reservation,
+      cart,
+    }),
+    nextContext: {
+      ...baseContext,
+      step: "reservation_created",
+      state: "reservation_created",
+      selectedEvent,
+      selectedQuantity: getCartQuantity(cart),
+      cart,
+      tableMapPlace: cart.tableMapPlace,
+      reservation: buildReservationContext(reservationResult.reservation),
+      lastSeats: [],
+    },
+  };
 }
 
 function formatSeatsReply({
@@ -2248,7 +2450,7 @@ function isBuyerNewIntent(text: string) {
 }
 
 function isBuyerBackIntent(text: string) {
-  return isPublicHelpBackIntent(text);
+  return normalizeIntentText(text) === "back" || isPublicHelpBackIntent(text);
 }
 
 function isAllPublicEventsIntent(text: string) {
@@ -2289,6 +2491,7 @@ function resetBuyerReservationContext(
     selectedSeat: undefined,
     selectedQuantity: undefined,
     cart: undefined,
+    tableMapPlace: undefined,
     eventMoreInfoShown: undefined,
     lastSeats: [],
     lastSections: [],
@@ -3159,15 +3362,33 @@ function buildSelectedSeatContext(
 }
 
 function formatCartSummaryLines(cart: TicketConversationCart) {
-  return cart.items.flatMap((item, index) => [
+  const itemLines = cart.items.flatMap((item, index) => [
     ...(index > 0 ? ["---"] : []),
-    `> Setor: ${item.sectionName}`,
-    `> Ingresso: ${item.ticketLabel}`,
+    `> Ingresso: *${item.ticketLabel}*`,
     ...(item.seats?.length
       ? [`> Assentos: ${item.seats.map((seat) => seat.seatCode).join(", ")}`]
       : []),
-    `> Quantidade: ${item.quantity}`,
+    `> Quantidade: *${item.quantity}*`,
   ]);
+
+  return [
+    ...itemLines,
+    ...(cart.tableMapPlace
+      ? [
+          "---",
+          `> Mesa/Bistrô: *${formatTableMapPlaceLabel(cart.tableMapPlace)}*`,
+        ]
+      : ["> Mesa/Bistrô: *X*"]),
+  ];
+}
+
+function formatTableMapPlaceLabel(place: TicketConversationTableMapPlace) {
+  const typeLabel = place.type === "bistro" ? "Bistro" : "Mesa";
+  const environmentLabel =
+    place.environment === "ground_floor" ? "terreo" : "mezanino";
+  const capacityLabel = place.capacity ? ` para ${place.capacity} pessoas` : "";
+
+  return `${typeLabel} ${place.code}${capacityLabel} (${environmentLabel})`;
 }
 
 function formatReservationReply({
@@ -3186,24 +3407,26 @@ function formatReservationReply({
   const quantity = reservation.items.length || 1;
 
   return [
-    "RESERVA CRIADA. VOCÃƒÅ  TEM 10 MINUTOS PARA EFETUAR A COMPRA",
+    "*RESERVA CRIADA.*",
+    "",
+    'Você tem *"10 MIN PARA EFETUAR A COMPRA"*',
     `> Evento: ${selectedEvent.title}`,
     ...(cart
       ? formatCartSummaryLines(cart)
       : [
-          ...(selectedSection ? [`> Setor: ${selectedSection.sectionName}`] : []),
           ...(selectedSection?.selectedTicketType
-            ? [`> Ingresso: ${selectedSection.selectedTicketType.label}`]
+            ? [`> Ingresso: *${selectedSection.selectedTicketType.label}*`]
             : []),
           ...(selectedSeat ? [`> Assento: ${selectedSeat.seatCode}`] : []),
-          `> Quantidade: ${quantity}`,
+          `> Quantidade: *${quantity}*`,
         ]),
+    ...(cart?.tableMapPlace ? ["---"] : [""]),
+    `Valor Total: *${formatPriceWithOptionalFee(reservation.totalAmountCents, reservation.totalFeeCents)}*`,
+    `> Reserva válida até: *${formatTime(reservation.expiresAt)}*`,
     "",
-    `Valor: ${formatPriceWithOptionalFee(reservation.totalAmountCents, reservation.totalFeeCents)}`,
-    `> Reserva vÃƒÂ¡lida atÃƒÂ©: ${formatTime(reservation.expiresAt)}`,
-    "",
-    "Para comprar, digite COMPRAR. VocÃƒÂª receberÃƒÂ¡ o link de pagamento na prÃƒÂ³xima mensagem.",
-    "Digite *CANCELAR* para zerar o pedido de compra.",
+    "Para comprar, digite *COMPRAR*",
+    'Digite *"BACK"* para voltar.',
+    'Para uma nova pesquisa, *"NEW"*',
   ].join("\n");
 }
 
@@ -3223,23 +3446,26 @@ function formatReservationContextReply({
   cart?: TicketConversationCart;
 }) {
   return [
-    "RESERVA EM ANDAMENTO. VOCÃƒÅ  AINDA PODE EFETUAR A COMPRA",
+    "*RESERVA CRIADA.*",
+    "",
+    'Você tem *"10 MIN PARA EFETUAR A COMPRA"*',
     ...(selectedEvent ? [`> Evento: ${selectedEvent.title}`] : []),
     ...(cart
       ? formatCartSummaryLines(cart)
       : [
-          ...(selectedSection ? [`> Setor: ${selectedSection.sectionName}`] : []),
           ...(selectedSection?.selectedTicketType
-            ? [`> Ingresso: ${selectedSection.selectedTicketType.label}`]
+            ? [`> Ingresso: *${selectedSection.selectedTicketType.label}*`]
             : []),
           ...(selectedSeat ? [`> Assento: ${selectedSeat.seatCode}`] : []),
-          `> Quantidade: ${quantity}`,
+          `> Quantidade: *${quantity}*`,
         ]),
+    ...(cart?.tableMapPlace ? ["---"] : [""]),
+    `Valor Total: *${formatPriceWithOptionalFee(reservation.totalAmountCents, reservation.totalFeeCents)}*`,
+    `> Reserva válida até: *${formatTime(reservation.expiresAt)}*`,
     "",
-    `Valor: ${formatPriceWithOptionalFee(reservation.totalAmountCents, reservation.totalFeeCents)}`,
-    `> Reserva vÃƒÂ¡lida atÃƒÂ©: ${formatTime(reservation.expiresAt)}`,
-    "",
-    "Para comprar, digite COMPRAR. Para alterar sua escolha, digite VOLTAR.",
+    "Para comprar, digite *COMPRAR*",
+    'Digite *"BACK"* para voltar.',
+    'Para uma nova pesquisa, *"NEW"*',
   ].join("\n");
 }
 
@@ -3251,10 +3477,10 @@ function formatPaymentLinkReply({
   const lines = [
     "*LINK DE PAGAMENTO GERADO*",
     "",
-    "Pague por Pix clicando neste link:",
+    "Link de pagamento::",
     checkout.checkoutUrl,
     "",
-    "ApÃƒÂ³s a confirmaÃƒÂ§ÃƒÂ£o do pagamento, seu ingresso serÃƒÂ¡ emitido automaticamente.",
+    "Após a confirmação do pagamento, seu ingresso será emitido automaticamente nesta conversa.",
   ];
 
   return lines.join("\n");
@@ -5745,11 +5971,10 @@ function parseComboOfferTiming(option: number | null): {
   timingType: ComboOfferTimingType;
   customOffsetMinutes?: number | null;
 } | null {
-  if (option === 1) return { timingType: "three_hours_before" };
-  if (option === 2) return { timingType: "one_hour_before" };
-  if (option === 3) return { timingType: "event_day_noon" };
-  if (option === 4) return { timingType: "custom", customOffsetMinutes: 15 };
-  if (option === 5) return { timingType: "custom", customOffsetMinutes: 120 };
+  if (option === 1) return { timingType: "custom", customOffsetMinutes: 3 };
+  if (option === 2) return { timingType: "custom", customOffsetMinutes: 15 };
+  if (option === 3) return { timingType: "custom", customOffsetMinutes: 120 };
+  if (option === 4) return { timingType: "custom", customOffsetMinutes: 1440 };
 
   return null;
 }
@@ -5798,11 +6023,10 @@ function parseAdminOfferImageInput({
 function buildAdminOfferTimingPrompt() {
   return [
     "Quando enviar?",
-    "1. 3h antes do evento",
-    "2. 1h antes do evento",
-    "3. No dia do evento as 12h",
-    "4. 15 minutos apos a compra",
-    "5. 2h apos a compra",
+    "1. 3 minutos após a compra",
+    "2. 15 minutos apos a compra",
+    "3. 2h após a compra",
+    "4. 24h após a compra",
   ].join("\n");
 }
 
@@ -16537,6 +16761,108 @@ export async function routeTicketMessage({
     };
   }
 
+  if (previousState.state === "selecting_table_map_place") {
+    const cart = previousState.cart;
+
+    if (!cart?.items.length) {
+      return {
+        reply: "Nao encontrei itens nessa compra. Escolha o ingresso novamente.",
+        nextContext: resetBuyerReservationContext(baseContext),
+      };
+    }
+
+    const selectedSession = await getValidatedEventSession({
+      eventId: cart.eventId,
+      sessionId: cart.sessionId,
+    });
+
+    if (!selectedSession) {
+      return {
+        reply: TICKET_MESSAGES.sessionUnavailable,
+        nextContext: resetBuyerReservationContext(baseContext),
+      };
+    }
+
+    const selectedEvent = buildSelectedEvent(selectedSession);
+
+    if (isBuyerBackIntent(text)) {
+      return {
+        reply: formatCartDecisionReply({ cart }),
+        nextContext: {
+          ...baseContext,
+          step: "reviewing_cart",
+          state: "reviewing_cart",
+        },
+      };
+    }
+
+    if (text.trim() === "0") {
+      const nextCart = { ...cart, tableMapPlace: undefined };
+
+      return finalizeTicketCartReservation({
+        cart: nextCart,
+        selectedEvent,
+        selectedSection: previousState.selectedSection,
+        selectedSeat: previousState.selectedSeat,
+        customer,
+        conversation,
+        baseContext: { ...baseContext, cart: nextCart, tableMapPlace: undefined },
+        sourceIdentifier,
+      });
+    }
+
+    const cartQuantity = getCartQuantity(cart);
+    const place = getOfficialTableMapPlaceByInput(text);
+    const availability = await buildOfficialTableMapAvailabilityImage({
+      quantity: cartQuantity,
+    });
+
+    if (
+      !place ||
+      !isOfficialTableMapPlaceAllowedForQuantity({ place, quantity: cartQuantity }) ||
+      availability.unavailableCodes.includes(place.code)
+    ) {
+      const reply = place
+        ? formatTableMapPlaceUnavailableReply()
+        : "Codigo invalido. Escolha um codigo do mapa ou digite 0 para continuar sem mesa/bistro.";
+
+      return {
+        reply,
+        outboundMessages: [
+          {
+            type: "image",
+            imageUrl: availability.imageUrl,
+            caption: reply,
+          },
+        ],
+        nextContext: {
+          ...baseContext,
+          step: "selecting_table_map_place",
+          state: "selecting_table_map_place",
+        },
+      };
+    }
+
+    const tableMapPlace = {
+      code: place.code,
+      type: place.type,
+      environment: place.environment,
+      capacity: place.capacity,
+    } satisfies TicketConversationTableMapPlace;
+    const nextCart = { ...cart, tableMapPlace };
+
+    return finalizeTicketCartReservation({
+      cart: nextCart,
+      selectedEvent,
+      selectedSection: previousState.selectedSection,
+      selectedSeat: previousState.selectedSeat,
+      customer,
+      conversation,
+      baseContext: { ...baseContext, cart: nextCart, tableMapPlace },
+      sourceIdentifier,
+    });
+  }
+
   if (previousState.state === "reviewing_cart") {
     const selectedOption = /^\d+$/.test(text.trim()) ? Number(text.trim()) : null;
     const cart = previousState.cart;
@@ -16585,121 +16911,54 @@ export async function routeTicketMessage({
       });
     }
 
-    if (selectedOption !== 1) {
+    if (selectedOption === 1) {
+      const cartQuantity = getCartQuantity(cart);
+
+      if (cartQuantity <= 1) {
+        const nextCart = { ...cart, tableMapPlace: undefined };
+
+        return finalizeTicketCartReservation({
+          cart: nextCart,
+          selectedEvent,
+          selectedSection: previousState.selectedSection,
+          selectedSeat: previousState.selectedSeat,
+          customer,
+          conversation,
+          baseContext: { ...baseContext, cart: nextCart, tableMapPlace: undefined },
+          sourceIdentifier,
+        });
+      }
+
+      const availability = await buildOfficialTableMapAvailabilityImage({
+        quantity: cartQuantity,
+      });
+      const reply = formatTableMapSelectionReply({
+        availableCount: availability.availablePlaces.length,
+      });
+
       return {
-        reply: formatCartDecisionReply({ cart }),
+        reply,
+        outboundMessages: [
+          {
+            type: "image",
+            imageUrl: availability.imageUrl,
+            caption: reply,
+          },
+        ],
         nextContext: {
           ...baseContext,
-          step: "reviewing_cart",
-          state: "reviewing_cart",
+          step: "selecting_table_map_place",
+          state: "selecting_table_map_place",
         },
       };
     }
 
-    const reservationResult = await reserveTicketCart({
-      customerId: customer.id,
-      conversationId: conversation.id,
-      eventId: cart.eventId,
-      sessionId: cart.sessionId,
-      items: cart.items.map((item) => ({
-        sectionId: item.sectionId,
-        ticketPriceId: item.ticketPriceId,
-        quantity: item.quantity,
-        priceCents: item.priceCents,
-        feeCents: item.feeCents,
-        currency: item.currency,
-        ...(item.seats?.length
-          ? { seatIds: item.seats.map((seat) => seat.seatId) }
-          : {}),
-      })),
-      sourceIdentifier,
-    });
-
-    if (!reservationResult.ok) {
-      if (reservationResult.reason === "active_reservation_exists") {
-        return {
-          reply: messageForReservationFailure(reservationResult),
-          nextContext: {
-            ...baseContext,
-            step: "reservation_created",
-            state: "reservation_created",
-            reservation: reservationResult.reservation,
-            cart: undefined,
-            selectedEvent: undefined,
-            selectedSection: undefined,
-            selectedSeat: undefined,
-            selectedQuantity: undefined,
-            lastSeats: [],
-          },
-        };
-      }
-
-      if (reservationResult.reason === "buyer_risk_limited") {
-        return {
-          reply: messageForReservationFailure(reservationResult),
-          nextContext: {
-            ...baseContext,
-            step: "reviewing_cart",
-            state: "reviewing_cart",
-          },
-        };
-      }
-
-      const sectionsResult = await renderBuyerSectionsStep({
-        baseContext: { ...baseContext, cart: undefined },
-        selectedEvent,
-      });
-
-      return {
-        ...sectionsResult,
-        reply: [
-          "O estoque mudou antes da finalizaÃƒÂ§ÃƒÂ£o e a reserva nÃƒÂ£o foi criada. Selecione os ingressos novamente.",
-          "",
-          sectionsResult.reply,
-        ].join("\n"),
-      };
-    }
-
-    if (
-      reservationResult.reservation.totalAmountCents === 0 &&
-      reservationResult.reservation.totalFeeCents === 0
-    ) {
-      const issueResult = await issuePublicFreeTicketsForOrder({
-        orderId: reservationResult.reservation.orderId,
-        customerId: customer.id,
-      });
-
-      if (!issueResult.ok) {
-        return {
-          reply: formatPublicFreeTicketFailureMessage(issueResult),
-          nextContext: resetBuyerReservationContext(baseContext),
-        };
-      }
-
-      return {
-        reply: issueResult.delivery.message,
-        outboundMessages: buildPublicFreeTicketOutboundMessages(issueResult),
-        nextContext: resetBuyerReservationContext(baseContext),
-      };
-    }
-
     return {
-      reply: formatReservationReply({
-        selectedEvent,
-        selectedSection: previousState.selectedSection,
-        selectedSeat: previousState.selectedSeat,
-        reservation: reservationResult.reservation,
-        cart,
-      }),
+      reply: formatCartDecisionReply({ cart }),
       nextContext: {
         ...baseContext,
-        step: "reservation_created",
-        state: "reservation_created",
-        selectedEvent,
-        selectedQuantity: getCartQuantity(cart),
-        cart,
-        reservation: buildReservationContext(reservationResult.reservation),
-        lastSeats: [],
+        step: "reviewing_cart",
+        state: "reviewing_cart",
       },
     };
   }
@@ -17617,3 +17876,5 @@ export async function routeTicketMessage({
     },
   };
 }
+
+

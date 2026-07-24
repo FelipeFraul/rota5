@@ -35,6 +35,11 @@ type TicketRow = {
   } | null;
 };
 
+type OfficialTableMapReservationRow = {
+  order_id: string;
+  place_code: string;
+};
+
 type PaidTicketResendRow = TicketRow & {
   issued_at: string;
   orders: {
@@ -96,6 +101,7 @@ export type TicketForDelivery = {
   startsAt: string;
   sectionName: string;
   seatCode: string;
+  tableMapPlaceCode: string | null;
 };
 
 export type PublicTicketView = Pick<
@@ -179,6 +185,7 @@ function mapTicketRow(row: TicketRow): TicketForDelivery | null {
     startsAt: row.event_sessions.starts_at,
     sectionName: row.venue_sections?.name ?? "Setor",
     seatCode: row.reservation_items?.seat_code ?? "A confirmar",
+    tableMapPlaceCode: null,
   };
 }
 
@@ -243,6 +250,40 @@ function mapPaidTicketRowsToGroups(rows: PaidTicketResendRow[]) {
       left.ticketCode.localeCompare(right.ticketCode),
     ),
     ticketsCount: group.tickets.length,
+  }));
+}
+
+async function getOfficialTableMapPlaceCodesByOrder(
+  orderIds: string[],
+): Promise<Map<string, string>> {
+  const uniqueOrderIds = uniqueStrings(orderIds);
+
+  if (uniqueOrderIds.length === 0) {
+    return new Map();
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("official_table_map_reservations")
+    .select("order_id, place_code")
+    .in("order_id", uniqueOrderIds)
+    .in("status", ["active", "paid"])
+    .returns<OfficialTableMapReservationRow[]>();
+
+  if (error) {
+    throw error;
+  }
+
+  return new Map((data ?? []).map((row) => [row.order_id, row.place_code]));
+}
+
+function attachTableMapPlaceCodes(
+  tickets: TicketForDelivery[],
+  placeCodesByOrder: Map<string, string>,
+) {
+  return tickets.map((ticket) => ({
+    ...ticket,
+    tableMapPlaceCode: placeCodesByOrder.get(ticket.orderId) ?? null,
   }));
 }
 
@@ -337,11 +378,16 @@ export async function getTicketsForOrder(
     throw error;
   }
 
-  return (data ?? []).flatMap((row) => {
+  const tickets = (data ?? []).flatMap((row) => {
     const ticket = mapTicketRow(row);
 
     return ticket ? [ticket] : [];
   });
+  const placeCodesByOrder = await getOfficialTableMapPlaceCodesByOrder(
+    tickets.map((ticket) => ticket.orderId),
+  );
+
+  return attachTableMapPlaceCodes(tickets, placeCodesByOrder);
 }
 
 export async function listPaidTicketResendGroupsForPhone(
@@ -365,7 +411,15 @@ export async function listPaidTicketResendGroupsForPhone(
     throw error;
   }
 
-  return mapPaidTicketRowsToGroups(data ?? []);
+  const groups = mapPaidTicketRowsToGroups(data ?? []);
+  const placeCodesByOrder = await getOfficialTableMapPlaceCodesByOrder(
+    groups.flatMap((group) => group.orderIds),
+  );
+
+  return groups.map((group) => ({
+    ...group,
+    tickets: attachTableMapPlaceCodes(group.tickets, placeCodesByOrder),
+  }));
 }
 
 export async function getTicketBySignedToken(

@@ -71,6 +71,49 @@ function parseScope(value: unknown): ComboOfferScopeInput | null {
   return null;
 }
 
+function getPayloadLogShape(payload: ComboOfferPatchPayload | null) {
+  if (!payload || typeof payload !== "object") return { payloadType: typeof payload };
+
+  return {
+    nameType: typeof payload.name,
+    nameLength: typeof payload.name === "string" ? payload.name.trim().length : null,
+    descriptionType: typeof payload.description,
+    descriptionLength: typeof payload.description === "string" ? payload.description.trim().length : null,
+    imageUrlType: payload.imageUrl === null ? "null" : typeof payload.imageUrl,
+    hasImageUrl: typeof payload.imageUrl === "string" ? payload.imageUrl.trim().length > 0 : false,
+    priceCents: payload.priceCents,
+    displayPriority: payload.displayPriority,
+    status: payload.status,
+    timingType: payload.timingType,
+    customOffsetMinutes: payload.customOffsetMinutes,
+    scope: payload.scope && typeof payload.scope === "object"
+      ? {
+          scopeType: (payload.scope as { scopeType?: unknown }).scopeType,
+          eventIdsCount: Array.isArray((payload.scope as { eventIds?: unknown }).eventIds)
+            ? ((payload.scope as { eventIds: unknown[] }).eventIds).length
+            : null,
+          weekdaysCount: Array.isArray((payload.scope as { weekdays?: unknown }).weekdays)
+            ? ((payload.scope as { weekdays: unknown[] }).weekdays).length
+            : null,
+        }
+      : payload.scope === undefined ? undefined : typeof payload.scope,
+  };
+}
+
+function logComboOfferPatchFailure(
+  offerId: string,
+  reason: string,
+  payload: ComboOfferPatchPayload | null,
+  extra: Record<string, unknown> = {},
+) {
+  console.warn("[admin-combo-offers] patch rejected", {
+    offerId,
+    reason,
+    payload: getPayloadLogShape(payload),
+    ...extra,
+  });
+}
+
 async function requireEditableComboOffer(request: Request, offerId: string) {
   const auth = await requireAdminEventEditorSession();
 
@@ -120,16 +163,19 @@ export async function PATCH(request: Request, { params }: Params) {
 
   const payload = await request.json().catch(() => null) as ComboOfferPatchPayload | null;
   if (!payload || typeof payload !== "object") {
+    logComboOfferPatchFailure(offerId, "invalid_payload", payload);
     return NextResponse.json({ ok: false, message: "Dados inválidos." }, { status: 400 });
   }
 
   const timingType = payload.timingType === undefined ? undefined : parseTimingType(payload.timingType);
   if (payload.timingType !== undefined && !timingType) {
+    logComboOfferPatchFailure(offerId, "invalid_timing_type", payload);
     return NextResponse.json({ ok: false, message: "Regra de envio inválida." }, { status: 400 });
   }
 
   const priceCents = payload.priceCents === undefined ? undefined : parsePriceCents(payload.priceCents);
   if (payload.priceCents !== undefined && !priceCents) {
+    logComboOfferPatchFailure(offerId, "invalid_price_cents", payload);
     return NextResponse.json({ ok: false, message: "Preço inválido." }, { status: 400 });
   }
 
@@ -137,6 +183,7 @@ export async function PATCH(request: Request, { params }: Params) {
     ? undefined
     : parseDisplayPriority(payload.displayPriority);
   if (payload.displayPriority !== undefined && !displayPriority) {
+    logComboOfferPatchFailure(offerId, "invalid_display_priority", payload);
     return NextResponse.json({ ok: false, message: "Prioridade inválida." }, { status: 400 });
   }
 
@@ -146,11 +193,13 @@ export async function PATCH(request: Request, { params }: Params) {
       ? payload.customOffsetMinutes
       : null;
   if (payload.customOffsetMinutes !== undefined && customOffsetMinutes === null) {
+    logComboOfferPatchFailure(offerId, "invalid_custom_offset_minutes", payload);
     return NextResponse.json({ ok: false, message: "Intervalo inválido." }, { status: 400 });
   }
 
   const scope = payload.scope === undefined ? undefined : parseScope(payload.scope);
   if (payload.scope !== undefined && !scope) {
+    logComboOfferPatchFailure(offerId, "invalid_scope", payload);
     return NextResponse.json({ ok: false, message: "Escopo invÃ¡lido." }, { status: 400 });
   }
 
@@ -176,6 +225,12 @@ export async function PATCH(request: Request, { params }: Params) {
     });
 
     if (!detailsResult.ok) {
+      logComboOfferPatchFailure(offerId, "details_update_failed", payload, {
+        resultReason: detailsResult.reason,
+        error: detailsResult.reason === "database_error" && "error" in detailsResult
+          ? detailsResult.error
+          : undefined,
+      });
       return NextResponse.json({ ok: false, message: "Não foi possível salvar a oferta." }, { status: 400 });
     }
   }
@@ -183,11 +238,13 @@ export async function PATCH(request: Request, { params }: Params) {
   if (payload.status !== undefined) {
     const status = payload.status === "active" || payload.status === "paused" ? payload.status : null;
     if (!status) {
+      logComboOfferPatchFailure(offerId, "invalid_status", payload);
       return NextResponse.json({ ok: false, message: "Status inválido." }, { status: 400 });
     }
 
     const statusResult = await updateComboOfferStatus(offerId, status);
     if (!statusResult.ok) {
+      logComboOfferPatchFailure(offerId, "status_update_failed", payload, { error: statusResult.error });
       return NextResponse.json({ ok: false, message: "Não foi possível atualizar o status." }, { status: 500 });
     }
   }
@@ -195,11 +252,18 @@ export async function PATCH(request: Request, { params }: Params) {
   if (scope) {
     const scopeResult = await updateComboOfferScope(offerId, scope);
     if (!scopeResult.ok) {
+      logComboOfferPatchFailure(offerId, "scope_update_failed", payload, {
+        resultReason: scopeResult.reason,
+        error: scopeResult.reason === "database_error" && "error" in scopeResult
+          ? scopeResult.error
+          : undefined,
+      });
       return NextResponse.json({ ok: false, message: "NÃ£o foi possÃ­vel atualizar o escopo." }, { status: 400 });
     }
   }
 
   if (!hasDetailsChange && payload.status === undefined && scope === undefined) {
+    logComboOfferPatchFailure(offerId, "empty_patch", payload);
     return NextResponse.json({ ok: false, message: "Nenhuma alteração enviada." }, { status: 400 });
   }
 

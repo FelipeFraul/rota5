@@ -25,6 +25,10 @@ import {
   generateTicketQrImage,
   ticketQrImageToDataUrl,
 } from "@/lib/tickets/services/ticketQrImage";
+import {
+  getOfficialTableMapPlace,
+  normalizeOfficialTableMapCode,
+} from "@/lib/tickets/tableMap/officialPlaces";
 import { sendZapiImage, sendZapiText } from "@/lib/zapi/client";
 
 type OrderCustomer = {
@@ -76,16 +80,22 @@ const QR_CODE_CAPTION = [
 ].join("\n");
 
 function formatEventDate(startsAt: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
+  const date = new Date(startsAt);
+  const weekday = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: SAO_PAULO_TIME_ZONE,
+    weekday: "long",
+  }).format(date);
+  const dayTime = new Intl.DateTimeFormat("pt-BR", {
     timeZone: SAO_PAULO_TIME_ZONE,
     day: "2-digit",
     month: "2-digit",
-    year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
   })
-    .format(new Date(startsAt))
+    .format(date)
     .replace(",", " às");
+
+  return `${weekday.charAt(0).toLocaleUpperCase("pt-BR")}${weekday.slice(1)} ${dayTime}`;
 }
 
 function buildTicketUrl(ticket: TicketForDelivery) {
@@ -97,50 +107,41 @@ function buildTicketUrl(ticket: TicketForDelivery) {
   return createTicketUrl(token);
 }
 
-function formatTicket(ticket: TicketForDelivery) {
+function formatTicketCodes(tickets: TicketForDelivery[]) {
+  return tickets.map((ticket) => ticket.ticketCode).join(", ");
+}
+
+function formatTicketSeatCodes(tickets: TicketForDelivery[]) {
+  return tickets.map((ticket) => ticket.seatCode).join(", ");
+}
+
+function formatTableMapPlaceCode(code: string | null) {
+  if (!code) return "X";
+
+  const normalizedCode = normalizeOfficialTableMapCode(code);
+  const place = getOfficialTableMapPlace(normalizedCode);
+  const displayCode = normalizedCode.replace(/^0+/, "") || normalizedCode;
+
+  return place?.capacity
+    ? `${displayCode} para ${place.capacity} pessoas`
+    : displayCode;
+}
+
+function formatTicketSummary(tickets: TicketForDelivery[]) {
+  const firstTicket = tickets[0];
+
+  if (!firstTicket) {
+    return "";
+  }
+
   return [
-    `> ${ticket.eventTitle}`,
-    `> Data: ${formatEventDate(ticket.startsAt)}`,
-    `> Local: ${ticket.venueName ?? "A confirmar"} - ${ticket.city}/${ticket.state}`,
-    `> Setor: ${ticket.sectionName}`,
-    `> Ingresso/Assento: ${ticket.seatCode}`,
-    `> Código: ${ticket.ticketCode}`,
+    `> ${firstTicket.eventTitle}`,
+    `> Data: *${formatEventDate(firstTicket.startsAt)}*`,
+    `> Local: *${firstTicket.venueName ?? "A confirmar"}*`,
+    `> Ingresso: *${formatTicketSeatCodes(tickets)}*`,
+    `> Mesa/ bistrô: *${formatTableMapPlaceCode(firstTicket.tableMapPlaceCode)}*`,
+    `> Código: *${formatTicketCodes(tickets)}*`,
   ].join("\n");
-}
-
-function buildVenueSearchText(ticket: TicketForDelivery) {
-  return [
-    ticket.venueName,
-    ticket.venueAddress,
-    ticket.city,
-    ticket.state,
-  ]
-    .filter((value): value is string => Boolean(value?.trim()))
-    .join(", ");
-}
-
-function buildVenueMapLink(ticket: TicketForDelivery) {
-  const searchText = buildVenueSearchText(ticket);
-
-  if (!searchText) {
-    return null;
-  }
-
-  return `https://maps.google.com/?q=${encodeURIComponent(searchText)}`;
-}
-
-function buildVenueLinkLines(tickets: TicketForDelivery[]) {
-  const links = new Set<string>();
-
-  for (const ticket of tickets) {
-    const link = buildVenueMapLink(ticket);
-
-    if (link) {
-      links.add(link);
-    }
-  }
-
-  return [...links].map((link) => `> Local: ${link}`);
 }
 
 export type TicketDeliveryPayload = {
@@ -155,14 +156,10 @@ export function buildTicketDeliveryMessage(
   tickets: TicketForDelivery[],
   title = "*PAGAMENTO CONFIRMADO*",
 ) {
-  const ticketBlocks = tickets.map(formatTicket);
-  const venueLinkLines = buildVenueLinkLines(tickets);
-
   return [
     title,
-    ...venueLinkLines,
-    ...(venueLinkLines.length > 0 ? [""] : []),
-    ticketBlocks.join("\n\n"),
+    "",
+    formatTicketSummary(tickets),
   ].join("\n");
 }
 
@@ -643,3 +640,4 @@ export async function deliverTicketsForOrder(
     ticketsCount: tickets.length,
   };
 }
+
