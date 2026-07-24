@@ -104,6 +104,29 @@ type ParsedIncomingMessage = {
   messageType: "text" | "image" | "document" | "system";
   mediaUrl: string | null;
 };
+type SanitizedContactAudit = {
+  marker: "zapi_contact_payload_audit";
+  detectedType: string | null;
+  providerMessageId: string | null;
+  sender: {
+    phone: string | null;
+    phoneLast4: string | null;
+    rawPhoneShape: unknown;
+  };
+  counts: {
+    contacts: number;
+    phonesByContact: number[];
+  };
+  presence: {
+    vcard: boolean;
+    phone: boolean;
+    contactPhone: boolean;
+    chatLid: boolean;
+    lid: boolean;
+    atLid: boolean;
+  };
+  payload: unknown;
+};
 type RouteOutboundMessage =
   | {
       type: "text";
@@ -419,6 +442,199 @@ function normalizeMessageType(messageType: string | null) {
   }
 
   return "text";
+}
+
+function normalizeAuditKey(key: string) {
+  return key.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function isSensitiveNameKey(key: string) {
+  return [
+    "name",
+    "contactname",
+    "sendername",
+    "pushname",
+    "displayname",
+    "formattedname",
+    "fn",
+    "notifyname",
+  ].includes(normalizeAuditKey(key));
+}
+
+function isPhoneLikeKey(key: string) {
+  return [
+    "phone",
+    "phones",
+    "number",
+    "contactphone",
+    "phonenumber",
+    "waid",
+    "sender",
+    "senderphone",
+    "from",
+    "participant",
+    "participantphone",
+    "remotejid",
+    "chatid",
+  ].includes(normalizeAuditKey(key));
+}
+
+function maskDigits(value: string) {
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return value.includes("@lid") ? "[lid:@lid]" : "[redacted]";
+  return `${digits.slice(0, 2)}***${digits.slice(-4)}`;
+}
+
+function maskAuditValue(key: string, value: unknown): unknown {
+  if (typeof value !== "string") return value;
+
+  if (isSensitiveNameKey(key)) return "[name:redacted]";
+  if (isPhoneLikeKey(key) || /\d{7,}/.test(value)) return maskDigits(value);
+  if (value.includes("@lid")) return "[lid:@lid]";
+  if (/BEGIN:VCARD/i.test(value)) return "[vcard:redacted]";
+
+  return value.length > 160 ? `${value.slice(0, 80)}...[truncated]` : value;
+}
+
+function sanitizePayloadForContactAudit(value: unknown, key = "", depth = 0): unknown {
+  if (depth > 8) return "[depth_limit]";
+
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizePayloadForContactAudit(item, key, depth + 1));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([entryKey, entryValue]) => [
+        entryKey,
+        sanitizePayloadForContactAudit(entryValue, entryKey, depth + 1),
+      ]),
+    );
+  }
+
+  return maskAuditValue(key, value);
+}
+
+function payloadContainsKey(payload: unknown, predicate: (key: string) => boolean): boolean {
+  if (Array.isArray(payload)) return payload.some((item) => payloadContainsKey(item, predicate));
+  if (!payload || typeof payload !== "object") return false;
+
+  return Object.entries(payload as Record<string, unknown>).some(([key, value]) =>
+    predicate(key) || payloadContainsKey(value, predicate),
+  );
+}
+
+function payloadContainsVcard(payload: unknown): boolean {
+  if (typeof payload === "string") return /BEGIN:VCARD|END:VCARD|vcard/i.test(payload);
+  if (Array.isArray(payload)) return payload.some(payloadContainsVcard);
+  if (!payload || typeof payload !== "object") return false;
+
+  return Object.entries(payload as Record<string, unknown>).some(([key, value]) =>
+    normalizeAuditKey(key).includes("vcard") || payloadContainsVcard(value),
+  );
+}
+
+function countPhoneValues(payload: unknown): number {
+  if (Array.isArray(payload)) return payload.reduce((total, item) => total + countPhoneValues(item), 0);
+  if (!payload || typeof payload !== "object") return 0;
+
+  let count = 0;
+  for (const [key, value] of Object.entries(payload as Record<string, unknown>)) {
+    if (isPhoneLikeKey(key)) {
+      if (Array.isArray(value)) count += value.length;
+      else if (value !== null && value !== undefined) count += 1;
+    }
+    if (typeof value === "string" && /TEL/i.test(value)) {
+      count += (value.match(/TEL/gi) ?? []).length;
+    }
+    count += countPhoneValues(value);
+  }
+  return count;
+}
+
+function getContactCandidates(payload: ZapiWebhookPayload) {
+  const message = firstRecord(payload.message, payload.data, payload.key);
+  const candidates = [
+    payload.contact,
+    payload.contacts,
+    payload.vcard,
+    payload.vCard,
+    message.contact,
+    message.contacts,
+    message.vcard,
+    message.vCard,
+  ].filter(Boolean);
+
+  return candidates.flatMap((candidate) => Array.isArray(candidate) ? candidate : [candidate]);
+}
+
+function buildContactAuditPayload(
+  payload: ZapiWebhookPayload,
+  incoming: ParsedIncomingMessage,
+): SanitizedContactAudit | null {
+  const message = firstRecord(payload.message, payload.data, payload.key);
+  const rawMessageType = firstString(
+    payload.messageType,
+    payload.type,
+    message.messageType,
+    message.type,
+  );
+  const normalizedType = rawMessageType?.toLowerCase() ?? null;
+  const hasContactType = Boolean(
+    normalizedType &&
+      (
+        normalizedType.includes("contact") ||
+        normalizedType.includes("contacts") ||
+        normalizedType.includes("vcard")
+      ),
+  );
+  const hasContactKey = payloadContainsKey(payload, (key) => {
+    const normalizedKey = normalizeAuditKey(key);
+    return normalizedKey === "contact" ||
+      normalizedKey === "contacts" ||
+      normalizedKey === "contactphone" ||
+      normalizedKey.includes("vcard");
+  });
+  const hasVcard = payloadContainsVcard(payload);
+
+  if (!hasContactType && !hasContactKey && !hasVcard) {
+    return null;
+  }
+
+  const contacts = getContactCandidates(payload);
+  const phonesByContact = contacts.length
+    ? contacts.map((contact) => Math.max(0, countPhoneValues(contact)))
+    : [countPhoneValues(payload)].filter((count) => count > 0);
+
+  return {
+    marker: "zapi_contact_payload_audit",
+    detectedType: rawMessageType,
+    providerMessageId: incoming.providerMessageId,
+    sender: {
+      phone: incoming.phone ? maskDigits(incoming.phone) : null,
+      phoneLast4: incoming.phone?.slice(-4) ?? null,
+      rawPhoneShape: sanitizePayloadForContactAudit({
+        phone: payload.phone,
+        from: payload.from,
+        sender: payload.sender,
+        senderPhone: payload.senderPhone,
+        participant: payload.participant,
+      }),
+    },
+    counts: {
+      contacts: contacts.length || (hasContactType || hasContactKey || hasVcard ? 1 : 0),
+      phonesByContact,
+    },
+    presence: {
+      vcard: hasVcard,
+      phone: payloadContainsKey(payload, (key) => normalizeAuditKey(key) === "phone"),
+      contactPhone: payloadContainsKey(payload, (key) => normalizeAuditKey(key) === "contactphone"),
+      chatLid: payloadContainsKey(payload, (key) => normalizeAuditKey(key) === "chatlid"),
+      lid: payloadContainsKey(payload, (key) => normalizeAuditKey(key).includes("lid")),
+      atLid: JSON.stringify(payload).includes("@lid"),
+    },
+    payload: sanitizePayloadForContactAudit(payload),
+  };
 }
 
 function isTruthyFlag(value: unknown) {
@@ -826,6 +1042,112 @@ export async function POST(request: Request) {
     return jsonOk({ received: true, ignored: true, reason: "missing_phone" });
   }
 
+  if (incoming.providerMessageId) {
+    const duplicateResult = await findInboundMessageByProviderId(
+      incoming.providerMessageId,
+    );
+
+    if (!duplicateResult.ok) {
+      logWarn("Failed to pre-check duplicate Z-API message; continuing", {
+        code: duplicateResult.error?.code,
+        errorMessage: duplicateResult.error?.message,
+        providerMessageId: incoming.providerMessageId,
+      });
+    }
+
+    if (duplicateResult.ok && duplicateResult.message) {
+      logInfo("Ignored duplicate Z-API inbound message", {
+        providerMessageId: incoming.providerMessageId,
+      });
+      return jsonOk({ received: true, duplicate: true });
+    }
+  }
+
+  const contactAuditPayload = buildContactAuditPayload(payloadResult.payload, incoming);
+
+  if (contactAuditPayload) {
+    const customerResult = await upsertCustomerFromWhatsApp({
+      phone: incoming.phone,
+      name: incoming.contactName,
+    });
+
+    if (!customerResult.ok) {
+      logError("Failed to upsert WhatsApp customer for contact audit", {
+        phoneLast4: incoming.phone.slice(-4),
+        code: customerResult.error.code,
+      });
+      return jsonError("Internal Server Error", 500);
+    }
+
+    const conversationResult = await getOrCreateOpenConversation({
+      customerId: customerResult.customer.id,
+    });
+
+    if (!conversationResult.ok) {
+      logError("Failed to load WhatsApp conversation for contact audit", {
+        customerId: customerResult.customer.id,
+        code: conversationResult.error.code,
+      });
+      return jsonError("Internal Server Error", 500);
+    }
+
+    logInfo("ZAPI_CONTACT_AUDIT_CAPTURED", contactAuditPayload);
+
+    const inboundResult = await saveWhatsAppMessage({
+      conversationId: conversationResult.conversation.id,
+      customerId: customerResult.customer.id,
+      direction: "inbound",
+      messageType: "system",
+      body: "[Contato recebido para teste]",
+      providerMessageId: incoming.providerMessageId,
+      rawMetadata: {
+        provider: "zapi",
+        reason: "zapi_contact_payload_audit",
+        ...contactAuditPayload,
+      },
+    });
+
+    if (!inboundResult.ok) {
+      if ("duplicate" in inboundResult && inboundResult.duplicate) {
+        logInfo("Ignored concurrent duplicate Z-API contact audit", {
+          providerMessageId: incoming.providerMessageId,
+        });
+        return jsonOk({ received: true, duplicate: true });
+      }
+
+      logError("Failed to save Z-API contact audit message", {
+        conversationId: conversationResult.conversation.id,
+        code: inboundResult.error?.code,
+      });
+      return jsonError("Internal Server Error", 500);
+    }
+
+    const replyResult = await sendAndPersistText({
+      conversationId: conversationResult.conversation.id,
+      customerId: customerResult.customer.id,
+      phone: incoming.phone,
+      body: "Contato recebido para teste.",
+    });
+
+    if (!replyResult.ok) {
+      return jsonError("Internal Server Error", 500);
+    }
+
+    const conversationUpdateResult = await updateConversationAfterMessage({
+      conversationId: conversationResult.conversation.id,
+    });
+
+    if (!conversationUpdateResult.ok) {
+      return jsonError("Internal Server Error", 500);
+    }
+
+    return jsonOk({
+      received: true,
+      processed: true,
+      contactAudit: true,
+    });
+  }
+
   if (!incoming.text && !incoming.mediaUrl) {
     const message = firstRecord(
       payloadResult.payload.message,
@@ -859,27 +1181,6 @@ export async function POST(request: Request) {
       phoneLast4: incoming.phone.slice(-4),
     });
     return jsonOk({ received: true, ignored: true, reason: "phone_rate_limited" });
-  }
-
-  if (incoming.providerMessageId) {
-    const duplicateResult = await findInboundMessageByProviderId(
-      incoming.providerMessageId,
-    );
-
-    if (!duplicateResult.ok) {
-      logWarn("Failed to pre-check duplicate Z-API message; continuing", {
-        code: duplicateResult.error?.code,
-        errorMessage: duplicateResult.error?.message,
-        providerMessageId: incoming.providerMessageId,
-      });
-    }
-
-    if (duplicateResult.ok && duplicateResult.message) {
-      logInfo("Ignored duplicate Z-API inbound message", {
-        providerMessageId: incoming.providerMessageId,
-      });
-      return jsonOk({ received: true, duplicate: true });
-    }
   }
 
   const customerResult = await upsertCustomerFromWhatsApp({
