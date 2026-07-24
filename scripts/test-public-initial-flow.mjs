@@ -246,6 +246,8 @@ test("mensagens publicas posteriores tambem seguem pelo caminho imediato", () =>
   assert.match(webhook, /shouldProcessImmediately\(\{/);
   assert.match(webhook, /reconcileAdminNavigation\(\{/);
   assert.match(webhook, /const outboundMessages = getOutboundMessages\(routeResult\)/);
+  assert.match(webhook, /routeKey:\s*"webhook:zapi:phone"/);
+  assert.doesNotMatch(webhook, /routeKey:\s*"webhook:zapi"/);
   assert.doesNotMatch(webhook, /processAfter:\s*true/);
   assert.doesNotMatch(webhook, /listWhatsAppBatchMessages/);
 });

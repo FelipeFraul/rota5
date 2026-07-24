@@ -10,7 +10,6 @@ import { logError, logInfo, logWarn } from "@/lib/logger";
 import {
   consumeRateLimit,
   hashRateLimitScope,
-  rateLimitResponse,
 } from "@/lib/security/rateLimit";
 import {
   getOrCreateOpenConversation,
@@ -795,21 +794,6 @@ export async function POST(request: Request) {
   if (!webhookSecret || !isSecretMatch(requestSecret, webhookSecret)) {
     logWarn("Rejected Z-API webhook with invalid secret");
     return unauthorized();
-  }
-
-  const rateLimit = await consumeRateLimit({
-    routeKey: "webhook:zapi",
-    limit: 60,
-    windowSeconds: 60,
-    request,
-  });
-
-  if (!rateLimit.allowed) {
-    logWarn("Rate limited Z-API webhook", {
-      sourceHash: rateLimit.sourceHash,
-      count: rateLimit.count,
-    });
-    return rateLimitResponse(rateLimit);
   }
 
   const payloadResult = await readJsonPayload(request);

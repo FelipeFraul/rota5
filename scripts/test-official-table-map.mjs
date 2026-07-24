@@ -25,6 +25,7 @@ import {
   persistOfficialTableMapPlaces,
 } from "../src/lib/tickets/tableMap/persistOfficialPlaces.ts";
 import {
+  getOfficialTableMapPlaceByInput,
   isOfficialTableMapPlaceAllowedForQuantity,
 } from "../src/lib/tickets/services/officialTableMapReservations.ts";
 
@@ -219,6 +220,11 @@ test("filtro de mesa/bistro libera capacidades conforme quantidade de ingressos"
   assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(4), quantity: 8 }), true);
   assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(6), quantity: 8 }), true);
   assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(8), quantity: 8 }), true);
+});
+
+test("codigo de mesa ou bistro aceita entrada sem zero a esquerda", () => {
+  assert.equal(getOfficialTableMapPlaceByInput("9")?.code, "09");
+  assert.equal(getOfficialTableMapPlaceByInput("09")?.code, "09");
 });
 
 test("migration cria tabela de coordenadas oficiais com as sementes historicas", async () => {
