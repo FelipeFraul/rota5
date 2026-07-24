@@ -1720,7 +1720,7 @@ function formatSingleEventReply(
 ) {
   const title = formatPublicEventTitle(event.title, event.artistName);
   const details = [
-    `| Cidade: ${formatCityState(event.city, event.state)}`,
+    `| Local: ${formatCityState(event.city, event.state)}`,
     `*| Data: ${formatEventDate(event.startsAt)}*`,
   ];
   const buyOption = totalEvents === 1 ? 1 : index * 2 + 1;
@@ -1746,7 +1746,7 @@ function formatSingleEventOptionReply(
 ) {
   const title = formatPublicEventTitle(event.title, event.artistName);
   const details = [
-    `| Cidade: ${formatCityState(event.city, event.state)}`,
+    `| Local: ${formatCityState(event.city, event.state)}`,
     `*| Data: ${formatEventDate(event.startsAt)}*`,
   ];
   const buyOption = totalEvents === 1 ? 1 : index * 2 + 1;
@@ -1858,7 +1858,7 @@ function formatSingleEventMoreInfo(
 
   return [
     `🎟️ *${formatPublicEventTitle(event.title, event.artistName)}*`,
-    `| Cidade: ${formatCityState(event.city, event.state)}`,
+    `| Local: ${formatCityState(event.city, event.state)}`,
     `*| Data: ${formatEventDate(event.startsAt)}*`,
     ...(event.venueName ? [`> Ã°Å¸ÂÅ¸Ã¯Â¸Â Local: ${formatProperName(event.venueName)}`] : []),
     "",
@@ -3499,7 +3499,7 @@ function formatPaymentLinkReply({
   const lines = [
     "*LINK DE PAGAMENTO GERADO*",
     "",
-    "Link de pagamento::",
+    "Link de pagamento:",
     checkout.checkoutUrl,
     "",
     "Após a confirmação do pagamento, seu ingresso será emitido automaticamente nesta conversa.",

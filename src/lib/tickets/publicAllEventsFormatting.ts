@@ -32,7 +32,7 @@ export function formatSingleAllEventReply(
 
   return [
     `🎟️ *${formatPublicEventTitle(event.title, event.artistName)}*`,
-    `| Cidade: ${formatCityState(event.city, event.state)}`,
+    `| Local: ${formatCityState(event.city, event.state)}`,
     `*| Data: ${formatEventDate(event.startsAt)}*`,
     "",
     formatOptionLine(buyOption, "comprar"),

@@ -130,7 +130,7 @@ function formatSingleAllEventReply(event, index) {
 
   return [
     `🎟️ *${formatPublicEventTitle(event.title, event.artistName)}*`,
-    `| Cidade: ${formatCityState(event.city, event.state)}`,
+    `| Local: ${formatCityState(event.city, event.state)}`,
     `*| Data: ${formatEventDate(event.startsAt)}*`,
     "",
     formatOptionLine(buyOption, "comprar"),
@@ -258,14 +258,14 @@ test("TODOS sem eventos preserva a resposta atual do router", () => {
   );
 });
 
-test("TODOS com um evento formata titulo, cidade, data e opcoes", () => {
+test("TODOS com um evento formata titulo, local, data e opcoes", () => {
   assert.equal(
     formatAllEventsReply([baseEvents[0]]),
     [
       "Encontrei estes eventos:",
       "",
       "🎟️ *YURI MARÇAL - SOLO NOVO*",
-      "| Cidade: Sorocaba/SP",
+      "| Local: Sorocaba/SP",
       "*| Data: Sábado 01/08 às 20:00*",
       "",
       "Digite 1 para *comprar*",
@@ -281,7 +281,7 @@ test("TODOS com varios eventos preserva ordem e numeracao", () => {
       "Encontrei estes eventos:",
       "",
       "🎟️ *YURI MARÇAL - SOLO NOVO*",
-      "| Cidade: Sorocaba/SP",
+      "| Local: Sorocaba/SP",
       "*| Data: Sábado 01/08 às 20:00*",
       "",
       "Digite 1 para *comprar*",
@@ -290,7 +290,7 @@ test("TODOS com varios eventos preserva ordem e numeracao", () => {
       "--",
       "",
       "🎟️ *XANDA DIAS*",
-      "| Cidade: Ribeirão Preto/SP",
+      "| Local: Ribeirão Preto/SP",
       "*| Data: Domingo 02/08 às 19:30*",
       "",
       "Digite 3 para *comprar*",
@@ -299,7 +299,7 @@ test("TODOS com varios eventos preserva ordem e numeracao", () => {
       "--",
       "",
       "🎟️ *NOITE DOS AMIGOS*",
-      "| Cidade: Rio de Janeiro/RJ",
+      "| Local: Rio de Janeiro/RJ",
       "*| Data: Domingo 02/08 às 22:00*",
       "",
       "Digite 5 para *comprar*",

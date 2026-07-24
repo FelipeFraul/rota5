@@ -356,6 +356,11 @@ test("prompt de quantidade limpa carrinho antigo fora de adicionar mais ingresso
   assert.match(router, /tableMapPlace: preservedCart\?\.tableMapPlace/);
 });
 
+test("link de pagamento usa apenas um dois-pontos", () => {
+  assert.match(router, /"Link de pagamento:"/);
+  assert.doesNotMatch(router, /Link de pagamento::/);
+});
+
 test("primeira busca e primeiro TODOS recebem bootstrap sem repetir depois", () => {
   const searchSuccessBlock = sliceBetween(
     router,
