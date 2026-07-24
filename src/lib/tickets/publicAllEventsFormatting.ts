@@ -31,7 +31,7 @@ export function formatSingleAllEventReply(
   const moreInfoOption = buyOption + 1;
 
   return [
-    `🎟️ - *${formatPublicEventTitle(event.title, event.artistName)}*`,
+    `🎟️ *${formatPublicEventTitle(event.title, event.artistName)}*`,
     `| Cidade: ${formatCityState(event.city, event.state)}`,
     `*| Data: ${formatEventDate(event.startsAt)}*`,
     "",
@@ -126,3 +126,4 @@ export function buildAllEventsOutboundMessages(
 
   return messages;
 }
+

@@ -129,7 +129,7 @@ function formatSingleAllEventReply(event, index) {
   const moreInfoOption = buyOption + 1;
 
   return [
-    `🎟️ - *${formatPublicEventTitle(event.title, event.artistName)}*`,
+    `🎟️ *${formatPublicEventTitle(event.title, event.artistName)}*`,
     `| Cidade: ${formatCityState(event.city, event.state)}`,
     `*| Data: ${formatEventDate(event.startsAt)}*`,
     "",
@@ -264,7 +264,7 @@ test("TODOS com um evento formata titulo, cidade, data e opcoes", () => {
     [
       "Encontrei estes eventos:",
       "",
-      "🎟️ - *YURI MARÇAL - SOLO NOVO*",
+      "🎟️ *YURI MARÇAL - SOLO NOVO*",
       "| Cidade: Sorocaba/SP",
       "*| Data: Sábado 01/08 às 20:00*",
       "",
@@ -280,7 +280,7 @@ test("TODOS com varios eventos preserva ordem e numeracao", () => {
     [
       "Encontrei estes eventos:",
       "",
-      "🎟️ - *YURI MARÇAL - SOLO NOVO*",
+      "🎟️ *YURI MARÇAL - SOLO NOVO*",
       "| Cidade: Sorocaba/SP",
       "*| Data: Sábado 01/08 às 20:00*",
       "",
@@ -289,7 +289,7 @@ test("TODOS com varios eventos preserva ordem e numeracao", () => {
       "",
       "--",
       "",
-      "🎟️ - *XANDA DIAS*",
+      "🎟️ *XANDA DIAS*",
       "| Cidade: Ribeirão Preto/SP",
       "*| Data: Domingo 02/08 às 19:30*",
       "",
@@ -298,7 +298,7 @@ test("TODOS com varios eventos preserva ordem e numeracao", () => {
       "",
       "--",
       "",
-      "🎟️ - *NOITE DOS AMIGOS*",
+      "🎟️ *NOITE DOS AMIGOS*",
       "| Cidade: Rio de Janeiro/RJ",
       "*| Data: Domingo 02/08 às 22:00*",
       "",
@@ -394,3 +394,4 @@ test("TODOS envia foto dos eventos quando houver imageUrl", () => {
     ],
   );
 });
+
