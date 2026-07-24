@@ -17293,38 +17293,11 @@ export async function routeTicketMessage({
       }
 
       const selectedEvent = buildSelectedEvent(selectedSession);
-      const sections = await listAvailableSections(selectedSession.sessionId, {
-        venueId: selectedSession.venueId,
+
+      return renderBuyerSectionsStep({
+        baseContext: { ...baseContext, eventMoreInfoShown: undefined },
+        selectedEvent,
       });
-
-      if (sections.length === 0) {
-        return {
-          reply: TICKET_MESSAGES.noSectionsAvailable,
-          nextContext: {
-            ...baseContext,
-            step: "idle",
-            state: "idle",
-            selectedEvent,
-            eventMoreInfoShown: undefined,
-          },
-        };
-      }
-
-      return {
-        reply: formatSectionsReply({ sections }),
-        nextContext: {
-          ...baseContext,
-          step: "showing_sections",
-          state: "showing_sections",
-          selectedEvent,
-          selectedSection: undefined,
-          selectedSeat: undefined,
-          selectedQuantity: undefined,
-          eventMoreInfoShown: undefined,
-          lastSections: buildSectionOptions(sections),
-          lastSeats: [],
-        },
-      };
     }
 
     return {
@@ -17383,36 +17356,15 @@ export async function routeTicketMessage({
       };
     }
 
-    const sections = await listAvailableSections(selectedSession.sessionId, {
-      venueId: selectedSession.venueId,
-    });
-
-    if (sections.length === 0) {
-      return {
-        reply: TICKET_MESSAGES.noSectionsAvailable,
-        nextContext: {
-          ...baseContext,
-          step: "idle",
-          state: "idle",
-          selectedEvent,
-          lastEvents: [],
-          lastSections: [],
-          eventMoreInfoShown: undefined,
-        },
-      };
-    }
-
-    return {
-      reply: formatSectionsReply({ sections }),
-      nextContext: {
+    return renderBuyerSectionsStep({
+      baseContext: {
         ...baseContext,
-        step: "showing_sections",
-        state: "showing_sections",
-        selectedEvent,
-        lastSections: buildSectionOptions(sections),
+        lastEvents: [],
+        lastSections: [],
         eventMoreInfoShown: undefined,
       },
-    };
+      selectedEvent,
+    });
   }
 
   if (
@@ -17452,32 +17404,11 @@ export async function routeTicketMessage({
       }
 
       const selectedEvent = buildSelectedEvent(selectedSession);
-      const sections = await listAvailableSections(selectedSession.sessionId, {
-        venueId: selectedSession.venueId,
+
+      return renderBuyerSectionsStep({
+        baseContext: { ...baseContext, eventMoreInfoShown: undefined },
+        selectedEvent,
       });
-
-      if (sections.length === 0) {
-        return {
-          reply: TICKET_MESSAGES.noSectionsAvailable,
-          nextContext: resetBuyerReservationContext(baseContext),
-        };
-      }
-
-      return {
-        reply: formatSectionsReply({ sections }),
-        nextContext: {
-          ...baseContext,
-          step: "showing_sections",
-          state: "showing_sections",
-          selectedEvent,
-          selectedSection: undefined,
-          selectedSeat: undefined,
-          selectedQuantity: undefined,
-          eventMoreInfoShown: undefined,
-          lastSections: buildSectionOptions(sections),
-          lastSeats: [],
-        },
-      };
     }
 
     return {
@@ -17533,33 +17464,14 @@ export async function routeTicketMessage({
       };
     }
 
-    const sections = await listAvailableSections(selectedSession.sessionId, {
-      venueId: selectedSession.venueId,
-    });
-
-    if (sections.length === 0) {
-      return {
-        reply: TICKET_MESSAGES.noSectionsAvailable,
-        nextContext: resetBuyerReservationContext(baseContext),
-      };
-    }
-
-    return {
-      reply: formatSectionsReply({ sections }),
-      nextContext: {
+    return renderBuyerSectionsStep({
+      baseContext: {
         ...baseContext,
-        step: "showing_sections",
-        state: "showing_sections",
-        selectedEvent,
-        selectedSection: undefined,
-        selectedSeat: undefined,
-        selectedQuantity: undefined,
         cart: undefined,
         eventMoreInfoShown: undefined,
-        lastSections: buildSectionOptions(sections),
-        lastSeats: [],
       },
-    };
+      selectedEvent,
+    });
   }
 
   if (
@@ -17664,36 +17576,16 @@ export async function routeTicketMessage({
     }
 
     const selectedEvent = buildSelectedEvent(selectedSession);
-    const sections = await listAvailableSections(selectedSession.sessionId, {
-      venueId: selectedSession.venueId,
-    });
 
-    if (sections.length === 0) {
-      return {
-        reply: TICKET_MESSAGES.noSectionsAvailable,
-        nextContext: {
-          ...baseContext,
-          step: "idle",
-          state: "idle",
-        selectedEvent,
+    return renderBuyerSectionsStep({
+      baseContext: {
+        ...baseContext,
         lastEvents: [],
         lastSections: [],
         eventMoreInfoShown: undefined,
       },
-    };
-    }
-
-    return {
-      reply: formatSectionsReply({ sections }),
-      nextContext: {
-        ...baseContext,
-      step: "showing_sections",
-      state: "showing_sections",
       selectedEvent,
-      lastSections: buildSectionOptions(sections),
-      eventMoreInfoShown: undefined,
-    },
-  };
+    });
   }
 
   if (
