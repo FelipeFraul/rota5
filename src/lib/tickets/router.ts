@@ -2069,6 +2069,25 @@ function getCartSeatIds(cart?: TicketConversationCart) {
   );
 }
 
+function getCartForQuantityPrompt({
+  baseContext,
+  selectedEvent,
+}: {
+  baseContext: TicketConversationState;
+  selectedEvent: TicketConversationSelectedEvent;
+}) {
+  if (
+    baseContext.state !== "reviewing_cart" ||
+    !baseContext.cart ||
+    baseContext.cart.eventId !== selectedEvent.eventId ||
+    baseContext.cart.sessionId !== selectedEvent.sessionId
+  ) {
+    return undefined;
+  }
+
+  return baseContext.cart;
+}
+
 function addSelectionToCart({
   cart,
   selectedEvent,
@@ -10426,6 +10445,7 @@ async function renderBuyerSectionsStep({
   }
 
   const sectionOptions = buildSectionOptions(sections);
+  const validatedEvent = buildSelectedEvent(selectedSession);
 
   if (sectionOptions.length === 1) {
     const onlyOption = sectionOptions[0];
@@ -10434,6 +10454,7 @@ async function renderBuyerSectionsStep({
       section.ticketTypes.find(
         (item) => item.ticketPriceId === onlyOption.selectedTicketType?.ticketPriceId,
       ) ?? section.ticketTypes[0];
+    const preservedCart = getCartForQuantityPrompt({ baseContext, selectedEvent: validatedEvent });
 
     return {
       reply: formatQuantityPrompt(section, ticketType),
@@ -10441,10 +10462,12 @@ async function renderBuyerSectionsStep({
         ...baseContext,
         step: "selecting_quantity",
         state: "selecting_quantity",
-        selectedEvent: buildSelectedEvent(selectedSession),
+        selectedEvent: validatedEvent,
         selectedSection: buildSelectedSection(section, ticketType),
         selectedSeat: undefined,
         selectedQuantity: undefined,
+        cart: preservedCart,
+        tableMapPlace: preservedCart?.tableMapPlace,
         reservation: undefined,
         payment: undefined,
         lastSections: sectionOptions,
@@ -10453,16 +10476,20 @@ async function renderBuyerSectionsStep({
     };
   }
 
+  const preservedCart = getCartForQuantityPrompt({ baseContext, selectedEvent: validatedEvent });
+
   return {
     reply: formatSectionsReply({ sections }),
     nextContext: {
       ...baseContext,
       step: "showing_sections",
       state: "showing_sections",
-      selectedEvent: buildSelectedEvent(selectedSession),
+      selectedEvent: validatedEvent,
       selectedSection: undefined,
       selectedSeat: undefined,
       selectedQuantity: undefined,
+      cart: preservedCart,
+      tableMapPlace: preservedCart?.tableMapPlace,
       reservation: undefined,
       payment: undefined,
       lastSections: sectionOptions,
@@ -17802,5 +17829,3 @@ export async function routeTicketMessage({
     },
   };
 }
-
-

@@ -349,6 +349,13 @@ test("caminhos publicos normais ficam depois da guarda de bootstrap inicial", ()
   assert.ok(courtesyIndex > bootstrapIndex);
 });
 
+test("prompt de quantidade limpa carrinho antigo fora de adicionar mais ingressos", () => {
+  assert.match(router, /function getCartForQuantityPrompt/);
+  assert.match(router, /baseContext\.state !== "reviewing_cart"/);
+  assert.match(router, /cart: preservedCart/);
+  assert.match(router, /tableMapPlace: preservedCart\?\.tableMapPlace/);
+});
+
 test("primeira busca e primeiro TODOS recebem bootstrap sem repetir depois", () => {
   const searchSuccessBlock = sliceBetween(
     router,
