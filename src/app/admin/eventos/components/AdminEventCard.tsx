@@ -3,20 +3,6 @@
 import { memo, type KeyboardEvent, type MouseEvent } from "react";
 import type { EventStatus } from "../AdminEventsEditor";
 
-export type TicketSalesOverviewItem = {
-  key: string;
-  label: string;
-  shortLabel: string;
-  sold: number;
-  available: number;
-  courtesySold?: number;
-  courtesyAvailable?: number;
-  courtesyCapacity?: number;
-  salesSold?: number;
-  salesAvailable?: number;
-  salesCapacity?: number;
-};
-
 export type AdminEventCardProps = {
   eventId: string;
   title: string;
@@ -27,7 +13,8 @@ export type AdminEventCardProps = {
   nextSessionStartsAt: string | null;
   ticketImpressions: number;
   ticketClicks: number;
-  ticketSalesOverview: TicketSalesOverviewItem[];
+  ticketItemsSold: number;
+  ticketRevenueCents: number;
   duplicating: boolean;
   onOpen: (eventId: string) => void;
   onDuplicate: (eventId: string) => void;
@@ -53,6 +40,13 @@ function formatDateTime(value: string | null) {
 
 function formatInteger(value: number) {
   return new Intl.NumberFormat("pt-BR").format(value);
+}
+
+function formatCurrency(cents: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(cents / 100);
 }
 
 function EditIcon() {
@@ -96,36 +90,6 @@ function DeleteIcon() {
     </svg>
   );
 }
-
-function TicketSalesOverviewIcons({ items }: { items: TicketSalesOverviewItem[] }) {
-  if (!items.length) return null;
-
-  return (
-    <span className="admin-event-sales-overview" aria-label="Resumo rápido de vendas por setor">
-      {items.map((item) => {
-        const courtesySold = item.courtesySold ?? 0;
-        const courtesyCapacity = item.courtesyCapacity ?? (courtesySold + (item.courtesyAvailable ?? 0));
-        const salesSold = item.salesSold ?? item.sold;
-        const salesCapacity = item.salesCapacity ?? (salesSold + (item.salesAvailable ?? item.available));
-        const courtesyLabel = `${formatInteger(courtesySold)}-${formatInteger(courtesyCapacity)}`;
-        const salesLabel = `${formatInteger(salesSold)}-${formatInteger(salesCapacity)}`;
-
-        return (
-          <span
-            key={item.key}
-            className="admin-event-sales-chip"
-            data-tooltip={`${item.label}: cortesias ${courtesyLabel} | vendas ${salesLabel}`}
-            aria-label={`${item.label}: cortesias ${courtesyLabel}, vendas ${salesLabel}`}
-          >
-            <i>{item.shortLabel}</i>
-            <b><span className="is-courtesy">{courtesyLabel}</span><em>|</em><span className="is-sales">{salesLabel}</span></b>
-          </span>
-        );
-      })}
-    </span>
-  );
-}
-
 function stopCardPropagation(event: MouseEvent<HTMLButtonElement>) {
   event.stopPropagation();
 }
@@ -140,7 +104,8 @@ function AdminEventCardComponent({
   nextSessionStartsAt,
   ticketImpressions,
   ticketClicks,
-  ticketSalesOverview,
+  ticketItemsSold,
+  ticketRevenueCents,
   duplicating,
   onOpen,
   onDuplicate,
@@ -223,7 +188,10 @@ function AdminEventCardComponent({
         </span>
         <strong>{title}</strong>
         <small>{city}/{state} · {formatDateTime(nextSessionStartsAt)}</small>
-        <TicketSalesOverviewIcons items={ticketSalesOverview} />
+        <span className="admin-card-funnel-metrics">
+          <span><b>{formatInteger(ticketItemsSold)}</b> vendidos</span>
+          <span><b>{formatCurrency(ticketRevenueCents)}</b> receita</span>
+        </span>
         <span className="admin-card-funnel-metrics">
           <span><b>{formatInteger(ticketImpressions)}</b> impressões</span>
           <span><b>{formatInteger(ticketClicks)}</b> cliques</span>
@@ -236,3 +204,4 @@ function AdminEventCardComponent({
 const AdminEventCard = memo(AdminEventCardComponent);
 
 export default AdminEventCard;
+

@@ -14,6 +14,10 @@ const ticketMetricsMigration = readFileSync(
   new URL("../supabase/migrations/20260724000100_add_ticket_metrics_to_admin_events_fast_rpc.sql", import.meta.url),
   "utf8",
 );
+const ticketSalesMetricsMigration = readFileSync(
+  new URL("../supabase/migrations/20260724000300_add_ticket_sales_metrics_to_admin_events_fast_rpc.sql", import.meta.url),
+  "utf8",
+);
 const adminAuth = readFileSync(
   new URL("../src/lib/tickets/services/adminAuth.ts", import.meta.url),
   "utf8",
@@ -64,6 +68,13 @@ test("fast events RPC preserves root and non-root event isolation", () => {
   assert.match(ticketMetricsMigration, /checkout_click_count/i);
   assert.match(ticketMetricsMigration, /'ticketImpressions', c\.ticket_impressions/);
   assert.match(ticketMetricsMigration, /'ticketClicks', c\.ticket_clicks/);
+  assert.match(ticketSalesMetricsMigration, /ticket_sales_metrics as \(/i);
+  assert.match(ticketSalesMetricsMigration, /from public\.tickets t/i);
+  assert.match(ticketSalesMetricsMigration, /join public\.orders o on o\.id = t\.order_id/i);
+  assert.match(ticketSalesMetricsMigration, /o\.status = 'paid'/i);
+  assert.match(ticketSalesMetricsMigration, /t\.status <> 'cancelled'/i);
+  assert.match(ticketSalesMetricsMigration, /'ticketItemsSold', c\.ticket_items_sold/);
+  assert.match(ticketSalesMetricsMigration, /'ticketRevenueCents', c\.ticket_revenue_cents/);
 });
 
 test("fast events RPC is not executable publicly", () => {

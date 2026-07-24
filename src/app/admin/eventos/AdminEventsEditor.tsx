@@ -33,6 +33,8 @@ export type EventSummary = {
   nextSessionStatus: string | null;
   ticketImpressions: number;
   ticketClicks: number;
+  ticketItemsSold?: number;
+  ticketRevenueCents?: number;
   ticketSalesOverview: Array<{
     key: string;
     label: string;
@@ -522,7 +524,8 @@ export function AdminEventsEditor() {
       nextSessionStartsAt: event.nextSessionStartsAt,
       ticketImpressions: event.ticketImpressions,
       ticketClicks: event.ticketClicks,
-      ticketSalesOverview: event.ticketSalesOverview,
+      ticketItemsSold: event.ticketItemsSold ?? 0,
+      ticketRevenueCents: event.ticketRevenueCents ?? 0,
     }))
   ), [events]);
 

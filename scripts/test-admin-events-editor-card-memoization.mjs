@@ -7,6 +7,8 @@ const eventCardPath = new URL("../src/app/admin/eventos/components/AdminEventCar
 const eventGridPath = new URL("../src/app/admin/eventos/components/AdminEventGrid.tsx", import.meta.url);
 const comboCardPath = new URL("../src/app/admin/eventos/components/AdminComboOfferCard.tsx", import.meta.url);
 const comboGridPath = new URL("../src/app/admin/eventos/components/AdminComboOfferGrid.tsx", import.meta.url);
+const comboSectionPath = new URL("../src/app/admin/eventos/combo-editor/AdminComboOffersSection.tsx", import.meta.url);
+const eventEditorModalPath = new URL("../src/app/admin/eventos/event-editor/EventEditorModal.tsx", import.meta.url);
 
 async function source(path) {
   return readFile(path, "utf8");
@@ -15,19 +17,15 @@ async function source(path) {
 test("AdminEventsEditor delegates event and combo lists to memoized grids", async () => {
   const editor = await source(editorPath);
 
-  assert.match(editor, /import AdminComboOfferGrid, \{ type AdminComboOfferCardItem \}/);
   assert.match(editor, /import AdminEventGrid, \{ type AdminEventCardItem \}/);
+  assert.match(editor, /dynamic\(\(\) => import\("\.\/combo-editor\/AdminComboOffersSection"\)/);
   assert.match(editor, /const eventCardItems = useMemo<AdminEventCardItem\[\]>/);
-  assert.match(editor, /const comboOfferCardItems = useMemo<AdminComboOfferCardItem\[\]>/);
   assert.match(editor, /const handleOpenEvent = useCallback/);
   assert.match(editor, /const handleDuplicateEvent = useCallback/);
   assert.match(editor, /const handleDeleteEvent = useCallback/);
   assert.match(editor, /const handleOpenDashboard = useCallback/);
-  assert.match(editor, /const handleOpenComboOffer = useCallback/);
-  assert.match(editor, /const handleDuplicateComboOffer = useCallback/);
-  assert.match(editor, /const handleDeleteComboOffer = useCallback/);
   assert.match(editor, /<AdminEventGrid/);
-  assert.match(editor, /<AdminComboOfferGrid/);
+  assert.match(editor, /<AdminComboOffersSection events=\{events\} visible=\{viewFilter !== "tickets"\} \/>/);
   assert.doesNotMatch(editor, /events\.map\(\(event\) => \(\s*<article/);
   assert.doesNotMatch(editor, /comboOffers\.map\(\(offer\) => \(\s*<article/);
 });
@@ -46,7 +44,11 @@ test("event card and grid preserve all listing actions", async () => {
   assert.match(card, /onDuplicate\(eventId\)/);
   assert.match(card, /onOpenDashboard\(eventId\)/);
   assert.match(card, /onDelete\(eventId\)/);
-  assert.match(card, /TicketSalesOverviewIcons/);
+  assert.doesNotMatch(card, /TicketSalesOverviewIcons/);
+  assert.match(card, /ticketItemsSold/);
+  assert.match(card, /ticketRevenueCents/);
+  assert.match(card, /vendidos/);
+  assert.match(card, /receita/);
   assert.match(card, /ticketImpressions/);
   assert.match(card, /ticketClicks/);
   assert.match(grid, /duplicatingEventId === event\.eventId/);
@@ -75,14 +77,18 @@ test("combo card and grid preserve edit, duplicate, delete and metrics", async (
 
 test("list refresh remains wired after save, duplicate, delete, publish, pause and combo changes", async () => {
   const editor = await source(editorPath);
+  const eventEditorModal = await source(eventEditorModalPath);
+  const comboSection = await source(comboSectionPath);
 
-  assert.match(editor, /async function persistDraft\(\)[\s\S]*await loadEvents\(\);/);
-  assert.match(editor, /async function saveComboOffer\(event[\s\S]*await loadEvents\(\);[\s\S]*loadComboOffers\(\{ force: true \}\)/);
-  assert.match(editor, /const duplicateComboOfferCard = useCallback[\s\S]*await loadEvents\(\);[\s\S]*await loadComboOffers\(\{ force: true \}\)/);
-  assert.match(editor, /const deleteComboOfferCard = useCallback[\s\S]*await loadEvents\(\);[\s\S]*await loadComboOffers\(\{ force: true \}\)/);
+  assert.match(editor, /<EventEditorModal[\s\S]*onSaved=\{loadEvents\}/);
+  assert.match(eventEditorModal, /const persistDraft = useCallback\(async \(\) => \{[\s\S]*await onSaved\(\);/);
+  assert.match(comboSection, /async function saveComboOffer\(event[\s\S]*setComboOffers\(/);
+  assert.match(comboSection, /const duplicateComboOfferCard = useCallback[\s\S]*setComboOffers\(/);
+  assert.match(comboSection, /const deleteComboOfferCard = useCallback[\s\S]*setComboOffers\(/);
+  assert.doesNotMatch(comboSection, /loadEvents\(/);
   assert.match(editor, /const deleteEvent = useCallback[\s\S]*await loadEvents\(\);/);
   assert.match(editor, /const duplicateEvent = useCallback[\s\S]*await loadEvents\(\);/);
-  assert.match(editor, /<select value=\{draft\.event\.status\}/);
-  assert.match(editor, /<option value="published">Publicado<\/option>/);
-  assert.match(editor, /<option value="draft">Pausado<\/option>/);
+  assert.match(eventEditorModal, /<select value=\{draft\.event\.status\}/);
+  assert.match(eventEditorModal, /<option value="published">Publicado<\/option>/);
+  assert.match(eventEditorModal, /<option value="draft">Pausado<\/option>/);
 });
