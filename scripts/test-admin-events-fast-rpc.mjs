@@ -10,6 +10,10 @@ const migration = readFileSync(
   new URL("../supabase/migrations/20260723000600_create_list_admin_events_fast_rpc.sql", import.meta.url),
   "utf8",
 );
+const ticketMetricsMigration = readFileSync(
+  new URL("../supabase/migrations/20260724000100_add_ticket_metrics_to_admin_events_fast_rpc.sql", import.meta.url),
+  "utf8",
+);
 const adminAuth = readFileSync(
   new URL("../src/lib/tickets/services/adminAuth.ts", import.meta.url),
   "utf8",
@@ -55,8 +59,11 @@ test("fast events RPC preserves root and non-root event isolation", () => {
   assert.match(migration, /v_normalized_status in \('all', 'finished'\) or e\.status = v_normalized_status/i);
   assert.match(migration, /e\.search_text ilike '%' \|\| lower\(v_search\) \|\| '%'/i);
   assert.match(migration, /'eventId', c\.id/);
-  assert.match(migration, /'ticketImpressions', 0/);
-  assert.match(migration, /'ticketClicks', 0/);
+  assert.match(ticketMetricsMigration, /ticket_metrics as \(/i);
+  assert.match(ticketMetricsMigration, /pay\.checkout_url is not null/i);
+  assert.match(ticketMetricsMigration, /checkout_click_count/i);
+  assert.match(ticketMetricsMigration, /'ticketImpressions', c\.ticket_impressions/);
+  assert.match(ticketMetricsMigration, /'ticketClicks', c\.ticket_clicks/);
 });
 
 test("fast events RPC is not executable publicly", () => {
