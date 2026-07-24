@@ -753,7 +753,7 @@ body:has(.checkout-unavailable-shell) iframe {
 
 .admin-events-toolbar {
   display: grid;
-  grid-template-columns: minmax(280px, 1fr) minmax(320px, auto) minmax(160px, 190px);
+  grid-template-columns: minmax(280px, 1fr) minmax(430px, auto) minmax(160px, 190px);
   align-items: center;
   gap: 12px;
   width: min(1320px, 100%);
@@ -1130,7 +1130,7 @@ body:has(.checkout-unavailable-shell) iframe {
 
 .admin-view-filter {
   display: inline-flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 4px;
   width: auto;
   min-width: 0;
@@ -1143,7 +1143,7 @@ body:has(.checkout-unavailable-shell) iframe {
 
 .admin-view-filter button {
   width: auto;
-  flex: 1 1 104px;
+  flex: 1 0 auto;
   min-height: 38px;
   padding: 0 14px;
   border: 0;
@@ -2963,6 +2963,7 @@ body:has(.checkout-unavailable-shell) iframe {
   }
 
   .admin-view-filter {
+    flex-wrap: wrap;
     width: 100%;
   }
 }
