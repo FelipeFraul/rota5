@@ -1029,7 +1029,15 @@ function isWeakFreeSearchText(searchText: string | undefined) {
   }
 
   if (words.length === 1) {
-    return words[0].length < 4;
+    const word = words[0];
+    const hasLetter = /\p{L}/u.test(word);
+    const hasNumber = /\d/.test(word);
+
+    if (word.length >= 2 && hasLetter && hasNumber) {
+      return false;
+    }
+
+    return word.length < 4;
   }
 
   return false;
@@ -2524,6 +2532,12 @@ function resetBuyerReservationContext(
 }
 
 function publicInitialHelpContext(
+  baseContext: TicketConversationState,
+): TicketConversationState {
+  return markPublicInitialHelpSent(resetBuyerReservationContext(baseContext));
+}
+
+function resetBuyerReservationContextAfterPublicReentry(
   baseContext: TicketConversationState,
 ): TicketConversationState {
   return markPublicInitialHelpSent(resetBuyerReservationContext(baseContext));
@@ -16367,7 +16381,9 @@ export async function routeTicketMessage({
         cancelResult,
         resetToReentry: isBuyerNewIntent(text),
       }),
-      nextContext: resetBuyerReservationContext(baseContext),
+      nextContext: isBuyerNewIntent(text)
+        ? resetBuyerReservationContextAfterPublicReentry(baseContext)
+        : resetBuyerReservationContext(baseContext),
     };
   }
 
@@ -16380,7 +16396,9 @@ export async function routeTicketMessage({
       reply: isBuyerNewIntent(text)
         ? TICKET_MESSAGES.reentryPrompt
         : TICKET_MESSAGES.buyerFlowReset,
-      nextContext: resetBuyerReservationContext(baseContext),
+      nextContext: isBuyerNewIntent(text)
+        ? resetBuyerReservationContextAfterPublicReentry(baseContext)
+        : resetBuyerReservationContext(baseContext),
     };
   }
 

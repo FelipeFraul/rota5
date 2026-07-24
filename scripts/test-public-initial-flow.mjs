@@ -3,7 +3,11 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { buildInitialConversationState } from "../src/lib/tickets/conversationState.ts";
 import { TICKET_MESSAGES } from "../src/lib/tickets/messages.ts";
-import { routeTicketMessage } from "../src/lib/tickets/router.ts";
+import {
+  classifyPublicMessageIntent,
+  resolveIncomingMessageIntent,
+  routeTicketMessage,
+} from "../src/lib/tickets/router.ts";
 
 const router = readFileSync(
   new URL("../src/lib/tickets/router.ts", import.meta.url),
@@ -165,7 +169,6 @@ test("execucao real: bootstrap nao se repete apos contexto inicializado", async 
 test("execucao real: atalho new retorna reentrada atendimento", async () => {
   const result = await routePublicText("NEW", {
     ...buildInitialConversationState(),
-    publicInitialHelpSent: true,
     state: "showing_events",
     step: "showing_events",
   });
@@ -174,7 +177,23 @@ test("execucao real: atalho new retorna reentrada atendimento", async () => {
   assert.match(result.reply, /^ATENDIMENTO\n\n>/);
   assert.doesNotMatch(result.reply, /bem-vindo\(a\)/);
   assert.equal(result.nextContext.state, "idle");
+  assert.equal(result.nextContext.publicInitialHelpSent, true);
   assert.match(webhook, /routeResult\.reply === TICKET_MESSAGES\.reentryPrompt[\s\S]{0,180}suppressTitle:\s*true/);
+});
+
+test("busca curta com letra e numero, como u2, vira busca de evento", () => {
+  const publicIntent = classifyPublicMessageIntent("u2");
+  const incomingIntent = resolveIncomingMessageIntent({
+    text: "u2",
+    conversationState: {
+      ...buildInitialConversationState(),
+      publicInitialHelpSent: true,
+    },
+  });
+
+  assert.equal(publicIntent.intent, "search_event");
+  assert.equal(incomingIntent.classification, "search_event");
+  assert.equal(incomingIntent.searchAuthorized, true);
 });
 
 test("execucao real: excecao admin_auth_pending nao recebe bootstrap", async () => {
@@ -301,7 +320,7 @@ test("SAIR cancela e a proxima mensagem volta ao inicio", () => {
   assert.match(publicInitialFlow, /normalized === "new"/);
   assert.match(publicInitialFlow, /normalized === "sair"/);
   assert.match(router, /isBuyerNewIntent\(text\)[\s\S]*TICKET_MESSAGES\.reentryPrompt[\s\S]*TICKET_MESSAGES\.buyerFlowReset/);
-  assert.match(router, /nextContext:\s*resetBuyerReservationContext\(baseContext\)/);
+  assert.match(router, /resetBuyerReservationContextAfterPublicReentry\(baseContext\)/);
   assert.match(router, /function buildPublicInitialHelpResponse/);
   assert.match(router, /nextContext:\s*publicInitialHelpContext\(baseContext\)/);
   assert.match(publicInitialFlow, /function publicInitialHelpContext/);
