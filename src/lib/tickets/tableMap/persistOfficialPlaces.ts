@@ -12,7 +12,7 @@ import { renderOfficialTableMap } from "@/lib/tickets/tableMap/renderOfficialTab
 import { getOfficialTableMapPlaces } from "@/lib/tickets/tableMap/officialPlaceCoordinates";
 
 const previewDir = path.join(process.cwd(), ".tmp", "official-table-map");
-const unavailableSample = ["03", "08", "21", "27", "42", "51"] as const;
+const unavailableSample = ["03", "08", "21", "27", "41", "51"] as const;
 
 type PersistOfficialPlacesResult =
   | { ok: true; places: readonly OfficialTableMapPlace[]; previews: string[] }

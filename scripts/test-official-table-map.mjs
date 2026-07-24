@@ -28,7 +28,7 @@ import {
   isOfficialTableMapPlaceAllowedForQuantity,
 } from "../src/lib/tickets/services/officialTableMapReservations.ts";
 
-const unavailableSample = ["03", "08", "21", "27", "42", "51"];
+const unavailableSample = ["03", "08", "21", "27", "41", "51"];
 const outputDir = path.join(process.cwd(), ".tmp", "official-table-map");
 const migrationPath = path.join(
   process.cwd(),
@@ -41,6 +41,12 @@ const reservationsMigrationPath = path.join(
   "supabase",
   "migrations",
   "20260722000800_create_official_table_map_reservations.sql",
+);
+const scopedReservationsMigrationPath = path.join(
+  process.cwd(),
+  "supabase",
+  "migrations",
+  "20260724000400_scope_official_table_map_reservations_by_session.sql",
 );
 const routerPath = path.join(process.cwd(), "src", "lib", "tickets", "router.ts");
 const availabilityServicePath = path.join(
@@ -98,7 +104,7 @@ async function sha256(filePath) {
   return createHash("sha256").update(await readFile(filePath)).digest("hex");
 }
 
-test("catalogo oficial tem 40 lugares unicos e regras de tipo/ambiente", () => {
+test("catalogo oficial tem 40 lugares disponiveis unicos e regras de tipo/ambiente", () => {
   assert.equal(OFFICIAL_TABLE_MAP_PLACES.length, 40);
 
   const codes = OFFICIAL_TABLE_MAP_PLACES.map((place) => place.code);
@@ -114,7 +120,6 @@ test("catalogo oficial tem 40 lugares unicos e regras de tipo/ambiente", () => {
   const mezaninoBistros = OFFICIAL_TABLE_MAP_PLACES.filter(
     (place) => place.type === "bistro" && place.environment === "mezzanine",
   ).map((place) => place.code);
-
   assert.deepEqual(terreoBistros, [
     "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13",
   ]);
@@ -123,15 +128,37 @@ test("catalogo oficial tem 40 lugares unicos e regras de tipo/ambiente", () => {
     "32", "33", "40", "41", "46", "51", "52", "54", "55", "56",
   ]);
   assert.deepEqual(mezaninoBistros, ["42", "43", "44", "45", "53"]);
-  assert.equal(terreoBistros.length + mezaninoBistros.length, 18);
+  assert.equal(terreoBistros.length, 13);
   assert.equal(mezaninoTables.length, 22);
+  assert.equal(mezaninoBistros.length, 5);
   assert.equal(
     OFFICIAL_TABLE_MAP_PLACES.some((place) => place.type === "table" && place.environment !== "mezzanine"),
     false,
   );
-  assert.equal(OFFICIAL_TABLE_MAP_PLACES.filter((place) => place.capacity === 2).length, 11);
-  assert.equal(OFFICIAL_TABLE_MAP_PLACES.filter((place) => place.capacity === 4).length, 20);
-  assert.equal(OFFICIAL_TABLE_MAP_PLACES.filter((place) => place.capacity === 6).length, 9);
+  assert.deepEqual(
+    OFFICIAL_TABLE_MAP_PLACES.filter((place) => place.type === "table" && place.capacity === 2).map((place) => place.code),
+    ["21", "22", "29", "30", "31", "32", "33", "40"],
+  );
+  assert.deepEqual(
+    OFFICIAL_TABLE_MAP_PLACES.filter((place) => place.type === "table" && place.capacity === 4).map((place) => place.code),
+    ["23", "24", "25", "26", "27", "28", "51", "52", "54", "55", "56"],
+  );
+  assert.deepEqual(
+    OFFICIAL_TABLE_MAP_PLACES.filter((place) => place.type === "table" && place.capacity === 8).map((place) => place.code),
+    ["20", "41", "46"],
+  );
+  assert.deepEqual(
+    OFFICIAL_TABLE_MAP_PLACES.filter((place) => place.type === "bistro" && place.capacity === 2).map((place) => place.code),
+    ["02", "10", "13"],
+  );
+  assert.deepEqual(
+    OFFICIAL_TABLE_MAP_PLACES.filter((place) => place.type === "bistro" && place.capacity === 4).map((place) => place.code),
+    ["06", "07", "08", "12", "42", "43", "44", "45", "53"],
+  );
+  assert.deepEqual(
+    OFFICIAL_TABLE_MAP_PLACES.filter((place) => place.type === "bistro" && place.capacity === 6).map((place) => place.code),
+    ["01", "03", "04", "05", "09", "11"],
+  );
 });
 
 test("coordenadas ficam dentro da imagem oficial", () => {
@@ -153,9 +180,9 @@ test("catalogo oficial usa as coordenadas finais calibradas", () => {
   }
 });
 
-test("filtro de mesa/bistro libera somente a capacidade compativel com a quantidade", () => {
+test("filtro de mesa/bistro libera capacidades conforme quantidade de ingressos", () => {
   const placeByCapacity = new Map(
-    [2, 4, 6].map((capacity) => [
+    [2, 4, 6, 8].map((capacity) => [
       capacity,
       OFFICIAL_TABLE_MAP_PLACES.find((place) => place.capacity === capacity),
     ]),
@@ -164,18 +191,37 @@ test("filtro de mesa/bistro libera somente a capacidade compativel com a quantid
   assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(2), quantity: 2 }), true);
   assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(4), quantity: 2 }), false);
   assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(6), quantity: 2 }), false);
+  assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(8), quantity: 2 }), false);
 
-  assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(2), quantity: 4 }), false);
+  assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(2), quantity: 3 }), true);
+  assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(4), quantity: 3 }), false);
+
+  assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(2), quantity: 4 }), true);
   assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(4), quantity: 4 }), true);
   assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(6), quantity: 4 }), false);
+  assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(8), quantity: 4 }), false);
 
-  assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(2), quantity: 6 }), false);
-  assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(4), quantity: 6 }), false);
+  assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(2), quantity: 5 }), true);
+  assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(4), quantity: 5 }), true);
+  assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(6), quantity: 5 }), false);
+
+  assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(2), quantity: 6 }), true);
+  assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(4), quantity: 6 }), true);
   assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(6), quantity: 6 }), true);
-  assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(6), quantity: 7 }), false);
+  assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(8), quantity: 6 }), false);
+
+  assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(2), quantity: 7 }), true);
+  assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(4), quantity: 7 }), true);
+  assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(6), quantity: 7 }), true);
+  assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(8), quantity: 7 }), false);
+
+  assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(2), quantity: 8 }), true);
+  assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(4), quantity: 8 }), true);
+  assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(6), quantity: 8 }), true);
+  assert.equal(isOfficialTableMapPlaceAllowedForQuantity({ place: placeByCapacity.get(8), quantity: 8 }), true);
 });
 
-test("migration cria tabela de coordenadas oficiais com 40 sementes", async () => {
+test("migration cria tabela de coordenadas oficiais com as sementes historicas", async () => {
   const migration = await readFile(migrationPath, "utf8");
 
   assert.match(migration, /create table if not exists public\.official_table_map_places/);
@@ -201,6 +247,22 @@ test("migration cria reserva global dos lugares oficiais sem acesso publico", as
   assert.match(migration, /grant all on public\.official_table_map_reservations to service_role/);
   assert.match(migration, /create or replace function public\.reserve_official_table_map_place/);
   assert.match(migration, /reservations_sync_official_table_map_status/);
+});
+
+test("migration corrige reservas oficiais para escopo por sessao", async () => {
+  const migration = await readFile(scopedReservationsMigrationPath, "utf8");
+  const availabilityService = await readFile(availabilityServicePath, "utf8");
+  const router = await readFile(routerPath, "utf8");
+
+  assert.match(migration, /add column if not exists event_id uuid references public\.events\(id\)/);
+  assert.match(migration, /add column if not exists session_id uuid references public\.event_sessions\(id\)/);
+  assert.match(migration, /drop index if exists public\.official_table_map_reservations_active_place_key/);
+  assert.match(migration, /official_table_map_reservations_active_session_place_key/);
+  assert.match(migration, /on public\.official_table_map_reservations\(session_id, place_code\)/);
+  assert.match(migration, /where existing\.session_id = v_reservation\.session_id/);
+  assert.match(migration, /event_id,\s*session_id,\s*reservation_id/);
+  assert.match(availabilityService, /\.eq\("session_id", sessionId \?\? ""\)/);
+  assert.match(router, /buildOfficialTableMapAvailabilityImage\(\{\s*quantity:[\s\S]*sessionId: cart\.sessionId/);
 });
 
 test("router integra escolha opcional de mesa ao fluxo de compra", async () => {

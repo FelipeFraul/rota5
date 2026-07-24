@@ -214,7 +214,7 @@ export type TicketConversationTableMapPlace = {
   code: string;
   type: "bistro" | "table";
   environment: "ground_floor" | "mezzanine";
-  capacity?: 2 | 4 | 6;
+  capacity?: 2 | 4 | 6 | 8;
 };
 
 export type TicketConversationReservation = {

@@ -84,15 +84,18 @@ export function isOfficialTableMapPlaceAllowedForQuantity({
 }) {
   if (quantity <= 1) return false;
   if (quantity <= 2) return place.capacity === 2;
-  if (quantity <= 4) return place.capacity === 4;
-  if (quantity <= 6) return place.capacity === 6;
-  return false;
+  if (quantity <= 3) return place.capacity === 2;
+  if (quantity <= 5) return place.capacity === 2 || place.capacity === 4;
+  if (quantity <= 7) return place.capacity === 2 || place.capacity === 4 || place.capacity === 6;
+  return place.capacity === 2 || place.capacity === 4 || place.capacity === 6 || place.capacity === 8;
 }
 
 export async function listOfficialTableMapAvailability({
   quantity,
+  sessionId,
 }: {
   quantity?: number;
+  sessionId?: string;
 } = {}): Promise<OfficialTableMapAvailability> {
   const supabase = getSupabaseAdmin();
   const nowIso = new Date().toISOString();
@@ -107,6 +110,7 @@ export async function listOfficialTableMapAvailability({
   const { data, error } = await supabase
     .from("official_table_map_reservations")
     .select("place_code")
+    .eq("session_id", sessionId ?? "")
     .or(`status.eq.paid,and(status.eq.active,expires_at.gt.${nowIso})`)
     .returns<ActivePlaceReservationRow[]>();
 
@@ -140,10 +144,12 @@ export async function listOfficialTableMapAvailability({
 
 export async function buildOfficialTableMapAvailabilityImage({
   quantity,
+  sessionId,
 }: {
   quantity?: number;
+  sessionId?: string;
 } = {}) {
-  const availability = await listOfficialTableMapAvailability({ quantity });
+  const availability = await listOfficialTableMapAvailability({ quantity, sessionId });
   const rendered = await renderOfficialTableMap({
     format: "png",
     places: availability.places,

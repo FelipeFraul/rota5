@@ -714,12 +714,13 @@ function getTicketSalesOverviewIdentity(sectionId: string | null | undefined, na
 }
 
 const TABLE_MAP_OVERVIEW_IDENTITIES = [
-  { key: "table-map:2", label: "Mesa para 2", shortLabel: "M2", capacity: 11, placeCapacity: 2 },
-  { key: "table-map:4", label: "Mesa para 4", shortLabel: "M4", capacity: 20, placeCapacity: 4 },
-  { key: "table-map:6", label: "Mesa para 6", shortLabel: "M6", capacity: 9, placeCapacity: 6 },
+  { key: "table-map:2", label: "Mesa/bistro para 2", shortLabel: "M2", capacity: 11, placeCapacity: 2 },
+  { key: "table-map:4", label: "Mesa/bistro para 4", shortLabel: "M4", capacity: 20, placeCapacity: 4 },
+  { key: "table-map:6", label: "Bistro para 6", shortLabel: "B6", capacity: 6, placeCapacity: 6 },
+  { key: "table-map:8", label: "Mesa para 8", shortLabel: "M8", capacity: 3, placeCapacity: 8 },
 ] as const;
 
-function getTableMapOverviewIdentity(placeCapacity: 2 | 4 | 6) {
+function getTableMapOverviewIdentity(placeCapacity: 2 | 4 | 6 | 8) {
   return TABLE_MAP_OVERVIEW_IDENTITIES.find(
     (identity) => identity.placeCapacity === placeCapacity,
   ) ?? null;

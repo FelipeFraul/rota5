@@ -2178,16 +2178,18 @@ function formatCartDecisionReply({ cart }: { cart: TicketConversationCart }) {
 
 function formatTableMapSelectionReply({
   availableCount,
+  reservedCount,
 }: {
   availableCount: number;
+  reservedCount: number;
 }) {
   return [
     "*ESCOLHA SUA MESA OU BISTRÔ*",
     "",
     `> Mesas/bistrô disponiveis: *${availableCount}*`,
-    "> Mesas/bistrô com X: *indisponiveis*",
+    `> Mesas/bistrô reservadas: *${reservedCount}*`,
     "",
-    'Digite o número da mesa ou o bistrô, *"EX: 12"*',
+    'Digite o número da mesa ou o bistrô para reservar, *"EX: 12"*',
     'Digite *"0"* se não quer mesa ou bistrô.',
     'Digite *"BACK"* para voltar.',
     'Para uma nova pesquisa, *"NEW"*',
@@ -2306,6 +2308,7 @@ async function finalizeTicketCartReservation({
 
       const availability = await buildOfficialTableMapAvailabilityImage({
         quantity: getCartQuantity(cart),
+        sessionId: cart.sessionId,
       });
       const reply =
         tableMapReservationResult.reason === "place_not_available"
@@ -10422,6 +10425,34 @@ async function renderBuyerSectionsStep({
     };
   }
 
+  const sectionOptions = buildSectionOptions(sections);
+
+  if (sectionOptions.length === 1) {
+    const onlyOption = sectionOptions[0];
+    const section = sections.find((item) => item.sectionId === onlyOption.sectionId) ?? sections[0];
+    const ticketType =
+      section.ticketTypes.find(
+        (item) => item.ticketPriceId === onlyOption.selectedTicketType?.ticketPriceId,
+      ) ?? section.ticketTypes[0];
+
+    return {
+      reply: formatQuantityPrompt(section, ticketType),
+      nextContext: {
+        ...baseContext,
+        step: "selecting_quantity",
+        state: "selecting_quantity",
+        selectedEvent: buildSelectedEvent(selectedSession),
+        selectedSection: buildSelectedSection(section, ticketType),
+        selectedSeat: undefined,
+        selectedQuantity: undefined,
+        reservation: undefined,
+        payment: undefined,
+        lastSections: sectionOptions,
+        lastSeats: [],
+      },
+    };
+  }
+
   return {
     reply: formatSectionsReply({ sections }),
     nextContext: {
@@ -10434,7 +10465,7 @@ async function renderBuyerSectionsStep({
       selectedQuantity: undefined,
       reservation: undefined,
       payment: undefined,
-      lastSections: buildSectionOptions(sections),
+      lastSections: sectionOptions,
       lastSeats: [],
     },
   };
@@ -16815,6 +16846,7 @@ export async function routeTicketMessage({
     const place = getOfficialTableMapPlaceByInput(text);
     const availability = await buildOfficialTableMapAvailabilityImage({
       quantity: cartQuantity,
+      sessionId: cart.sessionId,
     });
 
     if (
@@ -16931,9 +16963,11 @@ export async function routeTicketMessage({
 
       const availability = await buildOfficialTableMapAvailabilityImage({
         quantity: cartQuantity,
+        sessionId: cart.sessionId,
       });
       const reply = formatTableMapSelectionReply({
         availableCount: availability.availablePlaces.length,
+        reservedCount: Math.max(0, availability.allowedPlaces.length - availability.availablePlaces.length),
       });
 
       return {
@@ -17876,6 +17910,5 @@ export async function routeTicketMessage({
     },
   };
 }
-
 
 
