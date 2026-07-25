@@ -60,6 +60,7 @@ import {
   DEFAULT_CONVERSATION_INACTIVITY_TTL_MINUTES,
   resolveConversationContextForInbound,
 } from "@/lib/tickets/conversationState";
+import { markParticipantTicketDelivered } from "@/lib/tickets/services/tickets";
 import {
   ADMIN_AUTH_REDACTED_BODY,
   verifyAdminUserPassphrase,
@@ -104,29 +105,6 @@ type ParsedIncomingMessage = {
   messageType: "text" | "image" | "document" | "system";
   mediaUrl: string | null;
 };
-type SanitizedContactAudit = {
-  marker: "zapi_contact_payload_audit";
-  detectedType: string | null;
-  providerMessageId: string | null;
-  sender: {
-    phone: string | null;
-    phoneLast4: string | null;
-    rawPhoneShape: unknown;
-  };
-  counts: {
-    contacts: number;
-    phonesByContact: number[];
-  };
-  presence: {
-    vcard: boolean;
-    phone: boolean;
-    contactPhone: boolean;
-    chatLid: boolean;
-    lid: boolean;
-    atLid: boolean;
-  };
-  payload: unknown;
-};
 type RouteOutboundMessage =
   | {
       type: "text";
@@ -135,6 +113,7 @@ type RouteOutboundMessage =
       persistedBody?: string;
       delayMs?: number;
       suppressTitle?: boolean;
+      participantDeliveryTicketId?: string;
     }
   | {
       type: "image";
@@ -144,6 +123,7 @@ type RouteOutboundMessage =
       persistedBody?: string;
       delayMs?: number;
       suppressTitle?: boolean;
+      participantDeliveryTicketId?: string;
     };
 
 function getFallbackSystemMessageTitle(state?: string | null) {
@@ -444,83 +424,22 @@ function normalizeMessageType(messageType: string | null) {
   return "text";
 }
 
-function normalizeAuditKey(key: string) {
+function normalizeContactKey(key: string) {
   return key.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-function isSensitiveNameKey(key: string) {
-  return [
-    "name",
-    "contactname",
-    "sendername",
-    "pushname",
-    "displayname",
-    "formattedname",
-    "fn",
-    "notifyname",
-  ].includes(normalizeAuditKey(key));
-}
-
-function isPhoneLikeKey(key: string) {
-  return [
-    "phone",
-    "phones",
-    "number",
-    "contactphone",
-    "phonenumber",
-    "waid",
-    "sender",
-    "senderphone",
-    "from",
-    "participant",
-    "participantphone",
-    "remotejid",
-    "chatid",
-  ].includes(normalizeAuditKey(key));
-}
-
-function maskDigits(value: string) {
-  const digits = value.replace(/\D/g, "");
-  if (!digits) return value.includes("@lid") ? "[lid:@lid]" : "[redacted]";
-  return `${digits.slice(0, 2)}***${digits.slice(-4)}`;
-}
-
-function maskAuditValue(key: string, value: unknown): unknown {
-  if (typeof value !== "string") return value;
-
-  if (isSensitiveNameKey(key)) return "[name:redacted]";
-  if (isPhoneLikeKey(key) || /\d{7,}/.test(value)) return maskDigits(value);
-  if (value.includes("@lid")) return "[lid:@lid]";
-  if (/BEGIN:VCARD/i.test(value)) return "[vcard:redacted]";
-
-  return value.length > 160 ? `${value.slice(0, 80)}...[truncated]` : value;
-}
-
-function sanitizePayloadForContactAudit(value: unknown, key = "", depth = 0): unknown {
-  if (depth > 8) return "[depth_limit]";
-
-  if (Array.isArray(value)) {
-    return value.map((item) => sanitizePayloadForContactAudit(item, key, depth + 1));
-  }
-
-  if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>).map(([entryKey, entryValue]) => [
-        entryKey,
-        sanitizePayloadForContactAudit(entryValue, entryKey, depth + 1),
-      ]),
-    );
-  }
-
-  return maskAuditValue(key, value);
-}
-
-function payloadContainsKey(payload: unknown, predicate: (key: string) => boolean): boolean {
-  if (Array.isArray(payload)) return payload.some((item) => payloadContainsKey(item, predicate));
+function payloadContainsContactKey(payload: unknown): boolean {
+  if (Array.isArray(payload)) return payload.some(payloadContainsContactKey);
   if (!payload || typeof payload !== "object") return false;
 
   return Object.entries(payload as Record<string, unknown>).some(([key, value]) =>
-    predicate(key) || payloadContainsKey(value, predicate),
+    [
+      "contact",
+      "contacts",
+      "contactarray",
+      "contactphone",
+      "vcard",
+    ].includes(normalizeContactKey(key)) || payloadContainsContactKey(value),
   );
 }
 
@@ -530,48 +449,11 @@ function payloadContainsVcard(payload: unknown): boolean {
   if (!payload || typeof payload !== "object") return false;
 
   return Object.entries(payload as Record<string, unknown>).some(([key, value]) =>
-    normalizeAuditKey(key).includes("vcard") || payloadContainsVcard(value),
+    normalizeContactKey(key).includes("vcard") || payloadContainsVcard(value),
   );
 }
 
-function countPhoneValues(payload: unknown): number {
-  if (Array.isArray(payload)) return payload.reduce((total, item) => total + countPhoneValues(item), 0);
-  if (!payload || typeof payload !== "object") return 0;
-
-  let count = 0;
-  for (const [key, value] of Object.entries(payload as Record<string, unknown>)) {
-    if (isPhoneLikeKey(key)) {
-      if (Array.isArray(value)) count += value.length;
-      else if (value !== null && value !== undefined) count += 1;
-    }
-    if (typeof value === "string" && /TEL/i.test(value)) {
-      count += (value.match(/TEL/gi) ?? []).length;
-    }
-    count += countPhoneValues(value);
-  }
-  return count;
-}
-
-function getContactCandidates(payload: ZapiWebhookPayload) {
-  const message = firstRecord(payload.message, payload.data, payload.key);
-  const candidates = [
-    payload.contact,
-    payload.contacts,
-    payload.vcard,
-    payload.vCard,
-    message.contact,
-    message.contacts,
-    message.vcard,
-    message.vCard,
-  ].filter(Boolean);
-
-  return candidates.flatMap((candidate) => Array.isArray(candidate) ? candidate : [candidate]);
-}
-
-function buildContactAuditPayload(
-  payload: ZapiWebhookPayload,
-  incoming: ParsedIncomingMessage,
-): SanitizedContactAudit | null {
+function isContactPayload(payload: ZapiWebhookPayload) {
   const message = firstRecord(payload.message, payload.data, payload.key);
   const rawMessageType = firstString(
     payload.messageType,
@@ -588,53 +470,8 @@ function buildContactAuditPayload(
         normalizedType.includes("vcard")
       ),
   );
-  const hasContactKey = payloadContainsKey(payload, (key) => {
-    const normalizedKey = normalizeAuditKey(key);
-    return normalizedKey === "contact" ||
-      normalizedKey === "contacts" ||
-      normalizedKey === "contactphone" ||
-      normalizedKey.includes("vcard");
-  });
-  const hasVcard = payloadContainsVcard(payload);
 
-  if (!hasContactType && !hasContactKey && !hasVcard) {
-    return null;
-  }
-
-  const contacts = getContactCandidates(payload);
-  const phonesByContact = contacts.length
-    ? contacts.map((contact) => Math.max(0, countPhoneValues(contact)))
-    : [countPhoneValues(payload)].filter((count) => count > 0);
-
-  return {
-    marker: "zapi_contact_payload_audit",
-    detectedType: rawMessageType,
-    providerMessageId: incoming.providerMessageId,
-    sender: {
-      phone: incoming.phone ? maskDigits(incoming.phone) : null,
-      phoneLast4: incoming.phone?.slice(-4) ?? null,
-      rawPhoneShape: sanitizePayloadForContactAudit({
-        phone: payload.phone,
-        from: payload.from,
-        sender: payload.sender,
-        senderPhone: payload.senderPhone,
-        participant: payload.participant,
-      }),
-    },
-    counts: {
-      contacts: contacts.length || (hasContactType || hasContactKey || hasVcard ? 1 : 0),
-      phonesByContact,
-    },
-    presence: {
-      vcard: hasVcard,
-      phone: payloadContainsKey(payload, (key) => normalizeAuditKey(key) === "phone"),
-      contactPhone: payloadContainsKey(payload, (key) => normalizeAuditKey(key) === "contactphone"),
-      chatLid: payloadContainsKey(payload, (key) => normalizeAuditKey(key) === "chatlid"),
-      lid: payloadContainsKey(payload, (key) => normalizeAuditKey(key).includes("lid")),
-      atLid: JSON.stringify(payload).includes("@lid"),
-    },
-    payload: sanitizePayloadForContactAudit(payload),
-  };
+  return hasContactType || payloadContainsContactKey(payload) || payloadContainsVcard(payload);
 }
 
 function isTruthyFlag(value: unknown) {
@@ -825,6 +662,10 @@ function getOutboundMessages(
   routeResult: Awaited<ReturnType<typeof routeTicketMessage>>,
 ): RouteOutboundMessage[] {
   const fallbackTitle = getFallbackSystemMessageTitle(routeResult.nextContext?.state);
+  if (routeResult.skipReply) {
+    return [];
+  }
+
   if (routeResult.outboundMessages?.length) {
     return routeResult.outboundMessages.map((message) =>
       normalizeOutboundMessageTitle(message, fallbackTitle),
@@ -1063,16 +904,16 @@ export async function POST(request: Request) {
     }
   }
 
-  const contactAuditPayload = buildContactAuditPayload(payloadResult.payload, incoming);
+  const contactPayload = isContactPayload(payloadResult.payload);
 
-  if (contactAuditPayload) {
+  if (contactPayload) {
     const customerResult = await upsertCustomerFromWhatsApp({
       phone: incoming.phone,
       name: incoming.contactName,
     });
 
     if (!customerResult.ok) {
-      logError("Failed to upsert WhatsApp customer for contact audit", {
+      logError("Failed to upsert WhatsApp customer for contact message", {
         phoneLast4: incoming.phone.slice(-4),
         code: customerResult.error.code,
       });
@@ -1084,71 +925,78 @@ export async function POST(request: Request) {
     });
 
     if (!conversationResult.ok) {
-      logError("Failed to load WhatsApp conversation for contact audit", {
+      logError("Failed to load WhatsApp conversation for contact message", {
         customerId: customerResult.customer.id,
         code: conversationResult.error.code,
       });
       return jsonError("Internal Server Error", 500);
     }
 
-    logInfo("ZAPI_CONTACT_AUDIT_CAPTURED", contactAuditPayload);
+    const contactConversationContext = resolveConversationContextForInbound({
+      context: conversationResult.conversation.context,
+      lastMessageAt: conversationResult.conversation.last_message_at,
+      inactivityTtlMinutes: getConversationInactivityTtlMinutes(),
+    }).context;
+    const shouldRouteParticipantContacts =
+      contactConversationContext.state === "ticket_delivery_contacts_waiting";
 
-    const inboundResult = await saveWhatsAppMessage({
-      conversationId: conversationResult.conversation.id,
-      customerId: customerResult.customer.id,
-      direction: "inbound",
-      messageType: "system",
-      body: "[Contato recebido para teste]",
-      providerMessageId: incoming.providerMessageId,
-      rawMetadata: {
-        provider: "zapi",
-        reason: "zapi_contact_payload_audit",
-        ...contactAuditPayload,
-      },
-    });
+    if (!shouldRouteParticipantContacts) {
+      const inboundResult = await saveWhatsAppMessage({
+        conversationId: conversationResult.conversation.id,
+        customerId: customerResult.customer.id,
+        direction: "inbound",
+        messageType: "system",
+        body: "[Contato fora do estado de distribuição]",
+        providerMessageId: incoming.providerMessageId,
+        rawMetadata: {
+          provider: "zapi",
+          reason: "contact_outside_ticket_delivery",
+        },
+      });
 
-    if (!inboundResult.ok) {
-      if ("duplicate" in inboundResult && inboundResult.duplicate) {
-        logInfo("Ignored concurrent duplicate Z-API contact audit", {
-          providerMessageId: incoming.providerMessageId,
+      if (!inboundResult.ok) {
+        if ("duplicate" in inboundResult && inboundResult.duplicate) {
+          logInfo("Ignored concurrent duplicate Z-API contact message", {
+            providerMessageId: incoming.providerMessageId,
+          });
+          return jsonOk({ received: true, duplicate: true });
+        }
+
+        logError("Failed to save Z-API contact message", {
+          conversationId: conversationResult.conversation.id,
+          code: inboundResult.error?.code,
         });
-        return jsonOk({ received: true, duplicate: true });
+        return jsonError("Internal Server Error", 500);
       }
 
-      logError("Failed to save Z-API contact audit message", {
+      const replyResult = await sendAndPersistText({
         conversationId: conversationResult.conversation.id,
-        code: inboundResult.error?.code,
+        customerId: customerResult.customer.id,
+        phone: incoming.phone,
+        body: "Não estou aguardando contatos neste momento.",
       });
-      return jsonError("Internal Server Error", 500);
+
+      if (!replyResult.ok) {
+        return jsonError("Internal Server Error", 500);
+      }
+
+      const conversationUpdateResult = await updateConversationAfterMessage({
+        conversationId: conversationResult.conversation.id,
+      });
+
+      if (!conversationUpdateResult.ok) {
+        return jsonError("Internal Server Error", 500);
+      }
+
+      return jsonOk({
+        received: true,
+        processed: true,
+        contactOutsideTicketDelivery: true,
+      });
     }
-
-    const replyResult = await sendAndPersistText({
-      conversationId: conversationResult.conversation.id,
-      customerId: customerResult.customer.id,
-      phone: incoming.phone,
-      body: "Contato recebido para teste.",
-    });
-
-    if (!replyResult.ok) {
-      return jsonError("Internal Server Error", 500);
-    }
-
-    const conversationUpdateResult = await updateConversationAfterMessage({
-      conversationId: conversationResult.conversation.id,
-    });
-
-    if (!conversationUpdateResult.ok) {
-      return jsonError("Internal Server Error", 500);
-    }
-
-    return jsonOk({
-      received: true,
-      processed: true,
-      contactAudit: true,
-    });
   }
 
-  if (!incoming.text && !incoming.mediaUrl) {
+  if (!incoming.text && !incoming.mediaUrl && !contactPayload) {
     const message = firstRecord(
       payloadResult.payload.message,
       payloadResult.payload.data,
@@ -1249,7 +1097,7 @@ export async function POST(request: Request) {
     customerId: customerResult.customer.id,
     direction: "inbound",
     messageType: incoming.messageType,
-    body: inboundRedaction?.body ?? incoming.text,
+    body: inboundRedaction?.body ?? incoming.text ?? "[Contato recebido]",
     providerMessageId: incoming.providerMessageId,
     rawMetadata: buildInboundMetadata({
       providerMessageId: incoming.providerMessageId,
@@ -1713,6 +1561,7 @@ export async function POST(request: Request) {
     text: effectiveText,
     messageType: incoming.messageType,
     mediaUrl: incoming.mediaUrl,
+    rawPayload: contactPayload ? payloadResult.payload : undefined,
     sourceIdentifier: getRequestSourceIdentifier(request),
   });
   const routeResult = reconcileAdminNavigation({
@@ -1735,6 +1584,40 @@ export async function POST(request: Request) {
   const nextContextWithoutDeliveryMetadata = withoutDeliveryMetadata(
     routeResult.nextContext,
   );
+  if (outboundMessages.length === 0) {
+    const contextOnlyUpdate = await updateConversationAfterMessage({
+      conversationId: conversationResult.conversation.id,
+      context: {
+        ...nextContextWithoutDeliveryMetadata,
+        ...(boundedRetiredMessageIds.length > 0
+          ? { retiredNumericMessageIds: boundedRetiredMessageIds }
+          : {}),
+      },
+    });
+
+    if (!contextOnlyUpdate.ok) {
+      logError("Failed to update WhatsApp conversation context", {
+        conversationId: conversationResult.conversation.id,
+        code: contextOnlyUpdate.error.code,
+      });
+      return jsonError("Internal Server Error", 500);
+    }
+
+    logInfo("Processed Z-API inbound message without outbound reply", {
+      conversationId: conversationResult.conversation.id,
+      phoneLast4: incoming.phone.slice(-4),
+      providerMessageId: incoming.providerMessageId,
+      intentClassification: incomingIntent.classification,
+      immediateReason: immediateDecision.reason,
+    });
+
+    return jsonOk({
+      received: true,
+      processed: true,
+      replied: false,
+    });
+  }
+
   const pendingContext = {
     ...nextContextWithoutDeliveryMetadata,
     ...(boundedRetiredMessageIds.length > 0
@@ -1817,6 +1700,12 @@ export async function POST(request: Request) {
         sendResult,
         messageType: outboundMessage.type,
         reason: "webhook_reply",
+        businessContext: outboundMessage.participantDeliveryTicketId
+          ? {
+              participant_delivery_ticket_id:
+                outboundMessage.participantDeliveryTicketId,
+            }
+          : {},
       }),
     });
 
@@ -1826,6 +1715,29 @@ export async function POST(request: Request) {
         code: outboundResult.error?.code,
       });
       outboundPersistenceFailed = true;
+    }
+
+    if (outboundMessage.participantDeliveryTicketId) {
+      if (sendResult.ok) {
+        const deliveredResult = await markParticipantTicketDelivered(
+          outboundMessage.participantDeliveryTicketId,
+        );
+
+        if (!deliveredResult.ok) {
+          logError("Failed to mark participant ticket as delivered after QR send", {
+            conversationId: conversationResult.conversation.id,
+            ticketId: outboundMessage.participantDeliveryTicketId,
+            reason: deliveredResult.reason,
+          });
+        }
+      } else {
+        logWarn("Participant ticket QR send failed; ticket remains pending for retry", {
+          conversationId: conversationResult.conversation.id,
+          ticketId: outboundMessage.participantDeliveryTicketId,
+          phoneLast4: outboundPhone.slice(-4),
+          error: sendResult.error,
+        });
+      }
     }
   }
 

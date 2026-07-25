@@ -109,6 +109,9 @@ export type TicketConversationStep =
   | "help_topic_collecting"
   | "help_results"
   | "ticket_resend_selecting"
+  | "ticket_delivery_selecting"
+  | "ticket_delivery_contacts_waiting"
+  | "ticket_delivery_contacts_validated"
   | "gate_access_selecting"
   | "gate_access_passphrase_collecting"
   | "fixed_gate_passphrase_collecting"
@@ -548,6 +551,17 @@ export type TicketConversationState = {
   eventMoreInfoShown?: boolean;
   publicHelp?: TicketConversationPublicHelp;
   ticketResend?: TicketConversationTicketResend;
+  ticketDelivery?: {
+    orderId: string;
+    expectedContactsCount: number;
+    requestedAt: string;
+    mode?: "buyer_whatsapp" | "participant_contacts";
+    validatedContacts?: Array<{
+      displayName: string | null;
+      phone: string;
+      rawPhone: string;
+    }>;
+  };
   reservation?: TicketConversationReservation;
   payment?: TicketConversationPayment;
   lastSections?: TicketConversationSectionOption[];

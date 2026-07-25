@@ -30,7 +30,7 @@ import {
   deliverComboOrder,
   extractComboOrderIdFromExternalReference,
 } from "@/lib/tickets/services/comboOffers";
-import { deliverTicketsForOrder } from "@/lib/tickets/services/ticketDelivery";
+import { requestTicketDeliveryPreferenceForOrder } from "@/lib/tickets/services/ticketDelivery";
 
 const MAX_WEBHOOK_BYTES = 256 * 1024;
 const PROVIDER = "mercado_pago";
@@ -532,26 +532,25 @@ export async function POST(request: Request) {
   }
 
   const confirmationResult = confirmation as ConfirmPaidTicketOrderResult | null;
-  const shouldDeliverTickets = confirmationResult?.idempotent !== true;
-  const deliveryResult = shouldDeliverTickets
-    ? await deliverTicketsForOrder(orderId)
+  const shouldRequestDeliveryPreference = confirmationResult?.idempotent !== true;
+  const deliveryPreferenceResult = shouldRequestDeliveryPreference
+    ? await requestTicketDeliveryPreferenceForOrder(orderId)
     : null;
 
-  if (deliveryResult && !deliveryResult.ok) {
-    logWarn("Ticket delivery could not be prepared after payment confirmation", {
+  if (deliveryPreferenceResult && !deliveryPreferenceResult.ok) {
+    logWarn("Ticket delivery preference could not be prepared after payment confirmation", {
       providerPaymentId: paymentId,
       orderId,
-      reason: deliveryResult.reason,
+      reason: deliveryPreferenceResult.reason,
     });
-  } else if (deliveryResult && !deliveryResult.sent) {
-    logWarn("Ticket delivery was not sent after payment confirmation", {
+  } else if (deliveryPreferenceResult && !deliveryPreferenceResult.sent) {
+    logWarn("Ticket delivery preference was not sent after payment confirmation", {
       providerPaymentId: paymentId,
       orderId,
-      reason: deliveryResult.reason,
-      ticketsCount: deliveryResult.ticketsCount,
+      reason: deliveryPreferenceResult.reason,
     });
-  } else if (!shouldDeliverTickets) {
-    logInfo("Skipped ticket delivery for idempotent paid order confirmation", {
+  } else if (!shouldRequestDeliveryPreference) {
+    logInfo("Skipped ticket delivery preference for idempotent paid order confirmation", {
       providerPaymentId: paymentId,
       orderId,
     });
@@ -562,8 +561,8 @@ export async function POST(request: Request) {
   logInfo("Processed approved Black House payment", {
     providerPaymentId: paymentId,
     orderId,
-    ticketsDelivered:
-      deliveryResult?.ok && deliveryResult.sent ? deliveryResult.ticketsCount : 0,
+    deliveryPreferenceRequested:
+      deliveryPreferenceResult?.ok && deliveryPreferenceResult.sent ? 1 : 0,
   });
 
   return jsonOk({ received: true, processed: true });

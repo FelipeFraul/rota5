@@ -63,6 +63,28 @@ type PaidTicketResendRow = TicketRow & {
   } | null;
 };
 
+type ParticipantTicketDeliveryRow = TicketRow & {
+  issued_at: string;
+  participant_delivery_status: string | null;
+  participant_delivered_at: string | null;
+  orders: {
+    id: string;
+    status: string;
+    payments:
+      | {
+          id: string;
+          status: string;
+          paid_at: string | null;
+        }
+      | Array<{
+          id: string;
+          status: string;
+          paid_at: string | null;
+        }>
+      | null;
+  } | null;
+};
+
 type PublicTicketRow = {
   ticket_code: string;
   event_sessions: {
@@ -134,6 +156,19 @@ export type PaidTicketResendGroup = PaidTicketResendOption & {
   tickets: TicketForDelivery[];
 };
 
+export type ParticipantTicketDelivery = {
+  ticket: TicketForDelivery;
+  deliveryStatus: "awaiting_participant_request" | "delivered";
+  deliveredAt: string | null;
+  issuedAt: string;
+};
+
+export type ValidatedParticipantContact = {
+  displayName: string | null;
+  phone: string;
+  rawPhone: string;
+};
+
 export type SignedTicketTokenPayload = {
   tid: string;
   code: string;
@@ -189,7 +224,22 @@ function mapTicketRow(row: TicketRow): TicketForDelivery | null {
   };
 }
 
-function firstPayment(row: PaidTicketResendRow) {
+function firstPayment(row: {
+  orders: {
+    payments:
+      | {
+          id: string;
+          status: string;
+          paid_at: string | null;
+        }
+      | Array<{
+          id: string;
+          status: string;
+          paid_at: string | null;
+        }>
+      | null;
+  } | null;
+}) {
   const payments = row.orders?.payments;
 
   if (Array.isArray(payments)) {
@@ -390,6 +440,61 @@ export async function getTicketsForOrder(
   return attachTableMapPlaceCodes(tickets, placeCodesByOrder);
 }
 
+export async function assignParticipantContactsToOrderTickets({
+  orderId,
+  contacts,
+}: {
+  orderId: string;
+  contacts: ValidatedParticipantContact[];
+}): Promise<
+  | {
+      ok: true;
+      assignedCount: number;
+    }
+  | {
+      ok: false;
+      reason: "tickets_not_found" | "count_mismatch" | "persist_failed";
+    }
+> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.rpc(
+    "assign_participant_contacts_to_order_tickets",
+    {
+      p_order_id: orderId,
+      p_contacts: contacts.map((contact) => ({
+        displayName: contact.displayName,
+        phone: contact.phone,
+      })),
+    },
+  );
+
+  if (error) {
+    if (error.message.includes("tickets_not_found")) {
+      return { ok: false, reason: "tickets_not_found" };
+    }
+
+    if (
+      error.message.includes("ticket_contact_count_mismatch") ||
+      error.message.includes("contacts_required")
+    ) {
+      return { ok: false, reason: "count_mismatch" };
+    }
+
+    return { ok: false, reason: "persist_failed" };
+  }
+
+  return {
+    ok: true,
+    assignedCount:
+      data &&
+      typeof data === "object" &&
+      "assigned_count" in data &&
+      typeof data.assigned_count === "number"
+        ? data.assigned_count
+        : contacts.length,
+  };
+}
+
 export async function listPaidTicketResendGroupsForPhone(
   phone: string,
 ): Promise<PaidTicketResendGroup[]> {
@@ -420,6 +525,107 @@ export async function listPaidTicketResendGroupsForPhone(
     ...group,
     tickets: attachTableMapPlaceCodes(group.tickets, placeCodesByOrder),
   }));
+}
+
+function mapParticipantTicketDeliveryRow(
+  row: ParticipantTicketDeliveryRow,
+): ParticipantTicketDelivery | null {
+  if (
+    row.orders?.status !== "paid" ||
+    firstPayment(row)?.status !== "approved" ||
+    (
+      row.participant_delivery_status !== "awaiting_participant_request" &&
+      row.participant_delivery_status !== "delivered"
+    )
+  ) {
+    return null;
+  }
+
+  const ticket = mapTicketRow(row);
+
+  if (!ticket) return null;
+
+  return {
+    ticket,
+    deliveryStatus: row.participant_delivery_status,
+    deliveredAt: row.participant_delivered_at,
+    issuedAt: row.issued_at,
+  };
+}
+
+export async function listParticipantTicketDeliveriesForPhone(
+  phone: string,
+): Promise<ParticipantTicketDelivery[]> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("tickets")
+    .select(
+      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, issued_at, participant_delivery_status, participant_delivered_at, orders!inner(id, status, payments!inner(id, status, paid_at)), reservation_items!inner(seat_code), event_sessions!inner(starts_at, events!inner(title, artist_name, city, state, venues(name, address))), venue_sections!inner(name)",
+    )
+    .eq("recipient_phone", phone)
+    .eq("status", "issued")
+    .eq("orders.status", "paid")
+    .eq("orders.payments.status", "approved")
+    .in("participant_delivery_status", [
+      "awaiting_participant_request",
+      "delivered",
+    ])
+    .order("issued_at", { ascending: true })
+    .order("ticket_code", { ascending: true })
+    .returns<ParticipantTicketDeliveryRow[]>();
+
+  if (error) {
+    throw error;
+  }
+
+  const deliveries = (data ?? [])
+    .map(mapParticipantTicketDeliveryRow)
+    .filter((item): item is ParticipantTicketDelivery => Boolean(item))
+    .sort((left, right) => {
+      const eventDateComparison =
+        new Date(left.ticket.startsAt).getTime() -
+        new Date(right.ticket.startsAt).getTime();
+
+      if (eventDateComparison !== 0) return eventDateComparison;
+
+      const issuedAtComparison =
+        new Date(left.issuedAt).getTime() - new Date(right.issuedAt).getTime();
+
+      if (issuedAtComparison !== 0) return issuedAtComparison;
+
+      return left.ticket.ticketCode.localeCompare(right.ticket.ticketCode);
+    });
+
+  if (deliveries.length === 0) return [];
+
+  const placeCodesByOrder = await getOfficialTableMapPlaceCodesByOrder([
+    ...new Set(deliveries.map((delivery) => delivery.ticket.orderId)),
+  ]);
+
+  return deliveries.map((delivery) => ({
+    ...delivery,
+    ticket: attachTableMapPlaceCodes([delivery.ticket], placeCodesByOrder)[0],
+  }));
+}
+
+export async function markParticipantTicketDelivered(ticketId: string) {
+  const supabase = getSupabaseAdmin();
+  const deliveredAt = new Date().toISOString();
+  const { error } = await supabase
+    .from("tickets")
+    .update({
+      participant_delivery_status: "delivered",
+      participant_delivered_at: deliveredAt,
+    })
+    .eq("id", ticketId)
+    .eq("status", "issued")
+    .eq("participant_delivery_status", "awaiting_participant_request");
+
+  if (error) {
+    return { ok: false as const, reason: "persist_failed" as const };
+  }
+
+  return { ok: true as const, deliveredAt };
 }
 
 export async function getTicketBySignedToken(

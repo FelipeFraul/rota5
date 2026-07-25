@@ -1,4 +1,4 @@
-import "server-only";
+﻿import "server-only";
 
 import { getEnv } from "@/lib/env";
 import { logError } from "@/lib/logger";
@@ -20,6 +20,7 @@ import {
   type TicketConversationStep,
   type TicketConversationState,
 } from "@/lib/tickets/conversationState";
+import { normalizeWhatsAppPhone } from "@/lib/tickets/phones";
 import { TICKET_MESSAGES } from "@/lib/tickets/messages";
 import {
   formatCityState,
@@ -81,8 +82,11 @@ import {
 } from "@/lib/tickets/services/publicFreeTickets";
 import {
   buildTicketDeliveryPayload,
+  deliverTicketsForOrder,
 } from "@/lib/tickets/services/ticketDelivery";
 import {
+  assignParticipantContactsToOrderTickets,
+  listParticipantTicketDeliveriesForPhone,
   listPaidTicketResendGroupsForPhone,
   type PaidTicketResendGroup,
 } from "@/lib/tickets/services/tickets";
@@ -308,14 +312,14 @@ const LEADING_INTENT_PATTERN =
 const GENERIC_MESSAGES = new Set([
   "oi",
   "ola",
-  "olÃƒÂ¡",
+  "olÃƒÆ’Ã‚Â¡",
   "bom dia",
   "boa tarde",
   "boa noite",
   "ajuda",
   "menu",
   "inicio",
-  "inÃƒÂ­cio",
+  "inÃƒÆ’Ã‚Â­cio",
 ]);
 const PAYMENT_LINK_INTENTS = new Set([
   "comprar",
@@ -344,15 +348,15 @@ const GATE_COMMAND_PATTERN =
   /^(?:sistema\s+)?(portaria|cozinha)(?:\s+(.+))?$/i;
 const ADMIN_MAIN_EXIT_OPTION = 9;
 const ADMIN_MENU_UNAVAILABLE_MESSAGE =
-  "Essa opÃƒÂ§ÃƒÂ£o nÃƒÂ£o estÃƒÂ¡ disponÃƒÂ­vel para o seu nÃƒÂ­vel de acesso.";
-const ADMIN_CONSTRUCTION_MESSAGE = "Essa funÃƒÂ§ÃƒÂ£o serÃƒÂ¡ ativada em breve.";
+  "Essa opÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o estÃƒÆ’Ã‚Â¡ disponÃƒÆ’Ã‚Â­vel para o seu nÃƒÆ’Ã‚Â­vel de acesso.";
+const ADMIN_CONSTRUCTION_MESSAGE = "Essa funÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o serÃƒÆ’Ã‚Â¡ ativada em breve.";
 const WEEKDAY_OFFSETS: Record<string, number> = {
   domingo: 0,
   segunda: 1,
   "segunda-feira": 1,
-  "terÃƒÂ§a": 2,
+  "terÃƒÆ’Ã‚Â§a": 2,
   terca: 2,
-  "terÃƒÂ§a-feira": 2,
+  "terÃƒÆ’Ã‚Â§a-feira": 2,
   "terca-feira": 2,
   quarta: 3,
   "quarta-feira": 3,
@@ -360,13 +364,13 @@ const WEEKDAY_OFFSETS: Record<string, number> = {
   "quinta-feira": 4,
   sexta: 5,
   "sexta-feira": 5,
-  "sÃƒÂ¡bado": 6,
+  "sÃƒÆ’Ã‚Â¡bado": 6,
   sabado: 6,
 };
 const MONTHS: Record<string, number> = {
   janeiro: 0,
   fevereiro: 1,
-  "marÃƒÂ§o": 2,
+  "marÃƒÆ’Ã‚Â§o": 2,
   marco: 2,
   abril: 3,
   maio: 4,
@@ -393,11 +397,13 @@ type RouteTicketMessageInput = {
   text: string;
   messageType?: "text" | "image" | "document" | "system";
   mediaUrl?: string | null;
+  rawPayload?: unknown;
   sourceIdentifier?: string | null;
 };
 
 export type RouteTicketMessageOutput = {
   reply: string;
+  skipReply?: boolean;
   suppressTitle?: boolean;
   intentResolution?: IncomingMessageIntentResolution;
   outboundMessages?: Array<
@@ -408,6 +414,7 @@ export type RouteTicketMessageOutput = {
         persistedBody?: string;
         delayMs?: number;
         suppressTitle?: boolean;
+        participantDeliveryTicketId?: string;
       }
     | {
         type: "image";
@@ -417,6 +424,7 @@ export type RouteTicketMessageOutput = {
         persistedBody?: string;
         delayMs?: number;
         suppressTitle?: boolean;
+        participantDeliveryTicketId?: string;
       }
   >;
   nextContext: TicketConversationState;
@@ -509,22 +517,22 @@ const LIST_ALL_EVENT_PATTERNS = [
 ];
 
 const EVENT_DATE_HINT_PATTERN =
-  /\b(?:hoje|hj|amanha|amanhã|fim de semana|domingo|segunda|terca|terça|quarta|quinta|sexta|sabado|sábado|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?|\d{1,2}\s+de\s+[a-z]+)\b/;
+  /\b(?:hoje|hj|amanha|amanhÃ£|fim de semana|domingo|segunda|terca|terÃ§a|quarta|quinta|sexta|sabado|sÃ¡bado|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?|\d{1,2}\s+de\s+[a-z]+)\b/;
 const EVENT_DOMAIN_WORD_PATTERN =
   /\b(?:agenda|atracao|atracoes|artista|artistas|comedia|evento|eventos|ingresso|ingressos|programacao|show|shows)\b/;
 const CONVERSATIONAL_OPENING_PATTERN =
   /\b(?:deixa\s+eu\s+(?:perguntar|falar|ver)|eu\s+(?:queria|queria\s+te|queria\s+saber|tenho\s+uma)\s+(?:pergunta|duvida)|me\s+(?:diz|fala)|posso\s+(?:perguntar|tirar\s+uma\s+duvida)|queria\s+(?:perguntar|saber|tirar\s+uma\s+duvida)|sabe|sabe\s+o\s+que|seguinte|tenho\s+(?:uma\s+)?(?:duvida|pergunta)|viu)\b/;
 const CLEAR_UNKNOWN_PUBLIC_PATTERN =
-  /\b(?:sem\s+sentido|qualquer\s+coisa|blablabla|asdf|teste\s+teste|nao\s+sei|não\s+sei|[\p{L}\p{N}]*zzz)\b/u;
+  /\b(?:sem\s+sentido|qualquer\s+coisa|blablabla|asdf|teste\s+teste|nao\s+sei|nÃ£o\s+sei|[\p{L}\p{N}]*zzz)\b/u;
 const EMPTY_MESSAGE_PATTERN = /^(?:mensagem\s+vazia|empty\s+message)$/;
 const GREETING_ONLY_PATTERN =
-  /^(?:(?:oi+|ola|olá|e ai|e aí|bom dia|boa tarde|boa noite|tudo bem|td bem)\s*)+$/;
+  /^(?:(?:oi+|ola|olÃ¡|e ai|e aÃ­|bom dia|boa tarde|boa noite|tudo bem|td bem)\s*)+$/;
 const SOCIAL_REPLY_PATTERN =
-  /^(?:td bem|tudo bem|estou bem|to bem|tô bem|e voce|e você|beleza|blz|tranquilo|tranquila|suave)$/;
+  /^(?:td bem|tudo bem|estou bem|to bem|tÃ´ bem|e voce|e vocÃª|beleza|blz|tranquilo|tranquila|suave)$/;
 const COURTESY_PATTERN =
   /^(?:por favor|obrigado|obrigada|valeu|obg|brigado|brigada)$/;
 const ACTIVE_FLOW_REPLY_PATTERN =
-  /^(?:\d+|sim|s|nao|não|n|esse|essa|quero esse|quero essa|duas|dois|uma|um|meia|inteira|comprar|voltar|back|cancelar)$/;
+  /^(?:\d+|sim|s|nao|nÃ£o|n|esse|essa|quero esse|quero essa|duas|dois|uma|um|meia|inteira|comprar|voltar|back|cancelar)$/;
 const CONVERSATIONAL_FILLER_WORDS = new Set([
   "amigo",
   "amiga",
@@ -782,7 +790,7 @@ function parseDateRange(
     return buildWeekendRange(now);
   }
 
-  if (/\bamanhÃƒÂ£\b|\bamanha\b/.test(normalized)) {
+  if (/\bamanhÃƒÆ’Ã‚Â£\b|\bamanha\b/.test(normalized)) {
     return buildDayRange(addDays(getSaoPauloDateParts(now), 1));
   }
 
@@ -819,7 +827,7 @@ function parseDateRange(
 
 function extractCity(text: string) {
   const match = text.match(
-    /\b(?:em|na|no)\s+([\p{L}][\p{L}\s-]{1,40})(?=\s+(?:hoje|amanh[aã]|s[áa]bado|domingo|segunda|ter[cç]a|quarta|quinta|sexta|fim|janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|\d{1,2}\/\d{1,2})|$)/iu,
+    /\b(?:em|na|no)\s+([\p{L}][\p{L}\s-]{1,40})(?=\s+(?:hoje|amanh[aÃ£]|s[Ã¡a]bado|domingo|segunda|ter[cÃ§]a|quarta|quinta|sexta|fim|janeiro|fevereiro|mar[cÃ§]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|\d{1,2}\/\d{1,2})|$)/iu,
   );
 
   const city = match?.[1]
@@ -835,7 +843,7 @@ function extractCity(text: string) {
   if (
     normalizedCity in MONTHS ||
     normalizedCity in WEEKDAY_OFFSETS ||
-    /^(hoje|amanh[ÃƒÂ£a]|fim de semana|este fim de semana)$/.test(normalizedCity)
+    /^(hoje|amanh[ÃƒÆ’Ã‚Â£a]|fim de semana|este fim de semana)$/.test(normalizedCity)
   ) {
     return undefined;
   }
@@ -854,7 +862,7 @@ function stripSearchNoise(text: string) {
       " ",
     )
     .replace(
-      /\b(hoje|amanh[ÃƒÂ£a]|s[ÃƒÂ¡a]bado|domingo|segunda(?:-feira)?|ter[cÃƒÂ§]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|fim de semana|este fim de semana|janeiro|fevereiro|mar[cÃƒÂ§]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b/gi,
+      /\b(hoje|amanh[ÃƒÆ’Ã‚Â£a]|s[ÃƒÆ’Ã‚Â¡a]bado|domingo|segunda(?:-feira)?|ter[cÃƒÆ’Ã‚Â§]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|fim de semana|este fim de semana|janeiro|fevereiro|mar[cÃƒÆ’Ã‚Â§]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b/gi,
       " ",
     )
     .replace(/\booutubro\b/gi, " ")
@@ -1622,7 +1630,7 @@ function formatDateTime(startsAt: string) {
     minute: "2-digit",
   })
     .format(new Date(startsAt))
-    .replace(",", " ÃƒÂ s");
+    .replace(",", " ÃƒÆ’Ã‚Â s");
 }
 
 function formatCurrencyFromCents(cents: number) {
@@ -1635,15 +1643,15 @@ function formatCurrencyFromCents(cents: number) {
 const CANONICAL_TICKET_OPTION_LABELS: Record<string, string> = {
   "cadeira individual (todos pagam meia)":
     "Cadeira Individual (TODOS pagam meia)",
-  "1Ã‚Âª fileira (com balcÃƒÂ£o) - cadeira individual":
-    "1Ã‚Âª FILEIRA (com balcÃƒÂ£o) - cadeira Individual",
+  "1Ãƒâ€šÃ‚Âª fileira (com balcÃƒÆ’Ã‚Â£o) - cadeira individual":
+    "1Ãƒâ€šÃ‚Âª FILEIRA (com balcÃƒÆ’Ã‚Â£o) - cadeira Individual",
   "poltrona+mesa 2 lugares (1 deste vale para 2)":
     "Poltrona+Mesa 2 lugares (1 deste vale para 2)",
   "poltrona+mesa 4 lugares (1 deste vale para 4)":
     "Poltrona+Mesa 4 lugares (1 deste vale para 4)",
   "cadeira individual (inteira)": "Cadeira Individual (Inteira)",
-  "crianÃƒÂ§as e adolescentes (2 a 18 anos)":
-    "CrianÃƒÂ§as e adolescentes (2 a 18 anos)",
+  "crianÃƒÆ’Ã‚Â§as e adolescentes (2 a 18 anos)":
+    "CrianÃƒÆ’Ã‚Â§as e adolescentes (2 a 18 anos)",
 };
 
 function formatTicketOptionLabel(label: string) {
@@ -1672,7 +1680,7 @@ function shouldUseTicketLabelForSingleOffer(sectionName: string) {
     .toLocaleLowerCase("pt-BR")
     .trim();
 
-  return ["cadeira", "1Ã‚Âª fileira", "mesa", "mesas"].includes(normalized);
+  return ["cadeira", "1Ãƒâ€šÃ‚Âª fileira", "mesa", "mesas"].includes(normalized);
 }
 
 
@@ -1702,7 +1710,7 @@ function formatEventsReply(events: TicketEventSearchResult[]) {
   ]);
 
   return [
-    events.length > 1 ? "Você quis dizer:" : "Encontrei este evento:",
+    events.length > 1 ? "VocÃª quis dizer:" : "Encontrei este evento:",
     "",
     ...lines,
   ].join("\n");
@@ -1740,7 +1748,7 @@ function formatSingleEventReply(
   ];
 
   return [
-    `🎟️ *${title}*`,
+    `ðŸŽŸï¸ *${title}*`,
     ...details,
     "",
     ...options,
@@ -1766,7 +1774,7 @@ function formatSingleEventOptionReply(
   ];
 
   return [
-    `🎟️ *${title}*`,
+    `ðŸŽŸï¸ *${title}*`,
     ...details,
     "",
     ...options,
@@ -1865,13 +1873,13 @@ function formatSingleEventMoreInfo(
   const description = event.description?.trim();
 
   return [
-    `🎟️ *${formatPublicEventTitle(event.title, event.artistName)}*`,
+    `ðŸŽŸï¸ *${formatPublicEventTitle(event.title, event.artistName)}*`,
     `| Local: ${formatCityState(event.city, event.state)}`,
     `*| Data: ${formatEventDate(event.startsAt)}*`,
-    ...(event.venueName ? [`> Ã°Å¸ÂÅ¸Ã¯Â¸Â Local: ${formatProperName(event.venueName)}`] : []),
+    ...(event.venueName ? [`> ÃƒÂ°Ã…Â¸Ã‚ÂÃ…Â¸ÃƒÂ¯Ã‚Â¸Ã‚Â Local: ${formatProperName(event.venueName)}`] : []),
     "",
-    "*INFORMAÃƒâ€¡Ãƒâ€¢ES DO EVENTO*",
-    description || "Nenhuma informaÃƒÂ§ÃƒÂ£o adicional cadastrada para este evento.",
+    "*INFORMAÃƒÆ’Ã¢â‚¬Â¡ÃƒÆ’Ã¢â‚¬Â¢ES DO EVENTO*",
+    description || "Nenhuma informaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o adicional cadastrada para este evento.",
   ].join("\n");
 }
 
@@ -2022,8 +2030,8 @@ function formatQuantityPrompt(
     `> Valor: *${selectedPrice}*`,
     "",
     isFree
-      ? "Digite o número de ingressos gratuitos, até 4 por pedido. Ex: 2"
-      : 'Digite o número de ingressos, *"EX: 4"*',
+      ? "Digite o nÃºmero de ingressos gratuitos, atÃ© 4 por pedido. Ex: 2"
+      : 'Digite o nÃºmero de ingressos, *"EX: 4"*',
     'Digite *"BACK"* para voltar.',
     'Para uma nova pesquisa, *"NEW"*',
   ].join("\n");
@@ -2194,7 +2202,7 @@ function formatCartDecisionReply({ cart }: { cart: TicketConversationCart }) {
     ...cartItemLines,
     `> Total da compra: *${formatPriceWithOptionalFee(totalAmountCents, totalFeeCents)}*`,
     ...(cart.tableMapPlace
-      ? [`> Mesa/Bistrô: ${formatTableMapPlaceLabel(cart.tableMapPlace)}`]
+      ? [`> Mesa/BistrÃ´: ${formatTableMapPlaceLabel(cart.tableMapPlace)}`]
       : []),
     "",
     'Digite *"1"* para para finalizar a compra',
@@ -2211,13 +2219,13 @@ function formatTableMapSelectionReply({
   reservedCount: number;
 }) {
   return [
-    "*ESCOLHA SUA MESA OU BISTRÔ*",
+    "*ESCOLHA SUA MESA OU BISTRÃ”*",
     "",
-    `> Mesas/bistrô disponiveis: *${availableCount}*`,
-    `> Mesas/bistrô reservadas: *${reservedCount}*`,
+    `> Mesas/bistrÃ´ disponiveis: *${availableCount}*`,
+    `> Mesas/bistrÃ´ reservadas: *${reservedCount}*`,
     "",
-    'Digite o número da mesa ou o bistrô para reservar, *"EX: 12"*',
-    'Digite *"0"* se não quer mesa ou bistrô.',
+    'Digite o nÃºmero da mesa ou o bistrÃ´ para reservar, *"EX: 12"*',
+    'Digite *"0"* se nÃ£o quer mesa ou bistrÃ´.',
     'Digite *"BACK"* para voltar.',
     'Para uma nova pesquisa, *"NEW"*',
   ].join("\n");
@@ -2227,8 +2235,8 @@ function formatTableMapPlaceUnavailableReply() {
   return [
     "*LUGAR INDISPONIVEL*",
     "",
-    "*Mesa/bistrô não disponivel*",
-    "Digite outra opção do mapa",
+    "*Mesa/bistrÃ´ nÃ£o disponivel*",
+    "Digite outra opÃ§Ã£o do mapa",
     "Digite *0* para continuar sem mesa/bistro.",
   ].join("\n");
 }
@@ -2427,8 +2435,8 @@ function formatSeatsReply({
     "",
     "Enviamos o mapa atualizado do setor.",
     quantity > 1
-      ? `Responda com os ${quantity} cÃƒÂ³digos dos assentos desejados.`
-      : "Responda com o cÃƒÂ³digo do assento desejado.",
+      ? `Responda com os ${quantity} cÃƒÆ’Ã‚Â³digos dos assentos desejados.`
+      : "Responda com o cÃƒÆ’Ã‚Â³digo do assento desejado.",
     quantity > 1 ? "Exemplo: A03,A04" : "Exemplo: A03",
   ].join("\n");
 }
@@ -2491,6 +2499,10 @@ function isTicketResendCommand(text: string) {
   return isPublicInitialTicketResendCommand(text);
 }
 
+function isParticipantTicketRequestIntent(text: string) {
+  return normalizeIntentText(text) === "meu ingresso";
+}
+
 function isAllPublicEventsContext(context: Partial<TicketConversationState>) {
   return context.lastSearch?.originalText
     ? isAllPublicEventsIntent(context.lastSearch.originalText)
@@ -2528,6 +2540,7 @@ function resetBuyerReservationContext(
     lastEvents: [],
     publicHelp: undefined,
     ticketResend: undefined,
+    ticketDelivery: undefined,
   };
 }
 
@@ -2685,7 +2698,7 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
     exitOption: 6,
     options: [
       "Buscar ingresso por telefone",
-      "Buscar ingresso por cÃƒÂ³digo",
+      "Buscar ingresso por cÃƒÆ’Ã‚Â³digo",
       "Cancelar reserva pendente",
     ],
   },
@@ -2759,14 +2772,14 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
     options: [
       "Listar administradores",
       "Adicionar administrador",
-      "Alterar nÃƒÂ­vel de administrador",
+      "Alterar nÃƒÆ’Ã‚Â­vel de administrador",
       "Desativar administrador",
       "Liberar administrador bloqueado",
       "Renovar palavra-chave",
     ],
   },
   admin_reports_menu: {
-    title: "Relatórios",
+    title: "RelatÃ³rios",
     state: "admin_reports_menu",
     mainOption: 8,
     permission: "view_reports",
@@ -2779,9 +2792,9 @@ const ADMIN_SUBMENUS: Record<AdminSubmenuState, AdminSubmenuConfig> = {
       "Pagamentos pendentes",
       "Reservas expiradas/canceladas",
       "Check-ins da portaria",
-      "Ingressos usados e não usados",
+      "Ingressos usados e nÃ£o usados",
       "Cortesias",
-      "Divisão",
+      "DivisÃ£o",
     ],
   },
 };
@@ -2804,8 +2817,8 @@ function renderAdminSubmenu(config: AdminSubmenuConfig) {
         ]
       : []),
     "",
-    "Responda com o número da opção.",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
+    "Responda com o nÃºmero da opÃ§Ã£o.",
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da Ã¡rea de admin.',
   ].join("\n");
 }
 
@@ -2820,7 +2833,7 @@ function renderAdminBrowserEventEditorReply(loginUrl: string, expiresInMinutes: 
     "Abra o link abaixo para acessar direto a pagina de edicao:",
     loginUrl,
     "",
-    `> Link vÃƒÂ¡lido por ${expiresInMinutes} minutos.`,
+    `> Link vÃƒÆ’Ã‚Â¡lido por ${expiresInMinutes} minutos.`,
     "> Link de uso unico, criado a partir da sua sessao admin no WhatsApp.",
   ].join("\n");
 }
@@ -2864,8 +2877,8 @@ function renderAdminEventListFilterMenu() {
     formatOptionLine(3, "eventos cancelados"),
     formatOptionLine(4, "todos os eventos"),
     "",
-    "Responda com o nÃƒÂºmero da opÃƒÂ§ÃƒÂ£o.",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
+    "Responda com o nÃƒÆ’Ã‚Âºmero da opÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o.",
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da Ã¡rea de admin.',
   ].join("\n");
 }
 
@@ -3007,8 +3020,8 @@ const ADMIN_EVENT_SHORTCUT_ALIASES: Array<[
   ["pending_payments", "pagamentos pendentes", ["pagamentos pendentes", "pedidos pendentes"]],
   ["expired_reservations", "reservas expiradas/canceladas", ["reservas expiradas", "reservas canceladas", "reservas expiradas canceladas"]],
   ["gate_checkins", "check-ins da portaria", ["checkins da portaria", "check ins da portaria", "relatorio de checkins", "relatorio da portaria"]],
-  ["ticket_usage", "ingressos usados e nÃƒÂ£o usados", ["ingressos usados", "ingressos nao usados", "ingressos usados e nao usados", "uso dos ingressos"]],
-  ["courtesy_report", "relatÃƒÂ³rio de cortesias", ["relatorio de cortesias", "cortesias emitidas"]],
+  ["ticket_usage", "ingressos usados e nÃƒÆ’Ã‚Â£o usados", ["ingressos usados", "ingressos nao usados", "ingressos usados e nao usados", "uso dos ingressos"]],
+  ["courtesy_report", "relatÃƒÆ’Ã‚Â³rio de cortesias", ["relatorio de cortesias", "cortesias emitidas"]],
   ["list_courtesies", "ver cortesias", ["cortesias", "ver cortesias", "listar cortesias", "consultar cortesias"]],
   ["add_courtesy", "adicionar cortesia", ["adicionar cortesia", "adicionar cortesias", "criar cortesia", "gerar cortesia"]],
   ["resend_courtesy", "reenviar cortesia", ["reenviar cortesia", "reenviar cortesias"]],
@@ -3020,7 +3033,7 @@ const ADMIN_EVENT_SHORTCUT_ALIASES: Array<[
   ["edit_venue", "editar local", ["editar local", "alterar local", "editar teatro"]],
   ["edit_image", "enviar foto", ["enviar foto", "alterar foto", "trocar foto", "editar foto", "trocar imagem"]],
   ["edit_datetime", "editar data/hora", ["editar data", "editar horario", "editar data hora", "alterar data", "alterar horario"]],
-  ["edit_description", "editar informaÃƒÂ§ÃƒÂµes gerais", ["editar informacoes", "editar informacoes gerais", "alterar informacoes", "editar descricao"]],
+  ["edit_description", "editar informaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes gerais", ["editar informacoes", "editar informacoes gerais", "alterar informacoes", "editar descricao"]],
   ["gate_menu", "portaria", ["portaria", "menu portaria"]],
   ["gate_self_checkin", "check-in neste telefone", ["check in neste telefone", "checkin neste telefone", "abrir checkin", "fazer checkin"]],
   ["gate_register", "definir outro telefone", ["definir outro telefone", "cadastrar telefone da portaria", "adicionar operador da portaria"]],
@@ -3111,7 +3124,7 @@ function parseAdminEventShortcut(text: string): {
 } | null {
   const parts = text
     .split(/(?:\s*\|\s*|\s*,\s+)/)
-    .map((part) => part.trim().replace(/^[*_'"Ã¢â‚¬Å“Ã¢â‚¬Â]+|[*_'"Ã¢â‚¬Å“Ã¢â‚¬Â]+$/g, "").trim())
+    .map((part) => part.trim().replace(/^[*_'"ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â]+|[*_'"ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â]+$/g, "").trim())
     .filter(Boolean);
   if (parts.length < 2) return null;
 
@@ -3285,9 +3298,9 @@ function buildGateCheckInReply({
     "Portaria - ler QR Codes de ingresso:",
     gateUrl,
     "",
-    `Validade: atÃƒÂ© ${formatDateTime(expiresAt)}`,
+    `Validade: atÃƒÆ’Ã‚Â© ${formatDateTime(expiresAt)}`,
     "",
-    "Esse link ÃƒÂ© temporÃƒÂ¡rio e deve ser usado apenas pela equipe autorizada.",
+    "Esse link ÃƒÆ’Ã‚Â© temporÃƒÆ’Ã‚Â¡rio e deve ser usado apenas pela equipe autorizada.",
   ].join("\n");
 }
 
@@ -3412,9 +3425,9 @@ function formatCartSummaryLines(cart: TicketConversationCart) {
     ...(cart.tableMapPlace
       ? [
           "---",
-          `> Mesa/Bistrô: *${formatTableMapPlaceLabel(cart.tableMapPlace)}*`,
+          `> Mesa/BistrÃ´: *${formatTableMapPlaceLabel(cart.tableMapPlace)}*`,
         ]
-      : ["> Mesa/Bistrô: *X*"]),
+      : ["> Mesa/BistrÃ´: *X*"]),
   ];
 }
 
@@ -3445,7 +3458,7 @@ function formatReservationReply({
   return [
     "*RESERVA CRIADA.*",
     "",
-    'Você tem *"10 MIN PARA EFETUAR A COMPRA"*',
+    'VocÃª tem *"10 MIN PARA EFETUAR A COMPRA"*',
     `> Evento: ${selectedEvent.title}`,
     ...(cart
       ? formatCartSummaryLines(cart)
@@ -3458,7 +3471,7 @@ function formatReservationReply({
         ]),
     ...(cart?.tableMapPlace ? ["---"] : [""]),
     `Valor Total: *${formatPriceWithOptionalFee(reservation.totalAmountCents, reservation.totalFeeCents)}*`,
-    `> Reserva válida até: *${formatTime(reservation.expiresAt)}*`,
+    `> Reserva vÃ¡lida atÃ©: *${formatTime(reservation.expiresAt)}*`,
     "",
     "Para comprar, digite *COMPRAR*",
     'Digite *"BACK"* para voltar.',
@@ -3484,7 +3497,7 @@ function formatReservationContextReply({
   return [
     "*RESERVA CRIADA.*",
     "",
-    'Você tem *"10 MIN PARA EFETUAR A COMPRA"*',
+    'VocÃª tem *"10 MIN PARA EFETUAR A COMPRA"*',
     ...(selectedEvent ? [`> Evento: ${selectedEvent.title}`] : []),
     ...(cart
       ? formatCartSummaryLines(cart)
@@ -3497,7 +3510,7 @@ function formatReservationContextReply({
         ]),
     ...(cart?.tableMapPlace ? ["---"] : [""]),
     `Valor Total: *${formatPriceWithOptionalFee(reservation.totalAmountCents, reservation.totalFeeCents)}*`,
-    `> Reserva válida até: *${formatTime(reservation.expiresAt)}*`,
+    `> Reserva vÃ¡lida atÃ©: *${formatTime(reservation.expiresAt)}*`,
     "",
     "Para comprar, digite *COMPRAR*",
     'Digite *"BACK"* para voltar.',
@@ -3516,7 +3529,7 @@ function formatPaymentLinkReply({
     "Link de pagamento:",
     checkout.checkoutUrl,
     "",
-    "Após a confirmação do pagamento, seu ingresso será emitido automaticamente nesta conversa.",
+    "ApÃ³s a confirmaÃ§Ã£o do pagamento, seu ingresso serÃ¡ emitido automaticamente nesta conversa.",
   ];
 
   return lines.join("\n");
@@ -3548,6 +3561,59 @@ function buildPaidTicketResendOutboundMessages(
   ];
 }
 
+async function handleParticipantTicketRequest({
+  baseContext,
+  phone,
+}: {
+  baseContext: TicketConversationState;
+  phone: string;
+}): Promise<RouteTicketMessageOutput> {
+  const normalizedPhone = normalizeWhatsAppPhone(phone);
+
+  if (!normalizedPhone) {
+    return {
+      reply:
+        "Não encontrei ingresso disponível para este telefone. Confirme com o comprador se este foi o número enviado.",
+      nextContext: resetBuyerReservationContext(baseContext),
+    };
+  }
+
+  const participantTickets = await listParticipantTicketDeliveriesForPhone(
+    normalizedPhone,
+  );
+
+  if (participantTickets.length === 0) {
+    return {
+      reply:
+        "Não encontrei ingresso disponível para este telefone. Confirme com o comprador se este foi o número enviado.",
+      nextContext: resetBuyerReservationContext(baseContext),
+    };
+  }
+
+  const deliveries = await Promise.all(
+    participantTickets.map((participantTicket) =>
+      buildTicketDeliveryPayload([participantTicket.ticket], "*INGRESSO*"),
+    ),
+  );
+  const outboundMessages = deliveries.flatMap((delivery, index) => {
+    const participantTicket = participantTickets[index];
+    const shouldMarkDelivered =
+      participantTicket.deliveryStatus === "awaiting_participant_request";
+
+    return buildPaidTicketResendOutboundMessages(delivery).map((message) => ({
+      ...message,
+      ...(shouldMarkDelivered && message.type === "image"
+        ? { participantDeliveryTicketId: participantTicket.ticket.ticketId }
+        : {}),
+    }));
+  });
+
+  return {
+    reply: deliveries[0]?.message ?? "*INGRESSO*",
+    outboundMessages,
+    nextContext: resetBuyerReservationContext(baseContext),
+  };
+}
 function formatPaidTicketResendOptions(groups: PaidTicketResendGroup[]) {
   return [
     "*REENVIAR INGRESSO*",
@@ -3563,6 +3629,281 @@ function formatPaidTicketResendOptions(groups: PaidTicketResendGroup[]) {
       ),
     ),
   ].join("\n");
+}
+
+function formatParticipantContactsPrompt(expectedContactsCount: number) {
+  return `Envie os contatos dos participantes usando a opÃ§Ã£o Contato do WhatsApp.\nSelecione e envie todos juntos, em um Ãºnico envio.\nA quantidade de contatos deve ser exatamente igual Ã  quantidade de ingressos comprados: ${expectedContactsCount}.`;
+}
+
+const PARTICIPANT_TICKET_REQUEST_INSTRUCTIONS = [
+  "INGRESSOS",
+  "",
+  "Para que os contatos enviados recebam os ingressos, eles precisam chamar este telefone e digitar:",
+  "",
+  "Meu ingresso",
+].join("\n");
+
+function formatParticipantContactsConfirmation(
+  contacts: Array<{ displayName: string | null; phone: string }>,
+) {
+  return [
+    "Confirme os destinatÃ¡rios dos ingressos:",
+    "",
+    ...contacts.map(
+      (contact, index) =>
+        `${index + 1}. ${contact.displayName ?? maskParticipantPhone(contact.phone)}`,
+    ),
+    "",
+    "Digite:",
+    "CONFIRMAR",
+    "para concluir a distribuiÃ§Ã£o",
+    "ou",
+    "CANCELAR",
+    "para reenviar os contatos.",
+  ].join("\n");
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function firstContactString(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return null;
+}
+
+function stringArray(value: unknown) {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => {
+      if (typeof item === "string") return item;
+      const record = asRecord(item);
+      return firstContactString(
+        record?.phone,
+        record?.number,
+        record?.waId,
+        record?.id,
+      );
+    })
+    .filter((item): item is string => Boolean(item));
+}
+
+function extractPhonesFromVcard(value: unknown) {
+  if (typeof value !== "string") return [];
+
+  return value
+    .split(/\r?\n/)
+    .filter((line) => /^TEL/i.test(line))
+    .map((line) => line.slice(line.lastIndexOf(":") + 1).trim())
+    .filter(Boolean);
+}
+
+function extractParticipantContactCandidates(rawPayload: unknown) {
+  const payload = asRecord(rawPayload);
+  if (!payload) return [];
+
+  const message = asRecord(payload.message) ?? asRecord(payload.data) ?? {};
+  const contactArray = payload.contactArray ?? message.contactArray;
+  const contacts = payload.contacts ?? message.contacts;
+  const contact = payload.contact ?? message.contact;
+
+  if (Array.isArray(contactArray)) return contactArray;
+  if (Array.isArray(contacts)) return contacts;
+  if (contact) return [contact];
+
+  return [];
+}
+
+type ParsedParticipantContact = {
+  displayName: string | null;
+  phones: string[];
+};
+
+type DuplicateParticipantPhone = {
+  phone: string;
+  contacts: Array<{
+    displayName: string | null;
+  }>;
+};
+
+function maskParticipantPhone(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length <= 4) return "****";
+
+  return `****${digits.slice(-4)}`;
+}
+
+function formatDuplicateParticipantPhones(duplicates: DuplicateParticipantPhone[]) {
+  return [
+    "Encontrei telefones repetidos nos contatos enviados.",
+    "",
+    ...duplicates.map((duplicate) => {
+      const names = duplicate.contacts
+        .map((contact) => contact.displayName)
+        .filter((name): name is string => Boolean(name));
+      const namesLabel = names.length ? ` (${names.join(", ")})` : "";
+
+      return `> ${maskParticipantPhone(duplicate.phone)}${namesLabel}`;
+    }),
+    "",
+    "Cada ingresso deve estar associado a um telefone diferente. Envie os contatos novamente.",
+  ].join("\n");
+}
+
+function parseParticipantContacts(rawPayload: unknown): ParsedParticipantContact[] {
+  return extractParticipantContactCandidates(rawPayload).map((candidate) => {
+    const contact = asRecord(candidate) ?? {};
+    const vCard = contact.vCard ?? contact.vcard;
+    const phones = [
+      ...stringArray(contact.phones),
+      ...[
+        contact.phone,
+        contact.contactPhone,
+        contact.number,
+        contact.waId,
+      ].filter((value): value is string => typeof value === "string" && Boolean(value.trim())),
+      ...extractPhonesFromVcard(vCard),
+    ];
+
+    return {
+      displayName: firstContactString(
+        contact.displayName,
+        contact.name,
+        contact.contactName,
+        contact.pushName,
+      ),
+      phones: [...new Set(phones.map((phone) => phone.trim()).filter(Boolean))],
+    };
+  });
+}
+
+export function validateParticipantContactsForTest({
+  rawPayload,
+  expectedContactsCount,
+}: {
+  rawPayload: unknown;
+  expectedContactsCount: number;
+}):
+  | {
+      ok: true;
+      contacts: Array<{
+        displayName: string | null;
+        phone: string;
+        rawPhone: string;
+      }>;
+      receivedCount: number;
+    }
+  | {
+      ok: false;
+      reason:
+        | "empty"
+        | "missing_phone"
+        | "multiple_phones"
+        | "duplicate_phones"
+        | "count_mismatch";
+      receivedCount: number;
+      duplicates?: DuplicateParticipantPhone[];
+    } {
+  const parsedContacts = parseParticipantContacts(rawPayload);
+
+  if (parsedContacts.length === 0) {
+    return { ok: false, reason: "empty", receivedCount: 0 };
+  }
+
+  const validContacts: Array<{
+    displayName: string | null;
+    phone: string;
+    rawPhone: string;
+  }> = [];
+  const contactsByPhone = new Map<
+    string,
+    Array<{
+      displayName: string | null;
+      rawPhone: string;
+    }>
+  >();
+
+  for (const contact of parsedContacts) {
+    const uniquePhones = new Map<string, string>();
+
+    for (const phone of contact.phones) {
+      const normalizedPhone = normalizeWhatsAppPhone(phone);
+      if (!normalizedPhone) continue;
+      if (!uniquePhones.has(normalizedPhone)) {
+        uniquePhones.set(normalizedPhone, phone);
+      }
+    }
+
+    if (uniquePhones.size === 0) {
+      return {
+        ok: false,
+        reason: "missing_phone",
+        receivedCount: validContacts.length,
+      };
+    }
+
+    if (uniquePhones.size > 1) {
+      return {
+        ok: false,
+        reason: "multiple_phones",
+        receivedCount: validContacts.length,
+      };
+    }
+
+    const [[normalizedPhone, rawPhone]] = uniquePhones.entries();
+
+    const phoneContacts = contactsByPhone.get(normalizedPhone) ?? [];
+    phoneContacts.push({
+      displayName: contact.displayName,
+      rawPhone,
+    });
+    contactsByPhone.set(normalizedPhone, phoneContacts);
+    validContacts.push({
+      displayName: contact.displayName,
+      phone: normalizedPhone,
+      rawPhone,
+    });
+  }
+
+  const duplicates = [...contactsByPhone.entries()]
+    .filter(([, contacts]) => contacts.length > 1)
+    .map(([phone, contacts]) => ({
+      phone,
+      contacts: contacts.map((contact) => ({
+        displayName: contact.displayName,
+      })),
+    }));
+
+  if (duplicates.length > 0) {
+    return {
+      ok: false,
+      reason: "duplicate_phones",
+      receivedCount: validContacts.length,
+      duplicates,
+    };
+  }
+
+  if (validContacts.length !== expectedContactsCount) {
+    return {
+      ok: false,
+      reason: "count_mismatch",
+      receivedCount: validContacts.length,
+    };
+  }
+
+  return {
+    ok: true,
+    contacts: validContacts,
+    receivedCount: validContacts.length,
+  };
 }
 
 async function buildPaidTicketResendResult({
@@ -3597,7 +3938,7 @@ async function handlePaidTicketResendCommand({
   if (ticketsCount === 0) {
     return {
       reply:
-        "NÃƒÂ£o encontrei ingresso pago emitido para este telefone. Confira se o pagamento foi aprovado e se este ÃƒÂ© o mesmo WhatsApp usado na compra.",
+        "NÃƒÆ’Ã‚Â£o encontrei ingresso pago emitido para este telefone. Confira se o pagamento foi aprovado e se este ÃƒÆ’Ã‚Â© o mesmo WhatsApp usado na compra.",
       nextContext: resetBuyerReservationContext(baseContext),
     };
   }
@@ -3651,7 +3992,7 @@ async function handlePaidTicketResendSelection({
 
   if (!selected) {
     return {
-      reply: "NÃƒÂ£o encontrei essa opÃƒÂ§ÃƒÂ£o. Responda com um nÃƒÂºmero da lista.",
+      reply: "NÃƒÆ’Ã‚Â£o encontrei essa opÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o. Responda com um nÃƒÆ’Ã‚Âºmero da lista.",
       nextContext: baseContext,
     };
   }
@@ -3667,12 +4008,243 @@ async function handlePaidTicketResendSelection({
   if (!group) {
     return {
       reply:
-        "NÃƒÂ£o encontrei mais esse ingresso disponÃƒÂ­vel para reenvio. Confira com a equipe da Black House.",
+        "NÃƒÆ’Ã‚Â£o encontrei mais esse ingresso disponÃƒÆ’Ã‚Â­vel para reenvio. Confira com a equipe da Black House.",
       nextContext: resetBuyerReservationContext(baseContext),
     };
   }
 
   return buildPaidTicketResendResult({ baseContext, group });
+}
+
+async function handleTicketDeliverySelection({
+  baseContext,
+  text,
+  rawPayload,
+}: {
+  baseContext: TicketConversationState;
+  text: string;
+  rawPayload?: unknown;
+}): Promise<RouteTicketMessageOutput | null> {
+  if (
+    baseContext.state !== "ticket_delivery_selecting" &&
+    baseContext.state !== "ticket_delivery_contacts_waiting" &&
+    baseContext.state !== "ticket_delivery_contacts_validated"
+  ) {
+    return null;
+  }
+
+  const orderId = baseContext.ticketDelivery?.orderId;
+  const expectedContactsCount = baseContext.ticketDelivery?.expectedContactsCount;
+  if (!orderId) {
+    return {
+      reply:
+        "Nao encontrei o pedido desta entrega. Digite *AGAIN* para reenviar seus ingressos.",
+      nextContext: resetBuyerReservationContext(baseContext),
+    };
+  }
+
+  if (
+    typeof expectedContactsCount !== "number" ||
+    !Number.isInteger(expectedContactsCount) ||
+    expectedContactsCount <= 0
+  ) {
+    return {
+      reply:
+        "Nao encontrei a quantidade de ingressos desta compra. Digite *AGAIN* para reenviar seus ingressos.",
+      nextContext: resetBuyerReservationContext(baseContext),
+    };
+  }
+
+  if (baseContext.state === "ticket_delivery_contacts_validated") {
+    const validatedContacts = baseContext.ticketDelivery?.validatedContacts ?? [];
+    const normalizedText = normalizeIntentText(text);
+
+    if (normalizedText === "cancelar") {
+      return {
+        reply: formatParticipantContactsPrompt(expectedContactsCount),
+        nextContext: {
+          ...baseContext,
+          step: "ticket_delivery_contacts_waiting",
+          state: "ticket_delivery_contacts_waiting",
+          ticketDelivery: {
+            orderId,
+            expectedContactsCount,
+            requestedAt:
+              baseContext.ticketDelivery?.requestedAt ?? new Date().toISOString(),
+            mode: "participant_contacts",
+          },
+        },
+      };
+    }
+
+    if (normalizedText !== "confirmar") {
+      return {
+        reply: formatParticipantContactsConfirmation(validatedContacts),
+        nextContext: baseContext,
+      };
+    }
+
+    if (validatedContacts.length !== expectedContactsCount) {
+      return {
+        reply: formatParticipantContactsPrompt(expectedContactsCount),
+        nextContext: {
+          ...baseContext,
+          step: "ticket_delivery_contacts_waiting",
+          state: "ticket_delivery_contacts_waiting",
+          ticketDelivery: {
+            orderId,
+            expectedContactsCount,
+            requestedAt:
+              baseContext.ticketDelivery?.requestedAt ?? new Date().toISOString(),
+            mode: "participant_contacts",
+          },
+        },
+      };
+    }
+
+    const assignment = await assignParticipantContactsToOrderTickets({
+      orderId,
+      contacts: validatedContacts,
+    });
+
+    if (!assignment.ok) {
+      return {
+        reply:
+          "Nao consegui vincular os contatos aos ingressos agora. Digite *CONFIRMAR* novamente em alguns instantes.",
+        nextContext: baseContext,
+      };
+    }
+
+    return {
+      reply: PARTICIPANT_TICKET_REQUEST_INSTRUCTIONS,
+      suppressTitle: true,
+      nextContext: resetBuyerReservationContext({
+        ...baseContext,
+        ticketDelivery: {
+          orderId,
+          expectedContactsCount,
+          requestedAt:
+            baseContext.ticketDelivery?.requestedAt ?? new Date().toISOString(),
+          mode: "participant_contacts",
+        },
+      }),
+    };
+  }
+
+  if (baseContext.state === "ticket_delivery_contacts_waiting") {
+    if (rawPayload) {
+      const validation = validateParticipantContactsForTest({
+        rawPayload,
+        expectedContactsCount,
+      });
+
+      if (!validation.ok) {
+        if (validation.reason === "multiple_phones") {
+          return {
+            reply:
+              "Um dos contatos enviados tem mais de um numero. Envie contatos com apenas um numero cada.",
+            nextContext: baseContext,
+          };
+        }
+
+        if (validation.reason === "missing_phone") {
+          return {
+            reply:
+              "Um dos contatos enviados nao tem telefone. Envie contatos com um numero cada.",
+            nextContext: baseContext,
+          };
+        }
+
+        if (validation.reason === "duplicate_phones") {
+          return {
+            reply: formatDuplicateParticipantPhones(validation.duplicates ?? []),
+            nextContext: baseContext,
+          };
+        }
+
+        return {
+          reply: `A quantidade de contatos deve ser exatamente igual a quantidade de ingressos comprados.\nEsperados: ${expectedContactsCount}.\nRecebidos: ${validation.receivedCount}.`,
+          nextContext: baseContext,
+        };
+      }
+
+      return {
+        reply: formatParticipantContactsConfirmation(validation.contacts),
+        nextContext: {
+          ...baseContext,
+          step: "ticket_delivery_contacts_validated",
+          state: "ticket_delivery_contacts_validated",
+          ticketDelivery: {
+            orderId,
+            expectedContactsCount,
+            requestedAt:
+              baseContext.ticketDelivery?.requestedAt ?? new Date().toISOString(),
+            mode: "participant_contacts",
+            validatedContacts: validation.contacts,
+          },
+        },
+      };
+    }
+
+    return {
+      reply: formatParticipantContactsPrompt(expectedContactsCount),
+      nextContext: baseContext,
+    };
+  }
+
+  const option = text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
+
+  if (option === 1) {
+    const deliveryResult = await deliverTicketsForOrder(orderId);
+
+    if (!deliveryResult.ok) {
+      return {
+        reply:
+          "Nao consegui preparar seus ingressos agora. Digite *AGAIN* para tentar reenviar.",
+        nextContext: resetBuyerReservationContext(baseContext),
+      };
+    }
+
+    if (!deliveryResult.sent) {
+      return {
+        reply:
+          deliveryResult.reason === "delivery_in_progress"
+            ? "Seus ingressos ja estao sendo enviados neste WhatsApp."
+            : "Nao consegui enviar seus ingressos agora. Digite *AGAIN* para tentar reenviar.",
+        nextContext: resetBuyerReservationContext(baseContext),
+      };
+    }
+
+    return {
+      reply: "",
+      skipReply: true,
+      nextContext: resetBuyerReservationContext(baseContext),
+    };
+  }
+
+  if (option === 2) {
+    return {
+      reply: formatParticipantContactsPrompt(expectedContactsCount),
+      nextContext: {
+        ...baseContext,
+        step: "ticket_delivery_contacts_waiting",
+        state: "ticket_delivery_contacts_waiting",
+        ticketDelivery: {
+          orderId,
+          expectedContactsCount,
+          requestedAt:
+            baseContext.ticketDelivery?.requestedAt ?? new Date().toISOString(),
+          mode: "participant_contacts",
+        },
+      },
+    };
+  }
+
+  return {
+    reply:
+      "Escolha como deseja receber seus ingressos:\n\n1. Receber todos os ingressos neste WhatsApp.\n2. Cada participante receber o proprio ingresso.\n\nDigite *1* ou *2*.",
+    nextContext: baseContext,
+  };
 }
 
 function formatPublicFreeTicketFailureMessage(
@@ -3683,7 +4255,7 @@ function formatPublicFreeTicketFailureMessage(
   }
 
   if (result.reason === "free_ticket_limit_exceeded") {
-    return "*QUANTIDADE INVALIDA*\nPara ingresso gratuito, o nÃƒÂºmero mÃƒÂ¡ximo de ingressos por pedido sÃƒÂ£o 4. Digite novamente o nÃƒÂºmero de 1 a 4.";
+    return "*QUANTIDADE INVALIDA*\nPara ingresso gratuito, o nÃƒÆ’Ã‚Âºmero mÃƒÆ’Ã‚Â¡ximo de ingressos por pedido sÃƒÆ’Ã‚Â£o 4. Digite novamente o nÃƒÆ’Ã‚Âºmero de 1 a 4.";
   }
 
   if (
@@ -3746,7 +4318,7 @@ function withAdminNavigationHint(reply: string) {
   return [
     reply,
     "",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da Ã¡rea de admin.',
   ].join("\n");
 }
 
@@ -3953,8 +4525,8 @@ function renderGateAccessFilterMenu() {
     formatOptionLine(1, "ativos"),
     formatOptionLine(2, "pausados"),
     "",
-    "Responda com o nÃƒÂºmero da opÃƒÂ§ÃƒÂ£o.",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÂ¡rea de admin.',
+    "Responda com o nÃƒÆ’Ã‚Âºmero da opÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o.",
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
   ].join("\n");
 }
 
@@ -4016,7 +4588,7 @@ function renderGateAccessRevokeConfirm(access: {
     `> Evento: ${access.eventTitle ?? "Evento"}`,
     "",
     "Responda SIM para pausar este acesso de portaria.",
-    'Digite "Voltar" para voltar ou "Sair" para sair da ÃƒÂ¡rea de admin.',
+    'Digite "Voltar" para voltar ou "Sair" para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
   ].join("\n");
 }
 
@@ -4036,9 +4608,9 @@ function renderGateValidatorPhonePrompt() {
   return [
     "*DEFINIR TELEFONE PARA CHECK-IN*",
     "",
-    "> Digite o nÃƒÂºmero de telefone",
+    "> Digite o nÃƒÆ’Ã‚Âºmero de telefone",
     "",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÂ¡rea de admin.',
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
   ].join("\n");
 }
 
@@ -4048,7 +4620,7 @@ function renderGateValidatorPasswordPrompt() {
     "",
     "> Digite a senha para entrar no sistema",
     "",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÂ¡rea de admin.',
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
   ].join("\n");
 }
 
@@ -4079,7 +4651,7 @@ function buildGateValidatorRegisteredReply({
 
 function renderGateAccessSelection(accesses: AdminGateAccessListItem[]) {
   return [
-    "*VocÃƒÂª tem acesso de portaria para estes eventos:*",
+    "*VocÃƒÆ’Ã‚Âª tem acesso de portaria para estes eventos:*",
     "",
     ...accesses.map(
       (access, index) =>
@@ -4088,7 +4660,7 @@ function renderGateAccessSelection(accesses: AdminGateAccessListItem[]) {
         }),
     ),
     "",
-    "Responda com o nÃƒÂºmero do evento para continuar.",
+    "Responda com o nÃƒÆ’Ã‚Âºmero do evento para continuar.",
   ].join("\n");
 }
 
@@ -4096,7 +4668,7 @@ function renderGateAccessSelectionFromContext(
   accesses: NonNullable<TicketConversationState["gateAccess"]>["lastAccesses"] = [],
 ) {
   return [
-    "*VocÃƒÂª tem acesso de portaria para estes eventos:*",
+    "*VocÃƒÆ’Ã‚Âª tem acesso de portaria para estes eventos:*",
     "",
     ...accesses.map(
       (access) =>
@@ -4105,7 +4677,7 @@ function renderGateAccessSelectionFromContext(
         }),
     ),
     "",
-    "Responda com o nÃƒÂºmero do evento para continuar.",
+    "Responda com o nÃƒÆ’Ã‚Âºmero do evento para continuar.",
   ].join("\n");
 }
 
@@ -4127,16 +4699,16 @@ function renderGateAccessPassphrasePrompt(
 
 function renderAdminReportPeriodMenu() {
   return [
-    "*QUAL PERÍODO DO RELATÓRIO?*",
+    "*QUAL PERÃODO DO RELATÃ“RIO?*",
     "",
     formatOptionLine(1, "hoje"),
-    formatOptionLine(2, "últimos 7 dias"),
-    formatOptionLine(3, "últimos 30 dias"),
-    formatOptionLine(4, "todo o período"),
+    formatOptionLine(2, "Ãºltimos 7 dias"),
+    formatOptionLine(3, "Ãºltimos 30 dias"),
+    formatOptionLine(4, "todo o perÃ­odo"),
     formatOptionLine(5, "escolher datas"),
     "",
-    "Responda com o número da opção.",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
+    "Responda com o nÃºmero da opÃ§Ã£o.",
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da Ã¡rea de admin.',
   ].join("\n");
 }
 
@@ -4144,7 +4716,7 @@ function renderFixedGatePhonePrompt() {
   return [
     "*ADICIONAR PORTARIA FIXA*",
     "",
-    "> Digite o número de telefone da portaria fixa.",
+    "> Digite o nÃºmero de telefone da portaria fixa.",
     "",
     'Digite "Voltar" para voltar ou "Cancelar" para abandonar esta tela.',
   ].join("\n");
@@ -4154,9 +4726,9 @@ function renderFixedGateAdminPassphrasePrompt() {
   return [
     "*PALAVRA-CHAVE DA PORTARIA FIXA*",
     "",
-    "> Digite a palavra-chave fixa que o porteiro usará para entrar.",
+    "> Digite a palavra-chave fixa que o porteiro usarÃ¡ para entrar.",
     "",
-    "A palavra-chave será mostrada somente agora e armazenada apenas como hash.",
+    "A palavra-chave serÃ¡ mostrada somente agora e armazenada apenas como hash.",
     'Digite "Voltar" para voltar ou "Cancelar" para abandonar esta tela.',
   ].join("\n");
 }
@@ -4168,7 +4740,7 @@ function renderFixedGateRegisteredReply(phone: string, passphrase: string) {
     `> Telefone: ${phone}`,
     `> Palavra-chave fixa: ${passphrase}`,
     "",
-    "Sempre que esse telefone enviar *Portaria* para +55 15 99834-3191, o sistema pedirá a palavra-chave e mostrará os eventos do responsável pelo cadastro.",
+    "Sempre que esse telefone enviar *Portaria* para +55 15 99834-3191, o sistema pedirÃ¡ a palavra-chave e mostrarÃ¡ os eventos do responsÃ¡vel pelo cadastro.",
   ].join("\n");
 }
 
@@ -4196,14 +4768,14 @@ function renderFixedGateAccessesList(accesses: FixedGateAccessListItem[]) {
         )
       : ["Nenhuma portaria fixa ativa encontrada."]),
     ...(accesses.length
-      ? ["", "Digite o número da portaria fixa que deseja excluir."]
+      ? ["", "Digite o nÃºmero da portaria fixa que deseja excluir."]
       : []),
   ].join("\n");
 }
 
 function renderFixedGateDeleteConfirm(phone: string) {
   return [
-    "*CONFIRMAR EXCLUSÃO DA PORTARIA FIXA*",
+    "*CONFIRMAR EXCLUSÃƒO DA PORTARIA FIXA*",
     "",
     `> Telefone: ${maskGatePhone(phone)}`,
     "",
@@ -4229,7 +4801,7 @@ function renderFixedGateEventSelection(
       formatOptionLine(event.option, event.title, { preserveCase: true }),
     ),
     "",
-    "Responda com o número do evento para receber o link temporário.",
+    "Responda com o nÃºmero do evento para receber o link temporÃ¡rio.",
   ].join("\n");
 }
 
@@ -4254,13 +4826,13 @@ function parseAdminReportPeriodOption(input: string): AdminReportPeriod | "custo
     const from = addDays(today, -(days - 1));
 
     return {
-      label: `Últimos ${days} dias`,
+      label: `Ãšltimos ${days} dias`,
       from: makeZonedIsoDate(from.year, from.month - 1, from.day),
       to: endOfToday,
     };
   }
 
-  if (option === 4) return { label: "Todo o período" };
+  if (option === 4) return { label: "Todo o perÃ­odo" };
   if (option === 5) return "custom";
 
   return null;
@@ -4286,7 +4858,7 @@ function parseBrazilianDateOnly(value: string) {
 
 function parseAdminReportCustomPeriod(input: string): AdminReportPeriod | null {
   const parts = input
-    .split(/\s+(?:a|até|-)\s+/i)
+    .split(/\s+(?:a|atÃ©|-)\s+/i)
     .map((part) => part.trim())
     .filter(Boolean);
 
@@ -4312,14 +4884,14 @@ function parseAdminReportCustomPeriod(input: string): AdminReportPeriod | null {
 
 function parseAdminDivisionWeekPeriod(input: string): AdminReportPeriod | null {
   const normalized = normalizeAdminText(input);
-  const match = normalized.match(/^(?:semana\s+([1-5]|primeira|segunda|terceira|quarta|quinta|ultima|ÃƒÂºltima)|([1-5]|primeira|segunda|terceira|quarta|quinta|ultima|ÃƒÂºltima)\s+semana)\s+(?:de\s+)?([a-z]+)(?:\s+(\d{4}))?$/);
+  const match = normalized.match(/^(?:semana\s+([1-5]|primeira|segunda|terceira|quarta|quinta|ultima|ÃƒÆ’Ã‚Âºltima)|([1-5]|primeira|segunda|terceira|quarta|quinta|ultima|ÃƒÆ’Ã‚Âºltima)\s+semana)\s+(?:de\s+)?([a-z]+)(?:\s+(\d{4}))?$/);
   if (!match) return null;
 
   const monthByName: Record<string, number> = {
     janeiro: 0,
     fevereiro: 1,
     marco: 2,
-    "marÃƒÂ§o": 2,
+    "marÃƒÆ’Ã‚Â§o": 2,
     abril: 3,
     maio: 4,
     junho: 5,
@@ -4338,7 +4910,7 @@ function parseAdminDivisionWeekPeriod(input: string): AdminReportPeriod | null {
     quarta: 4,
     quinta: 5,
     ultima: -1,
-    ÃƒÂºltima: -1,
+    "ÃƒÆ’Ã‚Âºltima": -1,
   };
   const monthName = match[3];
   const month = monthByName[monthName];
@@ -4375,13 +4947,13 @@ function parseAdminDivisionWeekPeriod(input: string): AdminReportPeriod | null {
 
 function renderAdminUserTypePrompt() {
   return [
-    "*QUAL NÃƒÂVEL DE ACESSO?*",
+    "*QUAL NÃƒÆ’Ã‚ÂVEL DE ACESSO?*",
     "",
     formatOptionLine(1, "diretor"),
     formatOptionLine(2, "gerente"),
     formatOptionLine(3, "operador"),
     "",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÂ¡rea de admin.',
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
   ].join("\n");
 }
 
@@ -4389,7 +4961,7 @@ function renderAdminUserPhonePrompt() {
   return [
     "*QUAL TELEFONE DO ADMINISTRADOR?*",
     "",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÂ¡rea de admin.',
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
   ].join("\n");
 }
 
@@ -4399,21 +4971,21 @@ function renderAdminUserNamePrompt() {
     "",
     "Digite o nome ou responda PULAR.",
     "",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÂ¡rea de admin.',
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
   ].join("\n");
 }
 
 function renderAdminUserRolePrompt() {
-  return renderAdminUserTypePrompt().replace("*QUAL NÃƒÂVEL DE ACESSO?*", "*NOVO NÃƒÂVEL*");
+  return renderAdminUserTypePrompt().replace("*QUAL NÃƒÆ’Ã‚ÂVEL DE ACESSO?*", "*NOVO NÃƒÆ’Ã‚ÂVEL*");
 }
 
 function renderAdminUserPassphrasePrompt() {
   return [
     "*QUAL A PALAVRA-CHAVE DO ADMINISTRADOR?*",
     "",
-    "Digite a senha individual que este administrador usarÃƒÂ¡ para entrar.",
+    "Digite a senha individual que este administrador usarÃƒÆ’Ã‚Â¡ para entrar.",
     "",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÂ¡rea de admin.',
+    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
   ].join("\n");
 }
 
@@ -4429,7 +5001,7 @@ function renderAdminUsersList(users: AdminUserListItem[]) {
       `   Perfil: ${formatAdminRoleLabel(user.role)}`,
       `   Status: ${user.status === "active" ? "ativo" : "desativado"}`,
       `   Criado em: ${formatDateTime(user.createdAt)}`,
-      ...(user.lastLoginAt ? [`   ÃƒÅ¡ltimo login: ${formatDateTime(user.lastLoginAt)}`] : []),
+      ...(user.lastLoginAt ? [`   ÃƒÆ’Ã…Â¡ltimo login: ${formatDateTime(user.lastLoginAt)}`] : []),
     ].join("\n"),
   );
 
@@ -4468,9 +5040,9 @@ function renderBlockedAdminAuthList(blocked: AdminAuthBlockedListItem[]) {
       `> Telefone: ${maskAdminPhone(item.phone)}`,
       ...(item.role ? [`> Perfil: ${formatAdminRoleLabel(item.role)}`] : []),
       `> Tentativas: ${item.failedAttempts}`,
-      `> Bloqueio: ${item.hardLockedAt ? "atÃƒÂ© Diretor liberar" : "temporÃƒÂ¡rio"}`,
-      ...(item.lockedUntil ? [`> AtÃƒÂ©: ${formatDateTime(item.lockedUntil)}`] : []),
-      ...(item.lastFailedAt ? [`> ÃƒÅ¡ltima tentativa: ${formatDateTime(item.lastFailedAt)}`] : []),
+      `> Bloqueio: ${item.hardLockedAt ? "atÃƒÆ’Ã‚Â© Diretor liberar" : "temporÃƒÆ’Ã‚Â¡rio"}`,
+      ...(item.lockedUntil ? [`> AtÃƒÆ’Ã‚Â©: ${formatDateTime(item.lockedUntil)}`] : []),
+      ...(item.lastFailedAt ? [`> ÃƒÆ’Ã…Â¡ltima tentativa: ${formatDateTime(item.lastFailedAt)}`] : []),
     ].join("\n"),
   );
 
@@ -4537,14 +5109,14 @@ function renderAdminUserRoleConfirm({
   newRole: AdminRole;
 }) {
   return [
-    "*ALTERAR NÃƒÂVEL DE ADMINISTRADOR*",
+    "*ALTERAR NÃƒÆ’Ã‚ÂVEL DE ADMINISTRADOR*",
     "",
     `> Nome: ${name || "Sem nome"}`,
-    `> Telefone: ${phone ? maskAdminPhone(phone) : "nÃƒÂ£o informado"}`,
+    `> Telefone: ${phone ? maskAdminPhone(phone) : "nÃƒÆ’Ã‚Â£o informado"}`,
     ...(currentRole ? [`> Perfil atual: ${formatAdminRoleLabel(currentRole)}`] : []),
     `> Novo perfil: ${formatAdminRoleLabel(newRole)}`,
     "",
-    "Digite ALTERAR NÃƒÂVEL para confirmar.",
+    "Digite ALTERAR NÃƒÆ’Ã‚ÂVEL para confirmar.",
     'Digite "Cancelar" para abandonar esta tela.',
   ].join("\n");
 }
@@ -4575,7 +5147,7 @@ function renderAdminUserPassphraseConfirm({
     "*RENOVAR PALAVRA-CHAVE*",
     "",
     `> Nome: ${name || "Sem nome"}`,
-    `> Telefone: ${phone ? maskAdminPhone(phone) : "nÃƒÂ£o informado"}`,
+    `> Telefone: ${phone ? maskAdminPhone(phone) : "nÃƒÆ’Ã‚Â£o informado"}`,
     ...(role ? [`> Perfil: ${formatAdminRoleLabel(role)}`] : []),
     "> Nova palavra-chave: definida e protegida por hash",
     "",
@@ -4662,7 +5234,7 @@ function maskAdminPhone(value: string | null | undefined) {
   const digits = String(value ?? "").replace(/\D/g, "");
 
   if (digits.length < 4) {
-    return "nÃƒÂ£o informado";
+    return "nÃƒÆ’Ã‚Â£o informado";
   }
 
   return `****${digits.slice(-4)}`;
@@ -4680,7 +5252,7 @@ function formatAdminTicket(ticket: AdminTicketLookup, index?: number) {
     `   Local: ${venue}`,
     `   Setor: ${ticket.sectionName}`,
     `   Ingresso/Assento: ${ticket.seatCode}`,
-    `   CÃƒÂ³digo: ${ticket.ticketCode}`,
+    `   CÃƒÆ’Ã‚Â³digo: ${ticket.ticketCode}`,
     `   Status: ${formatTicketStatus(ticket.status)}`,
   ];
 
@@ -4721,7 +5293,7 @@ function formatAdminTicketForPhoneSearch(ticket: AdminTicketLookup) {
     `- ${ticket.eventTitle}`,
     `   Data: ${formatDateTime(ticket.startsAt)}`,
     `   Setor: ${ticket.sectionName}`,
-    `   CÃƒÂ³digo: ${ticket.ticketCode}`,
+    `   CÃƒÆ’Ã‚Â³digo: ${ticket.ticketCode}`,
   ];
 
   if (ticket.purchasedAt) {
@@ -4834,29 +5406,29 @@ function renderAdminReportEventCountPrompt() {
   return [
     "*VENDAS POR EVENTO*",
     "",
-    "Digite quantos eventos você quer ver (de 1 a 3).",
+    "Digite quantos eventos vocÃª quer ver (de 1 a 3).",
     "",
-    'Digite "VOLTAR" para voltar, "CANCELAR" para abandonar esta tela ou "SAIR" para sair da área de admin.',
+    'Digite "VOLTAR" para voltar, "CANCELAR" para abandonar esta tela ou "SAIR" para sair da Ã¡rea de admin.',
   ].join("\n");
 }
 
 function renderAdminReportEventSearchPrompt(requestedEventCount: 1 | 2 | 3) {
   const subject = requestedEventCount === 1
-    ? "nome do evento, o artista ou a data da apresentação"
-    : "nomes dos eventos, os artistas ou as datas das apresentações";
+    ? "nome do evento, o artista ou a data da apresentaÃ§Ã£o"
+    : "nomes dos eventos, os artistas ou as datas das apresentaÃ§Ãµes";
 
   return [
-    "*RELATÓRIO - BUSCAR EVENTOS*",
+    "*RELATÃ“RIO - BUSCAR EVENTOS*",
     "",
-    `Digite *${requestedEventCount}* ${subject}${requestedEventCount === 1 ? "." : ", separados por vírgula."}`,
+    `Digite *${requestedEventCount}* ${subject}${requestedEventCount === 1 ? "." : ", separados por vÃ­rgula."}`,
     "Exemplo:",
     requestedEventCount === 1
-      ? "> *Yuri Marçal*"
-      : `> *${["Yuri Marçal", "Xanda Dias", "Diogo Portugal"]
+      ? "> *Yuri MarÃ§al*"
+      : `> *${["Yuri MarÃ§al", "Xanda Dias", "Diogo Portugal"]
           .slice(0, requestedEventCount)
           .join(", ")}*`,
     "",
-    'Digite "VOLTAR" para voltar, "CANCELAR" para abandonar esta tela ou "SAIR" para sair da área de admin.',
+    'Digite "VOLTAR" para voltar, "CANCELAR" para abandonar esta tela ou "SAIR" para sair da Ã¡rea de admin.',
   ].join("\n");
 }
 
@@ -4880,12 +5452,12 @@ function renderAdminReportEventAmbiguityPrompt(input: {
 }) {
   const limitLabel = input.maximumSelection === 1
     ? "1 evento"
-    : `até ${input.maximumSelection} eventos`;
+    : `atÃ© ${input.maximumSelection} eventos`;
 
   return [
-    "*RELATÓRIO - ESCOLHA AS DATAS*",
+    "*RELATÃ“RIO - ESCOLHA AS DATAS*",
     "",
-    `Encontrei ${input.events.length} shows para *${input.term}*. Você pode escolher ${limitLabel}.`,
+    `Encontrei ${input.events.length} shows para *${input.term}*. VocÃª pode escolher ${limitLabel}.`,
     "",
     ...input.events.map((event) => [
       `${event.option}. *${event.title}*`,
@@ -4895,9 +5467,9 @@ function renderAdminReportEventAmbiguityPrompt(input: {
       `> Status: ${event.status}`,
     ].join("\n")),
     "",
-    input.maximumSelection > 1 ? "Digite *TODOS*, *3*, *2*, *1* ou os números desejados. Ex: 1, 3." : "Digite *1* para usar o último show ou o número da data desejada.",
+    input.maximumSelection > 1 ? "Digite *TODOS*, *3*, *2*, *1* ou os nÃºmeros desejados. Ex: 1, 3." : "Digite *1* para usar o Ãºltimo show ou o nÃºmero da data desejada.",
     "",
-    'Digite "VOLTAR" para voltar, "CANCELAR" para abandonar esta tela ou "SAIR" para sair da área de admin.',
+    'Digite "VOLTAR" para voltar, "CANCELAR" para abandonar esta tela ou "SAIR" para sair da Ã¡rea de admin.',
   ].join("\n");
 }
 
@@ -4954,7 +5526,7 @@ async function buildAdminReportEventSelect({
     }
 
     return {
-      reply: buildCourtesyEventsReply("RELATÓRIO - ESCOLHA O EVENTO", result.events),
+      reply: buildCourtesyEventsReply("RELATÃ“RIO - ESCOLHA O EVENTO", result.events),
       nextContext: withAdminReportsContext(baseContext, "admin_report_event_select", {
         reportType,
         lastEvents: result.events.map((event) => ({
@@ -5105,15 +5677,15 @@ function getInitialSectionsFromDraft(draft: Record<string, unknown>) {
 function renderInitialSectionsSummary(draft: Record<string, unknown>) {
   const sections = getInitialSectionsFromDraft(draft);
   if (!sections.length) {
-    return ["Estrutura de entradas: nÃƒÂ£o definida"];
+    return ["Estrutura de entradas: nÃƒÆ’Ã‚Â£o definida"];
   }
 
   return [
     `Estrutura: ${
       draft.entryModel === "single_general"
-        ? "entrada ÃƒÂºnica sem assento marcado"
+        ? "entrada ÃƒÆ’Ã‚Âºnica sem assento marcado"
         : draft.entryModel === "multiple_general"
-          ? "vÃƒÂ¡rios tipos/setores sem assento marcado"
+          ? "vÃƒÆ’Ã‚Â¡rios tipos/setores sem assento marcado"
           : "setores com assentos marcados"
     }`,
     ...sections.map((section) =>
@@ -5218,11 +5790,11 @@ function parseInitialOfferDefinition(value: string) {
 function inferTicketTypeFromLabel(label: string): AdminTicketType {
   const normalizedName = normalizeAdminText(label);
 
-  if (/\b(meia|estudante|senior|sÃƒÂªnior|idoso|pcd|professor|crianca|criancas|adolescente|adolescentes)\b/.test(normalizedName)) {
+  if (/\b(meia|estudante|senior|sÃƒÆ’Ã‚Âªnior|idoso|pcd|professor|crianca|criancas|adolescente|adolescentes)\b/.test(normalizedName)) {
     return "half";
   }
 
-  if (/\b(cortesia|gratis|grÃƒÂ¡tis|gratuito|free)\b/.test(normalizedName)) {
+  if (/\b(cortesia|gratis|grÃƒÆ’Ã‚Â¡tis|gratuito|free)\b/.test(normalizedName)) {
     return "free";
   }
 
@@ -5530,7 +6102,7 @@ function renderCreateEventSeatMapVisualPrompt(sectionName?: string) {
     `Deseja criar o mapa visual do setor${sectionName ? ` ${sectionName}` : ""}?`,
     "",
     formatOptionLine(1, "sim, criar mapa visual automaticamente"),
-    formatOptionLine(2, "nÃƒÂ£o, apenas cadastrar os assentos"),
+    formatOptionLine(2, "nÃƒÆ’Ã‚Â£o, apenas cadastrar os assentos"),
   ].join("\n");
 }
 
@@ -5555,7 +6127,7 @@ function renderAdminEventListReply({
 }) {
   const navigationLines = [
     "Responda com o",
-    `> Digite o nÃƒÂºmero do evento para ${actionLabel}`,
+    `> Digite o nÃƒÆ’Ã‚Âºmero do evento para ${actionLabel}`,
   ];
 
   if (!events.length) {
@@ -5574,11 +6146,11 @@ function renderAdminEventListReply({
       formatOptionLine(event.option, event.title, { preserveCase: true }),
       `   ${event.city}/${event.state}`,
       `   Status: ${event.status}`,
-      `   SessÃƒÂµes: ${event.sessionsCount}`,
-      `   PrÃƒÂ³xima: ${
+      `   SessÃƒÆ’Ã‚Âµes: ${event.sessionsCount}`,
+      `   PrÃƒÆ’Ã‚Â³xima: ${
         event.nextSessionStartsAt
           ? formatDateTime(event.nextSessionStartsAt)
-          : "sem sessÃƒÂ£o futura"
+          : "sem sessÃƒÆ’Ã‚Â£o futura"
       }`,
     ].join("\n"),
   );
@@ -5599,21 +6171,21 @@ function renderAdminEventDetails(event: AdminEventDetails) {
     `Status: ${event.status}`,
     `Foto: ${event.imageUrl ? "cadastrada" : "ausente"}`,
     `Cidade: ${event.city}/${event.state}`,
-    `Local: ${event.venueName ?? "nÃƒÂ£o definido"}`,
+    `Local: ${event.venueName ?? "nÃƒÆ’Ã‚Â£o definido"}`,
     "",
-    "SessÃƒÂµes:",
+    "SessÃƒÆ’Ã‚Âµes:",
     ...(event.sessions.length
       ? event.sessions.map(
           (session) => `- ${formatDateTime(session.startsAt)} - ${session.status}`,
         )
-      : ["nenhuma sessÃƒÂ£o cadastrada"]),
+      : ["nenhuma sessÃƒÆ’Ã‚Â£o cadastrada"]),
     "",
     "Setores:",
     ...(event.sections.length
       ? event.sections.map((section) => `- ${section.name}`)
       : ["nenhum setor cadastrado"]),
     "",
-    "*OPÃƒâ€¡Ãƒâ€¢ES:*",
+    "*OPÃƒÆ’Ã¢â‚¬Â¡ÃƒÆ’Ã¢â‚¬Â¢ES:*",
     formatOptionLine(1, "editar evento"),
     formatOptionLine(2, "setores e assentos"),
     formatOptionLine(3, "ativar/pausar evento"),
@@ -5653,45 +6225,45 @@ function renderAdminEventStatusMenu(event: AdminEventDetails) {
       ? actions.map((action) => formatOptionLine(action.option, action.label))
       : [
           event.status === "cancelled"
-            ? "Este evento estÃƒÂ¡ cancelado. ReativaÃƒÂ§ÃƒÂ£o nÃƒÂ£o estÃƒÂ¡ disponÃƒÂ­vel por aqui."
-            : "Este evento estÃƒÂ¡ finalizado. AlteraÃƒÂ§ÃƒÂ£o de publicaÃƒÂ§ÃƒÂ£o nÃƒÂ£o estÃƒÂ¡ disponÃƒÂ­vel por aqui.",
+            ? "Este evento estÃƒÆ’Ã‚Â¡ cancelado. ReativaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o estÃƒÆ’Ã‚Â¡ disponÃƒÆ’Ã‚Â­vel por aqui."
+            : "Este evento estÃƒÆ’Ã‚Â¡ finalizado. AlteraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de publicaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o estÃƒÆ’Ã‚Â¡ disponÃƒÆ’Ã‚Â­vel por aqui.",
         ]),
   ].join("\n"));
 }
 
 function renderCreateEventPrompt(field?: string) {
   const prompts: Record<string, string> = {
-    title: "Qual o nome/tÃƒÂ­tulo do evento?",
-    artistName: "Qual o artista ou atraÃƒÂ§ÃƒÂ£o principal?",
+    title: "Qual o nome/tÃƒÆ’Ã‚Â­tulo do evento?",
+    artistName: "Qual o artista ou atraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o principal?",
     city: "Em qual cidade?",
     state: "Qual UF? Ex: SP",
     venueName:
       "Qual o nome do local/teatro/arena?\n\nEscreva o nome ou responda 1 para ver os locais cadastrados.",
     imageUrl:
-      "Envie a foto do evento agora ou cole uma URL pÃƒÂºblica https://...\nPara salvar como rascunho sem foto, responda PULAR. Para publicar, a foto ÃƒÂ© obrigatÃƒÂ³ria.",
-    dateCount: "Quantas datas terÃƒÂ¡ este evento?\nEx: 3",
-    sessionsPerDate: "Quantas sessÃƒÂµes por data esse evento terÃƒÂ¡?",
+      "Envie a foto do evento agora ou cole uma URL pÃƒÆ’Ã‚Âºblica https://...\nPara salvar como rascunho sem foto, responda PULAR. Para publicar, a foto ÃƒÆ’Ã‚Â© obrigatÃƒÆ’Ã‚Â³ria.",
+    dateCount: "Quantas datas terÃƒÆ’Ã‚Â¡ este evento?\nEx: 3",
+    sessionsPerDate: "Quantas sessÃƒÆ’Ã‚Âµes por data esse evento terÃƒÆ’Ã‚Â¡?",
     sessionDateItem: "Qual a data do evento? Ex: 10/06/2026",
-    sessionTimeItem: "Qual o horÃƒÂ¡rio desta sessÃƒÂ£o? Ex: 20:00",
-    sessionItem: "Qual a data e horÃƒÂ¡rio da sessÃƒÂ£o? Ex: 10/06/2026 22:00",
+    sessionTimeItem: "Qual o horÃƒÆ’Ã‚Â¡rio desta sessÃƒÆ’Ã‚Â£o? Ex: 20:00",
+    sessionItem: "Qual a data e horÃƒÆ’Ã‚Â¡rio da sessÃƒÆ’Ã‚Â£o? Ex: 10/06/2026 22:00",
     description:
-      "Envie as informaÃƒÂ§ÃƒÂµes gerais do evento.\n\nEx: abertura dos portÃƒÂµes, classificaÃƒÂ§ÃƒÂ£o, observaÃƒÂ§ÃƒÂµes importantes.\nSe nÃƒÂ£o quiser adicionar agora, responda PULAR.",
+      "Envie as informaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes gerais do evento.\n\nEx: abertura dos portÃƒÆ’Ã‚Âµes, classificaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o, observaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes importantes.\nSe nÃƒÆ’Ã‚Â£o quiser adicionar agora, responda PULAR.",
     status:
       `Para finalizar, escolha como deseja salvar o evento.\n\n${formatOptionLine(1, "deixar como rascunho")}\n${formatOptionLine(2, "publicar")}`,
     entryModel:
       [
-        "Como serÃƒÂ£o as entradas/lugares?",
-        formatOptionLine(1, "entrada ÃƒÂºnica sem assento marcado"),
-        formatOptionLine(2, "vÃƒÂ¡rios setores/tipos sem assento marcado"),
+        "Como serÃƒÆ’Ã‚Â£o as entradas/lugares?",
+        formatOptionLine(1, "entrada ÃƒÆ’Ã‚Âºnica sem assento marcado"),
+        formatOptionLine(2, "vÃƒÆ’Ã‚Â¡rios setores/tipos sem assento marcado"),
         formatOptionLine(3, "setores com assentos marcados"),
       ].join("\n"),
     singleEntryDetails:
       "Envie a entrada com capacidade e valor.\nFormato: nome capacidade valor taxa opcional\nEx: Entrada Geral 500 120,00 12,00",
     entryCapacityMode:
-      `Como a carga de ingressos serÃƒÂ¡ controlada?\n\n${formatOptionLine(1, "carga total compartilhada entre todos os tipos de compra")}\n${formatOptionLine(2, "carga separada para cada tipo/setor")}`,
+      `Como a carga de ingressos serÃƒÆ’Ã‚Â¡ controlada?\n\n${formatOptionLine(1, "carga total compartilhada entre todos os tipos de compra")}\n${formatOptionLine(2, "carga separada para cada tipo/setor")}`,
     sharedEntryCapacity:
       "Qual a carga total compartilhada de ingressos?\nEx: 200",
-    entryCount: "Quantos tipos/setores de ingresso serÃƒÂ£o cadastrados agora?",
+    entryCount: "Quantos tipos/setores de ingresso serÃƒÆ’Ã‚Â£o cadastrados agora?",
     entryItem:
       "Envie o tipo/setor com capacidade e valor.\nFormato: nome capacidade valor taxa opcional\nEx: Pista 500 120,00 12,00",
     entrySeatItem: renderCreateEventSeatPrompt(),
@@ -5709,12 +6281,12 @@ function renderCreateEventSummary(draft: Record<string, unknown>) {
   return [
     "Confirme o novo evento:",
     "",
-    `TÃƒÂ­tulo: ${draft.title}`,
+    `TÃƒÆ’Ã‚Â­tulo: ${draft.title}`,
     `Cidade/UF: ${draft.city}/${draft.state}`,
     `Local: ${draft.venueName}`,
     `Foto: ${draft.imageUrl ? "cadastrada" : "ausente"}`,
-    `InformaÃƒÂ§ÃƒÂµes gerais: ${draft.description ? "cadastradas" : "ausentes"}`,
-    "SessÃƒÂµes:",
+    `InformaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes gerais: ${draft.description ? "cadastradas" : "ausentes"}`,
+    "SessÃƒÆ’Ã‚Âµes:",
     ...(sessionsStartsAt.length
       ? sessionsStartsAt.map(
           (startsAt, index) =>
@@ -5722,11 +6294,11 @@ function renderCreateEventSummary(draft: Record<string, unknown>) {
               preserveCase: true,
             }),
         )
-      : ["nenhuma sessÃƒÂ£o definida"]),
+      : ["nenhuma sessÃƒÆ’Ã‚Â£o definida"]),
     "",
     ...renderInitialSectionsSummary(draft),
     "",
-    "Responda CONFIRMAR para escolher rascunho/publicaÃƒÂ§ÃƒÂ£o ou CANCELAR para abandonar.",
+    "Responda CONFIRMAR para escolher rascunho/publicaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o ou CANCELAR para abandonar.",
   ].join("\n");
 }
 
@@ -5734,14 +6306,14 @@ function renderEditEventSummary(draft: Record<string, unknown>) {
   const field = String(draft.field ?? "");
   const eventTitle = String(draft.eventTitle ?? "").trim();
   const labelByField: Record<string, string> = {
-    title: "TÃƒÂ­tulo",
+    title: "TÃƒÆ’Ã‚Â­tulo",
     artist_name: "Artista",
     city: "Cidade",
     state: "Estado",
     starts_at: "Data/hora",
     venue: "Local",
     image_url: "Foto do evento",
-    description: "InformaÃƒÂ§ÃƒÂµes gerais",
+    description: "InformaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes gerais",
     status: "Status",
   };
   const value =
@@ -5766,14 +6338,14 @@ function renderEditEventSummary(draft: Record<string, unknown>) {
                       : "";
 
   return [
-    "Confirmar alteraÃƒÂ§ÃƒÂ£o do evento?",
+    "Confirmar alteraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o do evento?",
     ...(eventTitle ? [`Evento: ${eventTitle}`] : []),
     "",
     `Campo: ${labelByField[field] ?? field}`,
     `Novo valor: ${value}`,
     "",
     field === "status" && draft.status === "cancelled"
-      ? "Digite CANCELAR EVENTO para confirmar o cancelamento. NÃƒÂ£o haverÃƒÂ¡ exclusÃƒÂ£o fÃƒÂ­sica nem estorno automÃƒÂ¡tico."
+      ? "Digite CANCELAR EVENTO para confirmar o cancelamento. NÃƒÆ’Ã‚Â£o haverÃƒÆ’Ã‚Â¡ exclusÃƒÆ’Ã‚Â£o fÃƒÆ’Ã‚Â­sica nem estorno automÃƒÆ’Ã‚Â¡tico."
       : "Responda CONFIRMAR ou CANCELAR.",
   ].join("\n");
 }
@@ -5794,7 +6366,7 @@ function renderAdminEventEditMenu(eventTitle?: string) {
     formatOptionLine(8, "editar setores/lugares"),
     formatOptionLine(9, "editar carga"),
     formatOptionLine(10, "editar valores"),
-    formatOptionLine(11, "editar informaÃƒÂ§ÃƒÂµes gerais"),
+    formatOptionLine(11, "editar informaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes gerais"),
   ].join("\n"));
 }
 
@@ -5803,12 +6375,12 @@ function renderAdminEventDuplicateConfirmReply(event: AdminEventDetails) {
     "*DUPLICAR EVENTO*",
     "",
     `> Origem: ${event.title}`,
-    `> Novo nome: ${event.title} - CÃƒâ€œPIA`,
-    `> SessÃƒÂµes: ${event.sessions.length}`,
+    `> Novo nome: ${event.title} - CÃƒÆ’Ã¢â‚¬Å“PIA`,
+    `> SessÃƒÆ’Ã‚Âµes: ${event.sessions.length}`,
     `> Setores/lugares: ${event.sections.length}`,
     "",
-    "O evento duplicado serÃƒÂ¡ criado como rascunho.",
-    "Reservas, pedidos, pagamentos, tickets, cortesias e acessos de portaria nÃƒÂ£o serÃƒÂ£o duplicados.",
+    "O evento duplicado serÃƒÆ’Ã‚Â¡ criado como rascunho.",
+    "Reservas, pedidos, pagamentos, tickets, cortesias e acessos de portaria nÃƒÆ’Ã‚Â£o serÃƒÆ’Ã‚Â£o duplicados.",
     "",
     "Responda CONFIRMAR ou CANCELAR.",
   ].join("\n"));
@@ -5820,12 +6392,12 @@ function renderAdminEventPublishSelectReply(eventTitle?: string) {
       ? `*PUBLICAR EVENTO: ${eventTitle.toUpperCase()}*`
       : "*PUBLICAR EVENTO*",
     "",
-    "A ediÃƒÂ§ÃƒÂ£o foi salva.",
+    "A ediÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o foi salva.",
     "",
     formatOptionLine(1, "deixar como rascunho"),
     formatOptionLine(2, "publicar evento"),
     "",
-    "Responda com o nÃƒÂºmero da opÃƒÂ§ÃƒÂ£o.",
+    "Responda com o nÃƒÆ’Ã‚Âºmero da opÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o.",
   ].join("\n"));
 }
 
@@ -5963,7 +6535,7 @@ function parseWeekdaysFromAdminText(text: string) {
     seg: 1,
     "1": 1,
     terca: 2,
-    "terÃƒÂ§a": 2,
+    "terÃƒÆ’Ã‚Â§a": 2,
     ter: 2,
     "2": 2,
     quarta: 3,
@@ -5976,7 +6548,7 @@ function parseWeekdaysFromAdminText(text: string) {
     sex: 5,
     "5": 5,
     sabado: 6,
-    "sÃƒÂ¡bado": 6,
+    "sÃƒÆ’Ã‚Â¡bado": 6,
     sab: 6,
     "6": 6,
   };
@@ -6059,10 +6631,10 @@ function parseAdminOfferImageInput({
 function buildAdminOfferTimingPrompt() {
   return [
     "Quando enviar?",
-    "1. 3 minutos após a compra",
+    "1. 3 minutos apÃ³s a compra",
     "2. 15 minutos apos a compra",
-    "3. 2h após a compra",
-    "4. 24h após a compra",
+    "3. 2h apÃ³s a compra",
+    "4. 24h apÃ³s a compra",
   ].join("\n");
 }
 
@@ -6293,7 +6865,7 @@ async function showAdminEventDetails(
 
   if (!details.ok) {
     return {
-      reply: "NÃƒÂ£o encontrei esse evento.",
+      reply: "NÃƒÆ’Ã‚Â£o encontrei esse evento.",
       nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
     };
   }
@@ -6529,9 +7101,9 @@ async function handleAdminEventsFlow({
       if (numericOption) {
         return {
           reply: [
-            "NÃƒÂ£o encontrei essa opÃƒÂ§ÃƒÂ£o na lista atual.",
+            "NÃƒÆ’Ã‚Â£o encontrei essa opÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o na lista atual.",
             "",
-            "Digite o nÃƒÂºmero do evento que aparece na lista ou \"Voltar\".",
+            "Digite o nÃƒÆ’Ã‚Âºmero do evento que aparece na lista ou \"Voltar\".",
           ].join("\n"),
           nextContext: withAdminEventsContext(baseContext, "admin_events_list", adminEvents),
         };
@@ -6551,7 +7123,7 @@ async function handleAdminEventsFlow({
 
       if (!details.ok) {
         return {
-          reply: "NÃƒÂ£o encontrei esse evento.",
+          reply: "NÃƒÆ’Ã‚Â£o encontrei esse evento.",
           nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
         };
       }
@@ -6569,7 +7141,7 @@ async function handleAdminEventsFlow({
 
       if (!details.ok) {
         return {
-          reply: "NÃƒÂ£o encontrei esse evento.",
+          reply: "NÃƒÆ’Ã‚Â£o encontrei esse evento.",
           nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
         };
       }
@@ -6587,7 +7159,7 @@ async function handleAdminEventsFlow({
 
       if (!details.ok) {
         return {
-          reply: "NÃƒÂ£o encontrei esse evento.",
+          reply: "NÃƒÆ’Ã‚Â£o encontrei esse evento.",
           nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
         };
       }
@@ -6630,7 +7202,7 @@ async function handleAdminEventsFlow({
       return {
         reply: details.ok
           ? renderAdminEventDuplicateConfirmReply(details.event)
-          : "NÃƒÂ£o encontrei esse evento.",
+          : "NÃƒÆ’Ã‚Â£o encontrei esse evento.",
         nextContext: withAdminEventsContext(
           baseContext,
           "admin_event_duplicate_confirm",
@@ -6643,7 +7215,7 @@ async function handleAdminEventsFlow({
 
     if (!details.ok) {
       return {
-        reply: "NÃƒÂ£o encontrei esse evento.",
+        reply: "NÃƒÆ’Ã‚Â£o encontrei esse evento.",
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
       };
     }
@@ -6663,7 +7235,7 @@ async function handleAdminEventsFlow({
 
     if (!duplicateResult.ok) {
       return {
-        reply: "NÃƒÂ£o consegui duplicar esse evento agora.",
+        reply: "NÃƒÆ’Ã‚Â£o consegui duplicar esse evento agora.",
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
       };
     }
@@ -6680,7 +7252,7 @@ async function handleAdminEventsFlow({
         duplicatedDetails.ok
           ? `> Novo evento: ${duplicatedDetails.event.title}`
           : "> Novo evento criado como rascunho",
-        `> SessÃƒÂµes copiadas: ${duplicateResult.sessionsCount}`,
+        `> SessÃƒÆ’Ã‚Âµes copiadas: ${duplicateResult.sessionsCount}`,
         `> Setores copiados: ${duplicateResult.createdSectionsCount}`,
         `> Assentos/unidades copiados: ${duplicateResult.createdSeatsCount}`,
         `> Valores copiados: ${duplicateResult.createdPricesCount}`,
@@ -6722,7 +7294,7 @@ async function handleAdminEventsFlow({
 
       if (!details.ok) {
         return {
-          reply: "NÃƒÂ£o encontrei esse evento.",
+          reply: "NÃƒÆ’Ã‚Â£o encontrei esse evento.",
           nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
         };
       }
@@ -6752,7 +7324,7 @@ async function handleAdminEventsFlow({
 
     if (isAbortText(text)) {
       return {
-        reply: ["CriaÃƒÂ§ÃƒÂ£o de evento cancelada.", "", renderAdminEventsMenu()].join("\n"),
+        reply: ["CriaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de evento cancelada.", "", renderAdminEventsMenu()].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
       };
     }
@@ -6818,7 +7390,7 @@ async function handleAdminEventsFlow({
       const state = text.trim().toUpperCase();
       if (!/^[A-Z]{2}$/.test(state)) {
         return {
-          reply: "UF invÃƒÂ¡lida. Envie com 2 letras. Ex: SP",
+          reply: "UF invÃƒÆ’Ã‚Â¡lida. Envie com 2 letras. Ex: SP",
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
           }),
@@ -6846,7 +7418,7 @@ async function handleAdminEventsFlow({
 
         if (!venuesResult.ok) {
           return {
-            reply: "NÃƒÂ£o consegui listar os locais cadastrados agora. Escreva o nome do local.",
+            reply: "NÃƒÆ’Ã‚Â£o consegui listar os locais cadastrados agora. Escreva o nome do local.",
             nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
               draft,
             }),
@@ -6868,7 +7440,7 @@ async function handleAdminEventsFlow({
                 )
               : ["Nenhum local cadastrado para essa cidade/UF."]),
             "",
-            "Responda com o nÃƒÂºmero do local ou escreva o nome de um novo local.",
+            "Responda com o nÃƒÆ’Ã‚Âºmero do local ou escreva o nome de um novo local.",
           ].join("\n"),
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft: {
@@ -6895,7 +7467,7 @@ async function handleAdminEventsFlow({
 
       if (!Number.isInteger(datesCount) || !datesCount || datesCount < 1 || datesCount > 30) {
         return {
-          reply: "Quantidade invÃƒÂ¡lida. Envie o nÃƒÂºmero de datas, de 1 a 30.",
+          reply: "Quantidade invÃƒÆ’Ã‚Â¡lida. Envie o nÃƒÆ’Ã‚Âºmero de datas, de 1 a 30.",
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
           }),
@@ -6923,7 +7495,7 @@ async function handleAdminEventsFlow({
         datesCount < 1
       ) {
         return {
-          reply: "Quantidade invÃƒÂ¡lida. Envie o nÃƒÂºmero de sessÃƒÂµes por data, de 1 a 10.",
+          reply: "Quantidade invÃƒÆ’Ã‚Â¡lida. Envie o nÃƒÆ’Ã‚Âºmero de sessÃƒÆ’Ã‚Âµes por data, de 1 a 10.",
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
           }),
@@ -6933,7 +7505,7 @@ async function handleAdminEventsFlow({
       const totalSessions = datesCount * sessionsPerDate;
       if (totalSessions > 60) {
         return {
-          reply: "Quantidade muito alta. Crie atÃƒÂ© 60 sessÃƒÂµes por evento.",
+          reply: "Quantidade muito alta. Crie atÃƒÆ’Ã‚Â© 60 sessÃƒÆ’Ã‚Âµes por evento.",
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
           }),
@@ -6964,7 +7536,7 @@ async function handleAdminEventsFlow({
 
       if (!date || !dateAtEndOfDay || dateAtEndOfDay.getTime() <= Date.now()) {
         return {
-          reply: "Data invÃƒÂ¡lida ou no passado. Envie no formato 10/06/2026.",
+          reply: "Data invÃƒÆ’Ã‚Â¡lida ou no passado. Envie no formato 10/06/2026.",
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
           }),
@@ -6982,7 +7554,7 @@ async function handleAdminEventsFlow({
         reply: [
           `Data cadastrada: ${text.trim()}.`,
           "",
-          `HorÃƒÂ¡rio 1 de ${Number(draft.sessionsPerDate ?? 1)} da data ${currentDateIndex}.`,
+          `HorÃƒÆ’Ã‚Â¡rio 1 de ${Number(draft.sessionsPerDate ?? 1)} da data ${currentDateIndex}.`,
           "",
           renderCreateEventPrompt("sessionTimeItem"),
         ].join("\n"),
@@ -6997,7 +7569,7 @@ async function handleAdminEventsFlow({
 
       if (!startsAt || new Date(startsAt).getTime() <= Date.now()) {
         return {
-          reply: "HorÃƒÂ¡rio invÃƒÂ¡lido ou no passado. Envie no formato 20:00.",
+          reply: "HorÃƒÆ’Ã‚Â¡rio invÃƒÆ’Ã‚Â¡lido ou no passado. Envie no formato 20:00.",
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
           }),
@@ -7017,9 +7589,9 @@ async function handleAdminEventsFlow({
 
         return {
           reply: [
-            `SessÃƒÂ£o cadastrada: ${formatDateTime(startsAt)}.`,
+            `SessÃƒÆ’Ã‚Â£o cadastrada: ${formatDateTime(startsAt)}.`,
             "",
-            `HorÃƒÂ¡rio ${currentTimeIndex + 1} de ${sessionsPerDate} da data ${currentDateIndex}.`,
+            `HorÃƒÆ’Ã‚Â¡rio ${currentTimeIndex + 1} de ${sessionsPerDate} da data ${currentDateIndex}.`,
             "",
             renderCreateEventPrompt("sessionTimeItem"),
           ].join("\n"),
@@ -7037,7 +7609,7 @@ async function handleAdminEventsFlow({
 
         return {
           reply: [
-            `SessÃƒÂ£o cadastrada: ${formatDateTime(startsAt)}.`,
+            `SessÃƒÆ’Ã‚Â£o cadastrada: ${formatDateTime(startsAt)}.`,
             "",
             `Data ${currentDateIndex + 1} de ${datesCount}.`,
             "",
@@ -7066,7 +7638,7 @@ async function handleAdminEventsFlow({
         if (!imageUrl) {
           return {
             reply:
-              "NÃƒÂ£o consegui identificar a foto. Envie uma imagem pelo WhatsApp ou cole uma URL pÃƒÂºblica https://...",
+              "NÃƒÆ’Ã‚Â£o consegui identificar a foto. Envie uma imagem pelo WhatsApp ou cole uma URL pÃƒÆ’Ã‚Âºblica https://...",
             nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
               draft,
             }),
@@ -7099,7 +7671,7 @@ async function handleAdminEventsFlow({
         draft.field = "imageUrl";
         return {
           reply:
-            "Para publicar, a foto do evento ÃƒÂ© obrigatÃƒÂ³ria. Envie a foto agora ou cole uma URL pÃƒÂºblica https://...",
+            "Para publicar, a foto do evento ÃƒÆ’Ã‚Â© obrigatÃƒÆ’Ã‚Â³ria. Envie a foto agora ou cole uma URL pÃƒÆ’Ã‚Âºblica https://...",
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
           }),
@@ -7194,7 +7766,7 @@ async function handleAdminEventsFlow({
       const capacity = Number(text.trim().replace(/\D/g, ""));
       if (!Number.isInteger(capacity) || capacity < 1 || capacity > 5000) {
         return {
-          reply: "Carga invÃƒÂ¡lida. Envie um nÃƒÂºmero de 1 a 5000.",
+          reply: "Carga invÃƒÆ’Ã‚Â¡lida. Envie um nÃƒÆ’Ã‚Âºmero de 1 a 5000.",
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
           }),
@@ -7235,7 +7807,7 @@ async function handleAdminEventsFlow({
       });
       if (!section) {
         return {
-          reply: "NÃƒÂ£o consegui entender. Envie assim: Entrada Geral 500 120,00 12,00",
+          reply: "NÃƒÆ’Ã‚Â£o consegui entender. Envie assim: Entrada Geral 500 120,00 12,00",
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
           }),
@@ -7253,7 +7825,7 @@ async function handleAdminEventsFlow({
       const count = Number(text.trim().replace(/\D/g, ""));
       if (!Number.isInteger(count) || count < 1 || count > 20) {
         return {
-          reply: "Quantidade invÃƒÂ¡lida. Envie um nÃƒÂºmero de 1 a 20.",
+          reply: "Quantidade invÃƒÆ’Ã‚Â¡lida. Envie um nÃƒÆ’Ã‚Âºmero de 1 a 20.",
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
           }),
@@ -7295,7 +7867,7 @@ async function handleAdminEventsFlow({
 
       if (!offer) {
         return {
-          reply: "NÃƒÂ£o consegui entender. Envie assim: Meia entrada professor 60,00 0",
+          reply: "NÃƒÆ’Ã‚Â£o consegui entender. Envie assim: Meia entrada professor 60,00 0",
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
           }),
@@ -7379,7 +7951,7 @@ async function handleAdminEventsFlow({
       ) {
         return {
           reply: [
-            "NÃƒÂ£o consegui entender os assentos.",
+            "NÃƒÆ’Ã‚Â£o consegui entender os assentos.",
             ...(seatLayout.invalidLines?.length
               ? [
                   "",
@@ -7483,7 +8055,7 @@ async function handleAdminEventsFlow({
 
       if (!section || totalCapacity > 5000) {
         return {
-          reply: "NÃƒÂ£o consegui entender. Envie assim: Pista 500 120,00 12,00",
+          reply: "NÃƒÆ’Ã‚Â£o consegui entender. Envie assim: Pista 500 120,00 12,00",
           nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
             draft,
           }),
@@ -7529,7 +8101,7 @@ async function handleAdminEventsFlow({
       };
     } else if (field === "description") {
       const normalized = normalizeAdminText(text);
-      draft.description = ["pular", "sem", "nenhum", "nao", "nÃƒÂ£o"].includes(normalized)
+      draft.description = ["pular", "sem", "nenhum", "nao", "nÃƒÆ’Ã‚Â£o"].includes(normalized)
         ? null
         : text.trim();
     } else {
@@ -7579,7 +8151,7 @@ async function handleAdminEventsFlow({
 
     if (isAbortText(text)) {
       return {
-        reply: ["CriaÃƒÂ§ÃƒÂ£o de evento cancelada.", "", renderAdminEventsMenu()].join("\n"),
+        reply: ["CriaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de evento cancelada.", "", renderAdminEventsMenu()].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
       };
     }
@@ -7613,8 +8185,8 @@ async function handleAdminEventsFlow({
       return {
         reply:
           initialSections.length === 0
-              ? "Antes de confirmar, defina a estrutura de entradas/lugares. Comece a criaÃƒÂ§ÃƒÂ£o novamente."
-              : "Os dados do evento ficaram incompletos ou invÃƒÂ¡lidos. Comece a criaÃƒÂ§ÃƒÂ£o novamente.",
+              ? "Antes de confirmar, defina a estrutura de entradas/lugares. Comece a criaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o novamente."
+              : "Os dados do evento ficaram incompletos ou invÃƒÆ’Ã‚Â¡lidos. Comece a criaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o novamente.",
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
       };
     }
@@ -7637,7 +8209,7 @@ async function handleAdminEventsFlow({
 
     if (isAbortText(text)) {
       return {
-        reply: ["CriaÃƒÂ§ÃƒÂ£o de evento cancelada.", "", renderAdminEventsMenu()].join("\n"),
+        reply: ["CriaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de evento cancelada.", "", renderAdminEventsMenu()].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
       };
     }
@@ -7668,7 +8240,7 @@ async function handleAdminEventsFlow({
       nextDraft.returnToCreateStatus = true;
       return {
         reply:
-          "Para publicar, a foto do evento ÃƒÂ© obrigatÃƒÂ³ria. Envie a foto agora ou cole uma URL pÃƒÂºblica https://...",
+          "Para publicar, a foto do evento ÃƒÆ’Ã‚Â© obrigatÃƒÆ’Ã‚Â³ria. Envie a foto agora ou cole uma URL pÃƒÆ’Ã‚Âºblica https://...",
         nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
           draft: nextDraft,
         }),
@@ -7690,8 +8262,8 @@ async function handleAdminEventsFlow({
       return {
         reply:
           initialSections.length === 0
-            ? "Antes de confirmar, defina a estrutura de entradas/lugares. Comece a criaÃƒÂ§ÃƒÂ£o novamente."
-            : "Os dados do evento ficaram incompletos ou invÃƒÂ¡lidos. Comece a criaÃƒÂ§ÃƒÂ£o novamente.",
+            ? "Antes de confirmar, defina a estrutura de entradas/lugares. Comece a criaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o novamente."
+            : "Os dados do evento ficaram incompletos ou invÃƒÆ’Ã‚Â¡lidos. Comece a criaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o novamente.",
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
       };
     }
@@ -7721,8 +8293,8 @@ async function handleAdminEventsFlow({
     if (!result.ok) {
       return {
         reply: result.partialEventCreated
-          ? "O evento foi salvo como rascunho, mas nÃƒÂ£o consegui concluir toda a estrutura. Revise o evento antes de publicar."
-          : "NÃƒÂ£o consegui criar o evento agora. Verifique os dados e tente novamente.",
+          ? "O evento foi salvo como rascunho, mas nÃƒÆ’Ã‚Â£o consegui concluir toda a estrutura. Revise o evento antes de publicar."
+          : "NÃƒÆ’Ã‚Â£o consegui criar o evento agora. Verifique os dados e tente novamente.",
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
       };
     }
@@ -7730,7 +8302,7 @@ async function handleAdminEventsFlow({
     return {
       reply: [
         "Evento criado.",
-        `SessÃƒÂµes criadas: ${result.sessionsCount}`,
+        `SessÃƒÆ’Ã‚Âµes criadas: ${result.sessionsCount}`,
         `Setores/entradas criados: ${result.createdSectionsCount}`,
         `Assentos/unidades criados: ${result.createdSeatsCount}`,
         `Valores de venda criados: ${result.createdPricesCount}`,
@@ -7776,12 +8348,12 @@ async function handleAdminEventsFlow({
             ? await renderSectionsList(eventId, scope, undefined, {
                 selectable: true,
               })
-            : "NÃƒÂ£o encontrei esse evento.",
+            : "NÃƒÆ’Ã‚Â£o encontrei esse evento.",
           "",
-          "Envie: nÃƒÂºmero do setor | nova carga.",
+          "Envie: nÃƒÆ’Ã‚Âºmero do setor | nova carga.",
           "Ex: 1 | 500",
           "",
-          "A reduÃƒÂ§ÃƒÂ£o sÃƒÂ³ bloqueia unidades disponÃƒÂ­veis. Vendidos e reservados nÃƒÂ£o sÃƒÂ£o alterados.",
+          "A reduÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o sÃƒÆ’Ã‚Â³ bloqueia unidades disponÃƒÆ’Ã‚Â­veis. Vendidos e reservados nÃƒÆ’Ã‚Â£o sÃƒÆ’Ã‚Â£o alterados.",
         ].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_capacity_collecting", {
           selectedEventId: eventId,
@@ -7802,7 +8374,7 @@ async function handleAdminEventsFlow({
 
       return {
         reply: [
-          details.ok ? "SessÃƒÂµes cadastradas:" : "SessÃƒÂµes cadastradas:",
+          details.ok ? "SessÃƒÆ’Ã‚Âµes cadastradas:" : "SessÃƒÆ’Ã‚Âµes cadastradas:",
           "",
           details.ok && details.event.sessions.length
             ? details.event.sessions
@@ -7815,9 +8387,9 @@ async function handleAdminEventsFlow({
                     ),
                 )
                 .join("\n")
-            : "Nenhuma sessÃƒÂ£o cadastrada.",
+            : "Nenhuma sessÃƒÆ’Ã‚Â£o cadastrada.",
           "",
-          "Envie: nÃƒÂºmero da sessÃƒÂ£o | nova data/hora",
+          "Envie: nÃƒÆ’Ã‚Âºmero da sessÃƒÆ’Ã‚Â£o | nova data/hora",
           "Ex: 1 | 10/06/2026 22:00",
         ].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_edit_collecting", {
@@ -7836,9 +8408,9 @@ async function handleAdminEventsFlow({
           : field === "venue"
             ? "Envie o novo nome do local."
             : field === "image_url"
-              ? "Envie a nova foto do evento ou cole uma URL pÃƒÂºblica https://..."
+              ? "Envie a nova foto do evento ou cole uma URL pÃƒÆ’Ã‚Âºblica https://..."
               : field === "description"
-                  ? "Envie as informaÃƒÂ§ÃƒÂµes gerais do evento."
+                  ? "Envie as informaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes gerais do evento."
                   : "Envie o novo valor.",
       nextContext: withAdminEventsContext(baseContext, "admin_event_edit_collecting", {
         ...adminEvents,
@@ -7873,7 +8445,7 @@ async function handleAdminEventsFlow({
     if (field === "city") {
       if (!text.trim()) {
         return {
-          reply: "Cidade invÃƒÂ¡lida. Envie novamente.",
+          reply: "Cidade invÃƒÆ’Ã‚Â¡lida. Envie novamente.",
           nextContext: withAdminEventsContext(baseContext, "admin_event_edit_collecting", adminEvents),
         };
       }
@@ -7882,7 +8454,7 @@ async function handleAdminEventsFlow({
       const state = text.trim().toUpperCase();
       if (!/^[A-Z]{2}$/.test(state)) {
         return {
-          reply: "UF invÃƒÂ¡lida. Envie com 2 letras. Ex: SP",
+          reply: "UF invÃƒÆ’Ã‚Â¡lida. Envie com 2 letras. Ex: SP",
           nextContext: withAdminEventsContext(baseContext, "admin_event_edit_collecting", adminEvents),
         };
       }
@@ -7899,19 +8471,19 @@ async function handleAdminEventsFlow({
       const status = normalizeAdminText(text);
       if (!isEventStatus(status)) {
         return {
-          reply: "Status invÃƒÂ¡lido. Use draft, published, cancelled ou finished.",
+          reply: "Status invÃƒÆ’Ã‚Â¡lido. Use draft, published, cancelled ou finished.",
           nextContext: withAdminEventsContext(baseContext, "admin_event_edit_collecting", adminEvents),
         };
       }
       value = { field, status };
     } else if (field === "image_url") {
-      if (["pular", "remover", "sem", "nenhum", "nao", "nÃƒÂ£o"].includes(normalizeAdminText(text))) {
+      if (["pular", "remover", "sem", "nenhum", "nao", "nÃƒÆ’Ã‚Â£o"].includes(normalizeAdminText(text))) {
         value = { field, imageUrl: null };
       } else {
       const imageUrl = normalizeEventImageUrl(mediaUrl ?? text);
       if (!imageUrl) {
         return {
-          reply: "Foto invÃƒÂ¡lida. Envie uma imagem pelo WhatsApp ou cole uma URL pÃƒÂºblica https://...",
+          reply: "Foto invÃƒÆ’Ã‚Â¡lida. Envie uma imagem pelo WhatsApp ou cole uma URL pÃƒÆ’Ã‚Âºblica https://...",
           nextContext: withAdminEventsContext(baseContext, "admin_event_edit_collecting", adminEvents),
         };
       }
@@ -7932,7 +8504,7 @@ async function handleAdminEventsFlow({
       if (!session) {
         return {
           reply: [
-            "SessÃƒÂ£o invÃƒÂ¡lida. Envie: nÃƒÂºmero da sessÃƒÂ£o | nova data/hora",
+            "SessÃƒÆ’Ã‚Â£o invÃƒÆ’Ã‚Â¡lida. Envie: nÃƒÆ’Ã‚Âºmero da sessÃƒÆ’Ã‚Â£o | nova data/hora",
             "Ex: 1 | 10/06/2026 22:00",
           ].join("\n"),
           nextContext: withAdminEventsContext(baseContext, "admin_event_edit_collecting", adminEvents),
@@ -7941,7 +8513,7 @@ async function handleAdminEventsFlow({
 
       if (!startsAt || new Date(startsAt).getTime() <= Date.now()) {
         return {
-          reply: "Data invÃƒÂ¡lida ou no passado. Envie no formato 10/06/2026 22:00.",
+          reply: "Data invÃƒÆ’Ã‚Â¡lida ou no passado. Envie no formato 10/06/2026 22:00.",
           nextContext: withAdminEventsContext(baseContext, "admin_event_edit_collecting", adminEvents),
         };
       }
@@ -7950,7 +8522,7 @@ async function handleAdminEventsFlow({
 
       if (!usage.ok) {
         return {
-          reply: "NÃƒÂ£o consegui verificar reservas/ingressos dessa data agora.",
+          reply: "NÃƒÆ’Ã‚Â£o consegui verificar reservas/ingressos dessa data agora.",
           nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", adminEvents),
         };
       }
@@ -7958,8 +8530,8 @@ async function handleAdminEventsFlow({
       if (usage.hasUsage) {
         return {
           reply: [
-            "Essa data jÃƒÂ¡ tem reservas ou ingressos vinculados.",
-            "Para evitar quebrar ingressos emitidos, a alteraÃƒÂ§ÃƒÂ£o de data/hora estÃƒÂ¡ bloqueada neste fluxo.",
+            "Essa data jÃƒÆ’Ã‚Â¡ tem reservas ou ingressos vinculados.",
+            "Para evitar quebrar ingressos emitidos, a alteraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de data/hora estÃƒÆ’Ã‚Â¡ bloqueada neste fluxo.",
           ].join("\n"),
           nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", adminEvents),
         };
@@ -8064,7 +8636,7 @@ async function handleAdminEventsFlow({
 
         if (!venue.ok) {
           return {
-            reply: "NÃƒÂ£o consegui preparar esse local agora.",
+            reply: "NÃƒÆ’Ã‚Â£o consegui preparar esse local agora.",
             nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
               selectedEventId: eventId,
             }),
@@ -8115,7 +8687,7 @@ async function handleAdminEventsFlow({
 
         if (!result.ok) {
           return {
-            reply: "NÃƒÂ£o consegui salvar a nova data/hora.",
+            reply: "NÃƒÆ’Ã‚Â£o consegui salvar a nova data/hora.",
             nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
               selectedEventId: eventId,
             }),
@@ -8141,7 +8713,7 @@ async function handleAdminEventsFlow({
 
     if (!values) {
       return {
-        reply: "Os dados da alteraÃƒÂ§ÃƒÂ£o ficaram invÃƒÂ¡lidos. Comece a ediÃƒÂ§ÃƒÂ£o novamente.",
+        reply: "Os dados da alteraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o ficaram invÃƒÆ’Ã‚Â¡lidos. Comece a ediÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o novamente.",
         nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
           selectedEventId: eventId,
         }),
@@ -8158,7 +8730,7 @@ async function handleAdminEventsFlow({
     const result = await updateAdminEvent(eventId, values);
     if (!result.ok) {
       return {
-        reply: "NÃƒÂ£o consegui salvar a alteraÃƒÂ§ÃƒÂ£o.",
+        reply: "NÃƒÆ’Ã‚Â£o consegui salvar a alteraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o.",
         nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
           selectedEventId: eventId,
         }),
@@ -8217,7 +8789,7 @@ async function handleAdminEventsFlow({
 
     if (!details.ok) {
       return {
-        reply: "NÃƒÂ£o encontrei esse evento.",
+        reply: "NÃƒÆ’Ã‚Â£o encontrei esse evento.",
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
       };
     }
@@ -8240,7 +8812,7 @@ async function handleAdminEventsFlow({
     ) {
       return {
         reply:
-          "Antes de publicar, cadastre setores/assentos e valores disponÃƒÂ­veis para venda.",
+          "Antes de publicar, cadastre setores/assentos e valores disponÃƒÆ’Ã‚Â­veis para venda.",
         nextContext: withAdminEventsContext(
           baseContext,
           "admin_event_edit_publish_select",
@@ -8270,7 +8842,7 @@ async function handleAdminEventsFlow({
             : "EVENTO SALVO COMO RASCUNHO!",
         )
       : {
-          reply: "NÃƒÂ£o consegui alterar o status do evento.",
+          reply: "NÃƒÆ’Ã‚Â£o consegui alterar o status do evento.",
           nextContext: withAdminEventsContext(
             baseContext,
             "admin_event_edit_publish_select",
@@ -8288,7 +8860,7 @@ async function handleAdminEventsFlow({
 
     if (!details.ok) {
       return {
-        reply: "NÃƒÂ£o encontrei esse evento.",
+        reply: "NÃƒÆ’Ã‚Â£o encontrei esse evento.",
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
       };
     }
@@ -8325,7 +8897,7 @@ async function handleAdminEventsFlow({
     return {
       reply:
         targetStatus === "cancelled"
-          ? "Digite CANCELAR EVENTO para confirmar o cancelamento. NÃƒÂ£o haverÃƒÂ¡ exclusÃƒÂ£o fÃƒÂ­sica nem estorno automÃƒÂ¡tico."
+          ? "Digite CANCELAR EVENTO para confirmar o cancelamento. NÃƒÆ’Ã‚Â£o haverÃƒÆ’Ã‚Â¡ exclusÃƒÆ’Ã‚Â£o fÃƒÆ’Ã‚Â­sica nem estorno automÃƒÆ’Ã‚Â¡tico."
           : targetStatus === "draft"
             ? "Responda CONFIRMAR para pausar o evento."
           : "Responda CONFIRMAR para ativar o evento.",
@@ -8349,7 +8921,7 @@ async function handleAdminEventsFlow({
     }
     if (!confirmed || !isEventStatus(String(status))) {
       return {
-        reply: "ConfirmaÃƒÂ§ÃƒÂ£o invÃƒÂ¡lida. OperaÃƒÂ§ÃƒÂ£o cancelada por seguranÃƒÂ§a.",
+        reply: "ConfirmaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o invÃƒÆ’Ã‚Â¡lida. OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o cancelada por seguranÃƒÆ’Ã‚Â§a.",
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
       };
     }
@@ -8370,7 +8942,7 @@ async function handleAdminEventsFlow({
           status === "cancelled" ? "EVENTO CANCELADO!" : undefined,
         )
       : {
-          reply: "NÃƒÂ£o consegui alterar o status.",
+          reply: "NÃƒÆ’Ã‚Â£o consegui alterar o status.",
           nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
         };
   }
@@ -8387,7 +8959,7 @@ async function showAdminEventSessionsMenu(
 
   if (!details.ok) {
     return {
-      reply: "NÃƒÂ£o encontrei esse evento.",
+      reply: "NÃƒÆ’Ã‚Â£o encontrei esse evento.",
       nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
     };
   }
@@ -8404,11 +8976,11 @@ function renderAdminSessionsMenu(eventTitle: string) {
   return withAdminNavigationHint([
     `*DATAS DO EVENTO - ${eventTitle.toUpperCase()}*`,
     "",
-    formatOptionLine(1, "listar sessÃƒÂµes"),
-    formatOptionLine(2, "criar sessÃƒÂ£o"),
-    formatOptionLine(3, "editar data/hora de sessÃƒÂ£o"),
-    formatOptionLine(4, "pausar/abrir vendas da sessÃƒÂ£o"),
-    formatOptionLine(5, "cancelar sessÃƒÂ£o"),
+    formatOptionLine(1, "listar sessÃƒÆ’Ã‚Âµes"),
+    formatOptionLine(2, "criar sessÃƒÆ’Ã‚Â£o"),
+    formatOptionLine(3, "editar data/hora de sessÃƒÆ’Ã‚Â£o"),
+    formatOptionLine(4, "pausar/abrir vendas da sessÃƒÆ’Ã‚Â£o"),
+    formatOptionLine(5, "cancelar sessÃƒÆ’Ã‚Â£o"),
   ].join("\n"));
 }
 
@@ -8421,7 +8993,7 @@ async function showAdminEventSectionsMenu(
 
   if (!details.ok) {
     return {
-      reply: "NÃƒÂ£o encontrei esse evento.",
+      reply: "NÃƒÆ’Ã‚Â£o encontrei esse evento.",
       nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
     };
   }
@@ -8443,7 +9015,7 @@ function renderAdminSectionsMenu(eventTitle: string) {
     formatOptionLine(3, "editar setor"),
     formatOptionLine(4, "cadastrar assentos em lote"),
     formatOptionLine(5, "bloquear/desbloquear assentos"),
-    formatOptionLine(6, "criar assentos da sessÃƒÂ£o"),
+    formatOptionLine(6, "criar assentos da sessÃƒÆ’Ã‚Â£o"),
   ].join("\n"));
 }
 
@@ -8456,7 +9028,7 @@ async function showAdminEventPricesMenu(
 
   if (!details.ok) {
     return {
-      reply: "NÃƒÂ£o encontrei esse evento.",
+      reply: "NÃƒÆ’Ã‚Â£o encontrei esse evento.",
       nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
     };
   }
@@ -8484,11 +9056,11 @@ async function renderSessionsList(
   { selectable = false }: { selectable?: boolean } = {},
 ) {
   const details = await getScopedAdminEventDetails(eventId, scope);
-  if (!details.ok) return "NÃƒÂ£o encontrei esse evento.";
+  if (!details.ok) return "NÃƒÆ’Ã‚Â£o encontrei esse evento.";
   const counts = await getAdminSessionCatalogCounts(details.event.sessions);
 
   return [
-    `SessÃƒÂµes de ${details.event.title}:`,
+    `SessÃƒÆ’Ã‚Âµes de ${details.event.title}:`,
     "",
     ...(details.event.sessions.length
         ? details.event.sessions.map(
@@ -8501,13 +9073,13 @@ async function renderSessionsList(
                     { preserveCase: true },
                   )
                 : `- ${formatDateTime(session.startsAt)} - ${session.status}`,
-              `   Local: ${session.venueName ?? details.event.venueName ?? "nÃƒÂ£o definido"}`,
+              `   Local: ${session.venueName ?? details.event.venueName ?? "nÃƒÆ’Ã‚Â£o definido"}`,
               counts.ok
-                ? `   Setores: ${counts.getSectionsCount(session.venueId)} | PreÃƒÂ§os: ${counts.getPricesCount(session.sessionId)}`
-                : "   Setores/preÃƒÂ§os: nÃƒÂ£o consegui calcular agora",
+                ? `   Setores: ${counts.getSectionsCount(session.venueId)} | PreÃƒÆ’Ã‚Â§os: ${counts.getPricesCount(session.sessionId)}`
+                : "   Setores/preÃƒÆ’Ã‚Â§os: nÃƒÆ’Ã‚Â£o consegui calcular agora",
             ].join("\n"),
         )
-      : ["Nenhuma sessÃƒÂ£o cadastrada."]),
+      : ["Nenhuma sessÃƒÆ’Ã‚Â£o cadastrada."]),
   ].join("\n");
 }
 
@@ -8518,9 +9090,9 @@ async function renderSectionsList(
   { selectable = false }: { selectable?: boolean } = {},
 ) {
   const details = await getScopedAdminEventDetails(eventId, scope);
-  if (!details.ok || !details.event.venueId) return "NÃƒÂ£o encontrei venue para esse evento.";
+  if (!details.ok || !details.event.venueId) return "NÃƒÆ’Ã‚Â£o encontrei venue para esse evento.";
   const result = await listAdminSections(details.event.venueId, sessionId);
-  if (!result.ok) return "NÃƒÂ£o consegui listar setores.";
+  if (!result.ok) return "NÃƒÆ’Ã‚Â£o consegui listar setores.";
 
   return [
     `Setores de ${details.event.venueName ?? details.event.title}:`,
@@ -8533,11 +9105,11 @@ async function renderSectionsList(
                 ? formatOptionLine(index + 1, section.name, { preserveCase: true })
                 : `- ${section.name}`,
               `   slug: ${section.slug}`,
-              `   capacidade: ${section.capacity ?? "nÃƒÂ£o definida"}`,
-              `   assento marcado: ${section.hasNumberedSeats ? "sim" : "nÃƒÂ£o"}`,
+              `   capacidade: ${section.capacity ?? "nÃƒÆ’Ã‚Â£o definida"}`,
+              `   assento marcado: ${section.hasNumberedSeats ? "sim" : "nÃƒÆ’Ã‚Â£o"}`,
               `   status: ${section.status}`,
               `   assentos estruturais: ${section.seatsCount}`,
-              `   assentos da sessÃƒÂ£o: ${section.sessionSeatsCount}`,
+              `   assentos da sessÃƒÆ’Ã‚Â£o: ${section.sessionSeatsCount}`,
             ].join("\n"),
         )
       : ["Nenhum setor cadastrado."]),
@@ -8549,12 +9121,12 @@ async function renderCapacityShortcutSectionsList(
   scope: AdminEventScope,
 ) {
   const details = await getScopedAdminEventDetails(eventId, scope);
-  if (!details.ok) return "NÃƒÂ£o encontrei setores para esse evento.";
+  if (!details.ok) return "NÃƒÆ’Ã‚Â£o encontrei setores para esse evento.";
 
   return details.event.sections.length
     ? details.event.sections
         .map((section, index) =>
-          `> ${formatOptionLine(index + 1, section.name, { preserveCase: true })} - *capacidade: ${section.capacity ?? "nÃƒÂ£o definida"}*`,
+          `> ${formatOptionLine(index + 1, section.name, { preserveCase: true })} - *capacidade: ${section.capacity ?? "nÃƒÆ’Ã‚Â£o definida"}*`,
         )
         .join("\n")
     : "Nenhum setor cadastrado.";
@@ -8562,9 +9134,9 @@ async function renderCapacityShortcutSectionsList(
 
 async function getAdminPriceListForEvent(eventId: string, scope: AdminEventScope) {
   const details = await getScopedAdminEventDetails(eventId, scope);
-  if (!details.ok) return { ok: false as const, reply: "NÃƒÂ£o encontrei esse evento." };
+  if (!details.ok) return { ok: false as const, reply: "NÃƒÆ’Ã‚Â£o encontrei esse evento." };
   if (!details.event.sessions.length) {
-    return { ok: false as const, reply: "Esse evento ainda nÃƒÂ£o tem sessÃƒÂµes." };
+    return { ok: false as const, reply: "Esse evento ainda nÃƒÆ’Ã‚Â£o tem sessÃƒÆ’Ã‚Âµes." };
   }
   const priceGroups = await Promise.all(
     details.event.sessions.map(async (session) => {
@@ -8573,7 +9145,7 @@ async function getAdminPriceListForEvent(eventId: string, scope: AdminEventScope
     }),
   );
   const failed = priceGroups.find((group) => !group.result.ok);
-  if (failed) return { ok: false as const, reply: "NÃƒÂ£o consegui listar preÃƒÂ§os." };
+  if (failed) return { ok: false as const, reply: "NÃƒÆ’Ã‚Â£o consegui listar preÃƒÆ’Ã‚Â§os." };
   let option = 1;
   const prices = priceGroups.flatMap(({ session, result }) =>
     (result.ok ? result.prices : []).map((price) => {
@@ -8614,12 +9186,12 @@ async function getAdminPriceListForEvent(eventId: string, scope: AdminEventScope
         ? prices.map((price) =>
             [
               `- ${price.label}`,
-              `   SessÃƒÂ£o: ${formatDateTime(price.sessionStartsAt)}`,
+              `   SessÃƒÆ’Ã‚Â£o: ${formatDateTime(price.sessionStartsAt)}`,
               `   Setor: ${price.sectionName}`,
               `   Valor: ${formatPriceWithOptionalFee(price.priceCents, price.feeCents)}`,
             ].join("\n"),
           )
-        : ["Nenhum preÃƒÂ§o cadastrado."]),
+        : ["Nenhum preÃƒÆ’Ã‚Â§o cadastrado."]),
     ].join("\n"),
   };
 }
@@ -8739,7 +9311,7 @@ async function handleAdminEventOperationalSubmenus({
     if (numericOption === 2) {
       return {
         reply:
-          "Envie data/hora e status da nova sessÃƒÂ£o. Ex: 10/06/2026 22:00 | sales_open\nStatus inicial permitido: scheduled ou sales_open.",
+          "Envie data/hora e status da nova sessÃƒÆ’Ã‚Â£o. Ex: 10/06/2026 22:00 | sales_open\nStatus inicial permitido: scheduled ou sales_open.",
         nextContext: withAdminEventsContext(baseContext, "admin_event_session_create_collecting", adminEvents),
       };
     }
@@ -8748,7 +9320,7 @@ async function handleAdminEventOperationalSubmenus({
         reply: [
           await renderSessionsList(eventId, scope, { selectable: true }),
           "",
-          "Envie: nÃƒÂºmero da sessÃƒÂ£o | nova data/hora. Ex: 1 | 10/06/2026 22:30",
+          "Envie: nÃƒÆ’Ã‚Âºmero da sessÃƒÆ’Ã‚Â£o | nova data/hora. Ex: 1 | 10/06/2026 22:30",
         ].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_session_edit_collecting", {
           ...adminEvents,
@@ -8761,9 +9333,9 @@ async function handleAdminEventOperationalSubmenus({
         reply: [
           await renderSessionsList(eventId, scope, { selectable: true }),
           "",
-          "Envie: nÃƒÂºmero da sessÃƒÂ£o | status. Ex: 1 | sales_open",
+          "Envie: nÃƒÆ’Ã‚Âºmero da sessÃƒÆ’Ã‚Â£o | status. Ex: 1 | sales_open",
           "Status: scheduled, sales_open ou sales_closed.",
-          "Para cancelar, use a opÃƒÂ§ÃƒÂ£o Cancelar sessÃƒÂ£o.",
+          "Para cancelar, use a opÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o Cancelar sessÃƒÆ’Ã‚Â£o.",
         ].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_session_edit_collecting", {
           ...adminEvents,
@@ -8776,7 +9348,7 @@ async function handleAdminEventOperationalSubmenus({
         reply: [
           await renderSessionsList(eventId, scope, { selectable: true }),
           "",
-          "Envie o nÃƒÂºmero da sessÃƒÂ£o que deseja cancelar.",
+          "Envie o nÃƒÆ’Ã‚Âºmero da sessÃƒÆ’Ã‚Â£o que deseja cancelar.",
         ].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_session_edit_collecting", {
           ...adminEvents,
@@ -8816,8 +9388,8 @@ async function handleAdminEventOperationalSubmenus({
       });
       return {
         reply: result.ok
-          ? "SessÃƒÂ£o criada. Agora configure setores/assentos para essa sessÃƒÂ£o."
-          : "NÃƒÂ£o consegui criar a sessÃƒÂ£o.",
+          ? "SessÃƒÆ’Ã‚Â£o criada. Agora configure setores/assentos para essa sessÃƒÆ’Ã‚Â£o."
+          : "NÃƒÆ’Ã‚Â£o consegui criar a sessÃƒÆ’Ã‚Â£o.",
         nextContext: withAdminEventsContext(baseContext, "admin_event_sessions_menu", {
           selectedEventId: eventId,
         }),
@@ -8835,13 +9407,13 @@ async function handleAdminEventOperationalSubmenus({
       !["scheduled", "sales_open"].includes(statusText)
     ) {
       return {
-        reply: "Dados invÃƒÂ¡lidos. Use: 10/06/2026 22:00 | sales_open ou scheduled.",
+        reply: "Dados invÃƒÆ’Ã‚Â¡lidos. Use: 10/06/2026 22:00 | sales_open ou scheduled.",
         nextContext: withAdminEventsContext(baseContext, "admin_event_session_create_collecting", adminEvents),
       };
     }
     return {
       reply: [
-        "Confirmar nova sessÃƒÂ£o?",
+        "Confirmar nova sessÃƒÆ’Ã‚Â£o?",
         `Data: ${formatDateTime(startsAt)}`,
         `Status: ${statusText}`,
         "",
@@ -8888,7 +9460,7 @@ async function handleAdminEventOperationalSubmenus({
       });
 
       return {
-        reply: result.ok ? "SessÃƒÂ£o atualizada." : "NÃƒÂ£o consegui atualizar a sessÃƒÂ£o.",
+        reply: result.ok ? "SessÃƒÆ’Ã‚Â£o atualizada." : "NÃƒÆ’Ã‚Â£o consegui atualizar a sessÃƒÆ’Ã‚Â£o.",
         nextContext: withAdminEventsContext(baseContext, "admin_event_sessions_menu", {
           selectedEventId: eventId,
         }),
@@ -8899,7 +9471,7 @@ async function handleAdminEventOperationalSubmenus({
       if (isCancelText(text)) return showAdminEventSessionsMenu(baseContext, scope, eventId);
       if (normalizeAdminText(text) !== "cancelar sessao") {
         return {
-          reply: "Digite CANCELAR SESSÃƒÆ’O para confirmar ou CANCELAR para abandonar.",
+          reply: "Digite CANCELAR SESSÃƒÆ’Ã†â€™O para confirmar ou CANCELAR para abandonar.",
           nextContext: withAdminEventsContext(
             baseContext,
             "admin_event_session_edit_collecting",
@@ -8920,8 +9492,8 @@ async function handleAdminEventOperationalSubmenus({
 
       return {
         reply: result.ok
-          ? "SessÃƒÂ£o cancelada. Nenhum ticket, pagamento ou reserva foi apagado."
-          : "NÃƒÂ£o consegui cancelar a sessÃƒÂ£o.",
+          ? "SessÃƒÆ’Ã‚Â£o cancelada. Nenhum ticket, pagamento ou reserva foi apagado."
+          : "NÃƒÆ’Ã‚Â£o consegui cancelar a sessÃƒÆ’Ã‚Â£o.",
         nextContext: withAdminEventsContext(baseContext, "admin_event_sessions_menu", {
           selectedEventId: eventId,
         }),
@@ -8932,7 +9504,7 @@ async function handleAdminEventOperationalSubmenus({
       const session = selectSessionByOption(details.event, text);
       if (!session) {
         return {
-          reply: "SessÃƒÂ£o invÃƒÂ¡lida. Envie o nÃƒÂºmero da sessÃƒÂ£o.",
+          reply: "SessÃƒÆ’Ã‚Â£o invÃƒÆ’Ã‚Â¡lida. Envie o nÃƒÆ’Ã‚Âºmero da sessÃƒÆ’Ã‚Â£o.",
           nextContext: withAdminEventsContext(
             baseContext,
             "admin_event_session_edit_collecting",
@@ -8943,10 +9515,10 @@ async function handleAdminEventOperationalSubmenus({
 
       return {
         reply: [
-          `Cancelar sessÃƒÂ£o ${formatDateTime(session.startsAt)}?`,
-          "NÃƒÂ£o haverÃƒÂ¡ exclusÃƒÂ£o fÃƒÂ­sica nem estorno automÃƒÂ¡tico neste passo.",
+          `Cancelar sessÃƒÆ’Ã‚Â£o ${formatDateTime(session.startsAt)}?`,
+          "NÃƒÆ’Ã‚Â£o haverÃƒÆ’Ã‚Â¡ exclusÃƒÆ’Ã‚Â£o fÃƒÆ’Ã‚Â­sica nem estorno automÃƒÆ’Ã‚Â¡tico neste passo.",
           "",
-          "Digite CANCELAR SESSÃƒÆ’O para confirmar.",
+          "Digite CANCELAR SESSÃƒÆ’Ã†â€™O para confirmar.",
         ].join("\n"),
         nextContext: withAdminEventsContext(
           baseContext,
@@ -8965,7 +9537,7 @@ async function handleAdminEventOperationalSubmenus({
 
     if (!session || !valueRaw) {
       return {
-        reply: "Dados invÃƒÂ¡lidos. Envie no formato indicado.",
+        reply: "Dados invÃƒÆ’Ã‚Â¡lidos. Envie no formato indicado.",
         nextContext: withAdminEventsContext(
           baseContext,
           "admin_event_session_edit_collecting",
@@ -8978,7 +9550,7 @@ async function handleAdminEventOperationalSubmenus({
       const startsAt = parseBrazilianDateTime(valueRaw);
       if (!startsAt || new Date(startsAt).getTime() <= Date.now()) {
         return {
-          reply: "Data invÃƒÂ¡lida ou no passado. Use: 10/06/2026 22:30",
+          reply: "Data invÃƒÆ’Ã‚Â¡lida ou no passado. Use: 10/06/2026 22:30",
           nextContext: withAdminEventsContext(
             baseContext,
             "admin_event_session_edit_collecting",
@@ -8989,7 +9561,7 @@ async function handleAdminEventOperationalSubmenus({
       const usage = await getAdminSessionUsage(session.sessionId);
       if (!usage.ok) {
         return {
-          reply: "NÃƒÂ£o consegui verificar reservas/ingressos dessa sessÃƒÂ£o agora.",
+          reply: "NÃƒÆ’Ã‚Â£o consegui verificar reservas/ingressos dessa sessÃƒÆ’Ã‚Â£o agora.",
           nextContext: withAdminEventsContext(
             baseContext,
             "admin_event_session_edit_collecting",
@@ -9000,10 +9572,10 @@ async function handleAdminEventOperationalSubmenus({
       if (usage.hasUsage) {
         return {
           reply: [
-            "Essa sessÃƒÂ£o jÃƒÂ¡ tem reservas ou ingressos vinculados.",
-            "Para evitar quebrar ingressos emitidos, a alteraÃƒÂ§ÃƒÂ£o de data/hora estÃƒÂ¡ bloqueada neste fluxo.",
+            "Essa sessÃƒÆ’Ã‚Â£o jÃƒÆ’Ã‚Â¡ tem reservas ou ingressos vinculados.",
+            "Para evitar quebrar ingressos emitidos, a alteraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de data/hora estÃƒÆ’Ã‚Â¡ bloqueada neste fluxo.",
             "",
-            "Ajuste operacional manual deve ser tratado em um passo especÃƒÂ­fico.",
+            "Ajuste operacional manual deve ser tratado em um passo especÃƒÆ’Ã‚Â­fico.",
           ].join("\n"),
           nextContext: withAdminEventsContext(baseContext, "admin_event_sessions_menu", {
             selectedEventId: eventId,
@@ -9013,7 +9585,7 @@ async function handleAdminEventOperationalSubmenus({
 
       return {
         reply: [
-          "Confirmar alteraÃƒÂ§ÃƒÂ£o da sessÃƒÂ£o?",
+          "Confirmar alteraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o da sessÃƒÆ’Ã‚Â£o?",
           `De: ${formatDateTime(session.startsAt)}`,
           `Para: ${formatDateTime(startsAt)}`,
           "",
@@ -9035,7 +9607,7 @@ async function handleAdminEventOperationalSubmenus({
     if (!["scheduled", "sales_open", "sales_closed"].includes(status)) {
       return {
         reply:
-          "Status invÃƒÂ¡lido. Use scheduled, sales_open ou sales_closed. Para cancelar, use a opÃƒÂ§ÃƒÂ£o Cancelar sessÃƒÂ£o.",
+          "Status invÃƒÆ’Ã‚Â¡lido. Use scheduled, sales_open ou sales_closed. Para cancelar, use a opÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o Cancelar sessÃƒÆ’Ã‚Â£o.",
         nextContext: withAdminEventsContext(
           baseContext,
           "admin_event_session_edit_collecting",
@@ -9046,8 +9618,8 @@ async function handleAdminEventOperationalSubmenus({
 
     return {
       reply: [
-        "Confirmar alteraÃƒÂ§ÃƒÂ£o de status da sessÃƒÂ£o?",
-        `SessÃƒÂ£o: ${formatDateTime(session.startsAt)}`,
+        "Confirmar alteraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de status da sessÃƒÆ’Ã‚Â£o?",
+        `SessÃƒÆ’Ã‚Â£o: ${formatDateTime(session.startsAt)}`,
         `Status atual: ${session.status}`,
         `Novo status: ${status}`,
         "",
@@ -9074,7 +9646,7 @@ async function handleAdminEventOperationalSubmenus({
     }
     if (numericOption === 2) {
       return {
-        reply: "Envie: Nome do setor | capacidade | numerado sim/nÃƒÂ£o. Ex: Pista Premium | 500 | sim",
+        reply: "Envie: Nome do setor | capacidade | numerado sim/nÃƒÆ’Ã‚Â£o. Ex: Pista Premium | 500 | sim",
         nextContext: withAdminEventsContext(baseContext, "admin_event_section_create_collecting", adminEvents),
       };
     }
@@ -9085,7 +9657,7 @@ async function handleAdminEventOperationalSubmenus({
             selectable: true,
           }),
           "",
-          "Envie: nÃƒÂºmero do setor | nome | capacidade | status | numerado sim/nÃƒÂ£o.",
+          "Envie: nÃƒÆ’Ã‚Âºmero do setor | nome | capacidade | status | numerado sim/nÃƒÆ’Ã‚Â£o.",
           "Ex: 1 | Pista Premium | 500 | active | sim",
         ].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_section_create_collecting", {
@@ -9097,10 +9669,10 @@ async function handleAdminEventOperationalSubmenus({
     if (numericOption === 4) {
       return {
         reply: [
-          "Envie: nÃƒÂºmero do setor | fileiras/assentos.",
+          "Envie: nÃƒÆ’Ã‚Âºmero do setor | fileiras/assentos.",
           "Ex: 1 | A 10 assentos 1 a 10",
           "Ex: 1 | A 10 assentos 10 a 1",
-          "VocÃƒÂª pode enviar vÃƒÂ¡rias linhas:",
+          "VocÃƒÆ’Ã‚Âª pode enviar vÃƒÆ’Ã‚Â¡rias linhas:",
           "1 | A 10 assentos 1 a 10",
           "B 15 assentos 11 a 25",
           "C 20 assentos 26 a 45",
@@ -9115,7 +9687,7 @@ async function handleAdminEventOperationalSubmenus({
             selectable: true,
           }),
           "",
-          "Envie: nÃƒÂºmero do setor | status | assentos.",
+          "Envie: nÃƒÆ’Ã‚Âºmero do setor | status | assentos.",
           "Ex: 1 | blocked | A01,A02 ou 1 | active | A01,A02",
         ].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_seats_create_collecting", {
@@ -9126,7 +9698,7 @@ async function handleAdminEventOperationalSubmenus({
     }
     if (numericOption === 6) {
       return {
-        reply: "Envie: nÃƒÂºmero da sessÃƒÂ£o | nÃƒÂºmero do setor ou todos. Ex: 1 | todos",
+        reply: "Envie: nÃƒÆ’Ã‚Âºmero da sessÃƒÆ’Ã‚Â£o | nÃƒÆ’Ã‚Âºmero do setor ou todos. Ex: 1 | todos",
         nextContext: withAdminEventsContext(baseContext, "admin_event_session_seats_confirm", adminEvents),
       };
     }
@@ -9162,7 +9734,7 @@ async function handleAdminEventOperationalSubmenus({
 
       if (!details.ok || !details.event.venueId || !sectionId || !Number.isInteger(newCapacity)) {
         return {
-          reply: "Os dados da carga ficaram invÃƒÂ¡lidos. Comece novamente.",
+          reply: "Os dados da carga ficaram invÃƒÆ’Ã‚Â¡lidos. Comece novamente.",
           nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
             selectedEventId: eventId,
           }),
@@ -9186,7 +9758,7 @@ async function handleAdminEventOperationalSubmenus({
       if (!result.ok && result.reason === "capacity_below_busy") {
         return {
           reply:
-            "NÃƒÂ£o ÃƒÂ© possÃƒÂ­vel reduzir para esse valor porque jÃƒÂ¡ existem ingressos vendidos ou reservados.",
+            "NÃƒÆ’Ã‚Â£o ÃƒÆ’Ã‚Â© possÃƒÆ’Ã‚Â­vel reduzir para esse valor porque jÃƒÆ’Ã‚Â¡ existem ingressos vendidos ou reservados.",
           nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
             selectedEventId: eventId,
           }),
@@ -9196,7 +9768,7 @@ async function handleAdminEventOperationalSubmenus({
       if (!result.ok && result.reason === "numbered_section") {
         return {
           reply:
-            "Esse setor usa assento marcado. Ajuste a carga pelo fluxo de ediÃƒÂ§ÃƒÂ£o de assentos.",
+            "Esse setor usa assento marcado. Ajuste a carga pelo fluxo de ediÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de assentos.",
           nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
             selectedEventId: eventId,
           }),
@@ -9216,7 +9788,7 @@ async function handleAdminEventOperationalSubmenus({
               "",
               renderAdminEventEditMenu(updatedDetails.ok ? updatedDetails.event.title : undefined),
             ].join("\n")
-          : "NÃƒÂ£o consegui atualizar a carga.",
+          : "NÃƒÆ’Ã‚Â£o consegui atualizar a carga.",
         nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
           selectedEventId: eventId,
         }),
@@ -9239,11 +9811,11 @@ async function handleAdminEventOperationalSubmenus({
       if (!selected || !details.ok) {
         return {
           reply: withAdminNavigationHint([
-            "Escolha uma das opÃƒÂ§ÃƒÂµes pelo nÃƒÂºmero:",
+            "Escolha uma das opÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes pelo nÃƒÆ’Ã‚Âºmero:",
             "",
             ...sections.map(
               (section) =>
-                `> ${formatOptionLine(section.option, section.name, { preserveCase: true })} - *capacidade: ${section.capacity ?? "nÃƒÂ£o definida"}*`,
+                `> ${formatOptionLine(section.option, section.name, { preserveCase: true })} - *capacidade: ${section.capacity ?? "nÃƒÆ’Ã‚Â£o definida"}*`,
             ),
           ].join("\n")),
           nextContext: withAdminEventsContext(
@@ -9271,7 +9843,7 @@ async function handleAdminEventOperationalSubmenus({
           "*AUMENTAR INGRESSOS*",
           `Evento: ${details.event.title}`,
           `Setor: ${selected.name}`,
-          `Carga atual: ${selected.capacity ?? "nÃƒÂ£o definida"}`,
+          `Carga atual: ${selected.capacity ?? "nÃƒÆ’Ã‚Â£o definida"}`,
           "",
           "Digite a nova carga total do setor. Ex: 500",
         ].join("\n"),
@@ -9302,7 +9874,7 @@ async function handleAdminEventOperationalSubmenus({
         newCapacity > 5000
       ) {
         return {
-          reply: "Carga invÃƒÂ¡lida. Digite um nÃƒÂºmero inteiro entre 0 e 5000. Ex: 500",
+          reply: "Carga invÃƒÆ’Ã‚Â¡lida. Digite um nÃƒÆ’Ã‚Âºmero inteiro entre 0 e 5000. Ex: 500",
           nextContext: withAdminEventsContext(
             baseContext,
             "admin_event_capacity_collecting",
@@ -9324,13 +9896,13 @@ async function handleAdminEventOperationalSubmenus({
 
       return {
         reply: [
-          "Confirmar alteraÃƒÂ§ÃƒÂ£o de carga?",
+          "Confirmar alteraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de carga?",
           `Evento: ${details.ok ? details.event.title : ""}`,
           `Setor: ${section.name}`,
-          `Carga atual: ${section.capacity ?? "nÃƒÂ£o definida"}`,
+          `Carga atual: ${section.capacity ?? "nÃƒÆ’Ã‚Â£o definida"}`,
           `Nova carga: ${newCapacity}`,
           "",
-          "A reduÃƒÂ§ÃƒÂ£o sÃƒÂ³ bloqueia unidades disponÃƒÂ­veis. Vendidos e reservados nÃƒÂ£o sÃƒÂ£o alterados.",
+          "A reduÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o sÃƒÆ’Ã‚Â³ bloqueia unidades disponÃƒÆ’Ã‚Â­veis. Vendidos e reservados nÃƒÆ’Ã‚Â£o sÃƒÆ’Ã‚Â£o alterados.",
           "",
           "Responda CONFIRMAR ou CANCELAR.",
         ].join("\n"),
@@ -9360,7 +9932,7 @@ async function handleAdminEventOperationalSubmenus({
     ) {
       return {
         reply: [
-          "Dados invÃƒÂ¡lidos. Envie: nÃƒÂºmero do setor | nova carga.",
+          "Dados invÃƒÆ’Ã‚Â¡lidos. Envie: nÃƒÆ’Ã‚Âºmero do setor | nova carga.",
           "Ex: 1 | 500",
         ].join("\n"),
         nextContext: withAdminEventsContext(
@@ -9373,7 +9945,7 @@ async function handleAdminEventOperationalSubmenus({
 
     if (section.hasNumberedSeats) {
       return {
-        reply: "Esse setor usa assento marcado. Ajuste a carga pelo fluxo de ediÃƒÂ§ÃƒÂ£o de assentos.",
+        reply: "Esse setor usa assento marcado. Ajuste a carga pelo fluxo de ediÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de assentos.",
         nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
           selectedEventId: eventId,
         }),
@@ -9382,12 +9954,12 @@ async function handleAdminEventOperationalSubmenus({
 
     return {
       reply: [
-        "Confirmar alteraÃƒÂ§ÃƒÂ£o de carga?",
+        "Confirmar alteraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de carga?",
         `Setor: ${section.name}`,
-        `Carga atual: ${section.capacity ?? "nÃƒÂ£o definida"}`,
+        `Carga atual: ${section.capacity ?? "nÃƒÆ’Ã‚Â£o definida"}`,
         `Nova carga: ${newCapacity}`,
         "",
-        "A reduÃƒÂ§ÃƒÂ£o sÃƒÂ³ bloqueia unidades disponÃƒÂ­veis. Vendidos e reservados nÃƒÂ£o sÃƒÂ£o alterados.",
+        "A reduÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o sÃƒÆ’Ã‚Â³ bloqueia unidades disponÃƒÆ’Ã‚Â­veis. Vendidos e reservados nÃƒÆ’Ã‚Â£o sÃƒÆ’Ã‚Â£o alterados.",
         "",
         "Responda CONFIRMAR ou CANCELAR.",
       ].join("\n"),
@@ -9440,7 +10012,7 @@ async function handleAdminEventOperationalSubmenus({
       return {
         reply: result.ok
           ? "Setor atualizado."
-          : "NÃƒÂ£o consegui atualizar o setor.",
+          : "NÃƒÆ’Ã‚Â£o consegui atualizar o setor.",
         nextContext: withAdminEventsContext(baseContext, "admin_event_sections_menu", {
           selectedEventId: eventId,
         }),
@@ -9483,7 +10055,7 @@ async function handleAdminEventOperationalSubmenus({
       return {
         reply: result.ok
           ? "Setor criado."
-          : "NÃƒÂ£o consegui criar o setor. Verifique se o slug jÃƒÂ¡ existe nesse local.",
+          : "NÃƒÆ’Ã‚Â£o consegui criar o setor. Verifique se o slug jÃƒÆ’Ã‚Â¡ existe nesse local.",
         nextContext: withAdminEventsContext(baseContext, "admin_event_sections_menu", {
           selectedEventId: eventId,
         }),
@@ -9517,7 +10089,7 @@ async function handleAdminEventOperationalSubmenus({
         hasNumberedSeats === null
       ) {
         return {
-          reply: "Dados invÃƒÂ¡lidos. Use: 1 | Pista Premium | 500 | active | sim",
+          reply: "Dados invÃƒÆ’Ã‚Â¡lidos. Use: 1 | Pista Premium | 500 | active | sim",
           nextContext: withAdminEventsContext(
             baseContext,
             "admin_event_section_create_collecting",
@@ -9529,7 +10101,7 @@ async function handleAdminEventOperationalSubmenus({
         const usage = await getAdminSectionUsage(section.sectionId);
         if (!usage.ok) {
           return {
-            reply: "NÃƒÂ£o consegui verificar reservas/ingressos desse setor agora.",
+            reply: "NÃƒÆ’Ã‚Â£o consegui verificar reservas/ingressos desse setor agora.",
             nextContext: withAdminEventsContext(
               baseContext,
               "admin_event_section_create_collecting",
@@ -9540,8 +10112,8 @@ async function handleAdminEventOperationalSubmenus({
         if (usage.hasUsage) {
           return {
             reply: [
-              "Esse setor jÃƒÂ¡ tem reservas, ingressos ou assentos de sessÃƒÂ£o ocupados.",
-              "Para evitar quebrar vendas existentes, a alteraÃƒÂ§ÃƒÂ£o de assento marcado foi bloqueada neste fluxo.",
+              "Esse setor jÃƒÆ’Ã‚Â¡ tem reservas, ingressos ou assentos de sessÃƒÆ’Ã‚Â£o ocupados.",
+              "Para evitar quebrar vendas existentes, a alteraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de assento marcado foi bloqueada neste fluxo.",
             ].join("\n"),
             nextContext: withAdminEventsContext(baseContext, "admin_event_sections_menu", {
               selectedEventId: eventId,
@@ -9552,12 +10124,12 @@ async function handleAdminEventOperationalSubmenus({
 
       return {
         reply: [
-          "Confirmar alteraÃƒÂ§ÃƒÂ£o do setor?",
+          "Confirmar alteraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o do setor?",
           `Setor: ${section.name}`,
           `Novo nome: ${nameRaw}`,
-          `Capacidade: ${capacity ?? "nÃƒÂ£o definida"}`,
+          `Capacidade: ${capacity ?? "nÃƒÆ’Ã‚Â£o definida"}`,
           `Status: ${status}`,
-          `Assento marcado: ${hasNumberedSeats ? "sim" : "nÃƒÂ£o"}`,
+          `Assento marcado: ${hasNumberedSeats ? "sim" : "nÃƒÆ’Ã‚Â£o"}`,
           "",
           "Responda CONFIRMAR ou CANCELAR.",
         ].join("\n"),
@@ -9590,17 +10162,17 @@ async function handleAdminEventOperationalSubmenus({
       (capacity !== null && (!Number.isInteger(capacity) || capacity <= 0))
     ) {
       return {
-        reply: "Dados invÃƒÂ¡lidos. Use: Pista Premium | 500 | sim",
+        reply: "Dados invÃƒÆ’Ã‚Â¡lidos. Use: Pista Premium | 500 | sim",
         nextContext: withAdminEventsContext(baseContext, "admin_event_section_create_collecting", adminEvents),
       };
     }
     return {
       reply: [
-        "Confirmar criaÃƒÂ§ÃƒÂ£o do setor?",
+        "Confirmar criaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o do setor?",
         `Nome: ${nameRaw}`,
         `Slug: ${slug}`,
-        `Capacidade: ${capacity ?? "nÃƒÂ£o definida"}`,
-        `Assento marcado: ${hasNumberedSeats ? "sim" : "nÃƒÂ£o"}`,
+        `Capacidade: ${capacity ?? "nÃƒÆ’Ã‚Â£o definida"}`,
+        `Assento marcado: ${hasNumberedSeats ? "sim" : "nÃƒÆ’Ã‚Â£o"}`,
         "",
         "Responda CONFIRMAR ou CANCELAR.",
       ].join("\n"),
@@ -9651,8 +10223,8 @@ async function handleAdminEventOperationalSubmenus({
 
       return {
         reply: result.ok
-          ? `Assentos atualizados: ${result.updatedCount}. NÃƒÂ£o encontrados: ${result.missingCount}.`
-          : "NÃƒÂ£o consegui atualizar os assentos.",
+          ? `Assentos atualizados: ${result.updatedCount}. NÃƒÆ’Ã‚Â£o encontrados: ${result.missingCount}.`
+          : "NÃƒÆ’Ã‚Â£o consegui atualizar os assentos.",
         nextContext: withAdminEventsContext(baseContext, "admin_event_sections_menu", {
           selectedEventId: eventId,
         }),
@@ -9690,7 +10262,7 @@ async function handleAdminEventOperationalSubmenus({
       return {
         reply: result.ok
           ? `Assentos criados: ${result.createdCount}. Ignorados por duplicidade: ${result.skippedCount}.`
-          : "NÃƒÂ£o consegui criar os assentos.",
+          : "NÃƒÆ’Ã‚Â£o consegui criar os assentos.",
         nextContext: withAdminEventsContext(baseContext, "admin_event_sections_menu", {
           selectedEventId: eventId,
         }),
@@ -9708,7 +10280,7 @@ async function handleAdminEventOperationalSubmenus({
 
       if (!section || !["active", "inactive", "blocked"].includes(status) || !seatCodes.length) {
         return {
-          reply: "Dados invÃƒÂ¡lidos. Use: 1 | blocked | A01,A02",
+          reply: "Dados invÃƒÆ’Ã‚Â¡lidos. Use: 1 | blocked | A01,A02",
           nextContext: withAdminEventsContext(
             baseContext,
             "admin_event_seats_create_collecting",
@@ -9723,7 +10295,7 @@ async function handleAdminEventOperationalSubmenus({
         });
         if (!usage.ok) {
           return {
-            reply: "NÃƒÂ£o consegui verificar reservas/vendas desses assentos agora.",
+            reply: "NÃƒÆ’Ã‚Â£o consegui verificar reservas/vendas desses assentos agora.",
             nextContext: withAdminEventsContext(
               baseContext,
               "admin_event_seats_create_collecting",
@@ -9734,8 +10306,8 @@ async function handleAdminEventOperationalSubmenus({
         if (usage.hasBusySeats) {
           return {
             reply: [
-              "Um ou mais assentos informados estÃƒÂ£o reservados ou vendidos em alguma sessÃƒÂ£o.",
-              "A alteraÃƒÂ§ÃƒÂ£o estrutural foi bloqueada para nÃƒÂ£o afetar vendas existentes.",
+              "Um ou mais assentos informados estÃƒÆ’Ã‚Â£o reservados ou vendidos em alguma sessÃƒÆ’Ã‚Â£o.",
+              "A alteraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o estrutural foi bloqueada para nÃƒÆ’Ã‚Â£o afetar vendas existentes.",
             ].join("\n"),
             nextContext: withAdminEventsContext(baseContext, "admin_event_sections_menu", {
               selectedEventId: eventId,
@@ -9746,7 +10318,7 @@ async function handleAdminEventOperationalSubmenus({
 
       return {
         reply: [
-          "Confirmar alteraÃƒÂ§ÃƒÂ£o dos assentos?",
+          "Confirmar alteraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o dos assentos?",
           `Setor: ${section.name}`,
           `Status: ${status}`,
           `Quantidade: ${seatCodes.length}`,
@@ -9772,13 +10344,13 @@ async function handleAdminEventOperationalSubmenus({
     const seatCodes = parseSeatCodesOrRange(seatsRaw ?? "");
     if (!section || !seatCodes.length) {
       return {
-        reply: "Dados invÃƒÂ¡lidos. Use: 1 | A01,A02,A03",
+        reply: "Dados invÃƒÆ’Ã‚Â¡lidos. Use: 1 | A01,A02,A03",
         nextContext: withAdminEventsContext(baseContext, "admin_event_seats_create_collecting", adminEvents),
       };
     }
     if (!section.hasNumberedSeats) {
       return {
-        reply: "Esse setor nÃƒÂ£o usa assento marcado. Altere o setor com cuidado antes de cadastrar assentos.",
+        reply: "Esse setor nÃƒÆ’Ã‚Â£o usa assento marcado. Altere o setor com cuidado antes de cadastrar assentos.",
         nextContext: withAdminEventsContext(baseContext, "admin_event_sections_menu", {
           selectedEventId: eventId,
         }),
@@ -9786,10 +10358,10 @@ async function handleAdminEventOperationalSubmenus({
     }
     return {
       reply: [
-        "Confirmar criaÃƒÂ§ÃƒÂ£o de assentos?",
+        "Confirmar criaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de assentos?",
         `Setor: ${section.name}`,
         `Quantidade: ${seatCodes.length}`,
-        `PrÃƒÂ©via: ${seatCodes.slice(0, 20).join(", ")}${seatCodes.length > 20 ? "..." : ""}`,
+        `PrÃƒÆ’Ã‚Â©via: ${seatCodes.slice(0, 20).join(", ")}${seatCodes.length > 20 ? "..." : ""}`,
         "",
         "Responda CONFIRMAR ou CANCELAR.",
       ].join("\n"),
@@ -9829,8 +10401,8 @@ async function handleAdminEventOperationalSubmenus({
       });
       return {
         reply: result.ok
-          ? `Assentos da sessÃƒÂ£o criados: ${result.createdCount}. JÃƒÂ¡ existentes: ${result.skippedCount}.`
-          : "NÃƒÂ£o consegui criar os assentos da sessÃƒÂ£o.",
+          ? `Assentos da sessÃƒÆ’Ã‚Â£o criados: ${result.createdCount}. JÃƒÆ’Ã‚Â¡ existentes: ${result.skippedCount}.`
+          : "NÃƒÆ’Ã‚Â£o consegui criar os assentos da sessÃƒÆ’Ã‚Â£o.",
         nextContext: withAdminEventsContext(baseContext, "admin_event_sections_menu", {
           selectedEventId: eventId,
         }),
@@ -9847,14 +10419,14 @@ async function handleAdminEventOperationalSubmenus({
         : [details.event.sections[Number(sectionNumberRaw) - 1]?.sectionId].filter(Boolean);
     if (!session || !sectionIds.length) {
       return {
-        reply: "Dados invÃƒÂ¡lidos. Use: 1 | todos ou 1 | 2",
+        reply: "Dados invÃƒÆ’Ã‚Â¡lidos. Use: 1 | todos ou 1 | 2",
         nextContext: withAdminEventsContext(baseContext, "admin_event_session_seats_confirm", adminEvents),
       };
     }
     return {
       reply: [
-        "Confirmar criaÃƒÂ§ÃƒÂ£o de assentos da sessÃƒÂ£o?",
-        `SessÃƒÂ£o: ${formatDateTime(session.startsAt)}`,
+        "Confirmar criaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de assentos da sessÃƒÆ’Ã‚Â£o?",
+        `SessÃƒÆ’Ã‚Â£o: ${formatDateTime(session.startsAt)}`,
         `Setores: ${sectionIds.length}`,
         "",
         "Responda CONFIRMAR ou CANCELAR.",
@@ -9897,12 +10469,12 @@ async function handleAdminEventOperationalSubmenus({
                           formatPriceWithOptionalFee(price.priceCents, price.feeCents),
                         ].join(" - "),
                     )
-                  : ["Nenhum preÃƒÂ§o cadastrado."]),
+                  : ["Nenhum preÃƒÆ’Ã‚Â§o cadastrado."]),
               ].join("\n")
             : list.reply,
           "",
           "*QUAL VALOR DESEJA ALTERAR?*",
-          "Responda com o nÃƒÂºmero.",
+          "Responda com o nÃƒÆ’Ã‚Âºmero.",
         ].join("\n"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_price_edit_collecting", {
           ...adminEvents,
@@ -9963,8 +10535,8 @@ async function handleAdminEventOperationalSubmenus({
 
       return {
         reply: result.ok
-          ? "PreÃƒÂ§o/lote atualizado. Reservas jÃƒÂ¡ criadas mantÃƒÂªm o valor congelado."
-          : "NÃƒÂ£o consegui atualizar o preÃƒÂ§o/lote.",
+          ? "PreÃƒÆ’Ã‚Â§o/lote atualizado. Reservas jÃƒÆ’Ã‚Â¡ criadas mantÃƒÆ’Ã‚Âªm o valor congelado."
+          : "NÃƒÆ’Ã‚Â£o consegui atualizar o preÃƒÆ’Ã‚Â§o/lote.",
         nextContext: withAdminEventsContext(baseContext, "admin_event_prices_menu", {
           selectedEventId: eventId,
         }),
@@ -9985,7 +10557,7 @@ async function handleAdminEventOperationalSubmenus({
       if (priceCents === null) {
         return {
           reply: withAdminNavigationHint([
-            "VALOR INVÃƒÂLIDO",
+            "VALOR INVÃƒÆ’Ã‚ÂLIDO",
             "",
             "Digite somente o novo valor.",
             "Ex: 140,00",
@@ -10015,14 +10587,14 @@ async function handleAdminEventOperationalSubmenus({
 
       return {
         reply: withAdminNavigationHint([
-          result.ok ? "*VALOR ATUALIZADO*" : "NÃƒÂ£o consegui atualizar o valor.",
+          result.ok ? "*VALOR ATUALIZADO*" : "NÃƒÆ’Ã‚Â£o consegui atualizar o valor.",
           ...(result.ok
             ? [
-                `> PreÃƒÂ§o: ${String(adminEvents.draft?.priceLabel ?? "PreÃƒÂ§o")}`,
+                `> PreÃƒÆ’Ã‚Â§o: ${String(adminEvents.draft?.priceLabel ?? "PreÃƒÆ’Ã‚Â§o")}`,
                 `> Valor anterior: ${formatCurrencyFromCents(Number(adminEvents.draft?.oldPriceCents ?? 0))}`,
                 `> Novo valor confirmado no banco: ${formatCurrencyFromCents(persistedPriceCents ?? priceCents)}`,
                 "",
-                "Reservas jÃƒÂ¡ criadas mantÃƒÂªm o valor congelado. A alteraÃƒÂ§ÃƒÂ£o afeta novas reservas.",
+                "Reservas jÃƒÆ’Ã‚Â¡ criadas mantÃƒÆ’Ã‚Âªm o valor congelado. A alteraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o afeta novas reservas.",
               ]
             : []),
           ...(details.ok ? ["", renderAdminPricesMenu(details.event.title)] : []),
@@ -10051,7 +10623,7 @@ async function handleAdminEventOperationalSubmenus({
 
     if (!price) {
       return {
-        reply: "Valor invÃƒÂ¡lido. Responda com o nÃƒÂºmero do valor que deseja alterar.",
+        reply: "Valor invÃƒÆ’Ã‚Â¡lido. Responda com o nÃƒÆ’Ã‚Âºmero do valor que deseja alterar.",
         nextContext: withAdminEventsContext(
           baseContext,
           "admin_event_price_edit_collecting",
@@ -10084,7 +10656,7 @@ async function handleAdminEventOperationalSubmenus({
       const status = normalizeAdminText(valueOneRaw ?? "");
       if (!["active", "inactive"].includes(status)) {
         return {
-          reply: "Status invÃƒÂ¡lido. Use active ou inactive.",
+          reply: "Status invÃƒÆ’Ã‚Â¡lido. Use active ou inactive.",
           nextContext: withAdminEventsContext(
             baseContext,
             "admin_event_price_edit_collecting",
@@ -10095,8 +10667,8 @@ async function handleAdminEventOperationalSubmenus({
 
       return {
         reply: [
-          "Confirmar alteraÃƒÂ§ÃƒÂ£o do preÃƒÂ§o/lote?",
-          `PreÃƒÂ§o: ${price.label}`,
+          "Confirmar alteraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o do preÃƒÆ’Ã‚Â§o/lote?",
+          `PreÃƒÆ’Ã‚Â§o: ${price.label}`,
           `Status atual: ${price.status}`,
           `Novo status: ${status}`,
           "",
@@ -10111,7 +10683,7 @@ async function handleAdminEventOperationalSubmenus({
     }
 
     return {
-      reply: "Responda somente com o nÃƒÂºmero do valor que deseja alterar.",
+      reply: "Responda somente com o nÃƒÆ’Ã‚Âºmero do valor que deseja alterar.",
       nextContext: withAdminEventsContext(
         baseContext,
         "admin_event_price_edit_collecting",
@@ -10160,8 +10732,8 @@ async function handleAdminEventOperationalSubmenus({
       });
       return {
         reply: result.ok
-          ? "PreÃƒÂ§o/lote criado."
-          : "NÃƒÂ£o consegui criar o preÃƒÂ§o. Se jÃƒÂ¡ existir esse tipo para sessÃƒÂ£o/setor, use ediÃƒÂ§ÃƒÂ£o.",
+          ? "PreÃƒÆ’Ã‚Â§o/lote criado."
+          : "NÃƒÆ’Ã‚Â£o consegui criar o preÃƒÆ’Ã‚Â§o. Se jÃƒÆ’Ã‚Â¡ existir esse tipo para sessÃƒÆ’Ã‚Â£o/setor, use ediÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o.",
         nextContext: withAdminEventsContext(baseContext, "admin_event_prices_menu", {
           selectedEventId: eventId,
         }),
@@ -10199,8 +10771,8 @@ async function handleAdminEventOperationalSubmenus({
       ) {
         return {
           reply: fixedSessionId
-            ? "Dados invÃƒÂ¡lidos. Use: Lote promocional | 60,00 | 0 | - | -"
-            : "Dados invÃƒÂ¡lidos. Use: 1 | Lote promocional | 60,00 | 0 | - | -",
+            ? "Dados invÃƒÆ’Ã‚Â¡lidos. Use: Lote promocional | 60,00 | 0 | - | -"
+            : "Dados invÃƒÆ’Ã‚Â¡lidos. Use: 1 | Lote promocional | 60,00 | 0 | - | -",
           nextContext: withAdminEventsContext(
             baseContext,
             "admin_event_price_create_collecting",
@@ -10211,14 +10783,14 @@ async function handleAdminEventOperationalSubmenus({
 
       return {
         reply: [
-          "Confirmar criaÃƒÂ§ÃƒÂ£o da venda especial?",
+          "Confirmar criaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o da venda especial?",
           `Evento: ${details.event.title}`,
-          `SessÃƒÂ£o: ${formatDateTime(session.startsAt)}`,
+          `SessÃƒÆ’Ã‚Â£o: ${formatDateTime(session.startsAt)}`,
           `Setor: ${section.name}`,
           `Oferta: ${label}`,
-          `PreÃƒÂ§o: ${formatCurrencyFromCents(priceCents)}`,
+          `PreÃƒÆ’Ã‚Â§o: ${formatCurrencyFromCents(priceCents)}`,
           `Taxa: ${formatCurrencyFromCents(feeCents)}`,
-          `InÃƒÂ­cio: ${salesStart.value ? formatDateTime(salesStart.value) : "livre"}`,
+          `InÃƒÆ’Ã‚Â­cio: ${salesStart.value ? formatDateTime(salesStart.value) : "livre"}`,
           `Fim: ${salesEnd.value ? formatDateTime(salesEnd.value) : "livre"}`,
           "",
           "Responda CONFIRMAR ou CANCELAR.",
@@ -10277,21 +10849,21 @@ async function handleAdminEventOperationalSubmenus({
         new Date(salesStart.value).getTime() >= new Date(salesEnd.value).getTime())
     ) {
       return {
-        reply: "Dados invÃƒÂ¡lidos. Use: 1 | 1 | full | Inteira | 120,00 | 12,00 | - | -",
+        reply: "Dados invÃƒÆ’Ã‚Â¡lidos. Use: 1 | 1 | full | Inteira | 120,00 | 12,00 | - | -",
         nextContext: withAdminEventsContext(baseContext, "admin_event_price_create_collecting", adminEvents),
       };
     }
     return {
       reply: [
-        "Confirmar criaÃƒÂ§ÃƒÂ£o do preÃƒÂ§o/lote?",
-        `SessÃƒÂ£o: ${formatDateTime(session.startsAt)}`,
+        "Confirmar criaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o do preÃƒÆ’Ã‚Â§o/lote?",
+        `SessÃƒÆ’Ã‚Â£o: ${formatDateTime(session.startsAt)}`,
         `Setor: ${section.name}`,
         `Tipo: ${ticketType}`,
         `Label: ${label}`,
-        `PreÃƒÂ§o: ${formatCurrencyFromCents(priceCents)}`,
+        `PreÃƒÆ’Ã‚Â§o: ${formatCurrencyFromCents(priceCents)}`,
         `Taxa: ${formatCurrencyFromCents(feeCents)}`,
         "Moeda: BRL",
-        `InÃƒÂ­cio: ${salesStart.value ? formatDateTime(salesStart.value) : "livre"}`,
+        `InÃƒÆ’Ã‚Â­cio: ${salesStart.value ? formatDateTime(salesStart.value) : "livre"}`,
         `Fim: ${salesEnd.value ? formatDateTime(salesEnd.value) : "livre"}`,
         "",
         "Responda CONFIRMAR ou CANCELAR.",
@@ -10336,7 +10908,7 @@ function messageForReservationFailure(
   }
 
   if (result.reason === "not_enough_seats") {
-    return "NÃƒÂ£o temos essa quantidade disponÃƒÂ­vel nesse ingresso/setor. Envie uma quantidade menor.";
+    return "NÃƒÆ’Ã‚Â£o temos essa quantidade disponÃƒÆ’Ã‚Â­vel nesse ingresso/setor. Envie uma quantidade menor.";
   }
 
   if (result.reason === "ticket_price_not_found") {
@@ -10586,7 +11158,7 @@ async function renderNoSeatsWithAlternatives({
       "",
       alternatives.reply,
       "",
-      'Digite "SAIR" para voltar ao inÃƒÂ­cio.',
+      'Digite "SAIR" para voltar ao inÃƒÆ’Ã‚Â­cio.',
     ].join("\n"),
   };
 }
@@ -10726,6 +11298,7 @@ export async function routeTicketMessage({
   text,
   messageType = "text",
   mediaUrl,
+  rawPayload,
   sourceIdentifier,
 }: RouteTicketMessageInput): Promise<RouteTicketMessageOutput> {
   const previousState = getConversationState(conversation.context);
@@ -10894,7 +11467,7 @@ export async function routeTicketMessage({
 
     if (!fixedAccessId) {
       return {
-        reply: "Não encontrei uma portaria fixa ativa para este telefone.",
+        reply: "NÃ£o encontrei uma portaria fixa ativa para este telefone.",
         nextContext: {
           ...baseContext,
           step: "idle",
@@ -10915,8 +11488,8 @@ export async function routeTicketMessage({
         return {
           reply:
             authentication.reason === "invalid_passphrase"
-              ? "Palavra-chave inválida."
-              : "Não encontrei uma portaria fixa ativa para este telefone.",
+              ? "Palavra-chave invÃ¡lida."
+              : "NÃ£o encontrei uma portaria fixa ativa para este telefone.",
           nextContext:
             authentication.reason === "invalid_passphrase"
               ? baseContext
@@ -10939,7 +11512,7 @@ export async function routeTicketMessage({
       if (!eventsResult.ok || eventsResult.events.length === 0) {
         return {
           reply: eventsResult.ok
-            ? "Não há eventos publicados disponíveis para esta portaria fixa."
+            ? "NÃ£o hÃ¡ eventos publicados disponÃ­veis para esta portaria fixa."
             : TICKET_MESSAGES.adminGenericError,
           nextContext: {
             ...baseContext,
@@ -10994,7 +11567,7 @@ export async function routeTicketMessage({
             gateUrl: sessionResult.gateUrl,
             expiresAt: sessionResult.gateSession.expires_at,
           })
-        : "Não foi possível gerar o link desta portaria fixa. Envie Portaria e tente novamente.",
+        : "NÃ£o foi possÃ­vel gerar o link desta portaria fixa. Envie Portaria e tente novamente.",
       nextContext: {
         ...baseContext,
         step: "idle",
@@ -11044,7 +11617,7 @@ export async function routeTicketMessage({
     if (!selectedAccessId) {
       return {
         reply:
-          "NÃƒÂ£o encontrei acesso de portaria ativo para este telefone.",
+          "NÃƒÆ’Ã‚Â£o encontrei acesso de portaria ativo para este telefone.",
         nextContext: {
           ...baseContext,
           step: "idle",
@@ -11065,8 +11638,8 @@ export async function routeTicketMessage({
       return {
         reply:
           gateSessionResult.reason === "invalid_passphrase"
-            ? "Palavra-chave invÃƒÂ¡lida."
-            : "NÃƒÂ£o encontrei acesso de portaria ativo para este telefone.",
+            ? "Palavra-chave invÃƒÆ’Ã‚Â¡lida."
+            : "NÃƒÆ’Ã‚Â£o encontrei acesso de portaria ativo para este telefone.",
         nextContext:
           gateSessionResult.reason === "invalid_passphrase"
             ? baseContext
@@ -11156,7 +11729,7 @@ export async function routeTicketMessage({
       await revokeActiveAdminSessions(customer.whatsapp_phone);
 
       return {
-        reply: "SessÃƒÂ£o administrativa encerrada com seguranÃƒÂ§a.\n\nPara acessar novamente, envie admin.",
+        reply: "SessÃƒÆ’Ã‚Â£o administrativa encerrada com seguranÃƒÆ’Ã‚Â§a.\n\nPara acessar novamente, envie admin.",
         nextContext: {
           ...buildInitialConversationState(),
           updatedAt: new Date().toISOString(),
@@ -11361,9 +11934,9 @@ export async function routeTicketMessage({
         const suggestions = suggestAdminShortcutActions(eventShortcut.actionText);
         return {
           reply: withAdminNavigationHint([
-            `NÃƒÂ£o reconheci a aÃƒÂ§ÃƒÂ£o "${eventShortcut.actionText}".`,
+            `NÃƒÆ’Ã‚Â£o reconheci a aÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o "${eventShortcut.actionText}".`,
             "",
-            "VocÃƒÂª quis dizer:",
+            "VocÃƒÆ’Ã‚Âª quis dizer:",
             ...suggestions.map(
               ({ label }) => `- ${formatAdminEventShortcutCommand(label, eventShortcut.eventQuery, eventShortcut.period, eventShortcut.targetQuery)}`,
             ),
@@ -11435,7 +12008,7 @@ export async function routeTicketMessage({
           reply: withAdminNavigationHint([
             resolvedEvent.reason === "ambiguous"
               ? "Encontrei mais de um evento. Digite o nome mais completo:"
-              : `NÃƒÂ£o encontrei exatamente o evento "${eventShortcut.eventQuery}". VocÃƒÂª quis dizer:`,
+              : `NÃƒÆ’Ã‚Â£o encontrei exatamente o evento "${eventShortcut.eventQuery}". VocÃƒÆ’Ã‚Âª quis dizer:`,
             ...(candidates.length
               ? [
                   "",
@@ -11467,8 +12040,8 @@ export async function routeTicketMessage({
             "*CRIAR NOVO SETOR*",
             `Evento: ${selectedEvent.title}`,
             "",
-            "Envie: nome do setor | capacidade | numerado sim/nÃƒÂ£o.",
-            "Ex: Pista Premium | 500 | nÃƒÂ£o",
+            "Envie: nome do setor | capacidade | numerado sim/nÃƒÆ’Ã‚Â£o.",
+            "Ex: Pista Premium | 500 | nÃƒÆ’Ã‚Â£o",
           ].join("\n"),
           nextContext: withAdminEventsContext(
             baseContext,
@@ -11487,7 +12060,7 @@ export async function routeTicketMessage({
           buildAdminEventScope(adminUser),
         );
         if (!details.ok) {
-          return { reply: "NÃƒÂ£o encontrei esse evento.", nextContext: baseContext };
+          return { reply: "NÃƒÆ’Ã‚Â£o encontrei esse evento.", nextContext: baseContext };
         }
 
         if (eventShortcut.action === "increase_tickets" && !eventShortcut.targetQuery) {
@@ -11501,7 +12074,7 @@ export async function routeTicketMessage({
                 buildAdminEventScope(adminUser),
               ),
               "",
-              "Envie: nÃƒÂºmero do setor | nova carga.",
+              "Envie: nÃƒÆ’Ã‚Âºmero do setor | nova carga.",
               "Ex: 1 | 500",
             ].join("\n"),
             nextContext: withAdminEventsContext(baseContext, "admin_event_capacity_collecting", {
@@ -11547,12 +12120,12 @@ export async function routeTicketMessage({
             return {
               reply: withAdminNavigationHint([
                 resolvedSection.reason === "ambiguous"
-                  ? `Encontrei mais de um setor para "${eventShortcut.targetQuery}". Digite o nÃƒÂºmero:`
-                  : `NÃƒÂ£o encontrei exatamente o setor "${eventShortcut.targetQuery}". VocÃƒÂª quis dizer:`,
+                  ? `Encontrei mais de um setor para "${eventShortcut.targetQuery}". Digite o nÃƒÆ’Ã‚Âºmero:`
+                  : `NÃƒÆ’Ã‚Â£o encontrei exatamente o setor "${eventShortcut.targetQuery}". VocÃƒÆ’Ã‚Âª quis dizer:`,
                 "",
                 ...sectionOptions.map(
                   (section) =>
-                    `> ${formatOptionLine(section.option, section.name, { preserveCase: true })} - *capacidade: ${section.capacity ?? "nÃƒÂ£o definida"}*`,
+                    `> ${formatOptionLine(section.option, section.name, { preserveCase: true })} - *capacidade: ${section.capacity ?? "nÃƒÆ’Ã‚Â£o definida"}*`,
                 ),
               ].join("\n")),
               nextContext: withAdminEventsContext(
@@ -11571,7 +12144,7 @@ export async function routeTicketMessage({
             reply: withAdminNavigationHint([
               resolvedSection.reason === "ambiguous"
                 ? "Encontrei mais de um setor. Digite o nome mais completo:"
-                : `NÃƒÂ£o encontrei o setor "${eventShortcut.targetQuery}". VocÃƒÂª quis dizer:`,
+                : `NÃƒÆ’Ã‚Â£o encontrei o setor "${eventShortcut.targetQuery}". VocÃƒÆ’Ã‚Âª quis dizer:`,
               "",
               ...resolvedSection.matches.map(
                 (section) => `- ${formatAdminEventShortcutCommand(
@@ -11604,7 +12177,7 @@ export async function routeTicketMessage({
               "*AUMENTAR INGRESSOS*",
               `Evento: ${selectedEvent.title}`,
               `Setor: ${section.name}`,
-              `Carga atual: ${section.capacity ?? "nÃƒÂ£o definida"}`,
+              `Carga atual: ${section.capacity ?? "nÃƒÆ’Ã‚Â£o definida"}`,
               "",
               "Digite a nova carga total do setor. Ex: 500",
             ].join("\n"),
@@ -11622,7 +12195,7 @@ export async function routeTicketMessage({
 
         if (details.event.sessions.length === 0) {
           return {
-            reply: "Esse evento ainda nÃƒÂ£o tem sessÃƒÂ£o para receber uma venda especial.",
+            reply: "Esse evento ainda nÃƒÆ’Ã‚Â£o tem sessÃƒÆ’Ã‚Â£o para receber uma venda especial.",
             nextContext: baseContext,
           };
         }
@@ -11635,7 +12208,7 @@ export async function routeTicketMessage({
             ...(multipleSessions
               ? [
                   "",
-                  "SessÃƒÂµes:",
+                  "SessÃƒÆ’Ã‚Âµes:",
                   ...details.event.sessions.map((session, index) =>
                     `${index + 1}. ${formatDateTime(session.startsAt)}`,
                   ),
@@ -11643,8 +12216,8 @@ export async function routeTicketMessage({
               : []),
             "",
             multipleSessions
-              ? "Envie: sessÃƒÂ£o | nome da oferta | valor | taxa opcional | inÃƒÂ­cio opcional | fim opcional"
-              : "Envie: nome da oferta | valor | taxa opcional | inÃƒÂ­cio opcional | fim opcional",
+              ? "Envie: sessÃƒÆ’Ã‚Â£o | nome da oferta | valor | taxa opcional | inÃƒÆ’Ã‚Â­cio opcional | fim opcional"
+              : "Envie: nome da oferta | valor | taxa opcional | inÃƒÆ’Ã‚Â­cio opcional | fim opcional",
             multipleSessions
               ? "Ex: 1 | Lote promocional | 60,00 | 0 | - | -"
               : "Ex: Lote promocional | 60,00 | 0 | - | -",
@@ -11686,7 +12259,7 @@ export async function routeTicketMessage({
           const report = await buildAdminReport({
             eventId: selectedEvent.eventId,
             type: shortcutReportType,
-            period: eventShortcut.period ?? { label: "Todo o perÃƒÂ­odo" },
+            period: eventShortcut.period ?? { label: "Todo o perÃƒÆ’Ã‚Â­odo" },
           });
           return {
             reply: withAdminNavigationHint(report),
@@ -11744,7 +12317,7 @@ export async function routeTicketMessage({
           buildAdminEventScope(adminUser),
         );
         if (!details.ok) {
-          return { reply: "NÃƒÂ£o encontrei esse evento.", nextContext: baseContext };
+          return { reply: "NÃƒÆ’Ã‚Â£o encontrei esse evento.", nextContext: baseContext };
         }
 
         if (eventShortcut.action === "event_edit") {
@@ -11818,7 +12391,7 @@ export async function routeTicketMessage({
             isResend
               ? "*QUAL CORTESIA DESEJA REENVIAR?*"
               : "*QUAL CORTESIA DESEJA CANCELAR?*",
-            "Responda com o nÃƒÂºmero da cortesia.",
+            "Responda com o nÃƒÆ’Ã‚Âºmero da cortesia.",
           ].join("\n"),
           nextContext: withAdminCourtesiesContext(baseContext, nextState, {
             mode: isResend ? "resend" : "cancel",
@@ -11838,7 +12411,7 @@ export async function routeTicketMessage({
         const sessions = await listCourtesySessions(selectedEvent.eventId);
         if (!sessions.ok || sessions.sessions.length === 0) {
           return {
-            reply: "Nenhuma sessÃƒÂ£o disponÃƒÂ­vel para gerar cortesia neste evento.",
+            reply: "Nenhuma sessÃƒÆ’Ã‚Â£o disponÃƒÆ’Ã‚Â­vel para gerar cortesia neste evento.",
             nextContext: adminReplyContext({
               state: "admin_courtesies_menu",
               role: adminUser.role,
@@ -11884,7 +12457,7 @@ export async function routeTicketMessage({
       if (eventShortcut.action === "gate_menu") {
         return {
           reply: withAdminNavigationHint([
-            `*PORTARIA Ã¢â‚¬â€ ${selectedEvent.title.toUpperCase()}*`,
+            `*PORTARIA ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ${selectedEvent.title.toUpperCase()}*`,
             "",
             `- check-in neste telefone, ${selectedEvent.title}`,
             `- definir outro telefone, ${selectedEvent.title}`,
@@ -11923,7 +12496,7 @@ export async function routeTicketMessage({
       if (eventShortcut.action === "gate_register") {
         return {
           reply: [
-            `*DEFINIR OUTRO TELEFONE Ã¢â‚¬â€ ${selectedEvent.title.toUpperCase()}*`,
+            `*DEFINIR OUTRO TELEFONE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ${selectedEvent.title.toUpperCase()}*`,
             "",
             renderGateValidatorPhonePrompt(),
           ].join("\n"),
@@ -11970,7 +12543,7 @@ export async function routeTicketMessage({
               selectable: true,
             }),
             "",
-            "Digite o nÃƒÂºmero do acesso que deseja pausar.",
+            "Digite o nÃƒÆ’Ã‚Âºmero do acesso que deseja pausar.",
           ].join("\n"),
           nextContext: withAdminGateContext(
             baseContext,
@@ -12013,13 +12586,13 @@ export async function routeTicketMessage({
       });
       const promptByField: Record<string, string> = {
         title: "Envie o novo nome.",
-        artist_name: "Envie o novo artista ou atraÃƒÂ§ÃƒÂ£o.",
+        artist_name: "Envie o novo artista ou atraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o.",
         city: "Envie a nova cidade. Ex: Sorocaba",
         state: "Envie o novo estado/UF. Ex: SP",
         venue: "Envie o novo nome do local.",
-        image_url: "Envie a nova foto ou cole uma URL pÃƒÂºblica https://...",
-        starts_at: "Envie: nÃƒÂºmero da sessÃƒÂ£o | nova data/hora. Ex: 1 | 10/06/2026 22:00",
-        description: "Envie as novas informaÃƒÂ§ÃƒÂµes gerais do evento.",
+        image_url: "Envie a nova foto ou cole uma URL pÃƒÆ’Ã‚Âºblica https://...",
+        starts_at: "Envie: nÃƒÆ’Ã‚Âºmero da sessÃƒÆ’Ã‚Â£o | nova data/hora. Ex: 1 | 10/06/2026 22:00",
+        description: "Envie as novas informaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes gerais do evento.",
       };
       return {
         reply: `*${getAdminShortcutActionLabel(eventShortcut.action).toUpperCase()}*\n\nEvento: ${selectedEvent.title}\n\n${promptByField[field]}`,
@@ -12132,7 +12705,7 @@ export async function routeTicketMessage({
         if (!ticket) {
           return {
             reply: withAdminNavigationHint(
-              "Ingresso nÃƒÂ£o encontrado. Confira o cÃƒÂ³digo e tente novamente.",
+              "Ingresso nÃƒÆ’Ã‚Â£o encontrado. Confira o cÃƒÆ’Ã‚Â³digo e tente novamente.",
             ),
             nextContext: adminReplyContext({
               state: baseContext.state,
@@ -12176,7 +12749,7 @@ export async function routeTicketMessage({
         if (selectedOption && !selectedReservation) {
           return {
             reply: withAdminNavigationHint(
-              "Escolha uma reserva da lista ou envie outro telefone/cÃƒÂ³digo para buscar.",
+              "Escolha uma reserva da lista ou envie outro telefone/cÃƒÆ’Ã‚Â³digo para buscar.",
             ),
             nextContext: withAdminOrdersContext(baseContext, "admin_order_cancel_collecting", {
               ...adminOrders,
@@ -12223,7 +12796,7 @@ export async function routeTicketMessage({
                 )
                 .join("\n---\n"),
               "",
-              "Digite o nÃƒÂºmero da reserva que deseja cancelar.",
+              "Digite o nÃƒÆ’Ã‚Âºmero da reserva que deseja cancelar.",
             ].join("\n")),
             nextContext: withAdminOrdersContext(baseContext, "admin_order_cancel_collecting", {
               lastReservations: options,
@@ -12257,7 +12830,7 @@ export async function routeTicketMessage({
             reply: reservation
               ? renderAdminPendingReservationCancelConfirm(reservation)
               : withAdminNavigationHint(
-                  "Reserva pendente nÃƒÂ£o encontrada. A aÃƒÂ§ÃƒÂ£o nÃƒÂ£o foi executada.",
+                  "Reserva pendente nÃƒÆ’Ã‚Â£o encontrada. A aÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o foi executada.",
                 ),
             nextContext: reservation
               ? withAdminOrdersContext(baseContext, "admin_order_cancel_confirm", adminOrders)
@@ -12270,7 +12843,7 @@ export async function routeTicketMessage({
         if (!pending) {
           return {
             reply: withAdminNavigationHint(
-              "Reserva pendente nÃƒÂ£o encontrada. A aÃƒÂ§ÃƒÂ£o nÃƒÂ£o foi executada.",
+              "Reserva pendente nÃƒÆ’Ã‚Â£o encontrada. A aÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o foi executada.",
             ),
             nextContext: withAdminOrdersContext(baseContext, "admin_orders_menu", {}),
           };
@@ -12290,8 +12863,8 @@ export async function routeTicketMessage({
           return {
             reply: withAdminNavigationHint(
               result.reason === "not_found"
-                ? "Essa reserva nÃƒÂ£o estÃƒÂ¡ mais pendente ou nÃƒÂ£o pode ser cancelada."
-                : "NÃƒÂ£o foi possÃƒÂ­vel cancelar a reserva agora. Tente novamente.",
+                ? "Essa reserva nÃƒÆ’Ã‚Â£o estÃƒÆ’Ã‚Â¡ mais pendente ou nÃƒÆ’Ã‚Â£o pode ser cancelada."
+                : "NÃƒÆ’Ã‚Â£o foi possÃƒÆ’Ã‚Â­vel cancelar a reserva agora. Tente novamente.",
             ),
             nextContext: withAdminOrdersContext(baseContext, "admin_orders_menu", {}),
           };
@@ -12355,7 +12928,7 @@ export async function routeTicketMessage({
 
         if (!eventId) {
           return {
-            reply: "Evento nÃƒÂ£o encontrado. Responda com nÃƒÂºmero, nome ou ID.",
+            reply: "Evento nÃƒÆ’Ã‚Â£o encontrado. Responda com nÃƒÆ’Ã‚Âºmero, nome ou ID.",
             nextContext: withAdminCourtesiesContext(baseContext, baseContext.state, adminCourtesies),
           };
         }
@@ -12378,7 +12951,7 @@ export async function routeTicketMessage({
         const sessions = await listCourtesySessions(eventId);
         if (!sessions.ok || sessions.sessions.length === 0) {
           return {
-            reply: "Nenhuma sessÃƒÂ£o disponÃƒÂ­vel para gerar cortesia neste evento.",
+            reply: "Nenhuma sessÃƒÆ’Ã‚Â£o disponÃƒÆ’Ã‚Â­vel para gerar cortesia neste evento.",
             nextContext: adminReplyContext({
               state: "admin_courtesies_menu",
               role: adminUser.role,
@@ -12411,7 +12984,7 @@ export async function routeTicketMessage({
         const session = (adminCourtesies.lastSessions ?? []).find((item) => item.sessionId === sessionId);
         if (!sessionId) {
           return {
-            reply: "SessÃƒÂ£o nÃƒÂ£o encontrada. Responda com o nÃƒÂºmero da sessÃƒÂ£o.",
+            reply: "SessÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada. Responda com o nÃƒÆ’Ã‚Âºmero da sessÃƒÆ’Ã‚Â£o.",
             nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_session_select", adminCourtesies),
           };
         }
@@ -12419,7 +12992,7 @@ export async function routeTicketMessage({
         const sections = await listCourtesySections(sessionId);
         if (!sections.ok || sections.sections.length === 0) {
           return {
-            reply: "Nenhum setor com disponibilidade para cortesia nessa sessÃƒÂ£o.",
+            reply: "Nenhum setor com disponibilidade para cortesia nessa sessÃƒÆ’Ã‚Â£o.",
             nextContext: returnToCourtesyMenu().nextContext,
           };
         }
@@ -12440,7 +13013,7 @@ export async function routeTicketMessage({
         const section = (adminCourtesies.lastSections ?? []).find((item) => item.sectionId === sectionId);
         if (!sectionId || !section) {
           return {
-            reply: "Setor nÃƒÂ£o encontrado. Responda com o nÃƒÂºmero do setor.",
+            reply: "Setor nÃƒÆ’Ã‚Â£o encontrado. Responda com o nÃƒÆ’Ã‚Âºmero do setor.",
             nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_section_select", adminCourtesies),
           };
         }
@@ -12460,7 +13033,7 @@ export async function routeTicketMessage({
         const quantity = /^\d+$/.test(text.trim()) ? Number(text.trim()) : null;
         if (!quantity || quantity <= 0 || quantity > 10) {
           return {
-            reply: "Quantidade invÃƒÂ¡lida. Envie um nÃƒÂºmero de 1 a 10.",
+            reply: "Quantidade invÃƒÆ’Ã‚Â¡lida. Envie um nÃƒÆ’Ã‚Âºmero de 1 a 10.",
             nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_quantity_collecting", adminCourtesies),
           };
         }
@@ -12473,7 +13046,7 @@ export async function routeTicketMessage({
           const seatsReply = [
             "*ESCOLHA OS ASSENTOS DA CORTESIA*",
             "",
-            `Digite ${quantity} cÃƒÂ³digo(s) de assento.`,
+            `Digite ${quantity} cÃƒÆ’Ã‚Â³digo(s) de assento.`,
           ].join("\n");
           return {
             reply: seatsReply,
@@ -12496,7 +13069,7 @@ export async function routeTicketMessage({
         }
 
         return {
-          reply: "*TELEFONE DO BENEFICIÃƒÂRIO*\n\nDigite o telefone que receberÃƒÂ¡ a cortesia.",
+          reply: "*TELEFONE DO BENEFICIÃƒÆ’Ã‚ÂRIO*\n\nDigite o telefone que receberÃƒÆ’Ã‚Â¡ a cortesia.",
           nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_beneficiary_phone_collecting", {
             ...adminCourtesies,
             quantity,
@@ -12508,13 +13081,13 @@ export async function routeTicketMessage({
         const seatCodes = parseCourtesySeatCodes(text);
         if (!adminCourtesies.quantity || seatCodes.length !== adminCourtesies.quantity) {
           return {
-            reply: "ASSENTO INDISPONÃƒÂVEL",
+            reply: "ASSENTO INDISPONÃƒÆ’Ã‚ÂVEL",
             nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_seat_collecting", adminCourtesies),
           };
         }
 
         return {
-          reply: "*TELEFONE DO BENEFICIÃƒÂRIO*\n\nDigite o telefone que receberÃƒÂ¡ a cortesia.",
+          reply: "*TELEFONE DO BENEFICIÃƒÆ’Ã‚ÂRIO*\n\nDigite o telefone que receberÃƒÆ’Ã‚Â¡ a cortesia.",
           nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_beneficiary_phone_collecting", {
             ...adminCourtesies,
             seatCodes,
@@ -12526,13 +13099,13 @@ export async function routeTicketMessage({
         const phone = normalizeCourtesyPhone(text);
         if (!phone || phone.length < 12) {
           return {
-            reply: "Telefone invÃƒÂ¡lido. Envie um telefone com DDD.",
+            reply: "Telefone invÃƒÆ’Ã‚Â¡lido. Envie um telefone com DDD.",
             nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_beneficiary_phone_collecting", adminCourtesies),
           };
         }
 
         return {
-          reply: "*NOME DO BENEFICIÃƒÂRIO*\n\nDigite o nome ou responda PULAR.",
+          reply: "*NOME DO BENEFICIÃƒÆ’Ã‚ÂRIO*\n\nDigite o nome ou responda PULAR.",
           nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_beneficiary_name_collecting", {
             ...adminCourtesies,
             beneficiaryPhone: phone,
@@ -12544,7 +13117,7 @@ export async function routeTicketMessage({
         const normalized = normalizeIntentText(text);
         const beneficiaryName = normalized === "pular" ? null : text.trim();
         return {
-          reply: "*MOTIVO/OBSERVAÃƒâ€¡ÃƒÆ’O*\n\nDigite uma observaÃƒÂ§ÃƒÂ£o ou responda PULAR.",
+          reply: "*MOTIVO/OBSERVAÃƒÆ’Ã¢â‚¬Â¡ÃƒÆ’Ã†â€™O*\n\nDigite uma observaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o ou responda PULAR.",
           nextContext: withAdminCourtesiesContext(baseContext, "admin_courtesy_reason_collecting", {
             ...adminCourtesies,
             beneficiaryName: beneficiaryName || null,
@@ -12620,8 +13193,8 @@ export async function routeTicketMessage({
           return {
             reply:
               issueResult.reason === "seat_unavailable"
-                ? "ASSENTO INDISPONÃƒÂVEL"
-                : "NÃƒÂ£o consegui gerar a cortesia. Nenhum ingresso foi emitido parcialmente.",
+                ? "ASSENTO INDISPONÃƒÆ’Ã‚ÂVEL"
+                : "NÃƒÆ’Ã‚Â£o consegui gerar a cortesia. Nenhum ingresso foi emitido parcialmente.",
             nextContext: returnToCourtesyMenu().nextContext,
           };
         }
@@ -12655,7 +13228,7 @@ export async function routeTicketMessage({
 
         if (!phone && !ticketCode) {
           return {
-            reply: "Digite um telefone vÃƒÂ¡lido ou cÃƒÂ³digo de ticket. Ex: TCK-XXXXXXXXXXXX",
+            reply: "Digite um telefone vÃƒÆ’Ã‚Â¡lido ou cÃƒÆ’Ã‚Â³digo de ticket. Ex: TCK-XXXXXXXXXXXX",
             nextContext: withAdminCourtesiesContext(baseContext, baseContext.state, adminCourtesies),
           };
         }
@@ -12680,7 +13253,7 @@ export async function routeTicketMessage({
             nextState === "admin_courtesy_resend_select"
               ? "*QUAL CORTESIA DESEJA REENVIAR?*"
               : "*QUAL CORTESIA DESEJA CANCELAR?*",
-            "Responda com o nÃƒÂºmero da cortesia.",
+            "Responda com o nÃƒÆ’Ã‚Âºmero da cortesia.",
           ].join("\n"),
           nextContext: withAdminCourtesiesContext(baseContext, nextState, {
             ...adminCourtesies,
@@ -12701,7 +13274,7 @@ export async function routeTicketMessage({
         const target = resolveCourtesyCancelTarget(text, adminCourtesies.lastCourtesies ?? []);
         if (!target?.courtesyId) {
           return {
-            reply: "NÃƒÂ£o encontrei essa cortesia. Responda com o nÃƒÂºmero da lista.",
+            reply: "NÃƒÆ’Ã‚Â£o encontrei essa cortesia. Responda com o nÃƒÆ’Ã‚Âºmero da lista.",
             nextContext: withAdminCourtesiesContext(baseContext, baseContext.state, adminCourtesies),
           };
         }
@@ -12724,7 +13297,7 @@ export async function routeTicketMessage({
       if (baseContext.state === "admin_courtesy_resend_confirm") {
         if (normalizeIntentText(text) !== "confirmar") {
           return {
-            reply: "Reenvio nÃƒÂ£o confirmado. Voltando ao menu de Cortesias.",
+            reply: "Reenvio nÃƒÆ’Ã‚Â£o confirmado. Voltando ao menu de Cortesias.",
             nextContext: returnToCourtesyMenu().nextContext,
           };
         }
@@ -12735,7 +13308,7 @@ export async function routeTicketMessage({
         const courtesy = found.ok ? found.courtesies[0] : null;
         if (!courtesy || courtesy.status !== "issued" || courtesy.ticketStatus !== "issued" || courtesy.usedAt) {
           return {
-            reply: "NÃƒÂ£o ÃƒÂ© possÃƒÂ­vel reenviar esta cortesia porque ela estÃƒÂ¡ cancelada ou jÃƒÂ¡ foi usada.",
+            reply: "NÃƒÆ’Ã‚Â£o ÃƒÆ’Ã‚Â© possÃƒÆ’Ã‚Â­vel reenviar esta cortesia porque ela estÃƒÆ’Ã‚Â¡ cancelada ou jÃƒÆ’Ã‚Â¡ foi usada.",
             nextContext: returnToCourtesyMenu().nextContext,
           };
         }
@@ -12743,7 +13316,7 @@ export async function routeTicketMessage({
         if (!delivery.ok) {
           return { reply: TICKET_MESSAGES.adminGenericError, nextContext: returnToCourtesyMenu().nextContext };
         }
-        const resendReply = "Cortesia reenviada ao beneficiÃƒÂ¡rio pelo WhatsApp.";
+        const resendReply = "Cortesia reenviada ao beneficiÃƒÆ’Ã‚Â¡rio pelo WhatsApp.";
         return {
           reply: resendReply,
           outboundMessages: [
@@ -12763,7 +13336,7 @@ export async function routeTicketMessage({
       if (baseContext.state === "admin_courtesy_cancel_confirm") {
         if (normalizeIntentText(text) !== "cancelar cortesia") {
           return {
-            reply: "Texto nÃƒÂ£o confirmado. A cortesia nÃƒÂ£o foi cancelada.",
+            reply: "Texto nÃƒÆ’Ã‚Â£o confirmado. A cortesia nÃƒÆ’Ã‚Â£o foi cancelada.",
             nextContext: returnToCourtesyMenu().nextContext,
           };
         }
@@ -12786,7 +13359,7 @@ export async function routeTicketMessage({
           reply:
             result.ok && result.cancelledCount > 0
               ? "CORTESIA CANCELADA\nOs ingressos foram liberados para venda novamente."
-              : "NÃƒÂ£o foi possÃƒÂ­vel cancelar esta cortesia. Ela pode jÃƒÂ¡ estar usada ou cancelada.",
+              : "NÃƒÆ’Ã‚Â£o foi possÃƒÆ’Ã‚Â­vel cancelar esta cortesia. Ela pode jÃƒÆ’Ã‚Â¡ estar usada ou cancelada.",
           nextContext: returnToCourtesyMenu().nextContext,
         };
       }
@@ -12861,7 +13434,7 @@ export async function routeTicketMessage({
                     selectable: true,
                   }),
                   "",
-                  "Digite o nÃƒÂºmero do acesso que deseja pausar.",
+                  "Digite o nÃƒÆ’Ã‚Âºmero do acesso que deseja pausar.",
                 ].join("\n"),
                 nextContext: withAdminGateContext(
                   baseContext,
@@ -12950,7 +13523,7 @@ export async function routeTicketMessage({
         return {
           reply: successReply ??
             (result.reason === "already_registered"
-              ? "Este telefone já possui uma portaria fixa ativa."
+              ? "Este telefone jÃ¡ possui uma portaria fixa ativa."
               : TICKET_MESSAGES.gateAdminCreateError),
           outboundMessages: successReply
             ? [buildRedactedGateAccessConfirmation(successReply)]
@@ -13039,7 +13612,7 @@ export async function routeTicketMessage({
 
         return {
           reply: result.ok && result.revoked
-            ? "*PORTARIA FIXA EXCLUÍDA*\nO telefone não poderá mais gerar links de portaria fixa."
+            ? "*PORTARIA FIXA EXCLUÃDA*\nO telefone nÃ£o poderÃ¡ mais gerar links de portaria fixa."
             : TICKET_MESSAGES.adminGenericError,
           nextContext: adminReplyContext({
             state: "admin_gate_menu",
@@ -13122,7 +13695,7 @@ export async function routeTicketMessage({
           return {
             reply:
               gateAccessResult.reason === "already_registered"
-                ? "Este telefone jÃƒÂ¡ possui acesso de portaria para este evento."
+                ? "Este telefone jÃƒÆ’Ã‚Â¡ possui acesso de portaria para este evento."
                 : TICKET_MESSAGES.gateAdminCreateError,
             nextContext: adminReplyContext({
               state: kitchenMode ? "admin_kitchen_menu" : "admin_gate_menu",
@@ -13162,7 +13735,7 @@ export async function routeTicketMessage({
 
         if (!eventId) {
           return {
-            reply: "Evento nÃƒÂ£o encontrado. Responda com nÃƒÂºmero, nome ou ID.",
+            reply: "Evento nÃƒÆ’Ã‚Â£o encontrado. Responda com nÃƒÆ’Ã‚Âºmero, nome ou ID.",
             nextContext: withAdminGateContext(
               baseContext,
               "admin_gate_access_event_select",
@@ -13255,7 +13828,7 @@ export async function routeTicketMessage({
               selectable: true,
             }),
             "",
-            "Digite o nÃƒÂºmero do acesso que deseja pausar.",
+            "Digite o nÃƒÆ’Ã‚Âºmero do acesso que deseja pausar.",
           ].join("\n");
 
           return {
@@ -13368,7 +13941,7 @@ export async function routeTicketMessage({
 
         if (!selected) {
           return {
-            reply: "NÃƒÂ£o encontrei esse acesso. Digite o nÃƒÂºmero do acesso que deseja pausar.",
+            reply: "NÃƒÆ’Ã‚Â£o encontrei esse acesso. Digite o nÃƒÆ’Ã‚Âºmero do acesso que deseja pausar.",
             nextContext: withAdminGateContext(
               baseContext,
               "admin_gate_revoke_select",
@@ -13532,9 +14105,9 @@ export async function routeTicketMessage({
         ) {
           return {
             reply: [
-              "*DIVISÃO*",
+              "*DIVISÃƒO*",
               "Digite *BAIXAR* para marcar este fechamento como pago.",
-              'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
+              'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da Ã¡rea de admin.',
             ].join("\n"),
             nextContext: withAdminReportsContext(
               baseContext,
@@ -13561,15 +14134,15 @@ export async function routeTicketMessage({
           return {
             reply: result.ok
               ? withAdminNavigationHint([
-                  "*DIVISÃƒÆ’O*",
+                  "*DIVISÃƒÆ’Ã†â€™O*",
                   "Fechamento marcado como pago.",
-                  `> PerÃƒÂ­odo: ${pendingSettlement.periodLabel}`,
+                  `> PerÃƒÆ’Ã‚Â­odo: ${pendingSettlement.periodLabel}`,
                   `> Valor baixado: ${new Intl.NumberFormat("pt-BR", {
                     style: "currency",
                     currency: "BRL",
                   }).format(pendingSettlement.amountDueCents / 100)}`,
                 ].join("\n"))
-              : "NÃƒÂ£o consegui gravar a baixa. A tabela de fechamentos ainda precisa ser aplicada no banco.",
+              : "NÃƒÆ’Ã‚Â£o consegui gravar a baixa. A tabela de fechamentos ainda precisa ser aplicada no banco.",
             nextContext: adminReplyContext({
               state: "admin_reports_menu",
               role: adminUser.role,
@@ -13752,7 +14325,7 @@ export async function routeTicketMessage({
 
           if (!eventId) {
             return {
-              reply: "Evento não encontrado. Responda com número, nome ou ID.",
+              reply: "Evento nÃ£o encontrado. Responda com nÃºmero, nome ou ID.",
               nextContext: withAdminReportsContext(
                 baseContext,
                 "admin_report_event_select",
@@ -13787,7 +14360,7 @@ export async function routeTicketMessage({
             reply: [
               maximumSelection === 1
                 ? "Digite uma busca por vez."
-                : `Digite exatamente ${maximumSelection} buscas separadas por vírgula.`,
+                : `Digite exatamente ${maximumSelection} buscas separadas por vÃ­rgula.`,
               "",
               renderAdminReportEventSearchPrompt(maximumSelection),
             ].join("\n"),
@@ -13810,7 +14383,7 @@ export async function routeTicketMessage({
 
         if (failedSearch && !failedSearch.ok) {
           const reply = failedSearch.reason === "invalid_date"
-            ? "Data inválida. Digite no formato DD/MM ou DD/MM/AAAA."
+            ? "Data invÃ¡lida. Digite no formato DD/MM ou DD/MM/AAAA."
             : failedSearch.reason === "query_too_short"
               ? "Digite pelo menos 2 letras do nome ou artista, ou informe uma data."
               : TICKET_MESSAGES.adminGenericError;
@@ -13981,7 +14554,7 @@ export async function routeTicketMessage({
               authorizedEventIds.length === 0
             ) {
               return {
-                reply: "Um dos eventos não está mais disponível para o seu perfil. Faça uma nova busca.",
+                reply: "Um dos eventos nÃ£o estÃ¡ mais disponÃ­vel para o seu perfil. FaÃ§a uma nova busca.",
                 nextContext: adminReplyContext({
                   state: "admin_reports_menu",
                   role: adminUser.role,
@@ -14071,7 +14644,7 @@ export async function routeTicketMessage({
               "Digite o intervalo no formato DD/MM/AAAA a DD/MM/AAAA.",
               "Ex: 01/05/2026 a 24/05/2026",
               "",
-              'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
+              'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da Ã¡rea de admin.',
             ].join("\n"),
             nextContext: withAdminReportsContext(
               baseContext,
@@ -14101,7 +14674,7 @@ export async function routeTicketMessage({
         if (!period) {
           return {
             reply:
-              "Intervalo invÃƒÂ¡lido. Digite no formato DD/MM/AAAA a DD/MM/AAAA.",
+              "Intervalo invÃƒÆ’Ã‚Â¡lido. Digite no formato DD/MM/AAAA a DD/MM/AAAA.",
             nextContext: withAdminReportsContext(
               baseContext,
               "admin_report_custom_period_collecting",
@@ -14319,7 +14892,7 @@ export async function routeTicketMessage({
 
         if (!result.ok && result.reason === "already_active") {
           return {
-            reply: "Este telefone jÃƒÂ¡ possui administrador ativo cadastrado.",
+            reply: "Este telefone jÃƒÆ’Ã‚Â¡ possui administrador ativo cadastrado.",
             nextContext: adminReplyContext({
               state: "admin_users_menu",
               role: adminUser.role,
@@ -14432,7 +15005,7 @@ export async function routeTicketMessage({
 
         if (!selectedAdminUserId) {
           return {
-            reply: "Administrador nÃƒÂ£o encontrado. Responda com nÃƒÂºmero, telefone ou ID.",
+            reply: "Administrador nÃƒÆ’Ã‚Â£o encontrado. Responda com nÃƒÆ’Ã‚Âºmero, telefone ou ID.",
             nextContext: withAdminUsersContext(
               baseContext,
               baseContext.state,
@@ -14461,7 +15034,7 @@ export async function routeTicketMessage({
           return {
             reply: listedUser
               ? renderAdminUserDisableConfirm(listedUser)
-              : "Administrador nÃƒÂ£o encontrado. Responda com nÃƒÂºmero, telefone ou ID.",
+              : "Administrador nÃƒÆ’Ã‚Â£o encontrado. Responda com nÃƒÆ’Ã‚Âºmero, telefone ou ID.",
             nextContext: withAdminUsersContext(baseContext, "admin_user_disable_confirm", {
               ...adminUsersContext,
               selectedAdminUserId,
@@ -14541,7 +15114,7 @@ export async function routeTicketMessage({
 
         if (!selectedPhone) {
           return {
-            reply: "Administrador bloqueado nÃƒÂ£o encontrado. Responda com nÃƒÂºmero ou telefone.",
+            reply: "Administrador bloqueado nÃƒÆ’Ã‚Â£o encontrado. Responda com nÃƒÆ’Ã‚Âºmero ou telefone.",
             nextContext: withAdminUsersContext(
               baseContext,
               "admin_user_unlock_select",
@@ -14601,7 +15174,7 @@ export async function routeTicketMessage({
 
         if (normalizeAdminText(text) !== "alterar nivel") {
           return {
-            reply: "Digite ALTERAR NÃƒÂVEL para confirmar ou CANCELAR para abandonar.",
+            reply: "Digite ALTERAR NÃƒÆ’Ã‚ÂVEL para confirmar ou CANCELAR para abandonar.",
             nextContext: withAdminUsersContext(
               baseContext,
               "admin_user_role_confirm",
@@ -14639,17 +15212,17 @@ export async function routeTicketMessage({
 
         const blockedMessage =
           !result.ok && result.reason === "self_downgrade_blocked"
-            ? "NÃƒÂ£o ÃƒÂ© permitido rebaixar o prÃƒÂ³prio Diretor neste fluxo."
+            ? "NÃƒÆ’Ã‚Â£o ÃƒÆ’Ã‚Â© permitido rebaixar o prÃƒÆ’Ã‚Â³prio Diretor neste fluxo."
             : !result.ok && result.reason === "last_root_blocked"
-              ? "NÃƒÂ£o ÃƒÂ© permitido remover o ÃƒÂºltimo Diretor ativo."
+              ? "NÃƒÆ’Ã‚Â£o ÃƒÆ’Ã‚Â© permitido remover o ÃƒÆ’Ã‚Âºltimo Diretor ativo."
               : null;
 
         return {
           reply: result.ok
             ? [
-                "*NÃƒÂVEL DE ADMINISTRADOR ATUALIZADO*",
+                "*NÃƒÆ’Ã‚ÂVEL DE ADMINISTRADOR ATUALIZADO*",
                 `> Perfil: ${formatAdminRoleLabel(adminUsersContext.pendingRole)}`,
-                'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÂ¡rea de admin.',
+                'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
               ].join("\n")
             : (blockedMessage ?? TICKET_MESSAGES.adminGenericError),
           nextContext: adminReplyContext({
@@ -14704,9 +15277,9 @@ export async function routeTicketMessage({
 
         const blockedMessage =
           !result.ok && result.reason === "self_disable_blocked"
-            ? "NÃƒÂ£o ÃƒÂ© permitido desativar o prÃƒÂ³prio Diretor neste fluxo."
+            ? "NÃƒÆ’Ã‚Â£o ÃƒÆ’Ã‚Â© permitido desativar o prÃƒÆ’Ã‚Â³prio Diretor neste fluxo."
             : !result.ok && result.reason === "last_root_blocked"
-              ? "NÃƒÂ£o ÃƒÂ© permitido desativar o ÃƒÂºltimo Diretor ativo."
+              ? "NÃƒÆ’Ã‚Â£o ÃƒÆ’Ã‚Â© permitido desativar o ÃƒÆ’Ã‚Âºltimo Diretor ativo."
               : null;
 
         return {
@@ -14715,8 +15288,8 @@ export async function routeTicketMessage({
                 "*ADMINISTRADOR DESATIVADO*",
                 "",
                 `> Nome: ${adminUsersContext.selectedAdminName || "Sem nome"}`,
-                `> Telefone: ${adminUsersContext.selectedAdminPhone ? maskAdminPhone(adminUsersContext.selectedAdminPhone) : "nÃƒÂ£o informado"}`,
-                `> Perfil: ${adminUsersContext.selectedAdminRole ? formatAdminRoleLabel(adminUsersContext.selectedAdminRole) : "nÃƒÂ£o informado"}`,
+                `> Telefone: ${adminUsersContext.selectedAdminPhone ? maskAdminPhone(adminUsersContext.selectedAdminPhone) : "nÃƒÆ’Ã‚Â£o informado"}`,
+                `> Perfil: ${adminUsersContext.selectedAdminRole ? formatAdminRoleLabel(adminUsersContext.selectedAdminRole) : "nÃƒÆ’Ã‚Â£o informado"}`,
               ].join("\n")
             : (blockedMessage ?? TICKET_MESSAGES.adminGenericError),
           nextContext: adminReplyContext({
@@ -14839,11 +15412,11 @@ export async function routeTicketMessage({
                 "*PALAVRA-CHAVE RENOVADA*",
                 "",
                 `> Nome: ${adminUsersContext.selectedAdminName || "Sem nome"}`,
-                `> Telefone: ${adminUsersContext.selectedAdminPhone ? maskAdminPhone(adminUsersContext.selectedAdminPhone) : "nÃƒÂ£o informado"}`,
+                `> Telefone: ${adminUsersContext.selectedAdminPhone ? maskAdminPhone(adminUsersContext.selectedAdminPhone) : "nÃƒÆ’Ã‚Â£o informado"}`,
                 ...(adminUsersContext.selectedAdminRole
                   ? [`> Perfil: ${formatAdminRoleLabel(adminUsersContext.selectedAdminRole)}`]
                   : []),
-                "> SessÃƒÂµes ativas revogadas",
+                "> SessÃƒÆ’Ã‚Âµes ativas revogadas",
               ].join("\n")
             : TICKET_MESSAGES.adminGenericError,
           nextContext: adminReplyContext({
@@ -15712,7 +16285,7 @@ export async function routeTicketMessage({
           },
           2: {
             reply:
-              "*BUSCAR INGRESSO POR CÃƒâ€œDIGO*\n\nEnvie o cÃƒÂ³digo do ingresso. Ex: TCK-XXXXXXXXXXXX",
+              "*BUSCAR INGRESSO POR CÃƒÆ’Ã¢â‚¬Å“DIGO*\n\nEnvie o cÃƒÆ’Ã‚Â³digo do ingresso. Ex: TCK-XXXXXXXXXXXX",
             state: "admin_order_code_collecting",
           },
           3: {
@@ -15782,8 +16355,8 @@ export async function routeTicketMessage({
           return {
             reply:
               submenuOption === 3
-                ? "*REENVIAR CORTESIA*\n\nDigite o telefone do beneficiÃƒÂ¡rio ou o cÃƒÂ³digo da cortesia."
-                : "*CANCELAR CORTESIA*\n\nDigite o telefone do beneficiÃƒÂ¡rio ou o cÃƒÂ³digo da cortesia.",
+                ? "*REENVIAR CORTESIA*\n\nDigite o telefone do beneficiÃƒÆ’Ã‚Â¡rio ou o cÃƒÆ’Ã‚Â³digo da cortesia."
+                : "*CANCELAR CORTESIA*\n\nDigite o telefone do beneficiÃƒÆ’Ã‚Â¡rio ou o cÃƒÆ’Ã‚Â³digo da cortesia.",
             nextContext: withAdminCourtesiesContext(
               baseContext,
               submenuOption === 3
@@ -15849,7 +16422,7 @@ export async function routeTicketMessage({
               reply: [
                 renderBlockedAdminAuthList(blockedResult.blocked),
                 "",
-                "Responda com o nÃƒÂºmero ou telefone que deseja liberar.",
+                "Responda com o nÃƒÆ’Ã‚Âºmero ou telefone que deseja liberar.",
               ].join("\n"),
               nextContext: withAdminUsersContext(
                 {
@@ -15914,7 +16487,7 @@ export async function routeTicketMessage({
                   : submenuOption === 4
                     ? "*QUAL ADMINISTRADOR DESEJA DESATIVAR?*"
                     : "*QUAL ADMINISTRADOR DESEJA RENOVAR A PALAVRA-CHAVE?*",
-                "Responda com nÃƒÂºmero, telefone ou ID.",
+                "Responda com nÃƒÆ’Ã‚Âºmero, telefone ou ID.",
                 "",
                 renderAdminUsersSelectionList(selectableUsers).replace(
                   /^\*ADMINISTRADORES\*\n\n/,
@@ -16257,7 +16830,7 @@ export async function routeTicketMessage({
 
       return {
         reply:
-          "NÃƒÂ£o encontrei acesso de portaria ativo para este telefone.",
+          "NÃƒÆ’Ã‚Â£o encontrei acesso de portaria ativo para este telefone.",
         nextContext: {
           ...baseContext,
           step: "idle",
@@ -16286,7 +16859,7 @@ export async function routeTicketMessage({
     if (!deliveryResult.ok) {
       return {
         reply:
-          "NÃƒÂ£o encontrei cortesia disponÃƒÂ­vel para este telefone. Confira se ela jÃƒÂ¡ foi emitida para este nÃƒÂºmero.",
+          "NÃƒÆ’Ã‚Â£o encontrei cortesia disponÃƒÆ’Ã‚Â­vel para este telefone. Confira se ela jÃƒÆ’Ã‚Â¡ foi emitida para este nÃƒÆ’Ã‚Âºmero.",
         nextContext: resetBuyerReservationContext(baseContext),
       };
     }
@@ -16303,6 +16876,23 @@ export async function routeTicketMessage({
       ],
       nextContext: resetBuyerReservationContext(baseContext),
     };
+  }
+
+  const ticketDeliverySelection = await handleTicketDeliverySelection({
+    baseContext,
+    text,
+    rawPayload,
+  });
+
+  if (ticketDeliverySelection) {
+    return ticketDeliverySelection;
+  }
+
+  if (isParticipantTicketRequestIntent(text)) {
+    return handleParticipantTicketRequest({
+      baseContext,
+      phone: customer.whatsapp_phone,
+    });
   }
 
   const publicEntryGateResponse = buildPublicEntryGateResponse({
@@ -16474,7 +17064,7 @@ export async function routeTicketMessage({
   ) {
     return {
       reply: [
-        "Olá! Bem-vindo(a) à Black House.",
+        "OlÃ¡! Bem-vindo(a) Ã  Black House.",
         "",
         LOW_CONFIDENCE_PUBLIC_PROMPT,
       ].join("\n"),
@@ -16492,7 +17082,7 @@ export async function routeTicketMessage({
 
     if (events.length === 0) {
       const noPublicEventsReply =
-        "Não encontrei eventos disponíveis no momento.";
+        "NÃ£o encontrei eventos disponÃ­veis no momento.";
       return {
         reply: noPublicEventsReply,
         outboundMessages: [
@@ -16545,7 +17135,7 @@ export async function routeTicketMessage({
 
     if (events.length === 0) {
       const noPublicEventsReply =
-        "NÃƒÂ£o encontrei eventos disponÃƒÂ­veis no momento.";
+        "NÃƒÆ’Ã‚Â£o encontrei eventos disponÃƒÆ’Ã‚Â­veis no momento.";
       return {
         reply: noPublicEventsReply,
         outboundMessages: [
@@ -16595,9 +17185,9 @@ export async function routeTicketMessage({
   ) {
     return {
       reply: [
-        "Para qual evento você quer comprar?",
+        "Para qual evento vocÃª quer comprar?",
         "",
-        "Digite o nome do artista/evento ou *TODOS* para ver a programação.",
+        "Digite o nome do artista/evento ou *TODOS* para ver a programaÃ§Ã£o.",
       ].join("\n"),
       nextContext: baseContext,
     };
@@ -16954,7 +17544,7 @@ export async function routeTicketMessage({
         return {
           ...sectionsResult,
           reply: [
-            "NÃƒÂ£o encontrei itens nessa compra. Escolha o ingresso novamente.",
+            "NÃƒÆ’Ã‚Â£o encontrei itens nessa compra. Escolha o ingresso novamente.",
             "",
             sectionsResult.reply,
           ].join("\n"),
@@ -16962,7 +17552,7 @@ export async function routeTicketMessage({
       }
 
       return {
-        reply: "NÃƒÂ£o encontrei itens nessa compra. Escolha o ingresso novamente.",
+        reply: "NÃƒÆ’Ã‚Â£o encontrei itens nessa compra. Escolha o ingresso novamente.",
         nextContext: resetBuyerReservationContext(baseContext),
       };
     }
@@ -17060,7 +17650,7 @@ export async function routeTicketMessage({
 
     if (!quantity) {
       return {
-        reply: "Envie a quantidade de ingressos usando apenas nÃƒÂºmeros. Ex: 2",
+        reply: "Envie a quantidade de ingressos usando apenas nÃƒÆ’Ã‚Âºmeros. Ex: 2",
         nextContext: {
           ...baseContext,
           step: "selecting_quantity",
@@ -17076,8 +17666,8 @@ export async function routeTicketMessage({
     if (quantity > maxTicketsPerOrder) {
       return {
         reply: isPublicFreeTicketType(previousState.selectedSection.selectedTicketType)
-          ? "*QUANTIDADE INVALIDA*\nPara ingresso gratuito, o nÃƒÂºmero mÃƒÂ¡ximo de ingressos por pedido sÃƒÂ£o 4. Digite novamente o nÃƒÂºmero de 1 a 4."
-          : "Para esta compra, escolha atÃƒÂ© 10 ingressos por vez. Envie uma quantidade menor.",
+          ? "*QUANTIDADE INVALIDA*\nPara ingresso gratuito, o nÃƒÆ’Ã‚Âºmero mÃƒÆ’Ã‚Â¡ximo de ingressos por pedido sÃƒÆ’Ã‚Â£o 4. Digite novamente o nÃƒÆ’Ã‚Âºmero de 1 a 4."
+          : "Para esta compra, escolha atÃƒÆ’Ã‚Â© 10 ingressos por vez. Envie uma quantidade menor.",
         nextContext: {
           ...baseContext,
           step: "selecting_quantity",
@@ -17097,8 +17687,8 @@ export async function routeTicketMessage({
       return {
         reply:
           nextFreeQuantity > 4
-            ? "Para ingresso gratuito, o mÃƒÂ¡ximo sÃƒÂ£o 4 ingressos por pedido. Escolha uma quantidade menor."
-            : "A compra pode ter no mÃƒÂ¡ximo 10 ingressos no total. Escolha uma quantidade menor.",
+            ? "Para ingresso gratuito, o mÃƒÆ’Ã‚Â¡ximo sÃƒÆ’Ã‚Â£o 4 ingressos por pedido. Escolha uma quantidade menor."
+            : "A compra pode ter no mÃƒÆ’Ã‚Â¡ximo 10 ingressos no total. Escolha uma quantidade menor.",
         nextContext: {
           ...baseContext,
           step: "selecting_quantity",
@@ -17189,7 +17779,7 @@ export async function routeTicketMessage({
 
     if (!cart) {
       return {
-        reply: "NÃƒÂ£o consegui adicionar esse ingresso ÃƒÂ  compra. Escolha o setor novamente.",
+        reply: "NÃƒÆ’Ã‚Â£o consegui adicionar esse ingresso ÃƒÆ’Ã‚Â  compra. Escolha o setor novamente.",
         nextContext: {
           ...baseContext,
           step: "showing_sections",
@@ -17234,7 +17824,7 @@ export async function routeTicketMessage({
       return {
         reply:
           quantity > 1
-            ? `Envie exatamente ${quantity} assentos disponÃƒÂ­veis. Ex: A03 A04`
+            ? `Envie exatamente ${quantity} assentos disponÃƒÆ’Ã‚Â­veis. Ex: A03 A04`
             : TICKET_MESSAGES.seatInvalidOption,
         nextContext: {
           ...baseContext,
@@ -17268,7 +17858,7 @@ export async function routeTicketMessage({
 
     if (!cart) {
       return {
-        reply: "NÃƒÂ£o consegui adicionar esses assentos ÃƒÂ  compra. Escolha novamente.",
+        reply: "NÃƒÆ’Ã‚Â£o consegui adicionar esses assentos ÃƒÆ’Ã‚Â  compra. Escolha novamente.",
         nextContext: {
           ...baseContext,
           step: "showing_seats",

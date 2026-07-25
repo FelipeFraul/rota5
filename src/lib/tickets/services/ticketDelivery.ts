@@ -65,6 +65,26 @@ export type DeliverTicketsForOrderResult =
       reason: "order_not_found" | "internal_error";
     };
 
+export type RequestTicketDeliveryPreferenceResult =
+  | {
+      ok: true;
+      sent: true;
+    }
+  | {
+      ok: true;
+      sent: false;
+      reason:
+        | "missing_phone"
+        | "tickets_not_found"
+        | "zapi_failed"
+        | "delivery_in_progress";
+      ticketsCount?: number;
+    }
+  | {
+      ok: false;
+      reason: "order_not_found" | "internal_error";
+    };
+
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 function getDeliveryStateUpdateFailureCode(result: {
   ok: false;
@@ -126,6 +146,17 @@ function formatTableMapPlaceCode(code: string | null) {
     ? `${displayCode} para ${place.capacity} pessoas`
     : displayCode;
 }
+
+const TICKET_DELIVERY_PREFERENCE_MESSAGE = [
+  "*PAGAMENTO CONFIRMADO*",
+  "",
+  "Como deseja receber seus ingressos?",
+  "",
+  "1. Receber todos os ingressos neste WhatsApp.",
+  "2. Cada participante receber o prÃ³prio ingresso.",
+  "",
+  "Digite *1* ou *2*.",
+].join("\n");
 
 function formatTicketSummary(tickets: TicketForDelivery[]) {
   const firstTicket = tickets[0];
@@ -256,6 +287,206 @@ async function resetPaidOrderConversationContext({
       code: updateResult.error.code,
     });
   }
+}
+
+export async function requestTicketDeliveryPreferenceForOrder(
+  orderId: string,
+): Promise<RequestTicketDeliveryPreferenceResult> {
+  let order: OrderCustomer | null;
+  let tickets: TicketForDelivery[];
+
+  try {
+    order = await getOrderCustomer(orderId);
+    tickets = await getTicketsForOrder(orderId);
+  } catch (error) {
+    logError("Failed to load order for ticket delivery preference", {
+      orderId,
+      error,
+    });
+    return { ok: false, reason: "internal_error" };
+  }
+
+  if (!order) {
+    return { ok: false, reason: "order_not_found" };
+  }
+
+  const phone = order.customers?.whatsapp_phone;
+
+  if (!phone) {
+    logWarn("Skipped ticket delivery preference without customer phone", {
+      orderId,
+    });
+    return { ok: true, sent: false, reason: "missing_phone" };
+  }
+
+  if (tickets.length === 0) {
+    logWarn("Skipped ticket delivery preference without issued tickets", {
+      orderId,
+    });
+    return { ok: true, sent: false, reason: "tickets_not_found" };
+  }
+
+  const conversationResult = await getOrCreateOpenConversation({
+    customerId: order.customer_id,
+  });
+  if (!conversationResult.ok) {
+    logError("Failed to prepare ticket delivery preference conversation", {
+      orderId,
+      customerId: order.customer_id,
+      code: conversationResult.error.code,
+    });
+    return { ok: false, reason: "internal_error" };
+  }
+
+  const conversationId = conversationResult.conversation.id;
+  const context = {
+    ...buildInitialConversationState(),
+    step: "ticket_delivery_selecting",
+    state: "ticket_delivery_selecting",
+    ticketDelivery: {
+      orderId,
+      expectedContactsCount: tickets.length,
+      requestedAt: new Date().toISOString(),
+      mode: "buyer_whatsapp",
+    },
+  };
+
+  const contextUpdateResult = await updateConversationAfterMessage({
+    conversationId,
+    context,
+  });
+
+  if (!contextUpdateResult.ok) {
+    logError("Failed to set ticket delivery preference context", {
+      orderId,
+      conversationId,
+      code: contextUpdateResult.error.code,
+    });
+    return { ok: false, reason: "internal_error" };
+  }
+
+  const businessContext = {
+    order_id: orderId,
+    tickets_count: tickets.length,
+  };
+  const delivery = await getOrCreateWhatsAppOutboundDelivery({
+    idempotencyKey: `paid-ticket-order:${orderId}:delivery-choice:v1`,
+    customerId: order.customer_id,
+    conversationId,
+    recipientPhone: phone,
+    messageType: "text",
+    reason: "paid_ticket_delivery_choice",
+    businessContext,
+  });
+
+  if (!delivery.ok) {
+    logError("Failed to prepare ticket delivery preference idempotency", {
+      orderId,
+      code: delivery.error.code,
+    });
+    return { ok: false, reason: "internal_error" };
+  }
+
+  if (delivery.delivery.status === "sent") {
+    logInfo("Skipped already sent ticket delivery preference", { orderId });
+    return { ok: true, sent: true };
+  }
+
+  const claim = await claimWhatsAppOutboundDelivery(delivery.delivery.id);
+  if (!claim.ok) {
+    logError("Failed to claim ticket delivery preference", {
+      orderId,
+      code: claim.error.code,
+    });
+    return { ok: false, reason: "internal_error" };
+  }
+
+  if (!claim.claimed) {
+    logWarn("Skipped ticket delivery preference already in progress", {
+      orderId,
+    });
+    return { ok: true, sent: false, reason: "delivery_in_progress" };
+  }
+
+  const sendResult = await sendZapiText({
+    phone,
+    message: TICKET_DELIVERY_PREFERENCE_MESSAGE,
+  });
+  const saveResult = await saveWhatsAppMessage({
+    conversationId,
+    customerId: order.customer_id,
+    direction: "outbound",
+    messageType: "text",
+    body: TICKET_DELIVERY_PREFERENCE_MESSAGE,
+    providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
+    rawMetadata: buildWhatsAppOutboundMetadata({
+      sendResult,
+      messageType: "text",
+      reason: "paid_ticket_delivery_choice",
+      businessContext,
+    }),
+  });
+
+  if (!saveResult.ok) {
+    const markFailedResult = await markWhatsAppOutboundDeliveryFailed({
+      deliveryId: delivery.delivery.id,
+      error: saveResult.error?.code ?? "whatsapp_message_persist_failed",
+    });
+    if (!markFailedResult.ok) {
+      logError("Failed to mark ticket delivery preference as failed", {
+        orderId,
+        code: getDeliveryStateUpdateFailureCode(markFailedResult),
+        originalCode: saveResult.error?.code,
+      });
+    }
+    logError("Failed to save ticket delivery preference message", {
+      orderId,
+      conversationId,
+      code: saveResult.error?.code,
+    });
+    return sendResult.ok
+      ? { ok: false, reason: "internal_error" }
+      : { ok: true, sent: false, reason: "zapi_failed" };
+  }
+
+  if (!sendResult.ok) {
+    const markFailedResult = await markWhatsAppOutboundDeliveryFailed({
+      deliveryId: delivery.delivery.id,
+      error: sendResult.error,
+    });
+    if (!markFailedResult.ok) {
+      logError("Failed to mark ticket delivery preference as failed", {
+        orderId,
+        code: getDeliveryStateUpdateFailureCode(markFailedResult),
+        originalCode: sendResult.error,
+      });
+    }
+    logWarn("Ticket delivery preference failed after payment confirmation", {
+      orderId,
+      phoneLast4: phone.slice(-4),
+      reason: sendResult.error,
+    });
+    return { ok: true, sent: false, reason: "zapi_failed" };
+  }
+
+  const markSentResult = await markWhatsAppOutboundDeliverySent({
+    deliveryId: delivery.delivery.id,
+    providerMessageId: sendResult.providerMessageId,
+  });
+  if (!markSentResult.ok) {
+    logError("Failed to mark ticket delivery preference as sent", {
+      orderId,
+      code: getDeliveryStateUpdateFailureCode(markSentResult),
+    });
+    return { ok: false, reason: "internal_error" };
+  }
+
+  logInfo("Requested paid ticket delivery preference by WhatsApp", {
+    orderId,
+    phoneLast4: phone.slice(-4),
+  });
+
+  return { ok: true, sent: true };
 }
 
 export async function deliverTicketsForOrder(
