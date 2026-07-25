@@ -23,6 +23,10 @@ const ticketDeliverySource = readFileSync(
   new URL("../src/lib/tickets/services/ticketDelivery.ts", import.meta.url),
   "utf8",
 );
+const comboOffersSource = readFileSync(
+  new URL("../src/lib/tickets/services/comboOffers.ts", import.meta.url),
+  "utf8",
+);
 const buyerReservedMigrationSource = readFileSync(
   new URL(
     "../supabase/migrations/20260725000100_reserve_buyer_ticket_in_participant_distribution.sql",
@@ -401,4 +405,85 @@ test("falha parcial no envio mantem awaiting_participant_request para retry", ()
   assert.match(zapiWebhookSource, /if \(!sendResult\.ok\)[\s\S]*logWarn\("Z-API reply failed/);
   assert.match(zapiWebhookSource, /if \(outboundMessage\.participantDeliveryTicketId\)[\s\S]*markParticipantTicketDelivered/);
   assert.match(zapiWebhookSource, /Participant ticket QR send failed; ticket remains pending for retry/);
+});
+
+test("Meu ingresso envia somente QR Code e nenhuma oferta na mesma execucao", () => {
+  assert.doesNotMatch(routerSource, /participantComboOfferTicketId/);
+  assert.doesNotMatch(zapiWebhookSource, /sendComboOfferForTicket|participant_combo_offer/);
+  assert.doesNotMatch(routerSource, /createComboOrderForCheckout/);
+});
+
+test("participante fica elegivel para agendamento somente apos QR entregue", () => {
+  assert.match(zapiWebhookSource, /if \(outboundMessage\.participantDeliveryTicketId\)[\s\S]*markParticipantTicketDelivered/);
+  assert.match(comboOffersSource, /\.eq\("participant_delivery_status",\s*"delivered"\)/);
+  assert.match(comboOffersSource, /\.not\("recipient_phone",\s*"is",\s*null\)/);
+  assert.match(comboOffersSource, /participant_delivered_at/);
+  assert.doesNotMatch(comboOffersSource, /\.eq\("participant_delivery_status",\s*"awaiting_participant_request"\)/);
+});
+
+test("scheduler encontra participante entregue e resolve customer proprio pelo recipient_phone", () => {
+  assert.match(comboOffersSource, /import \{ upsertCustomerFromWhatsApp \} from "@\/lib\/tickets\/services\/customers"/);
+  assert.match(comboOffersSource, /participantPhones[\s\S]*ticket\.recipient_phone/);
+  assert.match(comboOffersSource, /upsertCustomerFromWhatsApp\(\{ phone \}\)/);
+  assert.match(comboOffersSource, /participantCustomerByPhone\.set\(originalPhone,[\s\S]*id:\s*result\.customer\.id[\s\S]*phone:\s*result\.customer\.whatsapp_phone/);
+  assert.match(comboOffersSource, /const customer = phone \? participantCustomerByPhone\.get\(phone\) : null/);
+  assert.match(comboOffersSource, /customer_id:\s*customer\.id/);
+  assert.match(comboOffersSource, /offer_customer_id:\s*customer\.id/);
+  assert.match(comboOffersSource, /customers:\s*\{\s*whatsapp_phone:\s*customer\.phone\s*\}/);
+});
+
+test("oferta de participante usa o mesmo agendador e respeita tempo configurado", () => {
+  assert.match(comboOffersSource, /export async function sendScheduledComboOffers/);
+  assert.match(comboOffersSource, /participantOfferTickets/);
+  assert.match(comboOffersSource, /mergeComboOfferCandidateTickets\([\s\S]*eventWindowTickets[\s\S]*recentPurchaseTickets[\s\S]*participantOfferTickets/);
+  assert.match(comboOffersSource, /shouldSendComboOfferNow\(offer,\s*session\.starts_at,\s*now,\s*ticket\.issued_at\)/);
+  assert.match(comboOffersSource, /const offset = offer\.send_offset_minutes/);
+});
+
+test("oferta de 2 minutos e multiplas prioridades continuam no mecanismo existente", () => {
+  assert.match(comboOffersSource, /offer\.send_offset_minutes/);
+  assert.match(comboOffersSource, /target = start - offset \* 60_000/);
+  assert.match(comboOffersSource, /getComboOfferPriorityForEvent\(offer,\s*session\.event_id\) === purchaseNumber/);
+  assert.match(comboOffersSource, /resolveEffectiveComboOffersForEvent/);
+});
+
+test("mesma oferta nao duplica para o mesmo participante", () => {
+  assert.match(comboOffersSource, /const offerCustomerId = ticket\.offer_customer_id \?\? ticket\.customer_id/);
+  assert.match(comboOffersSource, /buildComboOfferDedupeKey\(\{[\s\S]*customerId:\s*offerCustomerId/);
+  assert.match(comboOffersSource, /loadSentComboOfferKeys\(\[offerCustomerId\]\)/);
+  assert.match(comboOffersSource, /combo_offer_event_locks/);
+});
+
+test("comprador e participante usam chaves independentes de deduplicacao", () => {
+  assert.match(comboOffersSource, /byId\.set\(`\$\{ticket\.offer_source \?\? "buyer"\}:\$\{customerId\}:\$\{ticket\.id\}`, ticket\)/);
+  assert.match(comboOffersSource, /const key = `\$\{ticket\.offer_source \?\? "buyer"\}:\$\{customerId\}:\$\{order\.id\}`/);
+  assert.match(comboOffersSource, /customerId:\s*offerCustomerId/);
+  assert.match(comboOffersSource, /offer_recipient_source:\s*ticket\.offer_source \?\? "buyer"/);
+});
+
+test("multiplos ingressos do mesmo participante no mesmo pedido nao duplicam oferta", () => {
+  assert.match(comboOffersSource, /function uniqueComboOfferCandidateTicketsByOrder/);
+  assert.match(comboOffersSource, /const customerId = ticket\.offer_customer_id \?\? ticket\.customer_id/);
+  assert.match(comboOffersSource, /const key = `\$\{ticket\.offer_source \?\? "buyer"\}:\$\{customerId\}:\$\{order\.id\}`/);
+});
+
+test("evento sem oferta nao agenda nada para participante", () => {
+  assert.match(comboOffersSource, /listActiveComboOffersForEventSession\(/);
+  assert.match(comboOffersSource, /if \(!offers\.length\) \{[\s\S]*skippedCount \+= 1/);
+  assert.match(comboOffersSource, /if \(!offer\) \{[\s\S]*skippedCount \+= 1/);
+});
+
+test("oferta do participante nao vincula combo ao pedido original", () => {
+  assert.match(comboOffersSource, /const isParticipantOffer = ticket\.offer_source === "participant"/);
+  assert.match(comboOffersSource, /sourceOrderId:\s*isParticipantOffer \? null : order\.id/);
+  assert.match(comboOffersSource, /sourceTicketId:\s*isParticipantOffer \? null : ticket\.id/);
+  assert.match(comboOffersSource, /offer_recipient_source:\s*ticket\.offer_source \?\? "buyer"/);
+});
+
+test("fluxo do comprador permanece inalterado para oferta de combo", () => {
+  assert.match(comboOffersSource, /export async function sendScheduledComboOffers/);
+  assert.match(comboOffersSource, /reason:\s*"combo_offer"/);
+  assert.match(comboOffersSource, /sourceOrderId:\s*isParticipantOffer \? null : order\.id/);
+  assert.match(comboOffersSource, /sourceTicketId:\s*isParticipantOffer \? null : ticket\.id/);
+  assert.match(comboOffersSource, /\.eq\("orders\.status",\s*"paid"\)/);
 });

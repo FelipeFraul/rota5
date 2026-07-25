@@ -120,6 +120,8 @@ export type TicketForDelivery = {
   status: string;
   orderId: string;
   customerId: string;
+  eventId: string;
+  sessionId: string;
   eventTitle: string;
   artistName: string;
   city: string;
@@ -217,6 +219,8 @@ function mapTicketRow(row: TicketRow): TicketForDelivery | null {
     status: row.status,
     orderId: row.order_id,
     customerId: row.customer_id,
+    eventId: row.event_sessions.event_id ?? "",
+    sessionId: row.session_id,
     eventTitle: row.event_sessions.events.title,
     artistName: row.event_sessions.events.artist_name,
     city: row.event_sessions.events.city,

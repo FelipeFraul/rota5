@@ -1730,6 +1730,7 @@ export async function POST(request: Request) {
             reason: deliveredResult.reason,
           });
         }
+
       } else {
         logWarn("Participant ticket QR send failed; ticket remains pending for retry", {
           conversationId: conversationResult.conversation.id,
@@ -1739,6 +1740,7 @@ export async function POST(request: Request) {
         });
       }
     }
+
   }
 
   const anyMessageDelivered = deliveryResults.some(

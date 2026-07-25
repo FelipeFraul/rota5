@@ -7,6 +7,7 @@ import { getEnv } from "@/lib/env";
 import { logError, logInfo, logWarn } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getOrCreateOpenConversation, updateConversationAfterMessage } from "@/lib/tickets/services/conversations";
+import { upsertCustomerFromWhatsApp } from "@/lib/tickets/services/customers";
 import { saveWhatsAppMessage } from "@/lib/tickets/services/messages";
 import { buildWhatsAppOutboundMetadata } from "@/lib/tickets/services/outboundMessages";
 import { centsToDecimalAmount, decimalAmountToCents } from "@/lib/tickets/services/payments";
@@ -134,6 +135,9 @@ type ComboPaymentRow = {
 type ComboOfferCandidateTicketRow = {
   id: string;
   customer_id: string;
+  offer_customer_id?: string;
+  offer_phone?: string | null;
+  offer_source?: "buyer" | "participant";
   issued_at: string;
   orders:
     | { id: string; created_at: string; status: string }
@@ -1904,7 +1908,8 @@ function mergeComboOfferCandidateTickets(
 
   for (const group of groups) {
     for (const ticket of group ?? []) {
-      byId.set(ticket.id, ticket);
+      const customerId = ticket.offer_customer_id ?? ticket.customer_id;
+      byId.set(`${ticket.offer_source ?? "buyer"}:${customerId}:${ticket.id}`, ticket);
     }
   }
 
@@ -1926,8 +1931,11 @@ function uniqueComboOfferCandidateTicketsByOrder(
       continue;
     }
 
-    if (!byOrder.has(order.id)) {
-      byOrder.set(order.id, ticket);
+    const customerId = ticket.offer_customer_id ?? ticket.customer_id;
+    const key = `${ticket.offer_source ?? "buyer"}:${customerId}:${order.id}`;
+
+    if (!byOrder.has(key)) {
+      byOrder.set(key, ticket);
     }
   }
 
@@ -2046,6 +2054,7 @@ export async function sendScheduledComboOffers(limit = 100) {
   const [
     { data: eventWindowTickets, error: eventWindowError },
     { data: recentPurchaseTickets, error: recentPurchaseError },
+    { data: participantTickets, error: participantTicketsError },
   ] = await Promise.all([
     supabase
     .from("tickets")
@@ -2067,13 +2076,78 @@ export async function sendScheduledComboOffers(limit = 100) {
       .order("issued_at", { ascending: true })
       .limit(limit)
       .returns<ComboOfferCandidateTicketRow[]>(),
+    supabase
+      .from("tickets")
+      .select("id, customer_id, recipient_phone, issued_at, participant_delivered_at, orders!inner(id, created_at, status), event_sessions!inner(id, event_id, starts_at, events!inner(id, title))")
+      .eq("status", "issued")
+      .eq("orders.status", "paid")
+      .eq("participant_delivery_status", "delivered")
+      .not("recipient_phone", "is", null)
+      .gte("event_sessions.starts_at", eventWindowFrom)
+      .order("participant_delivered_at", { ascending: true })
+      .limit(limit)
+      .returns<Array<ComboOfferCandidateTicketRow & {
+        recipient_phone: string | null;
+        participant_delivered_at: string | null;
+      }>>(),
   ]);
 
-  const error = eventWindowError ?? recentPurchaseError;
+  const error = eventWindowError ?? recentPurchaseError ?? participantTicketsError;
   if (error) throw error;
 
+  const participantPhones = [
+    ...new Set(
+      (participantTickets ?? [])
+        .map((ticket) => ticket.recipient_phone)
+        .filter((phone): phone is string => Boolean(phone)),
+    ),
+  ];
+  const participantCustomerByPhone = new Map<string, { id: string; phone: string }>();
+  const participantCustomerResults = await Promise.all(
+    participantPhones.map(async (phone) => ({
+      originalPhone: phone,
+      result: await upsertCustomerFromWhatsApp({ phone }),
+    })),
+  );
+
+  for (const { originalPhone, result } of participantCustomerResults) {
+    if (!result.ok) {
+      logWarn("Skipped participant combo offer customer upsert", {
+        code: result.error?.code,
+      });
+      continue;
+    }
+
+    participantCustomerByPhone.set(originalPhone, {
+      id: result.customer.id,
+      phone: result.customer.whatsapp_phone,
+    });
+  }
+  const participantOfferTickets: ComboOfferCandidateTicketRow[] =
+    (participantTickets ?? [])
+      .flatMap((ticket): ComboOfferCandidateTicketRow[] => {
+        const phone = ticket.recipient_phone;
+        const customer = phone ? participantCustomerByPhone.get(phone) : null;
+
+        if (!phone || !customer) return [];
+
+        return [{
+          ...ticket,
+          customer_id: customer.id,
+          offer_customer_id: customer.id,
+          offer_phone: customer.phone,
+          offer_source: "participant" as const,
+          issued_at: ticket.participant_delivered_at ?? ticket.issued_at,
+          customers: { whatsapp_phone: customer.phone },
+        }];
+      });
+
   const tickets = uniqueComboOfferCandidateTicketsByOrder(
-    mergeComboOfferCandidateTickets(eventWindowTickets, recentPurchaseTickets),
+    mergeComboOfferCandidateTickets(
+      eventWindowTickets,
+      recentPurchaseTickets,
+      participantOfferTickets,
+    ),
   );
   let sentCount = 0;
   let failedCount = 0;
@@ -2084,6 +2158,8 @@ export async function sendScheduledComboOffers(limit = 100) {
     const order = firstJoin(ticket.orders);
     const event = session?.events;
     const phone = ticket.customers?.whatsapp_phone;
+    const offerCustomerId = ticket.offer_customer_id ?? ticket.customer_id;
+    const isParticipantOffer = ticket.offer_source === "participant";
 
     if (!session || !order || !event || !phone) {
       skippedCount += 1;
@@ -2091,7 +2167,7 @@ export async function sendScheduledComboOffers(limit = 100) {
     }
 
     const eventLock = await acquireComboOfferEventLock({
-      customerId: ticket.customer_id,
+      customerId: offerCustomerId,
       eventId: session.event_id,
     });
 
@@ -2102,7 +2178,7 @@ export async function sendScheduledComboOffers(limit = 100) {
 
     try {
     const purchaseNumber = await getPaidTicketPurchaseNumberForEvent({
-      customerId: ticket.customer_id,
+      customerId: offerCustomerId,
       eventId: session.event_id,
       currentOrderId: order.id,
       currentOrderCreatedAt: order.created_at,
@@ -2133,11 +2209,11 @@ export async function sendScheduledComboOffers(limit = 100) {
       }
 
       const dedupeKey = buildComboOfferDedupeKey({
-        customerId: ticket.customer_id,
+        customerId: offerCustomerId,
         eventId: session.event_id,
         offerId: offer.id,
       });
-      const currentSentKeys = await loadSentComboOfferKeys([ticket.customer_id]);
+      const currentSentKeys = await loadSentComboOfferKeys([offerCustomerId]);
       if (currentSentKeys.has(dedupeKey)) {
         skippedCount += 1;
         continue;
@@ -2145,11 +2221,11 @@ export async function sendScheduledComboOffers(limit = 100) {
 
       const checkout = await createComboOrderForCheckout({
         offerId: offer.id,
-        customerId: ticket.customer_id,
+        customerId: offerCustomerId,
         eventId: session.event_id,
         sessionId: session.id,
-        sourceOrderId: order.id,
-        sourceTicketId: ticket.id,
+        sourceOrderId: isParticipantOffer ? null : order.id,
+        sourceTicketId: isParticipantOffer ? null : ticket.id,
       });
 
       if (!checkout.ok) {
@@ -2163,7 +2239,7 @@ export async function sendScheduledComboOffers(limit = 100) {
       }
 
       const conversationResult = await getOrCreateOpenConversation({
-        customerId: ticket.customer_id,
+        customerId: offerCustomerId,
       });
 
       if (!conversationResult.ok) {
@@ -2193,7 +2269,7 @@ export async function sendScheduledComboOffers(limit = 100) {
       const messageType = offer.image_url ? "image" : "text";
       const saveResult = await saveWhatsAppMessage({
         conversationId: conversationResult.conversation.id,
-        customerId: ticket.customer_id,
+        customerId: offerCustomerId,
         direction: "outbound",
         messageType,
         body: message,
@@ -2211,7 +2287,8 @@ export async function sendScheduledComboOffers(limit = 100) {
             combo_order_id: checkout.orderId,
             event_id: session.event_id,
             session_id: session.id,
-            customer_id: ticket.customer_id,
+            customer_id: offerCustomerId,
+            offer_recipient_source: ticket.offer_source ?? "buyer",
           },
         }),
       });
@@ -2237,7 +2314,7 @@ export async function sendScheduledComboOffers(limit = 100) {
       }
     } finally {
       await releaseComboOfferEventLock({
-        customerId: ticket.customer_id,
+        customerId: offerCustomerId,
         eventId: session.event_id,
         lockToken: eventLock.lockToken,
       });

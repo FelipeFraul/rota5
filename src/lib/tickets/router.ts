@@ -3677,9 +3677,7 @@ function formatParticipantContactsPrompt(expectedContactsCount: number) {
 const PARTICIPANT_TICKET_REQUEST_INSTRUCTIONS = [
   "INGRESSOS",
   "",
-  "Para que os contatos enviados recebam os ingressos, eles precisam chamar este telefone e digitar:",
-  "",
-  "*Meu ingresso*",
+  "Para que os acompanhantes recebam seus ingressos, basta enviar uma mensagem *MEU INGRESSO* para este telefone",
 ].join("\n");
 
 function formatParticipantContactsConfirmation(
