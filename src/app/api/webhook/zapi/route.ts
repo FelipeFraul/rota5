@@ -166,72 +166,10 @@ function formatSystemMessageTitle(title: string) {
   return `*${sanitizeOutboundText(title).toLocaleUpperCase("pt-BR")}*`;
 }
 
-const MOJIBAKE_REPLACEMENTS: Array<[string, string]> = [
-  ["ÃƒÂ¡", "á"],
-  ["ÃƒÂ ", "à"],
-  ["ÃƒÂ¢", "â"],
-  ["ÃƒÂ£", "ã"],
-  ["ÃƒÂ©", "é"],
-  ["ÃƒÂª", "ê"],
-  ["ÃƒÂ­", "í"],
-  ["ÃƒÂ³", "ó"],
-  ["ÃƒÂ´", "ô"],
-  ["ÃƒÂµ", "õ"],
-  ["ÃƒÂº", "ú"],
-  ["ÃƒÂ¼", "ü"],
-  ["ÃƒÂ§", "ç"],
-  ["Ã¡", "á"],
-  ["Ã ", "à"],
-  ["Ã¢", "â"],
-  ["Ã£", "ã"],
-  ["Ã©", "é"],
-  ["Ãª", "ê"],
-  ["Ã­", "í"],
-  ["Ã³", "ó"],
-  ["Ã´", "ô"],
-  ["Ãµ", "õ"],
-  ["Ãº", "ú"],
-  ["Ã¼", "ü"],
-  ["Ã§", "ç"],
-  ["ÃƒÂ", "Á"],
-  ["Ãƒâ€°", "É"],
-  ["ÃƒÂ", "Í"],
-  ["Ãƒâ€œ", "Ó"],
-  ["ÃƒÅ¡", "Ú"],
-  ["Ãƒâ€¡", "Ç"],
-  ["Ã", "Á"],
-  ["Ã‰", "É"],
-  ["Ã", "Í"],
-  ["Ã“", "Ó"],
-  ["Ãš", "Ú"],
-  ["Ã‡", "Ç"],
-  ["ÃƒÅ ", "Ê"],
-  ["Ãƒâ€", "Ô"],
-  ["Ãƒâ€¢", "Õ"],
-  ["ÃƒÆ’O", "ÃO"],
-  ["ÃƒÆ’", "Ã"],
-  ["Ã‚Âº", "º"],
-  ["Ã‚Âª", "ª"],
-  ["Ã‚Â°", "°"],
-  ["Ã¢â‚¬â€", "—"],
-  ["Ã¢â‚¬â€œ", "–"],
-  ["Ã¢â‚¬Å“", "“"],
-  ["Ã¢â‚¬Â", "”"],
-  ["Ã¢â‚¬Ëœ", "‘"],
-  ["Ã¢â‚¬â„¢", "’"],
-  ["Ã¢â‚¬Â¦", "..."],
-  ["Ã¢â€šÂ¬", "€"],
-];
-
 function sanitizeOutboundText(value: string) {
-  let sanitized = value;
-
-  for (const [broken, fixed] of MOJIBAKE_REPLACEMENTS) {
-    sanitized = sanitized.split(broken).join(fixed);
-  }
-
-  return sanitizeWhatsAppText(sanitized);
+  return sanitizeWhatsAppText(value);
 }
+
 
 function ensureSystemMessageTitle(body: string, fallbackTitle: string) {
   const normalizedBody = sanitizeOutboundText(body).trim();

@@ -399,15 +399,27 @@ test("Meu ingresso com 2 ou mais ingressos mostra menu e nao envia QR imediatame
   assert.match(routerSource, /function formatParticipantTicketSelectionPrompt/);
   assert.match(routerSource, /\*INGRESSO ROCKBAR\*/);
   assert.match(routerSource, /Qual ingresso voc/);
+  assert.match(routerSource, /groupParticipantTicketDeliveries\(deliveries\)/);
   assert.match(routerSource, /`> Digite \$\{index \+ 1\} para/);
-  assert.match(routerSource, /`> Digite \$\{deliveries\.length \+ 1\} para receber todos`/);
+  assert.match(routerSource, /`> Digite \$\{groups\.length \+ 1\} para receber todos`/);
   assert.match(routerSource, /participantTickets\.length > 1[\s\S]*reply:\s*formatParticipantTicketSelectionPrompt\(participantTickets\)[\s\S]*nextContext:\s*buildParticipantTicketSelectionContext/);
 });
 
-test("opcao individual envia somente ingresso escolhido e todos envia a lista completa", () => {
+test("opcao individual envia ingressos do grupo escolhido e todos envia a lista completa", () => {
   assert.match(routerSource, /baseContext\.state !== "participant_ticket_selecting"/);
   assert.match(routerSource, /option === selection\.allOption\s*\? validDeliveries\s*:\s*validDeliveries\.filter/);
-  assert.match(routerSource, /item\.option === option[\s\S]*item\.ticketId === delivery\.ticket\.ticketId/);
+  assert.match(routerSource, /const selectedOption = selection\.options\.find/);
+  assert.match(routerSource, /selectedOption\?\.ticketIds\.includes\(delivery\.ticket\.ticketId\)/);
+});
+
+test("selecao de ingresso agrupa por evento e sessao", () => {
+  assert.match(routerSource, /type ParticipantTicketSelectionGroup/);
+  assert.match(routerSource, /const groupKey = `\$\{delivery\.ticket\.eventId\}:\$\{delivery\.ticket\.sessionId\}`/);
+  assert.match(routerSource, /groupKey: group\.groupKey/);
+  assert.match(routerSource, /ticketIds: group\.deliveries\.map/);
+  assert.doesNotMatch(conversationStateSource, /ticketId: string;/);
+  assert.match(conversationStateSource, /groupKey: string;/);
+  assert.match(conversationStateSource, /ticketIds: string\[\];/);
 });
 
 test("opcao invalida reapresenta orientacao", () => {
@@ -418,7 +430,7 @@ test("opcao invalida reapresenta orientacao", () => {
 test("shows iguais com sessoes diferentes sao diferenciados", () => {
   assert.match(routerSource, /function formatParticipantTicketSelectionLabel/);
   assert.match(routerSource, /sameTitleCount > 1/);
-  assert.match(routerSource, /formatDateTime\(delivery\.ticket\.startsAt\)/);
+  assert.match(routerSource, /formatDateTime\(group\.startsAt\)/);
 });
 
 test("falha parcial mantem pendente e marca apenas imagens enviadas com sucesso", () => {

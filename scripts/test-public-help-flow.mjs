@@ -236,7 +236,7 @@ export function buildPublicHelpMoreResultsResponse({
   if (!baseContext.publicHelp?.hasMore) {
     return {
       reply:
-        "NÃƒÂ£o encontrei outros tÃƒÂ³picos para essa pesquisa. Digite outras duas palavras para uma nova busca de ajuda ou *VOLTAR* para voltar onde estava.",
+        "Não encontrei outros tópicos para essa pesquisa. Digite outras duas palavras para uma nova busca de ajuda ou *VOLTAR* para voltar onde estava.",
       nextContext: baseContext,
     };
   }

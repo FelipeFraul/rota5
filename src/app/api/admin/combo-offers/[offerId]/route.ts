@@ -230,7 +230,7 @@ export async function PATCH(request: Request, { params }: Params) {
   const scope = payload.scope === undefined ? undefined : parseScope(payload.scope);
   if (payload.scope !== undefined && !scope) {
     logComboOfferPatchFailure(offerId, "invalid_scope", payload);
-    return NextResponse.json({ ok: false, message: "Escopo invÃ¡lido." }, { status: 400 });
+    return NextResponse.json({ ok: false, message: "Escopo inválido." }, { status: 400 });
   }
 
   const hasDetailsChange =
@@ -290,7 +290,7 @@ export async function PATCH(request: Request, { params }: Params) {
           ? scopeResult.error
           : undefined,
       });
-      return NextResponse.json({ ok: false, message: "NÃ£o foi possÃ­vel atualizar o escopo." }, { status: 400 });
+      return NextResponse.json({ ok: false, message: "Não foi possível atualizar o escopo." }, { status: 400 });
     }
   }
 

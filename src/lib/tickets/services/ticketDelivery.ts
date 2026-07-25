@@ -96,7 +96,7 @@ function getDeliveryStateUpdateFailureCode(result: {
 
 const QR_CODE_CAPTION = [
   "*APRESENTE O QRCODE NA PORTARIA*",
-  "Este ingresso serÃ¡ validado uma Ãºnica vez na portaria. Por seguranÃ§a, nÃ£o envie para terceiros.",
+  "Este ingresso será validado uma única vez na portaria. Por segurança, não envie para terceiros.",
 ].join("\n");
 
 function formatEventDate(startsAt: string) {
@@ -113,7 +113,7 @@ function formatEventDate(startsAt: string) {
     minute: "2-digit",
   })
     .format(date)
-    .replace(",", " Ã s");
+    .replace(",", " às");
 
   return `${weekday.charAt(0).toLocaleUpperCase("pt-BR")}${weekday.slice(1)} ${dayTime}`;
 }
@@ -176,8 +176,8 @@ function formatTicketSummary(tickets: TicketForDelivery[]) {
     `> Data: *${formatEventDate(firstTicket.startsAt)}*`,
     `> Local: *${firstTicket.venueName ?? "A confirmar"}*`,
     `> Ingresso: *${formatTicketSeatCodes(tickets)}*`,
-    `> Mesa/ bistrÃ´: *${formatTableMapPlaceCode(firstTicket.tableMapPlaceCode)}*`,
-    `> CÃ³digo: *${formatTicketCodes(tickets)}*`,
+    `> Mesa/ bistrô: *${formatTableMapPlaceCode(firstTicket.tableMapPlaceCode)}*`,
+    `> Código: *${formatTicketCodes(tickets)}*`,
   ].join("\n");
 }
 

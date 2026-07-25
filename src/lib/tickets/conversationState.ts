@@ -558,7 +558,8 @@ export type TicketConversationState = {
     ticketIds: string[];
     options: Array<{
       option: number;
-      ticketId: string;
+      groupKey: string;
+      ticketIds: string[];
     }>;
     allOption: number;
     createdAt: string;

@@ -313,7 +313,7 @@ test("admin_auth_pending falha de challenge monta alerta sem criar sessao ou con
   );
   assert.match(
     alertMessageBlock,
-    /body: \[\s*"\*ALERTA DE ACESSO ADMIN\*",\s*"",\s*`O telefone \$\{maskAdminPhone\(phoneNumber\)\} teve \$\{failureResult\.failedAttempts\} tentativas incorretas de login administrativo\.`,\s*failureResult\.hardLocked\s*\?\s*"O acesso foi bloqueado atÃƒÂ© liberaÃƒÂ§ÃƒÂ£o manual por Diretor\."\s*:\s*`O acesso foi bloqueado temporariamente por \$\{failureResult\.retryAfterMinutes \?\? 15\} minutos\.`,\s*"",\s*"Entre em Administradores > Liberar administrador bloqueado se reconhecer o acesso\.",\s*\]\.join\("\\n"\),/,
+    /body: \[\s*"\*ALERTA DE ACESSO ADMIN\*",\s*"",\s*`O telefone \$\{maskAdminPhone\(phoneNumber\)\} teve \$\{failureResult\.failedAttempts\} tentativas incorretas de login administrativo\.`,\s*failureResult\.hardLocked\s*\?\s*"O acesso foi bloqueado até liberação manual por Diretor\."\s*:\s*`O acesso foi bloqueado temporariamente por \$\{failureResult\.retryAfterMinutes \?\? 15\} minutos\.`,\s*"",\s*"Entre em Administradores > Liberar administrador bloqueado se reconhecer o acesso\.",\s*\]\.join\("\\n"\),/,
   );
   assert.match(
     challengeFailureBlock,

@@ -513,8 +513,8 @@ async function buildGeneralDashboard(input: { ownerAdminUserId: string; canSeeAl
 function formatComboOfferTiming(offer: AdminComboOfferRow) {
   if (offer.send_timing_type === "custom") {
     return offer.send_offset_minutes
-      ? `${offer.send_offset_minutes} min apÃ³s compra`
-      : "ApÃ³s compra";
+      ? `${offer.send_offset_minutes} min após compra`
+      : "Após compra";
   }
   if (offer.send_timing_type === "event_day_noon") return "Meio-dia do evento";
   if (offer.send_timing_type === "one_hour_before") return "1h antes do evento";
@@ -533,7 +533,7 @@ function formatComboOfferScope(scope: AdminComboOfferRow["combo_offer_scopes"]) 
     .filter(Boolean);
   if (eventNames.length) return eventNames.slice(0, 2).join(", ") + (eventNames.length > 2 ? ` +${eventNames.length - 2}` : "");
 
-  const weekdays = ["domingo", "segunda", "terÃ§a", "quarta", "quinta", "sexta", "sÃ¡bado"];
+  const weekdays = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
   const weekdayNames = scopes
     .filter((item) => item.scope_type === "weekday")
     .map((item) => weekdays[item.weekday ?? -1])

@@ -210,7 +210,7 @@ function AdminDashboardSectionComponent({
         }));
       }
     } catch (error) {
-      console.error("NÃ£o foi possÃ­vel atualizar os contatos.", error);
+      console.error("Não foi possível atualizar os contatos.", error);
     } finally {
       setGeneralContactsLoadingRange((current) => current === range ? null : current);
     }

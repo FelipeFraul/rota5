@@ -47,7 +47,7 @@ function maskAdminPhone(value: string | null | undefined) {
   const digits = String(value ?? "").replace(/\D/g, "");
 
   if (digits.length < 4) {
-    return "nÃƒÆ’Ã‚Â£o informado";
+    return "não informado";
   }
 
   return `****${digits.slice(-4)}`;
@@ -127,7 +127,7 @@ export async function startAdminLogin({
     challengeResult.loginUrl,
     "",
     `O link expira em ${challengeResult.expiresInMinutes} minutos.`,
-    "Depois de confirmar a senha, envie aqui o cÃƒÂ³digo de uso ÃƒÂºnico exibido na pÃƒÂ¡gina.",
+    "Depois de confirmar a senha, envie aqui o código de uso único exibido na página.",
   ].join("\n");
 
   return {
@@ -324,7 +324,7 @@ export function buildAdminAuthFailureAlertMessage({
       "",
       `O telefone ${maskAdminPhone(phoneNumber)} teve ${failureResult.failedAttempts} tentativas incorretas de login administrativo.`,
       failureResult.hardLocked
-        ? "O acesso foi bloqueado atÃƒÂ© liberaÃƒÂ§ÃƒÂ£o manual por Diretor."
+        ? "O acesso foi bloqueado até liberação manual por Diretor."
         : `O acesso foi bloqueado temporariamente por ${failureResult.retryAfterMinutes ?? 15} minutos.`,
       "",
       "Entre em Administradores > Liberar administrador bloqueado se reconhecer o acesso.",
