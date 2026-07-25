@@ -27,6 +27,10 @@ const comboOffersSource = readFileSync(
   new URL("../src/lib/tickets/services/comboOffers.ts", import.meta.url),
   "utf8",
 );
+const comboOfferTicketUniquenessMigration = readFileSync(
+  new URL("../supabase/migrations/20260725000400_scope_combo_order_offer_uniqueness_by_ticket.sql", import.meta.url),
+  "utf8",
+);
 const comboRedemptionsSource = readFileSync(
   new URL("../src/lib/tickets/services/comboRedemptions.ts", import.meta.url),
   "utf8",
@@ -488,19 +492,20 @@ test("Meu ingresso envia somente QR Code e nenhuma oferta na mesma execucao", ()
 test("participante fica elegivel para agendamento somente apos QR entregue", () => {
   assert.match(zapiWebhookSource, /if \(outboundMessage\.participantDeliveryTicketId\)[\s\S]*markParticipantTicketDelivered/);
   assert.doesNotMatch(comboOffersSource, /\.eq\("participant_delivery_status",\s*"delivered"\)/);
-  assert.doesNotMatch(comboOffersSource, /\.not\("recipient_phone",\s*"is",\s*null\)/);
+  assert.match(comboOffersSource, /recipientPhone[\s\S]*participant_delivery_status !== "delivered"/);
   assert.doesNotMatch(comboOffersSource, /participant_delivered_at/);
   assert.doesNotMatch(comboOffersSource, /\.eq\("participant_delivery_status",\s*"awaiting_participant_request"\)/);
 });
 
-test("scheduler temporario nao coleta acompanhantes nem recipient_phone para combo", () => {
+test("scheduler coleta comprador e participantes entregues para combo", () => {
   assert.match(comboOffersSource, /export async function sendScheduledComboOffers/);
-  assert.doesNotMatch(comboOffersSource, /participantOfferTickets/);
-  assert.doesNotMatch(comboOffersSource, /upsertCustomerFromWhatsApp/);
-  assert.match(comboOffersSource, /\.is\("recipient_phone",\s*null\)/);
+  assert.match(comboOffersSource, /recipient_phone, participant_delivery_status/);
+  assert.doesNotMatch(comboOffersSource, /\.is\("recipient_phone",\s*null\)/);
+  assert.match(comboOffersSource, /upsertCustomerFromWhatsApp/);
+  assert.match(comboOffersSource, /const phone = ticket\.offer_phone \?\? recipient\?\.phone/);
 });
 
-test("scheduler temporario envia combo apenas para comprador com mesa ou bistro pago", () => {
+test("scheduler envia combo para pedido com mesa ou bistro pago", () => {
   assert.match(comboOffersSource, /official_table_map_reservations!inner\(place_code, status\)/);
   assert.match(comboOffersSource, /\.eq\("orders\.status",\s*"paid"\)/);
   assert.match(comboOffersSource, /\.eq\("orders\.official_table_map_reservations\.status",\s*"paid"\)/);
@@ -520,7 +525,7 @@ test("oferta perdida e recuperada uma unica vez quando janela passou mas evento 
 });
 
 test("recuperacao de oferta perdida continua protegida pela deduplicacao antes do envio", () => {
-  assert.match(comboOffersSource, /const dedupeKey = buildComboOfferDedupeKey[\s\S]*const currentSentKeys = await loadSentComboOfferKeys\(\[offerCustomerId\]\)[\s\S]*if \(currentSentKeys\.has\(dedupeKey\)\)[\s\S]*const shouldSendOnSchedule = shouldSendComboOfferNow/);
+  assert.match(comboOffersSource, /const recipientDedupeKey = buildComboOfferRecipientDedupeKey[\s\S]*const currentSentKeys = await loadSentComboOfferKeys\(\[offerCustomerId\], \[phone\]\)[\s\S]*currentSentKeys\.recipientKeys\.has\(recipientDedupeKey\)[\s\S]*const shouldSendOnSchedule = shouldSendComboOfferNow/);
 });
 
 test("oferta de 2 minutos e multiplas prioridades continuam no mecanismo existente", () => {
@@ -531,23 +536,24 @@ test("oferta de 2 minutos e multiplas prioridades continuam no mecanismo existen
 });
 
 test("mesma oferta nao duplica para o mesmo comprador", () => {
-  assert.match(comboOffersSource, /const offerCustomerId = ticket\.offer_customer_id \?\? ticket\.customer_id/);
+  assert.match(comboOffersSource, /let offerCustomerId = ticket\.offer_customer_id \?\? ticket\.customer_id/);
   assert.match(comboOffersSource, /buildComboOfferDedupeKey\(\{[\s\S]*customerId:\s*offerCustomerId/);
-  assert.match(comboOffersSource, /loadSentComboOfferKeys\(\[offerCustomerId\]\)/);
+  assert.match(comboOffersSource, /buildComboOfferRecipientDedupeKey/);
+  assert.match(comboOffersSource, /loadSentComboOfferKeys\(\[offerCustomerId\], \[phone\]\)/);
   assert.match(comboOffersSource, /combo_offer_event_locks/);
 });
 
-test("deduplicacao temporaria fica por comprador evento e oferta", () => {
+test("deduplicacao fica por telefone evento oferta ticket e tipo de destinatario", () => {
   assert.match(comboOffersSource, /byId\.set\(`\$\{ticket\.offer_source \?\? "buyer"\}:\$\{customerId\}:\$\{ticket\.id\}`, ticket\)/);
-  assert.match(comboOffersSource, /const key = `\$\{ticket\.offer_source \?\? "buyer"\}:\$\{customerId\}:\$\{order\.id\}`/);
+  assert.match(comboOffersSource, /return `\$\{phone\}:\$\{eventId\}:\$\{offerId\}:\$\{sourceTicketId\}:\$\{recipientType\}`/);
   assert.match(comboOffersSource, /customerId:\s*offerCustomerId/);
-  assert.match(comboOffersSource, /offer_recipient_source:\s*ticket\.offer_source \?\? "buyer"/);
+  assert.match(comboOffersSource, /recipient_phone:\s*phone/);
+  assert.match(comboOffersSource, /recipient_type:\s*recipientType/);
 });
 
 test("multiplos ingressos do mesmo comprador no mesmo pedido nao duplicam oferta", () => {
   assert.match(comboOffersSource, /function uniqueComboOfferCandidateTicketsByOrder/);
-  assert.match(comboOffersSource, /const customerId = ticket\.offer_customer_id \?\? ticket\.customer_id/);
-  assert.match(comboOffersSource, /const key = `\$\{ticket\.offer_source \?\? "buyer"\}:\$\{customerId\}:\$\{order\.id\}`/);
+  assert.match(comboOffersSource, /const key = `\$\{recipient\.phone\}:\$\{session\.event_id\}`/);
 });
 
 test("evento sem oferta nao agenda nada para combo", () => {
@@ -560,7 +566,44 @@ test("oferta temporaria do comprador vincula combo ao pedido e ticket origem", (
   assert.doesNotMatch(comboOffersSource, /const isParticipantOffer = ticket\.offer_source === "participant"/);
   assert.match(comboOffersSource, /sourceOrderId:\s*order\.id/);
   assert.match(comboOffersSource, /sourceTicketId:\s*ticket\.id/);
-  assert.match(comboOffersSource, /offer_recipient_source:\s*ticket\.offer_source \?\? "buyer"/);
+  assert.match(comboOffersSource, /offer_recipient_source:\s*recipientType/);
+});
+
+test("ofertas de combo incluem comprador e participantes entregues do pedido elegivel", () => {
+  assert.match(comboOffersSource, /\.eq\("orders\.official_table_map_reservations\.status",\s*"paid"\)/);
+  assert.match(comboOffersSource, /const buyerPhone = normalizeWhatsAppPhone\(ticket\.customers\?\.whatsapp_phone\)/);
+  assert.match(comboOffersSource, /const recipientPhone = normalizeWhatsAppPhone\(ticket\.recipient_phone\)/);
+  assert.match(comboOffersSource, /participant_delivery_status !== "delivered"/);
+});
+
+test("ofertas de combo ignoram pedido sem mesa ou bistro pago", () => {
+  assert.match(comboOffersSource, /official_table_map_reservations!inner\(place_code, status\)/);
+  assert.match(comboOffersSource, /\.eq\("orders\.official_table_map_reservations\.status",\s*"paid"\)/);
+});
+
+test("ofertas de combo consolidam mesmo telefone e permitem telefones diferentes", () => {
+  assert.match(comboOffersSource, /normalizeWhatsAppPhone/);
+  assert.match(comboOffersSource, /const key = `\$\{recipient\.phone\}:\$\{session\.event_id\}`/);
+  assert.match(comboOffersSource, /byRecipient\.set\(key/);
+});
+
+test("nova execucao do scheduler nao duplica oferta enviada", () => {
+  assert.match(comboOffersSource, /loadSentComboOfferKeys\(\[offerCustomerId\], \[phone\]\)/);
+  assert.match(comboOffersSource, /recipientKeys\.has\(recipientDedupeKey\)/);
+  assert.match(comboOffersSource, /recipientType === "buyer" && currentSentKeys\.legacyKeys\.has\(dedupeKey\)/);
+});
+
+test("cada destinatario pode gerar seu proprio checkout por ticket e oferta", () => {
+  assert.match(comboOffersSource, /\.eq\("source_ticket_id", sourceTicketId\)/);
+  assert.match(comboOfferTicketUniquenessMigration, /drop index if exists combo_orders_source_order_offer_unique_idx/);
+  assert.match(comboOfferTicketUniquenessMigration, /combo_orders_source_ticket_offer_unique_idx/);
+  assert.match(comboOfferTicketUniquenessMigration, /on public\.combo_orders\(source_ticket_id, offer_id\)/);
+  assert.match(comboOfferTicketUniquenessMigration, /combo_orders_legacy_source_order_offer_unique_idx/);
+});
+
+test("falha da zapi em oferta de combo nao fica marcada como envio concluido", () => {
+  assert.match(comboOffersSource, /providerMessageId:\s*sendResult\.ok \? sendResult\.providerMessageId : null/);
+  assert.match(comboOffersSource, /if \(sendResult\.ok\) \{[\s\S]*sentCount \+= 1;[\s\S]*\} else \{[\s\S]*failedCount \+= 1;/);
 });
 
 test("fluxo do comprador permanece inalterado para oferta de combo", () => {

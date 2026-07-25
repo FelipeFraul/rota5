@@ -6,7 +6,9 @@ import { createMercadoPagoPayment } from "@/lib/mercado-pago/client";
 import { getEnv } from "@/lib/env";
 import { logError, logInfo, logWarn } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { normalizeWhatsAppPhone } from "@/lib/tickets/phones";
 import { getOrCreateOpenConversation, updateConversationAfterMessage } from "@/lib/tickets/services/conversations";
+import { upsertCustomerFromWhatsApp } from "@/lib/tickets/services/customers";
 import { saveWhatsAppMessage } from "@/lib/tickets/services/messages";
 import { buildWhatsAppOutboundMetadata } from "@/lib/tickets/services/outboundMessages";
 import { centsToDecimalAmount, decimalAmountToCents } from "@/lib/tickets/services/payments";
@@ -137,6 +139,8 @@ type ComboOfferCandidateTicketRow = {
   offer_customer_id?: string;
   offer_phone?: string | null;
   offer_source?: "buyer" | "participant";
+  recipient_phone?: string | null;
+  participant_delivery_status?: string | null;
   issued_at: string;
   orders:
     | {
@@ -852,7 +856,48 @@ export async function createComboOrderForCheckout({
 
   const checkoutExpiresAt = new Date(Date.now() + CHECKOUT_TTL_MINUTES * 60_000).toISOString();
   const supabase = getSupabaseAdmin();
-  if (sourceOrderId) {
+  if (sourceTicketId) {
+    const { data: existingOrder, error: existingError } = await supabase
+      .from("combo_orders")
+      .select("id, checkout_token_hash, checkout_expires_at, status")
+      .eq("source_ticket_id", sourceTicketId)
+      .eq("offer_id", offer.id)
+      .in("status", ["pending_payment", "expired"])
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle<{
+        id: string;
+        checkout_token_hash: string | null;
+        checkout_expires_at: string;
+        status: string;
+      }>();
+
+    if (existingError) return { ok: false as const, reason: "database_error" as const, error: existingError };
+
+    if (existingOrder) {
+      const token = buildComboCheckoutToken();
+      const nextExpiresAt = new Date(existingOrder.status === "expired" ? Date.now() + CHECKOUT_TTL_MINUTES * 60_000 : new Date(existingOrder.checkout_expires_at).getTime()).toISOString();
+      const updateResult = await supabase
+        .from("combo_orders")
+        .update({
+          checkout_token_hash: hashSecret(token),
+          checkout_expires_at: nextExpiresAt,
+          status: "pending_payment",
+        })
+        .eq("id", existingOrder.id);
+
+      if (updateResult.error) return { ok: false as const, reason: "database_error" as const, error: updateResult.error };
+
+      return {
+        ok: true as const,
+        orderId: existingOrder.id,
+        checkoutUrl: buildComboCheckoutUrl(existingOrder.id, token),
+        expiresAt: nextExpiresAt,
+        offerName: offer.name,
+        priceCents: offer.price_cents,
+      };
+    }
+  } else if (sourceOrderId) {
     const { data: existingOrder, error: existingError } = await supabase
       .from("combo_orders")
       .select("id, checkout_token_hash, checkout_expires_at, status")
@@ -1932,19 +1977,64 @@ function buildComboOfferDedupeKey({
   return `${customerId}:${eventId}:${offerId}`;
 }
 
-async function loadSentComboOfferKeys(customerIds: string[]) {
-  if (!customerIds.length) return new Set<string>();
+function buildComboOfferRecipientDedupeKey({
+  phone,
+  eventId,
+  offerId,
+  sourceTicketId,
+  recipientType,
+}: {
+  phone: string;
+  eventId: string;
+  offerId: string;
+  sourceTicketId: string;
+  recipientType: "buyer" | "participant";
+}) {
+  return `${phone}:${eventId}:${offerId}:${sourceTicketId}:${recipientType}`;
+}
 
-  const { data, error } = await getSupabaseAdmin()
+function comboOfferRecipientFromTicket(ticket: ComboOfferCandidateTicketRow) {
+  const recipientPhone = normalizeWhatsAppPhone(ticket.recipient_phone);
+
+  if (recipientPhone) {
+    if (ticket.participant_delivery_status !== "delivered") return null;
+    return {
+      phone: recipientPhone,
+      recipientType: "participant" as const,
+    };
+  }
+
+  const buyerPhone = normalizeWhatsAppPhone(ticket.customers?.whatsapp_phone);
+  if (!buyerPhone) return null;
+
+  return {
+    phone: buyerPhone,
+    recipientType: "buyer" as const,
+  };
+}
+
+async function loadSentComboOfferKeys(customerIds: string[], recipientPhones: string[] = []) {
+  if (!customerIds.length && !recipientPhones.length) {
+    return { legacyKeys: new Set<string>(), recipientKeys: new Set<string>() };
+  }
+
+  let query = getSupabaseAdmin()
     .from("whatsapp_messages")
     .select("raw_metadata")
     .eq("direction", "outbound")
-    .contains("raw_metadata", { reason: "combo_offer", send_status: "sent" })
-    .in("customer_id", Array.from(new Set(customerIds)));
+    .contains("raw_metadata", { reason: "combo_offer", send_status: "sent" });
+
+  if (customerIds.length) {
+    query = query.in("customer_id", Array.from(new Set(customerIds)));
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
 
-  const keys = new Set<string>();
+  const legacyKeys = new Set<string>();
+  const recipientKeys = new Set<string>();
+  const requestedPhones = new Set(recipientPhones);
 
   for (const row of data ?? []) {
     const metadata = row.raw_metadata as Record<string, unknown> | null;
@@ -1953,13 +2043,32 @@ async function loadSentComboOfferKeys(customerIds: string[]) {
     const eventId =
       typeof metadata?.event_id === "string" ? metadata.event_id : null;
     const offerId = typeof metadata?.offer_id === "string" ? metadata.offer_id : null;
+    const phone = normalizeWhatsAppPhone(
+      typeof metadata?.recipient_phone === "string" ? metadata.recipient_phone : null,
+    );
+    const sourceTicketId =
+      typeof metadata?.source_ticket_id === "string" ? metadata.source_ticket_id : null;
+    const recipientType =
+      metadata?.recipient_type === "participant" || metadata?.recipient_type === "buyer"
+        ? metadata.recipient_type
+        : null;
 
     if (customerId && eventId && offerId) {
-      keys.add(buildComboOfferDedupeKey({ customerId, eventId, offerId }));
+      legacyKeys.add(buildComboOfferDedupeKey({ customerId, eventId, offerId }));
+    }
+
+    if (phone && eventId && offerId && sourceTicketId && recipientType && requestedPhones.has(phone)) {
+      recipientKeys.add(buildComboOfferRecipientDedupeKey({
+        phone,
+        eventId,
+        offerId,
+        sourceTicketId,
+        recipientType,
+      }));
     }
   }
 
-  return keys;
+  return { legacyKeys, recipientKeys };
 }
 
 function mergeComboOfferCandidateTickets(
@@ -1983,7 +2092,7 @@ function mergeComboOfferCandidateTickets(
 function uniqueComboOfferCandidateTicketsByOrder(
   tickets: ComboOfferCandidateTicketRow[],
 ) {
-  const byOrder = new Map<string, ComboOfferCandidateTicketRow>();
+  const byRecipient = new Map<string, ComboOfferCandidateTicketRow>();
 
   for (const ticket of tickets) {
     const order = firstJoin(ticket.orders);
@@ -1992,15 +2101,24 @@ function uniqueComboOfferCandidateTicketsByOrder(
       continue;
     }
 
-    const customerId = ticket.offer_customer_id ?? ticket.customer_id;
-    const key = `${ticket.offer_source ?? "buyer"}:${customerId}:${order.id}`;
+    const recipient = comboOfferRecipientFromTicket(ticket);
+    if (!recipient) continue;
 
-    if (!byOrder.has(key)) {
-      byOrder.set(key, ticket);
+    const session = firstJoin(ticket.event_sessions);
+    if (!session) continue;
+
+    const key = `${recipient.phone}:${session.event_id}`;
+
+    if (!byRecipient.has(key)) {
+      byRecipient.set(key, {
+        ...ticket,
+        offer_phone: recipient.phone,
+        offer_source: recipient.recipientType,
+      });
     }
   }
 
-  return Array.from(byOrder.values());
+  return Array.from(byRecipient.values());
 }
 
 async function getPaidTicketPurchaseNumberForEvent({
@@ -2118,9 +2236,8 @@ export async function sendScheduledComboOffers(limit = 100) {
   ] = await Promise.all([
     supabase
     .from("tickets")
-    .select("id, customer_id, issued_at, customers(whatsapp_phone), orders!inner(id, created_at, status, official_table_map_reservations!inner(place_code, status)), event_sessions!inner(id, event_id, starts_at, events!inner(id, title))")
+    .select("id, customer_id, recipient_phone, participant_delivery_status, issued_at, customers(whatsapp_phone), orders!inner(id, created_at, status, official_table_map_reservations!inner(place_code, status)), event_sessions!inner(id, event_id, starts_at, events!inner(id, title))")
     .eq("status", "issued")
-    .is("recipient_phone", null)
     .eq("orders.status", "paid")
     .eq("orders.official_table_map_reservations.status", "paid")
     .gte("event_sessions.starts_at", eventWindowFrom)
@@ -2130,9 +2247,8 @@ export async function sendScheduledComboOffers(limit = 100) {
       .returns<ComboOfferCandidateTicketRow[]>(),
     supabase
       .from("tickets")
-      .select("id, customer_id, issued_at, customers(whatsapp_phone), orders!inner(id, created_at, status, official_table_map_reservations!inner(place_code, status)), event_sessions!inner(id, event_id, starts_at, events!inner(id, title))")
+      .select("id, customer_id, recipient_phone, participant_delivery_status, issued_at, customers(whatsapp_phone), orders!inner(id, created_at, status, official_table_map_reservations!inner(place_code, status)), event_sessions!inner(id, event_id, starts_at, events!inner(id, title))")
       .eq("status", "issued")
-      .is("recipient_phone", null)
       .eq("orders.status", "paid")
       .eq("orders.official_table_map_reservations.status", "paid")
       .gte("issued_at", recentPurchaseFrom)
@@ -2159,12 +2275,27 @@ export async function sendScheduledComboOffers(limit = 100) {
     const session = firstJoin(ticket.event_sessions);
     const order = firstJoin(ticket.orders);
     const event = session?.events;
-    const phone = ticket.customers?.whatsapp_phone;
-    const offerCustomerId = ticket.offer_customer_id ?? ticket.customer_id;
+    const recipient = comboOfferRecipientFromTicket(ticket);
+    const phone = ticket.offer_phone ?? recipient?.phone ?? null;
+    const recipientType = ticket.offer_source ?? recipient?.recipientType ?? "buyer";
+    let offerCustomerId = ticket.offer_customer_id ?? ticket.customer_id;
 
     if (!session || !order || !event || !phone) {
       skippedCount += 1;
       continue;
+    }
+
+    if (recipientType === "participant") {
+      const customerResult = await upsertCustomerFromWhatsApp({ phone });
+      if (!customerResult.ok) {
+        failedCount += 1;
+        logWarn("Skipped participant combo offer without customer identity", {
+          ticketId: ticket.id,
+          code: customerResult.error.code,
+        });
+        continue;
+      }
+      offerCustomerId = customerResult.customer.id;
     }
 
     const eventLock = await acquireComboOfferEventLock({
@@ -2179,7 +2310,7 @@ export async function sendScheduledComboOffers(limit = 100) {
 
     try {
     const purchaseNumber = await getPaidTicketPurchaseNumberForEvent({
-      customerId: offerCustomerId,
+      customerId: ticket.customer_id,
       eventId: session.event_id,
       currentOrderId: order.id,
       currentOrderCreatedAt: order.created_at,
@@ -2209,8 +2340,18 @@ export async function sendScheduledComboOffers(limit = 100) {
         eventId: session.event_id,
         offerId: offer.id,
       });
-      const currentSentKeys = await loadSentComboOfferKeys([offerCustomerId]);
-      if (currentSentKeys.has(dedupeKey)) {
+      const recipientDedupeKey = buildComboOfferRecipientDedupeKey({
+        phone,
+        eventId: session.event_id,
+        offerId: offer.id,
+        sourceTicketId: ticket.id,
+        recipientType,
+      });
+      const currentSentKeys = await loadSentComboOfferKeys([offerCustomerId], [phone]);
+      if (
+        currentSentKeys.recipientKeys.has(recipientDedupeKey) ||
+        (recipientType === "buyer" && currentSentKeys.legacyKeys.has(dedupeKey))
+      ) {
         skippedCount += 1;
         continue;
       }
@@ -2298,7 +2439,9 @@ export async function sendScheduledComboOffers(limit = 100) {
             event_id: session.event_id,
             session_id: session.id,
             customer_id: offerCustomerId,
-            offer_recipient_source: ticket.offer_source ?? "buyer",
+            recipient_phone: phone,
+            recipient_type: recipientType,
+            offer_recipient_source: recipientType,
             combo_offer_delivery_mode: shouldSendAsRecovery ? "recovery" : "scheduled",
             combo_offer_recovered: shouldSendAsRecovery,
           },
