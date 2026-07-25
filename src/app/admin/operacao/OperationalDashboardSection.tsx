@@ -348,23 +348,6 @@ export default function OperationalDashboardSection() {
       </header>
 
       <main className="admin-operation-layout" aria-label="Centro de inteligência operacional">
-        <section className="admin-operation-health is-ok" aria-label="Agora">
-          <div>
-            <span className="admin-operation-live-dot" />
-            <div>
-              <p>Agora</p>
-              <strong>Operação normal</strong>
-            </div>
-          </div>
-          <div className="admin-operation-alert-strip is-temporarily-hidden" aria-label="Alertas aguardando dados">
-            <StatusRow label="Pagamentos presos" tone="attention" />
-            <StatusRow label="Mensagens falhando" tone="danger" />
-            <StatusRow label="QR recusados" tone="danger" />
-            <StatusRow label="Combos sem QR" tone="attention" />
-            <StatusRow label="Participantes pendentes" tone="attention" />
-          </div>
-        </section>
-
         <section className="admin-operation-metrics" aria-label="Resumo compacto">
           {(Object.keys(expandedMetricContent) as ActiveMetric[]).map((metric) => (
             <MetricPill
