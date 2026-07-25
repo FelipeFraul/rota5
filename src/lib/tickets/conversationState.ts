@@ -561,6 +561,11 @@ export type TicketConversationState = {
       phone: string;
       rawPhone: string;
     }>;
+    pendingContacts?: Array<{
+      displayName: string | null;
+      phone: string;
+      rawPhone: string;
+    }>;
   };
   reservation?: TicketConversationReservation;
   payment?: TicketConversationPayment;

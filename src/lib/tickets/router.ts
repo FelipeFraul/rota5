@@ -2220,7 +2220,7 @@ function formatTableMapSelectionReply({
 }) {
   return [
     "*ESCOLHA SUA MESA OU BISTRÃ”*",
-    "🟠Mesa ⚫Bistrô alta",
+    "🟠 Mesa ⚫ Bistrô alta",
     "",
     `> Mesas/bistrÃ´ disponiveis: *${availableCount}*`,
     `> Mesas/bistrÃ´ reservadas: *${reservedCount}*`,
@@ -3668,9 +3668,7 @@ function formatParticipantContactsPrompt(expectedContactsCount: number) {
   return [
     "ENVIANDO OS INGRESSOS",
     "",
-    "Para enviar os ingressos aos acompanhantes, basta adicionar nesta conversa o contato de cada um.",
-    `A quantidade de contatos deve ser exatamente igual à quantidade de participantes que receberão o próprio ingresso: ${expectedContactsCount}.`,
-    "O seu ingresso será enviado em seguida.",
+    `*Agora envie, nesta conversa, o contato dos ${expectedContactsCount} acompanhante(s) que receberão o ingresso. Neste pedido, você deve enviar ${expectedContactsCount} contatos. Em seguida, enviaremos automaticamente o seu ingresso para este WhatsApp.*`,
     "",
     "OBS.: Os acompanhantes precisam enviar a este número *Meu ingresso*",
   ].join("\n");
@@ -3771,6 +3769,12 @@ type DuplicateParticipantPhone = {
   }>;
 };
 
+type ValidatedParticipantContactForState = {
+  displayName: string | null;
+  phone: string;
+  rawPhone: string;
+};
+
 function maskParticipantPhone(phone: string) {
   const digits = phone.replace(/\D/g, "");
   if (digits.length <= 4) return "****";
@@ -3822,20 +3826,29 @@ function parseParticipantContacts(rawPayload: unknown): ParsedParticipantContact
   });
 }
 
-export function validateParticipantContactsForTest({
-  rawPayload,
-  expectedContactsCount,
-}: {
-  rawPayload: unknown;
-  expectedContactsCount: number;
-}):
+function findDuplicateParticipantPhones(
+  contacts: ValidatedParticipantContactForState[],
+): DuplicateParticipantPhone[] {
+  const contactsByPhone = new Map<string, Array<{ displayName: string | null }>>();
+
+  for (const contact of contacts) {
+    const phoneContacts = contactsByPhone.get(contact.phone) ?? [];
+    phoneContacts.push({ displayName: contact.displayName });
+    contactsByPhone.set(contact.phone, phoneContacts);
+  }
+
+  return [...contactsByPhone.entries()]
+    .filter(([, phoneContacts]) => phoneContacts.length > 1)
+    .map(([phone, phoneContacts]) => ({
+      phone,
+      contacts: phoneContacts,
+    }));
+}
+
+function validateParticipantContactBatch(rawPayload: unknown):
   | {
       ok: true;
-      contacts: Array<{
-        displayName: string | null;
-        phone: string;
-        rawPhone: string;
-      }>;
+      contacts: ValidatedParticipantContactForState[];
       receivedCount: number;
     }
   | {
@@ -3844,8 +3857,7 @@ export function validateParticipantContactsForTest({
         | "empty"
         | "missing_phone"
         | "multiple_phones"
-        | "duplicate_phones"
-        | "count_mismatch";
+        | "duplicate_phones";
       receivedCount: number;
       duplicates?: DuplicateParticipantPhone[];
     } {
@@ -3855,18 +3867,7 @@ export function validateParticipantContactsForTest({
     return { ok: false, reason: "empty", receivedCount: 0 };
   }
 
-  const validContacts: Array<{
-    displayName: string | null;
-    phone: string;
-    rawPhone: string;
-  }> = [];
-  const contactsByPhone = new Map<
-    string,
-    Array<{
-      displayName: string | null;
-      rawPhone: string;
-    }>
-  >();
+  const validContacts: ValidatedParticipantContactForState[] = [];
 
   for (const contact of parsedContacts) {
     const uniquePhones = new Map<string, string>();
@@ -3896,13 +3897,6 @@ export function validateParticipantContactsForTest({
     }
 
     const [[normalizedPhone, rawPhone]] = uniquePhones.entries();
-
-    const phoneContacts = contactsByPhone.get(normalizedPhone) ?? [];
-    phoneContacts.push({
-      displayName: contact.displayName,
-      rawPhone,
-    });
-    contactsByPhone.set(normalizedPhone, phoneContacts);
     validContacts.push({
       displayName: contact.displayName,
       phone: normalizedPhone,
@@ -3910,15 +3904,7 @@ export function validateParticipantContactsForTest({
     });
   }
 
-  const duplicates = [...contactsByPhone.entries()]
-    .filter(([, contacts]) => contacts.length > 1)
-    .map(([phone, contacts]) => ({
-      phone,
-      contacts: contacts.map((contact) => ({
-        displayName: contact.displayName,
-      })),
-    }));
-
+  const duplicates = findDuplicateParticipantPhones(validContacts);
   if (duplicates.length > 0) {
     return {
       ok: false,
@@ -3928,18 +3914,63 @@ export function validateParticipantContactsForTest({
     };
   }
 
-  if (validContacts.length !== expectedContactsCount) {
+  return {
+    ok: true,
+    contacts: validContacts,
+    receivedCount: validContacts.length,
+  };
+}
+
+export function validateParticipantContactsForTest({
+  rawPayload,
+  expectedContactsCount,
+}: {
+  rawPayload: unknown;
+  expectedContactsCount: number;
+}):
+  | {
+      ok: true;
+      contacts: Array<{
+        displayName: string | null;
+        phone: string;
+        rawPhone: string;
+      }>;
+      receivedCount: number;
+    }
+  | {
+      ok: false;
+      reason:
+        | "empty"
+        | "missing_phone"
+        | "multiple_phones"
+        | "duplicate_phones"
+        | "count_mismatch";
+      receivedCount: number;
+      duplicates?: DuplicateParticipantPhone[];
+    } {
+  const batch = validateParticipantContactBatch(rawPayload);
+
+  if (!batch.ok) {
+    return {
+      ok: false,
+      reason: batch.reason,
+      receivedCount: batch.receivedCount,
+      duplicates: batch.duplicates,
+    };
+  }
+
+  if (batch.contacts.length !== expectedContactsCount) {
     return {
       ok: false,
       reason: "count_mismatch",
-      receivedCount: validContacts.length,
+      receivedCount: batch.contacts.length,
     };
   }
 
   return {
     ok: true,
-    contacts: validContacts,
-    receivedCount: validContacts.length,
+    contacts: batch.contacts,
+    receivedCount: batch.contacts.length,
   };
 }
 
@@ -4103,6 +4134,7 @@ async function handleTicketDeliverySelection({
     if (normalizedText === "cancelar") {
       return {
         reply: formatParticipantContactsPrompt(expectedContactsCount),
+        suppressTitle: true,
         nextContext: {
           ...baseContext,
           step: "ticket_delivery_contacts_waiting",
@@ -4128,6 +4160,7 @@ async function handleTicketDeliverySelection({
     if (validatedContacts.length !== expectedContactsCount) {
       return {
         reply: formatParticipantContactsPrompt(expectedContactsCount),
+        suppressTitle: true,
         nextContext: {
           ...baseContext,
           step: "ticket_delivery_contacts_waiting",
@@ -4198,10 +4231,7 @@ async function handleTicketDeliverySelection({
 
   if (baseContext.state === "ticket_delivery_contacts_waiting") {
     if (rawPayload) {
-      const validation = validateParticipantContactsForTest({
-        rawPayload,
-        expectedContactsCount,
-      });
+      const validation = validateParticipantContactBatch(rawPayload);
 
       if (!validation.ok) {
         if (validation.reason === "multiple_phones") {
@@ -4228,13 +4258,51 @@ async function handleTicketDeliverySelection({
         }
 
         return {
-          reply: `A quantidade de contatos deve ser exatamente igual a quantidade de participantes que receberão o próprio ingresso.\nEsperados: ${expectedContactsCount}.\nRecebidos: ${validation.receivedCount}.`,
+          reply: `ENVIANDO INGRESSOS\n\nA quantidade de contatos deve ser exatamente igual a quantidade de participantes que receberão o próprio ingresso.\nEsperados: ${expectedContactsCount}.\nRecebidos: ${validation.receivedCount}.`,
+          suppressTitle: true,
           nextContext: baseContext,
         };
       }
 
+      const pendingContacts = baseContext.ticketDelivery?.pendingContacts ?? [];
+      const accumulatedContacts = [...pendingContacts, ...validation.contacts];
+      const duplicates = findDuplicateParticipantPhones(accumulatedContacts);
+
+      if (duplicates.length > 0) {
+        return {
+          reply: formatDuplicateParticipantPhones(duplicates),
+          nextContext: baseContext,
+        };
+      }
+
+      if (accumulatedContacts.length > expectedContactsCount) {
+        return {
+          reply: `ENVIANDO INGRESSOS\n\nA quantidade de contatos deve ser exatamente igual a quantidade de participantes que receberão o próprio ingresso.\nEsperados: ${expectedContactsCount}.\nRecebidos: ${accumulatedContacts.length}.`,
+          suppressTitle: true,
+          nextContext: baseContext,
+        };
+      }
+
+      if (accumulatedContacts.length < expectedContactsCount) {
+        return {
+          reply: `ENVIANDO INGRESSOS\n\nContato recebido.\nRecebidos: ${accumulatedContacts.length}.\nFaltam: ${expectedContactsCount - accumulatedContacts.length}.\nEnvie o(s) próximo(s) contato(s).`,
+          suppressTitle: true,
+          nextContext: {
+            ...baseContext,
+            ticketDelivery: {
+              orderId,
+              expectedContactsCount,
+              requestedAt:
+                baseContext.ticketDelivery?.requestedAt ?? new Date().toISOString(),
+              mode: "participant_contacts",
+              pendingContacts: accumulatedContacts,
+            },
+          },
+        };
+      }
+
       return {
-        reply: formatParticipantContactsConfirmation(validation.contacts),
+        reply: formatParticipantContactsConfirmation(accumulatedContacts),
         nextContext: {
           ...baseContext,
           step: "ticket_delivery_contacts_validated",
@@ -4245,7 +4313,7 @@ async function handleTicketDeliverySelection({
             requestedAt:
               baseContext.ticketDelivery?.requestedAt ?? new Date().toISOString(),
             mode: "participant_contacts",
-            validatedContacts: validation.contacts,
+            validatedContacts: accumulatedContacts,
           },
         },
       };
@@ -4253,6 +4321,7 @@ async function handleTicketDeliverySelection({
 
     return {
       reply: formatParticipantContactsPrompt(expectedContactsCount),
+      suppressTitle: true,
       nextContext: baseContext,
     };
   }
@@ -4298,6 +4367,7 @@ async function handleTicketDeliverySelection({
 
     return {
       reply: formatParticipantContactsPrompt(expectedContactsCount),
+      suppressTitle: true,
       nextContext: {
         ...baseContext,
         step: "ticket_delivery_contacts_waiting",

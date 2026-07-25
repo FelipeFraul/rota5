@@ -192,7 +192,7 @@ test("opcao 2 entra em ticket_delivery_contacts_waiting", async () => {
   assert.equal(result.nextContext.state, "ticket_delivery_contacts_waiting");
   assert.equal(result.nextContext.ticketDelivery.mode, "participant_contacts");
   assert.equal(result.nextContext.ticketDelivery.expectedContactsCount, 2);
-  assert.match(result.reply, /quantidade de contatos/i);
+  assert.match(result.reply, /você deve enviar 2 contatos/i);
 });
 
 test("opcao 2 espera quantidade de ingressos menos um e nao e oferecida para compra de 1 ingresso", async () => {
@@ -304,6 +304,32 @@ test("quantidade menor que a esperada nao avanca", () => {
   assert.equal(result.ok, false);
   assert.equal(result.reason, "count_mismatch");
   assert.equal(result.receivedCount, 1);
+});
+
+test("contatos enviados em partes sao acumulados ate completar a quantidade esperada", async () => {
+  const firstResult = await route(
+    "",
+    waitingContext(2),
+    contact("Joao Silva", ["+55 15 99991-1111"]),
+  );
+
+  assert.equal(firstResult.nextContext.state, "ticket_delivery_contacts_waiting");
+  assert.equal(firstResult.nextContext.ticketDelivery.pendingContacts.length, 1);
+  assert.match(firstResult.reply, /Faltam: 1/i);
+
+  const secondResult = await route(
+    "",
+    firstResult.nextContext,
+    contact("Maria Souza", ["+55 15 99992-2222"]),
+  );
+
+  assert.equal(secondResult.nextContext.state, "ticket_delivery_contacts_validated");
+  assert.equal(secondResult.nextContext.ticketDelivery.validatedContacts.length, 2);
+  assert.deepEqual(
+    secondResult.nextContext.ticketDelivery.validatedContacts.map((item) => item.phone),
+    ["5515999911111", "5515999922222"],
+  );
+  assert.match(secondResult.reply, /Confirme os/i);
 });
 
 test("quantidade maior que a esperada nao avanca", () => {
