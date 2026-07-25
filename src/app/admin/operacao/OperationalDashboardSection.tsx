@@ -302,28 +302,6 @@ function ExpandedPanel({ metric }: { metric: ExpandedMetric }) {
   );
 }
 
-function Section({
-  title,
-  icon,
-  tone = "neutral",
-  children,
-}: {
-  title: string;
-  icon: IconName;
-  tone?: Tone;
-  children: ReactNode;
-}) {
-  return (
-    <section className={`admin-operation-block is-${tone}`}>
-      <header className="admin-operation-block-heading">
-        <OperationIcon name={icon} />
-        <h2>{title}</h2>
-      </header>
-      {children}
-    </section>
-  );
-}
-
 function StatusRow({ label, tone = "neutral" }: { label: string; tone?: Tone }) {
   return (
     <article className={`admin-operation-row is-${tone}`}>
@@ -331,19 +309,6 @@ function StatusRow({ label, tone = "neutral" }: { label: string; tone?: Tone }) 
       <strong>{EMPTY_VALUE}</strong>
     </article>
   );
-}
-
-function TimelineEmpty({ label }: { label: string }) {
-  return (
-    <article className="admin-operation-timeline-empty">
-      <time>{EMPTY_VALUE}</time>
-      <span>{label}</span>
-    </article>
-  );
-}
-
-function EmptyLine({ children }: { children: ReactNode }) {
-  return <p className="admin-operation-empty">{children}</p>;
 }
 
 export default function OperationalDashboardSection() {
@@ -412,80 +377,6 @@ export default function OperationalDashboardSection() {
         </section>
 
         <ExpandedPanel metric={expandedMetric} />
-
-        <section className="admin-operation-focus-grid">
-          <Section title="Entradas" icon="door" tone="ok">
-            <div className="admin-operation-row-list">
-              <StatusRow label="Entradas realizadas" tone="ok" />
-              <StatusRow label="Últimos check-ins" tone="ok" />
-              <StatusRow label="Recusas" tone="danger" />
-              <StatusRow label="Duplicados" tone="attention" />
-            </div>
-            <div className="admin-operation-sublist">
-              <h3>Últimas entradas</h3>
-              <EmptyLine>Nenhum check-in carregado.</EmptyLine>
-            </div>
-          </Section>
-
-          <Section title="Participantes" icon="users" tone="info">
-            <div className="admin-operation-row-list">
-              <StatusRow label="Enviados" tone="ok" />
-              <StatusRow label="Entregues" tone="ok" />
-              <StatusRow label="Aguardando telefone" tone="attention" />
-              <StatusRow label="Aguardando resposta" tone="attention" />
-            </div>
-            <div className="admin-operation-sublist">
-              <h3>Participantes pendentes</h3>
-              <EmptyLine>Nenhum participante carregado.</EmptyLine>
-            </div>
-          </Section>
-        </section>
-
-        <section className="admin-operation-focus-grid is-secondary">
-          <Section title="Combos" icon="bag" tone="attention">
-            <div className="admin-operation-row-list">
-              <StatusRow label="Pagos" tone="ok" />
-              <StatusRow label="Utilizados" tone="ok" />
-              <StatusRow label="Pendentes" tone="attention" />
-              <StatusRow label="Sem QR" tone="danger" />
-            </div>
-            <div className="admin-operation-sublist">
-              <h3>Últimos combos</h3>
-              <EmptyLine>Nenhum combo carregado.</EmptyLine>
-            </div>
-          </Section>
-
-          <Section title="Eventos" icon="calendar" tone="info">
-            <div className="admin-operation-event-groups">
-              <div>
-                <h3>Eventos ativos</h3>
-                <EmptyLine>Nenhum evento operacional carregado.</EmptyLine>
-              </div>
-              <div>
-                <h3>Próximos eventos</h3>
-                <EmptyLine>Nenhum próximo evento carregado.</EmptyLine>
-              </div>
-              <div>
-                <h3>Sessões, mesas e bistrôs</h3>
-                <EmptyLine>Nenhuma configuração operacional carregada.</EmptyLine>
-              </div>
-            </div>
-          </Section>
-        </section>
-
-        <section className="admin-operation-focus-grid is-secondary">
-          <Section title="Administração" icon="message">
-            <div className="admin-operation-timeline">
-              <TimelineEmpty label="Nenhuma ação administrativa carregada." />
-            </div>
-          </Section>
-
-          <Section title="IA" icon="spark" tone="info">
-            <div className="admin-operation-insight">
-              <p>A IA ainda não recebeu fatos operacionais para interpretar.</p>
-            </div>
-          </Section>
-        </section>
       </main>
     </>
   );
