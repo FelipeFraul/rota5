@@ -4,7 +4,7 @@ import BrandLogo from "@/app/BrandLogo";
 
 const EMPTY_VALUE = "\u2014";
 
-type Tone = "neutral" | "ok" | "attention" | "danger";
+type Tone = "neutral" | "ok" | "attention" | "danger" | "info";
 type IconName = "activity" | "ticket" | "door" | "alert" | "message" | "bag" | "refresh" | "calendar";
 
 function OperationIcon({ name }: { name: IconName }) {
@@ -26,15 +26,7 @@ function OperationIcon({ name }: { name: IconName }) {
   );
 }
 
-function SummaryItem({
-  label,
-  icon,
-  tone = "neutral",
-}: {
-  label: string;
-  icon: IconName;
-  tone?: Tone;
-}) {
+function SummaryItem({ label, icon, tone = "neutral" }: { label: string; icon: IconName; tone?: Tone }) {
   return (
     <article className={`admin-operation-summary-item is-${tone}`}>
       <OperationIcon name={icon} />
@@ -46,22 +38,36 @@ function SummaryItem({
   );
 }
 
+function PrioritySection({
+  title,
+  tone,
+  children,
+}: {
+  title: string;
+  tone: Tone;
+  children: ReactNode;
+}) {
+  return (
+    <section className={`admin-operation-priority is-${tone}`}>
+      <header>
+        <span className="admin-operation-status-dot" />
+        <h2>{title}</h2>
+      </header>
+      {children}
+    </section>
+  );
+}
+
 function SectionHeading({ title, icon }: { title: string; icon: IconName }) {
   return (
     <div className="admin-operation-section-heading">
       <OperationIcon name={icon} />
-      <h2>{title}</h2>
+      <h3>{title}</h3>
     </div>
   );
 }
 
-function StatusRow({
-  label,
-  tone = "neutral",
-}: {
-  label: string;
-  tone?: Tone;
-}) {
+function StatusRow({ label, tone = "neutral" }: { label: string; tone?: Tone }) {
   return (
     <article className={`admin-operation-row is-${tone}`}>
       <span>{label}</span>
@@ -77,39 +83,39 @@ function EmptyLine({ children }: { children: ReactNode }) {
 export default function OperationalDashboardSection() {
   return (
     <>
-      <header className="admin-events-header admin-operation-header">
+      <header className="admin-operation-hero">
         <BrandLogo />
-        <div>
-          <p className="admin-events-kicker">Admin</p>
-          <h1>Operação ao vivo</h1>
-          <p>Acompanhamento operacional dos eventos em tempo real</p>
+        <div className="admin-operation-title">
+          <div>
+            <p className="admin-events-kicker">Admin</p>
+            <h1>Operação ao vivo</h1>
+          </div>
+          <p>
+            <span className="admin-operation-live-dot" />
+            Operação não conectada
+          </p>
         </div>
-        <Link className="admin-operation-link" href="/admin/eventos">
-          Editar eventos
-        </Link>
+        <div className="admin-operation-top-actions">
+          <span>Atualizado: {EMPTY_VALUE}</span>
+          <Link className="admin-operation-link" href="/admin/eventos">
+            Editar eventos
+          </Link>
+        </div>
+        <div className="admin-operation-controls" aria-label="Controles da operação ao vivo">
+          <label>
+            <span>Evento</span>
+            <select disabled defaultValue="">
+              <option value="">Nenhum evento carregado</option>
+            </select>
+          </label>
+          <button type="button">
+            <OperationIcon name="refresh" />
+            Atualizar
+          </button>
+        </div>
       </header>
 
-      <section className="admin-operation-toolbar" aria-label="Controles da operação ao vivo">
-        <label>
-          <span>Evento</span>
-          <select disabled defaultValue="">
-            <option value="">Nenhum evento carregado</option>
-          </select>
-        </label>
-        <button type="button">Atualizar</button>
-        <p>Aguardando dados</p>
-        <strong>Painel ainda não conectado</strong>
-      </section>
-
       <section className="admin-operation-layout" aria-label="Painel operacional">
-        <section className="admin-operation-status-strip is-neutral" aria-label="Status operacional">
-          <div>
-            <span className="admin-operation-status-dot" />
-            <strong>Operação não conectada</strong>
-          </div>
-          <p>Aguardando dados</p>
-        </section>
-
         <section className="admin-operation-summary" aria-label="Resumo geral operacional">
           <SummaryItem label="Eventos" icon="calendar" tone="ok" />
           <SummaryItem label="Check-ins" icon="door" tone="ok" />
@@ -119,21 +125,39 @@ export default function OperationalDashboardSection() {
           <SummaryItem label="Alertas" icon="alert" tone="danger" />
         </section>
 
-        <section className="admin-operation-surface">
-          <SectionHeading title="Eventos e sessões" icon="calendar" />
-          <div className="admin-operation-split">
-            <div className="admin-operation-group">
-              <h3>Em andamento</h3>
-              <EmptyLine>Nenhum evento operacional carregado.</EmptyLine>
-            </div>
-            <div className="admin-operation-group">
-              <h3>Próximos eventos</h3>
-              <EmptyLine>Nenhum evento operacional carregado.</EmptyLine>
-            </div>
+        <PrioritySection title="Precisa de atenção agora" tone="danger">
+          <div className="admin-operation-grid">
+            <section className="admin-operation-surface">
+              <SectionHeading title="Alertas" icon="alert" />
+              <EmptyLine>Nenhum incidente operacional carregado.</EmptyLine>
+            </section>
+            <section className="admin-operation-surface">
+              <SectionHeading title="Falhas e filas" icon="message" />
+              <div className="admin-operation-row-list">
+                <StatusRow label="Falhas de envio" tone="danger" />
+                <StatusRow label="Mensagens em retry" tone="attention" />
+                <StatusRow label="Jobs presos" tone="danger" />
+                <StatusRow label="Pagamentos não processados" tone="attention" />
+              </div>
+            </section>
           </div>
-        </section>
+        </PrioritySection>
 
-        <div className="admin-operation-grid">
+        <PrioritySection title="Operação acontecendo" tone="ok">
+          <section className="admin-operation-surface">
+            <SectionHeading title="Eventos ativos" icon="calendar" />
+            <div className="admin-operation-event-preview">
+              <div>
+                <h4>Em andamento</h4>
+                <EmptyLine>Nenhum evento operacional carregado.</EmptyLine>
+              </div>
+              <div>
+                <h4>Portaria ativa</h4>
+                <EmptyLine>Nenhum dado de portaria carregado.</EmptyLine>
+              </div>
+            </div>
+          </section>
+
           <section className="admin-operation-surface">
             <SectionHeading title="Check-in e portarias" icon="door" />
             <div className="admin-operation-portaria-list" aria-label="Fluxo por portaria">
@@ -146,53 +170,34 @@ export default function OperationalDashboardSection() {
               <EmptyLine>Nenhum dado de portaria carregado.</EmptyLine>
             </div>
           </section>
+        </PrioritySection>
 
-          <section className="admin-operation-surface">
-            <SectionHeading title="Filas operacionais" icon="message" />
-            <div className="admin-operation-row-list">
-              <StatusRow label="Envios pendentes" tone="attention" />
-              <StatusRow label="Envios em processamento" />
-              <StatusRow label="Mensagens em retry" tone="attention" />
-              <StatusRow label="Jobs presos" tone="danger" />
-            </div>
-          </section>
-        </div>
-
-        <div className="admin-operation-grid">
-          <section className="admin-operation-surface">
-            <SectionHeading title="Combos" icon="bag" />
-            <div className="admin-operation-row-list">
-              <StatusRow label="Aguardando pagamento" tone="attention" />
-              <StatusRow label="Pagos" />
-              <StatusRow label="Utilizados" />
-              <StatusRow label="Pagos sem QR disponível" tone="danger" />
-            </div>
-          </section>
-
-          <section className="admin-operation-surface">
-            <SectionHeading title="Detalhes técnicos" icon="ticket" />
-            <div className="admin-operation-row-list">
-              <StatusRow label="Ingressos emitidos" />
-              <StatusRow label="Ingressos utilizados" />
-              <StatusRow label="QR de participantes entregues" />
-              <StatusRow label="QR de participantes pendentes" tone="attention" />
-            </div>
-          </section>
-        </div>
-
-        <section className="admin-operation-surface">
-          <SectionHeading title="Falhas e inconsistências" icon="alert" />
-          <div className="admin-operation-row-list">
-            <StatusRow label="Falhas de envio" tone="danger" />
-            <StatusRow label="Pagamentos não processados" tone="attention" />
-            <StatusRow label="Pedidos pagos sem ingresso" tone="danger" />
-            <StatusRow label="Combos pagos sem QR" tone="danger" />
+        <PrioritySection title="Próximos passos" tone="info">
+          <div className="admin-operation-grid">
+            <section className="admin-operation-surface">
+              <SectionHeading title="Eventos em breve" icon="calendar" />
+              <EmptyLine>Nenhum evento operacional carregado.</EmptyLine>
+            </section>
+            <section className="admin-operation-surface">
+              <SectionHeading title="Combos e participantes" icon="bag" />
+              <div className="admin-operation-row-list">
+                <StatusRow label="Aguardando pagamento" tone="attention" />
+                <StatusRow label="Combos pagos sem QR" tone="danger" />
+                <StatusRow label="QR de participantes pendentes" tone="attention" />
+                <StatusRow label="Envios pendentes" tone="attention" />
+              </div>
+            </section>
           </div>
-        </section>
+        </PrioritySection>
 
-        <section className="admin-operation-surface">
-          <SectionHeading title="Alertas operacionais" icon="activity" />
-          <EmptyLine>Nenhum dado de alerta carregado.</EmptyLine>
+        <section className="admin-operation-surface is-muted">
+          <SectionHeading title="Detalhes técnicos" icon="ticket" />
+          <div className="admin-operation-row-list">
+            <StatusRow label="Ingressos emitidos" />
+            <StatusRow label="Ingressos utilizados" />
+            <StatusRow label="QR de participantes entregues" />
+            <StatusRow label="Combos utilizados" />
+          </div>
         </section>
       </section>
     </>

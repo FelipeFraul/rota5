@@ -1262,6 +1262,237 @@ body:has(.checkout-unavailable-shell) iframe {
   font-weight: 700;
 }
 
+.admin-operation-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 18px 22px;
+  align-items: start;
+  width: min(1320px, 100%);
+  margin: 0 auto 16px;
+  padding: 24px 28px;
+  border: 1px solid rgba(226, 232, 240, 0.86);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #020617;
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.16);
+}
+
+.admin-operation-hero .brand-logo {
+  width: 74px;
+  margin: 0;
+}
+
+.admin-operation-title {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.admin-operation-title h1 {
+  margin: 0;
+  color: #020617;
+  font-size: clamp(30px, 3.2vw, 42px);
+  font-weight: 950;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.admin-operation-title > p {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  width: fit-content;
+  margin: 0;
+  color: #334155;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.admin-operation-live-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #94a3b8;
+  box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.14);
+  animation: admin-operation-pulse 1600ms ease-in-out infinite;
+}
+
+.admin-operation-top-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.admin-operation-top-actions > span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.admin-operation-controls {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(128px, auto);
+  gap: 10px;
+  align-items: end;
+  grid-column: 2 / 4;
+}
+
+.admin-operation-controls label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.admin-operation-controls label span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-operation-controls select,
+.admin-operation-controls button {
+  min-height: 42px;
+  border-radius: 6px;
+  font-family: var(--font-sans);
+  font-size: 15px;
+}
+
+.admin-operation-controls select {
+  width: 100%;
+  padding: 8px 11px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.admin-operation-controls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 0;
+  background: #020617;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 850;
+}
+
+.admin-operation-summary {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.admin-operation-summary-item {
+  min-height: 72px;
+  padding: 8px 18px;
+  border-right: 1px solid rgba(2, 6, 23, 0.1);
+  background: transparent;
+}
+
+.admin-operation-summary-item:first-child {
+  padding-left: 0;
+}
+
+.admin-operation-summary-item strong {
+  font-size: clamp(30px, 3vw, 44px);
+}
+
+.admin-operation-priority {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-operation-priority > header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.admin-operation-priority > header h2 {
+  margin: 0;
+  color: #020617;
+  font-size: 15px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-operation-priority.is-ok .admin-operation-status-dot {
+  background: #0f766e;
+  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.14);
+}
+
+.admin-operation-priority.is-attention .admin-operation-status-dot {
+  background: #f97316;
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.14);
+}
+
+.admin-operation-priority.is-danger .admin-operation-status-dot {
+  background: #dc2626;
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.14);
+}
+
+.admin-operation-priority.is-info .admin-operation-status-dot {
+  background: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+}
+
+.admin-operation-surface {
+  box-shadow: none;
+}
+
+.admin-operation-surface.is-muted {
+  background: rgba(248, 250, 252, 0.86);
+}
+
+.admin-operation-section-heading h3 {
+  margin: 0;
+  color: #020617;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.admin-operation-event-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: 20px;
+}
+
+.admin-operation-event-preview > div + div {
+  border-left: 1px solid rgba(2, 6, 23, 0.08);
+  padding-left: 20px;
+}
+
+.admin-operation-event-preview h4 {
+  margin: 0 0 10px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+@keyframes admin-operation-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.45;
+    transform: scale(0.82);
+  }
+}
+
 .admin-events-kicker {
   margin: 0 0 9px !important;
   color: #006c67 !important;
@@ -3486,6 +3717,19 @@ body:has(.checkout-unavailable-shell) iframe {
     border-right: 0;
   }
 
+  .admin-operation-hero {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .admin-operation-top-actions {
+    grid-column: 1 / -1;
+    justify-content: space-between;
+  }
+
+  .admin-operation-controls {
+    grid-column: 1 / -1;
+  }
+
   .admin-events-toolbar form {
     grid-column: 1 / -1;
   }
@@ -3516,17 +3760,26 @@ body:has(.checkout-unavailable-shell) iframe {
 
   .admin-operation-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    overflow: visible;
-    border: 0;
-    background: transparent;
-  }
-
-  .admin-operation-summary-item,
-  .admin-operation-summary-item:nth-child(3n) {
+    gap: 0;
+    overflow: hidden;
     border: 1px solid rgba(2, 6, 23, 0.08);
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.94);
+  }
+
+  .admin-operation-summary-item,
+  .admin-operation-summary-item:nth-child(3n),
+  .admin-operation-summary-item:last-child {
+    border-right: 1px solid rgba(2, 6, 23, 0.08);
+    border-bottom: 1px solid rgba(2, 6, 23, 0.08);
+  }
+
+  .admin-operation-summary-item:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .admin-operation-summary-item:nth-last-child(-n + 2) {
+    border-bottom: 0;
   }
 
   .admin-general-kpis article,
@@ -3555,6 +3808,8 @@ body:has(.checkout-unavailable-shell) iframe {
   .admin-events-header,
   .admin-events-toolbar,
   .admin-operation-toolbar,
+  .admin-operation-hero,
+  .admin-operation-controls,
   .admin-operation-summary,
   .admin-operation-grid,
   .admin-events-toolbar form,
@@ -3642,6 +3897,7 @@ body:has(.checkout-unavailable-shell) iframe {
   .admin-operation-table-head,
   .admin-operation-split,
   .admin-operation-portaria-head,
+  .admin-operation-event-preview,
   .admin-dashboard-skeleton {
     grid-template-columns: 1fr;
   }
@@ -3660,6 +3916,30 @@ body:has(.checkout-unavailable-shell) iframe {
 
   .admin-operation-surface {
     padding: 18px;
+  }
+
+  .admin-operation-hero {
+    padding: 20px;
+  }
+
+  .admin-operation-hero .brand-logo {
+    width: 64px;
+  }
+
+  .admin-operation-title h1 {
+    font-size: 30px;
+  }
+
+  .admin-operation-top-actions {
+    display: grid;
+    justify-content: stretch;
+  }
+
+  .admin-operation-event-preview > div + div {
+    border-left: 0;
+    border-top: 1px solid rgba(2, 6, 23, 0.08);
+    padding-top: 18px;
+    padding-left: 0;
   }
 
   .admin-operation-summary-item {
