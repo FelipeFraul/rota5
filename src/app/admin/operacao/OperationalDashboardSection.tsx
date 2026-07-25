@@ -1,10 +1,14 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import type { ReactNode } from "react";
 import BrandLogo from "@/app/BrandLogo";
 
 const EMPTY_VALUE = "—";
 
 type Tone = "neutral" | "ok" | "attention" | "danger" | "info";
+type ActiveMetric = "revenue" | "tickets" | "combos";
 type IconName =
   | "activity"
   | "ticket"
@@ -40,9 +44,74 @@ function OperationIcon({ name }: { name: IconName }) {
   );
 }
 
-function MetricPill({ label, icon, tone = "neutral" }: { label: string; icon: IconName; tone?: Tone }) {
-  return (
-    <article className={`admin-operation-metric is-${tone}`}>
+const expandedMetricContent: Record<
+  ActiveMetric,
+  {
+    title: string;
+    icon: IconName;
+    tone: Tone;
+    metrics: Array<{ label: string; tone?: Tone }>;
+    listTitle: string;
+    empty: string;
+  }
+> = {
+  revenue: {
+    title: "Receita",
+    icon: "cash",
+    tone: "ok",
+    metrics: [
+      { label: "Receita total", tone: "ok" },
+      { label: "Receita de ingressos" },
+      { label: "Receita de combos", tone: "attention" },
+      { label: "Comparativo" },
+    ],
+    listTitle: "Últimas vendas",
+    empty: "Nenhuma venda carregada.",
+  },
+  tickets: {
+    title: "Ingressos",
+    icon: "ticket",
+    tone: "info",
+    metrics: [
+      { label: "Ingressos vendidos", tone: "ok" },
+      { label: "Cortesias emitidas" },
+      { label: "Ingressos utilizados" },
+      { label: "Comparativo" },
+    ],
+    listTitle: "Últimos ingressos",
+    empty: "Nenhum ingresso carregado.",
+  },
+  combos: {
+    title: "Combos",
+    icon: "bag",
+    tone: "attention",
+    metrics: [
+      { label: "Combos pagos", tone: "ok" },
+      { label: "Combos utilizados" },
+      { label: "Combos pendentes", tone: "attention" },
+      { label: "Comparativo" },
+    ],
+    listTitle: "Últimos combos",
+    empty: "Nenhum combo carregado.",
+  },
+};
+
+function MetricPill({
+  label,
+  icon,
+  tone = "neutral",
+  isActive = false,
+  onClick,
+}: {
+  label: string;
+  icon: IconName;
+  tone?: Tone;
+  isActive?: boolean;
+  onClick?: () => void;
+}) {
+  const className = `admin-operation-metric is-${tone}${isActive ? " is-active" : ""}`;
+  const content = (
+    <>
       <div className="admin-operation-metric-copy">
         <span>
           <OperationIcon name={icon} />
@@ -56,8 +125,18 @@ function MetricPill({ label, icon, tone = "neutral" }: { label: string; icon: Ic
         <path d="M4 34c14 9 27 10 42 3 18-9 27-2 42 7 19 11 32-3 56-1" />
         <path d="M4 62c18-3 30-14 46-13 17 2 27 12 42 10 20-3 31-18 52-23" />
       </svg>
-    </article>
+    </>
   );
+
+  if (onClick) {
+    return (
+      <button type="button" className={className} onClick={onClick} aria-pressed={isActive}>
+        {content}
+      </button>
+    );
+  }
+
+  return <article className={className}>{content}</article>;
 }
 
 function Section({
@@ -105,6 +184,9 @@ function EmptyLine({ children }: { children: ReactNode }) {
 }
 
 export default function OperationalDashboardSection() {
+  const [activeMetric, setActiveMetric] = useState<ActiveMetric>("revenue");
+  const expandedMetric = expandedMetricContent[activeMetric];
+
   return (
     <>
       <header className="admin-operation-hero">
@@ -156,24 +238,47 @@ export default function OperationalDashboardSection() {
         </section>
 
         <section className="admin-operation-metrics" aria-label="Resumo compacto">
-          <MetricPill label="Receita" icon="cash" tone="ok" />
-          <MetricPill label="Ingressos" icon="ticket" />
-          <MetricPill label="Combos" icon="bag" tone="attention" />
+          <MetricPill
+            label="Receita"
+            icon="cash"
+            tone="ok"
+            isActive={activeMetric === "revenue"}
+            onClick={() => setActiveMetric("revenue")}
+          />
+          <MetricPill
+            label="Ingressos"
+            icon="ticket"
+            tone="info"
+            isActive={activeMetric === "tickets"}
+            onClick={() => setActiveMetric("tickets")}
+          />
+          <MetricPill
+            label="Combos"
+            icon="bag"
+            tone="attention"
+            isActive={activeMetric === "combos"}
+            onClick={() => setActiveMetric("combos")}
+          />
           <MetricPill label="Conversão" icon="activity" tone="info" />
           <MetricPill label="Alertas" icon="alert" tone="danger" />
         </section>
 
         <section className="admin-operation-focus-grid is-single">
-          <Section title="Vendas" icon="cash" tone="ok">
+          <Section title={expandedMetric.title} icon={expandedMetric.icon} tone={expandedMetric.tone}>
+            <div className="admin-operation-expanded-toolbar">
+              <label>
+                <span>Dias para comparativo</span>
+                <input type="number" min="1" max="365" defaultValue="30" inputMode="numeric" />
+              </label>
+            </div>
             <div className="admin-operation-mini-grid">
-              <StatusRow label="Receita" tone="ok" />
-              <StatusRow label="Ingressos" />
-              <StatusRow label="Combos" tone="attention" />
-              <StatusRow label="Conversão" tone="info" />
+              {expandedMetric.metrics.map((metric) => (
+                <StatusRow key={metric.label} label={metric.label} tone={metric.tone} />
+              ))}
             </div>
             <div className="admin-operation-sublist">
-              <h3>Últimas vendas</h3>
-              <EmptyLine>Nenhuma venda carregada.</EmptyLine>
+              <h3>{expandedMetric.listTitle}</h3>
+              <EmptyLine>{expandedMetric.empty}</EmptyLine>
             </div>
           </Section>
         </section>
