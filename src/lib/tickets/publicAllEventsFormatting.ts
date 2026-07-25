@@ -1,7 +1,7 @@
 import type { TicketConversationEventOption } from "@/lib/tickets/conversationState";
 import {
-  formatCityState,
   formatEventDate,
+  formatEventLocation,
   formatOptionLine,
   formatPublicEventTitle,
 } from "@/lib/tickets/eventFormatting";
@@ -32,7 +32,7 @@ export function formatSingleAllEventReply(
 
   return [
     `🎟️ *${formatPublicEventTitle(event.title, event.artistName)}*`,
-    `| Local: ${formatCityState(event.city, event.state)}`,
+    `| Local: ${formatEventLocation(event)}`,
     `*| Data: ${formatEventDate(event.startsAt)}*`,
     "",
     formatOptionLine(buyOption, "comprar"),

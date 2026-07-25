@@ -124,13 +124,18 @@ function formatCityState(city, state) {
   return `${formatProperName(city)}/${state.trim().toLocaleUpperCase("pt-BR")}`;
 }
 
+function formatEventLocation(event) {
+  const venueName = formatProperName(event.venueName);
+  return venueName || formatCityState(event.city, event.state);
+}
+
 function formatSingleAllEventReply(event, index) {
   const buyOption = index * 2 + 1;
   const moreInfoOption = buyOption + 1;
 
   return [
     `🎟️ *${formatPublicEventTitle(event.title, event.artistName)}*`,
-    `| Local: ${formatCityState(event.city, event.state)}`,
+    `| Local: ${formatEventLocation(event)}`,
     `*| Data: ${formatEventDate(event.startsAt)}*`,
     "",
     formatOptionLine(buyOption, "comprar"),
@@ -222,6 +227,7 @@ const baseEvents = [
     artistName: "Yuri Marçal",
     city: "sorocaba",
     state: "sp",
+    venueName: "teatro municipal",
     startsAt: "2026-08-01T23:00:00.000Z",
   },
   {
@@ -231,6 +237,7 @@ const baseEvents = [
     artistName: "Xanda Dias",
     city: "ribeirão preto",
     state: "sp",
+    venueName: "rock bar pub",
     startsAt: "2026-08-02T22:30:00.000Z",
   },
   {
@@ -265,7 +272,7 @@ test("TODOS com um evento formata titulo, local, data e opcoes", () => {
       "Encontrei estes eventos:",
       "",
       "🎟️ *YURI MARÇAL - SOLO NOVO*",
-      "| Local: Sorocaba/SP",
+      "| Local: Teatro Municipal",
       "*| Data: Sábado 01/08 às 20:00*",
       "",
       "Digite 1 para *comprar*",
@@ -281,7 +288,7 @@ test("TODOS com varios eventos preserva ordem e numeracao", () => {
       "Encontrei estes eventos:",
       "",
       "🎟️ *YURI MARÇAL - SOLO NOVO*",
-      "| Local: Sorocaba/SP",
+      "| Local: Teatro Municipal",
       "*| Data: Sábado 01/08 às 20:00*",
       "",
       "Digite 1 para *comprar*",
@@ -290,7 +297,7 @@ test("TODOS com varios eventos preserva ordem e numeracao", () => {
       "--",
       "",
       "🎟️ *XANDA DIAS*",
-      "| Local: Ribeirão Preto/SP",
+      "| Local: Rock Bar Pub",
       "*| Data: Domingo 02/08 às 19:30*",
       "",
       "Digite 3 para *comprar*",

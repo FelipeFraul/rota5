@@ -25,8 +25,8 @@ import { TICKET_MESSAGES } from "@/lib/tickets/messages";
 import {
   formatCityState,
   formatEventDate,
+  formatEventLocation,
   formatOptionLine,
-  formatProperName,
   formatPublicEventTitle,
 } from "@/lib/tickets/eventFormatting";
 import {
@@ -1671,7 +1671,7 @@ function formatTicketOptionLine(
   label: string,
   priceLabel: string,
 ) {
-  return `Digite *"${option}"* ${formatTicketOptionLabel(label)} - ${priceLabel}`;
+  return `Digite *${option}* ${formatTicketOptionLabel(label)} - ${priceLabel}`;
 }
 
 function shouldUseTicketLabelForSingleOffer(sectionName: string) {
@@ -1737,15 +1737,15 @@ function formatSingleEventReply(
 ) {
   const title = formatPublicEventTitle(event.title, event.artistName);
   const details = [
-    `| Local: ${formatCityState(event.city, event.state)}`,
+    `| Local: ${formatEventLocation(event)}`,
     `*| Data: ${formatEventDate(event.startsAt)}*`,
   ];
   const buyOption = totalEvents === 1 ? 1 : index * 2 + 1;
   const moreInfoOption = buyOption + 1;
   const options = [
-    `Digite *"${buyOption}"* para comprar`,
-    `Digite *"${moreInfoOption}"* para saber mais`,
-    'Para uma nova pesquisa, *"NEW"*',
+    `Digite *${buyOption}* para comprar`,
+    `Digite *${moreInfoOption}* para saber mais`,
+    'Para uma nova pesquisa, *NEW*',
   ];
 
   return [
@@ -1763,15 +1763,15 @@ function formatSingleEventOptionReply(
 ) {
   const title = formatPublicEventTitle(event.title, event.artistName);
   const details = [
-    `| Local: ${formatCityState(event.city, event.state)}`,
+    `| Local: ${formatEventLocation(event)}`,
     `*| Data: ${formatEventDate(event.startsAt)}*`,
   ];
   const buyOption = totalEvents === 1 ? 1 : index * 2 + 1;
   const moreInfoOption = buyOption + 1;
   const options = [
-    `Digite *"${buyOption}"* para comprar`,
-    `Digite *"${moreInfoOption}"* para saber mais`,
-    'Para uma nova pesquisa, *"NEW"*',
+    `Digite *${buyOption}* para comprar`,
+    `Digite *${moreInfoOption}* para saber mais`,
+    'Para uma nova pesquisa, *NEW*',
   ];
 
   return [
@@ -1875,9 +1875,8 @@ function formatSingleEventMoreInfo(
 
   return [
     `ðŸŽŸï¸ *${formatPublicEventTitle(event.title, event.artistName)}*`,
-    `| Local: ${formatCityState(event.city, event.state)}`,
+    `| Local: ${formatEventLocation(event)}`,
     `*| Data: ${formatEventDate(event.startsAt)}*`,
-    ...(event.venueName ? [`> ÃƒÂ°Ã…Â¸Ã‚ÂÃ…Â¸ÃƒÂ¯Ã‚Â¸Ã‚Â Local: ${formatProperName(event.venueName)}`] : []),
     "",
     "*INFORMAÃƒÆ’Ã¢â‚¬Â¡ÃƒÆ’Ã¢â‚¬Â¢ES DO EVENTO*",
     description || "Nenhuma informaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o adicional cadastrada para este evento.",
@@ -1886,8 +1885,8 @@ function formatSingleEventMoreInfo(
 
 function formatSingleEventMoreInfoOptions() {
   return [
-    'Digite *"1"* para comprar',
-    'Para uma nova pesquisa, *"NEW"*',
+    'Digite *1* para comprar',
+    'Para uma nova pesquisa, *NEW*',
   ].join("\n");
 }
 
@@ -2010,8 +2009,8 @@ function formatSectionsReply({
     "",
     sectionLines.join("\n---\n"),
     "",
-    'Digite *"BACK"* para voltar.',
-    'Para uma nova pesquisa, *"NEW"*',
+    'Digite *BACK* para voltar.',
+    'Para uma nova pesquisa, *NEW*',
   ].join("\n");
 }
 
@@ -2032,9 +2031,9 @@ function formatQuantityPrompt(
     "",
     isFree
       ? "Digite o nÃºmero de ingressos gratuitos, atÃ© 4 por pedido. Ex: 2"
-      : 'Digite o nÃºmero de ingressos, *"EX: 4"*',
-    'Digite *"BACK"* para voltar.',
-    'Para uma nova pesquisa, *"NEW"*',
+      : 'Digite o nÃºmero de ingressos, *EX: 4*',
+    'Digite *BACK* para voltar.',
+    'Para uma nova pesquisa, *NEW*',
   ].join("\n");
 }
 
@@ -2206,9 +2205,9 @@ function formatCartDecisionReply({ cart }: { cart: TicketConversationCart }) {
       ? [`> Mesa/BistrÃ´: ${formatTableMapPlaceLabel(cart.tableMapPlace)}`]
       : []),
     "",
-    'Digite *"1"* para para finalizar a compra',
-    'Digite *"BACK"* para voltar.',
-    'Para uma nova pesquisa, *"NEW"*',
+    "Digite *1* para finalizar a compra",
+    'Digite *BACK* para voltar.',
+    'Para uma nova pesquisa, *NEW*',
   ].join("\n");
 }
 
@@ -2221,14 +2220,15 @@ function formatTableMapSelectionReply({
 }) {
   return [
     "*ESCOLHA SUA MESA OU BISTRÃ”*",
+    "🟠Mesa ⚫Bistrô alta",
     "",
     `> Mesas/bistrÃ´ disponiveis: *${availableCount}*`,
     `> Mesas/bistrÃ´ reservadas: *${reservedCount}*`,
     "",
-    'Digite o nÃºmero da mesa ou o bistrÃ´ para reservar, *"EX: 12"*',
-    'Digite *"0"* se nÃ£o quer mesa ou bistrÃ´.',
-    'Digite *"BACK"* para voltar.',
-    'Para uma nova pesquisa, *"NEW"*',
+    'Digite o nÃºmero da mesa ou o bistrÃ´ para reservar, *EX: 12*',
+    'Digite *0* se nÃ£o quer mesa ou bistrÃ´.',
+    'Digite *BACK* para voltar.',
+    'Para uma nova pesquisa, *NEW*',
   ].join("\n");
 }
 
@@ -2851,7 +2851,7 @@ function renderAdminSubmenu(config: AdminSubmenuConfig) {
       : []),
     "",
     "Responda com o nÃºmero da opÃ§Ã£o.",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da Ã¡rea de admin.',
+    'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da Ã¡rea de admin.',
   ].join("\n");
 }
 
@@ -2911,7 +2911,7 @@ function renderAdminEventListFilterMenu() {
     formatOptionLine(4, "todos os eventos"),
     "",
     "Responda com o nÃƒÆ’Ã‚Âºmero da opÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o.",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da Ã¡rea de admin.',
+    'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da Ã¡rea de admin.',
   ].join("\n");
 }
 
@@ -3491,7 +3491,7 @@ function formatReservationReply({
   return [
     "*RESERVA CRIADA.*",
     "",
-    'VocÃª tem *"10 MIN PARA EFETUAR A COMPRA"*',
+    'VocÃª tem *10 MIN PARA EFETUAR A COMPRA*',
     `> Evento: ${selectedEvent.title}`,
     ...(cart
       ? formatCartSummaryLines(cart)
@@ -3507,8 +3507,8 @@ function formatReservationReply({
     `> Reserva vÃ¡lida atÃ©: *${formatTime(reservation.expiresAt)}*`,
     "",
     "Para comprar, digite *COMPRAR*",
-    'Digite *"BACK"* para voltar.',
-    'Para uma nova pesquisa, *"NEW"*',
+    'Digite *BACK* para voltar.',
+    'Para uma nova pesquisa, *NEW*',
   ].join("\n");
 }
 
@@ -3530,7 +3530,7 @@ function formatReservationContextReply({
   return [
     "*RESERVA CRIADA.*",
     "",
-    'VocÃª tem *"10 MIN PARA EFETUAR A COMPRA"*',
+    'VocÃª tem *10 MIN PARA EFETUAR A COMPRA*',
     ...(selectedEvent ? [`> Evento: ${selectedEvent.title}`] : []),
     ...(cart
       ? formatCartSummaryLines(cart)
@@ -3546,8 +3546,8 @@ function formatReservationContextReply({
     `> Reserva vÃ¡lida atÃ©: *${formatTime(reservation.expiresAt)}*`,
     "",
     "Para comprar, digite *COMPRAR*",
-    'Digite *"BACK"* para voltar.',
-    'Para uma nova pesquisa, *"NEW"*',
+    'Digite *BACK* para voltar.',
+    'Para uma nova pesquisa, *NEW*',
   ].join("\n");
 }
 
@@ -3562,7 +3562,7 @@ function formatPaymentLinkReply({
     "Link de pagamento:",
     checkout.checkoutUrl,
     "",
-    "ApÃ³s a confirmaÃ§Ã£o do pagamento, seu ingresso serÃ¡ emitido automaticamente nesta conversa.",
+    "ApÃ³s a confirmaÃ§Ã£o do pagamento, vocÃª receberÃ¡ o seu ingresso aqui, nesta conversa. Caso tenha comprado mais de um ingresso, poderÃ¡ fazer o envio para seu(s) acompanhantes.",
   ];
 
   return lines.join("\n");
@@ -3665,7 +3665,15 @@ function formatPaidTicketResendOptions(groups: PaidTicketResendGroup[]) {
 }
 
 function formatParticipantContactsPrompt(expectedContactsCount: number) {
-  return `Envie os contatos dos participantes usando a opção Contato do WhatsApp.\nSelecione e envie todos juntos, em um único envio.\nA quantidade de contatos deve ser exatamente igual à quantidade de participantes que receberão o próprio ingresso: ${expectedContactsCount}.`;
+  return [
+    "ENVIANDO OS INGRESSOS",
+    "",
+    "Para enviar os ingressos aos acompanhantes, basta adicionar nesta conversa o contato de cada um.",
+    `A quantidade de contatos deve ser exatamente igual à quantidade de participantes que receberão o próprio ingresso: ${expectedContactsCount}.`,
+    "O seu ingresso será enviado em seguida.",
+    "",
+    "OBS.: Os acompanhantes precisam enviar a este número *Meu ingresso*",
+  ].join("\n");
 }
 
 const PARTICIPANT_TICKET_REQUEST_INSTRUCTIONS = [
@@ -3673,7 +3681,7 @@ const PARTICIPANT_TICKET_REQUEST_INSTRUCTIONS = [
   "",
   "Para que os contatos enviados recebam os ingressos, eles precisam chamar este telefone e digitar:",
   "",
-  "Meu ingresso",
+  "*Meu ingresso*",
 ].join("\n");
 
 function formatParticipantContactsConfirmation(
@@ -3683,16 +3691,12 @@ function formatParticipantContactsConfirmation(
     "Confirme os destinatÃ¡rios dos ingressos:",
     "",
     ...contacts.map(
-      (contact, index) =>
-        `${index + 1}. ${contact.displayName ?? maskParticipantPhone(contact.phone)}`,
+      (contact) =>
+        `> ${contact.displayName ?? maskParticipantPhone(contact.phone)}`,
     ),
     "",
-    "Digite:",
-    "CONFIRMAR",
-    "para concluir a distribuiÃ§Ã£o",
-    "ou",
-    "CANCELAR",
-    "para reenviar os contatos.",
+    "Digite *CONFIRMAR* para concluir",
+    "Ou *CANCELAR* para reenviar os contatos",
   ].join("\n");
 }
 
@@ -4312,8 +4316,8 @@ async function handleTicketDeliverySelection({
   return {
     reply:
       expectedContactsCount <= 0
-        ? "Escolha como deseja receber seu ingresso:\n\n1. Receber o ingresso neste WhatsApp.\n\nDigite *1*."
-        : "Escolha como deseja receber seus ingressos:\n\n1. Receber todos os ingressos neste WhatsApp.\n2. Cada participante receber o proprio ingresso.\n\nDigite *1* ou *2*.",
+        ? "*PAGAMENTO CONFIRMADO*\n\n> Digite *1* para receber o QRCode"
+        : "*PAGAMENTO CONFIRMADO*\n\n> Digite *1* para receber os QRCodes\n> Digite *2* para enviá-los aos acompanhantes",
     nextContext: baseContext,
   };
 }
@@ -4389,7 +4393,7 @@ function withAdminNavigationHint(reply: string) {
   return [
     reply,
     "",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da Ã¡rea de admin.',
+    'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da Ã¡rea de admin.',
   ].join("\n");
 }
 
@@ -4597,7 +4601,7 @@ function renderGateAccessFilterMenu() {
     formatOptionLine(2, "pausados"),
     "",
     "Responda com o nÃƒÆ’Ã‚Âºmero da opÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o.",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
+    'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
   ].join("\n");
 }
 
@@ -4659,7 +4663,7 @@ function renderGateAccessRevokeConfirm(access: {
     `> Evento: ${access.eventTitle ?? "Evento"}`,
     "",
     "Responda SIM para pausar este acesso de portaria.",
-    'Digite "Voltar" para voltar ou "Sair" para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
+    'Digite *Voltar* para voltar ou *Sair* para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
   ].join("\n");
 }
 
@@ -4681,7 +4685,7 @@ function renderGateValidatorPhonePrompt() {
     "",
     "> Digite o nÃƒÆ’Ã‚Âºmero de telefone",
     "",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
+    'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
   ].join("\n");
 }
 
@@ -4691,7 +4695,7 @@ function renderGateValidatorPasswordPrompt() {
     "",
     "> Digite a senha para entrar no sistema",
     "",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
+    'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
   ].join("\n");
 }
 
@@ -4779,7 +4783,7 @@ function renderAdminReportPeriodMenu() {
     formatOptionLine(5, "escolher datas"),
     "",
     "Responda com o nÃºmero da opÃ§Ã£o.",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da Ã¡rea de admin.',
+    'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da Ã¡rea de admin.',
   ].join("\n");
 }
 
@@ -4789,7 +4793,7 @@ function renderFixedGatePhonePrompt() {
     "",
     "> Digite o nÃºmero de telefone da portaria fixa.",
     "",
-    'Digite "Voltar" para voltar ou "Cancelar" para abandonar esta tela.',
+    'Digite *Voltar* para voltar ou *Cancelar* para abandonar esta tela.',
   ].join("\n");
 }
 
@@ -4800,7 +4804,7 @@ function renderFixedGateAdminPassphrasePrompt() {
     "> Digite a palavra-chave fixa que o porteiro usarÃ¡ para entrar.",
     "",
     "A palavra-chave serÃ¡ mostrada somente agora e armazenada apenas como hash.",
-    'Digite "Voltar" para voltar ou "Cancelar" para abandonar esta tela.',
+    'Digite *Voltar* para voltar ou *Cancelar* para abandonar esta tela.',
   ].join("\n");
 }
 
@@ -5024,7 +5028,7 @@ function renderAdminUserTypePrompt() {
     formatOptionLine(2, "gerente"),
     formatOptionLine(3, "operador"),
     "",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
+    'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
   ].join("\n");
 }
 
@@ -5032,7 +5036,7 @@ function renderAdminUserPhonePrompt() {
   return [
     "*QUAL TELEFONE DO ADMINISTRADOR?*",
     "",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
+    'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
   ].join("\n");
 }
 
@@ -5042,7 +5046,7 @@ function renderAdminUserNamePrompt() {
     "",
     "Digite o nome ou responda PULAR.",
     "",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
+    'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
   ].join("\n");
 }
 
@@ -5056,7 +5060,7 @@ function renderAdminUserPassphrasePrompt() {
     "",
     "Digite a senha individual que este administrador usarÃƒÆ’Ã‚Â¡ para entrar.",
     "",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
+    'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
   ].join("\n");
 }
 
@@ -5140,7 +5144,7 @@ function renderAdminUnlockConfirm({
     `> Telefone: ${maskAdminPhone(phone)}`,
     "",
     "Digite LIBERAR ADMIN para confirmar.",
-    'Digite "Cancelar" para abandonar esta tela.',
+    'Digite *Cancelar* para abandonar esta tela.',
   ].join("\n");
 }
 
@@ -5164,7 +5168,7 @@ function renderAdminUserCreateConfirm({
     "> Palavra-chave: definida e protegida por hash",
     "",
     `Digite ${reactivation ? "REATIVAR ADMIN" : "CONFIRMAR ADMIN"} para confirmar.`,
-    'Digite "Cancelar" para abandonar esta tela.',
+    'Digite *Cancelar* para abandonar esta tela.',
   ].join("\n");
 }
 
@@ -5188,7 +5192,7 @@ function renderAdminUserRoleConfirm({
     `> Novo perfil: ${formatAdminRoleLabel(newRole)}`,
     "",
     "Digite ALTERAR NÃƒÆ’Ã‚ÂVEL para confirmar.",
-    'Digite "Cancelar" para abandonar esta tela.',
+    'Digite *Cancelar* para abandonar esta tela.',
   ].join("\n");
 }
 
@@ -5201,7 +5205,7 @@ function renderAdminUserDisableConfirm(user: AdminUserListItem) {
     `> Perfil: ${formatAdminRoleLabel(user.role)}`,
     "",
     "Digite DESATIVAR ADMIN para confirmar.",
-    'Digite "Cancelar" para abandonar esta tela.',
+    'Digite *Cancelar* para abandonar esta tela.',
   ].join("\n");
 }
 
@@ -5223,7 +5227,7 @@ function renderAdminUserPassphraseConfirm({
     "> Nova palavra-chave: definida e protegida por hash",
     "",
     "Digite RENOVAR PALAVRA para confirmar.",
-    'Digite "Cancelar" para abandonar esta tela.',
+    'Digite *Cancelar* para abandonar esta tela.',
   ].join("\n");
 }
 
@@ -5479,7 +5483,7 @@ function renderAdminReportEventCountPrompt() {
     "",
     "Digite quantos eventos vocÃª quer ver (de 1 a 3).",
     "",
-    'Digite "VOLTAR" para voltar, "CANCELAR" para abandonar esta tela ou "SAIR" para sair da Ã¡rea de admin.',
+    'Digite *VOLTAR* para voltar, *CANCELAR* para abandonar esta tela ou *SAIR* para sair da Ã¡rea de admin.',
   ].join("\n");
 }
 
@@ -5499,7 +5503,7 @@ function renderAdminReportEventSearchPrompt(requestedEventCount: 1 | 2 | 3) {
           .slice(0, requestedEventCount)
           .join(", ")}*`,
     "",
-    'Digite "VOLTAR" para voltar, "CANCELAR" para abandonar esta tela ou "SAIR" para sair da Ã¡rea de admin.',
+    'Digite *VOLTAR* para voltar, *CANCELAR* para abandonar esta tela ou *SAIR* para sair da Ã¡rea de admin.',
   ].join("\n");
 }
 
@@ -5540,7 +5544,7 @@ function renderAdminReportEventAmbiguityPrompt(input: {
     "",
     input.maximumSelection > 1 ? "Digite *TODOS*, *3*, *2*, *1* ou os nÃºmeros desejados. Ex: 1, 3." : "Digite *1* para usar o Ãºltimo show ou o nÃºmero da data desejada.",
     "",
-    'Digite "VOLTAR" para voltar, "CANCELAR" para abandonar esta tela ou "SAIR" para sair da Ã¡rea de admin.',
+    'Digite *VOLTAR* para voltar, *CANCELAR* para abandonar esta tela ou *SAIR* para sair da Ã¡rea de admin.',
   ].join("\n");
 }
 
@@ -11229,7 +11233,7 @@ async function renderNoSeatsWithAlternatives({
       "",
       alternatives.reply,
       "",
-      'Digite "SAIR" para voltar ao inÃƒÆ’Ã‚Â­cio.',
+      'Digite *SAIR* para voltar ao inÃƒÆ’Ã‚Â­cio.',
     ].join("\n"),
   };
 }
@@ -14193,7 +14197,7 @@ export async function routeTicketMessage({
             reply: [
               "*DIVISÃƒO*",
               "Digite *BAIXAR* para marcar este fechamento como pago.",
-              'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da Ã¡rea de admin.',
+              'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da Ã¡rea de admin.',
             ].join("\n"),
             nextContext: withAdminReportsContext(
               baseContext,
@@ -14730,7 +14734,7 @@ export async function routeTicketMessage({
               "Digite o intervalo no formato DD/MM/AAAA a DD/MM/AAAA.",
               "Ex: 01/05/2026 a 24/05/2026",
               "",
-              'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da Ã¡rea de admin.',
+              'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da Ã¡rea de admin.',
             ].join("\n"),
             nextContext: withAdminReportsContext(
               baseContext,
@@ -15308,7 +15312,7 @@ export async function routeTicketMessage({
             ? [
                 "*NÃƒÆ’Ã‚ÂVEL DE ADMINISTRADOR ATUALIZADO*",
                 `> Perfil: ${formatAdminRoleLabel(adminUsersContext.pendingRole)}`,
-                'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
+                'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da ÃƒÆ’Ã‚Â¡rea de admin.',
               ].join("\n")
             : (blockedMessage ?? TICKET_MESSAGES.adminGenericError),
           nextContext: adminReplyContext({

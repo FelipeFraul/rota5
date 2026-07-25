@@ -124,3 +124,12 @@ export function formatProperName(value: string | null | undefined) {
 export function formatCityState(city: string, state: string) {
   return `${formatProperName(city)}/${state.trim().toLocaleUpperCase("pt-BR")}`;
 }
+
+export function formatEventLocation(input: {
+  venueName?: string | null;
+  city: string;
+  state: string;
+}) {
+  const venueName = formatProperName(input.venueName);
+  return venueName || formatCityState(input.city, input.state);
+}

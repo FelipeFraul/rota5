@@ -152,23 +152,15 @@ function buildTicketDeliveryPreferenceMessage(ticketsCount: number) {
     return [
       "*PAGAMENTO CONFIRMADO*",
       "",
-      "Seu ingresso está pronto.",
-      "",
-      "1. Receber o ingresso neste WhatsApp.",
-      "",
-      "Digite *1*.",
+      "> Digite *1* para receber o QRCode",
     ].join("\n");
   }
 
   return [
     "*PAGAMENTO CONFIRMADO*",
     "",
-    "Como deseja receber seus ingressos?",
-    "",
-    "1. Receber todos os ingressos neste WhatsApp.",
-    "2. Cada participante receber o próprio ingresso.",
-    "",
-    "Digite *1* ou *2*.",
+    "> Digite *1* para receber os QRCodes",
+    "> Digite *2* para enviá-los aos acompanhantes",
   ].join("\n");
 }
 

@@ -984,6 +984,7 @@ export async function trackComboCheckoutClick(orderId: string) {
     .update({
       raw_metadata: {
         ...metadata,
+        checkout_click_kind: "offer",
         checkout_clicked_at: new Date().toISOString(),
         checkout_click_count: Number.isFinite(currentCount) ? currentCount + 1 : 1,
       },

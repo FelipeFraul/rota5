@@ -194,7 +194,7 @@ function AdminEventCardComponent({
         </span>
         <span className="admin-card-funnel-metrics">
           <span><b>{formatInteger(ticketImpressions)}</b> impressões</span>
-          <span><b>{formatInteger(ticketClicks)}</b> cliques</span>
+          <span><b>{formatInteger(ticketClicks)}</b> cliques em evento</span>
         </span>
       </span>
     </article>

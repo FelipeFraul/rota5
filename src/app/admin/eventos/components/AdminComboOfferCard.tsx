@@ -150,7 +150,7 @@ function AdminComboOfferCardComponent({
           <span><b>{formatInteger(itemsSold)}</b> vendidos</span>
           <span><b>{formatCurrency(revenueCents)}</b> receita</span>
           <span><b>{formatInteger(impressions)}</b> impressões</span>
-          <span><b>{formatInteger(clicks)}</b> cliques</span>
+          <span><b>{formatInteger(clicks)}</b> cliques em oferta</span>
         </span>
       </span>
     </article>

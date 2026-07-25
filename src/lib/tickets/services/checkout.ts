@@ -921,6 +921,7 @@ export async function trackTicketCheckoutClick(orderId: string) {
     .update({
       raw_metadata: {
         ...metadata,
+        checkout_click_kind: "event",
         checkout_clicked_at: clickedAt,
         checkout_click_count: Number.isFinite(currentCount) ? currentCount + 1 : 1,
       },
