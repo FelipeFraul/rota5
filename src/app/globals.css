@@ -1710,6 +1710,10 @@ body:has(.checkout-unavailable-shell) iframe {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.admin-operation-focus-grid.is-single {
+  grid-template-columns: 1fr;
+}
+
 .admin-operation-block {
   display: grid;
   align-content: start;

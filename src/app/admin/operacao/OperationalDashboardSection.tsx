@@ -163,13 +163,7 @@ export default function OperationalDashboardSection() {
           <MetricPill label="Alertas" icon="alert" tone="danger" />
         </section>
 
-        <section className="admin-operation-focus-grid">
-          <Section title="O que está acontecendo" icon="activity" tone="ok">
-            <div className="admin-operation-timeline">
-              <TimelineEmpty label="Nenhum fato operacional carregado." />
-            </div>
-          </Section>
-
+        <section className="admin-operation-focus-grid is-single">
           <Section title="Vendas" icon="cash" tone="ok">
             <div className="admin-operation-mini-grid">
               <StatusRow label="Receita" tone="ok" />
