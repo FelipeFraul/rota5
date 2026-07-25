@@ -1007,6 +1007,261 @@ body:has(.checkout-unavailable-shell) iframe {
   line-height: 1;
 }
 
+.admin-operation-icon {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.admin-operation-status-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-width: 0;
+  padding: 14px 18px;
+  border: 1px solid rgba(2, 6, 23, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.admin-operation-status-strip > div {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.admin-operation-status-strip strong {
+  color: #020617;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.admin-operation-status-strip p {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-operation-status-dot {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #94a3b8;
+  box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.14);
+}
+
+.admin-operation-status-strip.is-ok .admin-operation-status-dot {
+  background: #0f766e;
+  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.14);
+}
+
+.admin-operation-status-strip.is-attention .admin-operation-status-dot {
+  background: #f97316;
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.14);
+}
+
+.admin-operation-status-strip.is-danger .admin-operation-status-dot {
+  background: #dc2626;
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.14);
+}
+
+.admin-operation-summary {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid rgba(2, 6, 23, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: none;
+}
+
+.admin-operation-summary-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 86px;
+  padding: 16px 18px;
+  border-right: 1px solid rgba(2, 6, 23, 0.08);
+  color: #64748b;
+}
+
+.admin-operation-summary-item:last-child {
+  border-right: 0;
+}
+
+.admin-operation-summary-item.is-ok {
+  color: #0f766e;
+}
+
+.admin-operation-summary-item.is-attention {
+  color: #f97316;
+}
+
+.admin-operation-summary-item.is-danger {
+  color: #dc2626;
+}
+
+.admin-operation-summary-item div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.admin-operation-summary-item span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-operation-summary-item strong {
+  color: #020617;
+  font-size: clamp(28px, 2.6vw, 38px);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 0.9;
+}
+
+.admin-operation-surface {
+  padding: 24px;
+  border: 1px solid rgba(2, 6, 23, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.admin-operation-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  color: #0f766e;
+}
+
+.admin-operation-section-heading h2 {
+  margin: 0;
+  color: #020617;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.admin-operation-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.admin-operation-group {
+  min-width: 0;
+}
+
+.admin-operation-group + .admin-operation-group {
+  border-left: 1px solid rgba(2, 6, 23, 0.08);
+  padding-left: 22px;
+}
+
+.admin-operation-group h3 {
+  margin: 0 0 10px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.admin-operation-portaria-list,
+.admin-operation-row-list {
+  display: grid;
+  gap: 0;
+}
+
+.admin-operation-portaria-head {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.4fr) repeat(3, minmax(88px, 1fr));
+  gap: 14px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid rgba(2, 6, 23, 0.08);
+}
+
+.admin-operation-portaria-head span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-operation-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 44px;
+  padding: 11px 0;
+  border-bottom: 1px solid rgba(2, 6, 23, 0.07);
+}
+
+.admin-operation-row:last-child {
+  border-bottom: 0;
+}
+
+.admin-operation-row::before {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #94a3b8;
+  content: "";
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.admin-operation-row span {
+  min-width: 0;
+  padding-left: 18px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 700;
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.admin-operation-row strong {
+  color: #020617;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+  grid-column: 2;
+}
+
+.admin-operation-row.is-ok::before {
+  background: #0f766e;
+}
+
+.admin-operation-row.is-attention::before {
+  background: #f97316;
+}
+
+.admin-operation-row.is-danger::before {
+  background: #dc2626;
+}
+
+.admin-operation-empty {
+  margin: 0;
+  padding: 18px 0 0;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .admin-events-kicker {
   margin: 0 0 9px !important;
   color: #006c67 !important;
@@ -3227,6 +3482,10 @@ body:has(.checkout-unavailable-shell) iframe {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .admin-operation-summary-item:nth-child(3n) {
+    border-right: 0;
+  }
+
   .admin-events-toolbar form {
     grid-column: 1 / -1;
   }
@@ -3258,6 +3517,16 @@ body:has(.checkout-unavailable-shell) iframe {
   .admin-operation-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .admin-operation-summary-item,
+  .admin-operation-summary-item:nth-child(3n) {
+    border: 1px solid rgba(2, 6, 23, 0.08);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.94);
   }
 
   .admin-general-kpis article,
@@ -3371,8 +3640,30 @@ body:has(.checkout-unavailable-shell) iframe {
   .admin-dashboard-lower-grid,
   .admin-operation-event-columns,
   .admin-operation-table-head,
+  .admin-operation-split,
+  .admin-operation-portaria-head,
   .admin-dashboard-skeleton {
     grid-template-columns: 1fr;
+  }
+
+  .admin-operation-status-strip,
+  .admin-operation-group + .admin-operation-group {
+    display: grid;
+  }
+
+  .admin-operation-group + .admin-operation-group {
+    border-left: 0;
+    border-top: 1px solid rgba(2, 6, 23, 0.08);
+    padding-top: 18px;
+    padding-left: 0;
+  }
+
+  .admin-operation-surface {
+    padding: 18px;
+  }
+
+  .admin-operation-summary-item {
+    min-height: 76px;
   }
 
   .admin-operation-link {
