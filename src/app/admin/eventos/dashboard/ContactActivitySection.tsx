@@ -107,10 +107,10 @@ export default function ContactActivitySection({
     <section className="admin-dashboard-chart-card">
       <div className="admin-dashboard-section-heading">
         <div>
-          <h3>Contatos no WhatsApp</h3>
+          <h3>Atividade de mensagens no WhatsApp</h3>
           <p>{eventSpecific
-            ? "Pessoas que conversaram na jornada deste show e concluíram a compra, em intervalos de 6 horas."
-            : `Todas as pessoas que mandaram mensagem em ${activity.periodLabel.toLowerCase()}, em intervalos de 6 horas.`}</p>
+            ? "Mensagens e contatos únicos relacionados a este show, em intervalos de 6 horas."
+            : `Mensagens e contatos únicos em ${activity.periodLabel.toLowerCase()}, em intervalos de 6 horas.`}</p>
         </div>
         <button type="button" className="admin-dashboard-contact-button" onClick={onOpen}>Ver contatos</button>
       </div>

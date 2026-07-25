@@ -47,11 +47,6 @@ const GeneralDashboardCards = memo(function GeneralDashboardCards({
   dashboard: GeneralDashboard | null;
   onOpen: () => void;
 }) {
-  const occupancy = useMemo(() => {
-    if (!dashboard) return 0;
-    return dashboard.today.capacity > 0 ? Math.round((dashboard.today.ticketsSold / dashboard.today.capacity) * 100) : 0;
-  }, [dashboard]);
-
   const today = dashboard?.today;
 
   return (
@@ -59,29 +54,19 @@ const GeneralDashboardCards = memo(function GeneralDashboardCards({
       {today ? (
         <>
           <article>
-            <span>Vendas do dia</span>
-            <strong>{formatInteger(today.ticketsSold)} / {formatInteger(today.capacity)}</strong>
-            <small>{occupancy}% do lote vendido</small>
-          </article>
-          <article>
-            <span>Receita do dia</span>
+            <span>Receita</span>
             <strong>{formatCurrency(today.totalRevenueCents)}</strong>
             <small>Ingressos {formatCurrency(today.ticketRevenueCents)} · Combos {formatCurrency(today.comboRevenueCents)}</small>
           </article>
           <article>
-            <span>Combos do dia</span>
-            <strong>{formatInteger(today.comboItemsSold)}</strong>
-            <small>{formatInteger(today.comboUsed)} retirados · {formatInteger(today.comboOrdersPending)} pendentes</small>
+            <span>Ingressos</span>
+            <strong>{formatInteger(today.ticketsSold)}</strong>
+            <small>{formatInteger(today.courtesyTickets)} cortesias emitidas</small>
           </article>
           <article>
-            <span>Entrada</span>
+            <span>Check-in</span>
             <strong>{formatInteger(today.checkins)}</strong>
-            <small>Check-ins realizados hoje</small>
-          </article>
-          <article>
-            <span>Cortesias</span>
-            <strong>{formatInteger(today.courtesyTickets)}</strong>
-            <small>Cortesias emitidas hoje</small>
+            <small>Entradas realizadas hoje</small>
           </article>
         </>
       ) : null}

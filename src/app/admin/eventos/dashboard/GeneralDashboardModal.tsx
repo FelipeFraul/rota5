@@ -152,7 +152,7 @@ export default function GeneralDashboardModal({
             <article>
               <span>Combos</span>
               <strong>{formatInteger(summary.comboItemsSold)}</strong>
-              <small>{formatInteger(summary.comboUsed)} retirados · {formatInteger(summary.comboOrdersPending)} pendentes</small>
+              <small>{formatInteger(summary.comboUsed)} utilizados · {formatInteger(summary.comboOrdersPending)} aguardando pagamento · {formatCurrency(summary.comboRevenueCents)}</small>
             </article>
             <article>
               <span>Entrada</span>
