@@ -106,6 +106,7 @@ import {
   buildPublicEntryGateResponse,
   LOW_CONFIDENCE_PUBLIC_PROMPT,
 } from "@/lib/tickets/services/publicEntryGate";
+import { confirmComboDeliveryChoice } from "@/lib/tickets/services/comboRedemptions";
 import {
   formatPublicHelpPrompt,
 } from "@/lib/tickets/services/publicHelp";
@@ -2571,6 +2572,7 @@ function resetBuyerReservationContext(
     publicHelp: undefined,
     ticketResend: undefined,
     participantTicketSelection: undefined,
+    comboDeliveryConfirmation: undefined,
     ticketDelivery: undefined,
   };
 }
@@ -3752,6 +3754,74 @@ async function handleParticipantTicketSelection({
     baseContext,
     deliveries: selectedDeliveries,
   });
+}
+
+async function handleComboDeliveryConfirmation({
+  baseContext,
+  customerId,
+  text,
+}: {
+  baseContext: TicketConversationState;
+  customerId: string;
+  text: string;
+}): Promise<RouteTicketMessageOutput | null> {
+  if (baseContext.state !== "combo_delivery_confirming") return null;
+
+  const pending = baseContext.comboDeliveryConfirmation;
+  const normalized = normalizeIntentText(text);
+
+  if (!pending) {
+    return {
+      reply: TICKET_MESSAGES.genericHelpPrompt,
+      nextContext: resetBuyerReservationContext(baseContext),
+    };
+  }
+
+  if (normalized !== "ok" && normalized !== "1") {
+    return {
+      reply: [
+        "*ENTREGA DE BEBIDA*",
+        "",
+        `Digite *OK* para receber na sua ${pending.placeLabel}`,
+        "Digite *1* para solicitar um garçom.",
+        "",
+        "Mantenha o QR Code vermelho aberto para apresentar na entrega.",
+      ].join("\n"),
+      nextContext: baseContext,
+    };
+  }
+
+  const result = await confirmComboDeliveryChoice({
+    customerId,
+    redemptionId: pending.redemptionId,
+    choice: normalized === "1" ? "waiter" : "table",
+  });
+
+  if (!result.ok) {
+    return {
+      reply:
+        "Não consegui confirmar a entrega desse combo agora. Mantenha o QR Code vermelho aberto e solicite ajuda da equipe.",
+      nextContext: resetBuyerReservationContext(baseContext),
+    };
+  }
+
+  return {
+    reply:
+      result.choice === "waiter"
+        ? [
+            "*ENTREGA DE BEBIDA*",
+            "",
+            "Um garçom foi solicitado para seu pedido.",
+            `Apresente o QR Code vermelho na entrega na sua ${result.placeLabel}.`,
+          ].join("\n")
+        : [
+            "*ENTREGA DE BEBIDA*",
+            "",
+            `Pedido encaminhado para entrega na sua ${result.placeLabel}.`,
+            "Mantenha o QR Code vermelho aberto para apresentar na entrega.",
+          ].join("\n"),
+    nextContext: resetBuyerReservationContext(baseContext),
+  };
 }
 
 async function handleParticipantTicketRequest({
@@ -11793,6 +11863,16 @@ export async function routeTicketMessage({
       reply: TICKET_MESSAGES.genericHelpPrompt,
       nextContext: resetConversationToInitialHelp(),
     };
+  }
+
+  const comboDeliveryConfirmation = await handleComboDeliveryConfirmation({
+    baseContext,
+    customerId: customer.id,
+    text,
+  });
+
+  if (comboDeliveryConfirmation) {
+    return comboDeliveryConfirmation;
   }
 
   if (isParticipantTicketRequestIntent(text)) {

@@ -7,7 +7,6 @@ import { getEnv } from "@/lib/env";
 import { logError, logInfo, logWarn } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getOrCreateOpenConversation, updateConversationAfterMessage } from "@/lib/tickets/services/conversations";
-import { upsertCustomerFromWhatsApp } from "@/lib/tickets/services/customers";
 import { saveWhatsAppMessage } from "@/lib/tickets/services/messages";
 import { buildWhatsAppOutboundMetadata } from "@/lib/tickets/services/outboundMessages";
 import { centsToDecimalAmount, decimalAmountToCents } from "@/lib/tickets/services/payments";
@@ -140,8 +139,18 @@ type ComboOfferCandidateTicketRow = {
   offer_source?: "buyer" | "participant";
   issued_at: string;
   orders:
-    | { id: string; created_at: string; status: string }
-    | { id: string; created_at: string; status: string }[]
+    | {
+        id: string;
+        created_at: string;
+        status: string;
+        official_table_map_reservations?: Array<{ place_code: string; status: string }> | { place_code: string; status: string } | null;
+      }
+    | {
+        id: string;
+        created_at: string;
+        status: string;
+        official_table_map_reservations?: Array<{ place_code: string; status: string }> | { place_code: string; status: string } | null;
+      }[]
     | null;
   event_sessions:
     | {
@@ -2106,13 +2115,14 @@ export async function sendScheduledComboOffers(limit = 100) {
   const [
     { data: eventWindowTickets, error: eventWindowError },
     { data: recentPurchaseTickets, error: recentPurchaseError },
-    { data: participantTickets, error: participantTicketsError },
   ] = await Promise.all([
     supabase
     .from("tickets")
-    .select("id, customer_id, issued_at, customers(whatsapp_phone), orders!inner(id, created_at, status), event_sessions!inner(id, event_id, starts_at, events!inner(id, title))")
+    .select("id, customer_id, issued_at, customers(whatsapp_phone), orders!inner(id, created_at, status, official_table_map_reservations!inner(place_code, status)), event_sessions!inner(id, event_id, starts_at, events!inner(id, title))")
     .eq("status", "issued")
+    .is("recipient_phone", null)
     .eq("orders.status", "paid")
+    .eq("orders.official_table_map_reservations.status", "paid")
     .gte("event_sessions.starts_at", eventWindowFrom)
     .lte("event_sessions.starts_at", eventWindowTo)
     .order("issued_at", { ascending: true })
@@ -2120,85 +2130,25 @@ export async function sendScheduledComboOffers(limit = 100) {
       .returns<ComboOfferCandidateTicketRow[]>(),
     supabase
       .from("tickets")
-      .select("id, customer_id, issued_at, customers(whatsapp_phone), orders!inner(id, created_at, status), event_sessions!inner(id, event_id, starts_at, events!inner(id, title))")
+      .select("id, customer_id, issued_at, customers(whatsapp_phone), orders!inner(id, created_at, status, official_table_map_reservations!inner(place_code, status)), event_sessions!inner(id, event_id, starts_at, events!inner(id, title))")
       .eq("status", "issued")
+      .is("recipient_phone", null)
       .eq("orders.status", "paid")
+      .eq("orders.official_table_map_reservations.status", "paid")
       .gte("issued_at", recentPurchaseFrom)
       .gte("event_sessions.starts_at", eventWindowFrom)
       .order("issued_at", { ascending: true })
       .limit(limit)
       .returns<ComboOfferCandidateTicketRow[]>(),
-    supabase
-      .from("tickets")
-      .select("id, customer_id, recipient_phone, issued_at, participant_delivered_at, orders!inner(id, created_at, status), event_sessions!inner(id, event_id, starts_at, events!inner(id, title))")
-      .eq("status", "issued")
-      .eq("orders.status", "paid")
-      .eq("participant_delivery_status", "delivered")
-      .not("recipient_phone", "is", null)
-      .gte("event_sessions.starts_at", eventWindowFrom)
-      .order("participant_delivered_at", { ascending: true })
-      .limit(limit)
-      .returns<Array<ComboOfferCandidateTicketRow & {
-        recipient_phone: string | null;
-        participant_delivered_at: string | null;
-      }>>(),
   ]);
 
-  const error = eventWindowError ?? recentPurchaseError ?? participantTicketsError;
+  const error = eventWindowError ?? recentPurchaseError;
   if (error) throw error;
-
-  const participantPhones = [
-    ...new Set(
-      (participantTickets ?? [])
-        .map((ticket) => ticket.recipient_phone)
-        .filter((phone): phone is string => Boolean(phone)),
-    ),
-  ];
-  const participantCustomerByPhone = new Map<string, { id: string; phone: string }>();
-  const participantCustomerResults = await Promise.all(
-    participantPhones.map(async (phone) => ({
-      originalPhone: phone,
-      result: await upsertCustomerFromWhatsApp({ phone }),
-    })),
-  );
-
-  for (const { originalPhone, result } of participantCustomerResults) {
-    if (!result.ok) {
-      logWarn("Skipped participant combo offer customer upsert", {
-        code: result.error?.code,
-      });
-      continue;
-    }
-
-    participantCustomerByPhone.set(originalPhone, {
-      id: result.customer.id,
-      phone: result.customer.whatsapp_phone,
-    });
-  }
-  const participantOfferTickets: ComboOfferCandidateTicketRow[] =
-    (participantTickets ?? [])
-      .flatMap((ticket): ComboOfferCandidateTicketRow[] => {
-        const phone = ticket.recipient_phone;
-        const customer = phone ? participantCustomerByPhone.get(phone) : null;
-
-        if (!phone || !customer) return [];
-
-        return [{
-          ...ticket,
-          customer_id: customer.id,
-          offer_customer_id: customer.id,
-          offer_phone: customer.phone,
-          offer_source: "participant" as const,
-          issued_at: ticket.participant_delivered_at ?? ticket.issued_at,
-          customers: { whatsapp_phone: customer.phone },
-        }];
-      });
 
   const tickets = uniqueComboOfferCandidateTicketsByOrder(
     mergeComboOfferCandidateTickets(
       eventWindowTickets,
       recentPurchaseTickets,
-      participantOfferTickets,
     ),
   );
   let sentCount = 0;
@@ -2211,7 +2161,6 @@ export async function sendScheduledComboOffers(limit = 100) {
     const event = session?.events;
     const phone = ticket.customers?.whatsapp_phone;
     const offerCustomerId = ticket.offer_customer_id ?? ticket.customer_id;
-    const isParticipantOffer = ticket.offer_source === "participant";
 
     if (!session || !order || !event || !phone) {
       skippedCount += 1;
@@ -2285,8 +2234,8 @@ export async function sendScheduledComboOffers(limit = 100) {
         customerId: offerCustomerId,
         eventId: session.event_id,
         sessionId: session.id,
-        sourceOrderId: isParticipantOffer ? null : order.id,
-        sourceTicketId: isParticipantOffer ? null : ticket.id,
+        sourceOrderId: order.id,
+        sourceTicketId: ticket.id,
       });
 
       if (!checkout.ok) {

@@ -27,6 +27,14 @@ const comboOffersSource = readFileSync(
   new URL("../src/lib/tickets/services/comboOffers.ts", import.meta.url),
   "utf8",
 );
+const comboRedemptionsSource = readFileSync(
+  new URL("../src/lib/tickets/services/comboRedemptions.ts", import.meta.url),
+  "utf8",
+);
+const conversationStateSource = readFileSync(
+  new URL("../src/lib/tickets/conversationState.ts", import.meta.url),
+  "utf8",
+);
 const buyerReservedMigrationSource = readFileSync(
   new URL(
     "../supabase/migrations/20260725000100_reserve_buyer_ticket_in_participant_distribution.sql",
@@ -467,27 +475,24 @@ test("Meu ingresso envia somente QR Code e nenhuma oferta na mesma execucao", ()
 
 test("participante fica elegivel para agendamento somente apos QR entregue", () => {
   assert.match(zapiWebhookSource, /if \(outboundMessage\.participantDeliveryTicketId\)[\s\S]*markParticipantTicketDelivered/);
-  assert.match(comboOffersSource, /\.eq\("participant_delivery_status",\s*"delivered"\)/);
-  assert.match(comboOffersSource, /\.not\("recipient_phone",\s*"is",\s*null\)/);
-  assert.match(comboOffersSource, /participant_delivered_at/);
+  assert.doesNotMatch(comboOffersSource, /\.eq\("participant_delivery_status",\s*"delivered"\)/);
+  assert.doesNotMatch(comboOffersSource, /\.not\("recipient_phone",\s*"is",\s*null\)/);
+  assert.doesNotMatch(comboOffersSource, /participant_delivered_at/);
   assert.doesNotMatch(comboOffersSource, /\.eq\("participant_delivery_status",\s*"awaiting_participant_request"\)/);
 });
 
-test("scheduler encontra participante entregue e resolve customer proprio pelo recipient_phone", () => {
-  assert.match(comboOffersSource, /import \{ upsertCustomerFromWhatsApp \} from "@\/lib\/tickets\/services\/customers"/);
-  assert.match(comboOffersSource, /participantPhones[\s\S]*ticket\.recipient_phone/);
-  assert.match(comboOffersSource, /upsertCustomerFromWhatsApp\(\{ phone \}\)/);
-  assert.match(comboOffersSource, /participantCustomerByPhone\.set\(originalPhone,[\s\S]*id:\s*result\.customer\.id[\s\S]*phone:\s*result\.customer\.whatsapp_phone/);
-  assert.match(comboOffersSource, /const customer = phone \? participantCustomerByPhone\.get\(phone\) : null/);
-  assert.match(comboOffersSource, /customer_id:\s*customer\.id/);
-  assert.match(comboOffersSource, /offer_customer_id:\s*customer\.id/);
-  assert.match(comboOffersSource, /customers:\s*\{\s*whatsapp_phone:\s*customer\.phone\s*\}/);
+test("scheduler temporario nao coleta acompanhantes nem recipient_phone para combo", () => {
+  assert.match(comboOffersSource, /export async function sendScheduledComboOffers/);
+  assert.doesNotMatch(comboOffersSource, /participantOfferTickets/);
+  assert.doesNotMatch(comboOffersSource, /upsertCustomerFromWhatsApp/);
+  assert.match(comboOffersSource, /\.is\("recipient_phone",\s*null\)/);
 });
 
-test("oferta de participante usa o mesmo agendador e respeita tempo configurado", () => {
-  assert.match(comboOffersSource, /export async function sendScheduledComboOffers/);
-  assert.match(comboOffersSource, /participantOfferTickets/);
-  assert.match(comboOffersSource, /mergeComboOfferCandidateTickets\([\s\S]*eventWindowTickets[\s\S]*recentPurchaseTickets[\s\S]*participantOfferTickets/);
+test("scheduler temporario envia combo apenas para comprador com mesa ou bistro pago", () => {
+  assert.match(comboOffersSource, /official_table_map_reservations!inner\(place_code, status\)/);
+  assert.match(comboOffersSource, /\.eq\("orders\.status",\s*"paid"\)/);
+  assert.match(comboOffersSource, /\.eq\("orders\.official_table_map_reservations\.status",\s*"paid"\)/);
+  assert.match(comboOffersSource, /mergeComboOfferCandidateTickets\([\s\S]*eventWindowTickets[\s\S]*recentPurchaseTickets/);
   assert.match(comboOffersSource, /shouldSendComboOfferNow\([\s\S]*offer,[\s\S]*session\.starts_at,[\s\S]*now,[\s\S]*ticket\.issued_at/);
   assert.match(comboOffersSource, /const shouldSendOnSchedule = shouldSendComboOfferNow/);
   assert.match(comboOffersSource, /const offset = offer\.send_offset_minutes/);
@@ -513,43 +518,87 @@ test("oferta de 2 minutos e multiplas prioridades continuam no mecanismo existen
   assert.match(comboOffersSource, /resolveEffectiveComboOffersForEvent/);
 });
 
-test("mesma oferta nao duplica para o mesmo participante", () => {
+test("mesma oferta nao duplica para o mesmo comprador", () => {
   assert.match(comboOffersSource, /const offerCustomerId = ticket\.offer_customer_id \?\? ticket\.customer_id/);
   assert.match(comboOffersSource, /buildComboOfferDedupeKey\(\{[\s\S]*customerId:\s*offerCustomerId/);
   assert.match(comboOffersSource, /loadSentComboOfferKeys\(\[offerCustomerId\]\)/);
   assert.match(comboOffersSource, /combo_offer_event_locks/);
 });
 
-test("comprador e participante usam chaves independentes de deduplicacao", () => {
+test("deduplicacao temporaria fica por comprador evento e oferta", () => {
   assert.match(comboOffersSource, /byId\.set\(`\$\{ticket\.offer_source \?\? "buyer"\}:\$\{customerId\}:\$\{ticket\.id\}`, ticket\)/);
   assert.match(comboOffersSource, /const key = `\$\{ticket\.offer_source \?\? "buyer"\}:\$\{customerId\}:\$\{order\.id\}`/);
   assert.match(comboOffersSource, /customerId:\s*offerCustomerId/);
   assert.match(comboOffersSource, /offer_recipient_source:\s*ticket\.offer_source \?\? "buyer"/);
 });
 
-test("multiplos ingressos do mesmo participante no mesmo pedido nao duplicam oferta", () => {
+test("multiplos ingressos do mesmo comprador no mesmo pedido nao duplicam oferta", () => {
   assert.match(comboOffersSource, /function uniqueComboOfferCandidateTicketsByOrder/);
   assert.match(comboOffersSource, /const customerId = ticket\.offer_customer_id \?\? ticket\.customer_id/);
   assert.match(comboOffersSource, /const key = `\$\{ticket\.offer_source \?\? "buyer"\}:\$\{customerId\}:\$\{order\.id\}`/);
 });
 
-test("evento sem oferta nao agenda nada para participante", () => {
+test("evento sem oferta nao agenda nada para combo", () => {
   assert.match(comboOffersSource, /listActiveComboOffersForEventSession\(/);
   assert.match(comboOffersSource, /if \(!offers\.length\) \{[\s\S]*skippedCount \+= 1/);
   assert.match(comboOffersSource, /if \(!offer\) \{[\s\S]*skippedCount \+= 1/);
 });
 
-test("oferta do participante nao vincula combo ao pedido original", () => {
-  assert.match(comboOffersSource, /const isParticipantOffer = ticket\.offer_source === "participant"/);
-  assert.match(comboOffersSource, /sourceOrderId:\s*isParticipantOffer \? null : order\.id/);
-  assert.match(comboOffersSource, /sourceTicketId:\s*isParticipantOffer \? null : ticket\.id/);
+test("oferta temporaria do comprador vincula combo ao pedido e ticket origem", () => {
+  assert.doesNotMatch(comboOffersSource, /const isParticipantOffer = ticket\.offer_source === "participant"/);
+  assert.match(comboOffersSource, /sourceOrderId:\s*order\.id/);
+  assert.match(comboOffersSource, /sourceTicketId:\s*ticket\.id/);
   assert.match(comboOffersSource, /offer_recipient_source:\s*ticket\.offer_source \?\? "buyer"/);
 });
 
 test("fluxo do comprador permanece inalterado para oferta de combo", () => {
   assert.match(comboOffersSource, /export async function sendScheduledComboOffers/);
   assert.match(comboOffersSource, /reason:\s*"combo_offer"/);
-  assert.match(comboOffersSource, /sourceOrderId:\s*isParticipantOffer \? null : order\.id/);
-  assert.match(comboOffersSource, /sourceTicketId:\s*isParticipantOffer \? null : ticket\.id/);
+  assert.match(comboOffersSource, /sourceOrderId:\s*order\.id/);
+  assert.match(comboOffersSource, /sourceTicketId:\s*ticket\.id/);
   assert.match(comboOffersSource, /\.eq\("orders\.status",\s*"paid"\)/);
+});
+
+test("QR vermelho solicita escolha de entrega sem marcar usado", () => {
+  assert.match(comboRedemptionsSource, /\*ENTREGA DE BEBIDA\*/);
+  assert.match(comboRedemptionsSource, /Digite \*OK\* para receber na sua \$\{input\.placeLabel\}/);
+  assert.match(comboRedemptionsSource, /Digite \*1\* para solicitar um garçom/);
+  assert.match(comboRedemptionsSource, /delivery_choice_status:\s*"awaiting_customer"/);
+  assert.match(comboRedemptionsSource, /reason:\s*"combo_delivery_choice_requested"/);
+  assert.match(comboRedemptionsSource, /redemption\.status !== "issued"/);
+});
+
+test("respostas OK e 1 revalidam compra e reserva e nao concluem entrega", () => {
+  assert.match(conversationStateSource, /"combo_delivery_confirming"/);
+  assert.match(conversationStateSource, /comboDeliveryConfirmation\?:/);
+  assert.match(routerSource, /handleComboDeliveryConfirmation/);
+  assert.match(routerSource, /normalized !== "ok" && normalized !== "1"/);
+  assert.match(routerSource, /choice:\s*normalized === "1" \? "waiter" : "table"/);
+  assert.match(comboRedemptionsSource, /export async function confirmComboDeliveryChoice/);
+  assert.match(comboRedemptionsSource, /\.eq\("customer_id", input\.customerId\)/);
+  assert.match(comboRedemptionsSource, /order\.status !== "paid" \|\| redemption\.status !== "issued"/);
+  assert.match(comboRedemptionsSource, /\.from\("official_table_map_reservations"\)[\s\S]*\.eq\("status", "paid"\)/);
+  assert.match(comboRedemptionsSource, /delivery_choice_status:\s*input\.choice === "waiter" \? "waiter_requested" : "table_requested"/);
+});
+
+test("QR vermelho repetido apos OK ou 1 nao reabre entrega nem cria evento operacional", () => {
+  const guardIndex = comboRedemptionsSource.indexOf(
+    'typeof existingMetadata.delivery_choice_confirmed_at === "string"',
+  );
+  const awaitingIndex = comboRedemptionsSource.indexOf(
+    'delivery_choice_status: "awaiting_customer"',
+  );
+  const promptStateIndex = comboRedemptionsSource.indexOf(
+    'state: "combo_delivery_confirming"',
+  );
+  const operationalEventIndex = comboRedemptionsSource.indexOf(
+    'reason: "delivery_choice_requested"',
+  );
+
+  assert.notEqual(guardIndex, -1);
+  assert.ok(guardIndex < awaitingIndex);
+  assert.ok(guardIndex < promptStateIndex);
+  assert.ok(guardIndex < operationalEventIndex);
+  assert.match(comboRedemptionsSource, /A forma de entrega desse combo ja foi escolhida/);
+  assert.match(comboRedemptionsSource, /Mantenha o QR Code vermelho aberto para apresentar na entrega/);
 });

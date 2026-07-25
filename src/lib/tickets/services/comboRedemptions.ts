@@ -14,6 +14,7 @@ import {
   formatComboDescription,
   generateComboQrImage,
 } from "@/lib/tickets/services/comboOffers";
+import { getOfficialTableMapPlace } from "@/lib/tickets/tableMap/officialPlaces";
 
 export type KitchenSessionValidation =
   | {
@@ -56,6 +57,8 @@ export type ComboRedemptionScanResult = {
     usedAt?: string | null;
   } | null;
 };
+
+export type ComboDeliveryChoice = "table" | "waiter";
 
 export type KitchenOrdersValidation =
   | {
@@ -148,6 +151,11 @@ type ComboRedemptionOrderRow = {
   event_sessions: { starts_at: string } | { starts_at: string }[] | null;
 };
 
+type ComboDeliveryReservationRow = {
+  place_code: string;
+  status: string;
+};
+
 type GateTicketForKitchenRow = {
   id: string;
   customer_id: string;
@@ -231,6 +239,31 @@ function firstJoin<T>(value: T | T[] | null | undefined) {
 function phoneLast4(phone: string | null | undefined) {
   const digits = String(phone ?? "").replace(/\D/g, "");
   return digits.length >= 4 ? digits.slice(-4) : null;
+}
+
+function formatComboDeliveryPlace(placeCode: string | null | undefined) {
+  const code = String(placeCode ?? "").trim().padStart(2, "0");
+  const place = getOfficialTableMapPlace(code);
+  const displayCode = code.replace(/^0+/, "") || code;
+  const kind = place?.type === "bistro" ? "bistrô" : "mesa";
+
+  return `${kind} ${displayCode}`;
+}
+
+function buildComboDeliveryChoiceMessage(input: {
+  product: string;
+  placeLabel: string;
+}) {
+  return [
+    "*ENTREGA DE BEBIDA*",
+    "",
+    `*Produto:* ${input.product}`,
+    "",
+    `Digite *OK* para receber na sua ${input.placeLabel}`,
+    "Digite *1* para solicitar um garçom.",
+    "",
+    "Mantenha o QR Code vermelho aberto para apresentar na entrega.",
+  ].join("\n");
 }
 
 export async function validateKitchenSessionToken(
@@ -881,13 +914,14 @@ export async function validateComboRedemptionScan(input: {
   const { data: scannedRedemption } = await supabase
     .from("combo_redemptions")
     .select(
-      "id, combo_order_id, event_id, session_id, redemption_code, offer_name, quantity, status, qr_token_hash, raw_metadata, customers(id, whatsapp_phone), events(title), combo_orders!inner(status, combo_offers(description))",
+      "id, combo_order_id, customer_id, event_id, session_id, redemption_code, offer_name, quantity, status, qr_token_hash, raw_metadata, customers(id, whatsapp_phone), events(title), combo_orders!inner(id, status, source_order_id, combo_offers(description))",
     )
     .eq("id", parsedToken.redemptionId)
     .eq("qr_token_hash", hashSecret(parsedToken.token))
     .maybeSingle<{
       id: string;
       combo_order_id: string;
+      customer_id: string;
       event_id: string;
       session_id: string;
       redemption_code: string;
@@ -903,14 +937,18 @@ export async function validateComboRedemptionScan(input: {
       events: { title: string } | { title: string }[] | null;
       combo_orders:
         | {
+            id: string;
             status: string;
+            source_order_id: string | null;
             combo_offers:
               | { description: string }
               | { description: string }[]
               | null;
           }
         | {
+            id: string;
             status: string;
+            source_order_id: string | null;
             combo_offers:
               | { description: string }
               | { description: string }[]
@@ -929,7 +967,205 @@ export async function validateComboRedemptionScan(input: {
   const wrongSession =
     scannedRedemption &&
     kitchenSession.gateSession.sessionId &&
-    scannedRedemption.session_id !== kitchenSession.gateSession.sessionId;
+      scannedRedemption.session_id !== kitchenSession.gateSession.sessionId;
+
+  if (
+    scannedRedemption &&
+    scannedOrder?.status === "paid" &&
+    scannedRedemption.status === "issued" &&
+    !wrongEvent &&
+    !wrongSession
+  ) {
+    const existingMetadata = scannedRedemption.raw_metadata ?? {};
+    const customer = firstJoin(scannedRedemption.customers);
+    const sourceOrderId =
+      typeof scannedOrder.source_order_id === "string"
+        ? scannedOrder.source_order_id
+        : null;
+
+    if (!sourceOrderId || !customer?.whatsapp_phone) {
+      return {
+        allowed: false,
+        result: "denied",
+        message:
+          "Combo pago, mas sem reserva de mesa/bistro vinculada ou telefone do cliente. A entrega nao foi concluida.",
+      };
+    }
+
+    const { data: reservation } = await supabase
+      .from("official_table_map_reservations")
+      .select("place_code, status")
+      .eq("order_id", sourceOrderId)
+      .eq("customer_id", scannedRedemption.customer_id)
+      .eq("event_id", scannedRedemption.event_id)
+      .eq("session_id", scannedRedemption.session_id)
+      .eq("status", "paid")
+      .maybeSingle<ComboDeliveryReservationRow>();
+
+    if (!reservation?.place_code) {
+      return {
+        allowed: false,
+        result: "denied",
+        message:
+          "Combo pago, mas a reserva de mesa/bistro nao esta valida. A entrega nao foi concluida.",
+      };
+    }
+
+    const now = new Date().toISOString();
+    const placeLabel = formatComboDeliveryPlace(reservation.place_code);
+    if (typeof existingMetadata.delivery_choice_confirmed_at === "string") {
+      return {
+        allowed: true,
+        result: "allowed",
+        message: `A forma de entrega desse combo ja foi escolhida para ${String(existingMetadata.delivery_place_label ?? placeLabel)}. Mantenha o QR Code vermelho aberto para apresentar na entrega.`,
+        redemption: {
+          redemptionId: scannedRedemption.id,
+          redemptionCode: scannedRedemption.redemption_code,
+          offerName: scannedRedemption.offer_name,
+          quantity: scannedRedemption.quantity,
+          status: scannedRedemption.status,
+        },
+      };
+    }
+
+    const alreadyPrompted =
+      typeof existingMetadata.delivery_choice_requested_at === "string";
+    let promptSent = alreadyPrompted;
+
+    if (!alreadyPrompted) {
+      const conversation = await getOrCreateOpenConversation({
+        customerId: customer.id,
+      });
+
+      if (!conversation.ok) {
+        return {
+          allowed: false,
+          result: "denied",
+          message:
+            "Combo valido, mas nao foi possivel abrir a conversa do cliente. A entrega nao foi concluida.",
+        };
+      }
+
+      const message = buildComboDeliveryChoiceMessage({
+        product: scannedRedemption.offer_name,
+        placeLabel,
+      });
+      const sendResult = await sendZapiText({
+        phone: customer.whatsapp_phone,
+        message,
+      });
+      promptSent = sendResult.ok;
+
+      await saveWhatsAppMessage({
+        conversationId: conversation.conversation.id,
+        customerId: customer.id,
+        direction: "outbound",
+        messageType: "text",
+        body: message,
+        providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
+        rawMetadata: buildWhatsAppOutboundMetadata({
+          sendResult,
+          messageType: "text",
+          reason: "combo_delivery_choice_requested",
+          businessContext: {
+            combo_order_id: scannedRedemption.combo_order_id,
+            combo_redemption_id: scannedRedemption.id,
+            place_code: reservation.place_code,
+          },
+        }),
+      });
+
+      if (sendResult.ok) {
+        await updateConversationAfterMessage({
+          conversationId: conversation.conversation.id,
+          context: {
+            state: "combo_delivery_confirming",
+            step: "combo_delivery_confirming",
+            comboDeliveryConfirmation: {
+              redemptionId: scannedRedemption.id,
+              comboOrderId: scannedRedemption.combo_order_id,
+              placeCode: reservation.place_code,
+              placeLabel,
+              offerName: scannedRedemption.offer_name,
+              createdAt: now,
+            },
+          },
+        });
+      }
+    }
+
+    const latest = await supabase
+      .from("combo_redemptions")
+      .select("raw_metadata")
+      .eq("id", scannedRedemption.id)
+      .eq("status", "issued")
+      .maybeSingle<{ raw_metadata: Record<string, unknown> | null }>();
+    const latestMetadata = latest.data?.raw_metadata ?? existingMetadata;
+
+    await supabase
+      .from("combo_redemptions")
+      .update({
+        raw_metadata: {
+          ...latestMetadata,
+          kitchen_visible: true,
+          kitchen_status:
+            latestMetadata.kitchen_status === "preparing"
+              ? "preparing"
+              : "pending",
+          delivery_choice_status: "awaiting_customer",
+          delivery_choice_requested_at:
+            typeof latestMetadata.delivery_choice_requested_at === "string"
+              ? latestMetadata.delivery_choice_requested_at
+              : now,
+          delivery_place_code: reservation.place_code,
+          delivery_place_label: placeLabel,
+          delivery_choice_prompt_sent: promptSent,
+          kitchen_released_at:
+            typeof latestMetadata.kitchen_released_at === "string"
+              ? latestMetadata.kitchen_released_at
+              : now,
+          kitchen_released_by: "combo_qr_delivery_choice",
+          kitchen_released_gate_session_id: kitchenSession.gateSession.id,
+          kitchen_released_gate_label: kitchenSession.gateSession.gateLabel,
+          kitchen_released_validator_identifier:
+            kitchenSession.gateSession.validatorIdentifier,
+        },
+      })
+      .eq("id", scannedRedemption.id)
+      .eq("status", "issued");
+
+    await supabase.from("combo_redemption_events").insert({
+      combo_redemption_id: scannedRedemption.id,
+      combo_order_id: scannedRedemption.combo_order_id,
+      kitchen_session_id: kitchenSession.gateSession.id,
+      result: "allowed",
+      redemption_code: scannedRedemption.redemption_code,
+      offer_name: scannedRedemption.offer_name,
+      quantity: scannedRedemption.quantity,
+      kitchen_label: kitchenSession.gateSession.gateLabel,
+      validator_identifier: kitchenSession.gateSession.validatorIdentifier,
+      metadata: {
+        source: "kitchen_scan",
+        reason: "delivery_choice_requested",
+        place_code: reservation.place_code,
+        prompt_sent: promptSent,
+      },
+    });
+
+    return {
+      allowed: true,
+      result: "allowed",
+      message:
+        "COMBO VALIDADO. A entrega ainda nao foi concluida; aguarde o cliente responder OK ou 1 no WhatsApp e mantenha o QR vermelho aberto.",
+      redemption: {
+        redemptionId: scannedRedemption.id,
+        redemptionCode: scannedRedemption.redemption_code,
+        offerName: scannedRedemption.offer_name,
+        quantity: scannedRedemption.quantity,
+        status: scannedRedemption.status,
+      },
+    };
+  }
 
   if (
     scannedRedemption &&
@@ -1210,5 +1446,122 @@ export async function validateComboRedemptionScan(input: {
     result: result.result,
     message: result.message,
     redemption: result.redemption ?? null,
+  };
+}
+
+export async function confirmComboDeliveryChoice(input: {
+  customerId: string;
+  redemptionId: string;
+  choice: ComboDeliveryChoice;
+}) {
+  const supabase = getSupabaseAdmin();
+  const { data: redemption, error } = await supabase
+    .from("combo_redemptions")
+    .select(
+      "id, combo_order_id, customer_id, event_id, session_id, redemption_code, offer_name, quantity, status, raw_metadata, combo_orders!inner(id, status, source_order_id)",
+    )
+    .eq("id", input.redemptionId)
+    .eq("customer_id", input.customerId)
+    .maybeSingle<{
+      id: string;
+      combo_order_id: string;
+      customer_id: string;
+      event_id: string;
+      session_id: string;
+      redemption_code: string;
+      offer_name: string;
+      quantity: number;
+      status: "issued" | "used" | "cancelled";
+      raw_metadata: Record<string, unknown> | null;
+      combo_orders:
+        | { id: string; status: string; source_order_id: string | null }
+        | Array<{ id: string; status: string; source_order_id: string | null }>
+        | null;
+    }>();
+  const order = redemption ? firstJoin(redemption.combo_orders) : null;
+
+  if (error || !redemption || !order || order.status !== "paid" || redemption.status !== "issued") {
+    return { ok: false as const, reason: "not_found" as const };
+  }
+
+  const sourceOrderId = order.source_order_id;
+  if (!sourceOrderId) return { ok: false as const, reason: "place_not_found" as const };
+
+  const { data: reservation } = await supabase
+    .from("official_table_map_reservations")
+    .select("place_code, status")
+    .eq("order_id", sourceOrderId)
+    .eq("customer_id", redemption.customer_id)
+    .eq("event_id", redemption.event_id)
+    .eq("session_id", redemption.session_id)
+    .eq("status", "paid")
+    .maybeSingle<ComboDeliveryReservationRow>();
+
+  if (!reservation?.place_code) {
+    return { ok: false as const, reason: "place_not_found" as const };
+  }
+
+  const metadata = redemption.raw_metadata ?? {};
+  if (typeof metadata.delivery_choice_confirmed_at === "string") {
+    return {
+      ok: true as const,
+      duplicate: true as const,
+      choice: metadata.delivery_choice === "waiter" ? "waiter" as const : "table" as const,
+      placeLabel: String(metadata.delivery_place_label ?? formatComboDeliveryPlace(reservation.place_code)),
+      offerName: redemption.offer_name,
+    };
+  }
+
+  const now = new Date().toISOString();
+  const placeLabel = formatComboDeliveryPlace(reservation.place_code);
+  const { error: updateError } = await supabase
+    .from("combo_redemptions")
+    .update({
+      raw_metadata: {
+        ...metadata,
+        kitchen_visible: true,
+        delivery_choice_status:
+          input.choice === "waiter" ? "waiter_requested" : "table_requested",
+        delivery_choice: input.choice,
+        delivery_choice_confirmed_at: now,
+        delivery_place_code: reservation.place_code,
+        delivery_place_label: placeLabel,
+        kitchen_released_at:
+          typeof metadata.kitchen_released_at === "string"
+            ? metadata.kitchen_released_at
+            : now,
+        kitchen_released_by:
+          input.choice === "waiter"
+            ? "customer_waiter_request"
+            : "customer_table_delivery_request",
+      },
+    })
+    .eq("id", redemption.id)
+    .eq("status", "issued");
+
+  if (updateError) {
+    return { ok: false as const, reason: "update_failed" as const };
+  }
+
+  await supabase.from("combo_redemption_events").insert({
+    combo_redemption_id: redemption.id,
+    combo_order_id: redemption.combo_order_id,
+    result: "allowed",
+    redemption_code: redemption.redemption_code,
+    offer_name: redemption.offer_name,
+    quantity: redemption.quantity,
+    metadata: {
+      source: "customer_delivery_choice",
+      choice: input.choice,
+      place_code: reservation.place_code,
+    },
+  });
+
+  return {
+    ok: true as const,
+    duplicate: false as const,
+    choice: input.choice,
+    placeLabel,
+    offerName: redemption.offer_name,
   };
 }

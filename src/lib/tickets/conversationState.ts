@@ -110,6 +110,7 @@ export type TicketConversationStep =
   | "help_results"
   | "ticket_resend_selecting"
   | "participant_ticket_selecting"
+  | "combo_delivery_confirming"
   | "ticket_delivery_selecting"
   | "ticket_delivery_contacts_waiting"
   | "ticket_delivery_contacts_validated"
@@ -560,6 +561,14 @@ export type TicketConversationState = {
       ticketId: string;
     }>;
     allOption: number;
+    createdAt: string;
+  };
+  comboDeliveryConfirmation?: {
+    redemptionId: string;
+    comboOrderId: string;
+    placeCode: string;
+    placeLabel: string;
+    offerName: string;
     createdAt: string;
   };
   ticketDelivery?: {
