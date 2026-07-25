@@ -1,4 +1,4 @@
-import "server-only";
+﻿import "server-only";
 
 import { logError, logInfo, logWarn } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -96,7 +96,7 @@ function getDeliveryStateUpdateFailureCode(result: {
 
 const QR_CODE_CAPTION = [
   "*APRESENTE O QRCODE NA PORTARIA*",
-  "Este ingresso será validado uma única vez na portaria. Por segurança, não envie para terceiros.",
+  "Este ingresso serÃ¡ validado uma Ãºnica vez na portaria. Por seguranÃ§a, nÃ£o envie para terceiros.",
 ].join("\n");
 
 function formatEventDate(startsAt: string) {
@@ -113,7 +113,7 @@ function formatEventDate(startsAt: string) {
     minute: "2-digit",
   })
     .format(date)
-    .replace(",", " às");
+    .replace(",", " Ã s");
 
   return `${weekday.charAt(0).toLocaleUpperCase("pt-BR")}${weekday.slice(1)} ${dayTime}`;
 }
@@ -147,16 +147,30 @@ function formatTableMapPlaceCode(code: string | null) {
     : displayCode;
 }
 
-const TICKET_DELIVERY_PREFERENCE_MESSAGE = [
-  "*PAGAMENTO CONFIRMADO*",
-  "",
-  "Como deseja receber seus ingressos?",
-  "",
-  "1. Receber todos os ingressos neste WhatsApp.",
-  "2. Cada participante receber o prÃ³prio ingresso.",
-  "",
-  "Digite *1* ou *2*.",
-].join("\n");
+function buildTicketDeliveryPreferenceMessage(ticketsCount: number) {
+  if (ticketsCount <= 1) {
+    return [
+      "*PAGAMENTO CONFIRMADO*",
+      "",
+      "Seu ingresso está pronto.",
+      "",
+      "1. Receber o ingresso neste WhatsApp.",
+      "",
+      "Digite *1*.",
+    ].join("\n");
+  }
+
+  return [
+    "*PAGAMENTO CONFIRMADO*",
+    "",
+    "Como deseja receber seus ingressos?",
+    "",
+    "1. Receber todos os ingressos neste WhatsApp.",
+    "2. Cada participante receber o próprio ingresso.",
+    "",
+    "Digite *1* ou *2*.",
+  ].join("\n");
+}
 
 function formatTicketSummary(tickets: TicketForDelivery[]) {
   const firstTicket = tickets[0];
@@ -170,8 +184,8 @@ function formatTicketSummary(tickets: TicketForDelivery[]) {
     `> Data: *${formatEventDate(firstTicket.startsAt)}*`,
     `> Local: *${firstTicket.venueName ?? "A confirmar"}*`,
     `> Ingresso: *${formatTicketSeatCodes(tickets)}*`,
-    `> Mesa/ bistrô: *${formatTableMapPlaceCode(firstTicket.tableMapPlaceCode)}*`,
-    `> Código: *${formatTicketCodes(tickets)}*`,
+    `> Mesa/ bistrÃ´: *${formatTableMapPlaceCode(firstTicket.tableMapPlaceCode)}*`,
+    `> CÃ³digo: *${formatTicketCodes(tickets)}*`,
   ].join("\n");
 }
 
@@ -345,7 +359,7 @@ export async function requestTicketDeliveryPreferenceForOrder(
     state: "ticket_delivery_selecting",
     ticketDelivery: {
       orderId,
-      expectedContactsCount: tickets.length,
+      expectedContactsCount: Math.max(0, tickets.length - 1),
       requestedAt: new Date().toISOString(),
       mode: "buyer_whatsapp",
     },
@@ -368,6 +382,7 @@ export async function requestTicketDeliveryPreferenceForOrder(
   const businessContext = {
     order_id: orderId,
     tickets_count: tickets.length,
+    participant_contacts_expected_count: Math.max(0, tickets.length - 1),
   };
   const delivery = await getOrCreateWhatsAppOutboundDelivery({
     idempotencyKey: `paid-ticket-order:${orderId}:delivery-choice:v1`,
@@ -408,16 +423,17 @@ export async function requestTicketDeliveryPreferenceForOrder(
     return { ok: true, sent: false, reason: "delivery_in_progress" };
   }
 
+  const preferenceMessage = buildTicketDeliveryPreferenceMessage(tickets.length);
   const sendResult = await sendZapiText({
     phone,
-    message: TICKET_DELIVERY_PREFERENCE_MESSAGE,
+    message: preferenceMessage,
   });
   const saveResult = await saveWhatsAppMessage({
     conversationId,
     customerId: order.customer_id,
     direction: "outbound",
     messageType: "text",
-    body: TICKET_DELIVERY_PREFERENCE_MESSAGE,
+    body: preferenceMessage,
     providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
     rawMetadata: buildWhatsAppOutboundMetadata({
       sendResult,
@@ -871,4 +887,6 @@ export async function deliverTicketsForOrder(
     ticketsCount: tickets.length,
   };
 }
+
+
 

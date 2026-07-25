@@ -52,10 +52,7 @@ test("admin_auth_pending cancela login com logout sem executar outros ramos", as
     text: "sair",
   });
 
-  assert.equal(
-    result.reply,
-    "Login administrativo cancelado. Para acessar novamente, envie admin.",
-  );
+  assert.equal(result.reply, TICKET_MESSAGES.genericHelpPrompt);
   assert.equal(result.outboundMessages, undefined);
   assert.equal(result.intentResolution, undefined);
   assert.equal(typeof result.nextContext.updatedAt, "string");
@@ -63,7 +60,10 @@ test("admin_auth_pending cancela login com logout sem executar outros ramos", as
 
   assert.deepEqual(
     withoutUpdatedAt(result.nextContext),
-    withoutUpdatedAt(buildInitialConversationState()),
+    {
+      ...withoutUpdatedAt(buildInitialConversationState()),
+      publicInitialHelpSent: true,
+    },
   );
 });
 

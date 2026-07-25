@@ -35,6 +35,12 @@ type TicketRow = {
   } | null;
 };
 
+type ParticipantAssignmentTicketRow = TicketRow & {
+  recipient_name: string | null;
+  recipient_phone: string | null;
+  participant_delivery_status: string | null;
+};
+
 type OfficialTableMapReservationRow = {
   order_id: string;
   place_code: string;
@@ -440,6 +446,39 @@ export async function getTicketsForOrder(
   return attachTableMapPlaceCodes(tickets, placeCodesByOrder);
 }
 
+export async function getBuyerReservedTicketsForOrder(
+  orderId: string,
+): Promise<TicketForDelivery[]> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("tickets")
+    .select(
+      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, recipient_name, recipient_phone, participant_delivery_status, reservation_items!inner(seat_code), event_sessions!inner(starts_at, events!inner(title, artist_name, city, state, venues(name, address))), venue_sections!inner(name)",
+    )
+    .eq("order_id", orderId)
+    .eq("status", "issued")
+    .is("recipient_name", null)
+    .is("recipient_phone", null)
+    .is("participant_delivery_status", null)
+    .order("ticket_code", { ascending: true })
+    .returns<ParticipantAssignmentTicketRow[]>();
+
+  if (error) {
+    throw error;
+  }
+
+  const tickets = (data ?? []).flatMap((row) => {
+    const ticket = mapTicketRow(row);
+
+    return ticket ? [ticket] : [];
+  });
+  const placeCodesByOrder = await getOfficialTableMapPlaceCodesByOrder(
+    tickets.map((ticket) => ticket.orderId),
+  );
+
+  return attachTableMapPlaceCodes(tickets, placeCodesByOrder);
+}
+
 export async function assignParticipantContactsToOrderTickets({
   orderId,
   contacts,
@@ -475,7 +514,8 @@ export async function assignParticipantContactsToOrderTickets({
 
     if (
       error.message.includes("ticket_contact_count_mismatch") ||
-      error.message.includes("contacts_required")
+      error.message.includes("contacts_required") ||
+      error.message.includes("buyer_reserved_ticket_requires_participants")
     ) {
       return { ok: false, reason: "count_mismatch" };
     }

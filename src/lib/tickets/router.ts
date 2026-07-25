@@ -86,6 +86,7 @@ import {
 } from "@/lib/tickets/services/ticketDelivery";
 import {
   assignParticipantContactsToOrderTickets,
+  getBuyerReservedTicketsForOrder,
   listParticipantTicketDeliveriesForPhone,
   listPaidTicketResendGroupsForPhone,
   type PaidTicketResendGroup,
@@ -2503,6 +2504,19 @@ function isParticipantTicketRequestIntent(text: string) {
   return normalizeIntentText(text) === "meu ingresso";
 }
 
+function isGlobalConversationCancelCommand(text: string) {
+  return new Set([
+    "sair",
+    "cancelar",
+    "cancelar atendimento",
+    "encerrar",
+    "menu",
+    "inicio",
+    "comecar novamente",
+    "recomecar",
+  ]).has(normalizeIntentText(text));
+}
+
 function isAllPublicEventsContext(context: Partial<TicketConversationState>) {
   return context.lastSearch?.originalText
     ? isAllPublicEventsIntent(context.lastSearch.originalText)
@@ -2554,6 +2568,10 @@ function resetBuyerReservationContextAfterPublicReentry(
   baseContext: TicketConversationState,
 ): TicketConversationState {
   return markPublicInitialHelpSent(resetBuyerReservationContext(baseContext));
+}
+
+function resetConversationToInitialHelp(): TicketConversationState {
+  return markPublicInitialHelpSent(buildInitialConversationState());
 }
 
 function handlePublicHelpMessage({
@@ -3632,7 +3650,7 @@ function formatPaidTicketResendOptions(groups: PaidTicketResendGroup[]) {
 }
 
 function formatParticipantContactsPrompt(expectedContactsCount: number) {
-  return `Envie os contatos dos participantes usando a opÃ§Ã£o Contato do WhatsApp.\nSelecione e envie todos juntos, em um Ãºnico envio.\nA quantidade de contatos deve ser exatamente igual Ã  quantidade de ingressos comprados: ${expectedContactsCount}.`;
+  return `Envie os contatos dos participantes usando a opção Contato do WhatsApp.\nSelecione e envie todos juntos, em um único envio.\nA quantidade de contatos deve ser exatamente igual à quantidade de participantes que receberão o próprio ingresso: ${expectedContactsCount}.`;
 }
 
 const PARTICIPANT_TICKET_REQUEST_INSTRUCTIONS = [
@@ -4046,7 +4064,11 @@ async function handleTicketDeliverySelection({
   if (
     typeof expectedContactsCount !== "number" ||
     !Number.isInteger(expectedContactsCount) ||
-    expectedContactsCount <= 0
+    expectedContactsCount < 0 ||
+    (
+      expectedContactsCount === 0 &&
+      baseContext.state !== "ticket_delivery_selecting"
+    )
   ) {
     return {
       reply:
@@ -4115,9 +4137,33 @@ async function handleTicketDeliverySelection({
       };
     }
 
+    const buyerReservedTickets = await getBuyerReservedTicketsForOrder(orderId);
+
+    if (buyerReservedTickets.length !== 1) {
+      return {
+        reply:
+          "Nao consegui localizar o ingresso reservado para este WhatsApp. Digite *CONFIRMAR* novamente em alguns instantes.",
+        nextContext: baseContext,
+      };
+    }
+
+    const buyerDelivery = await buildTicketDeliveryPayload(
+      buyerReservedTickets,
+      "*INGRESSO RESERVADO*",
+    );
+    const outboundMessages = [
+      ...buildPaidTicketResendOutboundMessages(buyerDelivery),
+      {
+        type: "text" as const,
+        body: PARTICIPANT_TICKET_REQUEST_INSTRUCTIONS,
+        suppressTitle: true,
+      },
+    ];
+
     return {
       reply: PARTICIPANT_TICKET_REQUEST_INSTRUCTIONS,
       suppressTitle: true,
+      outboundMessages,
       nextContext: resetBuyerReservationContext({
         ...baseContext,
         ticketDelivery: {
@@ -4163,7 +4209,7 @@ async function handleTicketDeliverySelection({
         }
 
         return {
-          reply: `A quantidade de contatos deve ser exatamente igual a quantidade de ingressos comprados.\nEsperados: ${expectedContactsCount}.\nRecebidos: ${validation.receivedCount}.`,
+          reply: `A quantidade de contatos deve ser exatamente igual a quantidade de participantes que receberão o próprio ingresso.\nEsperados: ${expectedContactsCount}.\nRecebidos: ${validation.receivedCount}.`,
           nextContext: baseContext,
         };
       }
@@ -4223,6 +4269,14 @@ async function handleTicketDeliverySelection({
   }
 
   if (option === 2) {
+    if (expectedContactsCount <= 0) {
+      return {
+        reply:
+          "Esta compra tem apenas 1 ingresso. Digite *1* para receber o ingresso neste WhatsApp.",
+        nextContext: baseContext,
+      };
+    }
+
     return {
       reply: formatParticipantContactsPrompt(expectedContactsCount),
       nextContext: {
@@ -4242,7 +4296,9 @@ async function handleTicketDeliverySelection({
 
   return {
     reply:
-      "Escolha como deseja receber seus ingressos:\n\n1. Receber todos os ingressos neste WhatsApp.\n2. Cada participante receber o proprio ingresso.\n\nDigite *1* ou *2*.",
+      expectedContactsCount <= 0
+        ? "Escolha como deseja receber seu ingresso:\n\n1. Receber o ingresso neste WhatsApp.\n\nDigite *1*."
+        : "Escolha como deseja receber seus ingressos:\n\n1. Receber todos os ingressos neste WhatsApp.\n2. Cada participante receber o proprio ingresso.\n\nDigite *1* ou *2*.",
     nextContext: baseContext,
   };
 }
@@ -11312,6 +11368,14 @@ export async function routeTicketMessage({
     messageType,
     conversationState: previousState,
   });
+
+  if (isGlobalConversationCancelCommand(text)) {
+    return {
+      reply: TICKET_MESSAGES.genericHelpPrompt,
+      nextContext: resetConversationToInitialHelp(),
+    };
+  }
+
   const gateCommand = parseGateCommand(text);
   const reservedAdminCommand = isReservedAdminCommand(text);
 

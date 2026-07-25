@@ -19,6 +19,17 @@ const zapiWebhookSource = readFileSync(
   new URL("../src/app/api/webhook/zapi/route.ts", import.meta.url),
   "utf8",
 );
+const ticketDeliverySource = readFileSync(
+  new URL("../src/lib/tickets/services/ticketDelivery.ts", import.meta.url),
+  "utf8",
+);
+const buyerReservedMigrationSource = readFileSync(
+  new URL(
+    "../supabase/migrations/20260725000100_reserve_buyer_ticket_in_participant_distribution.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
 const customer = {
   id: "customer-ticket-delivery-distribution",
@@ -105,6 +116,27 @@ function route(text, context, rawPayload) {
   });
 }
 
+test("comando global cancela conversa antes de executar estado pendente", async () => {
+  const result = await route("cancelar", validatedContext());
+
+  assert.equal(result.reply.includes("bem-vindo"), true);
+  assert.equal(result.nextContext.state, "idle");
+  assert.equal(result.nextContext.step, "idle");
+  assert.equal(result.nextContext.ticketDelivery, undefined);
+  assert.equal(result.nextContext.reservation, undefined);
+  assert.equal(result.nextContext.payment, undefined);
+  assert.equal(result.nextContext.publicInitialHelpSent, true);
+  assert.doesNotMatch(result.reply, /Confirme os destinatários|Nao consegui vincular/);
+});
+
+test("comandos globais de reinicio sao tratados antes dos roteamentos por estado", () => {
+  assert.match(routerSource, /isGlobalConversationCancelCommand\(text\)[\s\S]*resetConversationToInitialHelp/);
+  assert.match(routerSource, /buildInitialConversationState\(\)/);
+  assert.match(routerSource, /"cancelar atendimento"/);
+  assert.match(routerSource, /"comecar novamente"/);
+  assert.match(routerSource, /"recomecar"/);
+});
+
 test("opcao 1 entrega normalmente ao comprador e encerra estado sem resposta extra", () => {
   assert.match(routerSource, /if \(option === 1\)[\s\S]*deliverTicketsForOrder\(orderId\)/);
   assert.match(routerSource, /if \(option === 1\)[\s\S]*skipReply:\s*true/);
@@ -118,6 +150,27 @@ test("opcao 2 entra em ticket_delivery_contacts_waiting", async () => {
   assert.equal(result.nextContext.ticketDelivery.mode, "participant_contacts");
   assert.equal(result.nextContext.ticketDelivery.expectedContactsCount, 2);
   assert.match(result.reply, /quantidade de contatos/i);
+});
+
+test("opcao 2 espera quantidade de ingressos menos um e nao e oferecida para compra de 1 ingresso", async () => {
+  assert.match(ticketDeliverySource, /expectedContactsCount:\s*Math\.max\(0,\s*tickets\.length - 1\)/);
+  assert.match(ticketDeliverySource, /buildTicketDeliveryPreferenceMessage\(tickets\.length\)/);
+  assert.match(ticketDeliverySource, /ticketsCount <= 1[\s\S]*Digite \*1\*/);
+
+  const result = await route(
+    "2",
+    ticketDeliveryContext({
+      ticketDelivery: {
+        orderId: "order-single-ticket",
+        expectedContactsCount: 0,
+        requestedAt: "2026-07-24T12:00:00.000Z",
+        mode: "selecting",
+      },
+    }),
+  );
+
+  assert.equal(result.nextContext.state, "ticket_delivery_selecting");
+  assert.match(result.reply, /apenas 1 ingresso/i);
 });
 
 test("leitura de contact valida e exibe confirmacao sem telefone completo", async () => {
@@ -224,20 +277,32 @@ test("quantidade maior que a esperada nao avanca", () => {
   assert.equal(result.receivedCount, 2);
 });
 
-test("CANCELAR limpa contatos validados e volta para espera", async () => {
+test("CANCELAR global limpa contatos validados e volta ao inicio", async () => {
   const result = await route("cancelar", validatedContext());
 
-  assert.equal(result.nextContext.state, "ticket_delivery_contacts_waiting");
-  assert.equal(result.nextContext.ticketDelivery.validatedContacts, undefined);
-  assert.match(result.reply, /Envie os contatos/i);
+  assert.equal(result.nextContext.state, "idle");
+  assert.equal(result.nextContext.ticketDelivery, undefined);
+  assert.match(result.reply, /bem-vindo/i);
 });
 
 test("CONFIRMAR usa RPC de vinculacao e limpa estado apos sucesso", () => {
   assert.match(routerSource, /normalizedText !== "confirmar"/);
   assert.match(routerSource, /assignParticipantContactsToOrderTickets\(\{[\s\S]*orderId,[\s\S]*contacts:\s*validatedContacts/);
+  assert.match(routerSource, /getBuyerReservedTicketsForOrder\(orderId\)/);
+  assert.match(routerSource, /buildTicketDeliveryPayload\([\s\S]*buyerReservedTickets[\s\S]*"\*INGRESSO RESERVADO\*"/);
+  assert.match(routerSource, /outboundMessages = \[[\s\S]*buildPaidTicketResendOutboundMessages\(buyerDelivery\)[\s\S]*PARTICIPANT_TICKET_REQUEST_INSTRUCTIONS/);
   assert.match(routerSource, /reply:\s*PARTICIPANT_TICKET_REQUEST_INSTRUCTIONS/);
   assert.match(ticketsServiceSource, /supabase\.rpc\(\s*"assign_participant_contacts_to_order_tickets"/);
   assert.match(ticketsServiceSource, /p_contacts:\s*contacts\.map/);
+});
+
+test("RPC reserva exatamente 1 ingresso do comprador e vincula contatos aos demais", () => {
+  assert.match(buyerReservedMigrationSource, /v_expected_contacts_count := v_ticket_count - 1/);
+  assert.match(buyerReservedMigrationSource, /if v_contacts_count <> v_expected_contacts_count then[\s\S]*ticket_contact_count_mismatch/);
+  assert.match(buyerReservedMigrationSource, /if not v_buyer_ticket_seen then[\s\S]*v_buyer_ticket_id := v_ticket\.id[\s\S]*continue;/);
+  assert.match(buyerReservedMigrationSource, /buyer_reserved_count', 1/);
+  assert.match(buyerReservedMigrationSource, /for update/);
+  assert.match(buyerReservedMigrationSource, /notify pgrst, 'reload schema'/);
 });
 
 test("Meu ingresso busca por telefone e envia ingressos individualmente", () => {
