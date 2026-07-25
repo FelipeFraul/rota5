@@ -1793,6 +1793,58 @@ export function shouldSendComboOfferNow(
   return current >= target && current < target + EVENT_OFFER_SEND_GRACE_MINUTES * 60_000;
 }
 
+function shouldRecoverMissedComboOffer(
+  offer: ComboOfferRow,
+  startsAt: string,
+  now = new Date(),
+  purchasedAt?: string | null,
+) {
+  const start = new Date(startsAt).getTime();
+  const current = now.getTime();
+
+  if (!Number.isFinite(start) || current >= start) return false;
+
+  if (offer.send_timing_type === "custom") {
+    const purchaseTime = purchasedAt ? new Date(purchasedAt).getTime() : Number.NaN;
+    const offset = offer.send_offset_minutes;
+
+    if (!Number.isFinite(purchaseTime) || !offset || offset <= 0) return false;
+
+    return current >= purchaseTime + offset * 60_000;
+  }
+
+  const eventWindowStart = start - EVENT_OFFER_LOOKAHEAD_MINUTES * 60_000;
+  if (current < eventWindowStart) return false;
+
+  if (offer.send_timing_type === "event_day_noon") {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: SAO_PAULO_TIME_ZONE,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).formatToParts(now);
+    const get = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+    const eventParts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: SAO_PAULO_TIME_ZONE,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date(startsAt));
+    const eventDay = `${eventParts.find((p) => p.type === "year")?.value}-${eventParts.find((p) => p.type === "month")?.value}-${eventParts.find((p) => p.type === "day")?.value}`;
+    const nowDay = `${get("year")}-${get("month")}-${get("day")}`;
+
+    if (eventDay !== nowDay) return false;
+    if (get("hour") > "12") return true;
+    return get("hour") === "12" && Number(get("minute")) >= 5;
+  }
+
+  const offset = offer.send_offset_minutes ?? (offer.send_timing_type === "one_hour_before" ? 60 : 180);
+  return current >= start - offset * 60_000;
+}
+
 export function buildComboOfferMessage({
   offer,
   eventTitle,
@@ -2203,11 +2255,6 @@ export async function sendScheduledComboOffers(limit = 100) {
       continue;
     }
 
-      if (!shouldSendComboOfferNow(offer, session.starts_at, now, ticket.issued_at)) {
-        skippedCount += 1;
-        continue;
-      }
-
       const dedupeKey = buildComboOfferDedupeKey({
         customerId: offerCustomerId,
         eventId: session.event_id,
@@ -2215,6 +2262,20 @@ export async function sendScheduledComboOffers(limit = 100) {
       });
       const currentSentKeys = await loadSentComboOfferKeys([offerCustomerId]);
       if (currentSentKeys.has(dedupeKey)) {
+        skippedCount += 1;
+        continue;
+      }
+
+      const shouldSendOnSchedule = shouldSendComboOfferNow(
+        offer,
+        session.starts_at,
+        now,
+        ticket.issued_at,
+      );
+      const shouldSendAsRecovery =
+        !shouldSendOnSchedule &&
+        shouldRecoverMissedComboOffer(offer, session.starts_at, now, ticket.issued_at);
+      if (!shouldSendOnSchedule && !shouldSendAsRecovery) {
         skippedCount += 1;
         continue;
       }
@@ -2289,6 +2350,8 @@ export async function sendScheduledComboOffers(limit = 100) {
             session_id: session.id,
             customer_id: offerCustomerId,
             offer_recipient_source: ticket.offer_source ?? "buyer",
+            combo_offer_delivery_mode: shouldSendAsRecovery ? "recovery" : "scheduled",
+            combo_offer_recovered: shouldSendAsRecovery,
           },
         }),
       });

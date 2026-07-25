@@ -1500,7 +1500,7 @@ export async function listAdminVenues(input: {
 
 export async function createAdminEvent(input: {
   title: string;
-  artistName: string;
+  artistName?: string | null;
   city: string;
   state: string;
   venueName: string;
@@ -1523,9 +1523,11 @@ export async function createAdminEvent(input: {
   }
 
   const supabase = getSupabaseAdmin();
+  const title = input.title.trim();
+  const artistName = input.artistName?.trim() || title;
   const eventPayload = {
-    title: input.title.trim(),
-    artist_name: input.artistName.trim(),
+    title,
+    artist_name: artistName,
     description: input.description?.trim() || null,
     city: input.city.trim(),
     state: input.state.trim().toUpperCase(),

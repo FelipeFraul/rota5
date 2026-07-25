@@ -93,7 +93,7 @@ type DashboardComboRedemptionRow = {
 const patchSchema = z.object({
   event: z.object({
     title: z.string().trim().min(1).max(160),
-    artistName: z.string().trim().min(1).max(160),
+    artistName: z.string().trim().max(160).nullable().optional(),
     city: z.string().trim().min(1).max(90),
     state: z.string().trim().min(2).max(2),
     venueName: z.string().trim().min(1).max(160),
@@ -760,7 +760,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const eventUpdate = await updateAdminEvent(eventId, {
     title: parsed.data.event.title,
-    artist_name: parsed.data.event.artistName,
+    artist_name: parsed.data.event.artistName?.trim() || parsed.data.event.title,
     description: parsed.data.event.description || null,
     city: parsed.data.event.city,
     state: parsed.data.event.state.toUpperCase(),

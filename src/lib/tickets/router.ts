@@ -90,6 +90,7 @@ import {
   listParticipantTicketDeliveriesForPhone,
   listPaidTicketResendGroupsForPhone,
   type PaidTicketResendGroup,
+  type ParticipantTicketDelivery,
 } from "@/lib/tickets/services/tickets";
 import {
   buildAdminAuthPendingActiveAdminResponse,
@@ -2569,6 +2570,7 @@ function resetBuyerReservationContext(
     lastEvents: [],
     publicHelp: undefined,
     ticketResend: undefined,
+    participantTicketSelection: undefined,
     ticketDelivery: undefined,
   };
 }
@@ -3594,6 +3596,164 @@ function buildPaidTicketResendOutboundMessages(
   ];
 }
 
+function formatParticipantTicketSelectionLabel(
+  delivery: ParticipantTicketDelivery,
+  allDeliveries: ParticipantTicketDelivery[],
+) {
+  const sameTitleCount = allDeliveries.filter(
+    (item) => item.ticket.eventTitle === delivery.ticket.eventTitle,
+  ).length;
+
+  return sameTitleCount > 1
+    ? `${delivery.ticket.eventTitle} - ${formatDateTime(delivery.ticket.startsAt)}`
+    : delivery.ticket.eventTitle;
+}
+
+function formatParticipantTicketSelectionPrompt(
+  deliveries: ParticipantTicketDelivery[],
+) {
+  return [
+    "*INGRESSO ROCKBAR*",
+    "",
+    "Qual ingresso você quer receber?",
+    "",
+    ...deliveries.map((delivery, index) =>
+      `> Digite ${index + 1} para ${formatParticipantTicketSelectionLabel(delivery, deliveries)}`,
+    ),
+    `> Digite ${deliveries.length + 1} para receber todos`,
+  ].join("\n");
+}
+
+function buildParticipantTicketSelectionContext(
+  baseContext: TicketConversationState,
+  phone: string,
+  deliveries: ParticipantTicketDelivery[],
+): TicketConversationState {
+  return {
+    ...resetBuyerReservationContext(baseContext),
+    step: "participant_ticket_selecting",
+    state: "participant_ticket_selecting",
+    participantTicketSelection: {
+      phone,
+      ticketIds: deliveries.map((delivery) => delivery.ticket.ticketId),
+      options: deliveries.map((delivery, index) => ({
+        option: index + 1,
+        ticketId: delivery.ticket.ticketId,
+      })),
+      allOption: deliveries.length + 1,
+      createdAt: new Date().toISOString(),
+    },
+  };
+}
+
+async function buildParticipantTicketDeliveryResult({
+  baseContext,
+  deliveries,
+}: {
+  baseContext: TicketConversationState;
+  deliveries: ParticipantTicketDelivery[];
+}): Promise<RouteTicketMessageOutput> {
+  if (!deliveries.length) {
+    return {
+      reply:
+        "Não encontrei mais esse ingresso disponível para este telefone. Digite *Meu ingresso* para consultar novamente.",
+      nextContext: resetBuyerReservationContext(baseContext),
+    };
+  }
+
+  const payloads = await Promise.all(
+    deliveries.map((delivery) =>
+      buildTicketDeliveryPayload([delivery.ticket], "*INGRESSO*"),
+    ),
+  );
+  const outboundMessages = payloads.flatMap((payload, index) => {
+    const delivery = deliveries[index];
+    const shouldMarkDelivered =
+      delivery.deliveryStatus === "awaiting_participant_request";
+
+    return buildPaidTicketResendOutboundMessages(payload).map((message) => ({
+      ...message,
+      ...(shouldMarkDelivered && message.type === "image"
+        ? { participantDeliveryTicketId: delivery.ticket.ticketId }
+        : {}),
+    }));
+  });
+
+  return {
+    reply: payloads[0]?.message ?? "*INGRESSO*",
+    outboundMessages,
+    nextContext: resetBuyerReservationContext(baseContext),
+  };
+}
+
+async function handleParticipantTicketSelection({
+  baseContext,
+  text,
+}: {
+  baseContext: TicketConversationState;
+  text: string;
+}): Promise<RouteTicketMessageOutput | null> {
+  if (baseContext.state !== "participant_ticket_selecting") return null;
+
+  const normalizedText = normalizeIntentText(text);
+  if (
+    normalizedText === "sair" ||
+    normalizedText === "cancelar" ||
+    normalizedText === "menu"
+  ) {
+    return {
+      reply: TICKET_MESSAGES.genericHelpPrompt,
+      nextContext: resetBuyerReservationContext(baseContext),
+    };
+  }
+
+  if (isParticipantTicketRequestIntent(text)) {
+    return handleParticipantTicketRequest({
+      baseContext: resetBuyerReservationContext(baseContext),
+      phone: baseContext.participantTicketSelection?.phone ?? "",
+    });
+  }
+
+  const selection = baseContext.participantTicketSelection;
+  const option = Number.parseInt(normalizedText, 10);
+
+  if (
+    !selection ||
+    !Number.isInteger(option) ||
+    option < 1 ||
+    option > selection.allOption
+  ) {
+    return {
+      reply:
+        "Opção inválida. Responda com um número da lista ou digite *Meu ingresso* para atualizar.",
+      nextContext: baseContext,
+    };
+  }
+
+  const currentDeliveries = await listParticipantTicketDeliveriesForPhone(
+    selection.phone,
+  );
+  const allowedIds = new Set(selection.ticketIds);
+  const validDeliveries = currentDeliveries.filter((delivery) =>
+    allowedIds.has(delivery.ticket.ticketId),
+  );
+  const selectedDeliveries =
+    option === selection.allOption
+      ? validDeliveries
+      : validDeliveries.filter((delivery) =>
+          selection.options.some(
+            (item) =>
+              item.option === option &&
+              item.ticketId === delivery.ticket.ticketId,
+          ),
+        );
+
+  return buildParticipantTicketDeliveryResult({
+    baseContext,
+    deliveries: selectedDeliveries,
+  });
+}
+
 async function handleParticipantTicketRequest({
   baseContext,
   phone,
@@ -3623,29 +3783,21 @@ async function handleParticipantTicketRequest({
     };
   }
 
-  const deliveries = await Promise.all(
-    participantTickets.map((participantTicket) =>
-      buildTicketDeliveryPayload([participantTicket.ticket], "*INGRESSO*"),
-    ),
-  );
-  const outboundMessages = deliveries.flatMap((delivery, index) => {
-    const participantTicket = participantTickets[index];
-    const shouldMarkDelivered =
-      participantTicket.deliveryStatus === "awaiting_participant_request";
+  if (participantTickets.length > 1) {
+    return {
+      reply: formatParticipantTicketSelectionPrompt(participantTickets),
+      nextContext: buildParticipantTicketSelectionContext(
+        baseContext,
+        normalizedPhone,
+        participantTickets,
+      ),
+    };
+  }
 
-    return buildPaidTicketResendOutboundMessages(delivery).map((message) => ({
-      ...message,
-      ...(shouldMarkDelivered && message.type === "image"
-        ? { participantDeliveryTicketId: participantTicket.ticket.ticketId }
-        : {}),
-    }));
+  return buildParticipantTicketDeliveryResult({
+    baseContext,
+    deliveries: participantTickets,
   });
-
-  return {
-    reply: deliveries[0]?.message ?? "*INGRESSO*",
-    outboundMessages,
-    nextContext: resetBuyerReservationContext(baseContext),
-  };
 }
 function formatPaidTicketResendOptions(groups: PaidTicketResendGroup[]) {
   return [
@@ -6055,6 +6207,181 @@ function getPreviousCreateEventField(draft: Record<string, unknown>) {
   return previousByField[field] ?? null;
 }
 
+const CREATE_EVENT_DRAFT_FIELD_ORDER = [
+  "title",
+  "artistName",
+  "city",
+  "state",
+  "venueName",
+  "imageUrl",
+  "dateCount",
+  "sessionsPerDate",
+  "sessionDateItem",
+  "sessionTimeItem",
+  "entryModel",
+  "entryCapacityMode",
+  "sharedEntryCapacity",
+  "entryCount",
+  "entryItem",
+  "entrySeatItem",
+  "entrySeatMapVisual",
+  "entryOfferItem",
+  "description",
+  "status",
+] as const;
+
+const CREATE_EVENT_DRAFT_DEPENDENT_KEYS: Record<string, string[]> = {
+  title: [
+    "artistName",
+    "city",
+    "state",
+    "venueName",
+    "imageUrl",
+    "expectedDateCount",
+    "sessionsPerDate",
+    "expectedSessionCount",
+    "currentSessionDateIndex",
+    "currentSessionTimeIndex",
+    "eventDates",
+    "pendingSessionDate",
+    "sessionsStartsAt",
+    "entryModel",
+    "entryCapacityMode",
+    "entryCapacityModeConfirmed",
+    "sharedEntryCapacity",
+    "expectedEntryCount",
+    "currentEntryIndex",
+    "sharedPriceOptions",
+    "initialSections",
+    "pendingNumberedSection",
+    "description",
+    "status",
+    "returnToCreateStatus",
+    "lastVenues",
+  ],
+  artistName: [
+    "city",
+    "state",
+    "venueName",
+    "imageUrl",
+    "expectedDateCount",
+    "sessionsPerDate",
+    "expectedSessionCount",
+    "currentSessionDateIndex",
+    "currentSessionTimeIndex",
+    "eventDates",
+    "pendingSessionDate",
+    "sessionsStartsAt",
+    "entryModel",
+    "entryCapacityMode",
+    "entryCapacityModeConfirmed",
+    "sharedEntryCapacity",
+    "expectedEntryCount",
+    "currentEntryIndex",
+    "sharedPriceOptions",
+    "initialSections",
+    "pendingNumberedSection",
+    "description",
+    "status",
+    "returnToCreateStatus",
+    "lastVenues",
+  ],
+  city: [
+    "state",
+    "venueName",
+    "imageUrl",
+    "lastVenues",
+  ],
+  state: [
+    "venueName",
+    "imageUrl",
+    "lastVenues",
+  ],
+  venueName: ["imageUrl", "lastVenues"],
+  imageUrl: ["returnToCreateStatus"],
+  dateCount: [
+    "expectedDateCount",
+    "sessionsPerDate",
+    "expectedSessionCount",
+    "currentSessionDateIndex",
+    "currentSessionTimeIndex",
+    "eventDates",
+    "pendingSessionDate",
+    "sessionsStartsAt",
+  ],
+  sessionsPerDate: [
+    "sessionsPerDate",
+    "expectedSessionCount",
+    "currentSessionDateIndex",
+    "currentSessionTimeIndex",
+    "eventDates",
+    "pendingSessionDate",
+    "sessionsStartsAt",
+  ],
+  sessionDateItem: [
+    "eventDates",
+    "pendingSessionDate",
+    "currentSessionTimeIndex",
+    "sessionsStartsAt",
+  ],
+  sessionTimeItem: [
+    "pendingSessionDate",
+    "currentSessionTimeIndex",
+    "sessionsStartsAt",
+  ],
+  entryModel: [
+    "entryModel",
+    "entryCapacityMode",
+    "entryCapacityModeConfirmed",
+    "sharedEntryCapacity",
+    "expectedEntryCount",
+    "currentEntryIndex",
+    "sharedPriceOptions",
+    "initialSections",
+    "pendingNumberedSection",
+  ],
+  entryCapacityMode: [
+    "entryCapacityMode",
+    "entryCapacityModeConfirmed",
+    "sharedEntryCapacity",
+    "expectedEntryCount",
+    "currentEntryIndex",
+    "sharedPriceOptions",
+    "initialSections",
+    "pendingNumberedSection",
+  ],
+  sharedEntryCapacity: [
+    "sharedEntryCapacity",
+    "sharedPriceOptions",
+    "initialSections",
+  ],
+  entryCount: [
+    "expectedEntryCount",
+    "currentEntryIndex",
+    "sharedPriceOptions",
+    "initialSections",
+    "pendingNumberedSection",
+  ],
+  entryItem: ["initialSections", "pendingNumberedSection"],
+  entrySeatItem: ["pendingNumberedSection"],
+  entrySeatMapVisual: ["pendingNumberedSection"],
+  entryOfferItem: ["sharedPriceOptions", "initialSections"],
+  description: ["description", "status"],
+  status: ["status"],
+};
+
+function resetCreateEventDraftFromField(
+  draft: Record<string, unknown>,
+  field: string,
+) {
+  const nextDraft = { ...draft };
+  for (const key of CREATE_EVENT_DRAFT_DEPENDENT_KEYS[field] ?? []) {
+    delete nextDraft[key];
+  }
+  nextDraft.field = field;
+  return nextDraft;
+}
+
 function stepBackCreateEventDraft(draft: Record<string, unknown>) {
   const currentField = String(draft.field ?? "title");
   const nextDraft = { ...draft };
@@ -6181,7 +6508,7 @@ function stepBackCreateEventDraft(draft: Record<string, unknown>) {
     return null;
   }
 
-  nextDraft.field = previousField;
+  Object.assign(nextDraft, resetCreateEventDraftFromField(nextDraft, previousField));
 
   if (previousField === "entryModel") {
     delete nextDraft.initialSections;
@@ -6377,7 +6704,7 @@ function renderAdminEventStatusMenu(event: AdminEventDetails) {
 function renderCreateEventPrompt(field?: string) {
   const prompts: Record<string, string> = {
     title: "Qual o nome/tÃƒÆ’Ã‚Â­tulo do evento?",
-    artistName: "Qual o artista ou atraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o principal?",
+    artistName: "Qual o artista ou atraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o principal?\n\nSe nÃƒÆ’Ã‚Â£o houver artista separado, responda PULAR.",
     city: "Em qual cidade?",
     state: "Qual UF? Ex: SP",
     venueName:
@@ -8247,6 +8574,11 @@ async function handleAdminEventsFlow({
       draft.description = ["pular", "sem", "nenhum", "nao", "nÃƒÆ’Ã‚Â£o"].includes(normalized)
         ? null
         : text.trim();
+    } else if (field === "artistName") {
+      const normalized = normalizeAdminText(text);
+      draft[field] = ["pular", "sem", "nenhum", "nao", "nÃƒÆ’Ã‚Â£o"].includes(normalized)
+        ? null
+        : text.trim();
     } else {
       const value = text.trim();
       if (!value) {
@@ -8262,11 +8594,13 @@ async function handleAdminEventsFlow({
 
     const nextField = nextFieldByField[field];
     if (nextField) {
-      draft.field = nextField;
+      const nextDraft = resetCreateEventDraftFromField(draft, field);
+      nextDraft[field] = draft[field];
+      nextDraft.field = nextField;
       return {
         reply: renderCreateEventPrompt(nextField),
         nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
-          draft,
+          draft: nextDraft,
         }),
       };
     }
@@ -8317,7 +8651,6 @@ async function handleAdminEventsFlow({
 
     if (
       !title ||
-      !artistName ||
       !city ||
       !/^[A-Z]{2}$/.test(state) ||
       !venueName ||
@@ -8392,7 +8725,6 @@ async function handleAdminEventsFlow({
 
     if (
       !title ||
-      !artistName ||
       !city ||
       !/^[A-Z]{2}$/.test(state) ||
       !venueName ||
@@ -17034,6 +17366,15 @@ export async function routeTicketMessage({
       ],
       nextContext: resetBuyerReservationContext(baseContext),
     };
+  }
+
+  const participantTicketSelection = await handleParticipantTicketSelection({
+    baseContext,
+    text,
+  });
+
+  if (participantTicketSelection) {
+    return participantTicketSelection;
   }
 
   const ticketDeliverySelection = await handleTicketDeliverySelection({

@@ -281,6 +281,15 @@ test("TODOS com um evento formata titulo, local, data e opcoes", () => {
   );
 });
 
+test("TODOS mostra apenas o titulo quando artistName for null", () => {
+  assert.equal(formatPublicEventTitle("DEEP ILLUSIONS", null), "DEEP ILLUSIONS");
+  assert.match(formatSingleAllEventReply({
+    ...baseEvents[2],
+    title: "DEEP ILLUSIONS",
+    artistName: null,
+  }, 0), /🎟️ \*DEEP ILLUSIONS\*/);
+});
+
 test("TODOS com varios eventos preserva ordem e numeracao", () => {
   assert.equal(
     formatAllEventsReply(baseEvents),

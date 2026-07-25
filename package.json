@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "test": "node --experimental-loader=./.tmp/typescript-alias-loader.mjs --test scripts/test-whatsapp-batch-compat.mjs scripts/test-conversation-inactivity.mjs scripts/test-public-initial-flow.mjs scripts/test-public-all-events-formatting.mjs scripts/test-public-help-flow.mjs scripts/test-admin-auth-pending-cancel.mjs scripts/test-ticket-delivery-distribution.mjs",
+    "test": "node --experimental-loader=./.tmp/typescript-alias-loader.mjs --test scripts/test-whatsapp-batch-compat.mjs scripts/test-conversation-inactivity.mjs scripts/test-public-initial-flow.mjs scripts/test-public-all-events-formatting.mjs scripts/test-public-help-flow.mjs scripts/test-admin-auth-pending-cancel.mjs scripts/test-admin-event-artist-name-leak.mjs scripts/test-ticket-delivery-distribution.mjs",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

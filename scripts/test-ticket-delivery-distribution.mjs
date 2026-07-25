@@ -167,7 +167,8 @@ test("Meu ingresso tem prioridade sobre saudacao inicial e estados antigos", () 
 test("Meu ingresso como primeira mensagem usa fluxo existente sem boas-vindas", () => {
   assert.match(routerSource, /listParticipantTicketDeliveriesForPhone\(\s*normalizedPhone/);
   assert.match(routerSource, /participantTickets\.length === 0[\s\S]*Não encontrei ingresso disponível para este telefone/);
-  assert.match(routerSource, /buildTicketDeliveryPayload\(\[participantTicket\.ticket\], "\*INGRESSO\*"\)/);
+  assert.match(routerSource, /participantTickets\.length > 1[\s\S]*formatParticipantTicketSelectionPrompt/);
+  assert.match(routerSource, /buildParticipantTicketDeliveryResult\(\{[\s\S]*deliveries:\s*participantTickets/);
   assert.match(routerSource, /outboundMessages,\s*\n\s*nextContext:\s*resetBuyerReservationContext\(baseContext\)/);
   assert.doesNotMatch(
     routerSource.match(/function handleParticipantTicketRequest[\s\S]*?\n\}/)?.[0] ?? "",
@@ -378,11 +379,62 @@ test("RPC reserva exatamente 1 ingresso do comprador e vincula contatos aos dema
   assert.match(buyerReservedMigrationSource, /notify pgrst, 'reload schema'/);
 });
 
-test("Meu ingresso busca por telefone e envia ingressos individualmente", () => {
+test("Meu ingresso com 1 ingresso envia diretamente", () => {
   assert.match(routerSource, /normalizeWhatsAppPhone\(phone\)/);
   assert.match(routerSource, /listParticipantTicketDeliveriesForPhone\(\s*normalizedPhone/);
-  assert.match(routerSource, /participantTickets\.map\(\(participantTicket\)[\s\S]*buildTicketDeliveryPayload\(\[participantTicket\.ticket\]/);
-  assert.match(routerSource, /buildPaidTicketResendOutboundMessages\(delivery\)/);
+  assert.match(routerSource, /if \(participantTickets\.length > 1\)/);
+  assert.match(routerSource, /buildParticipantTicketDeliveryResult\(\{[\s\S]*deliveries:\s*participantTickets/);
+  assert.match(routerSource, /buildTicketDeliveryPayload\(\[delivery\.ticket\], "\*INGRESSO\*"\)/);
+});
+
+test("Meu ingresso com 2 ou mais ingressos mostra menu e nao envia QR imediatamente", () => {
+  assert.match(routerSource, /function formatParticipantTicketSelectionPrompt/);
+  assert.match(routerSource, /\*INGRESSO ROCKBAR\*/);
+  assert.match(routerSource, /Qual ingresso voc/);
+  assert.match(routerSource, /`> Digite \$\{index \+ 1\} para/);
+  assert.match(routerSource, /`> Digite \$\{deliveries\.length \+ 1\} para receber todos`/);
+  assert.match(routerSource, /participantTickets\.length > 1[\s\S]*reply:\s*formatParticipantTicketSelectionPrompt\(participantTickets\)[\s\S]*nextContext:\s*buildParticipantTicketSelectionContext/);
+});
+
+test("opcao individual envia somente ingresso escolhido e todos envia a lista completa", () => {
+  assert.match(routerSource, /baseContext\.state !== "participant_ticket_selecting"/);
+  assert.match(routerSource, /option === selection\.allOption\s*\? validDeliveries\s*:\s*validDeliveries\.filter/);
+  assert.match(routerSource, /item\.option === option[\s\S]*item\.ticketId === delivery\.ticket\.ticketId/);
+});
+
+test("opcao invalida reapresenta orientacao", () => {
+  assert.match(routerSource, /Op.*inv.*lida\. Responda com um n.*mero da lista/);
+  assert.match(routerSource, /nextContext:\s*baseContext/);
+});
+
+test("shows iguais com sessoes diferentes sao diferenciados", () => {
+  assert.match(routerSource, /function formatParticipantTicketSelectionLabel/);
+  assert.match(routerSource, /sameTitleCount > 1/);
+  assert.match(routerSource, /formatDateTime\(delivery\.ticket\.startsAt\)/);
+});
+
+test("falha parcial mantem pendente e marca apenas imagens enviadas com sucesso", () => {
+  assert.match(routerSource, /deliveryStatus === "awaiting_participant_request"/);
+  assert.match(routerSource, /shouldMarkDelivered && message\.type === "image"/);
+  assert.match(zapiWebhookSource, /if \(!sendResult\.ok\)[\s\S]*Participant ticket QR send failed; ticket remains pending for retry/);
+  assert.match(zapiWebhookSource, /if \(outboundMessage\.participantDeliveryTicketId\)[\s\S]*markParticipantTicketDelivered/);
+});
+
+test("sair cancelar e menu limpam estado de selecao de ingresso", () => {
+  assert.match(routerSource, /normalizedText === "sair"[\s\S]*normalizedText === "cancelar"[\s\S]*normalizedText === "menu"/);
+  assert.match(routerSource, /participantTicketSelection:\s*undefined/);
+});
+
+test("Meu ingresso durante selecao reapresenta lista atualizada", () => {
+  assert.match(routerSource, /if \(isParticipantTicketRequestIntent\(text\)\) \{[\s\S]*handleParticipantTicketRequest/);
+  assert.match(routerSource, /phone:\s*baseContext\.participantTicketSelection\?\.phone/);
+});
+
+test("revalidacao impede envio de ingresso invalido", () => {
+  assert.match(routerSource, /const currentDeliveries = await listParticipantTicketDeliveriesForPhone\(\s*selection\.phone/);
+  assert.match(routerSource, /const allowedIds = new Set\(selection\.ticketIds\)/);
+  assert.match(routerSource, /allowedIds\.has\(delivery\.ticket\.ticketId\)/);
+  assert.match(routerSource, /N.*o encontrei mais esse ingresso dispon.*vel para este telefone/);
 });
 
 test("Meu ingresso suporta multiplos ingressos para o mesmo telefone e compras diferentes", () => {
@@ -436,8 +488,22 @@ test("oferta de participante usa o mesmo agendador e respeita tempo configurado"
   assert.match(comboOffersSource, /export async function sendScheduledComboOffers/);
   assert.match(comboOffersSource, /participantOfferTickets/);
   assert.match(comboOffersSource, /mergeComboOfferCandidateTickets\([\s\S]*eventWindowTickets[\s\S]*recentPurchaseTickets[\s\S]*participantOfferTickets/);
-  assert.match(comboOffersSource, /shouldSendComboOfferNow\(offer,\s*session\.starts_at,\s*now,\s*ticket\.issued_at\)/);
+  assert.match(comboOffersSource, /shouldSendComboOfferNow\([\s\S]*offer,[\s\S]*session\.starts_at,[\s\S]*now,[\s\S]*ticket\.issued_at/);
+  assert.match(comboOffersSource, /const shouldSendOnSchedule = shouldSendComboOfferNow/);
   assert.match(comboOffersSource, /const offset = offer\.send_offset_minutes/);
+});
+
+test("oferta perdida e recuperada uma unica vez quando janela passou mas evento nao iniciou", () => {
+  assert.match(comboOffersSource, /function shouldRecoverMissedComboOffer/);
+  assert.match(comboOffersSource, /if \(!Number\.isFinite\(start\) \|\| current >= start\) return false/);
+  assert.match(comboOffersSource, /const shouldSendAsRecovery =[\s\S]*!shouldSendOnSchedule[\s\S]*shouldRecoverMissedComboOffer\(offer,\s*session\.starts_at,\s*now,\s*ticket\.issued_at\)/);
+  assert.match(comboOffersSource, /if \(!shouldSendOnSchedule && !shouldSendAsRecovery\) \{[\s\S]*skippedCount \+= 1/);
+  assert.match(comboOffersSource, /combo_offer_delivery_mode:\s*shouldSendAsRecovery \? "recovery" : "scheduled"/);
+  assert.match(comboOffersSource, /combo_offer_recovered:\s*shouldSendAsRecovery/);
+});
+
+test("recuperacao de oferta perdida continua protegida pela deduplicacao antes do envio", () => {
+  assert.match(comboOffersSource, /const dedupeKey = buildComboOfferDedupeKey[\s\S]*const currentSentKeys = await loadSentComboOfferKeys\(\[offerCustomerId\]\)[\s\S]*if \(currentSentKeys\.has\(dedupeKey\)\)[\s\S]*const shouldSendOnSchedule = shouldSendComboOfferNow/);
 });
 
 test("oferta de 2 minutos e multiplas prioridades continuam no mecanismo existente", () => {

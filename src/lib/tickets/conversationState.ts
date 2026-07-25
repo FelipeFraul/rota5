@@ -109,6 +109,7 @@ export type TicketConversationStep =
   | "help_topic_collecting"
   | "help_results"
   | "ticket_resend_selecting"
+  | "participant_ticket_selecting"
   | "ticket_delivery_selecting"
   | "ticket_delivery_contacts_waiting"
   | "ticket_delivery_contacts_validated"
@@ -551,6 +552,16 @@ export type TicketConversationState = {
   eventMoreInfoShown?: boolean;
   publicHelp?: TicketConversationPublicHelp;
   ticketResend?: TicketConversationTicketResend;
+  participantTicketSelection?: {
+    phone: string;
+    ticketIds: string[];
+    options: Array<{
+      option: number;
+      ticketId: string;
+    }>;
+    allOption: number;
+    createdAt: string;
+  };
   ticketDelivery?: {
     orderId: string;
     expectedContactsCount: number;
