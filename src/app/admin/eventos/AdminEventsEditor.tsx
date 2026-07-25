@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import BrandLogo from "@/app/BrandLogo";
 import AdminEventGrid, { type AdminEventCardItem } from "./components/AdminEventGrid";
@@ -591,6 +592,9 @@ export function AdminEventsEditor() {
         <div>
           <h1>Editar eventos</h1>
         </div>
+        <Link className="admin-operation-link" href="/admin/operacao">
+          Operação ao vivo
+        </Link>
       </header>
 
       <AdminDashboardSection

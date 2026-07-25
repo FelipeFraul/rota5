@@ -742,6 +742,271 @@ body:has(.checkout-unavailable-shell) iframe {
   line-height: 1.35;
 }
 
+.admin-operation-header {
+  align-items: flex-start;
+}
+
+.admin-operation-header > div {
+  min-width: 0;
+}
+
+.admin-operation-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  margin-left: auto;
+  padding: 0 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #020617;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+.admin-operation-link:hover {
+  border-color: #020617;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+  transform: translateY(-1px);
+}
+
+.admin-operation-toolbar,
+.admin-operation-layout {
+  width: min(1320px, 100%);
+  margin: 0 auto 16px;
+}
+
+.admin-operation-toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(130px, 150px) auto auto;
+  align-items: end;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.12);
+}
+
+.admin-operation-toolbar label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.admin-operation-toolbar label span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-operation-toolbar select,
+.admin-operation-toolbar button {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-family: var(--font-sans);
+  font-size: 16px;
+}
+
+.admin-operation-toolbar select {
+  padding: 9px 11px;
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.admin-operation-toolbar button {
+  border: 0;
+  background: #020617;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.admin-operation-toolbar p,
+.admin-operation-toolbar strong {
+  display: inline-flex;
+  align-items: center;
+  min-height: 46px;
+  margin: 0;
+  padding: 0 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.admin-operation-toolbar p {
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.admin-operation-toolbar strong {
+  border: 1px solid #fed7aa;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.admin-operation-layout {
+  display: grid;
+  gap: 16px;
+}
+
+.admin-operation-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.admin-operation-summary-card {
+  position: relative;
+  display: grid;
+  align-content: space-between;
+  min-height: 142px;
+  min-width: 0;
+  gap: 12px;
+  overflow: hidden;
+  padding: 22px 20px 20px;
+  border: 1px solid rgba(2, 6, 23, 0.16);
+  border-left: 5px solid #94a3b8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #020617;
+}
+
+.admin-operation-summary-card.is-ok {
+  border-left-color: #0f766e;
+}
+
+.admin-operation-summary-card.is-attention {
+  border-left-color: #f97316;
+}
+
+.admin-operation-summary-card.is-danger {
+  border-left-color: #dc2626;
+}
+
+.admin-operation-summary-card span,
+.admin-operation-status-row span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-operation-summary-card strong {
+  color: #020617;
+  font-size: clamp(31px, 2.7vw, 42px);
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 0.95;
+}
+
+.admin-operation-summary-card small {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.admin-operation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.admin-operation-event-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.admin-operation-event-columns > div {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid rgba(2, 6, 23, 0.1);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.admin-operation-event-columns h4 {
+  margin: 0;
+  color: #020617;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.admin-operation-table {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-operation-table-head {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.4fr) repeat(3, minmax(120px, 1fr));
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(2, 6, 23, 0.1);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.admin-operation-table-head span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-operation-status-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-operation-status-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 54px;
+  padding: 14px;
+  border: 1px solid rgba(2, 6, 23, 0.1);
+  border-left: 4px solid #94a3b8;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.admin-operation-status-row.is-ok {
+  border-left-color: #0f766e;
+}
+
+.admin-operation-status-row.is-attention {
+  border-left-color: #f97316;
+}
+
+.admin-operation-status-row.is-danger {
+  border-left-color: #dc2626;
+}
+
+.admin-operation-status-row strong {
+  color: #020617;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+}
+
 .admin-events-kicker {
   margin: 0 0 9px !important;
   color: #006c67 !important;
@@ -2958,6 +3223,10 @@ body:has(.checkout-unavailable-shell) iframe {
     grid-template-columns: minmax(0, 1fr) minmax(160px, 190px);
   }
 
+  .admin-operation-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .admin-events-toolbar form {
     grid-column: 1 / -1;
   }
@@ -2986,8 +3255,14 @@ body:has(.checkout-unavailable-shell) iframe {
     gap: 12px;
   }
 
+  .admin-operation-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
   .admin-general-kpis article,
-  .admin-general-plus-card {
+  .admin-general-plus-card,
+  .admin-operation-summary-card {
     min-height: 132px;
     padding: 18px 16px;
   }
@@ -3010,6 +3285,9 @@ body:has(.checkout-unavailable-shell) iframe {
 
   .admin-events-header,
   .admin-events-toolbar,
+  .admin-operation-toolbar,
+  .admin-operation-summary,
+  .admin-operation-grid,
   .admin-events-toolbar form,
   .admin-general-kpis,
   .admin-general-period-grid,
@@ -3091,8 +3369,15 @@ body:has(.checkout-unavailable-shell) iframe {
 
   .admin-dashboard-kpis,
   .admin-dashboard-lower-grid,
+  .admin-operation-event-columns,
+  .admin-operation-table-head,
   .admin-dashboard-skeleton {
     grid-template-columns: 1fr;
+  }
+
+  .admin-operation-link {
+    width: 100%;
+    margin-left: 0;
   }
 
   .admin-dashboard-content {
