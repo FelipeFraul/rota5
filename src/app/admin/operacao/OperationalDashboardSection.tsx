@@ -43,9 +43,19 @@ function OperationIcon({ name }: { name: IconName }) {
 function MetricPill({ label, icon, tone = "neutral" }: { label: string; icon: IconName; tone?: Tone }) {
   return (
     <article className={`admin-operation-metric is-${tone}`}>
-      <OperationIcon name={icon} />
-      <span>{label}</span>
-      <strong>{EMPTY_VALUE}</strong>
+      <div className="admin-operation-metric-copy">
+        <span>
+          <OperationIcon name={icon} />
+          {label}
+        </span>
+        <strong>{EMPTY_VALUE}</strong>
+        <small>Aguardando dados</small>
+      </div>
+      <svg className="admin-operation-metric-chart" viewBox="0 0 148 76" aria-hidden="true" focusable="false">
+        <path d="M4 54c16-12 28 2 44-8 15-9 20-28 40-20 18 7 27 5 56-11" />
+        <path d="M4 34c14 9 27 10 42 3 18-9 27-2 42 7 19 11 32-3 56-1" />
+        <path d="M4 62c18-3 30-14 46-13 17 2 27 12 42 10 20-3 31-18 52-23" />
+      </svg>
     </article>
   );
 }
@@ -136,7 +146,7 @@ export default function OperationalDashboardSection() {
               <strong>Operação normal</strong>
             </div>
           </div>
-          <div className="admin-operation-alert-strip" aria-label="Alertas aguardando dados">
+          <div className="admin-operation-alert-strip is-temporarily-hidden" aria-label="Alertas aguardando dados">
             <StatusRow label="Pagamentos presos" tone="attention" />
             <StatusRow label="Mensagens falhando" tone="danger" />
             <StatusRow label="QR recusados" tone="danger" />
@@ -150,7 +160,6 @@ export default function OperationalDashboardSection() {
           <MetricPill label="Ingressos" icon="ticket" />
           <MetricPill label="Combos" icon="bag" tone="attention" />
           <MetricPill label="Conversão" icon="activity" tone="info" />
-          <MetricPill label="Filas" icon="message" tone="attention" />
           <MetricPill label="Alertas" icon="alert" tone="danger" />
         </section>
 
