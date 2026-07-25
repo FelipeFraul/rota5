@@ -1667,8 +1667,11 @@ body:has(.checkout-unavailable-shell) iframe {
   align-content: start;
   gap: 18px;
   min-width: 0;
-  padding: 24px 0 0;
-  border-top: 1px solid rgba(2, 6, 23, 0.1);
+  padding: 22px;
+  border: 1px solid rgba(2, 6, 23, 0.08);
+  border-top: 3px solid rgba(2, 6, 23, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
 }
 
 .admin-operation-block.is-danger {
@@ -4363,7 +4366,7 @@ body:has(.checkout-unavailable-shell) iframe {
   }
 
   .admin-operation-block {
-    padding-top: 20px;
+    padding: 18px;
   }
 
   .admin-operation-link {
