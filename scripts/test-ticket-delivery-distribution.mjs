@@ -137,6 +137,49 @@ test("comandos globais de reinicio sao tratados antes dos roteamentos por estado
   assert.match(routerSource, /"recomecar"/);
 });
 
+test("Meu ingresso tem prioridade sobre saudacao inicial e estados antigos", () => {
+  const routeBody = routerSource.slice(
+    routerSource.indexOf("export async function routeTicketMessage"),
+  );
+  const participantBlock = routeBody.match(
+    /if \(isParticipantTicketRequestIntent\(text\)\) \{[\s\S]*?handleParticipantTicketRequest[\s\S]*?\n  \}/,
+  );
+  assert.ok(participantBlock, "participant request block not found");
+  assert.ok(
+    routeBody.indexOf(participantBlock[0]) <
+      routeBody.indexOf("shouldSendPublicInitialHelp(baseContext)"),
+  );
+  assert.ok(
+    routeBody.indexOf(participantBlock[0]) <
+      routeBody.indexOf('previousState.state === "admin_auth_pending"'),
+  );
+  assert.match(participantBlock[0], /phone:\s*customer\.whatsapp_phone/);
+  assert.match(routerSource, /"meu ingresso"/);
+  assert.match(routerSource, /"meus ingressos"/);
+  assert.match(routerSource, /"quero meu ingresso"/);
+  assert.match(routerSource, /"reenviar meus ingressos"/);
+});
+
+test("Meu ingresso como primeira mensagem usa fluxo existente sem boas-vindas", () => {
+  assert.match(routerSource, /listParticipantTicketDeliveriesForPhone\(\s*normalizedPhone/);
+  assert.match(routerSource, /participantTickets\.length === 0[\s\S]*Não encontrei ingresso disponível para este telefone/);
+  assert.match(routerSource, /buildTicketDeliveryPayload\(\[participantTicket\.ticket\], "\*INGRESSO\*"\)/);
+  assert.match(routerSource, /outboundMessages,\s*\n\s*nextContext:\s*resetBuyerReservationContext\(baseContext\)/);
+  assert.doesNotMatch(
+    routerSource.match(/function handleParticipantTicketRequest[\s\S]*?\n\}/)?.[0] ?? "",
+    /genericHelp|bem-vindo|buildPublicInitialHelpResponse/,
+  );
+});
+
+test("Meu ingresso cobre telefone com vinculo, sem vinculo, sem estado e estado antigo", () => {
+  assert.match(ticketsServiceSource, /\.eq\("recipient_phone", phone\)/);
+  assert.match(ticketsServiceSource, /\.in\("participant_delivery_status", \[[\s\S]*awaiting_participant_request[\s\S]*delivered/);
+  assert.match(routerSource, /const previousState = getConversationState\(conversation\.context\)/);
+  assert.match(routerSource, /\.\.\.buildInitialConversationState\(\),[\s\S]*\.\.\.previousState/);
+  assert.match(routerSource, /isParticipantTicketRequestIntent\(text\)[\s\S]*handleParticipantTicketRequest/);
+  assert.match(routerSource, /resetBuyerReservationContext\(baseContext\)/);
+});
+
 test("opcao 1 entrega normalmente ao comprador e encerra estado sem resposta extra", () => {
   assert.match(routerSource, /if \(option === 1\)[\s\S]*deliverTicketsForOrder\(orderId\)/);
   assert.match(routerSource, /if \(option === 1\)[\s\S]*skipReply:\s*true/);

@@ -2501,7 +2501,22 @@ function isTicketResendCommand(text: string) {
 }
 
 function isParticipantTicketRequestIntent(text: string) {
-  return normalizeIntentText(text) === "meu ingresso";
+  const normalized = normalizeIntentText(text);
+
+  return new Set([
+    "meu ingresso",
+    "meus ingressos",
+    "quero meu ingresso",
+    "quero meus ingressos",
+    "receber meu ingresso",
+    "receber meus ingressos",
+    "reenviar meu ingresso",
+    "reenviar meus ingressos",
+    "pegar meu ingresso",
+    "pegar meus ingressos",
+    "buscar meu ingresso",
+    "buscar meus ingressos",
+  ]).has(normalized);
 }
 
 function isGlobalConversationCancelCommand(text: string) {
@@ -11376,6 +11391,13 @@ export async function routeTicketMessage({
     };
   }
 
+  if (isParticipantTicketRequestIntent(text)) {
+    return handleParticipantTicketRequest({
+      baseContext,
+      phone: customer.whatsapp_phone,
+    });
+  }
+
   const gateCommand = parseGateCommand(text);
   const reservedAdminCommand = isReservedAdminCommand(text);
 
@@ -16950,13 +16972,6 @@ export async function routeTicketMessage({
 
   if (ticketDeliverySelection) {
     return ticketDeliverySelection;
-  }
-
-  if (isParticipantTicketRequestIntent(text)) {
-    return handleParticipantTicketRequest({
-      baseContext,
-      phone: customer.whatsapp_phone,
-    });
   }
 
   const publicEntryGateResponse = buildPublicEntryGateResponse({
