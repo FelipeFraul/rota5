@@ -1698,17 +1698,33 @@ button.admin-operation-metric:hover {
   stroke-width: 4;
 }
 
-.admin-operation-metric-chart polyline:nth-child(n + 2) {
+.admin-operation-metric-chart g:nth-child(n + 2) polyline {
   opacity: 0.58;
   stroke-width: 3;
 }
 
-.admin-operation-metric-chart polyline:nth-child(3n + 2) {
+.admin-operation-metric-chart g:nth-child(3n + 2) polyline,
+.admin-operation-metric-chart g:nth-child(3n + 2) circle {
   stroke: #2563eb;
 }
 
-.admin-operation-metric-chart polyline:nth-child(3n + 3) {
+.admin-operation-metric-chart g:nth-child(3n + 3) polyline,
+.admin-operation-metric-chart g:nth-child(3n + 3) circle {
   stroke: #f97316;
+}
+
+.admin-operation-metric-chart circle {
+  fill: rgba(255, 255, 255, 0.96);
+  stroke: currentColor;
+  stroke-width: 2.5;
+  opacity: 0;
+  outline: none;
+  pointer-events: all;
+}
+
+.admin-operation-metric-chart circle:hover,
+.admin-operation-metric-chart circle:focus {
+  opacity: 1;
 }
 
 .admin-operation-metric-chart path:nth-child(2) {

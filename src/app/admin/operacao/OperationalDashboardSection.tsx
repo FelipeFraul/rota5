@@ -29,6 +29,7 @@ type IconName =
 
 type DetailItem = { label: string; value: string; tone?: Tone };
 type FeedItem = { time?: string; title: string; detail?: string; value?: string; tone?: Tone };
+type ChartLine = { label: string; values: number[]; dates?: string[] };
 type ExpandedMetric = {
   title: string;
   icon: IconName;
@@ -37,7 +38,7 @@ type ExpandedMetric = {
   headlineLabel: string;
   showChart: boolean;
   series: number[];
-  eventSeries?: number[][];
+  eventSeries?: ChartLine[];
   summary: DetailItem[];
   sections: Array<{
     title: string;
@@ -111,14 +112,65 @@ function toPolyline(values: number[], width: number, height: number) {
     .join(" ");
 }
 
-function MiniChart({ values, lines }: { values: number[]; lines?: number[][] }) {
-  const chartLines = lines?.length ? lines : [values];
-  const points = chartLines.map((line) => toPolyline(line, 148, 76)).filter(Boolean);
-  if (!points.length) return <span className="admin-operation-chart-empty">{EMPTY_VALUE}</span>;
+function formatChartValue(value: number) {
+  return new Intl.NumberFormat("pt-BR").format(value);
+}
+
+function trimChartLines(lines: ChartLine[]) {
+  const firstDataIndex = lines.reduce((firstIndex, line) => {
+    const index = line.values.findIndex((value) => value > 0);
+    return index >= 0 ? Math.min(firstIndex, index) : firstIndex;
+  }, Number.POSITIVE_INFINITY);
+
+  if (!Number.isFinite(firstDataIndex)) return [];
+
+  return lines.map((line) => ({
+    ...line,
+    values: line.values.slice(firstDataIndex),
+    dates: line.dates?.slice(firstDataIndex),
+  }));
+}
+
+function getChartMarkers(values: number[], dates: string[] | undefined, label: string, width: number, height: number) {
+  if (values.length < 2 || !hasSeriesData(values)) return [];
+  const max = Math.max(...values);
+  return values
+    .map((value, index) => {
+      const previous = values[index - 1] ?? 0;
+      const next = values[index + 1] ?? 0;
+      const isPeak = value > 0 && value >= previous && value >= next;
+      if (!isPeak) return null;
+      const x = (index / (values.length - 1)) * width;
+      const y = height - (max > 0 ? (value / max) * (height - 10) + 5 : height / 2);
+      const date = dates?.[index] ? new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }).format(new Date(dates[index])) : "Período";
+      return { x, y, title: `${label} • ${date} • ${formatChartValue(value)}` };
+    })
+    .filter((marker): marker is { x: number; y: number; title: string } => Boolean(marker));
+}
+
+function MiniChart({ values, lines }: { values: number[]; lines?: ChartLine[] }) {
+  const chartLines = trimChartLines(lines?.length ? lines : [{ label: "Total", values }]);
+  const renderedLines = chartLines
+    .map((line) => ({
+      ...line,
+      points: toPolyline(line.values, 148, 76),
+      markers: getChartMarkers(line.values, line.dates, line.label, 148, 76),
+    }))
+    .filter((line) => line.points);
+
+  if (!renderedLines.length) return <span className="admin-operation-chart-empty">{EMPTY_VALUE}</span>;
+
   return (
-    <svg className="admin-operation-metric-chart" viewBox="0 0 148 76" aria-hidden="true" focusable="false">
-      {points.map((linePoints, index) => (
-        <polyline key={`${linePoints}-${index}`} points={linePoints} />
+    <svg className="admin-operation-metric-chart" viewBox="0 0 148 76" role="img" aria-label="Evolução por evento">
+      {renderedLines.map((line, index) => (
+        <g key={`${line.label}-${index}`}>
+          <polyline points={line.points} />
+          {line.markers.map((marker, markerIndex) => (
+            <circle key={`${marker.title}-${markerIndex}`} cx={marker.x} cy={marker.y} r="4.5" tabIndex={0}>
+              <title>{marker.title}</title>
+            </circle>
+          ))}
+        </g>
       ))}
     </svg>
   );
@@ -150,10 +202,26 @@ function mapDashboardToMetrics(data: OperationalDashboardData | null): Record<Ac
   const ticketSeries = data?.tickets.series.map((point) => Number(point.paidTickets ?? 0)) ?? [];
   const comboSeries = data?.combos.series.map((point) => Number(point.paidItems ?? 0)) ?? [];
   const whatsappSeries = data?.whatsapp.series.map((point) => Number(point.uniqueContacts ?? 0)) ?? [];
-  const revenueEventSeries = data?.revenue.eventSeries?.map((series) => series.points.map((point) => Number(point.totalRevenueCents ?? 0)));
-  const ticketEventSeries = data?.tickets.eventSeries?.map((series) => series.points.map((point) => Number(point.paidTickets ?? 0)));
-  const comboEventSeries = data?.combos.eventSeries?.map((series) => series.points.map((point) => Number(point.paidItems ?? 0)));
-  const whatsappEventSeries = data?.whatsapp.eventSeries?.map((series) => series.points.map((point) => Number(point.uniqueContacts ?? 0)));
+  const revenueEventSeries = data?.revenue.eventSeries?.map((series) => ({
+    label: series.eventTitle,
+    values: series.points.map((point) => Number(point.totalRevenueCents ?? 0)),
+    dates: series.points.map((point) => String(point.date ?? "")),
+  }));
+  const ticketEventSeries = data?.tickets.eventSeries?.map((series) => ({
+    label: series.eventTitle,
+    values: series.points.map((point) => Number(point.paidTickets ?? 0)),
+    dates: series.points.map((point) => String(point.date ?? "")),
+  }));
+  const comboEventSeries = data?.combos.eventSeries?.map((series) => ({
+    label: series.eventTitle,
+    values: series.points.map((point) => Number(point.paidItems ?? 0)),
+    dates: series.points.map((point) => String(point.date ?? "")),
+  }));
+  const whatsappEventSeries = data?.whatsapp.eventSeries?.map((series) => ({
+    label: series.eventTitle,
+    values: series.points.map((point) => Number(point.uniqueContacts ?? 0)),
+    dates: series.points.map((point) => String(point.date ?? "")),
+  }));
 
   return {
     revenue: {
