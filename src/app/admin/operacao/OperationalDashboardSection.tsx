@@ -3,14 +3,10 @@
 import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 import BrandLogo from "@/app/BrandLogo";
-import type {
-  OperationalDashboardData,
-  OperationalDashboardPoint,
-} from "@/lib/tickets/services/operationalDashboardTypes";
+import type { OperationalDashboardData } from "@/lib/tickets/services/operationalDashboardTypes";
 import { useOperationalDashboard } from "./useOperationalDashboard";
 
 const EMPTY_VALUE = "—";
-const COMPARISON_DAY_OPTIONS = [7, 15, 30, 60, 90] as const;
 
 type Tone = "neutral" | "ok" | "attention" | "danger" | "info";
 type ActiveMetric = "revenue" | "tickets" | "combos" | "whatsapp" | "alerts";
@@ -179,21 +175,6 @@ function MiniChart({ values, lines }: { values: number[]; lines?: ChartLine[] })
         </g>
       ))}
     </svg>
-  );
-}
-
-function MainChart({ values }: { values: number[] }) {
-  const points = toPolyline(values, 620, 180);
-  return (
-    <div className="admin-operation-main-chart" aria-label="Gráfico do período">
-      {points ? (
-        <svg viewBox="0 0 620 180" aria-hidden="true" focusable="false">
-          <polyline points={points} />
-        </svg>
-      ) : (
-        <p>Nenhum dado no período.</p>
-      )}
-    </div>
   );
 }
 
@@ -433,18 +414,14 @@ function mapDashboardToMetrics(data: OperationalDashboardData | null): Record<Ac
 function MetricPill({
   metric,
   config,
-  isActive,
-  onClick,
 }: {
   metric: ActiveMetric;
   config: ExpandedMetric;
-  isActive: boolean;
-  onClick: () => void;
 }) {
-  const className = `admin-operation-metric is-${config.tone}${isActive ? " is-active" : ""}`;
+  const className = `admin-operation-metric is-${config.tone}`;
 
   return (
-    <button type="button" className={className} onClick={onClick} aria-pressed={isActive}>
+    <article className={className}>
       <div className="admin-operation-metric-copy">
         <span>
           <OperationIcon name={config.icon} />
@@ -457,68 +434,18 @@ function MetricPill({
         ) : (
           <MiniChart values={config.series} lines={config.eventSeries} />
         )}
+        <div className="admin-operation-metric-details">
+          {config.summary.map((item) => (
+            <span key={item.label} className={`admin-operation-metric-detail is-${item.tone ?? "neutral"}`}>
+              <i title={item.label} aria-label={item.label}>
+                {getSummaryIcon(item.label)}
+              </i>
+              <b>{item.value}</b>
+            </span>
+          ))}
+        </div>
       </div>
-    </button>
-  );
-}
-
-function ExpandedPanel({
-  metric,
-  comparisonDays,
-  onComparisonDaysChange,
-}: {
-  metric: ExpandedMetric;
-  comparisonDays: number;
-  onComparisonDaysChange: (days: number) => void;
-}) {
-  return (
-    <section className={`admin-operation-block admin-operation-expanded is-${metric.tone}`}>
-      <header className="admin-operation-block-heading">
-        <OperationIcon name={metric.icon} />
-        <h2>{metric.title}</h2>
-      </header>
-      <div className="admin-operation-expanded-toolbar">
-        <label>
-          <span>Dias para comparativo</span>
-          <select value={comparisonDays} onChange={(event) => onComparisonDaysChange(Number(event.target.value))}>
-            {COMPARISON_DAY_OPTIONS.map((days) => (
-              <option key={days} value={days}>
-                {days} dias
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <div className="admin-operation-expanded-summary">
-        {metric.summary.map((item) => (
-          <SummaryMetric key={item.label} label={item.label} value={item.value} tone={item.tone} />
-        ))}
-      </div>
-      {metric.showChart ? <MainChart values={metric.series} /> : null}
-      <div className="admin-operation-expanded-columns">
-        {metric.sections.map((section) => (
-          <div key={section.title} className={`admin-operation-sublist${section.type === "flow" ? " is-flow" : ""}`}>
-            <h3>{section.title}</h3>
-            {section.items.length ? (
-              section.items.map((item) => (
-                <article key={`${item.time ?? ""}-${item.title}-${item.value ?? ""}`} className={`admin-operation-feed-row is-${item.tone ?? "neutral"}`}>
-                  <time>{item.time ?? EMPTY_VALUE}</time>
-                  <span>{item.title}</span>
-                  {item.detail ? <small>{item.detail}</small> : null}
-                  <strong>{item.value ?? EMPTY_VALUE}</strong>
-                </article>
-              ))
-            ) : (
-              <p className="admin-operation-empty">Nenhum dado carregado.</p>
-            )}
-          </div>
-        ))}
-      </div>
-      <div className="admin-operation-insight">
-        <h3>IA</h3>
-        <p>{metric.insight}</p>
-      </div>
-    </section>
+    </article>
   );
 }
 
@@ -540,38 +467,16 @@ function getSummaryIcon(label: string) {
   return "R$";
 }
 
-function SummaryMetric({ label, value, tone = "neutral" }: { label: string; value: string; tone?: Tone }) {
-  return (
-    <article className={`admin-operation-summary-metric is-${tone}`} aria-label={`${label}: ${value}`}>
-      <span className="admin-operation-summary-icon" title={label}>
-        {getSummaryIcon(label)}
-      </span>
-      <strong>{value}</strong>
-    </article>
-  );
-}
-
-function StatusRow({ label, value, tone = "neutral" }: { label: string; value: string; tone?: Tone }) {
-  return (
-    <article className={`admin-operation-row is-${tone}`}>
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </article>
-  );
-}
-
 function formatEventOption(event: OperationalDashboardData["events"][number]) {
   const startsAt = event.startsAt ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(event.startsAt)) : null;
   return [event.title, event.artistName, startsAt, event.status].filter(Boolean).join(" • ");
 }
 
 export default function OperationalDashboardSection() {
-  const [activeMetric, setActiveMetric] = useState<ActiveMetric>("revenue");
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const [comparisonDays, setComparisonDays] = useState<number>(30);
+  const comparisonDays = 30;
   const { data, error, isLoading, isRefreshing, lastUpdatedAt, refresh } = useOperationalDashboard(selectedEventId, comparisonDays);
   const metrics = useMemo(() => mapDashboardToMetrics(data), [data]);
-  const expandedMetric = metrics[activeMetric];
   const events = data?.events ?? [];
   const currentEventId = selectedEventId ?? "";
 
@@ -630,17 +535,9 @@ export default function OperationalDashboardSection() {
               key={metric}
               metric={metric}
               config={metrics[metric]}
-              isActive={activeMetric === metric}
-              onClick={() => setActiveMetric(metric)}
             />
           ))}
         </section>
-
-        <ExpandedPanel
-          metric={expandedMetric}
-          comparisonDays={comparisonDays}
-          onComparisonDaysChange={setComparisonDays}
-        />
       </main>
     </>
   );
