@@ -37,6 +37,7 @@ type ExpandedMetric = {
   headlineLabel: string;
   showChart: boolean;
   series: number[];
+  eventSeries?: number[][];
   summary: DetailItem[];
   sections: Array<{
     title: string;
@@ -110,12 +111,15 @@ function toPolyline(values: number[], width: number, height: number) {
     .join(" ");
 }
 
-function MiniChart({ values }: { values: number[] }) {
-  const points = toPolyline(values, 148, 76);
-  if (!points) return <span className="admin-operation-chart-empty">{EMPTY_VALUE}</span>;
+function MiniChart({ values, lines }: { values: number[]; lines?: number[][] }) {
+  const chartLines = lines?.length ? lines : [values];
+  const points = chartLines.map((line) => toPolyline(line, 148, 76)).filter(Boolean);
+  if (!points.length) return <span className="admin-operation-chart-empty">{EMPTY_VALUE}</span>;
   return (
     <svg className="admin-operation-metric-chart" viewBox="0 0 148 76" aria-hidden="true" focusable="false">
-      <polyline points={points} />
+      {points.map((linePoints, index) => (
+        <polyline key={`${linePoints}-${index}`} points={linePoints} />
+      ))}
     </svg>
   );
 }
@@ -146,6 +150,10 @@ function mapDashboardToMetrics(data: OperationalDashboardData | null): Record<Ac
   const ticketSeries = data?.tickets.series.map((point) => Number(point.paidTickets ?? 0)) ?? [];
   const comboSeries = data?.combos.series.map((point) => Number(point.paidItems ?? 0)) ?? [];
   const whatsappSeries = data?.whatsapp.series.map((point) => Number(point.uniqueContacts ?? 0)) ?? [];
+  const revenueEventSeries = data?.revenue.eventSeries?.map((series) => series.points.map((point) => Number(point.totalRevenueCents ?? 0)));
+  const ticketEventSeries = data?.tickets.eventSeries?.map((series) => series.points.map((point) => Number(point.paidTickets ?? 0)));
+  const comboEventSeries = data?.combos.eventSeries?.map((series) => series.points.map((point) => Number(point.paidItems ?? 0)));
+  const whatsappEventSeries = data?.whatsapp.eventSeries?.map((series) => series.points.map((point) => Number(point.uniqueContacts ?? 0)));
 
   return {
     revenue: {
@@ -156,6 +164,7 @@ function mapDashboardToMetrics(data: OperationalDashboardData | null): Record<Ac
       headlineLabel: "No período",
       showChart: true,
       series: revenueSeries,
+      eventSeries: revenueEventSeries,
       summary: [
         { label: "Receita total", value: formatCurrency(getNumber(revenueSummary, "totalRevenueCents")), tone: "ok" },
         { label: "Receita de ingressos", value: formatCurrency(getNumber(revenueSummary, "ticketRevenueCents")) },
@@ -193,6 +202,7 @@ function mapDashboardToMetrics(data: OperationalDashboardData | null): Record<Ac
       headlineLabel: "Vendidos",
       showChart: true,
       series: ticketSeries,
+      eventSeries: ticketEventSeries,
       summary: [
         { label: "Vendidos", value: formatNumber(getNumber(ticketSummary, "soldPaid")), tone: "ok" },
         { label: "Disponíveis", value: formatNumber(getNumber(ticketSummary, "available")) },
@@ -239,6 +249,7 @@ function mapDashboardToMetrics(data: OperationalDashboardData | null): Record<Ac
       headlineLabel: "Vendidos",
       showChart: true,
       series: comboSeries,
+      eventSeries: comboEventSeries,
       summary: [
         { label: "Vendidos", value: formatNumber(getNumber(comboSummary, "soldItems")), tone: "ok" },
         { label: "Pagos", value: formatNumber(getNumber(comboSummary, "paidOrders")), tone: "ok" },
@@ -284,6 +295,7 @@ function mapDashboardToMetrics(data: OperationalDashboardData | null): Record<Ac
       headlineLabel: "Contatos",
       showChart: true,
       series: whatsappSeries,
+      eventSeries: whatsappEventSeries,
       summary: [
         { label: "Contatos únicos", value: formatNumber(getNumber(whatsappSummary, "uniqueContacts")), tone: "ok" },
         { label: "Mensagens recebidas", value: formatNumber(getNumber(whatsappSummary, "inboundMessages")) },
@@ -369,7 +381,7 @@ function MetricPill({
         {metric === "alerts" ? (
           <span className="admin-operation-alert-badge">{config.headlineValue}</span>
         ) : (
-          <MiniChart values={config.series} />
+          <MiniChart values={config.series} lines={config.eventSeries} />
         )}
       </div>
     </button>

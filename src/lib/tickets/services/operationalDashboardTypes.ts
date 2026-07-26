@@ -11,6 +11,12 @@ export type OperationalDashboardPoint = {
   [key: string]: string | number | null;
 };
 
+export type OperationalDashboardEventSeries = {
+  eventId: string;
+  eventTitle: string;
+  points: OperationalDashboardPoint[];
+};
+
 export type OperationalDashboardAlert = {
   id: string;
   type: string;
@@ -39,12 +45,14 @@ export type OperationalDashboardData = {
   revenue: {
     summary: Record<string, number | null>;
     series: OperationalDashboardPoint[];
+    eventSeries?: OperationalDashboardEventSeries[];
     latestSales: Array<Record<string, string | number | null>>;
     paymentMethods: Array<Record<string, string | number | null>>;
   };
   tickets: {
     summary: Record<string, number | null>;
     series: OperationalDashboardPoint[];
+    eventSeries?: OperationalDashboardEventSeries[];
     latestIssued: Array<Record<string, string | number | null>>;
     latestCheckins: Array<Record<string, string | number | null>>;
     problems: Record<string, number | null>;
@@ -52,6 +60,7 @@ export type OperationalDashboardData = {
   combos: {
     summary: Record<string, number | null>;
     series: OperationalDashboardPoint[];
+    eventSeries?: OperationalDashboardEventSeries[];
     topOffers: Array<Record<string, string | number | null>>;
     latest: Array<Record<string, string | number | null>>;
     problems: Record<string, number | null>;
@@ -59,6 +68,7 @@ export type OperationalDashboardData = {
   whatsapp: {
     summary: Record<string, number | null>;
     series: OperationalDashboardPoint[];
+    eventSeries?: OperationalDashboardEventSeries[];
     latestActivity: Array<Record<string, string | number | null>>;
     problems: Record<string, number | null>;
   };

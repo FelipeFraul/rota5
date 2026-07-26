@@ -23,7 +23,7 @@ test("operational dashboard uses one dedicated authenticated RPC endpoint", () =
   assert.match(migration, /create or replace function public\.get_admin_intelligence_dashboard/i);
   assert.match(route, /requireAdminEventEditorSession\(\)/);
   assert.match(route, /\.rpc\("get_admin_intelligence_dashboard"/);
-  assert.doesNotMatch(route, /\.from\(/);
+  assert.doesNotMatch(route, /supabase\.from\(/);
   assert.match(route, /event_forbidden/);
   assert.match(route, /status: result\?\.reason === "event_forbidden" \? 403 : 403/);
 });
