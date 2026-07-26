@@ -437,9 +437,7 @@ function MetricPill({
         <div className="admin-operation-metric-details">
           {config.summary.map((item) => (
             <span key={item.label} className={`admin-operation-metric-detail is-${item.tone ?? "neutral"}`}>
-              <i title={item.label} aria-label={item.label}>
-                {getSummaryIcon(item.label)}
-              </i>
+              <i>{item.label}</i>
               <b>{item.value}</b>
             </span>
           ))}
@@ -447,24 +445,6 @@ function MetricPill({
       </div>
     </article>
   );
-}
-
-function getSummaryIcon(label: string) {
-  const normalized = label
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-
-  if (normalized.includes("ingresso")) return "T";
-  if (normalized.includes("combo")) return "C";
-  if (normalized.includes("aprovado") || normalized.includes("check-in")) return "OK";
-  if (normalized.includes("pendente")) return "!";
-  if (normalized.includes("recusado") || normalized.includes("cancelado")) return "x";
-  if (normalized.includes("repasse")) return "%";
-  if (normalized.includes("dispon")) return "D";
-  if (normalized.includes("cortesia")) return "G";
-  if (normalized.includes("vendido")) return "V";
-  return "R$";
 }
 
 function formatEventOption(event: OperationalDashboardData["events"][number]) {

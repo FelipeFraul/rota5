@@ -1706,17 +1706,23 @@ body:has(.checkout-unavailable-shell) iframe {
 .admin-operation-metric-detail i {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  width: 20px;
+  justify-content: flex-start;
+  min-width: 0;
+  max-width: 70%;
   height: 20px;
   border-radius: 999px;
+  padding: 0 8px;
   background: rgba(100, 116, 139, 0.1);
   color: #64748b;
   font-size: 10px;
   font-style: normal;
   font-weight: 950;
   line-height: 1;
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
 }
 
 .admin-operation-metric-detail b {
