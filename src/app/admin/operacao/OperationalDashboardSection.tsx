@@ -491,7 +491,7 @@ function ExpandedPanel({
       </div>
       <div className="admin-operation-expanded-summary">
         {metric.summary.map((item) => (
-          <StatusRow key={item.label} label={item.label} value={item.value} tone={item.tone} />
+          <SummaryMetric key={item.label} label={item.label} value={item.value} tone={item.tone} />
         ))}
       </div>
       {metric.showChart ? <MainChart values={metric.series} /> : null}
@@ -519,6 +519,35 @@ function ExpandedPanel({
         <p>{metric.insight}</p>
       </div>
     </section>
+  );
+}
+
+function getSummaryIcon(label: string) {
+  const normalized = label
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+  if (normalized.includes("ingresso")) return "T";
+  if (normalized.includes("combo")) return "C";
+  if (normalized.includes("aprovado") || normalized.includes("check-in")) return "OK";
+  if (normalized.includes("pendente")) return "!";
+  if (normalized.includes("recusado") || normalized.includes("cancelado")) return "x";
+  if (normalized.includes("repasse")) return "%";
+  if (normalized.includes("dispon")) return "D";
+  if (normalized.includes("cortesia")) return "G";
+  if (normalized.includes("vendido")) return "V";
+  return "R$";
+}
+
+function SummaryMetric({ label, value, tone = "neutral" }: { label: string; value: string; tone?: Tone }) {
+  return (
+    <article className={`admin-operation-summary-metric is-${tone}`} aria-label={`${label}: ${value}`}>
+      <span className="admin-operation-summary-icon" title={label}>
+        {getSummaryIcon(label)}
+      </span>
+      <strong>{value}</strong>
+    </article>
   );
 }
 
