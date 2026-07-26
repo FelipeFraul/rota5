@@ -15,6 +15,11 @@ const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 const ALL_EVENTS_MESSAGE_MAX_LENGTH = 3_500;
 const ALL_EVENTS_CONTINUATION_DELAY_MS = 1_200;
 const ALL_EVENTS_SEPARATOR = "--";
+const ALL_EVENTS_FINAL_INSTRUCTIONS = [
+  "> Reenviar seu ingresso, digite *AGAIN*",
+  "> Para ajuda, digite *HELP*",
+  "> Para uma nova pesquisa, *NEW*",
+].join("\n");
 const LOWERCASE_NAME_PARTS = new Set([
   "da",
   "das",
@@ -150,6 +155,8 @@ function formatAllEventsReply(events) {
     "Encontrei estes eventos:",
     "",
     blocks.join(`\n\n${ALL_EVENTS_SEPARATOR}\n\n`),
+    "",
+    ALL_EVENTS_FINAL_INSTRUCTIONS,
   ].join("\n");
 }
 
@@ -180,6 +187,12 @@ function buildAllEventsOutboundMessages(events) {
               delayMs,
             };
       }),
+      {
+        type: "text",
+        body: ALL_EVENTS_FINAL_INSTRUCTIONS,
+        suppressTitle: true,
+        delayMs: (events.length + 1) * ALL_EVENTS_CONTINUATION_DELAY_MS,
+      },
     ];
   }
 
@@ -213,6 +226,13 @@ function buildAllEventsOutboundMessages(events) {
   });
 
   if (current) {
+    const withFinalInstructions = `${current}\n\n${ALL_EVENTS_FINAL_INSTRUCTIONS}`;
+    if (withFinalInstructions.length <= ALL_EVENTS_MESSAGE_MAX_LENGTH) {
+      current = withFinalInstructions;
+    } else {
+      pushCurrentMessage();
+      current = ALL_EVENTS_FINAL_INSTRUCTIONS;
+    }
     pushCurrentMessage();
   }
 
@@ -257,6 +277,7 @@ test("TODOS sem eventos preserva a resposta atual do router", () => {
   assert.match(publicAllEventsFormatting, /function buildAllEventsOutboundMessages/);
   assert.match(publicAllEventsFormatting, /ALL_EVENTS_MESSAGE_MAX_LENGTH = 3_500/);
   assert.match(publicAllEventsFormatting, /ALL_EVENTS_CONTINUATION_DELAY_MS = 1_200/);
+  assert.match(publicAllEventsFormatting, /ALL_EVENTS_FINAL_INSTRUCTIONS/);
   assert.match(router, /events\.length === 0[\s\S]*bootstrap\.initialMessages/);
   assert.match(router, /events\.length === 0[\s\S]*resetBuyerReservationContext\(bootstrap\.nextContext\)/);
   assert.doesNotMatch(
@@ -277,6 +298,8 @@ test("TODOS com um evento formata titulo, local, data e opcoes", () => {
       "",
       "Digite 1 para *comprar*",
       "Digite 2 para *ver mais*",
+      "",
+      ALL_EVENTS_FINAL_INSTRUCTIONS,
     ].join("\n"),
   );
 });
@@ -320,6 +343,8 @@ test("TODOS com varios eventos preserva ordem e numeracao", () => {
       "",
       "Digite 5 para *comprar*",
       "Digite 6 para *ver mais*",
+      "",
+      ALL_EVENTS_FINAL_INSTRUCTIONS,
     ].join("\n"),
   );
 });
@@ -354,6 +379,7 @@ test("TODOS divide em multiplas mensagens e aplica delay nas continuacoes", () =
   );
   assert.match(messages[1].body, /^\*EVENTOS - CONTINUACAO\*/);
   assert.match(combinedBody, /\n--\n/);
+  assert.ok(combinedBody.endsWith(ALL_EVENTS_FINAL_INSTRUCTIONS));
   assert.ok(messages.every((message) => message.body.length <= ALL_EVENTS_MESSAGE_MAX_LENGTH));
   assert.deepEqual(
     [...combinedBody.matchAll(/Digite (\d+) para/g)].map((match) => Number(match[1])),
@@ -406,6 +432,14 @@ test("TODOS envia foto dos eventos quando houver imageUrl", () => {
         caption: undefined,
         suppressTitle: true,
         delayMs: ALL_EVENTS_CONTINUATION_DELAY_MS * 2,
+      },
+      {
+        type: "text",
+        imageUrl: undefined,
+        body: ALL_EVENTS_FINAL_INSTRUCTIONS,
+        caption: undefined,
+        suppressTitle: true,
+        delayMs: ALL_EVENTS_CONTINUATION_DELAY_MS * 3,
       },
     ],
   );

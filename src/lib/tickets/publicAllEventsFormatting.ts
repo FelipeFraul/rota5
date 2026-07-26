@@ -10,6 +10,11 @@ import type { TicketEventSearchResult } from "@/lib/tickets/services/events";
 export const ALL_EVENTS_MESSAGE_MAX_LENGTH = 3_500;
 export const ALL_EVENTS_CONTINUATION_DELAY_MS = 1_200;
 const ALL_EVENTS_SEPARATOR = "--";
+export const ALL_EVENTS_FINAL_INSTRUCTIONS = [
+  "> Reenviar seu ingresso, digite *AGAIN*",
+  "> Para ajuda, digite *HELP*",
+  "> Para uma nova pesquisa, *NEW*",
+].join("\n");
 
 export function formatAllEventsReply(
   events: Array<TicketEventSearchResult | TicketConversationEventOption>,
@@ -20,6 +25,8 @@ export function formatAllEventsReply(
     "Encontrei estes eventos:",
     "",
     blocks.join(`\n\n${ALL_EVENTS_SEPARATOR}\n\n`),
+    "",
+    ALL_EVENTS_FINAL_INSTRUCTIONS,
   ].join("\n");
 }
 
@@ -54,22 +61,28 @@ export function buildAllEventsOutboundMessages(
         const body = formatSingleAllEventReply(event, index);
         const delayMs = (index + 1) * ALL_EVENTS_CONTINUATION_DELAY_MS;
 
-      return event.imageUrl
-        ? {
-            type: "image",
-            imageUrl: event.imageUrl,
-            caption: body,
-            suppressTitle: true,
-            delayMs,
-          } as const
-        : {
-            type: "text",
-            body,
-            suppressTitle: true,
-            delayMs,
-          } as const;
-    }),
-  ] satisfies Array<
+        return event.imageUrl
+          ? {
+              type: "image",
+              imageUrl: event.imageUrl,
+              caption: body,
+              suppressTitle: true,
+              delayMs,
+            } as const
+          : {
+              type: "text",
+              body,
+              suppressTitle: true,
+              delayMs,
+            } as const;
+      }),
+      {
+        type: "text",
+        body: ALL_EVENTS_FINAL_INSTRUCTIONS,
+        suppressTitle: true,
+        delayMs: (events.length + 1) * ALL_EVENTS_CONTINUATION_DELAY_MS,
+      },
+    ] satisfies Array<
       | {
           type: "text";
           body: string;
@@ -121,6 +134,13 @@ export function buildAllEventsOutboundMessages(
   });
 
   if (current) {
+    const withFinalInstructions = `${current}\n\n${ALL_EVENTS_FINAL_INSTRUCTIONS}`;
+    if (withFinalInstructions.length <= ALL_EVENTS_MESSAGE_MAX_LENGTH) {
+      current = withFinalInstructions;
+    } else {
+      pushCurrentMessage();
+      current = ALL_EVENTS_FINAL_INSTRUCTIONS;
+    }
     pushCurrentMessage();
   }
 

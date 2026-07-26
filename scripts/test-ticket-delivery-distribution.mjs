@@ -409,6 +409,16 @@ test("Meu ingresso com 2 ou mais ingressos mostra menu e nao envia QR imediatame
   assert.match(routerSource, /participantTickets\.length > 1[\s\S]*reply:\s*formatParticipantTicketSelectionPrompt\(participantTickets\)[\s\S]*nextContext:\s*buildParticipantTicketSelectionContext/);
 });
 
+test("REENVIAR INGRESSO lista somente eventos e comandos finais", () => {
+  assert.match(routerSource, /function formatPaidTicketResendOptions/);
+  assert.match(routerSource, /Escolha o evento que deseja receber novamente seu ingresso/);
+  assert.match(routerSource, /formatOptionLine\(\s*group\.option,\s*group\.title/);
+  assert.match(routerSource, /Digite \*BACK\* para voltar/);
+  assert.match(routerSource, /Para uma nova pesquisa, \*NEW\*/);
+  assert.doesNotMatch(routerSource, /Encontrei ingressos emitidos para este telefone/);
+  assert.doesNotMatch(routerSource, /group\.ticketsCount === 1/);
+});
+
 test("opcao individual envia ingressos do grupo escolhido e todos envia a lista completa", () => {
   assert.match(routerSource, /baseContext\.state !== "participant_ticket_selecting"/);
   assert.match(routerSource, /option === selection\.allOption\s*\? validDeliveries\s*:\s*validDeliveries\.filter/);

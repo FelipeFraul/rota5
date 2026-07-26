@@ -3914,16 +3914,18 @@ function formatPaidTicketResendOptions(groups: PaidTicketResendGroup[]) {
   return [
     "*REENVIAR INGRESSO*",
     "",
-    "Encontrei ingressos emitidos para este telefone.",
-    "Escolha o evento que deseja receber novamente:",
+    "Escolha o evento que deseja receber novamente seu ingresso:",
     "",
     ...groups.map((group) =>
       formatOptionLine(
         group.option,
-        `${group.title} - ${formatDateTime(group.startsAt)} - ${group.city}/${group.state} (${group.ticketsCount} ingresso${group.ticketsCount === 1 ? "" : "s"})`,
+        group.title,
         { preserveCase: true },
       ),
     ),
+    "",
+    "Digite *BACK* para voltar.",
+    "Para uma nova pesquisa, *NEW*",
   ].join("\n");
 }
 
