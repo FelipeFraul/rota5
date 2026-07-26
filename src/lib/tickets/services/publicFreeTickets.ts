@@ -15,6 +15,7 @@ export type IssuePublicFreeTicketsResult =
       delivery: {
         message: string;
         qrImages: Array<{
+          ticketId: string;
           imageUrl: string;
           caption: string;
         }>;

@@ -14,6 +14,7 @@ export type TicketWhatsAppMessage = {
   message_type: WhatsAppMessageType;
   body: string | null;
   provider_message_id: string | null;
+  created_at: string;
   raw_metadata: Record<string, unknown>;
 };
 
@@ -39,7 +40,7 @@ export async function findInboundMessageByProviderId(
   const { data: message, error } = await supabase
     .from("whatsapp_messages")
     .select(
-      "id, conversation_id, customer_id, direction, message_type, body, provider_message_id, raw_metadata",
+      "id, conversation_id, customer_id, direction, message_type, body, provider_message_id, created_at, raw_metadata",
     )
     .eq("direction", "inbound")
     .eq("provider_message_id", providerMessageId)
@@ -147,7 +148,7 @@ export async function saveWhatsAppMessage({
       raw_metadata: rawMetadata,
     })
     .select(
-      "id, conversation_id, customer_id, direction, message_type, body, provider_message_id, raw_metadata",
+      "id, conversation_id, customer_id, direction, message_type, body, provider_message_id, created_at, raw_metadata",
     )
     .single<TicketWhatsAppMessage>();
 

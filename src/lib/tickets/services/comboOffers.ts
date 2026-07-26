@@ -6,6 +6,7 @@ import { createMercadoPagoPayment } from "@/lib/mercado-pago/client";
 import { getEnv } from "@/lib/env";
 import { logError, logInfo, logWarn } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getComboOfferDelayMinutes } from "@/lib/tickets/config";
 import { normalizeWhatsAppPhone } from "@/lib/tickets/phones";
 import { getOrCreateOpenConversation, updateConversationAfterMessage } from "@/lib/tickets/services/conversations";
 import { upsertCustomerFromWhatsApp } from "@/lib/tickets/services/customers";
@@ -147,6 +148,8 @@ type ComboOfferCandidateTicketRow = {
   offer_source?: "buyer" | "participant";
   recipient_phone?: string | null;
   participant_delivery_status?: string | null;
+  buyer_qr_delivered_at?: string | null;
+  participant_delivered_at?: string | null;
   issued_at: string;
   orders:
     | {
@@ -2060,6 +2063,32 @@ function comboOfferRecipientFromTicket(ticket: ComboOfferCandidateTicketRow) {
   };
 }
 
+function getComboOfferRecipientQrDeliveredAt(
+  ticket: ComboOfferCandidateTicketRow,
+  recipientType: "buyer" | "participant",
+) {
+  return recipientType === "participant"
+    ? ticket.participant_delivered_at ?? null
+    : ticket.buyer_qr_delivered_at ?? null;
+}
+
+function hasComboOfferQrDelayElapsed({
+  qrDeliveredAt,
+  now,
+  delayMinutes = getComboOfferDelayMinutes(),
+}: {
+  qrDeliveredAt: string | null | undefined;
+  now: Date;
+  delayMinutes?: number;
+}) {
+  if (!qrDeliveredAt) return false;
+
+  const deliveredAt = new Date(qrDeliveredAt).getTime();
+  if (!Number.isFinite(deliveredAt)) return false;
+
+  return deliveredAt + delayMinutes * 60_000 <= now.getTime();
+}
+
 async function loadSentComboOfferKeys(customerIds: string[], recipientPhones: string[] = []) {
   if (!customerIds.length && !recipientPhones.length) {
     return { legacyKeys: new Set<string>(), recipientKeys: new Set<string>() };
@@ -2132,7 +2161,8 @@ function mergeComboOfferCandidateTickets(
 
   return Array.from(byId.values()).sort(
     (left, right) =>
-      new Date(left.issued_at).getTime() - new Date(right.issued_at).getTime(),
+      new Date(left.buyer_qr_delivered_at ?? left.participant_delivered_at ?? left.issued_at).getTime() -
+      new Date(right.buyer_qr_delivered_at ?? right.participant_delivered_at ?? right.issued_at).getTime(),
   );
 }
 
@@ -2276,14 +2306,18 @@ export async function sendScheduledComboOffers(limit = 100) {
   const recentPurchaseFrom = new Date(
     now.getTime() - CUSTOM_OFFER_LOOKBACK_MINUTES * 60_000,
   ).toISOString();
+  const recentQrDeliveryFrom = new Date(
+    now.getTime() - Math.max(CUSTOM_OFFER_LOOKBACK_MINUTES, getComboOfferDelayMinutes() + CUSTOM_OFFER_SEND_GRACE_MINUTES) * 60_000,
+  ).toISOString();
   const supabase = getSupabaseAdmin();
   const [
     { data: eventWindowTickets, error: eventWindowError },
     { data: recentPurchaseTickets, error: recentPurchaseError },
+    { data: recentQrDeliveryTickets, error: recentQrDeliveryError },
   ] = await Promise.all([
     supabase
     .from("tickets")
-    .select("id, customer_id, recipient_phone, participant_delivery_status, issued_at, customers(whatsapp_phone), orders!inner(id, created_at, status, official_table_map_reservations!inner(place_code, status)), event_sessions!inner(id, event_id, starts_at, timezone, status, events!inner(id, title, status))")
+    .select("id, customer_id, recipient_phone, participant_delivery_status, buyer_qr_delivered_at, participant_delivered_at, issued_at, customers(whatsapp_phone), orders!inner(id, created_at, status, official_table_map_reservations!inner(place_code, status)), event_sessions!inner(id, event_id, starts_at, timezone, status, events!inner(id, title, status))")
     .eq("status", "issued")
     .eq("orders.status", "paid")
     .eq("orders.official_table_map_reservations.status", "paid")
@@ -2296,7 +2330,7 @@ export async function sendScheduledComboOffers(limit = 100) {
       .returns<ComboOfferCandidateTicketRow[]>(),
     supabase
       .from("tickets")
-      .select("id, customer_id, recipient_phone, participant_delivery_status, issued_at, customers(whatsapp_phone), orders!inner(id, created_at, status, official_table_map_reservations!inner(place_code, status)), event_sessions!inner(id, event_id, starts_at, timezone, status, events!inner(id, title, status))")
+      .select("id, customer_id, recipient_phone, participant_delivery_status, buyer_qr_delivered_at, participant_delivered_at, issued_at, customers(whatsapp_phone), orders!inner(id, created_at, status, official_table_map_reservations!inner(place_code, status)), event_sessions!inner(id, event_id, starts_at, timezone, status, events!inner(id, title, status))")
       .eq("status", "issued")
       .eq("orders.status", "paid")
       .eq("orders.official_table_map_reservations.status", "paid")
@@ -2307,15 +2341,29 @@ export async function sendScheduledComboOffers(limit = 100) {
       .order("issued_at", { ascending: true })
       .limit(limit)
       .returns<ComboOfferCandidateTicketRow[]>(),
+    supabase
+      .from("tickets")
+      .select("id, customer_id, recipient_phone, participant_delivery_status, buyer_qr_delivered_at, participant_delivered_at, issued_at, customers(whatsapp_phone), orders!inner(id, created_at, status, official_table_map_reservations!inner(place_code, status)), event_sessions!inner(id, event_id, starts_at, timezone, status, events!inner(id, title, status))")
+      .eq("status", "issued")
+      .eq("orders.status", "paid")
+      .eq("orders.official_table_map_reservations.status", "paid")
+      .or(`buyer_qr_delivered_at.gte.${recentQrDeliveryFrom},participant_delivered_at.gte.${recentQrDeliveryFrom}`)
+      .in("event_sessions.status", getPublicVisibleSessionStatuses("offer"))
+      .in("event_sessions.events.status", PUBLIC_VISIBLE_EVENT_STATUSES)
+      .gte("event_sessions.starts_at", eventWindowFrom)
+      .order("issued_at", { ascending: true })
+      .limit(limit)
+      .returns<ComboOfferCandidateTicketRow[]>(),
   ]);
 
-  const error = eventWindowError ?? recentPurchaseError;
+  const error = eventWindowError ?? recentPurchaseError ?? recentQrDeliveryError;
   if (error) throw error;
 
   const tickets = uniqueComboOfferCandidateTicketsByOrder(
     mergeComboOfferCandidateTickets(
       eventWindowTickets,
       recentPurchaseTickets,
+      recentQrDeliveryTickets,
     ),
   );
   let sentCount = 0;
@@ -2329,6 +2377,7 @@ export async function sendScheduledComboOffers(limit = 100) {
     const recipient = comboOfferRecipientFromTicket(ticket);
     const phone = ticket.offer_phone ?? recipient?.phone ?? null;
     const recipientType = ticket.offer_source ?? recipient?.recipientType ?? "buyer";
+    const qrDeliveredAt = getComboOfferRecipientQrDeliveredAt(ticket, recipientType);
     let offerCustomerId = ticket.offer_customer_id ?? ticket.customer_id;
 
     if (
@@ -2345,6 +2394,11 @@ export async function sendScheduledComboOffers(limit = 100) {
         now,
       })
     ) {
+      skippedCount += 1;
+      continue;
+    }
+
+    if (!hasComboOfferQrDelayElapsed({ qrDeliveredAt, now })) {
       skippedCount += 1;
       continue;
     }
@@ -2424,11 +2478,11 @@ export async function sendScheduledComboOffers(limit = 100) {
         offer,
         session.starts_at,
         now,
-        ticket.issued_at,
+        qrDeliveredAt,
       );
       const shouldSendAsRecovery =
         !shouldSendOnSchedule &&
-        shouldRecoverMissedComboOffer(offer, session.starts_at, now, ticket.issued_at);
+        shouldRecoverMissedComboOffer(offer, session.starts_at, now, qrDeliveredAt);
       if (!shouldSendOnSchedule && !shouldSendAsRecovery) {
         skippedCount += 1;
         continue;
@@ -2506,6 +2560,8 @@ export async function sendScheduledComboOffers(limit = 100) {
             recipient_phone: phone,
             recipient_type: recipientType,
             offer_recipient_source: recipientType,
+            combo_offer_qr_delivered_at: qrDeliveredAt,
+            combo_offer_delay_minutes: getComboOfferDelayMinutes(),
             combo_offer_delivery_mode: shouldSendAsRecovery ? "recovery" : "scheduled",
             combo_offer_recovered: shouldSendAsRecovery,
           },

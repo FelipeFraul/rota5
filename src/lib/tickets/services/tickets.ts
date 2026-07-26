@@ -704,13 +704,47 @@ export async function markParticipantTicketDelivered(ticketId: string) {
     })
     .eq("id", ticketId)
     .eq("status", "issued")
-    .eq("participant_delivery_status", "awaiting_participant_request");
+    .eq("participant_delivery_status", "awaiting_participant_request")
+    .is("participant_delivered_at", null);
 
   if (error) {
     return { ok: false as const, reason: "persist_failed" as const };
   }
 
   return { ok: true as const, deliveredAt };
+}
+
+export async function markBuyerTicketQrDelivered({
+  ticketId,
+  deliveredAt,
+}: {
+  ticketId: string;
+  deliveredAt: string;
+}) {
+  if (!Number.isFinite(new Date(deliveredAt).getTime())) {
+    return { ok: false as const, reason: "invalid_delivered_at" as const };
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .rpc("mark_buyer_ticket_qr_delivered", {
+      p_ticket_id: ticketId,
+      p_delivered_at: deliveredAt,
+    })
+    .maybeSingle<{ ticket_id: string; buyer_qr_delivered_at: string }>();
+
+  if (error) {
+    return { ok: false as const, reason: "persist_failed" as const };
+  }
+
+  if (!data) {
+    return { ok: false as const, reason: "ticket_not_found" as const };
+  }
+
+  return {
+    ok: true as const,
+    deliveredAt: data.buyer_qr_delivered_at,
+  };
 }
 
 export async function getTicketBySignedToken(

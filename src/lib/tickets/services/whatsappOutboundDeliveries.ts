@@ -118,19 +118,20 @@ export async function markWhatsAppOutboundDeliverySent({
   deliveryId: string;
   providerMessageId?: string | null;
 }) {
+  const sentAt = new Date().toISOString();
   const { data, error } = await getSupabaseAdmin()
     .from("whatsapp_outbound_deliveries")
     .update({
       status: "sent",
       provider_message_id: providerMessageId ?? null,
       last_error: null,
-      sent_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      sent_at: sentAt,
+      updated_at: sentAt,
     })
     .eq("id", deliveryId)
     .eq("status", "sending")
-    .select("id")
-    .maybeSingle<{ id: string }>();
+    .select("id, sent_at")
+    .maybeSingle<{ id: string; sent_at: string | null }>();
 
   if (error) return { ok: false as const, error };
   if (!data) {
@@ -141,7 +142,7 @@ export async function markWhatsAppOutboundDeliverySent({
     };
   }
 
-  return { ok: true as const };
+  return { ok: true as const, sentAt: data.sent_at ?? sentAt };
 }
 
 export async function markWhatsAppOutboundDeliveryFailed({

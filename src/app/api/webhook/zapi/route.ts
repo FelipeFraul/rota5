@@ -60,7 +60,10 @@ import {
   DEFAULT_CONVERSATION_INACTIVITY_TTL_MINUTES,
   resolveConversationContextForInbound,
 } from "@/lib/tickets/conversationState";
-import { markParticipantTicketDelivered } from "@/lib/tickets/services/tickets";
+import {
+  markBuyerTicketQrDelivered,
+  markParticipantTicketDelivered,
+} from "@/lib/tickets/services/tickets";
 import {
   ADMIN_AUTH_REDACTED_BODY,
   verifyAdminUserPassphrase,
@@ -113,6 +116,7 @@ type RouteOutboundMessage =
       persistedBody?: string;
       delayMs?: number;
       suppressTitle?: boolean;
+      buyerDeliveryTicketId?: string;
       participantDeliveryTicketId?: string;
     }
   | {
@@ -123,6 +127,7 @@ type RouteOutboundMessage =
       persistedBody?: string;
       delayMs?: number;
       suppressTitle?: boolean;
+      buyerDeliveryTicketId?: string;
       participantDeliveryTicketId?: string;
     };
 
@@ -1638,7 +1643,12 @@ export async function POST(request: Request) {
         sendResult,
         messageType: outboundMessage.type,
         reason: "webhook_reply",
-        businessContext: outboundMessage.participantDeliveryTicketId
+        businessContext: outboundMessage.buyerDeliveryTicketId
+          ? {
+              buyer_delivery_ticket_id:
+                outboundMessage.buyerDeliveryTicketId,
+            }
+          : outboundMessage.participantDeliveryTicketId
           ? {
               participant_delivery_ticket_id:
                 outboundMessage.participantDeliveryTicketId,
@@ -1653,6 +1663,32 @@ export async function POST(request: Request) {
         code: outboundResult.error?.code,
       });
       outboundPersistenceFailed = true;
+    }
+
+    if (outboundMessage.buyerDeliveryTicketId) {
+      if (sendResult.ok) {
+        const deliveredResult = outboundResult.ok
+          ? await markBuyerTicketQrDelivered({
+              ticketId: outboundMessage.buyerDeliveryTicketId,
+              deliveredAt: outboundResult.message.created_at,
+            })
+          : { ok: false as const, reason: "outbound_message_not_persisted" as const };
+
+        if (!deliveredResult.ok) {
+          logError("Failed to mark buyer ticket QR as delivered after resend", {
+            conversationId: conversationResult.conversation.id,
+            ticketId: outboundMessage.buyerDeliveryTicketId,
+            reason: deliveredResult.reason,
+          });
+        }
+      } else {
+        logWarn("Buyer ticket QR send failed; first delivery timestamp remains unchanged", {
+          conversationId: conversationResult.conversation.id,
+          ticketId: outboundMessage.buyerDeliveryTicketId,
+          phoneLast4: outboundPhone.slice(-4),
+          error: sendResult.error,
+        });
+      }
     }
 
     if (outboundMessage.participantDeliveryTicketId) {

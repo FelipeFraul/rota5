@@ -23,6 +23,14 @@ const ticketDeliverySource = readFileSync(
   new URL("../src/lib/tickets/services/ticketDelivery.ts", import.meta.url),
   "utf8",
 );
+const outboundDeliveriesSource = readFileSync(
+  new URL("../src/lib/tickets/services/whatsappOutboundDeliveries.ts", import.meta.url),
+  "utf8",
+);
+const messagesServiceSource = readFileSync(
+  new URL("../src/lib/tickets/services/messages.ts", import.meta.url),
+  "utf8",
+);
 const comboOffersSource = readFileSync(
   new URL("../src/lib/tickets/services/comboOffers.ts", import.meta.url),
   "utf8",
@@ -31,8 +39,16 @@ const comboOfferTicketUniquenessMigration = readFileSync(
   new URL("../supabase/migrations/20260725000400_scope_combo_order_offer_uniqueness_by_ticket.sql", import.meta.url),
   "utf8",
 );
+const buyerQrDeliveryMigration = readFileSync(
+  new URL("../supabase/migrations/20260726000100_add_buyer_qr_delivered_at.sql", import.meta.url),
+  "utf8",
+);
 const comboRedemptionsSource = readFileSync(
   new URL("../src/lib/tickets/services/comboRedemptions.ts", import.meta.url),
+  "utf8",
+);
+const ticketsConfigSource = readFileSync(
+  new URL("../src/lib/tickets/config.ts", import.meta.url),
   "utf8",
 );
 const conversationStateSource = readFileSync(
@@ -382,6 +398,47 @@ test("CONFIRMAR usa RPC de vinculacao e limpa estado apos sucesso", () => {
   assert.match(ticketsServiceSource, /p_contacts:\s*contacts\.map/);
 });
 
+test("comprador registra primeira entrega valida do QR sem depender de pagamento para oferta", () => {
+  assert.match(ticketDeliverySource, /markBuyerTicketQrDelivered/);
+  assert.match(ticketDeliverySource, /markWhatsAppOutboundDeliverySent\([\s\S]*providerMessageId:\s*imageSendResult\.providerMessageId[\s\S]*markBuyerTicketQrDelivered\(\{[\s\S]*ticketId:\s*ticket\.ticketId,[\s\S]*deliveredAt:\s*markSentResult\.sentAt/);
+  assert.match(ticketsServiceSource, /export async function markBuyerTicketQrDelivered/);
+  assert.match(ticketsServiceSource, /deliveredAt:\s*string/);
+  assert.match(ticketsServiceSource, /\.rpc\("mark_buyer_ticket_qr_delivered"/);
+  assert.doesNotMatch(ticketsServiceSource, /\.is\("buyer_qr_delivered_at",\s*null\)/);
+  assert.doesNotMatch(ticketsServiceSource.match(/export async function markBuyerTicketQrDelivered[\s\S]*?^}/m)?.[0] ?? "", /new Date\(/);
+  assert.match(ticketDeliverySource, /ticketId:\s*ticket\.ticketId/);
+  assert.match(routerSource, /buyerDeliveryTicketId:\s*image\.ticketId/);
+  assert.match(zapiWebhookSource, /markBuyerTicketQrDelivered/);
+  assert.match(zapiWebhookSource, /outboundMessage\.buyerDeliveryTicketId[\s\S]*markBuyerTicketQrDelivered/);
+});
+
+test("migration cria e preenche buyer_qr_delivered_at pelo primeiro QR automatico enviado", () => {
+  assert.match(buyerQrDeliveryMigration, /add column if not exists buyer_qr_delivered_at timestamptz/);
+  assert.match(buyerQrDeliveryMigration, /tickets_buyer_qr_delivered_at_idx/);
+  assert.match(buyerQrDeliveryMigration, /create or replace function public\.mark_buyer_ticket_qr_delivered/);
+  assert.match(buyerQrDeliveryMigration, /least\([\s\S]*coalesce\(ticket\.buyer_qr_delivered_at,\s*p_delivered_at\),[\s\S]*p_delivered_at/);
+  assert.match(buyerQrDeliveryMigration, /grant execute on function public\.mark_buyer_ticket_qr_delivered\(uuid, timestamptz\) to service_role/);
+  assert.match(buyerQrDeliveryMigration, /min\(delivery\.sent_at\) as first_sent_at/);
+  assert.match(buyerQrDeliveryMigration, /delivery\.reason = 'paid_ticket_qr_delivery'/);
+  assert.match(buyerQrDeliveryMigration, /delivery\.status = 'sent'/);
+  assert.match(buyerQrDeliveryMigration, /first_buyer_qr_delivery\.first_sent_at < ticket\.buyer_qr_delivered_at/);
+});
+
+test("delivery pago ja marcado como sent reconcilia buyer_qr_delivered_at com sent_at existente", () => {
+  assert.match(outboundDeliveriesSource, /const sentAt = new Date\(\)\.toISOString\(\)/);
+  assert.match(outboundDeliveriesSource, /\.select\("id, sent_at"\)/);
+  assert.match(outboundDeliveriesSource, /return \{ ok: true as const, sentAt: data\.sent_at \?\? sentAt \}/);
+  assert.match(ticketDeliverySource, /if \(imageDelivery\.delivery\.status === "sent"\) \{[\s\S]*imageDelivery\.delivery\.sent_at[\s\S]*markBuyerTicketQrDelivered\(\{[\s\S]*deliveredAt:\s*imageDelivery\.delivery\.sent_at/);
+});
+
+test("webhook de reenvio usa created_at persistido e nao inventa horario para QR do comprador", () => {
+  assert.match(messagesServiceSource, /created_at:\s*string/);
+  assert.match(messagesServiceSource, /provider_message_id, created_at, raw_metadata/);
+  assert.match(zapiWebhookSource, /outboundResult\.ok[\s\S]*deliveredAt:\s*outboundResult\.message\.created_at/);
+  assert.match(zapiWebhookSource, /outbound_message_not_persisted/);
+  assert.doesNotMatch(zapiWebhookSource.match(/if \(outboundMessage\.buyerDeliveryTicketId\)[\s\S]*?if \(outboundMessage\.participantDeliveryTicketId\)/)?.[0] ?? "", /new Date\(/);
+});
+
 test("RPC reserva exatamente 1 ingresso do comprador e vincula contatos aos demais", () => {
   assert.match(buyerReservedMigrationSource, /v_expected_contacts_count := v_ticket_count - 1/);
   assert.match(buyerReservedMigrationSource, /if v_contacts_count <> v_expected_contacts_count then[\s\S]*ticket_contact_count_mismatch/);
@@ -449,9 +506,11 @@ test("shows iguais com sessoes diferentes sao diferenciados", () => {
 
 test("falha parcial mantem pendente e marca apenas imagens enviadas com sucesso", () => {
   assert.match(routerSource, /deliveryStatus === "awaiting_participant_request"/);
-  assert.match(routerSource, /shouldMarkDelivered && message\.type === "image"/);
+  assert.match(routerSource, /if \(message\.type !== "image"\) return message/);
+  assert.match(routerSource, /shouldMarkDelivered[\s\S]*participantDeliveryTicketId:\s*delivery\.ticket\.ticketId/);
   assert.match(zapiWebhookSource, /if \(!sendResult\.ok\)[\s\S]*Participant ticket QR send failed; ticket remains pending for retry/);
   assert.match(zapiWebhookSource, /if \(outboundMessage\.participantDeliveryTicketId\)[\s\S]*markParticipantTicketDelivered/);
+  assert.match(ticketsServiceSource, /\.is\("participant_delivered_at",\s*null\)/);
 });
 
 test("sair cancelar e menu limpam estado de selecao de ingresso", () => {
@@ -482,7 +541,8 @@ test("Meu ingresso suporta multiplos ingressos para o mesmo telefone e compras d
 
 test("reenvio de ingressos ja delivered preserva status e data", () => {
   assert.match(routerSource, /deliveryStatus === "awaiting_participant_request"/);
-  assert.match(routerSource, /shouldMarkDelivered && message\.type === "image"/);
+  assert.match(routerSource, /if \(message\.type !== "image"\) return message/);
+  assert.match(routerSource, /shouldMarkDelivered[\s\S]*participantDeliveryTicketId:\s*delivery\.ticket\.ticketId/);
   assert.doesNotMatch(routerSource, /deliveryStatus === "delivered"[\s\S]{0,120}participantDeliveryTicketId/);
 });
 
@@ -503,13 +563,14 @@ test("participante fica elegivel para agendamento somente apos QR entregue", () 
   assert.match(zapiWebhookSource, /if \(outboundMessage\.participantDeliveryTicketId\)[\s\S]*markParticipantTicketDelivered/);
   assert.doesNotMatch(comboOffersSource, /\.eq\("participant_delivery_status",\s*"delivered"\)/);
   assert.match(comboOffersSource, /recipientPhone[\s\S]*participant_delivery_status !== "delivered"/);
-  assert.doesNotMatch(comboOffersSource, /participant_delivered_at/);
+  assert.match(comboOffersSource, /participant_delivered_at/);
+  assert.match(comboOffersSource, /getComboOfferRecipientQrDeliveredAt[\s\S]*ticket\.participant_delivered_at/);
   assert.doesNotMatch(comboOffersSource, /\.eq\("participant_delivery_status",\s*"awaiting_participant_request"\)/);
 });
 
 test("scheduler coleta comprador e participantes entregues para combo", () => {
   assert.match(comboOffersSource, /export async function sendScheduledComboOffers/);
-  assert.match(comboOffersSource, /recipient_phone, participant_delivery_status/);
+  assert.match(comboOffersSource, /recipient_phone, participant_delivery_status, buyer_qr_delivered_at, participant_delivered_at/);
   assert.doesNotMatch(comboOffersSource, /\.is\("recipient_phone",\s*null\)/);
   assert.match(comboOffersSource, /upsertCustomerFromWhatsApp/);
   assert.match(comboOffersSource, /const phone = ticket\.offer_phone \?\? recipient\?\.phone/);
@@ -519,8 +580,8 @@ test("scheduler envia combo para pedido com mesa ou bistro pago", () => {
   assert.match(comboOffersSource, /official_table_map_reservations!inner\(place_code, status\)/);
   assert.match(comboOffersSource, /\.eq\("orders\.status",\s*"paid"\)/);
   assert.match(comboOffersSource, /\.eq\("orders\.official_table_map_reservations\.status",\s*"paid"\)/);
-  assert.match(comboOffersSource, /mergeComboOfferCandidateTickets\([\s\S]*eventWindowTickets[\s\S]*recentPurchaseTickets/);
-  assert.match(comboOffersSource, /shouldSendComboOfferNow\([\s\S]*offer,[\s\S]*session\.starts_at,[\s\S]*now,[\s\S]*ticket\.issued_at/);
+  assert.match(comboOffersSource, /mergeComboOfferCandidateTickets\([\s\S]*eventWindowTickets[\s\S]*recentPurchaseTickets[\s\S]*recentQrDeliveryTickets/);
+  assert.match(comboOffersSource, /shouldSendComboOfferNow\([\s\S]*offer,[\s\S]*session\.starts_at,[\s\S]*now,[\s\S]*qrDeliveredAt/);
   assert.match(comboOffersSource, /const shouldSendOnSchedule = shouldSendComboOfferNow/);
   assert.match(comboOffersSource, /const offset = offer\.send_offset_minutes/);
 });
@@ -528,10 +589,23 @@ test("scheduler envia combo para pedido com mesa ou bistro pago", () => {
 test("oferta perdida e recuperada uma unica vez quando janela passou mas evento nao iniciou", () => {
   assert.match(comboOffersSource, /function shouldRecoverMissedComboOffer/);
   assert.match(comboOffersSource, /if \(!Number\.isFinite\(start\) \|\| current >= start\) return false/);
-  assert.match(comboOffersSource, /const shouldSendAsRecovery =[\s\S]*!shouldSendOnSchedule[\s\S]*shouldRecoverMissedComboOffer\(offer,\s*session\.starts_at,\s*now,\s*ticket\.issued_at\)/);
+  assert.match(comboOffersSource, /const shouldSendAsRecovery =[\s\S]*!shouldSendOnSchedule[\s\S]*shouldRecoverMissedComboOffer\(offer,\s*session\.starts_at,\s*now,\s*qrDeliveredAt\)/);
   assert.match(comboOffersSource, /if \(!shouldSendOnSchedule && !shouldSendAsRecovery\) \{[\s\S]*skippedCount \+= 1/);
   assert.match(comboOffersSource, /combo_offer_delivery_mode:\s*shouldSendAsRecovery \? "recovery" : "scheduled"/);
   assert.match(comboOffersSource, /combo_offer_recovered:\s*shouldSendAsRecovery/);
+});
+
+test("oferta de combo depende exclusivamente de primeira entrega do QR mais delay configurado", () => {
+  assert.match(ticketsConfigSource, /DEFAULT_COMBO_OFFER_DELAY_MINUTES = 10/);
+  assert.match(ticketsConfigSource, /COMBO_OFFER_DELAY_MINUTES/);
+  assert.match(comboOffersSource, /getComboOfferDelayMinutes/);
+  assert.match(comboOffersSource, /function hasComboOfferQrDelayElapsed/);
+  assert.match(comboOffersSource, /if \(!qrDeliveredAt\) return false/);
+  assert.match(comboOffersSource, /deliveredAt \+ delayMinutes \* 60_000 <= now\.getTime\(\)/);
+  assert.match(comboOffersSource, /if \(!hasComboOfferQrDelayElapsed\(\{ qrDeliveredAt, now \}\)\) \{[\s\S]*skippedCount \+= 1/);
+  assert.match(comboOffersSource, /combo_offer_qr_delivered_at:\s*qrDeliveredAt/);
+  assert.match(comboOffersSource, /combo_offer_delay_minutes:\s*getComboOfferDelayMinutes\(\)/);
+  assert.doesNotMatch(comboOffersSource, /shouldSendComboOfferNow\([\s\S]*ticket\.issued_at/);
 });
 
 test("recuperacao de oferta perdida continua protegida pela deduplicacao antes do envio", () => {

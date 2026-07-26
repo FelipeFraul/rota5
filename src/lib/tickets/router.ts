@@ -417,6 +417,7 @@ export type RouteTicketMessageOutput = {
         persistedBody?: string;
         delayMs?: number;
         suppressTitle?: boolean;
+        buyerDeliveryTicketId?: string;
         participantDeliveryTicketId?: string;
       }
     | {
@@ -427,6 +428,7 @@ export type RouteTicketMessageOutput = {
         persistedBody?: string;
         delayMs?: number;
         suppressTitle?: boolean;
+        buyerDeliveryTicketId?: string;
         participantDeliveryTicketId?: string;
       }
   >;
@@ -3581,6 +3583,7 @@ function buildPublicFreeTicketOutboundMessages(
       type: "image" as const,
       imageUrl: image.imageUrl,
       caption: image.caption,
+      buyerDeliveryTicketId: image.ticketId,
     })),
   ];
 }
@@ -3594,6 +3597,7 @@ function buildPaidTicketResendOutboundMessages(
       type: "image" as const,
       imageUrl: image.imageUrl,
       caption: image.caption,
+      buyerDeliveryTicketId: image.ticketId,
     })),
   ];
 }
@@ -3714,12 +3718,21 @@ async function buildParticipantTicketDeliveryResult({
     const shouldMarkDelivered =
       delivery.deliveryStatus === "awaiting_participant_request";
 
-    return buildPaidTicketResendOutboundMessages(payload).map((message) => ({
-      ...message,
-      ...(shouldMarkDelivered && message.type === "image"
-        ? { participantDeliveryTicketId: delivery.ticket.ticketId }
-        : {}),
-    }));
+    return buildPaidTicketResendOutboundMessages(payload).map((message) => {
+      if (message.type !== "image") return message;
+      const participantMessage = {
+        type: message.type,
+        imageUrl: message.imageUrl,
+        caption: message.caption,
+      };
+
+      return {
+        ...participantMessage,
+        ...(shouldMarkDelivered
+          ? { participantDeliveryTicketId: delivery.ticket.ticketId }
+          : {}),
+      };
+    });
   });
 
   return {

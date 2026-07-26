@@ -19,6 +19,7 @@ import {
   createSignedTicketToken,
   createTicketUrl,
   getTicketsForOrder,
+  markBuyerTicketQrDelivered,
   type TicketForDelivery,
 } from "@/lib/tickets/services/tickets";
 import {
@@ -184,6 +185,7 @@ function formatTicketSummary(tickets: TicketForDelivery[]) {
 export type TicketDeliveryPayload = {
   message: string;
   qrImages: Array<{
+    ticketId: string;
     imageUrl: string;
     caption: string;
   }>;
@@ -216,6 +218,7 @@ export async function buildTicketDeliveryPayload(
         });
 
         return {
+          ticketId: ticket.ticketId,
           imageUrl: ticketQrImageToDataUrl(ticketQrImage.buffer),
           caption: QR_CODE_CAPTION,
         };
@@ -733,6 +736,20 @@ export async function deliverTicketsForOrder(
     }
 
     if (imageDelivery.delivery.status === "sent") {
+      if (imageDelivery.delivery.sent_at) {
+        const markBuyerDeliveredResult = await markBuyerTicketQrDelivered({
+          ticketId: ticket.ticketId,
+          deliveredAt: imageDelivery.delivery.sent_at,
+        });
+        if (!markBuyerDeliveredResult.ok) {
+          logError("Failed to reconcile buyer ticket QR delivery timestamp", {
+            orderId,
+            ticketId: ticket.ticketId,
+            reason: markBuyerDeliveredResult.reason,
+          });
+          return { ok: false, reason: "internal_error" };
+        }
+      }
       logInfo("Skipped already sent ticket QR WhatsApp delivery", {
         orderId,
         ticketId: ticket.ticketId,
@@ -848,6 +865,19 @@ export async function deliverTicketsForOrder(
         orderId,
         ticketId: ticket.ticketId,
         code: getDeliveryStateUpdateFailureCode(markSentResult),
+      });
+      return { ok: false, reason: "internal_error" };
+    }
+
+    const markBuyerDeliveredResult = await markBuyerTicketQrDelivered({
+      ticketId: ticket.ticketId,
+      deliveredAt: markSentResult.sentAt,
+    });
+    if (!markBuyerDeliveredResult.ok) {
+      logError("Failed to mark buyer ticket QR as delivered after send", {
+        orderId,
+        ticketId: ticket.ticketId,
+        reason: markBuyerDeliveredResult.reason,
       });
       return { ok: false, reason: "internal_error" };
     }
