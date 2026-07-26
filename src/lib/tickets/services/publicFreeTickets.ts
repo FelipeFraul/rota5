@@ -4,6 +4,7 @@ import { logError } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { buildTicketDeliveryPayload } from "@/lib/tickets/services/ticketDelivery";
 import { getTicketsForOrder } from "@/lib/tickets/services/tickets";
+import { isPublicEventVisible } from "@/lib/tickets/services/publicEventVisibility";
 
 export type IssuePublicFreeTicketsResult =
   | {
@@ -47,7 +48,15 @@ type IssuePublicFreeOrderRpcResponse = {
 
 type ReservationEventRow = {
   id: string;
-  event_sessions: { event_id: string } | null;
+  event_sessions:
+    | {
+        event_id: string;
+        starts_at: string;
+        timezone?: string | null;
+        status: string;
+        events: { status: string } | null;
+      }
+    | null;
 };
 
 type FreeReservationItemRow = {
@@ -188,6 +197,24 @@ async function validatePublicCourtesyLimits(reservationId: string) {
   return true;
 }
 
+async function validatePublicFreeReservationVisibility(reservationId: string) {
+  const { data, error } = await getSupabaseAdmin()
+    .from("reservations")
+    .select("id, event_sessions!inner(event_id, starts_at, timezone, status, events(status))")
+    .eq("id", reservationId)
+    .maybeSingle<ReservationEventRow>();
+
+  if (error) throw error;
+
+  return isPublicEventVisible({
+    startsAt: data?.event_sessions?.starts_at,
+    timezone: data?.event_sessions?.timezone,
+    sessionStatus: data?.event_sessions?.status,
+    eventStatus: data?.event_sessions?.events?.status,
+    purpose: "checkout",
+  });
+}
+
 export async function issuePublicFreeTicketsForOrder({
   orderId,
   customerId,
@@ -229,6 +256,13 @@ export async function issuePublicFreeTicketsForOrder({
   }
 
   try {
+    const reservationVisible = await validatePublicFreeReservationVisibility(
+      order.reservation_id,
+    );
+    if (!reservationVisible) {
+      return { ok: false, reason: "reservation_not_payable" };
+    }
+
     const courtesyLimitsOk = await validatePublicCourtesyLimits(order.reservation_id);
     if (!courtesyLimitsOk) {
       return { ok: false, reason: "free_ticket_limit_exceeded" };

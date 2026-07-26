@@ -55,7 +55,7 @@ test("operational dashboard frontend fetches safely and keeps current visual con
   assert.match(hook, /inFlightRef/);
   assert.match(hook, /document\.visibilityState === "visible"/);
   assert.match(hook, /30_000/);
-  assert.match(component, /COMPARISON_DAY_OPTIONS = \[7, 15, 30, 60, 90\]/);
+  assert.match(component, /const comparisonDays = 30/);
   assert.match(component, /useOperationalDashboard/);
   assert.match(component, /setSelectedEventId/);
   assert.match(component, /A IA ainda não recebeu fatos deste módulo para interpretar/);

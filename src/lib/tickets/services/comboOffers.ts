@@ -13,6 +13,12 @@ import { saveWhatsAppMessage } from "@/lib/tickets/services/messages";
 import { buildWhatsAppOutboundMetadata } from "@/lib/tickets/services/outboundMessages";
 import { centsToDecimalAmount, decimalAmountToCents } from "@/lib/tickets/services/payments";
 import {
+  getPublicEventVisibilityQueryFloorIso,
+  getPublicVisibleSessionStatuses,
+  isPublicEventVisible,
+  PUBLIC_VISIBLE_EVENT_STATUSES,
+} from "@/lib/tickets/services/publicEventVisibility";
+import {
   claimWhatsAppOutboundDelivery,
   getOrCreateWhatsAppOutboundDelivery,
   markWhatsAppOutboundDeliveryFailed,
@@ -123,7 +129,7 @@ type ComboOrderRow = {
     | null;
   customers?: { whatsapp_phone: string | null; email?: string | null } | null;
   events?: { title: string; city: string; state: string; venues?: { name: string | null } | null } | null;
-  event_sessions?: { starts_at: string } | null;
+  event_sessions?: { starts_at: string; timezone?: string | null; status?: string; events?: { status: string } | null } | null;
 };
 
 type ComboPaymentRow = {
@@ -161,13 +167,17 @@ type ComboOfferCandidateTicketRow = {
         id: string;
         event_id: string;
         starts_at: string;
-        events: { id: string; title: string };
+        timezone?: string | null;
+        status?: string;
+        events: { id: string; title: string; status?: string };
       }
     | {
         id: string;
         event_id: string;
         starts_at: string;
-        events: { id: string; title: string };
+        timezone?: string | null;
+        status?: string;
+        events: { id: string; title: string; status?: string };
       }[]
     | null;
   customers: { whatsapp_phone: string | null } | null;
@@ -176,7 +186,7 @@ type ComboOfferCandidateTicketRow = {
 type PaidComboOrderRow = ComboOrderRow & {
   customers: { whatsapp_phone: string | null };
   events: { title: string; city: string; state: string; venues?: { name: string | null } | null };
-  event_sessions: { starts_at: string };
+  event_sessions: { starts_at: string; timezone?: string | null; status?: string; events?: { status: string } | null };
 };
 
 function firstJoin<T>(value: T | T[] | null | undefined) {
@@ -826,12 +836,25 @@ async function loadOfferForSession(offerId: string, eventId: string, sessionId: 
 
   const { data: session, error: sessionError } = await supabase
     .from("event_sessions")
-    .select("id, event_id")
+    .select("id, event_id, starts_at, timezone, status, events!inner(status)")
     .eq("id", sessionId)
     .eq("event_id", eventId)
-    .maybeSingle<{ id: string; event_id: string }>();
+    .gte("starts_at", getPublicEventVisibilityQueryFloorIso())
+    .in("events.status", PUBLIC_VISIBLE_EVENT_STATUSES)
+    .maybeSingle<{ id: string; event_id: string; starts_at: string; timezone: string | null; status: string; events: { status: string } | null }>();
 
   if (sessionError || !session) return null;
+  if (
+    !isPublicEventVisible({
+      startsAt: session.starts_at,
+      timezone: session.timezone,
+      sessionStatus: session.status,
+      eventStatus: session.events?.status,
+      purpose: "offer",
+    })
+  ) {
+    return null;
+  }
 
   return offer;
 }
@@ -986,11 +1009,23 @@ export async function createComboOrderForCheckout({
 export async function getPublicComboCheckoutOrder(orderId: string, token: string) {
   const { data: order, error } = await getSupabaseAdmin()
     .from("combo_orders")
-    .select("id, offer_id, customer_id, event_id, session_id, status, quantity, unit_amount_cents, total_amount_cents, currency, external_reference, checkout_token_hash, checkout_expires_at, combo_offers(name, description, image_url, original_price_cents), customers(whatsapp_phone, email), events(title, city, state, venues(name)), event_sessions(starts_at)")
+    .select("id, offer_id, customer_id, event_id, session_id, status, quantity, unit_amount_cents, total_amount_cents, currency, external_reference, checkout_token_hash, checkout_expires_at, combo_offers(name, description, image_url, original_price_cents), customers(whatsapp_phone, email), events(title, city, state, venues(name)), event_sessions(starts_at, timezone, status, events(status))")
     .eq("id", orderId)
+    .gte("event_sessions.starts_at", getPublicEventVisibilityQueryFloorIso())
     .maybeSingle<ComboOrderRow>();
 
   if (error || !order || order.status !== "pending_payment") return null;
+  if (
+    !isPublicEventVisible({
+      startsAt: order.event_sessions?.starts_at,
+      timezone: order.event_sessions?.timezone,
+      sessionStatus: order.event_sessions?.status,
+      eventStatus: order.event_sessions?.events?.status,
+      purpose: "checkout",
+    })
+  ) {
+    return null;
+  }
   if (new Date(order.checkout_expires_at).getTime() <= Date.now()) return null;
   if (!checkoutTokenHashMatches(token, order.checkout_token_hash)) {
     return null;
@@ -1285,8 +1320,9 @@ async function generatePixQrImage(qrCode: string | null) {
 async function loadPaidComboOrder(orderId: string) {
   const { data, error } = await getSupabaseAdmin()
     .from("combo_orders")
-    .select("id, offer_id, customer_id, event_id, session_id, status, quantity, unit_amount_cents, total_amount_cents, currency, external_reference, checkout_token_hash, checkout_expires_at, combo_offers(name, description, image_url, original_price_cents), customers(whatsapp_phone), events(title, city, state, venues(name)), event_sessions(starts_at)")
+    .select("id, offer_id, customer_id, event_id, session_id, status, quantity, unit_amount_cents, total_amount_cents, currency, external_reference, checkout_token_hash, checkout_expires_at, combo_offers(name, description, image_url, original_price_cents), customers(whatsapp_phone), events(title, city, state, venues(name)), event_sessions(starts_at, timezone, status, events(status))")
     .eq("id", orderId)
+    .gte("event_sessions.starts_at", getPublicEventVisibilityQueryFloorIso())
     .maybeSingle<PaidComboOrderRow>();
 
   if (error) throw error;
@@ -1298,6 +1334,17 @@ export async function deliverComboOrder(orderId: string) {
   const order = await loadPaidComboOrder(orderId);
 
   if (!order || order.status !== "paid") return { ok: false as const, reason: "order_not_found" as const };
+  if (
+    !isPublicEventVisible({
+      startsAt: order.event_sessions.starts_at,
+      timezone: order.event_sessions.timezone,
+      sessionStatus: order.event_sessions.status,
+      eventStatus: order.event_sessions.events?.status,
+      purpose: "issued_access",
+    })
+  ) {
+    return { ok: false as const, reason: "order_not_found" as const };
+  }
 
   const existing = await supabase
     .from("combo_redemptions")
@@ -2222,7 +2269,7 @@ export async function sendScheduledComboOffers(limit = 100) {
   await expireComboOrders(limit);
 
   const now = new Date();
-  const eventWindowFrom = now.toISOString();
+  const eventWindowFrom = getPublicEventVisibilityQueryFloorIso(now);
   const eventWindowTo = new Date(
     now.getTime() + EVENT_OFFER_LOOKAHEAD_MINUTES * 60_000,
   ).toISOString();
@@ -2236,10 +2283,12 @@ export async function sendScheduledComboOffers(limit = 100) {
   ] = await Promise.all([
     supabase
     .from("tickets")
-    .select("id, customer_id, recipient_phone, participant_delivery_status, issued_at, customers(whatsapp_phone), orders!inner(id, created_at, status, official_table_map_reservations!inner(place_code, status)), event_sessions!inner(id, event_id, starts_at, events!inner(id, title))")
+    .select("id, customer_id, recipient_phone, participant_delivery_status, issued_at, customers(whatsapp_phone), orders!inner(id, created_at, status, official_table_map_reservations!inner(place_code, status)), event_sessions!inner(id, event_id, starts_at, timezone, status, events!inner(id, title, status))")
     .eq("status", "issued")
     .eq("orders.status", "paid")
     .eq("orders.official_table_map_reservations.status", "paid")
+    .in("event_sessions.status", getPublicVisibleSessionStatuses("offer"))
+    .in("event_sessions.events.status", PUBLIC_VISIBLE_EVENT_STATUSES)
     .gte("event_sessions.starts_at", eventWindowFrom)
     .lte("event_sessions.starts_at", eventWindowTo)
     .order("issued_at", { ascending: true })
@@ -2247,11 +2296,13 @@ export async function sendScheduledComboOffers(limit = 100) {
       .returns<ComboOfferCandidateTicketRow[]>(),
     supabase
       .from("tickets")
-      .select("id, customer_id, recipient_phone, participant_delivery_status, issued_at, customers(whatsapp_phone), orders!inner(id, created_at, status, official_table_map_reservations!inner(place_code, status)), event_sessions!inner(id, event_id, starts_at, events!inner(id, title))")
+      .select("id, customer_id, recipient_phone, participant_delivery_status, issued_at, customers(whatsapp_phone), orders!inner(id, created_at, status, official_table_map_reservations!inner(place_code, status)), event_sessions!inner(id, event_id, starts_at, timezone, status, events!inner(id, title, status))")
       .eq("status", "issued")
       .eq("orders.status", "paid")
       .eq("orders.official_table_map_reservations.status", "paid")
       .gte("issued_at", recentPurchaseFrom)
+      .in("event_sessions.status", getPublicVisibleSessionStatuses("offer"))
+      .in("event_sessions.events.status", PUBLIC_VISIBLE_EVENT_STATUSES)
       .gte("event_sessions.starts_at", eventWindowFrom)
       .order("issued_at", { ascending: true })
       .limit(limit)
@@ -2280,7 +2331,20 @@ export async function sendScheduledComboOffers(limit = 100) {
     const recipientType = ticket.offer_source ?? recipient?.recipientType ?? "buyer";
     let offerCustomerId = ticket.offer_customer_id ?? ticket.customer_id;
 
-    if (!session || !order || !event || !phone) {
+    if (
+      !session ||
+      !order ||
+      !event ||
+      !phone ||
+      !isPublicEventVisible({
+        startsAt: session.starts_at,
+        timezone: session.timezone,
+        sessionStatus: session.status,
+        eventStatus: event.status,
+        purpose: "offer",
+        now,
+      })
+    ) {
       skippedCount += 1;
       continue;
     }

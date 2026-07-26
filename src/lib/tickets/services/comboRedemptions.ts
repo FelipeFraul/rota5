@@ -15,6 +15,7 @@ import {
   generateComboQrImage,
 } from "@/lib/tickets/services/comboOffers";
 import { getOfficialTableMapPlace } from "@/lib/tickets/tableMap/officialPlaces";
+import { isPublicEventVisible } from "@/lib/tickets/services/publicEventVisibility";
 
 export type KitchenSessionValidation =
   | {
@@ -161,8 +162,8 @@ type GateTicketForKitchenRow = {
   customer_id: string;
   session_id: string;
   event_sessions:
-    | { event_id: string }
-    | { event_id: string }[]
+    | { event_id: string; starts_at: string; timezone?: string | null; status: string; events: { status: string } | null }
+    | { event_id: string; starts_at: string; timezone?: string | null; status: string; events: { status: string } | null }[]
     | null;
 };
 
@@ -478,7 +479,7 @@ export async function releaseComboOrdersForKitchenAfterGateEntry(input: {
   const supabase = getSupabaseAdmin();
   const { data: ticket, error: ticketError } = await supabase
     .from("tickets")
-    .select("id, customer_id, session_id, event_sessions!inner(event_id)")
+    .select("id, customer_id, session_id, event_sessions!inner(event_id, starts_at, timezone, status, events(status))")
     .eq("id", input.ticketId)
     .maybeSingle<GateTicketForKitchenRow>();
 
@@ -490,6 +491,13 @@ export async function releaseComboOrdersForKitchenAfterGateEntry(input: {
   if (!eventSession?.event_id) {
     return { ok: false as const, releasedCount: 0 };
   }
+  const canNotifyCustomer = isPublicEventVisible({
+    startsAt: eventSession.starts_at,
+    timezone: eventSession.timezone,
+    sessionStatus: eventSession.status,
+    eventStatus: firstJoin(eventSession.events)?.status,
+    purpose: "issued_access",
+  });
 
   const { data: redemptions, error } = await supabase
     .from("combo_redemptions")
@@ -542,6 +550,7 @@ export async function releaseComboOrdersForKitchenAfterGateEntry(input: {
       let notificationSent = false;
 
       if (
+        canNotifyCustomer &&
         typeof metadata.arrival_preparation_notified_at !== "string" &&
         customer?.whatsapp_phone
       ) {
@@ -628,7 +637,7 @@ export async function startKitchenOrderPreparation(input: {
   let query = supabase
     .from("combo_redemptions")
     .select(
-      "id, combo_order_id, event_id, session_id, redemption_code, offer_name, quantity, status, qr_token_hash, raw_metadata, customers(id, whatsapp_phone), events(title), combo_orders!inner(status, combo_offers(description))",
+      "id, combo_order_id, event_id, session_id, redemption_code, offer_name, quantity, status, qr_token_hash, raw_metadata, customers(id, whatsapp_phone), events(title), event_sessions(starts_at, timezone, status, events(status)), combo_orders!inner(status, combo_offers(description))",
     )
     .eq("id", input.redemptionId);
 
@@ -655,6 +664,10 @@ export async function startKitchenOrderPreparation(input: {
       | { id: string; whatsapp_phone: string | null }[]
       | null;
     events: { title: string } | { title: string }[] | null;
+    event_sessions:
+      | { starts_at: string; timezone?: string | null; status: string; events: { status: string } | null }
+      | { starts_at: string; timezone?: string | null; status: string; events: { status: string } | null }[]
+      | null;
     combo_orders:
       | {
           status: string;
@@ -676,6 +689,7 @@ export async function startKitchenOrderPreparation(input: {
   const order = redemption ? firstJoin(redemption.combo_orders) : null;
   const customer = redemption ? firstJoin(redemption.customers) : null;
   const event = redemption ? firstJoin(redemption.events) : null;
+  const eventSession = redemption ? firstJoin(redemption.event_sessions) : null;
   const offer = order ? firstJoin(order.combo_offers) : null;
   const itemLines = formatComboDescription(offer?.description ?? "")
     .split("\n")
@@ -725,7 +739,17 @@ export async function startKitchenOrderPreparation(input: {
     }
   }
 
-  if (!readyNotifiedAt && customer?.whatsapp_phone) {
+  if (
+    !readyNotifiedAt &&
+    customer?.whatsapp_phone &&
+    isPublicEventVisible({
+      startsAt: eventSession?.starts_at,
+      timezone: eventSession?.timezone,
+      sessionStatus: eventSession?.status,
+      eventStatus: firstJoin(eventSession?.events)?.status,
+      purpose: "issued_access",
+    })
+  ) {
     const message = [
       "*SEU PEDIDO ESTÁ PRONTO. APRESENTE O QRCODE ABAIXO NO BAR PARA RETIRADA*",
       "",

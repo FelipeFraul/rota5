@@ -3,6 +3,11 @@ import "server-only";
 import QRCode from "qrcode";
 import { createHash } from "crypto";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import {
+  getPublicEventVisibilityQueryFloorIso,
+  isPublicEventVisible,
+  PUBLIC_VISIBLE_EVENT_STATUSES,
+} from "@/lib/tickets/services/publicEventVisibility";
 import { normalizeWhatsAppPhone } from "@/lib/tickets/phones";
 import { listAvailableSections, type AvailableSection } from "@/lib/tickets/services/sections";
 import { listAvailableSeats, listSeatMap } from "@/lib/tickets/services/seats";
@@ -140,10 +145,13 @@ type TicketRow = {
   cancelled_at?: string | null;
   event_sessions: MaybeArray<{
     starts_at: string;
+    timezone?: string | null;
+    status?: string;
     events: MaybeArray<{
       title: string;
       city: string;
       state: string;
+      status?: string;
       venues: MaybeArray<{ name: string }>;
     }>;
   }>;
@@ -856,11 +864,13 @@ async function getCourtesyTicketsByPhone(phone: string, eventId?: string) {
   let query = supabase
     .from("courtesies")
     .select(
-      "ticket_id, tickets!inner(id, ticket_code, status, reservation_items(seat_code), event_sessions(starts_at, events(title, city, state, venues(name))), venue_sections(name))",
+      "ticket_id, tickets!inner(id, ticket_code, status, reservation_items(seat_code), event_sessions(starts_at, timezone, status, events(title, city, state, status, venues(name))), venue_sections(name))",
     )
     .eq("phone", phone)
     .eq("status", "issued")
-    .eq("tickets.status", "issued");
+    .eq("tickets.status", "issued")
+    .gte("tickets.event_sessions.starts_at", getPublicEventVisibilityQueryFloorIso())
+    .in("tickets.event_sessions.events.status", PUBLIC_VISIBLE_EVENT_STATUSES);
 
   if (eventId) query = query.eq("event_id", eventId);
 
@@ -872,7 +882,18 @@ async function getCourtesyTicketsByPhone(phone: string, eventId?: string) {
 
   return (data ?? []).flatMap((row) => {
     const ticket = first(row.tickets);
-    return ticket ? [ticket] : [];
+    const session = first(ticket?.event_sessions);
+    const event = first(session?.events);
+    return ticket &&
+      isPublicEventVisible({
+        startsAt: session?.starts_at,
+        timezone: session?.timezone,
+        sessionStatus: session?.status,
+        eventStatus: event?.status,
+        purpose: "issued_access",
+      })
+      ? [ticket]
+      : [];
   });
 }
 

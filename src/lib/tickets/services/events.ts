@@ -2,11 +2,16 @@ import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { listAvailableSections } from "@/lib/tickets/services/sections";
+import {
+  getPublicEventVisibilityQueryFloorIso,
+  getPublicVisibleSessionStatuses,
+  isPublicEventVisible,
+  PUBLIC_VISIBLE_EVENT_STATUSES,
+} from "@/lib/tickets/services/publicEventVisibility";
 
 const DEFAULT_EVENT_SEARCH_LIMIT = 5;
 const MAX_EVENT_CANDIDATES = 100;
 const DEFAULT_ALL_EVENTS_LIMIT = MAX_EVENT_CANDIDATES;
-const ACTIVE_SESSION_STATUSES = ["scheduled", "sales_open"];
 
 export type SearchEventsInput = {
   artist?: string;
@@ -31,6 +36,7 @@ export type TicketEventSearchResult = {
   sessionId: string;
   startsAt: string;
   sessionStatus: string;
+  timezone?: string | null;
 };
 
 export type ValidatedEventSession = {
@@ -46,6 +52,7 @@ export type ValidatedEventSession = {
   sessionId: string;
   startsAt: string;
   sessionStatus: string;
+  timezone?: string | null;
 };
 
 type EventRow = {
@@ -65,6 +72,7 @@ type SessionRow = {
   event_id: string;
   venue_id: string | null;
   starts_at: string;
+  timezone?: string | null;
   status: string;
   venues: { name: string; status?: string } | null;
 };
@@ -73,6 +81,7 @@ type EventSessionValidationRow = {
   id: string;
   venue_id: string | null;
   starts_at: string;
+  timezone?: string | null;
   status: string;
   events: {
     id: string;
@@ -101,6 +110,7 @@ type RankedPublicEventSearchRow = {
   venue_name: string | null;
   session_id: string;
   starts_at: string;
+  timezone?: string | null;
   session_status: string;
   score: number;
 };
@@ -114,7 +124,7 @@ function normalizeLimit(limit?: number) {
 }
 
 function clampPublicSearchDateFrom(dateFrom?: string) {
-  const nowIso = new Date().toISOString();
+  const nowIso = getPublicEventVisibilityQueryFloorIso();
 
   if (!dateFrom) {
     return nowIso;
@@ -308,7 +318,20 @@ function mapRankedSearchRow(row: RankedPublicEventSearchRow): TicketEventSearchR
     sessionId: row.session_id,
     startsAt: row.starts_at,
     sessionStatus: row.session_status,
+    timezone: row.timezone,
   };
+}
+
+async function getSessionTimezones(sessionIds: string[]) {
+  if (!sessionIds.length) return new Map<string, string | null>();
+
+  const { data } = await getSupabaseAdmin()
+    .from("event_sessions")
+    .select("id, timezone")
+    .in("id", sessionIds)
+    .returns<Array<{ id: string; timezone: string | null }>>();
+
+  return new Map((data ?? []).map((row) => [row.id, row.timezone]));
 }
 
 async function searchEventsRankedInDatabase({
@@ -381,7 +404,7 @@ export async function searchEvents({
   const eventQuery = supabase
     .from("events")
     .select("id, title, artist_name, description, city, state, image_url, venue_id, venues(name)")
-    .eq("status", "published");
+    .in("status", PUBLIC_VISIBLE_EVENT_STATUSES);
 
   const artistTerm = artist?.trim();
   const cityTerm = city?.trim();
@@ -395,10 +418,26 @@ export async function searchEvents({
     });
 
     if (rankedRows) {
+      const sessionTimezones = await getSessionTimezones(
+        rankedRows.map((row) => row.session_id),
+      );
       const purchasableResults: TicketEventSearchResult[] = [];
 
       for (const row of rankedRows) {
-        const result = mapRankedSearchRow(row);
+        const result = {
+          ...mapRankedSearchRow(row),
+          timezone: sessionTimezones.get(row.session_id) ?? row.timezone,
+        };
+        if (
+          !isPublicEventVisible({
+            startsAt: result.startsAt,
+            timezone: result.timezone,
+            sessionStatus: result.sessionStatus,
+            purpose: "purchase",
+          })
+        ) {
+          continue;
+        }
         const sections = await listAvailableSections(result.sessionId, {
           venueId: result.venueId,
         });
@@ -435,9 +474,9 @@ export async function searchEvents({
   const eventsById = new Map(filteredEvents.map((event) => [event.id, event]));
   let sessionQuery = supabase
     .from("event_sessions")
-    .select("id, event_id, venue_id, starts_at, status, venues(name)")
+    .select("id, event_id, venue_id, starts_at, timezone, status, venues(name)")
     .in("event_id", Array.from(eventsById.keys()))
-    .in("status", ACTIVE_SESSION_STATUSES)
+    .in("status", getPublicVisibleSessionStatuses("purchase"))
     .gte("starts_at", effectiveDateFrom)
     .order("starts_at", { ascending: true });
 
@@ -503,12 +542,24 @@ export async function searchEvents({
           sessionId: session.id,
           startsAt: session.starts_at,
           sessionStatus: session.status,
+          timezone: session.timezone,
         },
       ];
     });
   const purchasableResults: TicketEventSearchResult[] = [];
 
   for (const result of matchedSessions) {
+    if (
+      !isPublicEventVisible({
+        startsAt: result.startsAt,
+        timezone: result.timezone,
+        sessionStatus: result.sessionStatus,
+        purpose: "purchase",
+      })
+    ) {
+      continue;
+    }
+
     const sections = await listAvailableSections(result.sessionId, {
       venueId: result.venueId,
     });
@@ -535,7 +586,7 @@ export async function listAllPublicEventsByDate({
   const { data: events, error: eventsError } = await supabase
     .from("events")
     .select("id, title, artist_name, description, city, state, image_url, venue_id, venues(name)")
-    .eq("status", "published")
+    .in("status", PUBLIC_VISIBLE_EVENT_STATUSES)
     .limit(MAX_EVENT_CANDIDATES)
     .returns<EventRow[]>();
 
@@ -550,10 +601,10 @@ export async function listAllPublicEventsByDate({
   const eventsById = new Map(events.map((event) => [event.id, event]));
   const { data: sessions, error: sessionsError } = await supabase
     .from("event_sessions")
-    .select("id, event_id, venue_id, starts_at, status, venues(name)")
+    .select("id, event_id, venue_id, starts_at, timezone, status, venues(name)")
     .in("event_id", Array.from(eventsById.keys()))
-    .in("status", ACTIVE_SESSION_STATUSES)
-    .gte("starts_at", new Date().toISOString())
+    .in("status", getPublicVisibleSessionStatuses("purchase"))
+    .gte("starts_at", getPublicEventVisibilityQueryFloorIso())
     .order("starts_at", { ascending: true })
     .order("event_id", { ascending: true })
     .order("id", { ascending: true })
@@ -586,7 +637,19 @@ export async function listAllPublicEventsByDate({
       sessionId: session.id,
       startsAt: session.starts_at,
       sessionStatus: session.status,
+      timezone: session.timezone,
     };
+    if (
+      !isPublicEventVisible({
+        startsAt: result.startsAt,
+        timezone: result.timezone,
+        sessionStatus: result.sessionStatus,
+        purpose: "purchase",
+      })
+    ) {
+      continue;
+    }
+
     const sections = await listAvailableSections(result.sessionId, {
       venueId: result.venueId,
     });
@@ -631,7 +694,7 @@ export async function getValidatedEventSession({
   const { data, error } = await supabase
     .from("event_sessions")
     .select(
-      "id, venue_id, starts_at, status, venues(name, status), events(id, title, artist_name, description, city, state, image_url, venue_id, status, venues(name, status))",
+      "id, venue_id, starts_at, timezone, status, venues(name, status), events(id, title, artist_name, description, city, state, image_url, venue_id, status, venues(name, status))",
     )
     .eq("id", sessionId)
     .eq("event_id", eventId)
@@ -646,9 +709,13 @@ export async function getValidatedEventSession({
   }
 
   if (
-    data.events.status !== "published" ||
-    !ACTIVE_SESSION_STATUSES.includes(data.status) ||
-    data.starts_at < new Date().toISOString() ||
+    !isPublicEventVisible({
+      startsAt: data.starts_at,
+      timezone: data.timezone,
+      sessionStatus: data.status,
+      eventStatus: data.events.status,
+      purpose: "purchase",
+    }) ||
     data.venues?.status === "inactive" ||
     data.events.venues?.status === "inactive"
   ) {
@@ -668,5 +735,6 @@ export async function getValidatedEventSession({
     sessionId: data.id,
     startsAt: data.starts_at,
     sessionStatus: data.status,
+    timezone: data.timezone,
   };
 }

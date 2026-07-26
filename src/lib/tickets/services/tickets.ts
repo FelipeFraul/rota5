@@ -3,6 +3,11 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "crypto";
 import { getEnv } from "@/lib/env";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import {
+  getPublicEventVisibilityQueryFloorIso,
+  isPublicEventVisible,
+  PUBLIC_VISIBLE_EVENT_STATUSES,
+} from "@/lib/tickets/services/publicEventVisibility";
 
 type TicketRow = {
   id: string;
@@ -19,11 +24,14 @@ type TicketRow = {
   event_sessions: {
     event_id?: string;
     starts_at: string;
+    timezone?: string | null;
+    status?: string;
     events: {
       title: string;
       artist_name: string;
       city: string;
       state: string;
+      status?: string;
       venues: {
         name: string;
         address: string | null;
@@ -95,11 +103,14 @@ type PublicTicketRow = {
   ticket_code: string;
   event_sessions: {
     starts_at: string;
+    timezone?: string | null;
+    status?: string;
     events: {
       title: string;
       artist_name: string;
       city: string;
       state: string;
+      status?: string;
       venues: {
         name: string;
         address: string | null;
@@ -210,6 +221,17 @@ function safeSignatureEquals(left: string, right: string) {
 
 function mapTicketRow(row: TicketRow): TicketForDelivery | null {
   if (!row.event_sessions?.events) {
+    return null;
+  }
+  if (
+    !isPublicEventVisible({
+      startsAt: row.event_sessions.starts_at,
+      timezone: row.event_sessions.timezone,
+      sessionStatus: row.event_sessions.status,
+      eventStatus: row.event_sessions.events.status,
+      purpose: "issued_access",
+    })
+  ) {
     return null;
   }
 
@@ -351,6 +373,17 @@ function mapPublicTicketRow(row: PublicTicketRow): PublicTicketView | null {
   if (!row.event_sessions?.events) {
     return null;
   }
+  if (
+    !isPublicEventVisible({
+      startsAt: row.event_sessions.starts_at,
+      timezone: row.event_sessions.timezone,
+      sessionStatus: row.event_sessions.status,
+      eventStatus: row.event_sessions.events.status,
+      purpose: "issued_access",
+    })
+  ) {
+    return null;
+  }
 
   return {
     ticketCode: row.ticket_code,
@@ -427,10 +460,12 @@ export async function getTicketsForOrder(
   const { data, error } = await supabase
     .from("tickets")
     .select(
-      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, reservation_items!inner(seat_code), event_sessions!inner(starts_at, events!inner(title, artist_name, city, state, venues(name, address))), venue_sections!inner(name)",
+      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, reservation_items!inner(seat_code), event_sessions!inner(starts_at, timezone, status, events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
     )
     .eq("order_id", orderId)
     .eq("status", "issued")
+    .gte("event_sessions.starts_at", getPublicEventVisibilityQueryFloorIso())
+    .in("event_sessions.events.status", PUBLIC_VISIBLE_EVENT_STATUSES)
     .order("ticket_code", { ascending: true })
     .returns<TicketRow[]>();
 
@@ -457,10 +492,12 @@ export async function getBuyerReservedTicketsForOrder(
   const { data, error } = await supabase
     .from("tickets")
     .select(
-      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, recipient_name, recipient_phone, participant_delivery_status, reservation_items!inner(seat_code), event_sessions!inner(starts_at, events!inner(title, artist_name, city, state, venues(name, address))), venue_sections!inner(name)",
+      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, recipient_name, recipient_phone, participant_delivery_status, reservation_items!inner(seat_code), event_sessions!inner(starts_at, timezone, status, events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
     )
     .eq("order_id", orderId)
     .eq("status", "issued")
+    .gte("event_sessions.starts_at", getPublicEventVisibilityQueryFloorIso())
+    .in("event_sessions.events.status", PUBLIC_VISIBLE_EVENT_STATUSES)
     .is("recipient_name", null)
     .is("recipient_phone", null)
     .is("participant_delivery_status", null)
@@ -546,12 +583,14 @@ export async function listPaidTicketResendGroupsForPhone(
   const { data, error } = await supabase
     .from("tickets")
     .select(
-      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, issued_at, customers!inner(whatsapp_phone), orders!inner(id, status, payments!inner(id, status, paid_at)), reservation_items!inner(seat_code), event_sessions!inner(event_id, starts_at, events!inner(title, artist_name, city, state, venues(name, address))), venue_sections!inner(name)",
+      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, issued_at, customers!inner(whatsapp_phone), orders!inner(id, status, payments!inner(id, status, paid_at)), reservation_items!inner(seat_code), event_sessions!inner(event_id, starts_at, timezone, status, events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
     )
     .eq("customers.whatsapp_phone", phone)
     .eq("status", "issued")
     .eq("orders.status", "paid")
     .eq("orders.payments.status", "approved")
+    .gte("event_sessions.starts_at", getPublicEventVisibilityQueryFloorIso())
+    .in("event_sessions.events.status", PUBLIC_VISIBLE_EVENT_STATUSES)
     .order("issued_at", { ascending: false })
     .limit(50)
     .returns<PaidTicketResendRow[]>();
@@ -604,12 +643,14 @@ export async function listParticipantTicketDeliveriesForPhone(
   const { data, error } = await supabase
     .from("tickets")
     .select(
-      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, issued_at, participant_delivery_status, participant_delivered_at, orders!inner(id, status, payments!inner(id, status, paid_at)), reservation_items!inner(seat_code), event_sessions!inner(starts_at, events!inner(title, artist_name, city, state, venues(name, address))), venue_sections!inner(name)",
+      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, issued_at, participant_delivery_status, participant_delivered_at, orders!inner(id, status, payments!inner(id, status, paid_at)), reservation_items!inner(seat_code), event_sessions!inner(starts_at, timezone, status, events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
     )
     .eq("recipient_phone", phone)
     .eq("status", "issued")
     .eq("orders.status", "paid")
     .eq("orders.payments.status", "approved")
+    .gte("event_sessions.starts_at", getPublicEventVisibilityQueryFloorIso())
+    .in("event_sessions.events.status", PUBLIC_VISIBLE_EVENT_STATUSES)
     .in("participant_delivery_status", [
       "awaiting_participant_request",
       "delivered",
@@ -685,11 +726,13 @@ export async function getTicketBySignedToken(
   const { data, error } = await supabase
     .from("tickets")
     .select(
-      "ticket_code, reservation_items!inner(seat_code), event_sessions!inner(starts_at, events!inner(title, artist_name, city, state, venues(name, address))), venue_sections!inner(name)",
+      "ticket_code, reservation_items!inner(seat_code), event_sessions!inner(starts_at, timezone, status, events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
     )
     .eq("id", payload.tid)
     .eq("ticket_code", payload.code)
     .eq("status", "issued")
+    .gte("event_sessions.starts_at", getPublicEventVisibilityQueryFloorIso())
+    .in("event_sessions.events.status", PUBLIC_VISIBLE_EVENT_STATUSES)
     .maybeSingle<PublicTicketRow>();
 
   if (error || !data) {

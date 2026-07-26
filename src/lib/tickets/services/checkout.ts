@@ -15,6 +15,11 @@ import {
   decimalAmountToCents,
 } from "@/lib/tickets/services/payments";
 import { deliverTicketsForOrder } from "@/lib/tickets/services/ticketDelivery";
+import {
+  getPublicEventVisibilityQueryFloorIso,
+  isPublicEventVisible,
+  PUBLIC_VISIBLE_EVENT_STATUSES,
+} from "@/lib/tickets/services/publicEventVisibility";
 
 const PROVIDER = "mercado_pago";
 
@@ -35,6 +40,15 @@ type CheckoutReservation = {
   session_id: string;
   status: string;
   expires_at: string;
+};
+
+type PublicCheckoutSession = {
+  id: string;
+  event_id: string;
+  starts_at: string;
+  timezone: string | null;
+  status: string;
+  events: { id: string; title: string; status: string } | null;
 };
 
 type CheckoutReservationItem = {
@@ -430,6 +444,27 @@ async function validateReservationSeats({
   });
 }
 
+async function getPublicVisibleCheckoutSession(sessionId: string) {
+  const { data } = await getSupabaseAdmin()
+    .from("event_sessions")
+    .select("id, event_id, starts_at, timezone, status, events!inner(id, title, status)")
+    .eq("id", sessionId)
+    .gte("starts_at", getPublicEventVisibilityQueryFloorIso())
+    .in("events.status", PUBLIC_VISIBLE_EVENT_STATUSES)
+    .maybeSingle<PublicCheckoutSession>();
+
+  return data &&
+    isPublicEventVisible({
+      startsAt: data.starts_at,
+      timezone: data.timezone,
+      sessionStatus: data.status,
+      eventStatus: data.events?.status,
+      purpose: "checkout",
+    })
+    ? data
+    : null;
+}
+
 export async function createCheckoutForReservation({
   orderId,
   reservationId,
@@ -504,6 +539,10 @@ export async function createCheckoutForReservation({
 
   if (new Date(reservation.expires_at).getTime() <= Date.now()) {
     return { ok: false, reason: "reservation_expired" };
+  }
+
+  if (!(await getPublicVisibleCheckoutSession(reservation.session_id))) {
+    return { ok: false, reason: "reservation_not_payable" };
   }
 
   const { data: customer, error: customerError } = await supabase
@@ -838,19 +877,8 @@ export async function getPublicCheckoutOrder(
     return null;
   }
 
-  const { data: session } = await supabase
-    .from("event_sessions")
-    .select("id, event_id")
-    .eq("id", reservation.session_id)
-    .maybeSingle<{ id: string; event_id: string }>();
-
-  const { data: event } = session?.event_id
-    ? await supabase
-        .from("events")
-        .select("id, title")
-        .eq("id", session.event_id)
-        .maybeSingle<{ id: string; title: string }>()
-    : { data: null };
+  const session = await getPublicVisibleCheckoutSession(reservation.session_id);
+  if (!session) return null;
 
   const sectionIds = Array.from(
     new Set(reservationItems.map((item) => item.section_id)),
@@ -871,7 +899,7 @@ export async function getPublicCheckoutOrder(
 
   for (const item of reservationItems) {
     const sectionName = sectionNames.get(item.section_id) ?? "Ingresso";
-    const eventTitle = event?.title ?? "Evento";
+    const eventTitle = session.events?.title ?? "Evento";
     const unitPriceCents = item.price_cents + item.fee_cents;
     const key = `${sectionName}:${unitPriceCents}`;
     const existing = groupedItems.get(key);
