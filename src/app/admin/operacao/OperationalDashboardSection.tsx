@@ -103,11 +103,17 @@ function hasSeriesData(values: number[]) {
 function toPolyline(values: number[], width: number, height: number) {
   if (values.length < 2 || !hasSeriesData(values)) return "";
   const max = Math.max(...values);
-  return values
-    .map((value, index) => {
-      const x = (index / (values.length - 1)) * width;
-      const y = height - (max > 0 ? (value / max) * (height - 10) + 5 : height / 2);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
+  const points = values.map((value, index) => ({
+    x: (index / (values.length - 1)) * width,
+    y: height - (max > 0 ? (value / max) * (height - 10) + 5 : height / 2),
+  }));
+
+  return points
+    .map((point, index) => {
+      if (index === 0) return `M ${point.x.toFixed(1)} ${point.y.toFixed(1)}`;
+      const previous = points[index - 1];
+      const controlX = ((previous.x + point.x) / 2).toFixed(1);
+      return `C ${controlX} ${previous.y.toFixed(1)}, ${controlX} ${point.y.toFixed(1)}, ${point.x.toFixed(1)} ${point.y.toFixed(1)}`;
     })
     .join(" ");
 }
@@ -164,7 +170,7 @@ function MiniChart({ values, lines }: { values: number[]; lines?: ChartLine[] })
     <svg className="admin-operation-metric-chart" viewBox="0 0 148 76" role="img" aria-label="Evolução por evento">
       {renderedLines.map((line, index) => (
         <g key={`${line.label}-${index}`}>
-          <polyline points={line.points} />
+          <path d={line.points} />
           {line.markers.map((marker, markerIndex) => (
             <circle key={`${marker.title}-${markerIndex}`} cx={marker.x} cy={marker.y} r="4.5" tabIndex={0}>
               <title>{marker.title}</title>
