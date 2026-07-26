@@ -1,11 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import type { ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import BrandLogo from "@/app/BrandLogo";
+import type {
+  OperationalDashboardData,
+  OperationalDashboardPoint,
+} from "@/lib/tickets/services/operationalDashboardTypes";
+import { useOperationalDashboard } from "./useOperationalDashboard";
 
 const EMPTY_VALUE = "—";
+const COMPARISON_DAY_OPTIONS = [7, 15, 30, 60, 90] as const;
 
 type Tone = "neutral" | "ok" | "attention" | "danger" | "info";
 type ActiveMetric = "revenue" | "tickets" | "combos" | "whatsapp" | "alerts";
@@ -22,15 +27,16 @@ type IconName =
   | "cash"
   | "spark";
 
-type DetailItem = { label: string; value?: string; tone?: Tone };
+type DetailItem = { label: string; value: string; tone?: Tone };
 type FeedItem = { time?: string; title: string; detail?: string; value?: string; tone?: Tone };
 type ExpandedMetric = {
   title: string;
   icon: IconName;
   tone: Tone;
+  headlineValue: string;
   headlineLabel: string;
-  headlineDetail: string;
   showChart: boolean;
+  series: number[];
   summary: DetailItem[];
   sections: Array<{
     title: string;
@@ -62,171 +68,293 @@ function OperationIcon({ name }: { name: IconName }) {
   );
 }
 
-const expandedMetricContent: Record<ActiveMetric, ExpandedMetric> = {
-  revenue: {
-    title: "Receita",
-    icon: "cash",
-    tone: "ok",
-    headlineLabel: "Hoje",
-    headlineDetail: "Comparativo",
-    showChart: true,
-    summary: [
-      { label: "Receita total", tone: "ok" },
-      { label: "Ingressos" },
-      { label: "Combos", tone: "attention" },
-      { label: "Repasse" },
-    ],
-    sections: [
-      { title: "Evolução", items: [] },
-      { title: "Últimas vendas", items: [{ title: "Nenhuma venda carregada." }] },
-      {
-        title: "Distribuição",
-        items: [
-          { title: "PIX" },
-          { title: "Cartão" },
-          { title: "Dinheiro" },
-        ],
-      },
-    ],
-    insight: "A IA ainda não recebeu fatos de receita para interpretar.",
-  },
-  tickets: {
-    title: "Ingressos",
-    icon: "ticket",
-    tone: "info",
-    headlineLabel: "Vendidos",
-    headlineDetail: "Mini gráfico",
-    showChart: true,
-    summary: [
-      { label: "Vendidos", tone: "ok" },
-      { label: "Disponíveis" },
-      { label: "Cortesias" },
-      { label: "Cancelados", tone: "attention" },
-      { label: "Check-ins", tone: "ok" },
-    ],
-    sections: [
-      { title: "Evolução", items: [] },
-      { title: "Últimos emitidos", items: [{ title: "Nenhum ingresso carregado." }] },
-      { title: "Últimos check-ins", items: [{ title: "Nenhum check-in carregado." }] },
-      {
-        title: "Problemas",
-        items: [
-          { title: "QR recusados", tone: "danger" },
-          { title: "QR duplicados", tone: "attention" },
-          { title: "Ingressos cancelados", tone: "attention" },
-        ],
-      },
-    ],
-    insight: "A IA ainda não recebeu fatos de ingressos para interpretar.",
-  },
-  combos: {
-    title: "Combos",
-    icon: "bag",
-    tone: "attention",
-    headlineLabel: "Vendidos",
-    headlineDetail: "Operação",
-    showChart: true,
-    summary: [
-      { label: "Vendidos", tone: "ok" },
-      { label: "Pagos", tone: "ok" },
-      { label: "Utilizados" },
-      { label: "Pendentes", tone: "attention" },
-    ],
-    sections: [
-      { title: "Produtos mais vendidos", items: [{ title: "Nenhum produto carregado." }] },
-      { title: "Últimos combos", items: [{ title: "Nenhum combo carregado." }] },
-      {
-        title: "Alertas",
-        items: [
-          { title: "Pagos sem QR", tone: "danger" },
-          { title: "Aguardando utilização", tone: "attention" },
-          { title: "Expirados", tone: "attention" },
-        ],
-      },
-    ],
-    insight: "A IA ainda não recebeu fatos de combos para interpretar.",
-  },
-  whatsapp: {
-    title: "WhatsApp",
-    icon: "message",
-    tone: "info",
-    headlineLabel: "Conversas",
-    headlineDetail: "Mensagens",
-    showChart: true,
-    summary: [
-      { label: "Conversas", tone: "ok" },
-      { label: "Compradores" },
-      { label: "Mensagens" },
-      { label: "Tempo médio" },
-    ],
-    sections: [
-      {
-        title: "Fluxo",
-        type: "flow",
-        items: [
-          { title: "Entraram" },
-          { title: "Abriram evento" },
-          { title: "Selecionaram ingresso" },
-          { title: "Pagaram" },
-        ],
-      },
-      { title: "Últimas conversas", items: [{ title: "Nenhuma conversa carregada." }] },
-      {
-        title: "Abandonos",
-        items: [
-          { title: "Pagamento iniciado", tone: "attention" },
-          { title: "Sem resposta", tone: "attention" },
-        ],
-      },
-    ],
-    insight: "A IA ainda não recebeu fatos de WhatsApp para interpretar.",
-  },
-  alerts: {
-    title: "Alertas",
-    icon: "alert",
-    tone: "danger",
-    headlineLabel: "Ativos",
-    headlineDetail: "Prioridade",
-    showChart: false,
-    summary: [
-      { label: "Críticos", tone: "danger" },
-      { label: "Atenção", tone: "attention" },
-      { label: "Informação" },
-      { label: "Última atualização" },
-    ],
-    sections: [
-      {
-        title: "Crítico",
-        items: [
-          { title: "Pagamento aprovado sem ingresso", tone: "danger" },
-          { title: "Combo pago sem QR", tone: "danger" },
-        ],
-      },
-      {
-        title: "Atenção",
-        items: [
-          { title: "Participantes sem telefone", tone: "attention" },
-          { title: "QR pendentes", tone: "attention" },
-          { title: "Mensagens retry", tone: "attention" },
-        ],
-      },
-      { title: "Informação", items: [{ title: "Evento começa em breve" }] },
-      { title: "Últimos alertas", items: [{ title: "Nenhum alerta carregado." }] },
-    ],
-    insight: "A IA ainda não recebeu fatos de alertas para interpretar.",
-  },
-};
+function formatNumber(value: unknown) {
+  return typeof value === "number" ? new Intl.NumberFormat("pt-BR").format(value) : EMPTY_VALUE;
+}
+
+function formatCurrency(value: unknown) {
+  return typeof value === "number"
+    ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value / 100)
+    : EMPTY_VALUE;
+}
+
+function formatPercent(value: unknown) {
+  return typeof value === "number" ? `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(value)}%` : EMPTY_VALUE;
+}
+
+function formatTime(value: unknown) {
+  if (typeof value !== "string") return EMPTY_VALUE;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return EMPTY_VALUE;
+  return new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(date);
+}
+
+function getNumber(record: Record<string, number | null> | undefined, key: string) {
+  const value = record?.[key];
+  return typeof value === "number" ? value : null;
+}
+
+function hasSeriesData(values: number[]) {
+  return values.some((value) => value > 0);
+}
+
+function toPolyline(values: number[], width: number, height: number) {
+  if (values.length < 2 || !hasSeriesData(values)) return "";
+  const max = Math.max(...values);
+  return values
+    .map((value, index) => {
+      const x = (index / (values.length - 1)) * width;
+      const y = height - (max > 0 ? (value / max) * (height - 10) + 5 : height / 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+}
+
+function MiniChart({ values }: { values: number[] }) {
+  const points = toPolyline(values, 148, 76);
+  if (!points) return <span className="admin-operation-chart-empty">{EMPTY_VALUE}</span>;
+  return (
+    <svg className="admin-operation-metric-chart" viewBox="0 0 148 76" aria-hidden="true" focusable="false">
+      <polyline points={points} />
+    </svg>
+  );
+}
+
+function MainChart({ values }: { values: number[] }) {
+  const points = toPolyline(values, 620, 180);
+  return (
+    <div className="admin-operation-main-chart" aria-label="Gráfico do período">
+      {points ? (
+        <svg viewBox="0 0 620 180" aria-hidden="true" focusable="false">
+          <polyline points={points} />
+        </svg>
+      ) : (
+        <p>Nenhum dado no período.</p>
+      )}
+    </div>
+  );
+}
+
+function mapDashboardToMetrics(data: OperationalDashboardData | null): Record<ActiveMetric, ExpandedMetric> {
+  const revenueSummary = data?.revenue.summary;
+  const ticketSummary = data?.tickets.summary;
+  const comboSummary = data?.combos.summary;
+  const whatsappSummary = data?.whatsapp.summary;
+  const alertSummary = data?.alerts.summary;
+
+  const revenueSeries = data?.revenue.series.map((point) => Number(point.totalRevenueCents ?? 0)) ?? [];
+  const ticketSeries = data?.tickets.series.map((point) => Number(point.paidTickets ?? 0)) ?? [];
+  const comboSeries = data?.combos.series.map((point) => Number(point.paidItems ?? 0)) ?? [];
+  const whatsappSeries = data?.whatsapp.series.map((point) => Number(point.uniqueContacts ?? 0)) ?? [];
+
+  return {
+    revenue: {
+      title: "Receita",
+      icon: "cash",
+      tone: "ok",
+      headlineValue: formatCurrency(getNumber(revenueSummary, "totalRevenueCents")),
+      headlineLabel: "No período",
+      showChart: true,
+      series: revenueSeries,
+      summary: [
+        { label: "Receita total", value: formatCurrency(getNumber(revenueSummary, "totalRevenueCents")), tone: "ok" },
+        { label: "Receita de ingressos", value: formatCurrency(getNumber(revenueSummary, "ticketRevenueCents")) },
+        { label: "Receita de combos", value: formatCurrency(getNumber(revenueSummary, "comboRevenueCents")), tone: "attention" },
+        { label: "Pagamentos aprovados", value: formatNumber(getNumber(revenueSummary, "approvedPayments")) },
+        { label: "Pagamentos pendentes", value: formatNumber(getNumber(revenueSummary, "pendingPayments")), tone: "attention" },
+        { label: "Pagamentos recusados", value: formatNumber(getNumber(revenueSummary, "rejectedPayments")), tone: "danger" },
+        { label: "Repasse", value: formatCurrency(getNumber(revenueSummary, "repasseCents")) },
+      ],
+      sections: [
+        {
+          title: "Últimas vendas",
+          items: (data?.revenue.latestSales ?? []).map((sale) => ({
+            time: formatTime(sale.time),
+            title: String(sale.description ?? sale.type ?? "Venda"),
+            detail: String(sale.paymentMethod ?? sale.status ?? ""),
+            value: formatCurrency(typeof sale.valueCents === "number" ? sale.valueCents : null),
+          })),
+        },
+        {
+          title: "Distribuição",
+          items: (data?.revenue.paymentMethods ?? []).map((method) => ({
+            title: String(method.method ?? "Meio"),
+            value: formatPercent(method.percentage),
+          })),
+        },
+      ],
+      insight: "A IA ainda não recebeu fatos deste módulo para interpretar.",
+    },
+    tickets: {
+      title: "Ingressos",
+      icon: "ticket",
+      tone: "info",
+      headlineValue: formatNumber(getNumber(ticketSummary, "soldPaid")),
+      headlineLabel: "Vendidos",
+      showChart: true,
+      series: ticketSeries,
+      summary: [
+        { label: "Vendidos", value: formatNumber(getNumber(ticketSummary, "soldPaid")), tone: "ok" },
+        { label: "Disponíveis", value: formatNumber(getNumber(ticketSummary, "available")) },
+        { label: "Cortesias", value: formatNumber(getNumber(ticketSummary, "courtesies")) },
+        { label: "Cancelados", value: formatNumber(getNumber(ticketSummary, "cancelled")), tone: "attention" },
+        { label: "Check-ins", value: formatNumber(getNumber(ticketSummary, "checkins")), tone: "ok" },
+      ],
+      sections: [
+        {
+          title: "Últimos emitidos",
+          items: (data?.tickets.latestIssued ?? []).map((ticket) => ({
+            time: formatTime(ticket.time),
+            title: String(ticket.type ?? "Ingresso"),
+            detail: String(ticket.buyerName ?? ticket.status ?? ""),
+            value: typeof ticket.quantity === "number" ? `${ticket.quantity} ingresso` : EMPTY_VALUE,
+          })),
+        },
+        {
+          title: "Últimos check-ins",
+          items: (data?.tickets.latestCheckins ?? []).map((checkin) => ({
+            time: formatTime(checkin.time),
+            title: String(checkin.gate ?? checkin.ticketCode ?? "Check-in"),
+            detail: String(checkin.result ?? ""),
+          })),
+        },
+        {
+          title: "Problemas",
+          items: [
+            { title: "QR recusados", value: formatNumber(data?.tickets.problems.denied), tone: "danger" },
+            { title: "QR já utilizados", value: formatNumber(data?.tickets.problems.alreadyUsed), tone: "attention" },
+            { title: "QR não encontrados", value: formatNumber(data?.tickets.problems.notFound), tone: "danger" },
+            { title: "Ingressos cancelados apresentados", value: formatNumber(data?.tickets.problems.cancelledPresented), tone: "attention" },
+            { title: "Pedidos pagos sem ticket", value: formatNumber(data?.tickets.problems.paidOrdersWithoutTickets), tone: "danger" },
+          ],
+        },
+      ],
+      insight: "A IA ainda não recebeu fatos deste módulo para interpretar.",
+    },
+    combos: {
+      title: "Combos",
+      icon: "bag",
+      tone: "attention",
+      headlineValue: formatNumber(getNumber(comboSummary, "soldItems")),
+      headlineLabel: "Vendidos",
+      showChart: true,
+      series: comboSeries,
+      summary: [
+        { label: "Vendidos", value: formatNumber(getNumber(comboSummary, "soldItems")), tone: "ok" },
+        { label: "Pagos", value: formatNumber(getNumber(comboSummary, "paidOrders")), tone: "ok" },
+        { label: "Utilizados", value: formatNumber(getNumber(comboSummary, "usedItems")) },
+        { label: "Pendentes", value: formatNumber(getNumber(comboSummary, "pendingOrders")), tone: "attention" },
+        { label: "Expirados", value: formatNumber(getNumber(comboSummary, "expiredOrders")), tone: "attention" },
+        { label: "Receita", value: formatCurrency(getNumber(comboSummary, "revenueCents")) },
+      ],
+      sections: [
+        {
+          title: "Produtos mais vendidos",
+          items: (data?.combos.topOffers ?? []).map((offer) => ({
+            title: String(offer.name ?? "Combo"),
+            detail: formatCurrency(typeof offer.revenueCents === "number" ? offer.revenueCents : null),
+            value: formatNumber(offer.quantity),
+          })),
+        },
+        {
+          title: "Últimos combos",
+          items: (data?.combos.latest ?? []).map((combo) => ({
+            time: formatTime(combo.time),
+            title: String(combo.offerName ?? "Combo"),
+            detail: String(combo.status ?? ""),
+          })),
+        },
+        {
+          title: "Problemas",
+          items: [
+            { title: "Pagos sem QR", value: formatNumber(data?.combos.problems.paidWithoutQr), tone: "danger" },
+            { title: "QR recusado", value: formatNumber(data?.combos.problems.qrDenied), tone: "danger" },
+            { title: "Tentativa após uso", value: formatNumber(data?.combos.problems.alreadyUsed), tone: "attention" },
+            { title: "Pendentes expirados", value: formatNumber(data?.combos.problems.expiredPending), tone: "attention" },
+          ],
+        },
+      ],
+      insight: "A IA ainda não recebeu fatos deste módulo para interpretar.",
+    },
+    whatsapp: {
+      title: "WhatsApp",
+      icon: "message",
+      tone: "info",
+      headlineValue: formatNumber(getNumber(whatsappSummary, "uniqueContacts")),
+      headlineLabel: "Contatos",
+      showChart: true,
+      series: whatsappSeries,
+      summary: [
+        { label: "Contatos únicos", value: formatNumber(getNumber(whatsappSummary, "uniqueContacts")), tone: "ok" },
+        { label: "Mensagens recebidas", value: formatNumber(getNumber(whatsappSummary, "inboundMessages")) },
+        { label: "Mensagens enviadas", value: formatNumber(getNumber(whatsappSummary, "outboundMessages")) },
+        { label: "Mensagens com falha", value: formatNumber(getNumber(whatsappSummary, "failedMessages")), tone: "danger" },
+        { label: "Outbound pendente", value: formatNumber(getNumber(whatsappSummary, "pendingOutbound")), tone: "attention" },
+        { label: "Batches em retry", value: formatNumber(getNumber(whatsappSummary, "batchesRetry")), tone: "attention" },
+      ],
+      sections: [
+        {
+          title: "Últimas atividades",
+          items: (data?.whatsapp.latestActivity ?? []).map((activity) => ({
+            time: formatTime(activity.time),
+            title: String(activity.type ?? "Atividade"),
+            detail: String(activity.status ?? ""),
+          })),
+        },
+        {
+          title: "Falhas",
+          items: [
+            { title: "Outbound falhado", value: formatNumber(data?.whatsapp.problems.failedOutbound), tone: "danger" },
+            { title: "Batches em retry", value: formatNumber(data?.whatsapp.problems.retryBatches), tone: "attention" },
+            { title: "Batch preso", value: formatNumber(data?.whatsapp.problems.stuckBatches), tone: "danger" },
+            { title: "Delivery preso", value: formatNumber(data?.whatsapp.problems.stuckDeliveries), tone: "danger" },
+          ],
+        },
+      ],
+      insight: "A IA ainda não recebeu fatos deste módulo para interpretar.",
+    },
+    alerts: {
+      title: "Alertas",
+      icon: "alert",
+      tone: "danger",
+      headlineValue: formatNumber(alertSummary?.total),
+      headlineLabel: alertSummary?.total ? "Ativos" : "Sem alertas",
+      showChart: false,
+      series: [],
+      summary: [
+        { label: "Críticos", value: formatNumber(alertSummary?.critical), tone: "danger" },
+        { label: "Atenção", value: formatNumber(alertSummary?.warning), tone: "attention" },
+        { label: "Informação", value: formatNumber(alertSummary?.info) },
+        { label: "Última atualização", value: data?.generatedAt ? formatTime(data.generatedAt) : EMPTY_VALUE },
+      ],
+      sections: [
+        {
+          title: "Alertas ativos",
+          items: (data?.alerts.items ?? []).map((alert) => ({
+            time: formatTime(alert.detectedAt),
+            title: alert.title,
+            detail: alert.description,
+            value: formatNumber(alert.quantity),
+            tone: alert.severity === "critical" ? "danger" : alert.severity === "warning" ? "attention" : "neutral",
+          })),
+        },
+      ],
+      insight: "A IA ainda não recebeu fatos deste módulo para interpretar.",
+    },
+  };
+}
 
 function MetricPill({
   metric,
+  config,
   isActive,
   onClick,
 }: {
   metric: ActiveMetric;
+  config: ExpandedMetric;
   isActive: boolean;
   onClick: () => void;
 }) {
-  const config = expandedMetricContent[metric];
   const className = `admin-operation-metric is-${config.tone}${isActive ? " is-active" : ""}`;
 
   return (
@@ -236,23 +364,27 @@ function MetricPill({
           <OperationIcon name={config.icon} />
           {config.title}
         </span>
-        <strong>{EMPTY_VALUE}</strong>
+        <strong>{config.headlineValue}</strong>
         <small>{config.headlineLabel}</small>
       </div>
-      {config.showChart ? (
-        <svg className="admin-operation-metric-chart" viewBox="0 0 148 76" aria-hidden="true" focusable="false">
-          <path d="M4 54c16-12 28 2 44-8 15-9 20-28 40-20 18 7 27 5 56-11" />
-          <path d="M4 34c14 9 27 10 42 3 18-9 27-2 42 7 19 11 32-3 56-1" />
-          <path d="M4 62c18-3 30-14 46-13 17 2 27 12 42 10 20-3 31-18 52-23" />
-        </svg>
+      {metric === "alerts" ? (
+        <span className="admin-operation-alert-badge">{config.headlineValue}</span>
       ) : (
-        <span className="admin-operation-alert-badge">{EMPTY_VALUE}</span>
+        <MiniChart values={config.series} />
       )}
     </button>
   );
 }
 
-function ExpandedPanel({ metric }: { metric: ExpandedMetric }) {
+function ExpandedPanel({
+  metric,
+  comparisonDays,
+  onComparisonDaysChange,
+}: {
+  metric: ExpandedMetric;
+  comparisonDays: number;
+  onComparisonDaysChange: (days: number) => void;
+}) {
   return (
     <section className={`admin-operation-block admin-operation-expanded is-${metric.tone}`}>
       <header className="admin-operation-block-heading">
@@ -262,35 +394,37 @@ function ExpandedPanel({ metric }: { metric: ExpandedMetric }) {
       <div className="admin-operation-expanded-toolbar">
         <label>
           <span>Dias para comparativo</span>
-          <input type="number" min="1" max="365" defaultValue="30" inputMode="numeric" />
+          <select value={comparisonDays} onChange={(event) => onComparisonDaysChange(Number(event.target.value))}>
+            {COMPARISON_DAY_OPTIONS.map((days) => (
+              <option key={days} value={days}>
+                {days} dias
+              </option>
+            ))}
+          </select>
         </label>
       </div>
       <div className="admin-operation-expanded-summary">
         {metric.summary.map((item) => (
-          <StatusRow key={item.label} label={item.label} tone={item.tone} />
+          <StatusRow key={item.label} label={item.label} value={item.value} tone={item.tone} />
         ))}
       </div>
-      {metric.showChart ? (
-        <div className="admin-operation-main-chart" aria-label="Gráfico visual aguardando dados">
-          <svg viewBox="0 0 620 180" aria-hidden="true" focusable="false">
-            <path d="M10 130c55-42 95 6 150-26 52-31 71-86 137-59 59 24 88 18 180-35 48-28 82 7 133 0" />
-            <path d="M10 88c48 31 92 33 144 8 61-30 92-7 144 22 63 35 106-11 312-2" />
-            <path d="M10 152c61-11 101-48 157-41 58 7 92 42 144 33 69-12 106-62 299-76" />
-          </svg>
-        </div>
-      ) : null}
+      {metric.showChart ? <MainChart values={metric.series} /> : null}
       <div className="admin-operation-expanded-columns">
         {metric.sections.map((section) => (
           <div key={section.title} className={`admin-operation-sublist${section.type === "flow" ? " is-flow" : ""}`}>
             <h3>{section.title}</h3>
-            {section.items.map((item) => (
-              <article key={item.title} className={`admin-operation-feed-row is-${item.tone ?? "neutral"}`}>
-                <time>{item.time ?? EMPTY_VALUE}</time>
-                <span>{item.title}</span>
-                {item.detail ? <small>{item.detail}</small> : null}
-                <strong>{item.value ?? EMPTY_VALUE}</strong>
-              </article>
-            ))}
+            {section.items.length ? (
+              section.items.map((item) => (
+                <article key={`${item.time ?? ""}-${item.title}-${item.value ?? ""}`} className={`admin-operation-feed-row is-${item.tone ?? "neutral"}`}>
+                  <time>{item.time ?? EMPTY_VALUE}</time>
+                  <span>{item.title}</span>
+                  {item.detail ? <small>{item.detail}</small> : null}
+                  <strong>{item.value ?? EMPTY_VALUE}</strong>
+                </article>
+              ))
+            ) : (
+              <p className="admin-operation-empty">Nenhum dado carregado.</p>
+            )}
           </div>
         ))}
       </div>
@@ -302,18 +436,29 @@ function ExpandedPanel({ metric }: { metric: ExpandedMetric }) {
   );
 }
 
-function StatusRow({ label, tone = "neutral" }: { label: string; tone?: Tone }) {
+function StatusRow({ label, value, tone = "neutral" }: { label: string; value: string; tone?: Tone }) {
   return (
     <article className={`admin-operation-row is-${tone}`}>
       <span>{label}</span>
-      <strong>{EMPTY_VALUE}</strong>
+      <strong>{value}</strong>
     </article>
   );
 }
 
+function formatEventOption(event: OperationalDashboardData["events"][number]) {
+  const startsAt = event.startsAt ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(event.startsAt)) : null;
+  return [event.title, event.artistName, startsAt, event.status].filter(Boolean).join(" • ");
+}
+
 export default function OperationalDashboardSection() {
   const [activeMetric, setActiveMetric] = useState<ActiveMetric>("revenue");
-  const expandedMetric = expandedMetricContent[activeMetric];
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [comparisonDays, setComparisonDays] = useState<number>(30);
+  const { data, error, isLoading, isRefreshing, lastUpdatedAt, refresh } = useOperationalDashboard(selectedEventId, comparisonDays);
+  const metrics = useMemo(() => mapDashboardToMetrics(data), [data]);
+  const expandedMetric = metrics[activeMetric];
+  const events = data?.events ?? [];
+  const currentEventId = selectedEventId ?? data?.event?.id ?? "";
 
   return (
     <>
@@ -324,11 +469,11 @@ export default function OperationalDashboardSection() {
           <h1>Operação ao vivo</h1>
           <p>
             <span className="admin-operation-live-dot" />
-            Operação não conectada
+            {error ? "Erro ao atualizar" : isRefreshing ? "Atualizando" : "Painel conectado"}
           </p>
         </div>
         <div className="admin-operation-top-actions">
-          <span>Atualizado: {EMPTY_VALUE}</span>
+          <span>{lastUpdatedAt ? `Atualizado: ${formatTime(lastUpdatedAt.toISOString())}` : "Aguardando dados"}</span>
           <Link className="admin-operation-link" href="/admin/eventos">
             Editar eventos
           </Link>
@@ -336,30 +481,48 @@ export default function OperationalDashboardSection() {
         <div className="admin-operation-controls" aria-label="Controles da operação ao vivo">
           <label>
             <span>Evento</span>
-            <select disabled defaultValue="">
-              <option value="">Nenhum evento carregado</option>
+            <select
+              disabled={isLoading || events.length === 0}
+              value={currentEventId}
+              onChange={(event) => setSelectedEventId(event.target.value || null)}
+            >
+              {events.length ? (
+                events.map((event) => (
+                  <option key={event.id} value={event.id}>
+                    {formatEventOption(event)}
+                  </option>
+                ))
+              ) : (
+                <option value="">Nenhum evento carregado</option>
+              )}
             </select>
           </label>
-          <button type="button">
+          <button type="button" onClick={refresh} disabled={isRefreshing}>
             <OperationIcon name="refresh" />
             Atualizar
           </button>
         </div>
+        {error ? <p className="admin-operation-error">{error}</p> : null}
       </header>
 
       <main className="admin-operation-layout" aria-label="Centro de inteligência operacional">
         <section className="admin-operation-metrics" aria-label="Resumo compacto">
-          {(Object.keys(expandedMetricContent) as ActiveMetric[]).map((metric) => (
+          {(Object.keys(metrics) as ActiveMetric[]).map((metric) => (
             <MetricPill
               key={metric}
               metric={metric}
+              config={metrics[metric]}
               isActive={activeMetric === metric}
               onClick={() => setActiveMetric(metric)}
             />
           ))}
         </section>
 
-        <ExpandedPanel metric={expandedMetric} />
+        <ExpandedPanel
+          metric={expandedMetric}
+          comparisonDays={comparisonDays}
+          onComparisonDaysChange={setComparisonDays}
+        />
       </main>
     </>
   );

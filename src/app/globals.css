@@ -1692,6 +1692,14 @@ button.admin-operation-metric:hover {
   stroke-width: 4;
 }
 
+.admin-operation-metric-chart polyline {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4;
+}
+
 .admin-operation-metric-chart path:nth-child(2) {
   opacity: 0.32;
   stroke-width: 2.5;
@@ -1713,6 +1721,17 @@ button.admin-operation-metric:hover {
   background: rgba(220, 38, 38, 0.08);
   color: #dc2626;
   font-size: clamp(34px, 3.1vw, 48px);
+  font-weight: 950;
+}
+
+.admin-operation-chart-empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 76px;
+  color: #94a3b8;
+  font-size: clamp(30px, 2.8vw, 42px);
   font-weight: 950;
 }
 
@@ -1748,6 +1767,24 @@ button.admin-operation-metric:hover {
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 6;
+}
+
+.admin-operation-main-chart polyline {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 6;
+}
+
+.admin-operation-main-chart p {
+  display: grid;
+  place-items: center;
+  min-height: 150px;
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 800;
 }
 
 .admin-operation-main-chart path:nth-child(2) {
@@ -1936,7 +1973,8 @@ button.admin-operation-metric:hover {
   text-transform: uppercase;
 }
 
-.admin-operation-expanded-toolbar input {
+.admin-operation-expanded-toolbar input,
+.admin-operation-expanded-toolbar select {
   min-height: 40px;
   width: 100%;
   border: 1px solid rgba(2, 6, 23, 0.14);
@@ -1947,6 +1985,14 @@ button.admin-operation-metric:hover {
   font-size: 16px;
   font-weight: 800;
   padding: 8px 10px;
+}
+
+.admin-operation-error {
+  grid-column: 2 / 4;
+  margin: 0;
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 850;
 }
 
 .admin-operation-row-list,
