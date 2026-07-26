@@ -366,12 +366,12 @@ function MetricPill({
         </span>
         <strong>{config.headlineValue}</strong>
         <small>{config.headlineLabel}</small>
+        {metric === "alerts" ? (
+          <span className="admin-operation-alert-badge">{config.headlineValue}</span>
+        ) : (
+          <MiniChart values={config.series} />
+        )}
       </div>
-      {metric === "alerts" ? (
-        <span className="admin-operation-alert-badge">{config.headlineValue}</span>
-      ) : (
-        <MiniChart values={config.series} />
-      )}
     </button>
   );
 }
@@ -458,7 +458,7 @@ export default function OperationalDashboardSection() {
   const metrics = useMemo(() => mapDashboardToMetrics(data), [data]);
   const expandedMetric = metrics[activeMetric];
   const events = data?.events ?? [];
-  const currentEventId = selectedEventId ?? data?.event?.id ?? "";
+  const currentEventId = selectedEventId ?? "";
 
   return (
     <>
@@ -487,11 +487,14 @@ export default function OperationalDashboardSection() {
               onChange={(event) => setSelectedEventId(event.target.value || null)}
             >
               {events.length ? (
-                events.map((event) => (
-                  <option key={event.id} value={event.id}>
-                    {formatEventOption(event)}
-                  </option>
-                ))
+                <>
+                  <option value="">Todos</option>
+                  {events.map((event) => (
+                    <option key={event.id} value={event.id}>
+                      {formatEventOption(event)}
+                    </option>
+                  ))}
+                </>
               ) : (
                 <option value="">Nenhum evento carregado</option>
               )}

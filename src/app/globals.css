@@ -1606,10 +1606,7 @@ body:has(.checkout-unavailable-shell) iframe {
 }
 
 .admin-operation-metric {
-  display: grid;
-  grid-template-columns: minmax(0, 0.78fr) minmax(86px, 1fr);
-  gap: 14px;
-  align-items: center;
+  display: block;
   min-height: 118px;
   padding: 18px 20px;
   border: 1px solid rgba(2, 6, 23, 0.08);
@@ -1679,7 +1676,8 @@ button.admin-operation-metric:hover {
 .admin-operation-metric-chart {
   width: 100%;
   min-width: 0;
-  height: 76px;
+  height: 52px;
+  margin-top: 8px;
   fill: none;
   opacity: 0.72;
   overflow: visible;
@@ -1714,9 +1712,11 @@ button.admin-operation-metric:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
+  width: 72px;
+  max-width: 100%;
   min-width: 0;
-  height: 76px;
+  height: 72px;
+  margin-top: 8px;
   border-radius: 999px;
   background: rgba(220, 38, 38, 0.08);
   color: #dc2626;
@@ -4435,7 +4435,7 @@ button.admin-operation-metric:hover {
   }
 
   .admin-operation-metric {
-    grid-template-columns: minmax(0, 0.7fr) minmax(96px, 1fr);
+    display: block;
   }
 
   .admin-general-kpis article,
