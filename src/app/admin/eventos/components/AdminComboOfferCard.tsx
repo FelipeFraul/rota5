@@ -6,6 +6,7 @@ export type AdminComboOfferCardProps = {
   offerId: string;
   name: string;
   imageUrl: string | null;
+  originalPriceCents: number | null;
   priceCents: number;
   displayPriority: number;
   status: "active" | "paused" | string;
@@ -30,6 +31,10 @@ function formatCurrency(cents: number) {
 
 function formatInteger(value: number) {
   return new Intl.NumberFormat("pt-BR").format(value);
+}
+
+function formatCardTimingLabel(label: string) {
+  return label.replace(/\bantes\b/g, "depois");
 }
 
 function EditIcon() {
@@ -78,6 +83,7 @@ function AdminComboOfferCardComponent({
   offerId,
   name,
   imageUrl,
+  originalPriceCents,
   priceCents,
   displayPriority,
   status,
@@ -144,7 +150,9 @@ function AdminComboOfferCardComponent({
         </span>
         <strong>{name}</strong>
         <small>Prioridade {formatInteger(displayPriority || 1)}</small>
-        <small>{formatCurrency(priceCents)} · {timingLabel}</small>
+        <small>
+          De: {formatCurrency(originalPriceCents ?? priceCents)} - Por: {formatCurrency(priceCents)} - {formatCardTimingLabel(timingLabel)}
+        </small>
         <small>{scopeLabel}</small>
         <span className="admin-combo-offer-metrics">
           <span><b>{formatInteger(itemsSold)}</b> vendidos</span>

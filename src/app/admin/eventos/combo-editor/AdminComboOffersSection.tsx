@@ -214,6 +214,7 @@ export default function AdminComboOffersSection({ events, visible }: AdminComboO
       offerId: offer.offerId,
       name: offer.name,
       imageUrl: offer.imageUrl,
+      originalPriceCents: offer.originalPriceCents,
       priceCents: offer.priceCents,
       displayPriority: offer.displayPriority,
       status: offer.status,
