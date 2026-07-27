@@ -10,6 +10,7 @@ import type { TicketEventSearchResult } from "@/lib/tickets/services/events";
 export const ALL_EVENTS_MESSAGE_MAX_LENGTH = 3_500;
 export const ALL_EVENTS_CONTINUATION_DELAY_MS = 1_200;
 const ALL_EVENTS_SEPARATOR = "--";
+const ALL_EVENTS_HEADER = "*ENCONTREI ESTES EVENTOS:*";
 export const ALL_EVENTS_FINAL_INSTRUCTIONS = [
   "> Reenviar seu ingresso, digite *AGAIN*",
   "> Para ajuda, digite *HELP*",
@@ -22,7 +23,7 @@ export function formatAllEventsReply(
   const blocks = events.map((event, index) => formatSingleAllEventReply(event, index));
 
   return [
-    "Encontrei estes eventos:",
+    ALL_EVENTS_HEADER,
     "",
     blocks.join(`\n\n${ALL_EVENTS_SEPARATOR}\n\n`),
     "",
@@ -54,7 +55,7 @@ export function buildAllEventsOutboundMessages(
     return [
       {
         type: "text",
-        body: "Encontrei estes eventos:",
+        body: ALL_EVENTS_HEADER,
         suppressTitle: true,
       },
       ...events.map((event, index) => {
@@ -105,7 +106,7 @@ export function buildAllEventsOutboundMessages(
     suppressTitle: true;
     delayMs?: number;
   }> = [];
-  let current = "Encontrei estes eventos:";
+  let current = ALL_EVENTS_HEADER;
   const pushCurrentMessage = () => {
     messages.push({
       type: "text",
@@ -119,7 +120,7 @@ export function buildAllEventsOutboundMessages(
 
   events.forEach((event, index) => {
     const block = formatSingleAllEventReply(event, index);
-    const separator = current === "Encontrei estes eventos:" || current === "*EVENTOS - CONTINUACAO*"
+    const separator = current === ALL_EVENTS_HEADER || current === "*EVENTOS - CONTINUACAO*"
       ? "\n\n"
       : `\n\n${ALL_EVENTS_SEPARATOR}\n\n`;
     const candidate = `${current}${separator}${block}`;

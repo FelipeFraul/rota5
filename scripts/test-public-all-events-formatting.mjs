@@ -156,7 +156,7 @@ function formatAllEventsReply(events) {
   const blocks = events.map((event, index) => formatSingleAllEventReply(event, index));
 
   return [
-    "Encontrei estes eventos:",
+    "*ENCONTREI ESTES EVENTOS:*",
     "",
     blocks.join(`\n\n${ALL_EVENTS_SEPARATOR}\n\n`),
     "",
@@ -169,7 +169,7 @@ function buildAllEventsOutboundMessages(events) {
     return [
       {
         type: "text",
-        body: "Encontrei estes eventos:",
+        body: "*ENCONTREI ESTES EVENTOS:*",
         suppressTitle: true,
       },
       ...events.map((event, index) => {
@@ -201,7 +201,7 @@ function buildAllEventsOutboundMessages(events) {
   }
 
   const messages = [];
-  let current = "Encontrei estes eventos:";
+  let current = "*ENCONTREI ESTES EVENTOS:*";
   const pushCurrentMessage = () => {
     messages.push({
       type: "text",
@@ -215,7 +215,7 @@ function buildAllEventsOutboundMessages(events) {
 
   events.forEach((event, index) => {
     const block = formatSingleAllEventReply(event, index);
-    const separator = current === "Encontrei estes eventos:" || current === "*EVENTOS - CONTINUACAO*"
+    const separator = current === "*ENCONTREI ESTES EVENTOS:*" || current === "*EVENTOS - CONTINUACAO*"
       ? "\n\n"
       : `\n\n${ALL_EVENTS_SEPARATOR}\n\n`;
     const candidate = `${current}${separator}${block}`;
@@ -294,7 +294,7 @@ test("TODOS com um evento formata titulo, local, data e opcoes", () => {
   assert.equal(
     formatAllEventsReply([baseEvents[0]]),
     [
-      "Encontrei estes eventos:",
+      "*ENCONTREI ESTES EVENTOS:*",
       "",
       "🎟️ *YURI MARÇAL - SOLO NOVO*",
       "| Local: Teatro Municipal",
@@ -321,7 +321,7 @@ test("TODOS com varios eventos preserva ordem e numeracao", () => {
   assert.equal(
     formatAllEventsReply(baseEvents),
     [
-      "Encontrei estes eventos:",
+      "*ENCONTREI ESTES EVENTOS:*",
       "",
       "🎟️ *YURI MARÇAL - SOLO NOVO*",
       "| Local: Teatro Municipal",
@@ -422,7 +422,7 @@ test("TODOS envia foto dos eventos quando houver imageUrl", () => {
       {
         type: "text",
         imageUrl: undefined,
-        body: "Encontrei estes eventos:",
+        body: "*ENCONTREI ESTES EVENTOS:*",
         caption: undefined,
         suppressTitle: true,
         delayMs: undefined,

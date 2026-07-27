@@ -1728,7 +1728,7 @@ function formatEventOptionsReply(events: TicketConversationEventOption[]) {
   ]);
 
   return [
-    "Encontrei estes eventos:",
+    "*ENCONTREI ESTES EVENTOS:*",
     "",
     ...lines,
   ].join("\n");
