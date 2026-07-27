@@ -5,12 +5,13 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   OFFICIAL_TABLE_MAP_PLACES,
   type OfficialTableMapPlace,
+  type OfficialTableMapPlaceMetadata,
 } from "@/lib/tickets/tableMap/officialPlaces";
 import { getOfficialTableMapPlaces } from "@/lib/tickets/tableMap/officialPlaceCoordinates";
 import { renderOfficialTableMap } from "@/lib/tickets/tableMap/renderOfficialTableMap";
 
 export type OfficialTableMapReservationPlace = Pick<
-  OfficialTableMapPlace,
+  OfficialTableMapPlaceMetadata,
   "code" | "type" | "environment" | "capacity"
 >;
 
@@ -80,7 +81,7 @@ export function isOfficialTableMapPlaceAllowedForQuantity({
   place,
   quantity,
 }: {
-  place: OfficialTableMapPlace;
+  place: OfficialTableMapPlaceMetadata;
   quantity: number;
 }) {
   if (quantity <= 1) return false;

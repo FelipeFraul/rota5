@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 
 import {
   clampOfficialTableMapPoint,
@@ -9,8 +9,10 @@ import {
 } from "@/lib/tickets/tableMap/calibration";
 import {
   OFFICIAL_TABLE_MAP_HEIGHT,
+  OFFICIAL_TABLE_MAP_MARKER_VISUAL,
   OFFICIAL_TABLE_MAP_WIDTH,
   type OfficialTableMapPlace,
+  type OfficialTableMapPlaceMetadata,
 } from "@/lib/tickets/tableMap/officialPlaces";
 
 type DisplayMode = "code" | "unavailable";
@@ -18,12 +20,20 @@ type DisplayMode = "code" | "unavailable";
 const OFFICIAL_TABLE_MAP_IMAGE_SRC = "/mapa_mesas.webp?v=20260727-122245";
 
 type AdminTableMapCalibratorProps = {
-  places: readonly OfficialTableMapPlace[];
+  places: readonly OfficialTableMapPlaceMetadata[];
   embedded?: boolean;
 };
 
 function clonePlaces(places: readonly OfficialTableMapPlace[]) {
   return places.map((place) => ({ ...place }));
+}
+
+function buildEmptyDraftPlaces(places: readonly OfficialTableMapPlaceMetadata[]): OfficialTableMapPlace[] {
+  return places.map((place) => ({
+    ...place,
+    x: 0,
+    y: 0,
+  }));
 }
 
 function getCsrfToken() {
@@ -38,17 +48,43 @@ function getPlaceLabel(place: OfficialTableMapPlace, mode: DisplayMode) {
   return mode === "unavailable" ? "X" : place.code.padStart(2, "0");
 }
 
+function getPayloadMessage(payload: unknown, fallback: string) {
+  if (!payload || typeof payload !== "object") return fallback;
+  const message = "message" in payload ? String((payload as { message?: unknown }).message ?? "") : "";
+  const details = "details" in payload ? String((payload as { details?: unknown }).details ?? "") : "";
+
+  return [message || fallback, details].filter(Boolean).join(" Detalhe: ");
+}
+
+function getMarkerColor(place: OfficialTableMapPlace, mode: DisplayMode) {
+  if (mode === "unavailable") return OFFICIAL_TABLE_MAP_MARKER_VISUAL.unavailableColor;
+  return place.type === "bistro"
+    ? OFFICIAL_TABLE_MAP_MARKER_VISUAL.bistroColor
+    : OFFICIAL_TABLE_MAP_MARKER_VISUAL.tableColor;
+}
+
+const markerBaseStyle = {
+  width: `${(OFFICIAL_TABLE_MAP_MARKER_VISUAL.width / OFFICIAL_TABLE_MAP_WIDTH) * 100}%`,
+  height: `${(OFFICIAL_TABLE_MAP_MARKER_VISUAL.height / OFFICIAL_TABLE_MAP_HEIGHT) * 100}%`,
+  fontSize: `calc(${OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontSize / OFFICIAL_TABLE_MAP_WIDTH} * 100cqw)`,
+  fontFamily: `"${OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontFamily}", Arial, Helvetica, sans-serif`,
+  fontWeight: OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontWeight,
+  lineHeight: OFFICIAL_TABLE_MAP_MARKER_VISUAL.lineHeight,
+} satisfies CSSProperties;
+
 export function AdminTableMapCalibrator({ places, embedded = false }: AdminTableMapCalibratorProps) {
-  const [loadedPlaces, setLoadedPlaces] = useState(() => clonePlaces(places));
+  const [loadedPlaces, setLoadedPlaces] = useState<OfficialTableMapPlace[]>([]);
   const initialPlaces = useMemo(() => clonePlaces(loadedPlaces), [loadedPlaces]);
-  const [draftPlaces, setDraftPlaces] = useState(() => clonePlaces(places));
-  const [activeCode, setActiveCode] = useState<string | null>(places[0]?.code ?? null);
+  const [draftPlaces, setDraftPlaces] = useState<OfficialTableMapPlace[]>([]);
+  const [activeCode, setActiveCode] = useState<string | null>(null);
   const [displayMode, setDisplayMode] = useState<DisplayMode>("code");
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [previewing, setPreviewing] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>("Carregando coordenadas salvas...");
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const mapRef = useRef<HTMLDivElement | null>(null);
-  const draftPlacesRef = useRef(clonePlaces(places));
+  const draftPlacesRef = useRef<OfficialTableMapPlace[]>([]);
 
   const activePlace = draftPlaces.find((place) => place.code === activeCode) ?? draftPlaces[0] ?? null;
   const exportedJson = useMemo(() => exportOfficialPlacesCalibrationJson(draftPlaces), [draftPlaces]);
@@ -60,16 +96,31 @@ export function AdminTableMapCalibrator({ places, embedded = false }: AdminTable
       try {
         const response = await fetch("/api/admin/table-map", { cache: "no-store" });
         const payload = await response.json().catch(() => null);
-        if (!response.ok || !payload?.ok || !Array.isArray(payload.places) || cancelled) return;
+        if (cancelled) return;
+        if (!response.ok || !payload?.ok || !Array.isArray(payload.places)) {
+          const emptyDraftPlaces = buildEmptyDraftPlaces(places);
+          draftPlacesRef.current = clonePlaces(emptyDraftPlaces);
+          setLoadedPlaces([]);
+          setDraftPlaces(clonePlaces(emptyDraftPlaces));
+          setActiveCode(emptyDraftPlaces[0]?.code ?? null);
+          setSaveMessage(`${getPayloadMessage(payload, "Nao foi possivel carregar as coordenadas salvas do mapa.")} Calibre os pontos e salve para criar os registros.`);
+          return;
+        }
 
         const savedPlaces = clonePlaces(payload.places);
         setLoadedPlaces(savedPlaces);
         draftPlacesRef.current = clonePlaces(savedPlaces);
         setDraftPlaces(clonePlaces(savedPlaces));
         setActiveCode(savedPlaces[0]?.code ?? null);
-      } catch {
+        setSaveMessage(null);
+      } catch (error) {
         if (!cancelled) {
-          setSaveMessage("Usando catalogo padrao como fallback.");
+          const emptyDraftPlaces = buildEmptyDraftPlaces(places);
+          draftPlacesRef.current = clonePlaces(emptyDraftPlaces);
+          setLoadedPlaces([]);
+          setDraftPlaces(clonePlaces(emptyDraftPlaces));
+          setActiveCode(emptyDraftPlaces[0]?.code ?? null);
+          setSaveMessage(`Nao foi possivel carregar as coordenadas salvas do mapa. Detalhe: ${error instanceof Error ? error.message : String(error)} Calibre os pontos e salve para criar os registros.`);
         }
       }
     }
@@ -79,7 +130,7 @@ export function AdminTableMapCalibrator({ places, embedded = false }: AdminTable
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [places]);
 
   function updatePlacePosition(code: string, event: PointerEvent<HTMLElement>) {
     const rect = mapRef.current?.getBoundingClientRect();
@@ -126,12 +177,35 @@ export function AdminTableMapCalibrator({ places, embedded = false }: AdminTable
   }
 
   function restoreLoadedPositions() {
-    const restoredPlaces = clonePlaces(initialPlaces);
+    const restoredPlaces = initialPlaces.length === places.length
+      ? clonePlaces(initialPlaces)
+      : buildEmptyDraftPlaces(places);
     draftPlacesRef.current = restoredPlaces;
     setDraftPlaces(clonePlaces(restoredPlaces));
-    setActiveCode(initialPlaces[0]?.code ?? null);
+    setActiveCode(restoredPlaces[0]?.code ?? null);
     setCopied(false);
     setSaveMessage(null);
+  }
+
+  async function loadFinalPreview() {
+    setPreviewing(true);
+    setSaveMessage(null);
+
+    try {
+      const response = await fetch("/api/admin/table-map?preview=final", { cache: "no-store" });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !payload?.ok || typeof payload.imageUrl !== "string") {
+        setSaveMessage(getPayloadMessage(payload, "Nao foi possivel visualizar a imagem final."));
+        return;
+      }
+
+      setPreviewImageUrl(payload.imageUrl);
+    } catch (error) {
+      setSaveMessage(`Nao foi possivel visualizar a imagem final. Detalhe: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setPreviewing(false);
+    }
   }
 
   async function savePermanentChanges() {
@@ -150,7 +224,7 @@ export function AdminTableMapCalibrator({ places, embedded = false }: AdminTable
       const payload = await response.json().catch(() => null);
 
       if (!response.ok || !payload?.ok || !Array.isArray(payload.places)) {
-        setSaveMessage(payload?.message ?? "Nao foi possivel salvar o mapa.");
+        setSaveMessage(getPayloadMessage(payload, "Nao foi possivel salvar o mapa."));
         return;
       }
 
@@ -163,8 +237,9 @@ export function AdminTableMapCalibrator({ places, embedded = false }: AdminTable
         : savedPlaces[0]?.code ?? null;
       setActiveCode(savedActiveCode);
       setSaveMessage("Salvo permanentemente.");
-    } catch {
-      setSaveMessage("Nao foi possivel salvar o mapa.");
+      await loadFinalPreview();
+    } catch (error) {
+      setSaveMessage(`Nao foi possivel salvar o mapa. Detalhe: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setSaving(false);
     }
@@ -191,12 +266,15 @@ export function AdminTableMapCalibrator({ places, embedded = false }: AdminTable
               className={displayMode === "unavailable" ? "is-active" : ""}
               onClick={() => setDisplayMode("unavailable")}
             >
-              XX
+              X
             </button>
           </div>
           <button type="button" onClick={restoreLoadedPositions}>Restaurar</button>
-          <button type="button" onClick={savePermanentChanges} disabled={saving}>
+          <button type="button" onClick={savePermanentChanges} disabled={saving || draftPlaces.length !== places.length}>
             {saving ? "Salvando..." : "Salvar Alteracoes"}
+          </button>
+          <button type="button" onClick={loadFinalPreview} disabled={previewing}>
+            {previewing ? "Gerando..." : "Visualizar imagem final"}
           </button>
           <button type="button" onClick={copyJson}>{copied ? "Copiado" : "Copiar JSON"}</button>
         </div>
@@ -220,8 +298,10 @@ export function AdminTableMapCalibrator({ places, embedded = false }: AdminTable
                 type="button"
                 className={`admin-table-map-marker is-${place.type} ${displayMode === "unavailable" ? "is-unavailable" : ""} ${activeCode === place.code ? "is-active" : ""}`}
                 style={{
+                  ...markerBaseStyle,
                   left: `${(place.x / OFFICIAL_TABLE_MAP_WIDTH) * 100}%`,
                   top: `${(place.y / OFFICIAL_TABLE_MAP_HEIGHT) * 100}%`,
+                  color: getMarkerColor(place, displayMode),
                 }}
                 onPointerDown={(event) => startDrag(place.code, event)}
                 onPointerMove={(event) => {
@@ -264,6 +344,15 @@ export function AdminTableMapCalibrator({ places, embedded = false }: AdminTable
             JSON exportado
             <textarea readOnly value={exportedJson} />
           </label>
+
+          <div className="admin-table-map-preview">
+            <span>Imagem final</span>
+            {previewImageUrl ? (
+              <img src={previewImageUrl} alt="Imagem final do mapa oficial" />
+            ) : (
+              <small>Sem preview gerado.</small>
+            )}
+          </div>
         </aside>
       </div>
     </section>

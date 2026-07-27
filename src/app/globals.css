@@ -5679,6 +5679,7 @@ body:has(.checkout-unavailable-shell) iframe {
   width: min(calc(100% - 200px), 886px);
   flex: 0 0 auto;
   cursor: crosshair;
+  container-type: inline-size;
 }
 
 .admin-table-map-image-frame img {
@@ -5690,13 +5691,7 @@ body:has(.checkout-unavailable-shell) iframe {
 }
 
 .admin-table-map-marker {
-  color: #bf151a;
-}
-
-.admin-table-map-marker {
   position: absolute;
-  width: 64px;
-  height: 52px;
   transform: translate(-50%, -50%);
   border: 0;
   border-radius: 4px;
@@ -5705,7 +5700,6 @@ body:has(.checkout-unavailable-shell) iframe {
   align-items: center;
   justify-content: center;
   padding: 0;
-  font: 700 40px/1 "Bebas Neue", Arial, Helvetica, sans-serif;
   text-shadow:
     -1px -1px 0 #ffffff,
     1px -1px 0 #ffffff,
@@ -5713,24 +5707,6 @@ body:has(.checkout-unavailable-shell) iframe {
     1px 1px 0 #ffffff;
   cursor: grab;
   touch-action: none;
-}
-
-.admin-table-map-marker.is-bistro {
-  color: #1f7888;
-}
-
-.admin-table-map-marker.is-table {
-  color: #bf151a;
-}
-
-.admin-table-map-marker.is-unavailable {
-  color: #dc2626;
-  font-size: 40px;
-  text-shadow:
-    -1px -1px 0 #ffffff,
-    1px -1px 0 #ffffff,
-    -1px 1px 0 #ffffff,
-    1px 1px 0 #ffffff;
 }
 
 .admin-table-map-marker.is-active {
@@ -5748,7 +5724,8 @@ body:has(.checkout-unavailable-shell) iframe {
 }
 
 .admin-table-map-current,
-.admin-table-map-export {
+.admin-table-map-export,
+.admin-table-map-preview {
   display: grid;
   gap: 6px;
   padding: 14px;
@@ -5758,7 +5735,8 @@ body:has(.checkout-unavailable-shell) iframe {
 }
 
 .admin-table-map-current span,
-.admin-table-map-export {
+.admin-table-map-export,
+.admin-table-map-preview span {
   font-weight: 700;
 }
 
@@ -5820,6 +5798,19 @@ body:has(.checkout-unavailable-shell) iframe {
 
 .admin-table-map-calibrator.is-embedded .admin-table-map-export textarea {
   min-height: 210px;
+}
+
+.admin-table-map-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #0f172a;
+}
+
+.admin-table-map-preview small {
+  color: #475569;
 }
 
 @media (max-width: 980px) {

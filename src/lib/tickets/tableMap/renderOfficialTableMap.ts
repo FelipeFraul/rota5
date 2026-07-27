@@ -5,6 +5,7 @@ import sharp from "sharp";
 import {
   OFFICIAL_TABLE_MAP_ASSET,
   OFFICIAL_TABLE_MAP_HEIGHT,
+  OFFICIAL_TABLE_MAP_MARKER_VISUAL,
   type OfficialTableMapPlace,
   OFFICIAL_TABLE_MAP_WIDTH,
   normalizeOfficialTableMapCode,
@@ -25,19 +26,7 @@ export type RenderedOfficialTableMap = {
   filename: string;
 };
 
-export const OFFICIAL_TABLE_MAP_MARKER_VISUAL = {
-  width: 64,
-  height: 52,
-  fontFamily: "Bebas Neue",
-  fontFile: path.join(process.cwd(), "public", "fonts", "BebasNeue-Regular.ttf"),
-  fontWeight: 700,
-  fontSize: 40,
-  lineHeight: 1,
-  tableColor: "#bf151a",
-  bistroColor: "#1f7888",
-  unavailableColor: "#dc2626",
-  textShadowColor: "#ffffff",
-} as const;
+const OFFICIAL_TABLE_MAP_MARKER_FONT_FILE = path.join(process.cwd(), "public", "fonts", "BebasNeue-Regular.ttf");
 
 function escapeSvgText(text: string) {
   return text
@@ -120,7 +109,7 @@ async function renderMarkerText({
   text: string;
 }) {
   const visual = OFFICIAL_TABLE_MAP_MARKER_VISUAL;
-  const fontFile = existsSync(visual.fontFile) ? visual.fontFile : undefined;
+  const fontFile = existsSync(OFFICIAL_TABLE_MAP_MARKER_FONT_FILE) ? OFFICIAL_TABLE_MAP_MARKER_FONT_FILE : undefined;
 
   return sharp({
     text: {

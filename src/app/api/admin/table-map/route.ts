@@ -8,19 +8,64 @@ import {
   getOfficialTableMapPlaces,
 } from "@/lib/tickets/tableMap/officialPlaceCoordinates";
 import { persistOfficialTableMapPlaces } from "@/lib/tickets/tableMap/persistOfficialPlaces";
+import { renderOfficialTableMap } from "@/lib/tickets/tableMap/renderOfficialTableMap";
 
-export async function GET() {
+function getErrorMessage(error: unknown) {
+  return error && typeof error === "object" && "message" in error
+    ? String((error as { message?: unknown }).message ?? "Erro desconhecido.")
+    : String(error ?? "Erro desconhecido.");
+}
+
+export async function GET(request: Request) {
   const auth = await requireAdminEventEditorSession();
   if (!auth.ok) {
     return NextResponse.json({ ok: false, message: "Nao autorizado." }, { status: 401 });
   }
 
-  const places = await getOfficialTableMapPlaces();
+  const url = new URL(request.url);
 
-  return NextResponse.json(
-    { ok: true, places },
-    { headers: { "cache-control": "no-store" } },
-  );
+  if (url.searchParams.get("preview") === "final") {
+    try {
+      const rendered = await renderOfficialTableMap({ format: "png" });
+
+      return NextResponse.json(
+        {
+          ok: true,
+          imageUrl: `data:${rendered.mimeType};base64,${rendered.buffer.toString("base64")}`,
+        },
+        { headers: { "cache-control": "no-store" } },
+      );
+    } catch (error) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Nao foi possivel renderizar a imagem final do mapa.",
+          reason: "database_error",
+          details: getErrorMessage(error),
+        },
+        { status: 500, headers: { "cache-control": "no-store" } },
+      );
+    }
+  }
+
+  try {
+    const places = await getOfficialTableMapPlaces();
+
+    return NextResponse.json(
+      { ok: true, places },
+      { headers: { "cache-control": "no-store" } },
+    );
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "Nao foi possivel carregar as coordenadas salvas do mapa.",
+        reason: "database_error",
+        details: getErrorMessage(error),
+      },
+      { status: 500, headers: { "cache-control": "no-store" } },
+    );
+  }
 }
 
 export async function PUT(request: Request) {
@@ -38,7 +83,7 @@ export async function PUT(request: Request) {
 
   if (!result.ok) {
     return NextResponse.json(
-      { ok: false, message: "Catalogo invalido.", reason: result.reason },
+      { ok: false, message: result.message, reason: result.reason, details: result.details },
       { status: 400 },
     );
   }
