@@ -1,4 +1,3 @@
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 
@@ -28,8 +27,8 @@ export type RenderedOfficialTableMap = {
 export const OFFICIAL_TABLE_MAP_MARKER_VISUAL = {
   width: 64,
   height: 52,
-  fontFamily: "OfficialTableMapMarker",
-  fontFile: "public/fonts/BebasNeue-Regular.ttf",
+  fontFamily: "Bebas Neue",
+  fontFile: path.join(process.cwd(), "public", "fonts", "BebasNeue-Regular.ttf"),
   fontWeight: 700,
   fontSize: 40,
   lineHeight: 1,
@@ -38,15 +37,6 @@ export const OFFICIAL_TABLE_MAP_MARKER_VISUAL = {
   unavailableColor: "#dc2626",
   textShadowColor: "#ffffff",
 } as const;
-
-let markerFontDataUriPromise: Promise<string> | null = null;
-
-async function getMarkerFontDataUri() {
-  markerFontDataUriPromise ??= readFile(path.join(process.cwd(), OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontFile))
-    .then((buffer) => `data:font/ttf;base64,${buffer.toString("base64")}`);
-
-  return markerFontDataUriPromise;
-}
 
 function escapeSvgText(text: string) {
   return text
@@ -96,7 +86,6 @@ export async function buildOfficialTableMapOverlaySvg({
   hiddenCodes = [],
   places,
 }: Pick<RenderOfficialTableMapInput, "hiddenCodes" | "unavailableCodes" | "places"> = {}) {
-  const fontDataUri = await getMarkerFontDataUri();
   const resolvedPlaces = places ?? await getOfficialTableMapPlaces();
   const unavailable = new Set(
     unavailableCodes.map((code) => normalizeOfficialTableMapCode(code)),
@@ -117,14 +106,105 @@ export async function buildOfficialTableMapOverlaySvg({
 
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${OFFICIAL_TABLE_MAP_WIDTH}" height="${OFFICIAL_TABLE_MAP_HEIGHT}" viewBox="0 0 ${OFFICIAL_TABLE_MAP_WIDTH} ${OFFICIAL_TABLE_MAP_HEIGHT}">`,
-    "<defs>",
-    "<style>",
-    `@font-face{font-family:${OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontFamily};src:url('${fontDataUri}') format('truetype');font-weight:${OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontWeight};font-style:normal;}`,
-    "</style>",
-    "</defs>",
     labels,
     "</svg>",
   ].join("");
+}
+
+async function renderMarkerText({
+  color,
+  text,
+}: {
+  color: string;
+  text: string;
+}) {
+  const visual = OFFICIAL_TABLE_MAP_MARKER_VISUAL;
+
+  return sharp({
+    text: {
+      text: `<span foreground="${color}">${escapeSvgText(text)}</span>`,
+      font: `${visual.fontFamily} ${visual.fontSize}`,
+      fontfile: visual.fontFile,
+      width: visual.width,
+      align: "center",
+      rgba: true,
+      dpi: 72,
+    },
+  })
+    .png()
+    .toBuffer();
+}
+
+async function renderMarkerImage({
+  label,
+  type,
+}: {
+  label: string;
+  type: OfficialTableMapPlace["type"];
+}) {
+  const visual = OFFICIAL_TABLE_MAP_MARKER_VISUAL;
+  const isUnavailable = label === "X";
+  const fill = isUnavailable
+    ? visual.unavailableColor
+    : type === "bistro"
+      ? visual.bistroColor
+      : visual.tableColor;
+  const shadow = await renderMarkerText({ color: visual.textShadowColor, text: label });
+  const foreground = await renderMarkerText({ color: fill, text: label });
+  const shadowMetadata = await sharp(shadow).metadata();
+  const foregroundMetadata = await sharp(foreground).metadata();
+  const shadowTop = Math.round((visual.height - (shadowMetadata.height ?? visual.height)) / 2);
+  const foregroundTop = Math.round((visual.height - (foregroundMetadata.height ?? visual.height)) / 2);
+  const shadowOffsets = [
+    { left: -1, top: -1 },
+    { left: 1, top: -1 },
+    { left: -1, top: 1 },
+    { left: 1, top: 1 },
+  ];
+
+  return sharp({
+    create: {
+      width: visual.width,
+      height: visual.height,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    },
+  })
+    .composite([
+      ...shadowOffsets.map((offset) => ({ input: shadow, left: offset.left, top: shadowTop + offset.top })),
+      { input: foreground, left: 0, top: foregroundTop },
+    ])
+    .png()
+    .toBuffer();
+}
+
+async function buildOfficialTableMapMarkerComposites({
+  hiddenCodes = [],
+  unavailableCodes = [],
+  places,
+}: Pick<RenderOfficialTableMapInput, "hiddenCodes" | "unavailableCodes" | "places"> = {}) {
+  const resolvedPlaces = places ?? await getOfficialTableMapPlaces();
+  const unavailable = new Set(
+    unavailableCodes.map((code) => normalizeOfficialTableMapCode(code)),
+  );
+  const hidden = new Set(
+    hiddenCodes.map((code) => normalizeOfficialTableMapCode(code)),
+  );
+  const visual = OFFICIAL_TABLE_MAP_MARKER_VISUAL;
+  const composites = await Promise.all(
+    resolvedPlaces
+      .filter((place) => !hidden.has(place.code))
+      .map(async (place) => ({
+        input: await renderMarkerImage({
+          label: unavailable.has(place.code) ? "X" : place.code,
+          type: place.type,
+        }),
+        left: Math.round(place.x - visual.width / 2),
+        top: Math.round(place.y - visual.height / 2),
+      })),
+  );
+
+  return composites;
 }
 
 export async function renderOfficialTableMap({
@@ -134,18 +214,12 @@ export async function renderOfficialTableMap({
   format = "webp",
   places,
 }: RenderOfficialTableMapInput = {}): Promise<RenderedOfficialTableMap> {
-  const svg = await buildOfficialTableMapOverlaySvg({
+  const markerComposites = await buildOfficialTableMapMarkerComposites({
     hiddenCodes,
     unavailableCodes,
     places,
   });
-  const image = sharp(baseImagePath).composite([
-    {
-      input: Buffer.from(svg),
-      left: 0,
-      top: 0,
-    },
-  ]);
+  const image = sharp(baseImagePath).composite(markerComposites);
   const buffer = format === "png"
     ? await image.png().toBuffer()
     : await image.webp({ quality: 95 }).toBuffer();

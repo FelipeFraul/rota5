@@ -370,7 +370,7 @@ test("renderizador rejeita imagem ausente ou invalida", async () => {
   );
 });
 
-test("renderizador propaga falha do sharp quando overlay nao cabe na base", async () => {
+test("renderizador recorta marcador quando a base for menor que o mapa oficial", async () => {
   await mkdir(outputDir, { recursive: true });
   const smallImagePath = path.join(outputDir, "mapa-pequeno.webp");
   await sharp({
@@ -382,10 +382,11 @@ test("renderizador propaga falha do sharp quando overlay nao cabe na base", asyn
     },
   }).webp().toFile(smallImagePath);
 
-  await assert.rejects(
-    () => renderOfficialTableMap({ baseImagePath: smallImagePath }),
-    /Image to composite must have same dimensions or smaller/,
-  );
+  const rendered = await renderOfficialTableMap({ baseImagePath: smallImagePath, places: OFFICIAL_TABLE_MAP_PLACES.slice(0, 1) });
+  const metadata = await sharp(rendered.buffer).metadata();
+
+  assert.equal(metadata.width, 100);
+  assert.equal(metadata.height, 100);
 });
 
 test("falha de render do mapa nao impede continuidade do fluxo", async () => {
@@ -428,28 +429,23 @@ test("renderizador usa a mesma referencia visual dos marcadores do editor", asyn
   assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontWeight, 700);
   assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontSize, 40);
   assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.lineHeight, 1);
-  assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontFamily, "OfficialTableMapMarker");
-  assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontFile, "public/fonts/BebasNeue-Regular.ttf");
+  assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontFamily, "Bebas Neue");
+  assert.match(OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontFile, /public[\\/]+fonts[\\/]+BebasNeue-Regular\.ttf$/);
   assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.tableColor, "#bf151a");
   assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.bistroColor, "#1f7888");
   assert.doesNotMatch(renderer, /DIGIT_SEGMENTS|buildSegmentDigitSvg|buildVectorLabelSvg/);
   assert.doesNotMatch(svg, /Arial|Helvetica|sans-serif/);
-  assert.match(svg, /@font-face/);
-  assert.match(svg, /data:font\/ttf;base64,/);
-  assert.match(svg, /font-family:OfficialTableMapMarker/);
   assert.match(svg, /data-marker-width="64" data-marker-height="52"/);
   assert.match(svg, /transform="translate\(336 426\)"/);
-  assert.match(svg, /font-family="OfficialTableMapMarker"/);
+  assert.match(svg, /font-family="Bebas Neue"/);
   assert.match(svg, /font-size="40"/);
   assert.match(svg, /font-weight="700"/);
   assert.match(svg, /fill="#1f7888">01<\/text>/);
   assert.match(svg, /fill="#bf151a">20<\/text>/);
 });
 
-test("renderizador rasteriza o marcador 01 sem depender de Arial instalada", async () => {
+test("renderizador imprime o marcador 01 no bitmap final sem depender de Arial instalada", async () => {
   const place01 = { code: "01", type: "bistro", environment: "ground_floor", capacity: 6, x: 336, y: 426 };
-  const svg = await buildOfficialTableMapOverlaySvg({ places: [place01] });
-  const overlay = await sharp(Buffer.from(svg)).raw().toBuffer({ resolveWithObject: true });
   const baseImagePath = path.join(process.cwd(), OFFICIAL_TABLE_MAP_ASSET);
   const baseCrop = await sharp(baseImagePath)
     .extract({
@@ -471,11 +467,6 @@ test("renderizador rasteriza o marcador 01 sem depender de Arial instalada", asy
     .raw()
     .toBuffer();
 
-  let opaqueOverlayPixels = 0;
-  for (let index = 3; index < overlay.data.length; index += 4) {
-    if (overlay.data[index] > 0) opaqueOverlayPixels += 1;
-  }
-
   let changedPixels = 0;
   let bistroPixels = 0;
   for (let index = 0; index < markerCrop.length; index += 3) {
@@ -494,7 +485,6 @@ test("renderizador rasteriza o marcador 01 sem depender de Arial instalada", asy
     }
   }
 
-  assert.ok(opaqueOverlayPixels > 200, "overlay do marcador 01 deve ter pixels nao transparentes");
   assert.ok(changedPixels > 200, "bitmap final deve conter o numero 01 sobre a imagem base");
   assert.ok(bistroPixels > 60, "bitmap final deve conter pixels azuis do numero 01");
 });
