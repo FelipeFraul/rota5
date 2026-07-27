@@ -59,46 +59,46 @@ const availabilityServicePath = path.join(
   "officialTableMapReservations.ts",
 );
 const finalCoordinates = new Map([
-  ["01", { x: 377, y: 450 }],
-  ["02", { x: 394, y: 341 }],
-  ["03", { x: 420, y: 376 }],
-  ["04", { x: 465, y: 376 }],
-  ["05", { x: 409, y: 528 }],
-  ["06", { x: 418, y: 630 }],
-  ["07", { x: 416, y: 730 }],
-  ["08", { x: 416, y: 820 }],
-  ["09", { x: 433, y: 923 }],
-  ["10", { x: 401, y: 1087 }],
-  ["11", { x: 434, y: 1096 }],
-  ["12", { x: 486, y: 1084 }],
-  ["13", { x: 515, y: 1044 }],
-  ["20", { x: 583, y: 386 }],
-  ["21", { x: 619, y: 409 }],
-  ["22", { x: 635, y: 355 }],
-  ["23", { x: 648, y: 462 }],
-  ["24", { x: 649, y: 554 }],
-  ["25", { x: 656, y: 642 }],
-  ["26", { x: 662, y: 749 }],
-  ["27", { x: 671, y: 839 }],
-  ["28", { x: 674, y: 930 }],
-  ["29", { x: 676, y: 1018 }],
-  ["30", { x: 659, y: 1075 }],
-  ["31", { x: 632, y: 1072 }],
-  ["32", { x: 605, y: 1082 }],
-  ["33", { x: 607, y: 1153 }],
-  ["40", { x: 584, y: 307 }],
-  ["41", { x: 669, y: 383 }],
-  ["46", { x: 711, y: 1003 }],
-  ["51", { x: 633, y: 1231 }],
-  ["52", { x: 607, y: 1231 }],
-  ["54", { x: 585, y: 1317 }],
-  ["55", { x: 606, y: 1384 }],
-  ["56", { x: 640, y: 1374 }],
-  ["42", { x: 686, y: 535 }],
-  ["43", { x: 692, y: 649 }],
-  ["44", { x: 700, y: 771 }],
-  ["45", { x: 710, y: 896 }],
-  ["53", { x: 577, y: 1239 }],
+  ["01", { x: 336, y: 426 }],
+  ["02", { x: 352, y: 323 }],
+  ["03", { x: 375, y: 356 }],
+  ["04", { x: 415, y: 356 }],
+  ["05", { x: 365, y: 500 }],
+  ["06", { x: 373, y: 597 }],
+  ["07", { x: 371, y: 691 }],
+  ["08", { x: 371, y: 777 }],
+  ["09", { x: 386, y: 874 }],
+  ["10", { x: 358, y: 1030 }],
+  ["11", { x: 387, y: 1038 }],
+  ["12", { x: 434, y: 1027 }],
+  ["13", { x: 460, y: 989 }],
+  ["20", { x: 520, y: 366 }],
+  ["21", { x: 552, y: 387 }],
+  ["22", { x: 567, y: 336 }],
+  ["23", { x: 578, y: 438 }],
+  ["24", { x: 579, y: 525 }],
+  ["25", { x: 585, y: 608 }],
+  ["26", { x: 591, y: 710 }],
+  ["27", { x: 599, y: 795 }],
+  ["28", { x: 601, y: 881 }],
+  ["29", { x: 603, y: 964 }],
+  ["30", { x: 588, y: 1018 }],
+  ["31", { x: 564, y: 1015 }],
+  ["32", { x: 540, y: 1025 }],
+  ["33", { x: 542, y: 1092 }],
+  ["40", { x: 521, y: 291 }],
+  ["41", { x: 597, y: 363 }],
+  ["46", { x: 635, y: 950 }],
+  ["51", { x: 565, y: 1166 }],
+  ["52", { x: 542, y: 1166 }],
+  ["54", { x: 522, y: 1248 }],
+  ["55", { x: 541, y: 1311 }],
+  ["56", { x: 571, y: 1302 }],
+  ["42", { x: 612, y: 507 }],
+  ["43", { x: 618, y: 615 }],
+  ["44", { x: 625, y: 730 }],
+  ["45", { x: 634, y: 849 }],
+  ["53", { x: 515, y: 1174 }],
 ]);
 
 async function sha256(filePath) {
@@ -232,8 +232,8 @@ test("migration cria tabela de coordenadas oficiais com as sementes historicas",
 
   assert.match(migration, /create table if not exists public\.official_table_map_places/);
   assert.match(migration, /code text primary key/);
-  assert.match(migration, /check \(x >= 0 and x <= 1086\)/);
-  assert.match(migration, /check \(y >= 0 and y <= 1448\)/);
+  assert.match(migration, /check \(x >= 0 and x <= 969\)/);
+  assert.match(migration, /check \(y >= 0 and y <= 1371\)/);
 
   for (const [code, point] of finalCoordinates) {
     assert.match(migration, new RegExp(`\\('${code}', ${point.x}, ${point.y}\\)`));
@@ -277,9 +277,10 @@ test("router integra escolha opcional de mesa ao fluxo de compra", async () => {
 
   assert.match(router, /"selecting_table_map_place"/);
   assert.match(router, /buildOfficialTableMapAvailabilityImage/);
+  assert.match(router, /availability\.imageUrl/);
   assert.doesNotMatch(router, /Digite 2 para \*escolher mesa\/bistro gratuitamente\*/);
   assert.doesNotMatch(router, /Digite 2 para \*comprar outros\/mais ingressos\*/);
-  assert.match(router, /Digite \*"1"\* para para finalizar a compra/);
+  assert.match(router, /Digite \*1\* para finalizar a compra/);
   assert.match(router, /if \(selectedOption === 1\)[\s\S]*formatTableMapSelectionReply/);
   assert.match(router, /text\.trim\(\) === "0"/);
   assert.match(router, /reserveOfficialTableMapPlace\(/);
@@ -293,9 +294,9 @@ test("calibracao converte coordenadas responsivas para coordenadas originais", (
   const original = responsivePointToOriginalPoint({ x: 371.5, y: 412 }, rect);
   const responsive = originalPointToResponsivePoint(original, rect);
 
-  assert.deepEqual(original, { x: 543, y: 724 });
-  assert.equal(responsive.x, 371.5);
-  assert.equal(responsive.y, 412);
+  assert.deepEqual(original, { x: 485, y: 686 });
+  assert.ok(Math.abs(responsive.x - 371.5) < 0.5);
+  assert.ok(Math.abs(responsive.y - 412) < 0.5);
 });
 
 test("calibracao limita movimento dentro da imagem", () => {
@@ -327,16 +328,64 @@ test("persistencia permanente rejeita alteracao de metadados oficiais", async ()
 test("renderizador gera imagem derivada e preserva imagem original", async () => {
   const baseImagePath = path.join(process.cwd(), OFFICIAL_TABLE_MAP_ASSET);
   const beforeHash = await sha256(baseImagePath);
+  const baseMetadata = await sharp(baseImagePath).metadata();
   const rendered = await renderOfficialTableMap({ unavailableCodes: unavailableSample });
   const metadata = await sharp(rendered.buffer).metadata();
   const afterHash = await sha256(baseImagePath);
 
+  assert.equal(baseMetadata.width, 969);
+  assert.equal(baseMetadata.height, 1371);
   assert.equal(rendered.mimeType, "image/webp");
   assert.equal(rendered.filename, "mapa-mesas-render.webp");
   assert.equal(metadata.format, "webp");
   assert.equal(metadata.width, OFFICIAL_TABLE_MAP_WIDTH);
   assert.equal(metadata.height, OFFICIAL_TABLE_MAP_HEIGHT);
   assert.equal(beforeHash, afterHash);
+});
+
+test("renderizador rejeita imagem ausente ou invalida", async () => {
+  await mkdir(outputDir, { recursive: true });
+  const missingPath = path.join(outputDir, "mapa-ausente.webp");
+  const invalidPath = path.join(outputDir, "mapa-invalido.webp");
+  await writeFile(invalidPath, "nao e imagem");
+
+  await assert.rejects(
+    () => renderOfficialTableMap({ baseImagePath: missingPath }),
+    /Input file is missing|unable to open/i,
+  );
+  await assert.rejects(
+    () => renderOfficialTableMap({ baseImagePath: invalidPath }),
+    /unsupported image format|Input buffer contains unsupported image format|source: bad seek/i,
+  );
+});
+
+test("renderizador propaga falha do sharp quando overlay nao cabe na base", async () => {
+  await mkdir(outputDir, { recursive: true });
+  const smallImagePath = path.join(outputDir, "mapa-pequeno.webp");
+  await sharp({
+    create: {
+      width: 100,
+      height: 100,
+      channels: 3,
+      background: "#000000",
+    },
+  }).webp().toFile(smallImagePath);
+
+  await assert.rejects(
+    () => renderOfficialTableMap({ baseImagePath: smallImagePath }),
+    /Image to composite must have same dimensions or smaller/,
+  );
+});
+
+test("falha de render do mapa nao impede continuidade do fluxo", async () => {
+  const availabilityService = await readFile(availabilityServicePath, "utf8");
+  const router = await readFile(routerPath, "utf8");
+
+  assert.match(availabilityService, /try \{[\s\S]*renderOfficialTableMap/);
+  assert.match(availabilityService, /catch \(error\) \{[\s\S]*logError\("Failed to render official table map availability image"/);
+  assert.match(availabilityService, /imageUrl: null/);
+  assert.match(router, /\.\.\.\(availability\.imageUrl[\s\S]*outboundMessages/);
+  assert.match(router, /: \{\}\)/);
 });
 
 test("renderizador posiciona cada texto exatamente nas coordenadas oficiais", async () => {

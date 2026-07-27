@@ -1,5 +1,6 @@
 import "server-only";
 
+import { logError } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   OFFICIAL_TABLE_MAP_PLACES,
@@ -150,16 +151,30 @@ export async function buildOfficialTableMapAvailabilityImage({
   sessionId?: string;
 } = {}) {
   const availability = await listOfficialTableMapAvailability({ quantity, sessionId });
-  const rendered = await renderOfficialTableMap({
-    format: "png",
-    places: availability.places,
-    unavailableCodes: availability.unavailableCodes,
-    hiddenCodes: availability.hiddenCodes,
-  });
+
+  try {
+    const rendered = await renderOfficialTableMap({
+      format: "png",
+      places: availability.places,
+      unavailableCodes: availability.unavailableCodes,
+      hiddenCodes: availability.hiddenCodes,
+    });
+
+    return {
+      ...availability,
+      imageUrl: `data:${rendered.mimeType};base64,${rendered.buffer.toString("base64")}`,
+    };
+  } catch (error) {
+    logError("Failed to render official table map availability image", {
+      error,
+      quantity,
+      sessionId,
+    });
+  }
 
   return {
     ...availability,
-    imageUrl: `data:${rendered.mimeType};base64,${rendered.buffer.toString("base64")}`,
+    imageUrl: null,
   };
 }
 

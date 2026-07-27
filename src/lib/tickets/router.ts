@@ -2357,13 +2357,17 @@ async function finalizeTicketCartReservation({
 
       return {
         reply,
-        outboundMessages: [
-          {
-            type: "image",
-            imageUrl: availability.imageUrl,
-            caption: reply,
-          },
-        ],
+        ...(availability.imageUrl
+          ? {
+              outboundMessages: [
+                {
+                  type: "image",
+                  imageUrl: availability.imageUrl,
+                  caption: reply,
+                },
+              ],
+            }
+          : {}),
         nextContext: {
           ...baseContext,
           step: "selecting_table_map_place",
@@ -18124,13 +18128,17 @@ export async function routeTicketMessage({
 
       return {
         reply,
-        outboundMessages: [
-          {
-            type: "image",
-            imageUrl: availability.imageUrl,
-            caption: reply,
-          },
-        ],
+        ...(availability.imageUrl
+          ? {
+              outboundMessages: [
+                {
+                  type: "image",
+                  imageUrl: availability.imageUrl,
+                  caption: reply,
+                },
+              ],
+            }
+          : {}),
         nextContext: {
           ...baseContext,
           step: "selecting_table_map_place",
@@ -18236,13 +18244,17 @@ export async function routeTicketMessage({
 
       return {
         reply,
-        outboundMessages: [
-          {
-            type: "image",
-            imageUrl: availability.imageUrl,
-            caption: reply,
-          },
-        ],
+        ...(availability.imageUrl
+          ? {
+              outboundMessages: [
+                {
+                  type: "image",
+                  imageUrl: availability.imageUrl,
+                  caption: reply,
+                },
+              ],
+            }
+          : {}),
         nextContext: {
           ...baseContext,
           step: "selecting_table_map_place",
