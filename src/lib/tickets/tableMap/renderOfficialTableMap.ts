@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 
@@ -27,7 +28,8 @@ export type RenderedOfficialTableMap = {
 export const OFFICIAL_TABLE_MAP_MARKER_VISUAL = {
   width: 64,
   height: 52,
-  fontFamily: "Arial, Helvetica, sans-serif",
+  fontFamily: "OfficialTableMapMarker",
+  fontFile: "public/fonts/BebasNeue-Regular.ttf",
   fontWeight: 700,
   fontSize: 40,
   lineHeight: 1,
@@ -36,6 +38,15 @@ export const OFFICIAL_TABLE_MAP_MARKER_VISUAL = {
   unavailableColor: "#dc2626",
   textShadowColor: "#ffffff",
 } as const;
+
+let markerFontDataUriPromise: Promise<string> | null = null;
+
+async function getMarkerFontDataUri() {
+  markerFontDataUriPromise ??= readFile(path.join(process.cwd(), OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontFile))
+    .then((buffer) => `data:font/ttf;base64,${buffer.toString("base64")}`);
+
+  return markerFontDataUriPromise;
+}
 
 function escapeSvgText(text: string) {
   return text
@@ -85,6 +96,7 @@ export async function buildOfficialTableMapOverlaySvg({
   hiddenCodes = [],
   places,
 }: Pick<RenderOfficialTableMapInput, "hiddenCodes" | "unavailableCodes" | "places"> = {}) {
+  const fontDataUri = await getMarkerFontDataUri();
   const resolvedPlaces = places ?? await getOfficialTableMapPlaces();
   const unavailable = new Set(
     unavailableCodes.map((code) => normalizeOfficialTableMapCode(code)),
@@ -105,6 +117,11 @@ export async function buildOfficialTableMapOverlaySvg({
 
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${OFFICIAL_TABLE_MAP_WIDTH}" height="${OFFICIAL_TABLE_MAP_HEIGHT}" viewBox="0 0 ${OFFICIAL_TABLE_MAP_WIDTH} ${OFFICIAL_TABLE_MAP_HEIGHT}">`,
+    "<defs>",
+    "<style>",
+    `@font-face{font-family:${OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontFamily};src:url('${fontDataUri}') format('truetype');font-weight:${OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontWeight};font-style:normal;}`,
+    "</style>",
+    "</defs>",
     labels,
     "</svg>",
   ].join("");

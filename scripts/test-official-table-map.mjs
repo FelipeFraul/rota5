@@ -428,17 +428,75 @@ test("renderizador usa a mesma referencia visual dos marcadores do editor", asyn
   assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontWeight, 700);
   assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontSize, 40);
   assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.lineHeight, 1);
-  assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontFamily, "Arial, Helvetica, sans-serif");
+  assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontFamily, "OfficialTableMapMarker");
+  assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontFile, "public/fonts/BebasNeue-Regular.ttf");
   assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.tableColor, "#bf151a");
   assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.bistroColor, "#1f7888");
   assert.doesNotMatch(renderer, /DIGIT_SEGMENTS|buildSegmentDigitSvg|buildVectorLabelSvg/);
+  assert.doesNotMatch(svg, /Arial|Helvetica|sans-serif/);
+  assert.match(svg, /@font-face/);
+  assert.match(svg, /data:font\/ttf;base64,/);
+  assert.match(svg, /font-family:OfficialTableMapMarker/);
   assert.match(svg, /data-marker-width="64" data-marker-height="52"/);
   assert.match(svg, /transform="translate\(336 426\)"/);
-  assert.match(svg, /font-family="Arial, Helvetica, sans-serif"/);
+  assert.match(svg, /font-family="OfficialTableMapMarker"/);
   assert.match(svg, /font-size="40"/);
   assert.match(svg, /font-weight="700"/);
   assert.match(svg, /fill="#1f7888">01<\/text>/);
   assert.match(svg, /fill="#bf151a">20<\/text>/);
+});
+
+test("renderizador rasteriza o marcador 01 sem depender de Arial instalada", async () => {
+  const place01 = { code: "01", type: "bistro", environment: "ground_floor", capacity: 6, x: 336, y: 426 };
+  const svg = await buildOfficialTableMapOverlaySvg({ places: [place01] });
+  const overlay = await sharp(Buffer.from(svg)).raw().toBuffer({ resolveWithObject: true });
+  const baseImagePath = path.join(process.cwd(), OFFICIAL_TABLE_MAP_ASSET);
+  const baseCrop = await sharp(baseImagePath)
+    .extract({
+      left: place01.x - OFFICIAL_TABLE_MAP_MARKER_VISUAL.width / 2,
+      top: place01.y - OFFICIAL_TABLE_MAP_MARKER_VISUAL.height / 2,
+      width: OFFICIAL_TABLE_MAP_MARKER_VISUAL.width,
+      height: OFFICIAL_TABLE_MAP_MARKER_VISUAL.height,
+    })
+    .raw()
+    .toBuffer();
+  const rendered = await renderOfficialTableMap({ format: "png", places: [place01] });
+  const markerCrop = await sharp(rendered.buffer)
+    .extract({
+      left: place01.x - OFFICIAL_TABLE_MAP_MARKER_VISUAL.width / 2,
+      top: place01.y - OFFICIAL_TABLE_MAP_MARKER_VISUAL.height / 2,
+      width: OFFICIAL_TABLE_MAP_MARKER_VISUAL.width,
+      height: OFFICIAL_TABLE_MAP_MARKER_VISUAL.height,
+    })
+    .raw()
+    .toBuffer();
+
+  let opaqueOverlayPixels = 0;
+  for (let index = 3; index < overlay.data.length; index += 4) {
+    if (overlay.data[index] > 0) opaqueOverlayPixels += 1;
+  }
+
+  let changedPixels = 0;
+  let bistroPixels = 0;
+  for (let index = 0; index < markerCrop.length; index += 3) {
+    const r = markerCrop[index];
+    const g = markerCrop[index + 1];
+    const b = markerCrop[index + 2];
+    if (
+      Math.abs(r - baseCrop[index]) > 8 ||
+      Math.abs(g - baseCrop[index + 1]) > 8 ||
+      Math.abs(b - baseCrop[index + 2]) > 8
+    ) {
+      changedPixels += 1;
+    }
+    if (r < 80 && g > 80 && b > 90) {
+      bistroPixels += 1;
+    }
+  }
+
+  assert.ok(opaqueOverlayPixels > 200, "overlay do marcador 01 deve ter pixels nao transparentes");
+  assert.ok(changedPixels > 200, "bitmap final deve conter o numero 01 sobre a imagem base");
+  assert.ok(bistroPixels > 60, "bitmap final deve conter pixels azuis do numero 01");
 });
 
 test("gera imagens locais de conferencia", async () => {
