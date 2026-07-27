@@ -153,6 +153,8 @@ async function renderMarkerImage({
   const foreground = await renderMarkerText({ color: fill, text: label });
   const shadowMetadata = await sharp(shadow).metadata();
   const foregroundMetadata = await sharp(foreground).metadata();
+  const shadowLeft = Math.round((visual.width - (shadowMetadata.width ?? visual.width)) / 2);
+  const foregroundLeft = Math.round((visual.width - (foregroundMetadata.width ?? visual.width)) / 2);
   const shadowTop = Math.round((visual.height - (shadowMetadata.height ?? visual.height)) / 2);
   const foregroundTop = Math.round((visual.height - (foregroundMetadata.height ?? visual.height)) / 2);
   const shadowOffsets = [
@@ -171,8 +173,8 @@ async function renderMarkerImage({
     },
   })
     .composite([
-      ...shadowOffsets.map((offset) => ({ input: shadow, left: offset.left, top: shadowTop + offset.top })),
-      { input: foreground, left: 0, top: foregroundTop },
+      ...shadowOffsets.map((offset) => ({ input: shadow, left: shadowLeft + offset.left, top: shadowTop + offset.top })),
+      { input: foreground, left: foregroundLeft, top: foregroundTop },
     ])
     .png()
     .toBuffer();

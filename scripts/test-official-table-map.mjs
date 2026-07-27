@@ -50,6 +50,12 @@ const scopedReservationsMigrationPath = path.join(
   "migrations",
   "20260724000400_scope_official_table_map_reservations_by_session.sql",
 );
+const recalibrationMigrationPath = path.join(
+  process.cwd(),
+  "supabase",
+  "migrations",
+  "20260727000100_recalibrate_official_table_map_places.sql",
+);
 const routerPath = path.join(process.cwd(), "src", "lib", "tickets", "router.ts");
 const globalsCssPath = path.join(process.cwd(), "src", "app", "globals.css");
 const tableMapRendererPath = path.join(
@@ -69,46 +75,46 @@ const availabilityServicePath = path.join(
   "officialTableMapReservations.ts",
 );
 const finalCoordinates = new Map([
-  ["01", { x: 336, y: 426 }],
-  ["02", { x: 352, y: 323 }],
-  ["03", { x: 375, y: 356 }],
-  ["04", { x: 415, y: 356 }],
-  ["05", { x: 365, y: 500 }],
-  ["06", { x: 373, y: 597 }],
-  ["07", { x: 371, y: 691 }],
-  ["08", { x: 371, y: 777 }],
-  ["09", { x: 386, y: 874 }],
-  ["10", { x: 358, y: 1030 }],
-  ["11", { x: 387, y: 1038 }],
-  ["12", { x: 434, y: 1027 }],
-  ["13", { x: 460, y: 989 }],
-  ["20", { x: 520, y: 366 }],
-  ["21", { x: 552, y: 387 }],
-  ["22", { x: 567, y: 336 }],
-  ["23", { x: 578, y: 438 }],
-  ["24", { x: 579, y: 525 }],
-  ["25", { x: 585, y: 608 }],
-  ["26", { x: 591, y: 710 }],
-  ["27", { x: 599, y: 795 }],
-  ["28", { x: 601, y: 881 }],
-  ["29", { x: 603, y: 964 }],
-  ["30", { x: 588, y: 1018 }],
-  ["31", { x: 564, y: 1015 }],
-  ["32", { x: 540, y: 1025 }],
-  ["33", { x: 542, y: 1092 }],
-  ["40", { x: 521, y: 291 }],
-  ["41", { x: 597, y: 363 }],
-  ["46", { x: 635, y: 950 }],
-  ["51", { x: 565, y: 1166 }],
-  ["52", { x: 542, y: 1166 }],
-  ["54", { x: 522, y: 1248 }],
-  ["55", { x: 541, y: 1311 }],
-  ["56", { x: 571, y: 1302 }],
-  ["42", { x: 612, y: 507 }],
-  ["43", { x: 618, y: 615 }],
-  ["44", { x: 625, y: 730 }],
-  ["45", { x: 634, y: 849 }],
-  ["53", { x: 515, y: 1174 }],
+  ["01", { x: 124, y: 469 }],
+  ["02", { x: 92, y: 558 }],
+  ["03", { x: 187, y: 505 }],
+  ["04", { x: 281, y: 506 }],
+  ["05", { x: 166, y: 621 }],
+  ["06", { x: 324, y: 665 }],
+  ["07", { x: 166, y: 701 }],
+  ["08", { x: 166, y: 782 }],
+  ["09", { x: 178, y: 871 }],
+  ["10", { x: 144, y: 1044 }],
+  ["11", { x: 218, y: 1028 }],
+  ["12", { x: 328, y: 1044 }],
+  ["13", { x: 383, y: 1011 }],
+  ["20", { x: 735, y: 376 }],
+  ["21", { x: 573, y: 363 }],
+  ["22", { x: 572, y: 400 }],
+  ["23", { x: 697, y: 472 }],
+  ["24", { x: 666, y: 526 }],
+  ["25", { x: 718, y: 610 }],
+  ["26", { x: 727, y: 709 }],
+  ["27", { x: 743, y: 801 }],
+  ["28", { x: 759, y: 893 }],
+  ["29", { x: 784, y: 983 }],
+  ["30", { x: 637, y: 1039 }],
+  ["31", { x: 687, y: 1039 }],
+  ["32", { x: 739, y: 1039 }],
+  ["33", { x: 637, y: 1108 }],
+  ["40", { x: 592, y: 455 }],
+  ["41", { x: 596, y: 526 }],
+  ["42", { x: 796, y: 614 }],
+  ["43", { x: 812, y: 716 }],
+  ["44", { x: 828, y: 813 }],
+  ["45", { x: 846, y: 895 }],
+  ["46", { x: 844, y: 977 }],
+  ["51", { x: 582, y: 1166 }],
+  ["52", { x: 642, y: 1166 }],
+  ["53", { x: 693, y: 1167 }],
+  ["54", { x: 592, y: 1238 }],
+  ["55", { x: 643, y: 1266 }],
+  ["56", { x: 706, y: 1267 }],
 ]);
 
 async function sha256(filePath) {
@@ -237,13 +243,21 @@ test("codigo de mesa ou bistro aceita entrada sem zero a esquerda", () => {
   assert.equal(getOfficialTableMapPlaceByInput("09")?.code, "09");
 });
 
-test("migration cria tabela de coordenadas oficiais com as sementes historicas", async () => {
+test("migration cria tabela de coordenadas oficiais com sementes iniciais", async () => {
   const migration = await readFile(migrationPath, "utf8");
 
   assert.match(migration, /create table if not exists public\.official_table_map_places/);
   assert.match(migration, /code text primary key/);
   assert.match(migration, /check \(x >= 0 and x <= 969\)/);
   assert.match(migration, /check \(y >= 0 and y <= 1371\)/);
+  assert.match(migration, /insert into public\.official_table_map_places/);
+});
+
+test("migration de recalibracao aplica as coordenadas finais", async () => {
+  const migration = await readFile(recalibrationMigrationPath, "utf8");
+
+  assert.match(migration, /insert into public\.official_table_map_places/);
+  assert.match(migration, /on conflict \(code\) do update/);
 
   for (const [code, point] of finalCoordinates) {
     assert.match(migration, new RegExp(`\\('${code}', ${point.x}, ${point.y}\\)`));
@@ -423,7 +437,10 @@ test("renderizador usa a mesma referencia visual dos marcadores do editor", asyn
   assert.match(css, /\.admin-table-map-marker \{[\s\S]*width: 64px/);
   assert.match(css, /\.admin-table-map-marker \{[\s\S]*height: 52px/);
   assert.match(css, /\.admin-table-map-marker \{[\s\S]*transform: translate\(-50%, -50%\)/);
-  assert.match(css, /\.admin-table-map-marker \{[\s\S]*font: 700 40px\/1 Arial, Helvetica, sans-serif/);
+  assert.match(css, /@font-face \{[\s\S]*font-family: "Bebas Neue"/);
+  assert.match(css, /\.admin-table-map-marker \{[\s\S]*font: 700 40px\/1 "Bebas Neue", Arial, Helvetica, sans-serif/);
+  assert.match(css, /\.admin-table-map-marker\.is-bistro \{[\s\S]*color: #1f7888/);
+  assert.match(css, /\.admin-table-map-marker\.is-table \{[\s\S]*color: #bf151a/);
   assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.width, 64);
   assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.height, 52);
   assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontWeight, 700);

@@ -35,7 +35,7 @@ function getCsrfToken() {
 }
 
 function getPlaceLabel(place: OfficialTableMapPlace, mode: DisplayMode) {
-  return mode === "unavailable" ? "XX" : place.code.padStart(2, "0");
+  return mode === "unavailable" ? "X" : place.code.padStart(2, "0");
 }
 
 export function AdminTableMapCalibrator({ places, embedded = false }: AdminTableMapCalibratorProps) {
@@ -218,7 +218,7 @@ export function AdminTableMapCalibrator({ places, embedded = false }: AdminTable
               <button
                 key={place.code}
                 type="button"
-                className={`admin-table-map-marker ${displayMode === "unavailable" ? "is-unavailable" : ""} ${activeCode === place.code ? "is-active" : ""}`}
+                className={`admin-table-map-marker is-${place.type} ${displayMode === "unavailable" ? "is-unavailable" : ""} ${activeCode === place.code ? "is-active" : ""}`}
                 style={{
                   left: `${(place.x / OFFICIAL_TABLE_MAP_WIDTH) * 100}%`,
                   top: `${(place.y / OFFICIAL_TABLE_MAP_HEIGHT) * 100}%`,
