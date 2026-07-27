@@ -15,6 +15,8 @@ import {
 
 type DisplayMode = "code" | "unavailable";
 
+const OFFICIAL_TABLE_MAP_IMAGE_SRC = "/mapa_mesas.webp?v=20260727-122245";
+
 type AdminTableMapCalibratorProps = {
   places: readonly OfficialTableMapPlace[];
   embedded?: boolean;
@@ -211,7 +213,7 @@ export function AdminTableMapCalibrator({ places, embedded = false }: AdminTable
             style={{ aspectRatio: `${OFFICIAL_TABLE_MAP_WIDTH} / ${OFFICIAL_TABLE_MAP_HEIGHT}` }}
             onPointerDown={placeActiveOnMap}
           >
-            <img src="/mapa_mesas.webp" alt="Mapa oficial de mesas" draggable={false} />
+            <img src={OFFICIAL_TABLE_MAP_IMAGE_SRC} alt="Mapa oficial de mesas" draggable={false} />
             {draftPlaces.map((place) => (
               <button
                 key={place.code}
