@@ -19,6 +19,10 @@ const zapiWebhookSource = readFileSync(
   new URL("../src/app/api/webhook/zapi/route.ts", import.meta.url),
   "utf8",
 );
+const paymentWebhookSource = readFileSync(
+  new URL("../src/app/api/webhook/payment/mercado-pago/route.ts", import.meta.url),
+  "utf8",
+);
 const ticketDeliverySource = readFileSync(
   new URL("../src/lib/tickets/services/ticketDelivery.ts", import.meta.url),
   "utf8",
@@ -229,9 +233,12 @@ test("opcao 2 entra em ticket_delivery_contacts_waiting", async () => {
 });
 
 test("opcao 2 espera quantidade de ingressos menos um e nao e oferecida para compra de 1 ingresso", async () => {
+  const singleTicketPreferenceBlock =
+    ticketDeliverySource.match(/if \(ticketsCount <= 1\) \{[\s\S]*?\n  \}/)?.[0] ?? "";
+
   assert.match(ticketDeliverySource, /expectedContactsCount:\s*Math\.max\(0,\s*tickets\.length - 1\)/);
   assert.match(ticketDeliverySource, /buildTicketDeliveryPreferenceMessage\(tickets\.length\)/);
-  assert.match(ticketDeliverySource, /ticketsCount <= 1[\s\S]*Digite \*1\*/);
+  assert.doesNotMatch(singleTicketPreferenceBlock, /Digite \*1\*/);
 
   const result = await route(
     "2",
@@ -247,6 +254,21 @@ test("opcao 2 espera quantidade de ingressos menos um e nao e oferecida para com
 
   assert.equal(result.nextContext.state, "ticket_delivery_selecting");
   assert.match(result.reply, /apenas 1 ingresso/i);
+});
+
+test("compra com 1 ingresso entrega direto sem pedir opcao 1", () => {
+  assert.match(paymentWebhookSource, /tickets_count[\s\S]*<= 1[\s\S]*deliverTicketsForOrder\(orderId\)/);
+  assert.match(paymentWebhookSource, /requestTicketDeliveryPreferenceForOrder\(orderId\)/);
+  assert.doesNotMatch(ticketDeliverySource, /> Digite \*1\* para receber o QRCode/);
+  assert.doesNotMatch(routerSource, /> Digite \*1\* para receber o QRCode/);
+});
+
+test("imagem do ingresso e instrucao de portaria sao mensagens separadas", () => {
+  assert.match(ticketDeliverySource, /const EMPTY_QR_IMAGE_CAPTION = ""/);
+  assert.match(ticketDeliverySource, /caption:\s*EMPTY_QR_IMAGE_CAPTION/);
+  assert.match(ticketDeliverySource, /sendZapiImage\(\{[\s\S]*phone,[\s\S]*image:\s*qrImage,[\s\S]*\}\)/);
+  assert.match(ticketDeliverySource, /paid-ticket-order:\$\{orderId\}:qr-instruction:v1/);
+  assert.match(routerSource, /\.\.\.delivery\.qrImages\.map[\s\S]*\{ type: "text" as const, body: delivery\.qrInstructionMessage \}/);
 });
 
 test("leitura de contact valida e exibe confirmacao sem telefone completo", async () => {
@@ -456,6 +478,20 @@ test("Meu ingresso com 1 ingresso envia diretamente", () => {
   assert.match(routerSource, /buildTicketDeliveryPayload\(\[delivery\.ticket\], "\*INGRESSO\*"\)/);
 });
 
+test("Meu ingresso do participante prioriza nome do proprio WhatsApp", () => {
+  assert.match(ticketsServiceSource, /function normalizeParticipantHolderName/);
+  assert.match(ticketsServiceSource, /async function getParticipantWhatsAppName\(phone: string\)/);
+  assert.match(ticketsServiceSource, /\.from\("customers"\)[\s\S]*\.eq\("whatsapp_phone", phone\)/);
+  assert.doesNotMatch(
+    ticketsServiceSource.match(/export async function listParticipantTicketDeliveriesForPhone[\s\S]*?\.returns<ParticipantTicketDeliveryRow\[\]>\(\);/)?.[0] ?? "",
+    /customers\(name\)/,
+  );
+  assert.match(
+    ticketsServiceSource,
+    /holderName:\s*participantWhatsAppName\s*\?\?\s*normalizeParticipantHolderName\(delivery\.ticket\.holderName\)\s*\?\?\s*"Participante"/,
+  );
+});
+
 test("Meu ingresso com 2 ou mais ingressos mostra menu e nao envia QR imediatamente", () => {
   assert.match(routerSource, /function formatParticipantTicketSelectionPrompt/);
   assert.match(routerSource, /\*INGRESSO ROCKBAR\*/);
@@ -531,10 +567,13 @@ test("revalidacao impede envio de ingresso invalido", () => {
 });
 
 test("Meu ingresso suporta multiplos ingressos para o mesmo telefone e compras diferentes", () => {
+  const participantListBlock =
+    ticketsServiceSource.match(/export async function listParticipantTicketDeliveriesForPhone[\s\S]*?\.returns<ParticipantTicketDeliveryRow\[\]>\(\);/)?.[0] ?? "";
+
   assert.match(ticketsServiceSource, /recipient_phone",\s*phone/);
   assert.match(ticketsServiceSource, /participant_delivery_status/);
   assert.match(ticketsServiceSource, /orders!inner\(id,\s*status/);
-  assert.doesNotMatch(ticketsServiceSource, /\.maybeSingle<[^>]*Participant/);
+  assert.doesNotMatch(participantListBlock, /\.maybeSingle</);
   assert.match(ticketsServiceSource, /\.returns<ParticipantTicketDeliveryRow\[\]>\(\)/);
   assert.match(ticketsServiceSource, /sort\(\(left,\s*right\) =>/);
 });

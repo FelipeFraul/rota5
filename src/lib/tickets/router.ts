@@ -3599,6 +3599,7 @@ function buildPaidTicketResendOutboundMessages(
       caption: image.caption,
       buyerDeliveryTicketId: image.ticketId,
     })),
+    { type: "text" as const, body: delivery.qrInstructionMessage },
   ];
 }
 
@@ -4662,7 +4663,7 @@ async function handleTicketDeliverySelection({
   return {
     reply:
       expectedContactsCount <= 0
-        ? "*PAGAMENTO CONFIRMADO*\n\n> Digite *1* para receber o QRCode"
+        ? "Esta compra tem apenas 1 ingresso. Ele será enviado automaticamente neste WhatsApp."
         : "*PAGAMENTO CONFIRMADO*\n\n> Digite *1* para receber os QRCodes\n> Digite *2* para enviá-los aos acompanhantes",
     nextContext: baseContext,
   };

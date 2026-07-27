@@ -99,6 +99,7 @@ const QR_CODE_CAPTION = [
   "*APRESENTE O QRCODE NA PORTARIA*",
   "Este ingresso será validado uma única vez na portaria. Por segurança, não envie para terceiros.",
 ].join("\n");
+const EMPTY_QR_IMAGE_CAPTION = "";
 
 function formatEventDate(startsAt: string) {
   const date = new Date(startsAt);
@@ -150,11 +151,7 @@ function formatTableMapPlaceCode(code: string | null) {
 
 function buildTicketDeliveryPreferenceMessage(ticketsCount: number) {
   if (ticketsCount <= 1) {
-    return [
-      "*PAGAMENTO CONFIRMADO*",
-      "",
-      "> Digite *1* para receber o QRCode",
-    ].join("\n");
+    return "*PAGAMENTO CONFIRMADO*";
   }
 
   return [
@@ -184,6 +181,7 @@ function formatTicketSummary(tickets: TicketForDelivery[]) {
 
 export type TicketDeliveryPayload = {
   message: string;
+  qrInstructionMessage: string;
   qrImages: Array<{
     ticketId: string;
     imageUrl: string;
@@ -208,6 +206,7 @@ export async function buildTicketDeliveryPayload(
 ): Promise<TicketDeliveryPayload> {
   return {
     message: buildTicketDeliveryMessage(tickets, title),
+    qrInstructionMessage: QR_CODE_CAPTION,
     qrImages: await Promise.all(
       tickets.map(async (ticket) => {
         const ticketUrl = buildTicketUrl(ticket);
@@ -226,7 +225,7 @@ export async function buildTicketDeliveryPayload(
         return {
           ticketId: ticket.ticketId,
           imageUrl: ticketQrImageToDataUrl(ticketQrImage.buffer),
-          caption: QR_CODE_CAPTION,
+          caption: EMPTY_QR_IMAGE_CAPTION,
         };
       }),
     ),
@@ -791,14 +790,13 @@ export async function deliverTicketsForOrder(
     const imageSendResult = await sendZapiImage({
       phone,
       image: qrImage,
-      caption: QR_CODE_CAPTION,
     });
     const imageSaveResult = await saveWhatsAppMessage({
       conversationId,
       customerId: order.customer_id,
       direction: "outbound",
       messageType: "image",
-      body: QR_CODE_CAPTION,
+      body: "[QRCode do ingresso]",
       providerMessageId: imageSendResult.ok
         ? imageSendResult.providerMessageId
         : null,
@@ -892,6 +890,124 @@ export async function deliverTicketsForOrder(
         reason: markBuyerDeliveredResult.reason,
       });
       return { ok: false, reason: "internal_error" };
+    }
+  }
+
+  const instructionDelivery = await getOrCreateWhatsAppOutboundDelivery({
+    idempotencyKey: `paid-ticket-order:${orderId}:qr-instruction:v1`,
+    customerId: order.customer_id,
+    conversationId,
+    recipientPhone: phone,
+    messageType: "text",
+    reason: "paid_ticket_qr_instruction",
+    businessContext: textBusinessContext,
+  });
+
+  if (!instructionDelivery.ok) {
+    logError("Failed to prepare ticket QR instruction idempotency", {
+      orderId,
+      code: instructionDelivery.error.code,
+    });
+    return { ok: false, reason: "internal_error" };
+  }
+
+  if (instructionDelivery.delivery.status !== "sent") {
+    const instructionClaim = await claimWhatsAppOutboundDelivery(
+      instructionDelivery.delivery.id,
+    );
+    if (!instructionClaim.ok) {
+      logError("Failed to claim ticket QR instruction", {
+        orderId,
+        code: instructionClaim.error.code,
+      });
+      return { ok: false, reason: "internal_error" };
+    }
+
+    if (!instructionClaim.claimed) {
+      deliveryInProgress = true;
+    } else {
+      const instructionSendResult = await sendZapiText({
+        phone,
+        message: QR_CODE_CAPTION,
+      });
+      const instructionSaveResult = await saveWhatsAppMessage({
+        conversationId,
+        customerId: order.customer_id,
+        direction: "outbound",
+        messageType: "text",
+        body: QR_CODE_CAPTION,
+        providerMessageId: instructionSendResult.ok
+          ? instructionSendResult.providerMessageId
+          : null,
+        rawMetadata: buildWhatsAppOutboundMetadata({
+          sendResult: instructionSendResult,
+          messageType: "text",
+          reason: "paid_ticket_qr_instruction",
+          businessContext: textBusinessContext,
+        }),
+      });
+
+      if (!instructionSaveResult.ok) {
+        const markFailedResult = await markWhatsAppOutboundDeliveryFailed({
+          deliveryId: instructionDelivery.delivery.id,
+          error:
+            instructionSaveResult.error?.code ??
+            "whatsapp_message_persist_failed",
+        });
+        if (!markFailedResult.ok) {
+          logError("Failed to mark ticket QR instruction as failed", {
+            orderId,
+            code: getDeliveryStateUpdateFailureCode(markFailedResult),
+            originalCode: instructionSaveResult.error?.code,
+          });
+        }
+        logError("Failed to save ticket QR instruction message", {
+          orderId,
+          conversationId,
+          code: instructionSaveResult.error?.code,
+        });
+        if (!instructionSendResult.ok) {
+          return {
+            ok: true,
+            sent: false,
+            reason: "zapi_failed",
+            ticketsCount: tickets.length,
+          };
+        }
+        return { ok: false, reason: "internal_error" };
+      }
+
+      if (!instructionSendResult.ok) {
+        const markFailedResult = await markWhatsAppOutboundDeliveryFailed({
+          deliveryId: instructionDelivery.delivery.id,
+          error: instructionSendResult.error,
+        });
+        if (!markFailedResult.ok) {
+          logError("Failed to mark ticket QR instruction as failed", {
+            orderId,
+            code: getDeliveryStateUpdateFailureCode(markFailedResult),
+            originalCode: instructionSendResult.error,
+          });
+        }
+        return {
+          ok: true,
+          sent: false,
+          reason: "zapi_failed",
+          ticketsCount: tickets.length,
+        };
+      }
+
+      const markInstructionSentResult = await markWhatsAppOutboundDeliverySent({
+        deliveryId: instructionDelivery.delivery.id,
+        providerMessageId: instructionSendResult.providerMessageId,
+      });
+      if (!markInstructionSentResult.ok) {
+        logError("Failed to mark ticket QR instruction as sent", {
+          orderId,
+          code: getDeliveryStateUpdateFailureCode(markInstructionSentResult),
+        });
+        return { ok: false, reason: "internal_error" };
+      }
     }
   }
 

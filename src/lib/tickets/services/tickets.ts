@@ -104,6 +104,10 @@ type ParticipantTicketDeliveryRow = TicketRow & {
   } | null;
 };
 
+type ParticipantWhatsAppCustomerRow = {
+  name: string | null;
+};
+
 type PublicTicketRow = {
   ticket_code: string;
   event_sessions: {
@@ -643,6 +647,42 @@ function mapParticipantTicketDeliveryRow(
   };
 }
 
+const GENERIC_PARTICIPANT_WHATSAPP_NAMES = new Set([
+  "cliente",
+  "contato",
+  "unknown",
+  "desconhecido",
+  "sem nome",
+  "no name",
+]);
+
+function normalizeParticipantHolderName(name: string | null | undefined) {
+  const normalizedName = name?.trim() || null;
+
+  if (!normalizedName) return null;
+
+  if (GENERIC_PARTICIPANT_WHATSAPP_NAMES.has(normalizedName.toLowerCase())) {
+    return null;
+  }
+
+  return normalizedName;
+}
+
+async function getParticipantWhatsAppName(phone: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("customers")
+    .select("name")
+    .eq("whatsapp_phone", phone)
+    .maybeSingle<ParticipantWhatsAppCustomerRow>();
+
+  if (error) {
+    throw error;
+  }
+
+  return normalizeParticipantHolderName(data?.name);
+}
+
 export async function listParticipantTicketDeliveriesForPhone(
   phone: string,
 ): Promise<ParticipantTicketDelivery[]> {
@@ -650,7 +690,7 @@ export async function listParticipantTicketDeliveriesForPhone(
   const { data, error } = await supabase
     .from("tickets")
     .select(
-      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, recipient_name, issued_at, participant_delivery_status, participant_delivered_at, customers(name), orders!inner(id, status, payments!inner(id, status, paid_at)), reservation_items!inner(seat_code), event_sessions!inner(starts_at, timezone, status, events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
+      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, recipient_name, issued_at, participant_delivery_status, participant_delivered_at, orders!inner(id, status, payments!inner(id, status, paid_at)), reservation_items!inner(seat_code), event_sessions!inner(starts_at, timezone, status, events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
     )
     .eq("recipient_phone", phone)
     .eq("status", "issued")
@@ -690,13 +730,20 @@ export async function listParticipantTicketDeliveriesForPhone(
 
   if (deliveries.length === 0) return [];
 
+  const participantWhatsAppName = await getParticipantWhatsAppName(phone);
   const placeCodesByOrder = await getOfficialTableMapPlaceCodesByOrder([
     ...new Set(deliveries.map((delivery) => delivery.ticket.orderId)),
   ]);
 
   return deliveries.map((delivery) => ({
     ...delivery,
-    ticket: attachTableMapPlaceCodes([delivery.ticket], placeCodesByOrder)[0],
+    ticket: {
+      ...attachTableMapPlaceCodes([delivery.ticket], placeCodesByOrder)[0],
+      holderName:
+        participantWhatsAppName ??
+        normalizeParticipantHolderName(delivery.ticket.holderName) ??
+        "Participante",
+    },
   }));
 }
 
