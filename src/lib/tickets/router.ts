@@ -2224,7 +2224,7 @@ function formatTableMapSelectionReply({
 }) {
   return [
     "*ESCOLHA SUA MESA OU BISTRÔ*",
-    "🟠 Mesa ⚫ Bistrô alta",
+    "🔴 Mesa 🔵 Bistrô alta",
     "",
     `> Mesas/bistrô disponiveis: *${availableCount}*`,
     `> Mesas/bistrô reservadas: *${reservedCount}*`,

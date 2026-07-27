@@ -19,6 +19,7 @@ import {
 } from "../src/lib/tickets/tableMap/officialPlaces.ts";
 import {
   buildOfficialTableMapOverlaySvg,
+  OFFICIAL_TABLE_MAP_MARKER_VISUAL,
   renderOfficialTableMap,
 } from "../src/lib/tickets/tableMap/renderOfficialTableMap.ts";
 import {
@@ -50,6 +51,15 @@ const scopedReservationsMigrationPath = path.join(
   "20260724000400_scope_official_table_map_reservations_by_session.sql",
 );
 const routerPath = path.join(process.cwd(), "src", "lib", "tickets", "router.ts");
+const globalsCssPath = path.join(process.cwd(), "src", "app", "globals.css");
+const tableMapRendererPath = path.join(
+  process.cwd(),
+  "src",
+  "lib",
+  "tickets",
+  "tableMap",
+  "renderOfficialTableMap.ts",
+);
 const availabilityServicePath = path.join(
   process.cwd(),
   "src",
@@ -282,6 +292,7 @@ test("router integra escolha opcional de mesa ao fluxo de compra", async () => {
   assert.doesNotMatch(router, /Digite 2 para \*comprar outros\/mais ingressos\*/);
   assert.match(router, /Digite \*1\* para finalizar a compra/);
   assert.match(router, /if \(selectedOption === 1\)[\s\S]*formatTableMapSelectionReply/);
+  assert.match(router, /🔴 Mesa 🔵 Bistrô alta/);
   assert.match(router, /text\.trim\(\) === "0"/);
   assert.match(router, /reserveOfficialTableMapPlace\(/);
   assert.match(router, /cancelPendingReservationForCustomer\(\{/);
@@ -396,6 +407,38 @@ test("renderizador posiciona cada texto exatamente nas coordenadas oficiais", as
 
     assert.match(svg, labelPattern, `${place.code} nao foi renderizado no overlay`);
   }
+});
+
+test("renderizador usa a mesma referencia visual dos marcadores do editor", async () => {
+  const css = await readFile(globalsCssPath, "utf8");
+  const renderer = await readFile(tableMapRendererPath, "utf8");
+  const svg = await buildOfficialTableMapOverlaySvg({
+    places: [
+      { code: "01", type: "bistro", environment: "ground_floor", capacity: 6, x: 336, y: 426 },
+      { code: "20", type: "table", environment: "mezzanine", capacity: 8, x: 520, y: 366 },
+    ],
+  });
+
+  assert.match(css, /\.admin-table-map-marker \{[\s\S]*width: 64px/);
+  assert.match(css, /\.admin-table-map-marker \{[\s\S]*height: 52px/);
+  assert.match(css, /\.admin-table-map-marker \{[\s\S]*transform: translate\(-50%, -50%\)/);
+  assert.match(css, /\.admin-table-map-marker \{[\s\S]*font: 700 40px\/1 Arial, Helvetica, sans-serif/);
+  assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.width, 64);
+  assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.height, 52);
+  assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontWeight, 700);
+  assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontSize, 40);
+  assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.lineHeight, 1);
+  assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontFamily, "Arial, Helvetica, sans-serif");
+  assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.tableColor, "#bf151a");
+  assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.bistroColor, "#1f7888");
+  assert.doesNotMatch(renderer, /DIGIT_SEGMENTS|buildSegmentDigitSvg|buildVectorLabelSvg/);
+  assert.match(svg, /data-marker-width="64" data-marker-height="52"/);
+  assert.match(svg, /transform="translate\(336 426\)"/);
+  assert.match(svg, /font-family="Arial, Helvetica, sans-serif"/);
+  assert.match(svg, /font-size="40"/);
+  assert.match(svg, /font-weight="700"/);
+  assert.match(svg, /fill="#1f7888">01<\/text>/);
+  assert.match(svg, /fill="#bf151a">20<\/text>/);
 });
 
 test("gera imagens locais de conferencia", async () => {
