@@ -190,7 +190,8 @@ test("editor e render usam os mesmos tokens visuais e escala proporcional", asyn
   assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontSize, 40);
   assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.tableColor, "#bf151a");
   assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.bistroColor, "#1f7888");
-  assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.unavailableColor, "#dc2626");
+  assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.unavailableColor, "#ffffff");
+  assert.equal(OFFICIAL_TABLE_MAP_MARKER_VISUAL.unavailableTextShadowColor, "#dc2626");
 });
 
 test("renderizador posiciona overlay exatamente nos pontos recebidos", async () => {
@@ -200,7 +201,7 @@ test("renderizador posiciona overlay exatamente nos pontos recebidos", async () 
     assert.match(svg, new RegExp(`transform="translate\\(${place.x} ${place.y}\\)"`));
   }
   assert.match(svg, /fill="#1f7888">01<\/text>/);
-  assert.match(svg, /fill="#dc2626">X<\/text>/);
+  assert.match(svg, /fill="#dc2626">X<\/text>[\s\S]*fill="#ffffff">X<\/text>/);
 });
 
 test("renderizador gera imagem derivada e preserva imagem original", async () => {

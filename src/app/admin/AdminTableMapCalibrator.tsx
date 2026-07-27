@@ -63,6 +63,19 @@ function getMarkerColor(place: OfficialTableMapPlace, mode: DisplayMode) {
     : OFFICIAL_TABLE_MAP_MARKER_VISUAL.tableColor;
 }
 
+function getMarkerTextShadow(mode: DisplayMode) {
+  const shadowColor = mode === "unavailable"
+    ? OFFICIAL_TABLE_MAP_MARKER_VISUAL.unavailableTextShadowColor
+    : OFFICIAL_TABLE_MAP_MARKER_VISUAL.textShadowColor;
+
+  return [
+    `-1px -1px 0 ${shadowColor}`,
+    `1px -1px 0 ${shadowColor}`,
+    `-1px 1px 0 ${shadowColor}`,
+    `1px 1px 0 ${shadowColor}`,
+  ].join(", ");
+}
+
 const markerBaseStyle = {
   width: `${(OFFICIAL_TABLE_MAP_MARKER_VISUAL.width / OFFICIAL_TABLE_MAP_WIDTH) * 100}%`,
   height: `${(OFFICIAL_TABLE_MAP_MARKER_VISUAL.height / OFFICIAL_TABLE_MAP_HEIGHT) * 100}%`,
@@ -302,6 +315,7 @@ export function AdminTableMapCalibrator({ places, embedded = false }: AdminTable
                   left: `${(place.x / OFFICIAL_TABLE_MAP_WIDTH) * 100}%`,
                   top: `${(place.y / OFFICIAL_TABLE_MAP_HEIGHT) * 100}%`,
                   color: getMarkerColor(place, displayMode),
+                  textShadow: getMarkerTextShadow(displayMode),
                 }}
                 onPointerDown={(event) => startDrag(place.code, event)}
                 onPointerMove={(event) => {

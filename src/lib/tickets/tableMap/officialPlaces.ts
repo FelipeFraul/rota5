@@ -26,8 +26,9 @@ export const OFFICIAL_TABLE_MAP_MARKER_VISUAL = {
   lineHeight: 1,
   tableColor: "#bf151a",
   bistroColor: "#1f7888",
-  unavailableColor: "#dc2626",
+  unavailableColor: "#ffffff",
   textShadowColor: "#ffffff",
+  unavailableTextShadowColor: "#dc2626",
 } as const;
 
 export const OFFICIAL_TABLE_MAP_PLACES: readonly OfficialTableMapPlaceMetadata[] = [

@@ -53,6 +53,7 @@ function buildLabelSvg({
     : type === "bistro"
       ? visual.bistroColor
       : visual.tableColor;
+  const shadowFill = isUnavailable ? visual.unavailableTextShadowColor : visual.textShadowColor;
   const text = escapeSvgText(label);
 
   return [
@@ -64,7 +65,7 @@ function buildLabelSvg({
       [-1, 1],
       [1, 1],
     ].map(([dx, dy]) =>
-      `<text x="${dx}" y="${dy}" text-anchor="middle" dominant-baseline="central" font-family="${visual.fontFamily}" font-size="${visual.fontSize}" font-weight="${visual.fontWeight}" fill="${visual.textShadowColor}">${text}</text>`,
+      `<text x="${dx}" y="${dy}" text-anchor="middle" dominant-baseline="central" font-family="${visual.fontFamily}" font-size="${visual.fontSize}" font-weight="${visual.fontWeight}" fill="${shadowFill}">${text}</text>`,
     ),
     `<text x="0" y="0" text-anchor="middle" dominant-baseline="central" font-family="${visual.fontFamily}" font-size="${visual.fontSize}" font-weight="${visual.fontWeight}" fill="${fill}">${text}</text>`,
     "</g>",
@@ -140,7 +141,10 @@ async function renderMarkerImage({
     : type === "bistro"
       ? visual.bistroColor
       : visual.tableColor;
-  const shadow = await renderMarkerText({ color: visual.textShadowColor, text: label });
+  const shadow = await renderMarkerText({
+    color: isUnavailable ? visual.unavailableTextShadowColor : visual.textShadowColor,
+    text: label,
+  });
   const foreground = await renderMarkerText({ color: fill, text: label });
   const shadowMetadata = await sharp(shadow).metadata();
   const foregroundMetadata = await sharp(foreground).metadata();
