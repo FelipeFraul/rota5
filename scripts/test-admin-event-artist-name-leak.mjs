@@ -136,7 +136,9 @@ test("edicao permite limpar artistName sem usar fallback do ultimo evento", () =
   assert.match(adminEventRoute, /artist_name: parsed\.data\.event\.artistName\?\.trim\(\) \|\| parsed\.data\.event\.title/);
 });
 
-test("duplicacao explicita continua preservando artist_name do evento origem", () => {
+test("duplicacao explicita nao herda artist_name do evento origem", () => {
   assert.match(adminEventsService, /export async function duplicateAdminEvent/);
-  assert.match(adminEventsService, /artist_name: sourceEvent\.artist_name/);
+  assert.match(adminEventsService, /title: `\$\{sourceEvent\.title\} - CÓPIA`/);
+  assert.match(adminEventsService, /artist_name: ""/);
+  assert.doesNotMatch(adminEventsService, /artist_name: sourceEvent\.artist_name/);
 });

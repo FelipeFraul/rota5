@@ -1706,7 +1706,7 @@ export async function duplicateAdminEvent(input: {
 
   const eventPayload = {
     title: `${sourceEvent.title} - CÓPIA`,
-    artist_name: sourceEvent.artist_name,
+    artist_name: "",
     description: sourceEvent.description,
     city: sourceEvent.city,
     state: sourceEvent.state,
