@@ -1704,9 +1704,10 @@ export async function duplicateAdminEvent(input: {
     duplicatedVenueId = newVenue.id;
   }
 
+  const duplicatedTitle = `${sourceEvent.title} - CÓPIA`;
   const eventPayload = {
-    title: `${sourceEvent.title} - CÓPIA`,
-    artist_name: "",
+    title: duplicatedTitle,
+    artist_name: duplicatedTitle,
     description: sourceEvent.description,
     city: sourceEvent.city,
     state: sourceEvent.state,

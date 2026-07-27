@@ -14,6 +14,10 @@ const adminEventRoute = readFileSync(
   new URL("../src/app/api/admin/events/[eventId]/route.ts", import.meta.url),
   "utf8",
 );
+const eventEditorModal = readFileSync(
+  new URL("../src/app/admin/eventos/event-editor/EventEditorModal.tsx", import.meta.url),
+  "utf8",
+);
 
 const dependentKeys = {
   title: [
@@ -138,7 +142,13 @@ test("edicao permite limpar artistName sem usar fallback do ultimo evento", () =
 
 test("duplicacao explicita nao herda artist_name do evento origem", () => {
   assert.match(adminEventsService, /export async function duplicateAdminEvent/);
-  assert.match(adminEventsService, /title: `\$\{sourceEvent\.title\} - CÓPIA`/);
-  assert.match(adminEventsService, /artist_name: ""/);
+  assert.match(adminEventsService, /const duplicatedTitle = `\$\{sourceEvent\.title\} - C/);
+  assert.match(adminEventsService, /artist_name: duplicatedTitle/);
   assert.doesNotMatch(adminEventsService, /artist_name: sourceEvent\.artist_name/);
+});
+
+test("editor sincroniza artista com titulo enquanto artista ainda espelha titulo", () => {
+  assert.match(eventEditorModal, /function updateDraftEventTitle/);
+  assert.match(eventEditorModal, /draft\.event\.artistName\.trim\(\) === draft\.event\.title\.trim\(\)/);
+  assert.match(eventEditorModal, /setDraft\(updateDraftEventTitle\(draft, event\.target\.value\)\)/);
 });

@@ -173,6 +173,19 @@ function createNewSectionDraft(): Draft["newSections"][number] {
   };
 }
 
+function updateDraftEventTitle(draft: Draft, title: string): Draft {
+  const shouldSyncArtistName = draft.event.artistName.trim() === draft.event.title.trim();
+
+  return {
+    ...draft,
+    event: {
+      ...draft.event,
+      title,
+      ...(shouldSyncArtistName ? { artistName: title } : {}),
+    },
+  };
+}
+
 function closeOnOverlayClick(
   event: MouseEvent<HTMLDivElement>,
   onClose: () => void,
@@ -314,7 +327,8 @@ export default function EventEditorModal({ eventId, onClose, onSaved }: EventEdi
               <div className={`admin-event-modal-content ${activeTab === "tableMap" ? "is-table-map" : ""}`}>
                 {activeTab === "event" ? (
                   <div className="admin-event-form-grid">
-                    <label>Título<input value={draft.event.title} onChange={(event) => setDraft({ ...draft, event: { ...draft.event, title: event.target.value } })} /></label>
+                    <label>Título<input value={draft.event.title} onChange={(event) => setDraft(updateDraftEventTitle(draft, event.target.value))} /></label>
+                    <label>Artista<input value={draft.event.artistName} onChange={(event) => setDraft({ ...draft, event: { ...draft.event, artistName: event.target.value } })} /></label>
                     <label>Cidade<input value={draft.event.city} onChange={(event) => setDraft({ ...draft, event: { ...draft.event, city: event.target.value } })} /></label>
                     <label>UF<input value={draft.event.state} maxLength={2} onChange={(event) => setDraft({ ...draft, event: { ...draft.event, state: event.target.value.toUpperCase() } })} /></label>
                     <label>Local<input value={draft.event.venueName} onChange={(event) => setDraft({ ...draft, event: { ...draft.event, venueName: event.target.value } })} /></label>
