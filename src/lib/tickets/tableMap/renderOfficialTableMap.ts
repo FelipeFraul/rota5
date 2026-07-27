@@ -1,4 +1,5 @@
 import path from "node:path";
+import { existsSync } from "node:fs";
 import sharp from "sharp";
 
 import {
@@ -119,12 +120,13 @@ async function renderMarkerText({
   text: string;
 }) {
   const visual = OFFICIAL_TABLE_MAP_MARKER_VISUAL;
+  const fontFile = existsSync(visual.fontFile) ? visual.fontFile : undefined;
 
   return sharp({
     text: {
       text: `<span foreground="${color}">${escapeSvgText(text)}</span>`,
       font: `${visual.fontFamily} ${visual.fontSize}`,
-      fontfile: visual.fontFile,
+      ...(fontFile ? { fontfile: fontFile } : {}),
       width: visual.width,
       align: "center",
       rgba: true,

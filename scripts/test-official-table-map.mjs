@@ -384,6 +384,35 @@ test("renderizador rejeita imagem ausente ou invalida", async () => {
   );
 });
 
+test("renderizador continua gerando imagem quando a fonte local nao estiver disponivel", async () => {
+  const renderer = await import("../src/lib/tickets/tableMap/renderOfficialTableMap.ts");
+  const originalFontFile = renderer.OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontFile;
+
+  renderer.OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontFile = path.join(
+    process.cwd(),
+    ".tmp",
+    "fonte-inexistente.ttf",
+  );
+
+  try {
+    const rendered = await renderOfficialTableMap({
+      format: "png",
+      places: [
+        { code: "01", type: "bistro", environment: "ground_floor", capacity: 6, x: 124, y: 469 },
+      ],
+      unavailableCodes: ["01"],
+    });
+    const metadata = await sharp(rendered.buffer).metadata();
+
+    assert.equal(rendered.mimeType, "image/png");
+    assert.equal(metadata.width, OFFICIAL_TABLE_MAP_WIDTH);
+    assert.equal(metadata.height, OFFICIAL_TABLE_MAP_HEIGHT);
+    assert.ok(rendered.buffer.length > 100_000);
+  } finally {
+    renderer.OFFICIAL_TABLE_MAP_MARKER_VISUAL.fontFile = originalFontFile;
+  }
+});
+
 test("renderizador recorta marcador quando a base for menor que o mapa oficial", async () => {
   await mkdir(outputDir, { recursive: true });
   const smallImagePath = path.join(outputDir, "mapa-pequeno.webp");
