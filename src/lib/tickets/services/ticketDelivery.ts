@@ -215,6 +215,12 @@ export async function buildTicketDeliveryPayload(
           ticketUrl,
           ticketCode: ticket.ticketCode,
           eventTitle: ticket.eventTitle,
+          venueName: ticket.venueName,
+          city: ticket.city,
+          state: ticket.state,
+          startsAt: ticket.startsAt,
+          holderName: ticket.holderName,
+          tableMapPlaceCode: ticket.tableMapPlaceCode,
         });
 
         return {
@@ -693,6 +699,12 @@ export async function deliverTicketsForOrder(
         ticketUrl,
         ticketCode: ticket.ticketCode,
         eventTitle: ticket.eventTitle,
+        venueName: ticket.venueName,
+        city: ticket.city,
+        state: ticket.state,
+        startsAt: ticket.startsAt,
+        holderName: ticket.holderName,
+        tableMapPlaceCode: ticket.tableMapPlaceCode,
       });
       qrImage = ticketQrImageToDataUrl(ticketQrImage.buffer);
     } catch (error) {

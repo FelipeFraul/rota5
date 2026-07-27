@@ -15,9 +15,13 @@ type TicketRow = {
   status: string;
   order_id: string;
   customer_id: string;
+  recipient_name?: string | null;
   session_id: string;
   section_id: string;
   seat_id: string;
+  customers?: {
+    name?: string | null;
+  } | null;
   reservation_items: {
     seat_code: string;
   } | null;
@@ -74,6 +78,7 @@ type PaidTicketResendRow = TicketRow & {
   } | null;
   customers: {
     whatsapp_phone: string;
+    name?: string | null;
   } | null;
 };
 
@@ -143,6 +148,7 @@ export type TicketForDelivery = {
   sectionName: string;
   seatCode: string;
   tableMapPlaceCode: string | null;
+  holderName: string | null;
 };
 
 export type PublicTicketView = Pick<
@@ -253,6 +259,7 @@ function mapTicketRow(row: TicketRow): TicketForDelivery | null {
     sectionName: row.venue_sections?.name ?? "Setor",
     seatCode: row.reservation_items?.seat_code ?? "A confirmar",
     tableMapPlaceCode: null,
+    holderName: row.recipient_name ?? row.customers?.name ?? null,
   };
 }
 
@@ -460,7 +467,7 @@ export async function getTicketsForOrder(
   const { data, error } = await supabase
     .from("tickets")
     .select(
-      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, reservation_items!inner(seat_code), event_sessions!inner(starts_at, timezone, status, events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
+      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, recipient_name, customers(name), reservation_items!inner(seat_code), event_sessions!inner(starts_at, timezone, status, events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
     )
     .eq("order_id", orderId)
     .eq("status", "issued")
@@ -492,7 +499,7 @@ export async function getBuyerReservedTicketsForOrder(
   const { data, error } = await supabase
     .from("tickets")
     .select(
-      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, recipient_name, recipient_phone, participant_delivery_status, reservation_items!inner(seat_code), event_sessions!inner(starts_at, timezone, status, events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
+      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, recipient_name, recipient_phone, participant_delivery_status, customers(name), reservation_items!inner(seat_code), event_sessions!inner(starts_at, timezone, status, events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
     )
     .eq("order_id", orderId)
     .eq("status", "issued")
@@ -583,7 +590,7 @@ export async function listPaidTicketResendGroupsForPhone(
   const { data, error } = await supabase
     .from("tickets")
     .select(
-      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, issued_at, customers!inner(whatsapp_phone), orders!inner(id, status, payments!inner(id, status, paid_at)), reservation_items!inner(seat_code), event_sessions!inner(event_id, starts_at, timezone, status, events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
+      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, recipient_name, issued_at, customers!inner(whatsapp_phone, name), orders!inner(id, status, payments!inner(id, status, paid_at)), reservation_items!inner(seat_code), event_sessions!inner(event_id, starts_at, timezone, status, events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
     )
     .eq("customers.whatsapp_phone", phone)
     .eq("status", "issued")
@@ -643,7 +650,7 @@ export async function listParticipantTicketDeliveriesForPhone(
   const { data, error } = await supabase
     .from("tickets")
     .select(
-      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, issued_at, participant_delivery_status, participant_delivered_at, orders!inner(id, status, payments!inner(id, status, paid_at)), reservation_items!inner(seat_code), event_sessions!inner(starts_at, timezone, status, events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
+      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, recipient_name, issued_at, participant_delivery_status, participant_delivered_at, customers(name), orders!inner(id, status, payments!inner(id, status, paid_at)), reservation_items!inner(seat_code), event_sessions!inner(starts_at, timezone, status, events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
     )
     .eq("recipient_phone", phone)
     .eq("status", "issued")
