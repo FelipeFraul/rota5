@@ -1735,6 +1735,11 @@ export async function POST(request: Request) {
       ? [result.sendResult.providerMessageId]
       : [],
   );
+  const deliveredGenerationMessageIds = deliveryResults.flatMap((result) =>
+    result.sendResult.ok && result.sendResult.providerMessageId
+      ? [result.sendResult.providerMessageId]
+      : [],
+  );
   const reconciledContext = anyMessageDelivered
     ? {
         ...nextContextWithoutDeliveryMetadata,
@@ -1749,7 +1754,12 @@ export async function POST(request: Request) {
                 validOptions: [...deliveredOptions].sort(
                   (left, right) => left - right,
                 ),
-                messageIds: [...new Set(deliveredOptionMessageIds)],
+                messageIds: [
+                  ...new Set([
+                    ...deliveredOptionMessageIds,
+                    ...deliveredGenerationMessageIds,
+                  ]),
+                ],
               },
             }
           : {}),

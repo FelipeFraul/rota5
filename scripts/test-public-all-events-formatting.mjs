@@ -10,6 +10,10 @@ const router = readFileSync(
   new URL("../src/lib/tickets/router.ts", import.meta.url),
   "utf8",
 );
+const zapiWebhookRoute = readFileSync(
+  new URL("../src/app/api/webhook/zapi/route.ts", import.meta.url),
+  "utf8",
+);
 
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 const ALL_EVENTS_MESSAGE_MAX_LENGTH = 3_500;
@@ -385,6 +389,12 @@ test("TODOS divide em multiplas mensagens e aplica delay nas continuacoes", () =
     [...combinedBody.matchAll(/Digite (\d+) para/g)].map((match) => Number(match[1])),
     longEvents.flatMap((_, index) => [index * 2 + 1, index * 2 + 2]),
   );
+});
+
+test("mensagem auxiliar apos eventos nao invalida opcao numerica entregue", () => {
+  assert.match(zapiWebhookRoute, /const deliveredGenerationMessageIds = deliveryResults\.flatMap/);
+  assert.match(zapiWebhookRoute, /\.\.\.deliveredOptionMessageIds,\s*\.\.\.deliveredGenerationMessageIds/);
+  assert.match(zapiWebhookRoute, /!numericPrompt\.messageIds\.includes\(incoming\.referenceMessageId\)/);
 });
 
 test("TODOS envia foto dos eventos quando houver imageUrl", () => {
