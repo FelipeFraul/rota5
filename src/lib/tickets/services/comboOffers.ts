@@ -8,6 +8,7 @@ import { logError, logInfo, logWarn } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getComboOfferDelayMinutes } from "@/lib/tickets/config";
 import { normalizeWhatsAppPhone } from "@/lib/tickets/phones";
+import { generateComboQrImage } from "@/lib/tickets/services/comboQrImage";
 import { getOrCreateOpenConversation, updateConversationAfterMessage } from "@/lib/tickets/services/conversations";
 import { upsertCustomerFromWhatsApp } from "@/lib/tickets/services/customers";
 import { saveWhatsAppMessage } from "@/lib/tickets/services/messages";
@@ -116,6 +117,7 @@ type ComboOrderRow = {
   customer_id: string;
   event_id: string;
   session_id: string;
+  source_order_id?: string | null;
   status: "pending_payment" | "paid" | "cancelled" | "expired";
   quantity: number;
   unit_amount_cents: number;
@@ -128,7 +130,7 @@ type ComboOrderRow = {
     | { name: string; description: string; image_url: string | null; original_price_cents?: number | null }
     | { name: string; description: string; image_url: string | null; original_price_cents?: number | null }[]
     | null;
-  customers?: { whatsapp_phone: string | null; email?: string | null } | null;
+  customers?: { whatsapp_phone: string | null; email?: string | null; name?: string | null } | null;
   events?: { title: string; city: string; state: string; venues?: { name: string | null } | null } | null;
   event_sessions?: { starts_at: string; timezone?: string | null; status?: string; events?: { status: string } | null } | null;
 };
@@ -187,7 +189,8 @@ type ComboOfferCandidateTicketRow = {
 };
 
 type PaidComboOrderRow = ComboOrderRow & {
-  customers: { whatsapp_phone: string | null };
+  source_order_id: string | null;
+  customers: { whatsapp_phone: string | null; name: string | null };
   events: { title: string; city: string; state: string; venues?: { name: string | null } | null };
   event_sessions: { starts_at: string; timezone?: string | null; status?: string; events?: { status: string } | null };
 };
@@ -1291,21 +1294,6 @@ function formatOfferEventDate(startsAt: string) {
   return `${weekday.charAt(0).toLocaleUpperCase("pt-BR")}${weekday.slice(1)} ${dayTime}`;
 }
 
-export async function generateComboQrImage(token: string) {
-  const buffer = await QRCode.toBuffer(token, {
-    color: {
-      dark: "#DC2626",
-      light: "#FFFFFF",
-    },
-    errorCorrectionLevel: "M",
-    margin: 2,
-    scale: 8,
-    type: "png",
-  });
-
-  return `data:image/png;base64,${buffer.toString("base64")}`;
-}
-
 async function generatePixQrImage(qrCode: string | null) {
   if (!qrCode) return null;
 
@@ -1323,13 +1311,37 @@ async function generatePixQrImage(qrCode: string | null) {
 async function loadPaidComboOrder(orderId: string) {
   const { data, error } = await getSupabaseAdmin()
     .from("combo_orders")
-    .select("id, offer_id, customer_id, event_id, session_id, status, quantity, unit_amount_cents, total_amount_cents, currency, external_reference, checkout_token_hash, checkout_expires_at, combo_offers(name, description, image_url, original_price_cents), customers(whatsapp_phone), events(title, city, state, venues(name)), event_sessions(starts_at, timezone, status, events(status))")
+    .select("id, offer_id, customer_id, event_id, session_id, source_order_id, status, quantity, unit_amount_cents, total_amount_cents, currency, external_reference, checkout_token_hash, checkout_expires_at, combo_offers(name, description, image_url, original_price_cents), customers(whatsapp_phone, name), events(title, city, state, venues(name)), event_sessions(starts_at, timezone, status, events(status))")
     .eq("id", orderId)
     .gte("event_sessions.starts_at", getPublicEventVisibilityQueryFloorIso())
     .maybeSingle<PaidComboOrderRow>();
 
   if (error) throw error;
   return data;
+}
+
+async function getComboOrderTableMapPlaceCode(order: Pick<PaidComboOrderRow, "source_order_id" | "customer_id" | "event_id" | "session_id">) {
+  if (!order.source_order_id) return null;
+
+  const { data, error } = await getSupabaseAdmin()
+    .from("official_table_map_reservations")
+    .select("place_code")
+    .eq("order_id", order.source_order_id)
+    .eq("customer_id", order.customer_id)
+    .eq("event_id", order.event_id)
+    .eq("session_id", order.session_id)
+    .eq("status", "paid")
+    .maybeSingle<{ place_code: string | null }>();
+
+  if (error) {
+    logWarn("Failed to load combo table map place for QR image", {
+      comboSourceOrderId: order.source_order_id,
+      code: error.code,
+    });
+    return null;
+  }
+
+  return data?.place_code ?? null;
 }
 
 export async function deliverComboOrder(orderId: string) {
@@ -1404,6 +1416,7 @@ export async function deliverComboOrder(orderId: string) {
     : { conversation_status: "unavailable" };
 
   const event = order.events;
+  const tableMapPlaceCode = await getComboOrderTableMapPlaceCode(order);
   const message = [
     "*COMBO CONFIRMADO*",
     "",
@@ -1536,7 +1549,18 @@ export async function deliverComboOrder(orderId: string) {
     "",
     "Apresente no bar. Este QR Code é separado do ingresso da portaria.",
   ].join("\n");
-  const image = await generateComboQrImage(`combo:${redemptionId}:${token}`);
+  const qrPayload = `combo:${redemptionId}:${token}`;
+  const image = await generateComboQrImage({
+    qrPayload,
+    comboName: offer?.name ?? "Combo",
+    comboItems: offer?.description ?? null,
+    eventTitle: event.title,
+    startsAt: order.event_sessions.starts_at,
+    timezone: order.event_sessions.timezone,
+    buyerName: order.customers.name,
+    redemptionCode,
+    tableMapPlaceCode,
+  });
   const imageBusinessContext = {
     combo_order_id: order.id,
     combo_redemption_id: redemptionId,

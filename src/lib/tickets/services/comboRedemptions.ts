@@ -10,10 +10,8 @@ import {
 import { saveWhatsAppMessage } from "@/lib/tickets/services/messages";
 import { buildWhatsAppOutboundMetadata } from "@/lib/tickets/services/outboundMessages";
 import { sendZapiImage, sendZapiText } from "@/lib/zapi/client";
-import {
-  formatComboDescription,
-  generateComboQrImage,
-} from "@/lib/tickets/services/comboOffers";
+import { generateComboQrImage } from "@/lib/tickets/services/comboQrImage";
+import { formatComboDescription } from "@/lib/tickets/services/comboOffers";
 import { getOfficialTableMapPlace } from "@/lib/tickets/tableMap/officialPlaces";
 import { isPublicEventVisible } from "@/lib/tickets/services/publicEventVisibility";
 
@@ -249,6 +247,27 @@ function formatComboDeliveryPlace(placeCode: string | null | undefined) {
   const kind = place?.type === "bistro" ? "bistrô" : "mesa";
 
   return `${kind} ${displayCode}`;
+}
+
+async function getComboRedemptionTableMapPlaceCode(input: {
+  sourceOrderId: string | null | undefined;
+  customerId: string;
+  eventId: string;
+  sessionId: string;
+}) {
+  if (!input.sourceOrderId) return null;
+
+  const { data } = await getSupabaseAdmin()
+    .from("official_table_map_reservations")
+    .select("place_code")
+    .eq("order_id", input.sourceOrderId)
+    .eq("customer_id", input.customerId)
+    .eq("event_id", input.eventId)
+    .eq("session_id", input.sessionId)
+    .eq("status", "paid")
+    .maybeSingle<{ place_code: string | null }>();
+
+  return data?.place_code ?? null;
 }
 
 function buildComboDeliveryChoiceMessage(input: {
@@ -637,7 +656,7 @@ export async function startKitchenOrderPreparation(input: {
   let query = supabase
     .from("combo_redemptions")
     .select(
-      "id, combo_order_id, event_id, session_id, redemption_code, offer_name, quantity, status, qr_token_hash, raw_metadata, customers(id, whatsapp_phone), events(title), event_sessions(starts_at, timezone, status, events(status)), combo_orders!inner(status, combo_offers(description))",
+      "id, combo_order_id, customer_id, event_id, session_id, redemption_code, offer_name, quantity, status, qr_token_hash, raw_metadata, customers(id, whatsapp_phone, name), events(title, city, state, venues(name)), event_sessions(starts_at, timezone, status, events(status)), combo_orders!inner(status, source_order_id, combo_offers(description))",
     )
     .eq("id", input.redemptionId);
 
@@ -651,6 +670,7 @@ export async function startKitchenOrderPreparation(input: {
   const { data: redemption, error } = await query.maybeSingle<{
     id: string;
     combo_order_id: string;
+    customer_id: string;
     event_id: string;
     session_id: string;
     redemption_code: string;
@@ -660,10 +680,13 @@ export async function startKitchenOrderPreparation(input: {
     qr_token_hash: string;
     raw_metadata: Record<string, unknown> | null;
     customers:
-      | { id: string; whatsapp_phone: string | null }
-      | { id: string; whatsapp_phone: string | null }[]
+      | { id: string; whatsapp_phone: string | null; name: string | null }
+      | { id: string; whatsapp_phone: string | null; name: string | null }[]
       | null;
-    events: { title: string } | { title: string }[] | null;
+    events:
+      | { title: string; city?: string | null; state?: string | null; venues?: { name: string | null } | null }
+      | { title: string; city?: string | null; state?: string | null; venues?: { name: string | null } | null }[]
+      | null;
     event_sessions:
       | { starts_at: string; timezone?: string | null; status: string; events: { status: string } | null }
       | { starts_at: string; timezone?: string | null; status: string; events: { status: string } | null }[]
@@ -671,6 +694,7 @@ export async function startKitchenOrderPreparation(input: {
     combo_orders:
       | {
           status: string;
+          source_order_id: string | null;
           combo_offers:
             | { description: string }
             | { description: string }[]
@@ -678,6 +702,7 @@ export async function startKitchenOrderPreparation(input: {
         }
       | {
           status: string;
+          source_order_id: string | null;
           combo_offers:
             | { description: string }
             | { description: string }[]
@@ -815,9 +840,23 @@ export async function startKitchenOrderPreparation(input: {
         .eq("status", "issued");
 
       if (!rotateError) {
-        const image = await generateComboQrImage(
-          `combo:${redemption.id}:${newQrToken}`,
-        );
+        const tableMapPlaceCode = await getComboRedemptionTableMapPlaceCode({
+          sourceOrderId: order.source_order_id,
+          customerId: redemption.customer_id,
+          eventId: redemption.event_id,
+          sessionId: redemption.session_id,
+        });
+        const image = await generateComboQrImage({
+          qrPayload: `combo:${redemption.id}:${newQrToken}`,
+          comboName: redemption.offer_name,
+          comboItems: offer?.description ?? null,
+          eventTitle: event?.title ?? null,
+          startsAt: eventSession?.starts_at ?? null,
+          timezone: eventSession?.timezone ?? null,
+          buyerName: customer.name,
+          redemptionCode: redemption.redemption_code,
+          tableMapPlaceCode,
+        });
         const caption = [
           "*QRCODE DO COMBO*",
           `Pedido: ${redemption.redemption_code}`,
