@@ -3956,9 +3956,10 @@ function formatParticipantContactsPrompt(expectedContactsCount: number) {
 }
 
 const PARTICIPANT_TICKET_REQUEST_INSTRUCTIONS = [
-  "INGRESSOS",
+  "*INGRESSOS*",
   "",
-  "Para que os acompanhantes recebam seus ingressos, basta enviar uma mensagem *MEU INGRESSO* para este telefone",
+  "*Envie essa mensagem para seu(s) acompanhante(s).*",
+  "Para que os acompanhantes recebam seus ingressos, basta *enviar uma mensagem com o texto MEU INGRESSO* para nosso telefone, 15 99642-6671.",
 ].join("\n");
 
 function formatParticipantContactsConfirmation(

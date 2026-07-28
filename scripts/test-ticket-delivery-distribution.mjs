@@ -272,6 +272,9 @@ test("imagem do ingresso e instrucao de portaria sao mensagens separadas", () =>
   assert.match(ticketDeliverySource, /sendZapiImage\(\{[\s\S]*phone,[\s\S]*image:\s*qrImage,[\s\S]*\}\)/);
   assert.match(ticketDeliverySource, /paid-ticket-order:\$\{orderId\}:qr-instruction:v1/);
   assert.match(routerSource, /\.\.\.delivery\.qrImages\.map[\s\S]*\{ type: "text" as const, body: delivery\.qrInstructionMessage \}/);
+  assert.match(routerSource, /\*INGRESSOS\*/);
+  assert.match(routerSource, /\*Envie essa mensagem para seu\(s\) acompanhante\(s\)\.\*/);
+  assert.match(routerSource, /\*enviar uma mensagem com o texto MEU INGRESSO\* para nosso telefone, 15 99642-6671/);
 });
 
 test("leitura de contact valida e exibe confirmacao sem telefone completo", async () => {
