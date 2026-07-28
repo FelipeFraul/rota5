@@ -397,6 +397,14 @@ test("mensagem auxiliar apos eventos nao invalida opcao numerica entregue", () =
   assert.match(zapiWebhookRoute, /!numericPrompt\.messageIds\.includes\(incoming\.referenceMessageId\)/);
 });
 
+test("webhook separa imagem e texto da legenda antes do envio", () => {
+  assert.match(zapiWebhookRoute, /function splitImageMessagesFromText/);
+  assert.match(zapiWebhookRoute, /caption:\s*""/);
+  assert.match(zapiWebhookRoute, /type:\s*"text",\s*body:\s*caption/);
+  assert.match(zapiWebhookRoute, /suppressTitle:\s*true/);
+  assert.match(zapiWebhookRoute, /splitImageMessagesFromText\(\s*routeResult\.outboundMessages\.map/);
+});
+
 test("TODOS envia foto dos eventos quando houver imageUrl", () => {
   const events = [
     {

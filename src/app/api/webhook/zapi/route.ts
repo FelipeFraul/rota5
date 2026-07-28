@@ -610,8 +610,10 @@ function getOutboundMessages(
   }
 
   if (routeResult.outboundMessages?.length) {
-    return routeResult.outboundMessages.map((message) =>
-      normalizeOutboundMessageTitle(message, fallbackTitle),
+    return splitImageMessagesFromText(
+      routeResult.outboundMessages.map((message) =>
+        normalizeOutboundMessageTitle(message, fallbackTitle),
+      ),
     );
   }
 
@@ -649,6 +651,32 @@ function getOutboundMessages(
       suppressTitle: routeResult.suppressTitle,
     },
   ];
+}
+
+function splitImageMessagesFromText(
+  messages: RouteOutboundMessage[],
+): RouteOutboundMessage[] {
+  return messages.flatMap((message) => {
+    if (message.type !== "image" || !message.caption.trim()) {
+      return [message];
+    }
+
+    const { caption, persistedBody, ...imageMessage } = message;
+
+    return [
+      {
+        ...imageMessage,
+        caption: "",
+      },
+      {
+        type: "text",
+        body: caption,
+        phone: message.phone,
+        persistedBody: persistedBody ?? caption,
+        suppressTitle: true,
+      } satisfies RouteOutboundMessage,
+    ];
+  });
 }
 
 function sleep(ms: number) {
