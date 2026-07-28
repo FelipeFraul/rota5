@@ -266,6 +266,11 @@ export default function AdminComboOffersSection({ events, visible }: AdminComboO
       return;
     }
 
+    if (comboDraft.scopeType === "event" && comboDraft.eventIds.length === 0) {
+      setComboMessage("Escolha ao menos um evento para este combo.");
+      return;
+    }
+
     setComboSaving(true);
     setComboMessage(null);
     setSaveFeedback({ state: "loading", label: "Salvando combo" });

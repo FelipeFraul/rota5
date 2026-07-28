@@ -26,6 +26,25 @@ export default function ComboOfferModal({
   onDraftChange,
   onSubmit,
 }: ComboOfferModalProps) {
+  const selectedEventIds = draft.eventIds.filter((eventId) => (
+    events.some((event) => event.eventId === eventId)
+  ));
+  const selectedEventSet = new Set(selectedEventIds);
+  const availableEvents = events.filter((event) => !selectedEventSet.has(event.eventId));
+  const eventsById = new Map(events.map((event) => [event.eventId, event]));
+
+  function addEvent(eventId: string) {
+    if (!eventId || selectedEventSet.has(eventId)) return;
+    onDraftChange({ ...draft, eventIds: [...selectedEventIds, eventId] });
+  }
+
+  function removeEvent(eventId: string) {
+    onDraftChange({
+      ...draft,
+      eventIds: selectedEventIds.filter((currentEventId) => currentEventId !== eventId),
+    });
+  }
+
   return (
     <div
       className="admin-event-modal"
@@ -68,23 +87,38 @@ export default function ComboOfferModal({
               <select value={draft.scopeType} onChange={(event) => onDraftChange({
                 ...draft,
                 scopeType: event.target.value as ComboOfferDraft["scopeType"],
-                eventIds: event.target.value === "event" ? [draft.eventIds[0] ?? events[0]?.eventId ?? ""] : draft.eventIds,
+                eventIds: event.target.value === "event" ? selectedEventIds : draft.eventIds,
                 weekdays: event.target.value === "weekday" ? [draft.weekdays[0] ?? 5] : draft.weekdays,
               })}>
-                <option value="all_events">Todos</option>
-                <option value="event">Evento</option>
+                <option value="all_events">Todos os eventos</option>
+                <option value="event">Eventos especÃ­ficos</option>
                 <option value="weekday">Dia da semana</option>
               </select>
             </label>
             {draft.scopeType === "event" ? (
-              <label>
-                Evento
-                <select value={draft.eventIds[0] ?? ""} onChange={(event) => onDraftChange({ ...draft, eventIds: event.target.value ? [event.target.value] : [] })}>
-                  {events.map((event) => (
-                    <option key={event.eventId} value={event.eventId}>{event.title}</option>
-                  ))}
-                </select>
-              </label>
+              <div className="admin-event-field-wide admin-combo-event-picker">
+                <label>
+                  Adicionar evento
+                  <select value="" onChange={(event) => addEvent(event.target.value)}>
+                    <option value="">Escolha um evento</option>
+                    {availableEvents.map((event) => (
+                      <option key={event.eventId} value={event.eventId}>{event.title}</option>
+                    ))}
+                  </select>
+                </label>
+                <div className="admin-combo-event-list" aria-label="Eventos selecionados">
+                  {selectedEventIds.length ? selectedEventIds.map((eventId) => (
+                    <span key={eventId} className="admin-combo-event-item">
+                      <span>{eventsById.get(eventId)?.title ?? "Evento removido"}</span>
+                      <button type="button" onClick={() => removeEvent(eventId)} disabled={saving}>
+                        Remover
+                      </button>
+                    </span>
+                  )) : (
+                    <span className="admin-combo-event-empty">Nenhum evento selecionado.</span>
+                  )}
+                </div>
+              </div>
             ) : null}
             {draft.scopeType === "weekday" ? (
               <label>

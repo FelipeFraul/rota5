@@ -34,7 +34,7 @@ const CHECKOUT_TTL_MINUTES = 30;
 const EVENT_OFFER_LOOKAHEAD_MINUTES = 24 * 60;
 const EVENT_OFFER_SEND_GRACE_MINUTES = 5;
 const CUSTOM_OFFER_LOOKBACK_MINUTES = 180;
-const CUSTOM_OFFER_SEND_GRACE_MINUTES = 30;
+const CUSTOM_OFFER_SEND_GRACE_MINUTES = 3;
 const COMBO_OFFER_EVENT_LOCK_TTL_SECONDS = 90;
 const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 
@@ -1933,12 +1933,7 @@ function shouldRecoverMissedComboOffer(
   if (!Number.isFinite(start) || current >= start) return false;
 
   if (offer.send_timing_type === "custom") {
-    const purchaseTime = purchasedAt ? new Date(purchasedAt).getTime() : Number.NaN;
-    const offset = offer.send_offset_minutes;
-
-    if (!Number.isFinite(purchaseTime) || !offset || offset <= 0) return false;
-
-    return current >= purchaseTime + offset * 60_000;
+    return false;
   }
 
   const eventWindowStart = start - EVENT_OFFER_LOOKAHEAD_MINUTES * 60_000;
@@ -2208,7 +2203,7 @@ function uniqueComboOfferCandidateTicketsByOrder(
     const session = firstJoin(ticket.event_sessions);
     if (!session) continue;
 
-    const key = `${recipient.phone}:${session.event_id}`;
+    const key = `${recipient.recipientType}:${recipient.phone}:${session.event_id}:${order.id}`;
 
     if (!byRecipient.has(key)) {
       byRecipient.set(key, {
@@ -2422,7 +2417,7 @@ export async function sendScheduledComboOffers(limit = 100) {
       continue;
     }
 
-    if (!hasComboOfferQrDelayElapsed({ qrDeliveredAt, now })) {
+    if (!qrDeliveredAt) {
       skippedCount += 1;
       continue;
     }
@@ -2472,10 +2467,18 @@ export async function sendScheduledComboOffers(limit = 100) {
       (offer) => getComboOfferPriorityForEvent(offer, session.event_id) === purchaseNumber,
     );
 
-    if (!offer) {
-      skippedCount += 1;
-      continue;
-    }
+      if (!offer) {
+        skippedCount += 1;
+        continue;
+      }
+
+      if (
+        offer.send_timing_type !== "custom" &&
+        !hasComboOfferQrDelayElapsed({ qrDeliveredAt, now })
+      ) {
+        skippedCount += 1;
+        continue;
+      }
 
       const dedupeKey = buildComboOfferDedupeKey({
         customerId: offerCustomerId,

@@ -634,20 +634,22 @@ test("scheduler envia combo para pedido com mesa ou bistro pago", () => {
 test("oferta perdida e recuperada uma unica vez quando janela passou mas evento nao iniciou", () => {
   assert.match(comboOffersSource, /function shouldRecoverMissedComboOffer/);
   assert.match(comboOffersSource, /if \(!Number\.isFinite\(start\) \|\| current >= start\) return false/);
+  assert.match(comboOffersSource, /if \(offer\.send_timing_type === "custom"\) \{\s*return false;\s*\}/);
   assert.match(comboOffersSource, /const shouldSendAsRecovery =[\s\S]*!shouldSendOnSchedule[\s\S]*shouldRecoverMissedComboOffer\(offer,\s*session\.starts_at,\s*now,\s*qrDeliveredAt\)/);
   assert.match(comboOffersSource, /if \(!shouldSendOnSchedule && !shouldSendAsRecovery\) \{[\s\S]*skippedCount \+= 1/);
   assert.match(comboOffersSource, /combo_offer_delivery_mode:\s*shouldSendAsRecovery \? "recovery" : "scheduled"/);
   assert.match(comboOffersSource, /combo_offer_recovered:\s*shouldSendAsRecovery/);
 });
 
-test("oferta de combo depende exclusivamente de primeira entrega do QR mais delay configurado", () => {
+test("oferta de combo usa QR entregue e aplica delay global somente fora do fluxo apos compra", () => {
   assert.match(ticketsConfigSource, /DEFAULT_COMBO_OFFER_DELAY_MINUTES = 10/);
   assert.match(ticketsConfigSource, /COMBO_OFFER_DELAY_MINUTES/);
   assert.match(comboOffersSource, /getComboOfferDelayMinutes/);
   assert.match(comboOffersSource, /function hasComboOfferQrDelayElapsed/);
   assert.match(comboOffersSource, /if \(!qrDeliveredAt\) return false/);
   assert.match(comboOffersSource, /deliveredAt \+ delayMinutes \* 60_000 <= now\.getTime\(\)/);
-  assert.match(comboOffersSource, /if \(!hasComboOfferQrDelayElapsed\(\{ qrDeliveredAt, now \}\)\) \{[\s\S]*skippedCount \+= 1/);
+  assert.match(comboOffersSource, /if \(!qrDeliveredAt\) \{[\s\S]*skippedCount \+= 1/);
+  assert.match(comboOffersSource, /offer\.send_timing_type !== "custom" &&[\s\S]*!hasComboOfferQrDelayElapsed\(\{ qrDeliveredAt, now \}\)/);
   assert.match(comboOffersSource, /combo_offer_qr_delivered_at:\s*qrDeliveredAt/);
   assert.match(comboOffersSource, /combo_offer_delay_minutes:\s*getComboOfferDelayMinutes\(\)/);
   assert.doesNotMatch(comboOffersSource, /shouldSendComboOfferNow\([\s\S]*ticket\.issued_at/);
@@ -659,7 +661,8 @@ test("recuperacao de oferta perdida continua protegida pela deduplicacao antes d
 
 test("oferta de 2 minutos e multiplas prioridades continuam no mecanismo existente", () => {
   assert.match(comboOffersSource, /offer\.send_offset_minutes/);
-  assert.match(comboOffersSource, /target = start - offset \* 60_000/);
+  assert.match(comboOffersSource, /const target = purchaseTime \+ offset \* 60_000/);
+  assert.match(comboOffersSource, /CUSTOM_OFFER_SEND_GRACE_MINUTES = 3/);
   assert.match(comboOffersSource, /getComboOfferPriorityForEvent\(offer,\s*session\.event_id\) === purchaseNumber/);
   assert.match(comboOffersSource, /resolveEffectiveComboOffersForEvent/);
 });
@@ -682,7 +685,7 @@ test("deduplicacao fica por telefone evento oferta ticket e tipo de destinatario
 
 test("multiplos ingressos do mesmo comprador no mesmo pedido nao duplicam oferta", () => {
   assert.match(comboOffersSource, /function uniqueComboOfferCandidateTicketsByOrder/);
-  assert.match(comboOffersSource, /const key = `\$\{recipient\.phone\}:\$\{session\.event_id\}`/);
+  assert.match(comboOffersSource, /const key = `\$\{recipient\.recipientType\}:\$\{recipient\.phone\}:\$\{session\.event_id\}:\$\{order\.id\}`/);
 });
 
 test("evento sem oferta nao agenda nada para combo", () => {
@@ -712,7 +715,7 @@ test("ofertas de combo ignoram pedido sem mesa ou bistro pago", () => {
 
 test("ofertas de combo consolidam mesmo telefone e permitem telefones diferentes", () => {
   assert.match(comboOffersSource, /normalizeWhatsAppPhone/);
-  assert.match(comboOffersSource, /const key = `\$\{recipient\.phone\}:\$\{session\.event_id\}`/);
+  assert.match(comboOffersSource, /const key = `\$\{recipient\.recipientType\}:\$\{recipient\.phone\}:\$\{session\.event_id\}:\$\{order\.id\}`/);
   assert.match(comboOffersSource, /byRecipient\.set\(key/);
 });
 

@@ -4386,6 +4386,61 @@ body:has(.checkout-unavailable-shell) iframe {
   pointer-events: none;
 }
 
+.admin-combo-event-picker {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-combo-event-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 38px;
+}
+
+.admin-combo-event-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 6px 8px 6px 10px;
+  background: #f8fafc;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.admin-combo-event-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-combo-event-item button {
+  min-height: 30px;
+  border: 0;
+  border-radius: 7px;
+  padding: 0 10px;
+  background: #e2e8f0;
+  color: #111827;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.admin-combo-event-item button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.admin-combo-event-empty {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .admin-event-form-grid textarea {
   min-height: 110px;
   resize: vertical;
