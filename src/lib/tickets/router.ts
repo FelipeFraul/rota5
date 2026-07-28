@@ -3949,11 +3949,9 @@ function formatPaidTicketResendOptions(groups: PaidTicketResendGroup[]) {
 
 function formatParticipantContactsPrompt(expectedContactsCount: number) {
   return [
-    "ENVIANDO OS INGRESSOS",
+    "*ENVIANDO OS INGRESSOS*",
     "",
-    `*Agora envie, nesta conversa, o contato dos ${expectedContactsCount} acompanhante(s) que receberão o ingresso. Neste pedido, você deve enviar ${expectedContactsCount} contatos. Em seguida, enviaremos automaticamente o seu ingresso para este WhatsApp.*`,
-    "",
-    "OBS.: Os acompanhantes precisam enviar a este número *Meu ingresso*",
+    `Você pode *enviar o ingresso* de forma segura *para o seu acompanhante*. Basta adicionar o contato na próxima mensagem. Neste pedido, você tem *${expectedContactsCount} acompanhante(s) para convidar*. Envie o contato(s) abaixo:`,
   ].join("\n");
 }
 

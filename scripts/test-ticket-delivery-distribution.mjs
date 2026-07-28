@@ -229,7 +229,10 @@ test("opcao 2 entra em ticket_delivery_contacts_waiting", async () => {
   assert.equal(result.nextContext.state, "ticket_delivery_contacts_waiting");
   assert.equal(result.nextContext.ticketDelivery.mode, "participant_contacts");
   assert.equal(result.nextContext.ticketDelivery.expectedContactsCount, 2);
-  assert.match(result.reply, /você deve enviar 2 contatos/i);
+  assert.match(result.reply, /\*ENVIANDO OS INGRESSOS\*/);
+  assert.match(result.reply, /Você pode \*enviar o ingresso\* de forma segura \*para o seu acompanhante\*/);
+  assert.match(result.reply, /você tem \*2 acompanhante\(s\) para convidar\*/i);
+  assert.match(result.reply, /Envie o contato\(s\) abaixo:/);
 });
 
 test("opcao 2 espera quantidade de ingressos menos um e nao e oferecida para compra de 1 ingresso", async () => {
