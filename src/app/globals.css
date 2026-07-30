@@ -442,6 +442,26 @@ body:has(.checkout-unavailable-shell) iframe {
   resize: vertical;
 }
 
+.checkout-pix-code {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 120px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  overflow: visible;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
 .checkout-message {
   margin-top: 16px;
   padding: 12px;

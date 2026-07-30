@@ -322,7 +322,7 @@ export default function ComboCheckoutClient({
               ) : null}
               <label className="checkout-label">
                 Pix copia e cola
-                <textarea className="checkout-textarea" value={pixCode} readOnly />
+                <pre className="checkout-pix-code" aria-label="Codigo Pix copia e cola">{pixCode}</pre>
               </label>
               <button
                 type="button"
