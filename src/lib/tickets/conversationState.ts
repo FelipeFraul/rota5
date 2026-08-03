@@ -142,6 +142,13 @@ export type TicketConversationEventOption = {
   venueId?: string | null;
   venueName?: string;
   imageUrl?: string;
+  availabilityStatus?:
+    | "available"
+    | "sold_out"
+    | "sales_closed"
+    | "unavailable"
+    | "cancelled"
+    | "paused";
 };
 
 export type TicketConversationSelectedEvent = Omit<

@@ -1,13 +1,17 @@
 import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { listAvailableSections } from "@/lib/tickets/services/sections";
 import {
   getPublicEventVisibilityQueryFloorIso,
   getPublicVisibleSessionStatuses,
   isPublicEventVisible,
   PUBLIC_VISIBLE_EVENT_STATUSES,
 } from "@/lib/tickets/services/publicEventVisibility";
+import {
+  getPublicAvailabilityStatusForSession,
+  isPublicAvailabilityListable,
+  type PublicAvailabilityStatus,
+} from "@/lib/tickets/services/publicAvailability";
 
 const DEFAULT_EVENT_SEARCH_LIMIT = 5;
 const MAX_EVENT_CANDIDATES = 100;
@@ -37,6 +41,7 @@ export type TicketEventSearchResult = {
   startsAt: string;
   sessionStatus: string;
   timezone?: string | null;
+  availabilityStatus?: PublicAvailabilityStatus;
 };
 
 export type ValidatedEventSession = {
@@ -319,6 +324,40 @@ function mapRankedSearchRow(row: RankedPublicEventSearchRow): TicketEventSearchR
     startsAt: row.starts_at,
     sessionStatus: row.session_status,
     timezone: row.timezone,
+    availabilityStatus: "unavailable",
+  };
+}
+
+async function withPublicAvailability(
+  result: Omit<TicketEventSearchResult, "availabilityStatus"> & {
+    eventStatus?: string | null;
+    eventVenueStatus?: string | null;
+    sessionVenueStatus?: string | null;
+  },
+) {
+  const availabilityStatus = await getPublicAvailabilityStatusForSession({
+    sessionId: result.sessionId,
+    venueId: result.venueId,
+    eventStatus: result.eventStatus ?? "published",
+    sessionStatus: result.sessionStatus,
+    eventVenueStatus: result.eventVenueStatus,
+    sessionVenueStatus: result.sessionVenueStatus,
+  });
+
+  if (!isPublicAvailabilityListable(availabilityStatus)) {
+    return null;
+  }
+
+  const {
+    eventStatus: _eventStatus,
+    eventVenueStatus: _eventVenueStatus,
+    sessionVenueStatus: _sessionVenueStatus,
+    ...publicResult
+  } = result;
+
+  return {
+    ...publicResult,
+    availabilityStatus,
   };
 }
 
@@ -403,7 +442,7 @@ export async function searchEvents({
   const effectiveDateFrom = clampPublicSearchDateFrom(dateFrom);
   const eventQuery = supabase
     .from("events")
-    .select("id, title, artist_name, description, city, state, image_url, venue_id, venues(name)")
+    .select("id, title, artist_name, description, city, state, image_url, venue_id, venues(name, status)")
     .in("status", PUBLIC_VISIBLE_EVENT_STATUSES);
 
   const artistTerm = artist?.trim();
@@ -433,20 +472,18 @@ export async function searchEvents({
             startsAt: result.startsAt,
             timezone: result.timezone,
             sessionStatus: result.sessionStatus,
-            purpose: "purchase",
+            purpose: "issued_access",
           })
         ) {
           continue;
         }
-        const sections = await listAvailableSections(result.sessionId, {
-          venueId: result.venueId,
-        });
+        const publicResult = await withPublicAvailability(result);
 
-        if (sections.length === 0) {
+        if (!publicResult) {
           continue;
         }
 
-        purchasableResults.push(result);
+        purchasableResults.push(publicResult);
 
         if (purchasableResults.length >= resultLimit) {
           break;
@@ -476,7 +513,7 @@ export async function searchEvents({
     .from("event_sessions")
     .select("id, event_id, venue_id, starts_at, timezone, status, venues(name)")
     .in("event_id", Array.from(eventsById.keys()))
-    .in("status", getPublicVisibleSessionStatuses("purchase"))
+    .in("status", getPublicVisibleSessionStatuses("issued_access"))
     .gte("starts_at", effectiveDateFrom)
     .order("starts_at", { ascending: true });
 
@@ -543,6 +580,8 @@ export async function searchEvents({
           startsAt: session.starts_at,
           sessionStatus: session.status,
           timezone: session.timezone,
+          eventVenueStatus: event.venues?.status,
+          sessionVenueStatus: session.venues?.status,
         },
       ];
     });
@@ -554,21 +593,19 @@ export async function searchEvents({
         startsAt: result.startsAt,
         timezone: result.timezone,
         sessionStatus: result.sessionStatus,
-        purpose: "purchase",
+        purpose: "issued_access",
       })
     ) {
       continue;
     }
 
-    const sections = await listAvailableSections(result.sessionId, {
-      venueId: result.venueId,
-    });
+    const publicResult = await withPublicAvailability(result);
 
-    if (sections.length === 0) {
+    if (!publicResult) {
       continue;
     }
 
-    purchasableResults.push(result);
+    purchasableResults.push(publicResult);
 
     if (purchasableResults.length >= resultLimit) {
       break;
@@ -585,7 +622,7 @@ export async function listAllPublicEventsByDate({
   const resultLimit = Math.max(1, Math.min(limit, MAX_EVENT_CANDIDATES));
   const { data: events, error: eventsError } = await supabase
     .from("events")
-    .select("id, title, artist_name, description, city, state, image_url, venue_id, venues(name)")
+    .select("id, title, artist_name, description, city, state, image_url, venue_id, venues(name, status)")
     .in("status", PUBLIC_VISIBLE_EVENT_STATUSES)
     .limit(MAX_EVENT_CANDIDATES)
     .returns<EventRow[]>();
@@ -601,9 +638,9 @@ export async function listAllPublicEventsByDate({
   const eventsById = new Map(events.map((event) => [event.id, event]));
   const { data: sessions, error: sessionsError } = await supabase
     .from("event_sessions")
-    .select("id, event_id, venue_id, starts_at, timezone, status, venues(name)")
+    .select("id, event_id, venue_id, starts_at, timezone, status, venues(name, status)")
     .in("event_id", Array.from(eventsById.keys()))
-    .in("status", getPublicVisibleSessionStatuses("purchase"))
+    .in("status", getPublicVisibleSessionStatuses("issued_access"))
     .gte("starts_at", getPublicEventVisibilityQueryFloorIso())
     .order("starts_at", { ascending: true })
     .order("event_id", { ascending: true })
@@ -638,27 +675,27 @@ export async function listAllPublicEventsByDate({
       startsAt: session.starts_at,
       sessionStatus: session.status,
       timezone: session.timezone,
+      eventVenueStatus: event.venues?.status,
+      sessionVenueStatus: session.venues?.status,
     };
     if (
       !isPublicEventVisible({
         startsAt: result.startsAt,
         timezone: result.timezone,
         sessionStatus: result.sessionStatus,
-        purpose: "purchase",
+        purpose: "issued_access",
       })
     ) {
       continue;
     }
 
-    const sections = await listAvailableSections(result.sessionId, {
-      venueId: result.venueId,
-    });
+    const publicResult = await withPublicAvailability(result);
 
-    if (sections.length === 0) {
+    if (!publicResult) {
       continue;
     }
 
-    purchasableResults.push(result);
+    purchasableResults.push(publicResult);
 
     if (purchasableResults.length >= resultLimit) {
       break;

@@ -39,6 +39,7 @@ import {
   publicInitialHelpContext as markPublicInitialHelpSent,
 } from "@/lib/tickets/publicInitialFlow";
 import {
+  buildPublicEventActions,
   buildAllEventsOutboundMessages,
   formatAllEventsReply,
 } from "@/lib/tickets/publicAllEventsFormatting";
@@ -53,6 +54,10 @@ import {
   searchEvents,
   type TicketEventSearchResult,
 } from "@/lib/tickets/services/events";
+import {
+  getCurrentPublicAvailabilityStatusForSession,
+  type PublicAvailabilityStatus,
+} from "@/lib/tickets/services/publicAvailability";
 import {
   getAvailableSectionForSession,
   listAvailableSections,
@@ -1703,14 +1708,16 @@ function buildEventOptions(
     city: event.city,
     state: event.state,
     venueId: event.venueId,
+    availabilityStatus: event.availabilityStatus,
     ...(event.imageUrl ? { imageUrl: event.imageUrl } : {}),
     ...(event.venueName ? { venueName: event.venueName } : {}),
   }));
 }
 
 function formatEventsReply(events: TicketEventSearchResult[]) {
+  const actions = buildPublicEventActions(events);
   const lines = events.flatMap((event, index) => [
-    formatSingleEventReply(event, index, events.length),
+    formatSingleEventReply(event, actions),
     "",
   ]);
 
@@ -1722,8 +1729,9 @@ function formatEventsReply(events: TicketEventSearchResult[]) {
 }
 
 function formatEventOptionsReply(events: TicketConversationEventOption[]) {
+  const actions = buildPublicEventActions(events);
   const lines = events.flatMap((event, index) => [
-    formatSingleEventOptionReply(event, index, events.length),
+    formatSingleEventOptionReply(event, actions),
     "",
   ]);
 
@@ -1736,21 +1744,14 @@ function formatEventOptionsReply(events: TicketConversationEventOption[]) {
 
 function formatSingleEventReply(
   event: TicketEventSearchResult,
-  index: number,
-  totalEvents: number,
+  actions: ReturnType<typeof buildPublicEventActions>,
 ) {
   const title = formatPublicEventTitle(event.title, event.artistName);
   const details = [
-    `| Local: ${formatEventLocation(event)}`,
-    `*| Data: ${formatEventDate(event.startsAt)}*`,
+    `| Local: *${formatEventLocation(event)}*`,
+    `| Data: *${formatEventDate(event.startsAt)}*`,
   ];
-  const buyOption = totalEvents === 1 ? 1 : index * 2 + 1;
-  const moreInfoOption = buyOption + 1;
-  const options = [
-    `Digite *${buyOption}* para comprar`,
-    `Digite *${moreInfoOption}* para saber mais`,
-    'Para uma nova pesquisa, *NEW*',
-  ];
+  const options = formatPublicEventActionLines(event, actions);
 
   return [
     `🎟️ *${title}*`,
@@ -1762,21 +1763,14 @@ function formatSingleEventReply(
 
 function formatSingleEventOptionReply(
   event: TicketConversationEventOption,
-  index: number,
-  totalEvents: number,
+  actions: ReturnType<typeof buildPublicEventActions>,
 ) {
   const title = formatPublicEventTitle(event.title, event.artistName);
   const details = [
-    `| Local: ${formatEventLocation(event)}`,
-    `*| Data: ${formatEventDate(event.startsAt)}*`,
+    `| Local: *${formatEventLocation(event)}*`,
+    `| Data: *${formatEventDate(event.startsAt)}*`,
   ];
-  const buyOption = totalEvents === 1 ? 1 : index * 2 + 1;
-  const moreInfoOption = buyOption + 1;
-  const options = [
-    `Digite *${buyOption}* para comprar`,
-    `Digite *${moreInfoOption}* para saber mais`,
-    'Para uma nova pesquisa, *NEW*',
-  ];
+  const options = formatPublicEventActionLines(event, actions);
 
   return [
     `🎟️ *${title}*`,
@@ -1786,15 +1780,53 @@ function formatSingleEventOptionReply(
   ].join("\n");
 }
 
+function formatPublicEventActionLines(
+  event: TicketEventSearchResult | TicketConversationEventOption,
+  actions: ReturnType<typeof buildPublicEventActions>,
+) {
+  const eventActions = actions.filter((action) => action.event === event);
+  const buyAction = eventActions.find((action) => action.action === "buy");
+  const moreInfoAction = eventActions.find((action) => action.action === "more_info");
+  const moreInfoLine = moreInfoAction
+    ? `Digite *${moreInfoAction.option}* para *ver mais*`
+    : null;
+
+  if (event.availabilityStatus === "sold_out") {
+    return ["SOLD OUT", moreInfoLine, 'Para uma nova pesquisa, *NEW*'].filter(
+      (line): line is string => Boolean(line),
+    );
+  }
+
+  if (event.availabilityStatus === "sales_closed") {
+    return ["VENDAS ENCERRADAS", moreInfoLine, 'Para uma nova pesquisa, *NEW*'].filter(
+      (line): line is string => Boolean(line),
+    );
+  }
+
+  return [
+    buyAction ? `Digite *${buyAction.option}* para *comprar*` : null,
+    moreInfoLine,
+    'Para uma nova pesquisa, *NEW*',
+  ].filter((line): line is string => Boolean(line));
+}
+
 
 function buildEventSearchOutboundMessages(events: TicketEventSearchResult[]) {
+  const actions = buildPublicEventActions(events);
   return events.map((event, index) => {
-    const caption = formatSingleEventReply(event, index, events.length);
+    const caption = formatSingleEventReply(event, actions);
 
     return event.imageUrl
       ? ({ type: "image", imageUrl: event.imageUrl, caption, suppressTitle: true } as const)
       : ({ type: "text", body: caption, suppressTitle: true } as const);
   });
+}
+
+function findPublicEventActionByOption(
+  events: Array<TicketEventSearchResult | TicketConversationEventOption>,
+  option: number,
+) {
+  return buildPublicEventActions(events).find((action) => action.option === option) ?? null;
 }
 
 function shouldSendPublicInitialHelp(previousState: Partial<TicketConversationState>) {
@@ -1850,8 +1882,10 @@ function buildPublicInitialHelpResponse(
 }
 
 function buildEventOptionOutboundMessages(events: TicketConversationEventOption[]) {
-  return events.map((event, index) => {
-    const caption = formatSingleEventOptionReply(event, index, events.length);
+  const actions = buildPublicEventActions(events);
+
+  return events.map((event) => {
+    const caption = formatSingleEventOptionReply(event, actions);
 
     return event.imageUrl
       ? ({ type: "image", imageUrl: event.imageUrl, caption, suppressTitle: true } as const)
@@ -1868,8 +1902,34 @@ function buildEventMoreInfoOutboundMessages(
     event.imageUrl
       ? ({ type: "image", imageUrl: event.imageUrl, caption: body } as const)
       : ({ type: "text", body } as const),
-    { type: "text", body: formatSingleEventMoreInfoOptions() } as const,
+    { type: "text", body: formatSingleEventMoreInfoOptions(event) } as const,
   ];
+}
+
+async function buildEventMoreInfoSelection(
+  event: TicketEventSearchResult | TicketConversationEventOption,
+) {
+  const [validatedSession, availabilityStatus] = await Promise.all([
+    getValidatedEventSession({
+      eventId: event.eventId,
+      sessionId: event.sessionId,
+    }),
+    getCurrentPublicAvailabilityStatusForSession({
+      eventId: event.eventId,
+      sessionId: event.sessionId,
+    }).catch(() => event.availabilityStatus),
+  ]);
+  const selectedEvent = validatedSession
+    ? buildSelectedEvent({
+        ...validatedSession,
+        availabilityStatus: availabilityStatus ?? event.availabilityStatus,
+      })
+    : buildSelectedEventFromContext({
+        ...event,
+        availabilityStatus: availabilityStatus ?? event.availabilityStatus,
+      });
+
+  return selectedEvent;
 }
 
 function formatSingleEventMoreInfo(
@@ -1879,19 +1939,23 @@ function formatSingleEventMoreInfo(
 
   return [
     `🎟️ *${formatPublicEventTitle(event.title, event.artistName)}*`,
-    `| Local: ${formatEventLocation(event)}`,
-    `*| Data: ${formatEventDate(event.startsAt)}*`,
+    `| Local: *${formatEventLocation(event)}*`,
+    `| Data: *${formatEventDate(event.startsAt)}*`,
     "",
     "*INFORMAÇÕES DO EVENTO*",
     description || "Nenhuma informação adicional cadastrada para este evento.",
   ].join("\n");
 }
 
-function formatSingleEventMoreInfoOptions() {
-  return [
-    'Digite *1* para comprar',
-    'Para uma nova pesquisa, *NEW*',
-  ].join("\n");
+function formatSingleEventMoreInfoOptions(
+  event: TicketConversationEventOption | TicketConversationSelectedEvent,
+) {
+  return event.availabilityStatus === "sold_out" || event.availabilityStatus === "sales_closed"
+    ? 'Para uma nova pesquisa, *NEW*'
+    : [
+        'Digite *1* para *comprar*',
+        'Para uma nova pesquisa, *NEW*',
+      ].join("\n");
 }
 
 function buildSelectedEvent(
@@ -1907,9 +1971,94 @@ function buildSelectedEvent(
     city: event.city,
     state: event.state,
     venueId: event.venueId,
+    availabilityStatus: event.availabilityStatus,
     ...(event.imageUrl ? { imageUrl: event.imageUrl } : {}),
     ...(event.venueName ? { venueName: event.venueName } : {}),
   };
+}
+
+function buildSelectedEventFromContext(
+  event:
+    | TicketEventSearchResult
+    | TicketConversationEventOption
+    | TicketConversationSelectedEvent,
+): TicketConversationSelectedEvent {
+  return {
+    eventId: event.eventId,
+    sessionId: event.sessionId,
+    title: event.title,
+    artistName: event.artistName,
+    description: event.description,
+    startsAt: event.startsAt,
+    city: event.city,
+    state: event.state,
+    venueId: event.venueId,
+    availabilityStatus: event.availabilityStatus,
+    ...(event.imageUrl ? { imageUrl: event.imageUrl } : {}),
+    ...(event.venueName ? { venueName: event.venueName } : {}),
+  };
+}
+
+function formatBlockedBuyAvailabilityReply(status: PublicAvailabilityStatus) {
+  if (status === "sold_out") return "SOLD OUT";
+  if (status === "sales_closed") return "VENDAS ENCERRADAS";
+  return TICKET_MESSAGES.eventOptionUnavailable;
+}
+
+async function renderBuyerSectionsStepAfterBuyRevalidation({
+  baseContext,
+  selectedEvent: selectedContextEvent,
+}: {
+  baseContext: TicketConversationState;
+  selectedEvent:
+    | TicketEventSearchResult
+    | TicketConversationEventOption
+    | TicketConversationSelectedEvent;
+}): Promise<RouteTicketMessageOutput> {
+  const availabilityStatus = await getCurrentPublicAvailabilityStatusForSession({
+    eventId: selectedContextEvent.eventId,
+    sessionId: selectedContextEvent.sessionId,
+  });
+
+  if (availabilityStatus !== "available") {
+    return {
+      reply: formatBlockedBuyAvailabilityReply(availabilityStatus),
+      nextContext: {
+        ...baseContext,
+        step: "showing_events",
+        state: "showing_events",
+        selectedEvent: {
+          ...buildSelectedEventFromContext(selectedContextEvent),
+          availabilityStatus,
+        },
+        selectedSection: undefined,
+        selectedSeat: undefined,
+        selectedQuantity: undefined,
+        reservation: undefined,
+        payment: undefined,
+      },
+    };
+  }
+
+  const selectedSession = await getValidatedEventSession({
+    eventId: selectedContextEvent.eventId,
+    sessionId: selectedContextEvent.sessionId,
+  });
+
+  if (!selectedSession) {
+    return {
+      reply: TICKET_MESSAGES.eventOptionUnavailable,
+      nextContext: resetBuyerReservationContext(baseContext),
+    };
+  }
+
+  return renderBuyerSectionsStep({
+    baseContext,
+    selectedEvent: buildSelectedEvent({
+      ...selectedSession,
+      availabilityStatus,
+    }),
+  });
 }
 
 function buildSectionOptions(
@@ -18554,24 +18703,15 @@ export async function routeTicketMessage({
       };
     }
 
-    if (parsedSearch.numericSelection === 1 && previousState.selectedEvent) {
-      const selectedSession = await getValidatedEventSession({
-        eventId: previousState.selectedEvent.eventId,
-        sessionId: previousState.selectedEvent.sessionId,
-      });
-
-      if (!selectedSession) {
-        return {
-          reply: TICKET_MESSAGES.eventOptionUnavailable,
-          nextContext: resetBuyerReservationContext(baseContext),
-        };
-      }
-
-      const selectedEvent = buildSelectedEvent(selectedSession);
-
-      return renderBuyerSectionsStep({
+    if (
+      parsedSearch.numericSelection === 1 &&
+      previousState.selectedEvent &&
+      previousState.selectedEvent.availabilityStatus !== "sold_out" &&
+      previousState.selectedEvent.availabilityStatus !== "sales_closed"
+    ) {
+      return renderBuyerSectionsStepAfterBuyRevalidation({
         baseContext: { ...baseContext, eventMoreInfoShown: undefined },
-        selectedEvent,
+        selectedEvent: previousState.selectedEvent,
       });
     }
 
@@ -18588,11 +18728,10 @@ export async function routeTicketMessage({
     previousState.lastEvents?.length
   ) {
     const selectedOption = parsedSearch.numericSelection;
-    const selectedIndex = Math.floor((selectedOption - 1) / 2);
-    const selectedContextEvent = previousState.lastEvents[selectedIndex];
-    const isMoreInfoOption = selectedOption % 2 === 0;
+    const selectedAction = findPublicEventActionByOption(previousState.lastEvents, selectedOption);
+    const selectedContextEvent = selectedAction?.event;
 
-    if (!selectedContextEvent || selectedOption < 1) {
+    if (!selectedAction || !selectedContextEvent || selectedOption < 1) {
       return {
         reply: TICKET_MESSAGES.numericInvalidOption,
         nextContext: {
@@ -18603,21 +18742,9 @@ export async function routeTicketMessage({
       };
     }
 
-    const selectedSession = await getValidatedEventSession({
-      eventId: selectedContextEvent.eventId,
-      sessionId: selectedContextEvent.sessionId,
-    });
+    if (selectedAction.action === "more_info") {
+      const selectedEvent = await buildEventMoreInfoSelection(selectedContextEvent);
 
-    if (!selectedSession) {
-      return {
-        reply: TICKET_MESSAGES.eventOptionUnavailable,
-        nextContext: resetBuyerReservationContext(baseContext),
-      };
-    }
-
-    const selectedEvent = buildSelectedEvent(selectedSession);
-
-    if (isMoreInfoOption) {
       return {
         reply: formatSingleEventMoreInfo(selectedEvent),
         outboundMessages: buildEventMoreInfoOutboundMessages(selectedEvent),
@@ -18631,14 +18758,14 @@ export async function routeTicketMessage({
       };
     }
 
-    return renderBuyerSectionsStep({
+    return renderBuyerSectionsStepAfterBuyRevalidation({
       baseContext: {
         ...baseContext,
         lastEvents: [],
         lastSections: [],
         eventMoreInfoShown: undefined,
       },
-      selectedEvent,
+      selectedEvent: selectedContextEvent,
     });
   }
 
@@ -18665,24 +18792,14 @@ export async function routeTicketMessage({
       };
     }
 
-    if (parsedSearch.numericSelection === 1) {
-      const selectedSession = await getValidatedEventSession({
-        eventId: previousState.selectedEvent.eventId,
-        sessionId: previousState.selectedEvent.sessionId,
-      });
-
-      if (!selectedSession) {
-        return {
-          reply: TICKET_MESSAGES.eventOptionUnavailable,
-          nextContext: resetBuyerReservationContext(baseContext),
-        };
-      }
-
-      const selectedEvent = buildSelectedEvent(selectedSession);
-
-      return renderBuyerSectionsStep({
+    if (
+      parsedSearch.numericSelection === 1 &&
+      previousState.selectedEvent.availabilityStatus !== "sold_out" &&
+      previousState.selectedEvent.availabilityStatus !== "sales_closed"
+    ) {
+      return renderBuyerSectionsStepAfterBuyRevalidation({
         baseContext: { ...baseContext, eventMoreInfoShown: undefined },
-        selectedEvent,
+        selectedEvent: previousState.selectedEvent,
       });
     }
 
@@ -18700,32 +18817,19 @@ export async function routeTicketMessage({
     previousState.lastEvents.length > 1
   ) {
     const selectedOption = parsedSearch.numericSelection;
-    const selectedIndex = Math.floor((selectedOption - 1) / 2);
-    const selectedContextEvent = previousState.lastEvents[selectedIndex];
-    const isMoreInfoOption = selectedOption % 2 === 0;
+    const selectedAction = findPublicEventActionByOption(previousState.lastEvents, selectedOption);
+    const selectedContextEvent = selectedAction?.event;
 
-    if (!selectedContextEvent || selectedOption < 1) {
+    if (!selectedAction || !selectedContextEvent || selectedOption < 1) {
       return {
         reply: TICKET_MESSAGES.numericInvalidOption,
         nextContext: baseContext,
       };
     }
 
-    const selectedSession = await getValidatedEventSession({
-      eventId: selectedContextEvent.eventId,
-      sessionId: selectedContextEvent.sessionId,
-    });
+    if (selectedAction.action === "more_info") {
+      const selectedEvent = await buildEventMoreInfoSelection(selectedContextEvent);
 
-    if (!selectedSession) {
-      return {
-        reply: TICKET_MESSAGES.eventOptionUnavailable,
-        nextContext: resetBuyerReservationContext(baseContext),
-      };
-    }
-
-    const selectedEvent = buildSelectedEvent(selectedSession);
-
-    if (isMoreInfoOption) {
       return {
         reply: formatSingleEventMoreInfo(selectedEvent),
         outboundMessages: buildEventMoreInfoOutboundMessages(selectedEvent),
@@ -18739,34 +18843,32 @@ export async function routeTicketMessage({
       };
     }
 
-    return renderBuyerSectionsStep({
+    return renderBuyerSectionsStepAfterBuyRevalidation({
       baseContext: {
         ...baseContext,
         cart: undefined,
         eventMoreInfoShown: undefined,
       },
-      selectedEvent,
+      selectedEvent: selectedContextEvent,
     });
   }
 
   if (
     parsedSearch.numericSelection &&
     previousState.state === "showing_events" &&
-    previousState.lastEvents?.length === 1 &&
-    (
-      parsedSearch.numericSelection === 2 ||
-      parsedSearch.numericSelection === 3
-    )
+    previousState.lastEvents?.length === 1
   ) {
-    if (!previousState.eventMoreInfoShown && parsedSearch.numericSelection === 2) {
+    const selectedAction = findPublicEventActionByOption(
+      previousState.lastEvents,
+      parsedSearch.numericSelection,
+    );
+
+    if (
+      !previousState.eventMoreInfoShown &&
+      selectedAction?.action === "more_info"
+    ) {
       const contextEvent = previousState.lastEvents[0];
-      const validatedSession = await getValidatedEventSession({
-        eventId: contextEvent.eventId,
-        sessionId: contextEvent.sessionId,
-      });
-      const eventMoreInfo = validatedSession
-        ? buildSelectedEvent(validatedSession)
-        : contextEvent;
+      const eventMoreInfo = await buildEventMoreInfoSelection(contextEvent);
 
       return {
         reply: formatSingleEventMoreInfo(eventMoreInfo),
@@ -18778,6 +18880,18 @@ export async function routeTicketMessage({
           eventMoreInfoShown: true,
         },
       };
+    }
+
+    if (
+      !previousState.eventMoreInfoShown &&
+      selectedAction?.action === "buy"
+    ) {
+      const contextEvent = previousState.lastEvents[0];
+
+      return renderBuyerSectionsStepAfterBuyRevalidation({
+        baseContext: { ...baseContext, eventMoreInfoShown: undefined },
+        selectedEvent: contextEvent,
+      });
     }
 
     if (previousState.eventMoreInfoShown && parsedSearch.numericSelection === 2) {
@@ -18831,35 +18945,14 @@ export async function routeTicketMessage({
       };
     }
 
-    const selectedSession = await getValidatedEventSession({
-      eventId: selectedContextEvent.eventId,
-      sessionId: selectedContextEvent.sessionId,
-    });
-
-    if (!selectedSession) {
-      return {
-        reply: TICKET_MESSAGES.eventOptionUnavailable,
-        nextContext: {
-          ...baseContext,
-          step: "idle",
-          state: "idle",
-          lastEvents: [],
-          lastSections: [],
-          selectedEvent: undefined,
-        },
-      };
-    }
-
-    const selectedEvent = buildSelectedEvent(selectedSession);
-
-    return renderBuyerSectionsStep({
+    return renderBuyerSectionsStepAfterBuyRevalidation({
       baseContext: {
         ...baseContext,
         lastEvents: [],
         lastSections: [],
         eventMoreInfoShown: undefined,
       },
-      selectedEvent,
+      selectedEvent: selectedContextEvent,
     });
   }
 
