@@ -181,6 +181,19 @@ test("execucao real: atalho zero bala retorna reentrada atendimento", async () =
   assert.match(webhook, /routeResult\.reply === TICKET_MESSAGES\.reentryPrompt[\s\S]{0,180}suppressTitle:\s*true/);
 });
 
+test("execucao real: sair publico encerra sessao antes de voltar ao inicio", async () => {
+  const result = await routePublicText("SAIR", {
+    ...buildInitialConversationState(),
+    publicInitialHelpSent: true,
+    state: "showing_events",
+    step: "showing_events",
+  });
+
+  assert.equal(result.reply, TICKET_MESSAGES.conversationClosed);
+  assert.equal(result.nextContext.state, "idle");
+  assert.equal(result.nextContext.publicInitialHelpSent, true);
+});
+
 test("busca curta com letra e numero, como u2, vira busca de evento", () => {
   const publicIntent = classifyPublicMessageIntent("u2");
   const incomingIntent = resolveIncomingMessageIntent({
@@ -317,7 +330,7 @@ test("REENVIAR aciona reenvio pago e nao compra/admin", () => {
   assert.doesNotMatch(router, /normalized === "reenviar ingresso"[\s\S]{0,600}admin_auth_pending/);
 });
 
-test("SAIR cancela e a proxima mensagem volta ao inicio", () => {
+test("SAIR encerra e ZERO BALA volta ao inicio", () => {
   assert.match(router, /function isBuyerReservationExitIntent/);
   assert.match(router, /function isBuyerNewIntent/);
   assert.match(publicInitialFlow, /function isPublicInitialExitCommand/);
@@ -325,7 +338,7 @@ test("SAIR cancela e a proxima mensagem volta ao inicio", () => {
   assert.match(publicInitialFlow, /normalized === "zero bala"/);
   assert.match(publicInitialFlow, /normalized === "new"/);
   assert.match(publicInitialFlow, /normalized === "sair"/);
-  assert.match(router, /isBuyerNewIntent\(text\)[\s\S]*TICKET_MESSAGES\.reentryPrompt[\s\S]*TICKET_MESSAGES\.buyerFlowReset/);
+  assert.match(router, /isBuyerNewIntent\(text\)[\s\S]*TICKET_MESSAGES\.reentryPrompt[\s\S]*TICKET_MESSAGES\.conversationClosed/);
   assert.match(router, /resetBuyerReservationContextAfterPublicReentry\(baseContext\)/);
   assert.match(router, /function buildPublicInitialHelpResponse/);
   assert.match(router, /nextContext:\s*publicInitialHelpContext\(baseContext\)/);

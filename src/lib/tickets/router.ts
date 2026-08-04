@@ -12218,7 +12218,7 @@ export async function routeTicketMessage({
 
   if (isGlobalConversationCancelCommand(text)) {
     return {
-      reply: TICKET_MESSAGES.genericHelpPrompt,
+      reply: TICKET_MESSAGES.conversationClosed,
       nextContext: resetConversationToInitialHelp(),
     };
   }
@@ -12255,6 +12255,28 @@ export async function routeTicketMessage({
       baseContext,
       sourceIdentifier,
     });
+  }
+
+  if (
+    isBuyerReservationExitIntent(text) &&
+    previousState.state !== "reservation_created" &&
+    previousState.state !== "payment_pending" &&
+    !isPublicHelpFlowState(previousState.state) &&
+    previousState.state !== "admin_auth_pending" &&
+    previousState.state !== "admin_menu" &&
+    !isAdminSubmenuState(previousState.state) &&
+    !previousState.admin?.sessionId &&
+    !isFixedGateAccessFlowState(previousState.state) &&
+    !isGateAccessFlowState(previousState.state)
+  ) {
+    return {
+      reply: isBuyerNewIntent(text)
+        ? TICKET_MESSAGES.reentryPrompt
+        : TICKET_MESSAGES.conversationClosed,
+      nextContext: isBuyerNewIntent(text)
+        ? resetBuyerReservationContextAfterPublicReentry(baseContext)
+        : resetBuyerReservationContext(baseContext),
+    };
   }
 
   if (
@@ -17825,6 +17847,22 @@ export async function routeTicketMessage({
     return ticketDeliverySelection;
   }
 
+  if (
+    isBuyerReservationExitIntent(text) &&
+    previousState.state !== "reservation_created" &&
+    previousState.state !== "payment_pending" &&
+    !isPublicHelpFlowState(previousState.state)
+  ) {
+    return {
+      reply: isBuyerNewIntent(text)
+        ? TICKET_MESSAGES.reentryPrompt
+        : TICKET_MESSAGES.conversationClosed,
+      nextContext: isBuyerNewIntent(text)
+        ? resetBuyerReservationContextAfterPublicReentry(baseContext)
+        : resetBuyerReservationContext(baseContext),
+    };
+  }
+
   const publicEntryGateResponse = buildPublicEntryGateResponse({
     incomingIntent,
     baseContext,
@@ -17915,7 +17953,7 @@ export async function routeTicketMessage({
     return {
       reply: isBuyerNewIntent(text)
         ? TICKET_MESSAGES.reentryPrompt
-        : TICKET_MESSAGES.buyerFlowReset,
+        : TICKET_MESSAGES.conversationClosed,
       nextContext: isBuyerNewIntent(text)
         ? resetBuyerReservationContextAfterPublicReentry(baseContext)
         : resetBuyerReservationContext(baseContext),
