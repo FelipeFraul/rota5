@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import QrScanner from "qr-scanner";
-import BrandLogo from "@/app/BrandLogo";
 import { InformationPage } from "@/app/InformationPage";
 
 type ResultType = "allowed" | "denied" | "waiting";
@@ -172,7 +171,6 @@ export function OfferQrScanner({ initialValid }: { initialValid: boolean }) {
 
   return (
     <main className="gate-shell">
-      <BrandLogo className="gate-brand-logo" />
       <section className="gate-header">
         <div>
           <p className="gate-kicker">Leitor de Oferta</p>

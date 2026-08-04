@@ -563,12 +563,13 @@ export type TicketConversationState = {
   participantTicketSelection?: {
     phone: string;
     ticketIds: string[];
+    source?: "ticket_resend" | "participant_ticket_request";
     options: Array<{
       option: number;
       groupKey: string;
       ticketIds: string[];
     }>;
-    allOption: number;
+    allOption?: number;
     createdAt: string;
   };
   comboDeliveryConfirmation?: {

@@ -20,9 +20,9 @@ const ALL_EVENTS_MESSAGE_MAX_LENGTH = 3_500;
 const ALL_EVENTS_CONTINUATION_DELAY_MS = 1_200;
 const ALL_EVENTS_SEPARATOR = "--";
 const ALL_EVENTS_FINAL_INSTRUCTIONS = [
-  "> Reenviar seu ingresso, digite *AGAIN*",
-  "> Para ajuda, digite *HELP*",
-  "> Para uma nova pesquisa, *NEW*",
+  "> Reenviar seu ingresso, digite MANDA",
+  "> Para ajuda, digite DÁ UMA MÃO",
+  "> Para uma nova pesquisa, ZERO BALA",
 ].join("\n");
 const LOWERCASE_NAME_PARTS = new Set([
   "da",

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
-import BrandLogo from "@/app/BrandLogo";
 import type { OperationalDashboardData } from "@/lib/tickets/services/operationalDashboardTypes";
 import { useOperationalDashboard } from "./useOperationalDashboard";
 
@@ -463,7 +462,6 @@ export default function OperationalDashboardSection() {
   return (
     <>
       <header className="admin-operation-hero">
-        <BrandLogo />
         <div className="admin-operation-title">
           <p className="admin-events-kicker">Admin</p>
           <h1>Operação ao vivo</h1>

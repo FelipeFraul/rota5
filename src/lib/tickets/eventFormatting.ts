@@ -28,14 +28,7 @@ export function formatOptionLine(
     preserveCase || label.length === 0
       ? label
       : label.charAt(0).toLocaleLowerCase("pt-BR") + label.slice(1);
-  const emphasizedLabel =
-    /\b(?:comprar|saber mais|voltar|ver mais|nova pesquisa)\b/iu.test(
-      normalizedLabel,
-    )
-      ? `*${normalizedLabel}*`
-      : normalizedLabel;
-
-  return `Digite ${option} para ${emphasizedLabel}`;
+  return `Digite *${option}* para ${normalizedLabel}`;
 }
 
 const LOWERCASE_NAME_PARTS = new Set([

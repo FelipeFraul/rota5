@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import BrandLogo from "@/app/BrandLogo";
 
 type ComboCheckoutOrder = {
   orderId: string;
@@ -204,7 +203,6 @@ export default function ComboCheckoutClient({
     return (
       <main className="checkout-success-shell">
         <div className="page-card-stack">
-          <BrandLogo />
           <section className="checkout-success-panel">
             <div className="checkout-success-icon" aria-hidden="true">
               <span className="checkout-success-icon-stem" />
@@ -227,10 +225,6 @@ export default function ComboCheckoutClient({
 
   return (
     <main className="checkout-shell combo-checkout-shell">
-      <div className="checkout-brand-header">
-        <BrandLogo />
-      </div>
-
       <section className="checkout-summary-panel">
         <p className="checkout-eyebrow">Oferta e combo</p>
         {order.offer.imageUrl ? (

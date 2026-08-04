@@ -13,6 +13,7 @@ export function isPublicInitialExitCommand(text: string) {
   const normalized = normalizePublicInitialText(text);
 
   return (
+    normalized === "zero bala" ||
     normalized === "new" ||
     normalized === "sair" ||
     normalized === "cancela" ||
@@ -24,19 +25,21 @@ export function isPublicInitialExitCommand(text: string) {
 }
 
 export function isPublicInitialNewCommand(text: string) {
-  return normalizePublicInitialText(text) === "new";
+  const normalized = normalizePublicInitialText(text);
+
+  return normalized === "zero bala" || normalized === "new";
 }
 
 export function isPublicInitialAllEventsCommand(text: string) {
   const normalized = normalizePublicInitialText(text);
 
-  return normalized === "all" || normalized === "todos";
+  return normalized === "cambada" || normalized === "all" || normalized === "todos";
 }
 
 export function isPublicInitialNextEventCommand(text: string) {
   const normalized = normalizePublicInitialText(text);
 
-  return normalized === "show";
+  return normalized === "bailao" || normalized === "show";
 }
 
 export function isPublicInitialTicketResendCommand(text: string) {
@@ -44,6 +47,7 @@ export function isPublicInitialTicketResendCommand(text: string) {
 
   return (
     normalized === "again" ||
+    normalized === "manda" ||
     normalized === "reenviar" ||
     normalized === "reenviar ingresso"
   );
@@ -52,7 +56,7 @@ export function isPublicInitialTicketResendCommand(text: string) {
 export function isPublicInitialHelpCommand(text: string) {
   const normalized = normalizePublicInitialText(text);
 
-  return normalized === "help" || normalized === "ajuda";
+  return normalized === "da uma mao" || normalized === "help" || normalized === "ajuda";
 }
 
 export function publicInitialHelpContext(

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import BrandLogo from "@/app/BrandLogo";
 import { InformationPage } from "@/app/InformationPage";
 
 type KitchenStatus = "pending" | "preparing" | "delivered";
@@ -297,7 +296,6 @@ export function KitchenSessionScanner({
   return (
     <main className="kitchen-shell">
       <header className="kitchen-header">
-        <BrandLogo className="gate-brand-logo" />
         <div>
           <p className="gate-kicker">Sistema Cozinha</p>
           <h1>Pedidos do bar</h1>

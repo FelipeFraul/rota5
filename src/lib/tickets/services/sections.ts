@@ -1,6 +1,11 @@
 import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import {
+  ROTA5_PRESENTATION_COURTESY_ENABLED,
+  ROTA5_PRESENTATION_INDIVIDUAL_TICKETS_ONLY,
+  isRota5PresentationTableLikeSectionName,
+} from "@/lib/tickets/rota5Presentation";
 
 export type AvailableSectionTicketType = {
   ticketPriceId: string;
@@ -89,6 +94,17 @@ function sortTicketTypes(
     left.label.localeCompare(right.label) ||
     left.ticketType.localeCompare(right.ticketType)
   );
+}
+
+function filterPresentationTicketTypes(
+  ticketTypes: AvailableSectionTicketType[],
+) {
+  if (!ROTA5_PRESENTATION_INDIVIDUAL_TICKETS_ONLY) return ticketTypes;
+
+  return [...ticketTypes]
+    .filter((ticketType) => ticketType.ticketType !== "free")
+    .sort(sortTicketTypes)
+    .slice(0, 1);
 }
 
 function normalizeCourtesyLabel(label: string | null | undefined) {
@@ -299,7 +315,7 @@ export async function listAvailableSections(
     ticketTypesBySection.set(price.section_id, ticketTypes);
   }
 
-  if (selectedSession?.event_id) {
+  if (ROTA5_PRESENTATION_COURTESY_ENABLED && selectedSession?.event_id) {
     for (const limit of courtesyLimits ?? []) {
       if (!activeSectionIds.includes(limit.section_id)) {
         continue;
@@ -342,14 +358,21 @@ export async function listAvailableSections(
 
   return filteredSections
     .flatMap((section) => {
-      const ticketTypes = ticketTypesBySection.get(section.id) ?? [];
+      const ticketTypes = filterPresentationTicketTypes(
+        ticketTypesBySection.get(section.id) ?? [],
+      );
       const hasUnlimitedCapacity =
         !section.has_numbered_seats && section.capacity === null;
       const availableSeatsCount =
         availableSeatsBySection.get(section.id) ??
         (hasUnlimitedCapacity ? 999_999 : 0);
 
-      if (ticketTypes.length === 0 || availableSeatsCount <= 0) {
+      if (
+        ticketTypes.length === 0 ||
+        availableSeatsCount <= 0 ||
+        (ROTA5_PRESENTATION_INDIVIDUAL_TICKETS_ONLY &&
+          isRota5PresentationTableLikeSectionName(section.name))
+      ) {
         return [];
       }
 

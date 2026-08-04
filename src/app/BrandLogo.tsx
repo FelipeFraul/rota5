@@ -8,8 +8,8 @@ export default function BrandLogo({ className = "" }: BrandLogoProps) {
   return (
     <img
       className={["brand-logo", className].filter(Boolean).join(" ")}
-      src="/logo_rockbar.webp"
-      alt="RockBar Pub"
+      src="/logo_rota5.avif"
+      alt="Rota5"
     />
   );
 }

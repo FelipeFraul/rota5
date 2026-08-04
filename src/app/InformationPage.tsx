@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import BrandLogo from "@/app/BrandLogo";
 
 export function InformationPage({
   eyebrow,
@@ -15,7 +14,6 @@ export function InformationPage({
   return (
     <main className="information-shell">
       <div className="information-stack">
-        <BrandLogo className="information-logo" />
         <section className="information-card">
           {eyebrow ? <p className="information-eyebrow">{eyebrow}</p> : null}
           <h1>{title}</h1>

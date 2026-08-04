@@ -2423,286 +2423,54 @@ export async function updateAdminSectionCapacity(input: {
   newCapacity: number;
 }) {
   const supabase = getSupabaseAdmin();
-  const { data: section, error: sectionError } = await supabase
-    .from("venue_sections")
-    .select("id, capacity, has_numbered_seats")
-    .eq("id", input.sectionId)
-    .eq("venue_id", input.venueId)
-    .single<{ id: string; capacity: number | null; has_numbered_seats: boolean }>();
-
-  if (sectionError || !section) {
-    return { ok: false as const, reason: "section_not_found" as const, error: sectionError };
-  }
-
-  if (section.has_numbered_seats) {
-    return { ok: false as const, reason: "numbered_section" as const };
-  }
-
-  const { data: seats, error: seatsError } = await supabase
-    .from("seats")
-    .select("id, seat_code, status")
-    .eq("section_id", input.sectionId)
-    .order("seat_number", { ascending: true })
-    .returns<Array<{ id: string; seat_code: string; status: AdminSeatStatus }>>();
-
-  if (seatsError) {
-    return { ok: false as const, reason: "seats_not_read" as const, error: seatsError };
-  }
-
-  const activeSeats = (seats ?? []).filter((seat) => seat.status === "active");
-  const currentCapacity = activeSeats.length;
-  const ensureSessionSeatsForActiveSeats = async (
-    targetSeats: Array<{ id: string; section_id?: string | null }>,
-  ) => {
-    if (!targetSeats.length || !input.sessionIds.length) {
-      return { ok: true as const, createdCount: 0 };
-    }
-
-    const seatIds = targetSeats.map((seat) => seat.id);
-    const { data: existingSessionSeats, error: existingSessionSeatsError } = await supabase
-      .from("session_seats")
-      .select("session_id, seat_id")
-      .in("session_id", input.sessionIds)
-      .in("seat_id", seatIds)
-      .returns<Array<{ session_id: string; seat_id: string }>>();
-
-    if (existingSessionSeatsError) {
-      return {
-        ok: false as const,
-        reason: "session_seats_not_read" as const,
-        error: existingSessionSeatsError,
-      };
-    }
-
-    const existingPairs = new Set(
-      (existingSessionSeats ?? []).map((row) => `${row.session_id}:${row.seat_id}`),
-    );
-    const missingRows = targetSeats.flatMap((seat) =>
-      input.sessionIds
-        .filter((sessionId) => !existingPairs.has(`${sessionId}:${seat.id}`))
-        .map((sessionId) => ({
-          session_id: sessionId,
-          seat_id: seat.id,
-          section_id: input.sectionId,
-          status: "available",
-        })),
-    );
-
-    if (!missingRows.length) {
-      return { ok: true as const, createdCount: 0 };
-    }
-
-    const { error: missingSessionSeatsError } = await supabase
-      .from("session_seats")
-      .insert(missingRows);
-
-    if (missingSessionSeatsError) {
-      return {
-        ok: false as const,
-        reason: "session_seats_not_created" as const,
-        error: missingSessionSeatsError,
-      };
-    }
-
-    return { ok: true as const, createdCount: missingRows.length };
+  type AdminSectionCapacityResult = {
+    currentCapacity: number;
+    newCapacity: number;
+    createdCount: number;
+    blockedCount: number;
+    unblockedCount?: number;
   };
 
-  if (input.newCapacity === currentCapacity) {
-    const ensured = await ensureSessionSeatsForActiveSeats(activeSeats);
-
-    if (!ensured.ok) {
-      return ensured;
-    }
-
-    const { error } = await supabase
-      .from("venue_sections")
-      .update({ capacity: input.newCapacity })
-      .eq("id", input.sectionId);
-
-    return error
-      ? { ok: false as const, reason: "section_not_updated" as const, error }
-      : {
-          ok: true as const,
-          currentCapacity,
-          newCapacity: input.newCapacity,
-          createdCount: ensured.createdCount,
-          blockedCount: 0,
-        };
-  }
-
-  if (input.newCapacity > currentCapacity) {
-    const toCreate = input.newCapacity - currentCapacity;
-    const sectionSlug =
-      (seats?.[0]?.seat_code ?? "ENTRADA").replace(/-\d+$/i, "") || "ENTRADA";
-    const existingCodes = new Set((seats ?? []).map((seat) => seat.seat_code));
-    const seatRows = Array.from({ length: toCreate }, (_, index) => {
-      let nextIndex = currentCapacity + index + 1;
-      let seatCode = buildInventorySeatCode(sectionSlug, nextIndex);
-
-      while (existingCodes.has(seatCode)) {
-        nextIndex += 1;
-        seatCode = buildInventorySeatCode(sectionSlug, nextIndex);
-      }
-
-      existingCodes.add(seatCode);
-
-      return {
-        venue_id: input.venueId,
-        section_id: input.sectionId,
-        row_label: null,
-        seat_number: String(nextIndex),
-        seat_code: seatCode,
-        map_x: null,
-        map_y: null,
-        status: "active" as AdminSeatStatus,
-      };
+  const { data: rawData, error } = await supabase.rpc("update_admin_section_capacity", {
+      p_venue_id: input.venueId,
+      p_section_id: input.sectionId,
+      p_session_ids: input.sessionIds,
+      p_new_capacity: input.newCapacity,
     });
+  const data = rawData as AdminSectionCapacityResult | null;
 
-    const { data: createdSeats, error: createSeatsError } = await supabase
-      .from("seats")
-      .insert(seatRows)
-      .select("id, section_id")
-      .returns<Array<{ id: string; section_id: string }>>();
-
-    if (createSeatsError) {
-      return { ok: false as const, reason: "seats_not_created" as const, error: createSeatsError };
-    }
-
-    const sessionSeatRows =
-      createdSeats?.flatMap((seat) =>
-        input.sessionIds.map((sessionId) => ({
-          session_id: sessionId,
-          seat_id: seat.id,
-          section_id: seat.section_id,
-          status: "available",
-        })),
-      ) ?? [];
-
-    const { error: sessionSeatsError } = sessionSeatRows.length
-      ? await supabase.from("session_seats").insert(sessionSeatRows)
-      : { error: null };
-
-    if (sessionSeatsError) {
-      return {
-        ok: false as const,
-        reason: "session_seats_not_created" as const,
-        error: sessionSeatsError,
-      };
-    }
-
-    const ensured = await ensureSessionSeatsForActiveSeats(activeSeats);
-
-    if (!ensured.ok) {
-      return ensured;
-    }
-
-    const { error: updateSectionError } = await supabase
-      .from("venue_sections")
-      .update({ capacity: input.newCapacity })
-      .eq("id", input.sectionId);
-
-    return updateSectionError
-      ? { ok: false as const, reason: "section_not_updated" as const, error: updateSectionError }
-      : {
-          ok: true as const,
-          currentCapacity,
-          newCapacity: input.newCapacity,
-          createdCount: sessionSeatRows.length + ensured.createdCount,
-          blockedCount: 0,
-        };
-  }
-
-  const reduceBy = currentCapacity - input.newCapacity;
-  const candidateSeats = activeSeats.slice().reverse();
-  const candidateSeatIds = candidateSeats.map((seat) => seat.id);
-  const { data: candidateSessionSeats, error: sessionSeatsReadError } = candidateSeatIds.length
-    ? await supabase
-        .from("session_seats")
-        .select("id, seat_id, status")
-        .in("seat_id", candidateSeatIds)
-        .in("session_id", input.sessionIds)
-        .returns<Array<{ id: string; seat_id: string; status: string }>>()
-    : { data: [] as Array<{ id: string; seat_id: string; status: string }>, error: null };
-
-  if (sessionSeatsReadError) {
+  if (!error && data) {
     return {
-      ok: false as const,
-      reason: "session_seats_not_read" as const,
-      error: sessionSeatsReadError,
+      ok: true as const,
+      currentCapacity: data.currentCapacity,
+      newCapacity: data.newCapacity,
+      createdCount: data.createdCount,
+      blockedCount: data.blockedCount,
+      unblockedCount: data.unblockedCount ?? 0,
     };
   }
 
-  const sessionSeatsBySeat = new Map<string, Array<{ id: string; status: string }>>();
-  for (const sessionSeat of candidateSessionSeats ?? []) {
-    const list = sessionSeatsBySeat.get(sessionSeat.seat_id) ?? [];
-    list.push({ id: sessionSeat.id, status: sessionSeat.status });
-    sessionSeatsBySeat.set(sessionSeat.seat_id, list);
+  const message = String(error?.message ?? "");
+
+  if (message.includes("section_not_found")) {
+    return { ok: false as const, reason: "section_not_found" as const, error };
   }
 
-  const removableSeats = candidateSeats.filter((seat) => {
-    const sessionSeats = sessionSeatsBySeat.get(seat.id) ?? [];
-    return (
-      sessionSeats.length === input.sessionIds.length &&
-      sessionSeats.every((sessionSeat) => sessionSeat.status === "available")
-    );
-  });
+  if (message.includes("numbered_section")) {
+    return { ok: false as const, reason: "numbered_section" as const, error };
+  }
 
-  if (removableSeats.length < reduceBy) {
+  if (message.includes("capacity_below_busy")) {
     return {
       ok: false as const,
       reason: "capacity_below_busy" as const,
-      currentCapacity,
+      currentCapacity: input.newCapacity,
       newCapacity: input.newCapacity,
+      error,
     };
   }
 
-  const seatsToBlock = removableSeats.slice(0, reduceBy);
-  const sessionSeatIdsToBlock = seatsToBlock.flatMap((seat) =>
-    (sessionSeatsBySeat.get(seat.id) ?? []).map((sessionSeat) => sessionSeat.id),
-  );
-
-  const { error: updateSeatsError } = await supabase
-    .from("seats")
-    .update({ status: "inactive" as AdminSeatStatus })
-    .in(
-      "id",
-      seatsToBlock.map((seat) => seat.id),
-    );
-
-  if (updateSeatsError) {
-    return { ok: false as const, reason: "seats_not_updated" as const, error: updateSeatsError };
-  }
-
-  const { error: updateSessionSeatsError } = sessionSeatIdsToBlock.length
-    ? await supabase
-        .from("session_seats")
-        .update({ status: "blocked" })
-        .in("id", sessionSeatIdsToBlock)
-        .eq("status", "available")
-    : { error: null };
-
-  if (updateSessionSeatsError) {
-    return {
-      ok: false as const,
-      reason: "session_seats_not_updated" as const,
-      error: updateSessionSeatsError,
-    };
-  }
-
-  const { error: updateSectionError } = await supabase
-    .from("venue_sections")
-    .update({ capacity: input.newCapacity })
-    .eq("id", input.sectionId);
-
-  return updateSectionError
-    ? { ok: false as const, reason: "section_not_updated" as const, error: updateSectionError }
-    : {
-        ok: true as const,
-        currentCapacity,
-        newCapacity: input.newCapacity,
-        createdCount: 0,
-        blockedCount: sessionSeatIdsToBlock.length,
-      };
+  return { ok: false as const, reason: "section_not_updated" as const, error };
 }
 
 export async function getAdminSectionUsage(sectionId: string) {

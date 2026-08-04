@@ -14,6 +14,10 @@ const envSchema = z.object({
   ZAPI_CLIENT_TOKEN: z.string().min(1, "ZAPI_CLIENT_TOKEN is required."),
   ZAPI_BASE_URL: z.string().url("ZAPI_BASE_URL must be a valid URL."),
   ZAPI_WEBHOOK_SECRET: z.string().min(1, "ZAPI_WEBHOOK_SECRET is required."),
+  ROCK_BAR_OFFICIAL_WHATSAPP_PHONE: z
+    .string()
+    .min(1, "ROCK_BAR_OFFICIAL_WHATSAPP_PHONE must not be empty.")
+    .optional(),
   CHECKOUT_INTERNAL_SECRET: z
     .string()
     .min(1, "CHECKOUT_INTERNAL_SECRET is required."),

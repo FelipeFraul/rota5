@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import QrScanner from "qr-scanner";
-import BrandLogo from "@/app/BrandLogo";
 import { InformationPage } from "@/app/InformationPage";
 
 type GateSessionScannerProps = {
@@ -544,7 +543,6 @@ export function GateSessionScanner({
 
   return (
     <main className="gate-shell">
-      <BrandLogo className="gate-brand-logo" />
       <section className="gate-header">
         <div>
           <p className="gate-kicker">Portaria</p>

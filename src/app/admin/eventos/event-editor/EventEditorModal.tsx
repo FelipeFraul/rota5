@@ -13,6 +13,9 @@ import type {
   SessionStatus,
 } from "../AdminEventsEditor";
 
+const ROTA5_PRESENTATION_TABLE_MAP_ENABLED = false;
+const ROTA5_PRESENTATION_COURTESY_ENABLED = false;
+
 const EventTableMapTab = dynamic(() => import("./EventTableMapTab"), {
   loading: () => <p className="admin-events-empty">Carregando mapa...</p>,
 });
@@ -290,6 +293,8 @@ export default function EventEditorModal({ eventId, onClose, onSaved }: EventEdi
 
   function changeTab(nextTab: ActiveTab) {
     if (nextTab === activeTab || saving) return;
+    if (!ROTA5_PRESENTATION_TABLE_MAP_ENABLED && nextTab === "tableMap") return;
+    if (!ROTA5_PRESENTATION_COURTESY_ENABLED && nextTab === "courtesy") return;
     setActiveTab(nextTab);
   }
 
@@ -320,8 +325,12 @@ export default function EventEditorModal({ eventId, onClose, onSaved }: EventEdi
                 <button type="button" className={activeTab === "sessions" ? "is-active" : ""} disabled={saving} onClick={() => changeTab("sessions")}>Sessões</button>
                 <button type="button" className={activeTab === "sections" ? "is-active" : ""} disabled={saving} onClick={() => changeTab("sections")}>Setores</button>
                 <button type="button" className={activeTab === "prices" ? "is-active" : ""} disabled={saving} onClick={() => changeTab("prices")}>Preços</button>
-                <button type="button" className={activeTab === "courtesy" ? "is-active" : ""} disabled={saving} onClick={() => changeTab("courtesy")}>Cortesia</button>
-                <button type="button" className={activeTab === "tableMap" ? "is-active" : ""} disabled={saving} onClick={() => changeTab("tableMap")}>Mapa de Mesas</button>
+                {ROTA5_PRESENTATION_COURTESY_ENABLED ? (
+                  <button type="button" className={activeTab === "courtesy" ? "is-active" : ""} disabled={saving} onClick={() => changeTab("courtesy")}>Cortesia</button>
+                ) : null}
+                {ROTA5_PRESENTATION_TABLE_MAP_ENABLED ? (
+                  <button type="button" className={activeTab === "tableMap" ? "is-active" : ""} disabled={saving} onClick={() => changeTab("tableMap")}>Mapa de Mesas</button>
+                ) : null}
               </nav>
 
               <div className={`admin-event-modal-content ${activeTab === "tableMap" ? "is-table-map" : ""}`}>

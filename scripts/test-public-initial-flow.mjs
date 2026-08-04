@@ -30,9 +30,9 @@ const messages = readFileSync(
   "utf8",
 );
 
-const homeMessage = /PUBLIC_HOME_MESSAGE\s*=\s*[\s\S]*bem-vindo\(a\)[\s\S]*RockBar\* Pub/;
+const homeMessage = /PUBLIC_HOME_MESSAGE\s*=\s*[\s\S]*bem-vindo\(a\)[\s\S]*Rota5/;
 const homeCommands =
-  /PUBLIC_HOME_COMMANDS_MESSAGE\s*=[\s\S]*SHOW[\s\S]*ALL[\s\S]*AGAIN[\s\S]*HELP[\s\S]*NEW/;
+  /PUBLIC_HOME_COMMANDS_MESSAGE\s*=[\s\S]*BAILÃO[\s\S]*Ver próximos shows, digite CAMBADA[\s\S]*MANDA[\s\S]*DÁ UMA MÃO[\s\S]*ZERO BALA/;
 
 const customer = {
   id: "customer-public-initial",
@@ -166,8 +166,8 @@ test("execucao real: bootstrap nao se repete apos contexto inicializado", async 
   assert.notEqual(help.outboundMessages?.[0]?.body, TICKET_MESSAGES.genericHelp);
 });
 
-test("execucao real: atalho new retorna reentrada atendimento", async () => {
-  const result = await routePublicText("NEW", {
+test("execucao real: atalho zero bala retorna reentrada atendimento", async () => {
+  const result = await routePublicText("ZERO BALA", {
     ...buildInitialConversationState(),
     state: "showing_events",
     step: "showing_events",
@@ -278,6 +278,7 @@ test("AJUDA no fluxo publico inicial nao entra em compra nem admin", () => {
   assert.match(router, /intentNormalized === "help"/);
   assert.match(router, /classification:\s*"unknown"/);
   assert.match(publicInitialFlow, /function isPublicInitialHelpCommand/);
+  assert.match(publicInitialFlow, /normalized === "da uma mao"/);
   assert.match(publicInitialFlow, /normalized === "help"/);
   assert.match(publicInitialFlow, /normalized === "ajuda"/);
   assert.match(router, /incomingIntent\.classification === "unknown" && isPublicInitialHelpCommand\(text\)/);
@@ -287,16 +288,19 @@ test("AJUDA no fluxo publico inicial nao entra em compra nem admin", () => {
 
 test("TODOS no fluxo publico inicial segue para listagem publica", () => {
   assert.match(publicInitialFlow, /function isPublicInitialAllEventsCommand/);
+  assert.match(publicInitialFlow, /normalized === "cambada"/);
   assert.match(publicInitialFlow, /normalized === "all"/);
   assert.match(publicInitialFlow, /normalized === "todos"/);
+  assert.match(router, /\^cambada\$/);
   assert.match(router, /\^all\$/);
   assert.match(router, /classification:\s*"list_events"/);
   assert.match(router, /incomingIntent\.classification === "list_events"[\s\S]*listAllPublicEventsByDate/);
   assert.doesNotMatch(router, /normalized === "todos"[\s\S]{0,600}admin_auth_pending/);
 });
 
-test("SHOW no fluxo publico inicial mostra o proximo evento", () => {
+test("BAILAO no fluxo publico inicial mostra o proximo evento", () => {
   assert.match(publicInitialFlow, /function isPublicInitialNextEventCommand/);
+  assert.match(publicInitialFlow, /normalized === "bailao"/);
   assert.match(publicInitialFlow, /normalized === "show"/);
   assert.match(router, /isPublicInitialNextEventCommand\(text\)[\s\S]*listAllPublicEventsByDate\(\{ limit: 1 \}\)/);
   assert.match(router, /isPublicInitialNextEventCommand\(text\)[\s\S]*buildEventSearchOutboundMessages\(events\)/);
@@ -305,6 +309,7 @@ test("SHOW no fluxo publico inicial mostra o proximo evento", () => {
 
 test("REENVIAR aciona reenvio pago e nao compra/admin", () => {
   assert.match(publicInitialFlow, /function isPublicInitialTicketResendCommand/);
+  assert.match(publicInitialFlow, /normalized === "manda"/);
   assert.match(publicInitialFlow, /normalized === "again"/);
   assert.match(publicInitialFlow, /normalized === "reenviar"/);
   assert.match(router, /handlePaidTicketResendCommand/);
@@ -317,6 +322,7 @@ test("SAIR cancela e a proxima mensagem volta ao inicio", () => {
   assert.match(router, /function isBuyerNewIntent/);
   assert.match(publicInitialFlow, /function isPublicInitialExitCommand/);
   assert.match(publicInitialFlow, /function isPublicInitialNewCommand/);
+  assert.match(publicInitialFlow, /normalized === "zero bala"/);
   assert.match(publicInitialFlow, /normalized === "new"/);
   assert.match(publicInitialFlow, /normalized === "sair"/);
   assert.match(router, /isBuyerNewIntent\(text\)[\s\S]*TICKET_MESSAGES\.reentryPrompt[\s\S]*TICKET_MESSAGES\.buyerFlowReset/);

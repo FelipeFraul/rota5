@@ -97,6 +97,7 @@ import {
   type PaidTicketResendGroup,
   type ParticipantTicketDelivery,
 } from "@/lib/tickets/services/tickets";
+import { ROTA5_PRESENTATION_TABLE_MAP_ENABLED } from "@/lib/tickets/rota5Presentation";
 import {
   buildAdminAuthPendingActiveAdminResponse,
   buildAdminAuthPendingBlockResponse,
@@ -424,6 +425,10 @@ export type RouteTicketMessageOutput = {
         suppressTitle?: boolean;
         buyerDeliveryTicketId?: string;
         participantDeliveryTicketId?: string;
+        requiresSuccessfulBuyerDeliveryTicketId?: string;
+        outboundIdempotencyKey?: string;
+        outboundReason?: string;
+        outboundBusinessContext?: Record<string, unknown>;
       }
     | {
         type: "image";
@@ -435,6 +440,10 @@ export type RouteTicketMessageOutput = {
         suppressTitle?: boolean;
         buyerDeliveryTicketId?: string;
         participantDeliveryTicketId?: string;
+        requiresSuccessfulBuyerDeliveryTicketId?: string;
+        outboundIdempotencyKey?: string;
+        outboundReason?: string;
+        outboundBusinessContext?: Record<string, unknown>;
       }
   >;
   nextContext: TicketConversationState;
@@ -517,6 +526,7 @@ const BUY_EVENT_PATTERNS = [
 ];
 
 const LIST_ALL_EVENT_PATTERNS = [
+  /^cambada$/,
   /^all$/,
   /^todos$/,
   /^todos\s+(?:os\s+)?(?:eventos|shows)$/,
@@ -1366,11 +1376,14 @@ export function shouldProcessImmediately({
 
   if (
     normalizedMessage === "ajuda" ||
+    normalizedMessage === "da uma mao" ||
     normalizedMessage === "help" ||
     normalizedMessage === "menu" ||
     normalizedMessage === "inicio" ||
+    normalizedMessage === "zero bala" ||
     normalizedMessage === "new" ||
     normalizedMessage === "sair" ||
+    normalizedMessage === "manda" ||
     normalizedMessage === "again" ||
     normalizedMessage === "reenviar" ||
     normalizedMessage === "reenviar ingresso"
@@ -1792,13 +1805,13 @@ function formatPublicEventActionLines(
     : null;
 
   if (event.availabilityStatus === "sold_out") {
-    return ["SOLD OUT", moreInfoLine, 'Para uma nova pesquisa, *NEW*'].filter(
+    return ["SOLD OUT", moreInfoLine, "Para uma nova pesquisa, ZERO BALA"].filter(
       (line): line is string => Boolean(line),
     );
   }
 
   if (event.availabilityStatus === "sales_closed") {
-    return ["VENDAS ENCERRADAS", moreInfoLine, 'Para uma nova pesquisa, *NEW*'].filter(
+    return ["VENDAS ENCERRADAS", moreInfoLine, "Para uma nova pesquisa, ZERO BALA"].filter(
       (line): line is string => Boolean(line),
     );
   }
@@ -1806,7 +1819,7 @@ function formatPublicEventActionLines(
   return [
     buyAction ? `Digite *${buyAction.option}* para *comprar*` : null,
     moreInfoLine,
-    'Para uma nova pesquisa, *NEW*',
+    "Para uma nova pesquisa, ZERO BALA",
   ].filter((line): line is string => Boolean(line));
 }
 
@@ -1951,10 +1964,10 @@ function formatSingleEventMoreInfoOptions(
   event: TicketConversationEventOption | TicketConversationSelectedEvent,
 ) {
   return event.availabilityStatus === "sold_out" || event.availabilityStatus === "sales_closed"
-    ? 'Para uma nova pesquisa, *NEW*'
+    ? "Para uma nova pesquisa, ZERO BALA"
     : [
         'Digite *1* para *comprar*',
-        'Para uma nova pesquisa, *NEW*',
+        "Para uma nova pesquisa, ZERO BALA",
       ].join("\n");
 }
 
@@ -2163,7 +2176,7 @@ function formatSectionsReply({
     sectionLines.join("\n---\n"),
     "",
     'Digite *BACK* para voltar.',
-    'Para uma nova pesquisa, *NEW*',
+    "Para uma nova pesquisa, ZERO BALA",
   ].join("\n");
 }
 
@@ -2186,7 +2199,7 @@ function formatQuantityPrompt(
       ? "Digite o número de ingressos gratuitos, até 4 por pedido. Ex: 2"
       : 'Digite o número de ingressos, *EX: 4*',
     'Digite *BACK* para voltar.',
-    'Para uma nova pesquisa, *NEW*',
+    "Para uma nova pesquisa, ZERO BALA",
   ].join("\n");
 }
 
@@ -2360,7 +2373,7 @@ function formatCartDecisionReply({ cart }: { cart: TicketConversationCart }) {
     "",
     "Digite *1* para finalizar a compra",
     'Digite *BACK* para voltar.',
-    'Para uma nova pesquisa, *NEW*',
+    "Para uma nova pesquisa, ZERO BALA",
   ].join("\n");
 }
 
@@ -2381,7 +2394,7 @@ function formatTableMapSelectionReply({
     'Digite o número da mesa ou o bistrô para reservar, *EX: 12*',
     'Digite *0* se não quer mesa ou bistrô.',
     'Digite *BACK* para voltar.',
-    'Para uma nova pesquisa, *NEW*',
+    "Para uma nova pesquisa, ZERO BALA",
   ].join("\n");
 }
 
@@ -3667,7 +3680,7 @@ function formatReservationReply({
     "",
     "Para comprar, digite *COMPRAR*",
     'Digite *BACK* para voltar.',
-    'Para uma nova pesquisa, *NEW*',
+    "Para uma nova pesquisa, ZERO BALA",
   ].join("\n");
 }
 
@@ -3706,7 +3719,7 @@ function formatReservationContextReply({
     "",
     "Para comprar, digite *COMPRAR*",
     'Digite *BACK* para voltar.',
-    'Para uma nova pesquisa, *NEW*',
+    "Para uma nova pesquisa, ZERO BALA",
   ].join("\n");
 }
 
@@ -3822,12 +3835,33 @@ function formatParticipantTicketSelectionPrompt(
   ].join("\n");
 }
 
+function formatParticipantTicketResendSelectionPrompt(
+  deliveries: ParticipantTicketDelivery[],
+) {
+  const groups = groupParticipantTicketDeliveries(deliveries);
+
+  return [
+    "*REENVIAR INGRESSO*",
+    "",
+    "Escolha o evento que deseja receber novamente seu ingresso:",
+    "",
+    ...groups.map((group, index) =>
+      `Digite ${index + 1} para ${formatParticipantTicketSelectionLabel(group, groups)}`,
+    ),
+  ].join("\n");
+}
+
 function buildParticipantTicketSelectionContext(
   baseContext: TicketConversationState,
   phone: string,
   deliveries: ParticipantTicketDelivery[],
+  options: {
+    source?: "ticket_resend" | "participant_ticket_request";
+    includeAllOption?: boolean;
+  } = {},
 ): TicketConversationState {
   const groups = groupParticipantTicketDeliveries(deliveries);
+  const includeAllOption = options.includeAllOption ?? true;
 
   return {
     ...resetBuyerReservationContext(baseContext),
@@ -3835,13 +3869,14 @@ function buildParticipantTicketSelectionContext(
     state: "participant_ticket_selecting",
     participantTicketSelection: {
       phone,
+      source: options.source ?? "participant_ticket_request",
       ticketIds: deliveries.map((delivery) => delivery.ticket.ticketId),
       options: groups.map((group, index) => ({
         option: index + 1,
         groupKey: group.groupKey,
         ticketIds: group.deliveries.map((delivery) => delivery.ticket.ticketId),
       })),
-      allOption: groups.length + 1,
+      ...(includeAllOption ? { allOption: groups.length + 1 } : {}),
       createdAt: new Date().toISOString(),
     },
   };
@@ -3927,12 +3962,12 @@ async function handleParticipantTicketSelection({
   const selection = baseContext.participantTicketSelection;
   const option = Number.parseInt(normalizedText, 10);
 
-  if (
-    !selection ||
-    !Number.isInteger(option) ||
-    option < 1 ||
-    option > selection.allOption
-  ) {
+  const selectedOption = selection?.options.find(
+    (item) => item.option === option,
+  );
+  const selectedAll = selection?.allOption && option === selection.allOption;
+
+  if (!selection || !Number.isInteger(option) || (!selectedOption && !selectedAll)) {
     return {
       reply:
         "Opção inválida. Responda com um número da lista ou digite *Meu ingresso* para atualizar.",
@@ -3948,13 +3983,9 @@ async function handleParticipantTicketSelection({
     allowedIds.has(delivery.ticket.ticketId),
   );
   const selectedDeliveries =
-    option === selection.allOption
+    selectedAll
       ? validDeliveries
       : validDeliveries.filter((delivery) => {
-          const selectedOption = selection.options.find(
-            (item) => item.option === option,
-          );
-
           return selectedOption?.ticketIds.includes(delivery.ticket.ticketId) ?? false;
         });
 
@@ -4092,7 +4123,7 @@ function formatPaidTicketResendOptions(groups: PaidTicketResendGroup[]) {
     ),
     "",
     "Digite *BACK* para voltar.",
-    "Para uma nova pesquisa, *NEW*",
+    "Para uma nova pesquisa, ZERO BALA",
   ].join("\n");
 }
 
@@ -4104,12 +4135,57 @@ function formatParticipantContactsPrompt(expectedContactsCount: number) {
   ].join("\n");
 }
 
-const PARTICIPANT_TICKET_REQUEST_INSTRUCTIONS = [
-  "*INGRESSOS*",
-  "",
-  "*Envie essa mensagem para seu(s) acompanhante(s).*",
-  "Para que os acompanhantes recebam seus ingressos, basta *enviar uma mensagem com o texto MEU INGRESSO* para nosso telefone, 15 99642-6671.",
-].join("\n");
+const PARTICIPANT_FORWARDING_HEADER =
+  "*ENVIE A MENSAGEM ABAIXO PARA SEU(S) ACOMPANHANTE(S).*";
+
+function getRockBarOfficialWhatsAppPhone() {
+  const phone = getEnv().ROCK_BAR_OFFICIAL_WHATSAPP_PHONE?.trim();
+  const normalizedPhone = normalizeWhatsAppPhone(phone);
+
+  if (!phone || !normalizedPhone) {
+    logError("Skipped participant forwarding instructions without valid Rock Bar official WhatsApp phone", {
+      code: "missing_rock_bar_official_whatsapp_phone",
+    });
+    return null;
+  }
+
+  const formattedPhone = formatWhatsAppPhoneForDisplay(normalizedPhone);
+
+  if (!formattedPhone) {
+    logError("Skipped participant forwarding instructions without valid Rock Bar official WhatsApp phone", {
+      code: "invalid_rock_bar_official_whatsapp_phone",
+    });
+    return null;
+  }
+
+  return formattedPhone;
+}
+
+function formatWhatsAppPhoneForDisplay(phone: string) {
+  const withoutCountry = phone.startsWith("55") ? phone.slice(2) : phone;
+  const areaCode = withoutCountry.slice(0, 2);
+  const local = withoutCountry.slice(2);
+
+  if (areaCode.length !== 2 || !/^\d{8,9}$/.test(local)) {
+    return null;
+  }
+
+  return local.length === 9
+    ? `${areaCode} ${local.slice(0, 5)}-${local.slice(5)}`
+    : `${areaCode} ${local.slice(0, 4)}-${local.slice(4)}`;
+}
+
+function formatParticipantForwardingMessage(eventTitle: string) {
+  const officialPhone = getRockBarOfficialWhatsAppPhone();
+
+  if (!officialPhone) return null;
+
+  return [
+    `Acabei de comprar nossos ingressos para o *${eventTitle}*. Para receber o seu ingresso, envie uma mensagem com o texto *MEU INGRESSO* para o Rock Bar Pub no telefone abaixo:`,
+    "",
+    `*${officialPhone}*`,
+  ].join("\n");
+}
 
 function formatParticipantContactsConfirmation(
   contacts: Array<{ displayName: string | null; phone: string }>,
@@ -4433,6 +4509,39 @@ async function handlePaidTicketResendCommand({
   const ticketsCount = groups.reduce((total, group) => total + group.tickets.length, 0);
 
   if (ticketsCount === 0) {
+    const normalizedPhone = normalizeWhatsAppPhone(phone);
+    const participantTickets = normalizedPhone
+      ? await listParticipantTicketDeliveriesForPhone(normalizedPhone)
+      : [];
+
+    if (normalizedPhone && participantTickets.length === 1) {
+      return buildParticipantTicketDeliveryResult({
+        baseContext,
+        deliveries: participantTickets,
+      });
+    }
+
+    if (normalizedPhone && participantTickets.length > 1) {
+      const participantGroups = groupParticipantTicketDeliveries(participantTickets);
+
+      if (participantGroups.length === 1) {
+        return buildParticipantTicketDeliveryResult({
+          baseContext,
+          deliveries: participantTickets,
+        });
+      }
+
+      return {
+        reply: formatParticipantTicketResendSelectionPrompt(participantTickets),
+        nextContext: buildParticipantTicketSelectionContext(
+          baseContext,
+          normalizedPhone,
+          participantTickets,
+          { source: "ticket_resend", includeAllOption: false },
+        ),
+      };
+    }
+
     return {
       reply:
         "Não encontrei ingresso pago emitido para este telefone. Confira se o pagamento foi aprovado e se este é o mesmo WhatsApp usado na compra.",
@@ -4505,7 +4614,7 @@ async function handlePaidTicketResendSelection({
   if (!group) {
     return {
       reply:
-        "Não encontrei mais esse ingresso disponível para reenvio. Confira com a equipe da Black House.",
+        "Não encontrei mais esse ingresso disponível para reenvio. Confira com a equipe do Rock Bar.",
       nextContext: resetBuyerReservationContext(baseContext),
     };
   }
@@ -4535,7 +4644,7 @@ async function handleTicketDeliverySelection({
   if (!orderId) {
     return {
       reply:
-        "Nao encontrei o pedido desta entrega. Digite *AGAIN* para reenviar seus ingressos.",
+        "Nao encontrei o pedido desta entrega. Digite MANDA para reenviar seus ingressos.",
       nextContext: resetBuyerReservationContext(baseContext),
     };
   }
@@ -4551,7 +4660,7 @@ async function handleTicketDeliverySelection({
   ) {
     return {
       reply:
-        "Nao encontrei a quantidade de ingressos desta compra. Digite *AGAIN* para reenviar seus ingressos.",
+        "Nao encontrei a quantidade de ingressos desta compra. Digite MANDA para reenviar seus ingressos.",
       nextContext: resetBuyerReservationContext(baseContext),
     };
   }
@@ -4632,17 +4741,57 @@ async function handleTicketDeliverySelection({
       buyerReservedTickets,
       "*INGRESSO RESERVADO*",
     );
+    const buyerQrTicketId = buyerDelivery.qrImages[0]?.ticketId;
+    const participantForwardingMessage = formatParticipantForwardingMessage(
+      buyerReservedTickets[0].eventTitle,
+    );
+
+    if (!buyerQrTicketId) {
+      return {
+        reply:
+          "Nao consegui gerar o ingresso reservado para este WhatsApp. Digite *CONFIRMAR* novamente em alguns instantes.",
+        nextContext: baseContext,
+      };
+    }
+
+    const participantForwardingMessages = participantForwardingMessage
+      ? [
+          {
+            type: "text" as const,
+            body: PARTICIPANT_FORWARDING_HEADER,
+            suppressTitle: true,
+            requiresSuccessfulBuyerDeliveryTicketId: buyerQrTicketId,
+            outboundIdempotencyKey: `paid-ticket-order:${orderId}:participant-forward-title:v1`,
+            outboundReason: "participant_forward_title",
+            outboundBusinessContext: {
+              order_id: orderId,
+              buyer_delivery_ticket_id: buyerQrTicketId,
+            },
+          },
+          {
+            type: "text" as const,
+            body: participantForwardingMessage,
+            suppressTitle: true,
+            requiresSuccessfulBuyerDeliveryTicketId: buyerQrTicketId,
+            outboundIdempotencyKey: `paid-ticket-order:${orderId}:participant-forward-instruction:v1`,
+            outboundReason: "participant_forward_instruction",
+            outboundBusinessContext: {
+              order_id: orderId,
+              buyer_delivery_ticket_id: buyerQrTicketId,
+            },
+          },
+        ]
+      : [];
+
     const outboundMessages = [
       ...buildPaidTicketResendOutboundMessages(buyerDelivery),
-      {
-        type: "text" as const,
-        body: PARTICIPANT_TICKET_REQUEST_INSTRUCTIONS,
-        suppressTitle: true,
-      },
+      ...participantForwardingMessages,
     ];
 
     return {
-      reply: PARTICIPANT_TICKET_REQUEST_INSTRUCTIONS,
+      reply: participantForwardingMessage
+        ? PARTICIPANT_FORWARDING_HEADER
+        : buyerDelivery.message,
       suppressTitle: true,
       outboundMessages,
       nextContext: resetBuyerReservationContext({
@@ -4763,7 +4912,7 @@ async function handleTicketDeliverySelection({
     if (!deliveryResult.ok) {
       return {
         reply:
-          "Nao consegui preparar seus ingressos agora. Digite *AGAIN* para tentar reenviar.",
+          "Nao consegui preparar seus ingressos agora. Digite MANDA para tentar reenviar.",
         nextContext: resetBuyerReservationContext(baseContext),
       };
     }
@@ -4773,7 +4922,7 @@ async function handleTicketDeliverySelection({
         reply:
           deliveryResult.reason === "delivery_in_progress"
             ? "Seus ingressos ja estao sendo enviados neste WhatsApp."
-            : "Nao consegui enviar seus ingressos agora. Digite *AGAIN* para tentar reenviar.",
+            : "Nao consegui enviar seus ingressos agora. Digite MANDA para tentar reenviar.",
         nextContext: resetBuyerReservationContext(baseContext),
       };
     }
@@ -17845,7 +17994,7 @@ export async function routeTicketMessage({
   ) {
     return {
       reply: [
-        "Olá! Bem-vindo(a) à Black House.",
+        "Olá! Bem-vindo(a) ao Rock Bar.",
         "",
         LOW_CONFIDENCE_PUBLIC_PROMPT,
       ].join("\n"),
@@ -18366,7 +18515,7 @@ export async function routeTicketMessage({
     if (selectedOption === 1) {
       const cartQuantity = getCartQuantity(cart);
 
-      if (cartQuantity <= 1) {
+      if (!ROTA5_PRESENTATION_TABLE_MAP_ENABLED || cartQuantity <= 1) {
         const nextCart = { ...cart, tableMapPlace: undefined };
 
         return finalizeTicketCartReservation({

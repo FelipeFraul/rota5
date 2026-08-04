@@ -23,6 +23,12 @@ import {
 } from "@/lib/tickets/services/messages";
 import { buildWhatsAppOutboundMetadata } from "@/lib/tickets/services/outboundMessages";
 import {
+  claimWhatsAppOutboundDelivery,
+  getOrCreateWhatsAppOutboundDelivery,
+  markWhatsAppOutboundDeliveryFailed,
+  markWhatsAppOutboundDeliverySent,
+} from "@/lib/tickets/services/whatsappOutboundDeliveries";
+import {
   CODEX_AUTH_REDACTED_BODY,
   buildApprovedCodexRequestBody,
   buildCodexAuthInvalidReply,
@@ -118,6 +124,10 @@ type RouteOutboundMessage =
       suppressTitle?: boolean;
       buyerDeliveryTicketId?: string;
       participantDeliveryTicketId?: string;
+      requiresSuccessfulBuyerDeliveryTicketId?: string;
+      outboundIdempotencyKey?: string;
+      outboundReason?: string;
+      outboundBusinessContext?: Record<string, unknown>;
     }
   | {
       type: "image";
@@ -129,6 +139,10 @@ type RouteOutboundMessage =
       suppressTitle?: boolean;
       buyerDeliveryTicketId?: string;
       participantDeliveryTicketId?: string;
+      requiresSuccessfulBuyerDeliveryTicketId?: string;
+      outboundIdempotencyKey?: string;
+      outboundReason?: string;
+      outboundBusinessContext?: Record<string, unknown>;
     };
 
 function getFallbackSystemMessageTitle(state?: string | null) {
@@ -1621,9 +1635,63 @@ export async function POST(request: Request) {
     sendResult: SendZapiMessageResult;
   }> = [];
   let outboundPersistenceFailed = false;
+  const successfulBuyerDeliveryTicketIds = new Set<string>();
 
   for (const outboundMessage of outboundMessages) {
+    if (
+      outboundMessage.requiresSuccessfulBuyerDeliveryTicketId &&
+      !successfulBuyerDeliveryTicketIds.has(
+        outboundMessage.requiresSuccessfulBuyerDeliveryTicketId,
+      )
+    ) {
+      continue;
+    }
+
     const outboundPhone = outboundMessage.phone ?? incoming.phone;
+    let outboundDeliveryId: string | null = null;
+
+    if (outboundMessage.outboundIdempotencyKey) {
+      const delivery = await getOrCreateWhatsAppOutboundDelivery({
+        idempotencyKey: outboundMessage.outboundIdempotencyKey,
+        customerId: customerResult.customer.id,
+        conversationId: conversationResult.conversation.id,
+        recipientPhone: outboundPhone,
+        messageType: outboundMessage.type,
+        reason: outboundMessage.outboundReason ?? "webhook_reply",
+        businessContext: outboundMessage.outboundBusinessContext ?? {},
+      });
+
+      if (!delivery.ok) {
+        logError("Failed to prepare idempotent WhatsApp outbound message", {
+          conversationId: conversationResult.conversation.id,
+          idempotencyKey: outboundMessage.outboundIdempotencyKey,
+          code: delivery.error.code,
+        });
+        continue;
+      }
+
+      if (delivery.delivery.status === "sent") {
+        continue;
+      }
+
+      const claim = await claimWhatsAppOutboundDelivery(delivery.delivery.id);
+
+      if (!claim.ok) {
+        logError("Failed to claim idempotent WhatsApp outbound message", {
+          conversationId: conversationResult.conversation.id,
+          deliveryId: delivery.delivery.id,
+          code: claim.error.code,
+        });
+        continue;
+      }
+
+      if (!claim.claimed) {
+        continue;
+      }
+
+      outboundDeliveryId = claim.delivery.id;
+    }
+
     const options =
       outboundPhone === incoming.phone
         ? extractNumericOptions(getOutboundMessageText(outboundMessage))
@@ -1653,6 +1721,34 @@ export async function POST(request: Request) {
         messageType: outboundMessage.type,
         error: sendResult.error,
       });
+    }
+
+    if (outboundDeliveryId) {
+      if (sendResult.ok) {
+        const markSentResult = await markWhatsAppOutboundDeliverySent({
+          deliveryId: outboundDeliveryId,
+          providerMessageId: sendResult.providerMessageId,
+        });
+
+        if (!markSentResult.ok) {
+          logError("Failed to mark idempotent WhatsApp outbound message as sent", {
+            conversationId: conversationResult.conversation.id,
+            deliveryId: outboundDeliveryId,
+          });
+        }
+      } else {
+        const markFailedResult = await markWhatsAppOutboundDeliveryFailed({
+          deliveryId: outboundDeliveryId,
+          error: sendResult.error,
+        });
+
+        if (!markFailedResult.ok) {
+          logError("Failed to mark idempotent WhatsApp outbound message as failed", {
+            conversationId: conversationResult.conversation.id,
+            deliveryId: outboundDeliveryId,
+          });
+        }
+      }
     }
 
     const outboundResult = await saveWhatsAppMessage({
@@ -1708,6 +1804,8 @@ export async function POST(request: Request) {
             ticketId: outboundMessage.buyerDeliveryTicketId,
             reason: deliveredResult.reason,
           });
+        } else {
+          successfulBuyerDeliveryTicketIds.add(outboundMessage.buyerDeliveryTicketId);
         }
       } else {
         logWarn("Buyer ticket QR send failed; first delivery timestamp remains unchanged", {

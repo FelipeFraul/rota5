@@ -3,7 +3,6 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import BrandLogo from "@/app/BrandLogo";
 import AdminEventGrid, { type AdminEventCardItem } from "./components/AdminEventGrid";
 import AdminEventsToolbar from "./components/AdminEventsToolbar";
 
@@ -588,7 +587,6 @@ export function AdminEventsEditor() {
   return (
     <>
       <header className="admin-events-header">
-        <BrandLogo />
         <div>
           <h1>Editar eventos</h1>
         </div>

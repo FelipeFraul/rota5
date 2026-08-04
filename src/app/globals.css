@@ -8,7 +8,7 @@
 
 :root {
   color-scheme: light;
-  --app-bg-image: url("/rockbar.webp");
+  --app-bg-image: url("/rota5.webp");
   --font-sans: var(--font-roboto), Roboto, Arial, Helvetica, sans-serif;
   background: #0b0f18;
   color: #111827;
@@ -5899,7 +5899,7 @@ body:has(.checkout-unavailable-shell) iframe {
 
 @media (max-width: 640px) {
   :root {
-    --app-bg-image: url("/rockbar_mb.webp");
+    --app-bg-image: url("/rota5_mb.webp");
   }
 
   body {

@@ -465,7 +465,12 @@ function scoreTopic(topic: PublicHelpTopic, queryTokens: string[]) {
 export function isPublicHelpCommand(text: string) {
   const normalized = normalizeHelpText(text);
 
-  return normalized === "ajuda" || normalized === "help" || normalized === "sac";
+  return (
+    normalized === "da uma mao" ||
+    normalized === "ajuda" ||
+    normalized === "help" ||
+    normalized === "sac"
+  );
 }
 
 export function formatPublicHelpPrompt() {

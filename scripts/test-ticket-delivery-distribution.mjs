@@ -27,6 +27,10 @@ const ticketDeliverySource = readFileSync(
   new URL("../src/lib/tickets/services/ticketDelivery.ts", import.meta.url),
   "utf8",
 );
+const envSource = readFileSync(
+  new URL("../src/lib/env.ts", import.meta.url),
+  "utf8",
+);
 const outboundDeliveriesSource = readFileSync(
   new URL("../src/lib/tickets/services/whatsappOutboundDeliveries.ts", import.meta.url),
   "utf8",
@@ -272,9 +276,9 @@ test("imagem do ingresso e instrucao de portaria sao mensagens separadas", () =>
   assert.match(ticketDeliverySource, /sendZapiImage\(\{[\s\S]*phone,[\s\S]*image:\s*qrImage,[\s\S]*\}\)/);
   assert.match(ticketDeliverySource, /paid-ticket-order:\$\{orderId\}:qr-instruction:v1/);
   assert.match(routerSource, /\.\.\.delivery\.qrImages\.map[\s\S]*\{ type: "text" as const, body: delivery\.qrInstructionMessage \}/);
-  assert.match(routerSource, /\*INGRESSOS\*/);
-  assert.match(routerSource, /\*Envie essa mensagem para seu\(s\) acompanhante\(s\)\.\*/);
-  assert.match(routerSource, /\*enviar uma mensagem com o texto MEU INGRESSO\* para nosso telefone, 15 99642-6671/);
+  assert.match(routerSource, /const PARTICIPANT_FORWARDING_HEADER/);
+  assert.match(routerSource, /formatParticipantForwardingMessage/);
+  assert.doesNotMatch(routerSource, /15 99642-6671/);
 });
 
 test("leitura de contact valida e exibe confirmacao sem telefone completo", async () => {
@@ -420,10 +424,90 @@ test("CONFIRMAR usa RPC de vinculacao e limpa estado apos sucesso", () => {
   assert.match(routerSource, /assignParticipantContactsToOrderTickets\(\{[\s\S]*orderId,[\s\S]*contacts:\s*validatedContacts/);
   assert.match(routerSource, /getBuyerReservedTicketsForOrder\(orderId\)/);
   assert.match(routerSource, /buildTicketDeliveryPayload\([\s\S]*buyerReservedTickets[\s\S]*"\*INGRESSO RESERVADO\*"/);
-  assert.match(routerSource, /outboundMessages = \[[\s\S]*buildPaidTicketResendOutboundMessages\(buyerDelivery\)[\s\S]*PARTICIPANT_TICKET_REQUEST_INSTRUCTIONS/);
-  assert.match(routerSource, /reply:\s*PARTICIPANT_TICKET_REQUEST_INSTRUCTIONS/);
+  assert.match(routerSource, /outboundMessages = \[[\s\S]*buildPaidTicketResendOutboundMessages\(buyerDelivery\)[\s\S]*participantForwardingMessages/);
+  assert.match(routerSource, /reply:\s*participantForwardingMessage[\s\S]*PARTICIPANT_FORWARDING_HEADER/);
   assert.match(ticketsServiceSource, /supabase\.rpc\(\s*"assign_participant_contacts_to_order_tickets"/);
   assert.match(ticketsServiceSource, /p_contacts:\s*contacts\.map/);
+});
+
+test("opcao 2 envia duas mensagens finais apos QR do comprador", () => {
+  const optionTwoBlock =
+    routerSource.match(/const buyerDelivery = await buildTicketDeliveryPayload[\s\S]*?nextContext: resetBuyerReservationContext/)?.[0] ?? "";
+
+  assert.match(optionTwoBlock, /const buyerQrTicketId = buyerDelivery\.qrImages\[0\]\?\.ticketId/);
+  assert.match(optionTwoBlock, /const participantForwardingMessage = formatParticipantForwardingMessage/);
+  assert.match(routerSource, /const participantForwardingMessages = participantForwardingMessage[\s\S]*body:\s*PARTICIPANT_FORWARDING_HEADER[\s\S]*body:\s*participantForwardingMessage/);
+  assert.match(optionTwoBlock, /\.\.\.buildPaidTicketResendOutboundMessages\(buyerDelivery\)[\s\S]*participantForwardingMessages/);
+  assert.match(optionTwoBlock, /requiresSuccessfulBuyerDeliveryTicketId:\s*buyerQrTicketId/g);
+  assert.match(routerSource, /\*ENVIE A MENSAGEM ABAIXO PARA SEU\(S\) ACOMPANHANTE\(S\)\.\*/);
+});
+
+test("mensagem final usa nome do evento e telefone oficial do Rock Bar", () => {
+  assert.match(routerSource, /Acabei de comprar nossos ingressos para o \*\$\{eventTitle\}\*/);
+  assert.match(routerSource, /Rock Bar Pub no telefone abaixo/);
+  assert.match(routerSource, /ROCK_BAR_OFFICIAL_WHATSAPP_PHONE/);
+  assert.match(envSource, /ROCK_BAR_OFFICIAL_WHATSAPP_PHONE/);
+  assert.match(routerSource, /buyerReservedTickets\[0\]\.eventTitle/);
+  assert.match(routerSource, /formatWhatsAppPhoneForDisplay\(normalizedPhone\)/);
+  assert.match(routerSource, /\$\{areaCode\} \$\{local\.slice\(0, 5\)\}-\$\{local\.slice\(5\)\}/);
+  assert.doesNotMatch(routerSource, /\+55 \$\{areaCode\}/);
+});
+
+test("mensagem final nao usa nome telefone ou configuracao da Black House", () => {
+  const forwardingBlock =
+    routerSource.match(/const PARTICIPANT_FORWARDING_HEADER[\s\S]*?function formatParticipantContactsConfirmation/)?.[0] ?? "";
+
+  assert.doesNotMatch(forwardingBlock, /Black House|99642-6671|BLACK_HOUSE/i);
+  assert.match(forwardingBlock, /Rock Bar Pub/);
+  assert.match(routerSource, /equipe do Rock Bar/);
+  assert.doesNotMatch(routerSource, /equipe da Black House/);
+  assert.doesNotMatch(routerSource, /Bem-vindo\(a\) à Black House/);
+});
+
+test("falha do QR do comprador bloqueia mensagens finais e sucesso libera em ordem", () => {
+  assert.match(zapiWebhookSource, /const successfulBuyerDeliveryTicketIds = new Set<string>\(\)/);
+  assert.match(zapiWebhookSource, /outboundMessage\.requiresSuccessfulBuyerDeliveryTicketId[\s\S]*continue;/);
+  assert.match(zapiWebhookSource, /successfulBuyerDeliveryTicketIds\.add\(outboundMessage\.buyerDeliveryTicketId\)/);
+  assert.match(routerSource, /\.\.\.buildPaidTicketResendOutboundMessages\(buyerDelivery\)[\s\S]*participantForwardingMessages/);
+});
+
+test("opcao 1 nao recebe mensagens finais de acompanhante", () => {
+  const optionOneBlock =
+    routerSource.match(/if \(normalizedText === "1"[\s\S]*?return deliverTicketsForOrder/)?.[0] ?? "";
+
+  assert.doesNotMatch(optionOneBlock, /PARTICIPANT_FORWARDING_HEADER|formatParticipantForwardingMessage|requiresSuccessfulBuyerDeliveryTicketId/);
+});
+
+test("mensagens finais preservam retry sem duplicacao por dependerem do mesmo QR entregue", () => {
+  assert.match(routerSource, /const buyerQrTicketId = buyerDelivery\.qrImages\[0\]\?\.ticketId/);
+  assert.match(routerSource, /requiresSuccessfulBuyerDeliveryTicketId:\s*buyerQrTicketId/g);
+  assert.match(zapiWebhookSource, /successfulBuyerDeliveryTicketIds\.has\([\s\S]*outboundMessage\.requiresSuccessfulBuyerDeliveryTicketId/);
+  assert.match(zapiWebhookSource, /getOrCreateWhatsAppOutboundDelivery\(\{/);
+  assert.match(zapiWebhookSource, /delivery\.delivery\.status === "sent"[\s\S]*continue;/);
+});
+
+test("env ausente ou invalido nao derruba webhook e omite mensagens finais", () => {
+  assert.match(routerSource, /if \(!phone \|\| !normalizedPhone\) \{/);
+  assert.match(routerSource, /logError\("Skipped participant forwarding instructions without valid Rock Bar official WhatsApp phone"/);
+  assert.match(routerSource, /return null;/);
+  assert.match(routerSource, /const participantForwardingMessages = participantForwardingMessage[\s\S]*: \[\]/);
+  assert.doesNotMatch(routerSource, /throw new Error\("ROCK_BAR_OFFICIAL_WHATSAPP_PHONE/);
+});
+
+test("mensagens finais possuem chaves idempotentes proprias e duraveis", () => {
+  assert.match(routerSource, /paid-ticket-order:\$\{orderId\}:participant-forward-title:v1/);
+  assert.match(routerSource, /paid-ticket-order:\$\{orderId\}:participant-forward-instruction:v1/);
+  assert.match(routerSource, /outboundReason:\s*"participant_forward_title"/);
+  assert.match(routerSource, /outboundReason:\s*"participant_forward_instruction"/);
+  assert.match(zapiWebhookSource, /outboundMessage\.outboundIdempotencyKey/);
+  assert.match(zapiWebhookSource, /markWhatsAppOutboundDeliverySent/);
+  assert.match(zapiWebhookSource, /markWhatsAppOutboundDeliveryFailed/);
+});
+
+test("falha parcial entre mensagens finais mantem status proprio por mensagem", () => {
+  assert.match(zapiWebhookSource, /let outboundDeliveryId: string \| null = null/);
+  assert.match(zapiWebhookSource, /if \(outboundDeliveryId\) \{[\s\S]*if \(sendResult\.ok\)[\s\S]*markWhatsAppOutboundDeliverySent[\s\S]*else[\s\S]*markWhatsAppOutboundDeliveryFailed/);
+  assert.match(routerSource, /participant-forward-title:v1[\s\S]*participant-forward-instruction:v1/);
 });
 
 test("comprador registra primeira entrega valida do QR sem depender de pagamento para oferta", () => {
@@ -520,8 +604,8 @@ test("REENVIAR INGRESSO lista somente eventos e comandos finais", () => {
 
 test("opcao individual envia ingressos do grupo escolhido e todos envia a lista completa", () => {
   assert.match(routerSource, /baseContext\.state !== "participant_ticket_selecting"/);
-  assert.match(routerSource, /option === selection\.allOption\s*\? validDeliveries\s*:\s*validDeliveries\.filter/);
-  assert.match(routerSource, /const selectedOption = selection\.options\.find/);
+  assert.match(routerSource, /selectedAll\s*\?\s*validDeliveries\s*:\s*validDeliveries\.filter/);
+  assert.match(routerSource, /const selectedOption = selection\?\.options\.find/);
   assert.match(routerSource, /selectedOption\?\.ticketIds\.includes\(delivery\.ticket\.ticketId\)/);
 });
 
@@ -582,6 +666,49 @@ test("Meu ingresso suporta multiplos ingressos para o mesmo telefone e compras d
   assert.doesNotMatch(participantListBlock, /\.maybeSingle</);
   assert.match(ticketsServiceSource, /\.returns<ParticipantTicketDeliveryRow\[\]>\(\)/);
   assert.match(ticketsServiceSource, /sort\(\(left,\s*right\) =>/);
+});
+
+test("REENVIAR INGRESSO preserva busca do comprador antes de buscar acompanhante", () => {
+  assert.match(routerSource, /const groups = await listPaidTicketResendGroupsForPhone\(phone\)/);
+  assert.match(routerSource, /const ticketsCount = groups\.reduce/);
+  assert.match(routerSource, /if \(ticketsCount === 0\) \{[\s\S]*listParticipantTicketDeliveriesForPhone\(normalizedPhone\)/);
+  assert.match(routerSource, /if \(ticketsCount === 1\) \{[\s\S]*buildPaidTicketResendResult/);
+  assert.match(routerSource, /reply:\s*formatPaidTicketResendOptions\(groups\)/);
+});
+
+test("REENVIAR INGRESSO para acompanhante usa recipient_phone e estados permitidos", () => {
+  const participantListBlock =
+    ticketsServiceSource.match(/export async function listParticipantTicketDeliveriesForPhone[\s\S]*?\.returns<ParticipantTicketDeliveryRow\[\]>\(\);/)?.[0] ?? "";
+
+  assert.match(participantListBlock, /\.eq\("recipient_phone", phone\)/);
+  assert.match(participantListBlock, /"awaiting_participant_request"/);
+  assert.match(participantListBlock, /"delivered"/);
+  assert.match(ticketsServiceSource, /isPublicEventVisible[\s\S]*purpose:\s*"issued_access"/);
+  assert.match(routerSource, /listParticipantTicketDeliveriesForPhone\(normalizedPhone\)/);
+});
+
+test("REENVIAR INGRESSO de acompanhante com um grupo envia direto", () => {
+  assert.match(routerSource, /participantTickets\.length === 1[\s\S]*buildParticipantTicketDeliveryResult/);
+  assert.match(routerSource, /const participantGroups = groupParticipantTicketDeliveries\(participantTickets\)/);
+  assert.match(routerSource, /participantGroups\.length === 1[\s\S]*buildParticipantTicketDeliveryResult/);
+});
+
+test("REENVIAR INGRESSO de acompanhante com varios grupos lista somente eventos", () => {
+  assert.match(routerSource, /function formatParticipantTicketResendSelectionPrompt/);
+  assert.match(routerSource, /Escolha o evento que deseja receber novamente seu ingresso/);
+  assert.match(routerSource, /`Digite \$\{index \+ 1\} para \$\{formatParticipantTicketSelectionLabel\(group, groups\)\}`/);
+  assert.match(routerSource, /formatParticipantTicketResendSelectionPrompt\(participantTickets\)/);
+  assert.match(routerSource, /source:\s*"ticket_resend"/);
+  assert.match(routerSource, /includeAllOption:\s*false/);
+});
+
+test("REENVIAR INGRESSO de acompanhante usa mesmo visual do Meu ingresso e nao altera distribuicao", () => {
+  assert.match(routerSource, /buildTicketDeliveryPayload\(\[delivery\.ticket\], "\*INGRESSO\*"\)/);
+  assert.match(routerSource, /buildPaidTicketResendOutboundMessages\(payload\)/);
+  assert.doesNotMatch(
+    routerSource.match(/async function buildParticipantTicketDeliveryResult[\s\S]*?async function handleParticipantTicketSelection/)?.[0] ?? "",
+    /assignParticipantContactsToOrderTickets|recipient_phone|recipient_name|buyer_qr_delivered_at/,
+  );
 });
 
 test("reenvio de ingressos ja delivered preserva status e data", () => {
