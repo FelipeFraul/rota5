@@ -11,6 +11,8 @@ const ticketQrImageSource = readFileSync(
 
 test("ticket QR image uses the Rota5 ticket_sistema template", async () => {
   assert.match(ticketQrImageSource, /public",\s*"ticket_sistema\.webp"/);
+  assert.doesNotMatch(ticketQrImageSource, /<line\s+x1=/);
+  assert.doesNotMatch(ticketQrImageSource, /stroke-width=/);
 
   const image = await generateTicketQrImage({
     ticketUrl: "https://rota5.vercel.app/tickets/test-token",

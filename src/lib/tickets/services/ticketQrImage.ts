@@ -112,11 +112,6 @@ async function buildTextComposites({
     lineComposite(await renderTextLine({ text: venue, font: "Handjet", fontfile: HANDJET_FONT_PATH, fontSize: 39 }), 94, 1008),
     lineComposite(await renderTextLine({ text: cityState, font: "Handjet", fontfile: HANDJET_FONT_PATH, fontSize: 39 }), 94, 1048),
     lineComposite(await renderTextLine({ text: dateTime, font: "Handjet", fontfile: HANDJET_FONT_PATH, fontSize: 37 }), 94, 1090),
-    {
-      input: Buffer.from(`<svg width="${TICKET_WIDTH}" height="${TICKET_HEIGHT}" viewBox="0 0 ${TICKET_WIDTH} ${TICKET_HEIGHT}" xmlns="http://www.w3.org/2000/svg"><line x1="94" y1="1155" x2="714" y2="1155" stroke="#ffffff" stroke-width="5" /></svg>`),
-      left: 0,
-      top: 0,
-    },
     lineComposite(await renderTextLine({ text: holder, font: "Bebas Neue", fontfile: BEBAS_FONT_PATH, fontSize: 47 }), 94, 1181),
     lineComposite(await renderTextLine({ text: code, font: "Handjet", fontfile: HANDJET_FONT_PATH, fontSize: 37 }), 94, 1235),
   ];
