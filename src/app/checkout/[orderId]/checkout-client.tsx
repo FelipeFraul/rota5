@@ -244,6 +244,16 @@ export default function CheckoutClient({
   }
 
   async function submitPix() {
+    if (!email.trim()) {
+      setMessage("Informe um e-mail para gerar o Pix.");
+      return;
+    }
+
+    if (onlyDigits(identificationNumber).length !== 11) {
+      setMessage("Informe o CPF com 11 digitos para gerar o Pix.");
+      return;
+    }
+
     setLoading(true);
     setMessage(null);
     setPixCode(null);
@@ -440,14 +450,17 @@ export default function CheckoutClient({
           </div>
         ) : null}
 
+        {!pixCode ? (
         <div className="checkout-form-block">
           <label className="checkout-label">
             E-mail
             <input
               className="checkout-input"
+              type="email"
               inputMode="email"
               placeholder="seuemail@exemplo.com"
               value={email}
+              required
               onChange={(event) => setEmail(event.target.value)}
             />
           </label>
@@ -458,12 +471,16 @@ export default function CheckoutClient({
               inputMode="numeric"
               placeholder="Somente números"
               value={identificationNumber}
+              required
+              minLength={11}
+              maxLength={11}
               onChange={(event) =>
                 setIdentificationNumber(onlyDigits(event.target.value).slice(0, 11))
               }
             />
           </label>
         </div>
+        ) : null}
 
         {enableCardPayment && mode === "card" ? (
           <div className="checkout-form-block">
@@ -533,6 +550,25 @@ export default function CheckoutClient({
               {loading ? "Processando..." : `Pagar ${order.totalLabel}`}
             </button>
           </div>
+        ) : pixCode ? (
+          <div className="checkout-pix-box">
+            <label className="checkout-label">
+              Pix copia e cola
+              <pre className="checkout-pix-code" aria-label="Codigo Pix copia e cola">{pixCode}</pre>
+            </label>
+            <button
+              type="button"
+              className={
+                pixCopied
+                  ? "checkout-secondary-button is-copied"
+                  : "checkout-secondary-button"
+              }
+              onClick={copyPixCode}
+              aria-live="polite"
+            >
+              {pixCopied ? "Copiado" : "Copiar codigo Pix"}
+            </button>
+          </div>
         ) : (
           <div className="checkout-form-block">
             <button
@@ -543,26 +579,6 @@ export default function CheckoutClient({
             >
               {loading ? "Gerando Pix..." : `Gerar Pix de ${order.totalLabel}`}
             </button>
-            {pixCode ? (
-              <div className="checkout-pix-box">
-                <label className="checkout-label">
-                  Pix copia e cola
-                  <pre className="checkout-pix-code" aria-label="Codigo Pix copia e cola">{pixCode}</pre>
-                </label>
-                <button
-                  type="button"
-                  className={
-                    pixCopied
-                      ? "checkout-secondary-button is-copied"
-                      : "checkout-secondary-button"
-                  }
-                  onClick={copyPixCode}
-                  aria-live="polite"
-                >
-                  {pixCopied ? "Copiado" : "Copiar codigo Pix"}
-                </button>
-              </div>
-            ) : null}
           </div>
         )}
 

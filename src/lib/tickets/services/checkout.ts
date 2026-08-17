@@ -410,10 +410,6 @@ function buildPaymentIdempotencyKey({
   return `${localPaymentId}:card:${accessTokenFingerprint}:${tokenHash}`;
 }
 
-function buildTechnicalPayerEmail(orderId: string) {
-  return `pedido-${orderId.toLowerCase()}@example.com`;
-}
-
 async function validateReservationSeats({
   reservationId,
   reservationItems,
@@ -1131,14 +1127,14 @@ export async function paySelfHostedCheckout({
   }
 
   const trimmedEmail = email.trim().toLowerCase();
-  const normalizedEmail = trimmedEmail || buildTechnicalPayerEmail(order.orderId);
+  const normalizedEmail = trimmedEmail;
   const cpf = onlyDigits(identificationNumber);
 
   if (
-    (trimmedEmail && !isEmail(trimmedEmail)) ||
-    !isEmail(normalizedEmail) ||
+    !trimmedEmail ||
+    !isEmail(trimmedEmail) ||
     (method === "card" && cpf.length !== 11) ||
-    (method === "pix" && cpf.length > 0 && cpf.length !== 11)
+    (method === "pix" && cpf.length !== 11)
   ) {
     return { ok: false, reason: "invalid_payment_input" };
   }
