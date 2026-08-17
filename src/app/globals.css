@@ -171,7 +171,7 @@ main {
   justify-content: center;
   min-height: 100vh;
   padding: 24px;
-  background: var(--app-bg-image) center / cover no-repeat;
+  background: url("/rockbar.webp") center / cover no-repeat;
   font-family: var(--font-sans);
 }
 
@@ -203,7 +203,7 @@ main {
   justify-content: center;
   min-height: 100vh;
   padding: 28px 16px;
-  background: var(--app-bg-image) center / cover no-repeat;
+  background: url("/rockbar.webp") center / cover no-repeat;
   font-family: var(--font-sans);
 }
 
@@ -478,7 +478,7 @@ body:has(.checkout-unavailable-shell) iframe {
   justify-content: center;
   min-height: 100vh;
   padding: 28px 16px;
-  background: var(--app-bg-image) center / cover no-repeat;
+  background: url("/rockbar.webp") center / cover no-repeat;
   font-family: var(--font-sans);
 }
 
@@ -5904,6 +5904,12 @@ body:has(.checkout-unavailable-shell) iframe {
 
   body {
     background: var(--app-bg-image) center / cover no-repeat;
+  }
+
+  .checkout-shell,
+  .checkout-success-shell,
+  .checkout-unavailable-shell {
+    background-image: url("/rockbar_mb.webp");
   }
 
   main,
