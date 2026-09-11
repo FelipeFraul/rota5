@@ -371,7 +371,7 @@ export default function CheckoutClient({
 
     if (!copied) {
       setPixCopied(false);
-      setMessage("Nao consegui copiar automaticamente. Selecione o codigo Pix e copie manualmente.");
+      setMessage("N?o consegui copiar automaticamente. Selecione o c?digo Pix e copie manualmente.");
       return;
     }
 
@@ -572,7 +572,7 @@ export default function CheckoutClient({
                   onClick={copyPixCode}
                   aria-live="polite"
                 >
-                  {pixCopied ? "Copiado" : "Copiar codigo Pix"}
+                  {pixCopied ? "Copiado" : "Copiar c?digo Pix"}
                 </button>
               </div>
             )}

@@ -39,7 +39,7 @@ export function AdminLoginForm() {
       };
 
       if (!response.ok || !data.ok || (mode !== "event_editor" && !data.code)) {
-        setError(data.message ?? "Nao foi possivel autenticar este acesso.");
+        setError(data.message ?? "N?o foi poss?vel autenticar este acesso.");
         return;
       }
 
@@ -50,7 +50,7 @@ export function AdminLoginForm() {
       }
       setPassphrase("");
     } catch {
-      setError("Nao foi possivel autenticar este acesso agora.");
+      setError("N?o foi poss?vel autenticar este acesso agora.");
     } finally {
       setLoading(false);
     }

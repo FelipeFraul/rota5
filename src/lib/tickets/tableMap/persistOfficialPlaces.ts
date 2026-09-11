@@ -60,7 +60,7 @@ function validatePlaces(places: readonly OfficialTableMapPlace[] | null): Persis
   const codes = places.map((place) => place.code);
 
   if (new Set(codes).size !== OFFICIAL_TABLE_MAP_PLACES.length) {
-    return { ok: false, reason: "invalid_code", message: "Ha codigos duplicados ou ausentes no mapa." };
+    return { ok: false, reason: "invalid_code", message: "Ha c?digos duplicados ou ausentes no mapa." };
   }
 
   for (const place of places) {
@@ -145,7 +145,7 @@ export async function persistOfficialTableMapPlaces(input: unknown): Promise<Per
     return {
       ok: false,
       reason: "database_error",
-      message: "Nao foi possivel salvar as coordenadas no banco.",
+      message: "N?o foi poss?vel salvar as coordenadas no banco.",
       details: getErrorMessage(error),
     };
   }

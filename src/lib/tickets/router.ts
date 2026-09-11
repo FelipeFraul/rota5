@@ -2410,9 +2410,9 @@ function formatTableMapPlaceUnavailableReply() {
   return [
     "*LUGAR INDISPONIVEL*",
     "",
-    "*Mesa/bistrô não disponivel*",
+    "*Mesa/bistrô não dispon?vel*",
     "Digite outra opção do mapa",
-    "Digite *0* para continuar sem mesa/bistro.",
+    "Digite *0* para continuar sem mesa/bistr?.",
   ].join("\n");
 }
 
@@ -2523,7 +2523,7 @@ async function finalizeTicketCartReservation({
       const reply =
         tableMapReservationResult.reason === "place_not_available"
           ? formatTableMapPlaceUnavailableReply()
-          : "Nao consegui reservar essa mesa/bistro agora. Escolha outro codigo ou digite 0 para continuar sem mesa/bistro.";
+          : "N?o consegui reservar essa mesa/bistr? agora. Escolha outro c?digo ou digite 0 para continuar sem mesa/bistr?.";
 
       return {
         reply,
@@ -3645,7 +3645,7 @@ function formatCartSummaryLines(cart: TicketConversationCart) {
 }
 
 function formatTableMapPlaceLabel(place: TicketConversationTableMapPlace) {
-  const typeLabel = place.type === "bistro" ? "Bistro" : "Mesa";
+  const typeLabel = place.type === "bistr?" ? "Bistro" : "Mesa";
   const environmentLabel =
     place.environment === "ground_floor" ? "terreo" : "mezanino";
   const capacityLabel = place.capacity ? ` para ${place.capacity} pessoas` : "";
@@ -4612,7 +4612,7 @@ async function handleTicketDeliverySelection({
   if (!orderId) {
     return {
       reply:
-        "Nao encontrei o pedido desta entrega. Digite MANDA para reenviar seus ingressos.",
+        "N?o encontrei o pedido desta entrega. Digite MANDA para reenviar seus ingressos.",
       nextContext: resetBuyerReservationContext(baseContext),
     };
   }
@@ -4628,7 +4628,7 @@ async function handleTicketDeliverySelection({
   ) {
     return {
       reply:
-        "Nao encontrei a quantidade de ingressos desta compra. Digite MANDA para reenviar seus ingressos.",
+        "N?o encontrei a quantidade de ingressos desta compra. Digite MANDA para reenviar seus ingressos.",
       nextContext: resetBuyerReservationContext(baseContext),
     };
   }
@@ -4690,7 +4690,7 @@ async function handleTicketDeliverySelection({
     if (!assignment.ok) {
       return {
         reply:
-          "Nao consegui vincular os contatos aos ingressos agora. Digite *CONFIRMAR* novamente em alguns instantes.",
+          "N?o consegui vincular os contatos aos ingressos agora. Digite *CONFIRMAR* novamente em alguns instantes.",
         nextContext: baseContext,
       };
     }
@@ -4700,7 +4700,7 @@ async function handleTicketDeliverySelection({
     if (buyerReservedTickets.length !== 1) {
       return {
         reply:
-          "Nao consegui localizar o ingresso reservado para este WhatsApp. Digite *CONFIRMAR* novamente em alguns instantes.",
+          "N?o consegui localizar o ingresso reservado para este WhatsApp. Digite *CONFIRMAR* novamente em alguns instantes.",
         nextContext: baseContext,
       };
     }
@@ -4717,7 +4717,7 @@ async function handleTicketDeliverySelection({
     if (!buyerQrTicketId) {
       return {
         reply:
-          "Nao consegui gerar o ingresso reservado para este WhatsApp. Digite *CONFIRMAR* novamente em alguns instantes.",
+          "N?o consegui gerar o ingresso reservado para este WhatsApp. Digite *CONFIRMAR* novamente em alguns instantes.",
         nextContext: baseContext,
       };
     }
@@ -4868,7 +4868,7 @@ async function handleTicketDeliverySelection({
     if (!deliveryResult.ok) {
       return {
         reply:
-          "Nao consegui preparar seus ingressos agora. Digite MANDA para tentar reenviar.",
+          "N?o consegui preparar seus ingressos agora. Digite MANDA para tentar reenviar.",
         nextContext: resetBuyerReservationContext(baseContext),
       };
     }
@@ -4878,7 +4878,7 @@ async function handleTicketDeliverySelection({
         reply:
           deliveryResult.reason === "delivery_in_progress"
             ? "Seus ingressos ja estao sendo enviados neste WhatsApp."
-            : "Nao consegui enviar seus ingressos agora. Digite MANDA para tentar reenviar.",
+            : "N?o consegui enviar seus ingressos agora. Digite MANDA para tentar reenviar.",
         nextContext: resetBuyerReservationContext(baseContext),
       };
     }
@@ -16687,7 +16687,7 @@ export async function routeTicketMessage({
 
         if (!weekdays.length) {
           return {
-            reply: "Nao entendi o dia. Digite algo como sexta, sabado ou 5.",
+            reply: "N?o entendi o dia. Digite algo como sexta, s?bado ou 5.",
             nextContext: baseContext,
           };
         }
@@ -16772,7 +16772,7 @@ export async function routeTicketMessage({
 
         if (!timing || !scope || !draft.name || !draft.description || !draft.priceCents) {
           return {
-            reply: "Nao consegui fechar esta oferta. Volte ao menu e tente novamente.",
+            reply: "N?o consegui fechar esta oferta. Volte ao menu e tente novamente.",
             nextContext: withAdminOffersContext(baseContext, "admin_offers_menu", {}),
           };
         }
@@ -16938,7 +16938,7 @@ export async function routeTicketMessage({
                 })();
 
         return {
-          reply: result.ok ? "*OFERTA ATUALIZADA*" : "Nao consegui atualizar. Confira o valor enviado.",
+          reply: result.ok ? "*OFERTA ATUALIZADA*" : "N?o consegui atualizar. Confira o valor enviado.",
           nextContext: withAdminOffersContext(baseContext, "admin_offers_menu", {}),
         };
       }
@@ -18406,7 +18406,7 @@ export async function routeTicketMessage({
 
     if (!cart?.items.length) {
       return {
-        reply: "Nao encontrei itens nessa compra. Escolha o ingresso novamente.",
+        reply: "N?o encontrei itens nessa compra. Escolha o ingresso novamente.",
         nextContext: resetBuyerReservationContext(baseContext),
       };
     }
@@ -18465,7 +18465,7 @@ export async function routeTicketMessage({
     ) {
       const reply = place
         ? formatTableMapPlaceUnavailableReply()
-        : "Codigo invalido. Escolha um codigo do mapa ou digite 0 para continuar sem mesa/bistro.";
+        : "Codigo invalido. Escolha um c?digo do mapa ou digite 0 para continuar sem mesa/bistr?.";
 
       return {
         reply,

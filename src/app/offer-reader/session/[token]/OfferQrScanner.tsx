@@ -112,7 +112,7 @@ export function OfferQrScanner({ initialValid }: { initialValid: boolean }) {
             : result.message ?? "QR Code recusado.",
         );
       } catch {
-        showFeedback("denied", "Nao foi possivel validar o QR Code.");
+        showFeedback("denied", "N?o foi poss?vel validar o QR Code.");
       } finally {
         window.setTimeout(() => {
           busyRef.current = false;
@@ -146,7 +146,7 @@ export function OfferQrScanner({ initialValid }: { initialValid: boolean }) {
         await scanner.start();
         if (!cancelled) setStatus("Scanner ativo. Aponte para o QR Code.");
       } catch {
-        setStatus("Camera indisponivel. Use o campo manual.");
+        setStatus("Camera indispon?vel. Use o campo manual.");
       }
     }
 

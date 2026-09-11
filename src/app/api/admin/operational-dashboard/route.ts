@@ -207,7 +207,7 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("[operational-dashboard] failed to load dashboard", error);
     return NextResponse.json(
-      { ok: false, message: "Nao foi possivel carregar o painel operacional." },
+      { ok: false, message: "N?o foi poss?vel carregar o painel operacional." },
       { status: 500 },
     );
   }

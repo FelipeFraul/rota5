@@ -244,7 +244,7 @@ function formatComboDeliveryPlace(placeCode: string | null | undefined) {
   const code = String(placeCode ?? "").trim().padStart(2, "0");
   const place = getOfficialTableMapPlace(code);
   const displayCode = code.replace(/^0+/, "") || code;
-  const kind = place?.type === "bistro" ? "bistrô" : "mesa";
+  const kind = place?.type === "bistr?" ? "bistrô" : "mesa";
 
   return `${kind} ${displayCode}`;
 }
@@ -1051,7 +1051,7 @@ export async function validateComboRedemptionScan(input: {
         allowed: false,
         result: "denied",
         message:
-          "Combo pago, mas sem reserva de mesa/bistro vinculada ou telefone do cliente. A entrega nao foi concluida.",
+          "Combo pago, mas sem reserva de mesa/bistr? vinculada ou telefone do cliente. A entrega nao foi concluida.",
       };
     }
 
@@ -1070,7 +1070,7 @@ export async function validateComboRedemptionScan(input: {
         allowed: false,
         result: "denied",
         message:
-          "Combo pago, mas a reserva de mesa/bistro nao esta valida. A entrega nao foi concluida.",
+          "Combo pago, mas a reserva de mesa/bistr? nao esta valida. A entrega nao foi concluida.",
       };
     }
 
@@ -1448,7 +1448,7 @@ export async function validateComboRedemptionScan(input: {
       allowed: false,
       result: "awaiting_preparation",
       message:
-        "PEDIDO AINDA NAO ESTA EM PREPARO. Ele foi mantido em Pedidos e o cliente sera avisado quando estiver disponivel para retirada.",
+        "PEDIDO AINDA NAO ESTA EM PREPARO. Ele foi mantido em Pedidos e o cliente sera avisado quando estiver dispon?vel para retirada.",
       redemption: {
         redemptionId: scannedRedemption.id,
         redemptionCode: scannedRedemption.redemption_code,
@@ -1476,7 +1476,7 @@ export async function validateComboRedemptionScan(input: {
     return {
       allowed: false,
       result: "denied",
-      message: "Nao foi possivel validar este combo agora.",
+      message: "N?o foi poss?vel validar este combo agora.",
     };
   }
 

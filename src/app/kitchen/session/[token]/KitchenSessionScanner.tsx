@@ -130,7 +130,7 @@ function OrderCard({
       <dl>
         <div>
           <dt>Cliente</dt>
-          <dd>{order.customerName ?? "Nao informado"}</dd>
+          <dd>{order.customerName ?? "N?o informado"}</dd>
         </div>
         {order.customerPhoneLast4 ? (
           <div>
@@ -277,7 +277,7 @@ export function KitchenSessionScanner({
       );
       await refresh();
     } catch {
-      setNotice("Nao foi possivel colocar o pedido em preparo.");
+      setNotice("N?o foi poss?vel colocar o pedido em preparo.");
     } finally {
       setWorkingId(null);
     }

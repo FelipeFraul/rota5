@@ -50,7 +50,7 @@ function buildLabelSvg({
   const visual = OFFICIAL_TABLE_MAP_MARKER_VISUAL;
   const fill = isUnavailable
     ? visual.unavailableColor
-    : type === "bistro"
+    : type === "bistr?"
       ? visual.bistroColor
       : visual.tableColor;
   const shadowFill = isUnavailable ? visual.unavailableTextShadowColor : visual.textShadowColor;
@@ -138,7 +138,7 @@ async function renderMarkerImage({
   const isUnavailable = label === "X";
   const fill = isUnavailable
     ? visual.unavailableColor
-    : type === "bistro"
+    : type === "bistr?"
       ? visual.bistroColor
       : visual.tableColor;
   const shadow = await renderMarkerText({

@@ -1,4 +1,4 @@
-export type OfficialTableMapPlaceType = "bistro" | "table";
+export type OfficialTableMapPlaceType = "bistr?" | "table";
 export type OfficialTableMapEnvironment = "ground_floor" | "mezzanine";
 
 export type OfficialTableMapPlace = {
@@ -32,19 +32,19 @@ export const OFFICIAL_TABLE_MAP_MARKER_VISUAL = {
 } as const;
 
 export const OFFICIAL_TABLE_MAP_PLACES: readonly OfficialTableMapPlaceMetadata[] = [
-  { code: "01", type: "bistro", environment: "ground_floor", capacity: 6 },
-  { code: "02", type: "bistro", environment: "ground_floor", capacity: 2 },
-  { code: "03", type: "bistro", environment: "ground_floor", capacity: 6 },
-  { code: "04", type: "bistro", environment: "ground_floor", capacity: 6 },
-  { code: "05", type: "bistro", environment: "ground_floor", capacity: 6 },
-  { code: "06", type: "bistro", environment: "ground_floor", capacity: 4 },
-  { code: "07", type: "bistro", environment: "ground_floor", capacity: 4 },
-  { code: "08", type: "bistro", environment: "ground_floor", capacity: 4 },
-  { code: "09", type: "bistro", environment: "ground_floor", capacity: 6 },
-  { code: "10", type: "bistro", environment: "ground_floor", capacity: 2 },
-  { code: "11", type: "bistro", environment: "ground_floor", capacity: 6 },
-  { code: "12", type: "bistro", environment: "ground_floor", capacity: 4 },
-  { code: "13", type: "bistro", environment: "ground_floor", capacity: 2 },
+  { code: "01", type: "bistr?", environment: "ground_floor", capacity: 6 },
+  { code: "02", type: "bistr?", environment: "ground_floor", capacity: 2 },
+  { code: "03", type: "bistr?", environment: "ground_floor", capacity: 6 },
+  { code: "04", type: "bistr?", environment: "ground_floor", capacity: 6 },
+  { code: "05", type: "bistr?", environment: "ground_floor", capacity: 6 },
+  { code: "06", type: "bistr?", environment: "ground_floor", capacity: 4 },
+  { code: "07", type: "bistr?", environment: "ground_floor", capacity: 4 },
+  { code: "08", type: "bistr?", environment: "ground_floor", capacity: 4 },
+  { code: "09", type: "bistr?", environment: "ground_floor", capacity: 6 },
+  { code: "10", type: "bistr?", environment: "ground_floor", capacity: 2 },
+  { code: "11", type: "bistr?", environment: "ground_floor", capacity: 6 },
+  { code: "12", type: "bistr?", environment: "ground_floor", capacity: 4 },
+  { code: "13", type: "bistr?", environment: "ground_floor", capacity: 2 },
 
   { code: "20", type: "table", environment: "mezzanine", capacity: 8 },
   { code: "21", type: "table", environment: "mezzanine", capacity: 2 },
@@ -62,14 +62,14 @@ export const OFFICIAL_TABLE_MAP_PLACES: readonly OfficialTableMapPlaceMetadata[]
   { code: "33", type: "table", environment: "mezzanine", capacity: 2 },
   { code: "40", type: "table", environment: "mezzanine", capacity: 2 },
   { code: "41", type: "table", environment: "mezzanine", capacity: 8 },
-  { code: "42", type: "bistro", environment: "mezzanine", capacity: 4 },
-  { code: "43", type: "bistro", environment: "mezzanine", capacity: 4 },
-  { code: "44", type: "bistro", environment: "mezzanine", capacity: 4 },
-  { code: "45", type: "bistro", environment: "mezzanine", capacity: 4 },
+  { code: "42", type: "bistr?", environment: "mezzanine", capacity: 4 },
+  { code: "43", type: "bistr?", environment: "mezzanine", capacity: 4 },
+  { code: "44", type: "bistr?", environment: "mezzanine", capacity: 4 },
+  { code: "45", type: "bistr?", environment: "mezzanine", capacity: 4 },
   { code: "46", type: "table", environment: "mezzanine", capacity: 8 },
   { code: "51", type: "table", environment: "mezzanine", capacity: 4 },
   { code: "52", type: "table", environment: "mezzanine", capacity: 4 },
-  { code: "53", type: "bistro", environment: "mezzanine", capacity: 4 },
+  { code: "53", type: "bistr?", environment: "mezzanine", capacity: 4 },
   { code: "54", type: "table", environment: "mezzanine", capacity: 4 },
   { code: "55", type: "table", environment: "mezzanine", capacity: 4 },
   { code: "56", type: "table", environment: "mezzanine", capacity: 4 },

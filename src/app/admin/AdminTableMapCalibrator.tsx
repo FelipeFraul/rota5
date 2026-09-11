@@ -58,7 +58,7 @@ function getPayloadMessage(payload: unknown, fallback: string) {
 
 function getMarkerColor(place: OfficialTableMapPlace, mode: DisplayMode) {
   if (mode === "unavailable") return OFFICIAL_TABLE_MAP_MARKER_VISUAL.unavailableColor;
-  return place.type === "bistro"
+  return place.type === "bistr?"
     ? OFFICIAL_TABLE_MAP_MARKER_VISUAL.bistroColor
     : OFFICIAL_TABLE_MAP_MARKER_VISUAL.tableColor;
 }
@@ -116,7 +116,7 @@ export function AdminTableMapCalibrator({ places, embedded = false }: AdminTable
           setLoadedPlaces([]);
           setDraftPlaces(clonePlaces(emptyDraftPlaces));
           setActiveCode(emptyDraftPlaces[0]?.code ?? null);
-          setSaveMessage(`${getPayloadMessage(payload, "Nao foi possivel carregar as coordenadas salvas do mapa.")} Calibre os pontos e salve para criar os registros.`);
+          setSaveMessage(`${getPayloadMessage(payload, "N?o foi poss?vel carregar as coordenadas salvas do mapa.")} Calibre os pontos e salve para criar os registros.`);
           return;
         }
 
@@ -209,7 +209,7 @@ export function AdminTableMapCalibrator({ places, embedded = false }: AdminTable
       const payload = await response.json().catch(() => null);
 
       if (!response.ok || !payload?.ok || typeof payload.imageUrl !== "string") {
-        setSaveMessage(getPayloadMessage(payload, "Nao foi possivel visualizar a imagem final."));
+        setSaveMessage(getPayloadMessage(payload, "N?o foi poss?vel visualizar a imagem final."));
         return;
       }
 
@@ -237,7 +237,7 @@ export function AdminTableMapCalibrator({ places, embedded = false }: AdminTable
       const payload = await response.json().catch(() => null);
 
       if (!response.ok || !payload?.ok || !Array.isArray(payload.places)) {
-        setSaveMessage(getPayloadMessage(payload, "Nao foi possivel salvar o mapa."));
+        setSaveMessage(getPayloadMessage(payload, "N?o foi poss?vel salvar o mapa."));
         return;
       }
 

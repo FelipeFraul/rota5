@@ -701,7 +701,7 @@ export async function GET(request: Request) {
     if (error) {
       console.error("[admin-events] fast rpc failed", error);
       return NextResponse.json(
-        { ok: false, message: "Nao foi possivel listar os eventos." },
+        { ok: false, message: "N?o foi poss?vel listar os eventos." },
         { status: 500 },
       );
     }
@@ -770,7 +770,7 @@ export async function GET(request: Request) {
     } catch (error) {
       console.error("[admin-events] failed to build general dashboard", error);
       return NextResponse.json(
-        { ok: false, message: "Nao foi possivel carregar o dashboard geral." },
+        { ok: false, message: "N?o foi poss?vel carregar o dashboard geral." },
         { status: 500 },
       );
     }
@@ -809,7 +809,7 @@ export async function GET(request: Request) {
     } catch (error) {
       console.error("[admin-events] failed to load contact activity", error);
       return NextResponse.json(
-        { ok: false, message: "Nao foi possivel carregar os contatos." },
+        { ok: false, message: "N?o foi poss?vel carregar os contatos." },
         { status: 500 },
       );
     }
@@ -825,7 +825,7 @@ export async function GET(request: Request) {
 
   if (!result.ok) {
     return NextResponse.json(
-      { ok: false, message: "Nao foi possivel listar os eventos." },
+      { ok: false, message: "N?o foi poss?vel listar os eventos." },
       { status: 500 },
     );
   }

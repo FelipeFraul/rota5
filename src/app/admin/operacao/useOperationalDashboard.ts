@@ -55,7 +55,7 @@ export function useOperationalDashboard(eventId: string | null, comparisonDays: 
         const payload = (await response.json()) as OperationalDashboardResponse;
 
         if (!response.ok || !payload.ok || !payload.dashboard) {
-          throw new Error(payload.message ?? "Nao foi possivel carregar o painel operacional.");
+          throw new Error(payload.message ?? "N?o foi poss?vel carregar o painel operacional.");
         }
 
         setState({
@@ -69,7 +69,7 @@ export function useOperationalDashboard(eventId: string | null, comparisonDays: 
         if (controller.signal.aborted) return;
         setState((current) => ({
           ...current,
-          error: error instanceof Error ? error.message : "Nao foi possivel carregar o painel operacional.",
+          error: error instanceof Error ? error.message : "N?o foi poss?vel carregar o painel operacional.",
           isLoading: false,
           isRefreshing: false,
         }));

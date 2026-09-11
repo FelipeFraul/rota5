@@ -174,7 +174,7 @@ export default function ComboCheckoutClient({
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error?.message ?? "Nao foi possivel gerar o Pix.");
+        throw new Error(data.error?.message ?? "N?o foi poss?vel gerar o Pix.");
       }
 
       if (data.status === "approved") {
@@ -187,7 +187,7 @@ export default function ComboCheckoutClient({
       setPixCopied(false);
       setMessage(null);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Nao foi possivel gerar o Pix.");
+      setMessage(error instanceof Error ? error.message : "N?o foi poss?vel gerar o Pix.");
     } finally {
       setLoading(false);
     }
@@ -200,7 +200,7 @@ export default function ComboCheckoutClient({
 
     if (!copied) {
       setPixCopied(false);
-      setMessage("Nao consegui copiar automaticamente. Selecione o codigo Pix e copie manualmente.");
+      setMessage("N?o consegui copiar automaticamente. Selecione o c?digo Pix e copie manualmente.");
       return;
     }
 
@@ -340,7 +340,7 @@ export default function ComboCheckoutClient({
                 onClick={copyPixCode}
                 aria-live="polite"
               >
-                {pixCopied ? "Copiado" : "Copiar codigo Pix"}
+                {pixCopied ? "Copiado" : "Copiar c?digo Pix"}
               </button>
             </div>
           )}

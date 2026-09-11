@@ -19,7 +19,7 @@ function getErrorMessage(error: unknown) {
 export async function GET(request: Request) {
   const auth = await requireAdminEventEditorSession();
   if (!auth.ok) {
-    return NextResponse.json({ ok: false, message: "Nao autorizado." }, { status: 401 });
+    return NextResponse.json({ ok: false, message: "N?o autorizado." }, { status: 401 });
   }
 
   const url = new URL(request.url);
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
       return NextResponse.json(
         {
           ok: false,
-          message: "Nao foi possivel renderizar a imagem final do mapa.",
+          message: "N?o foi poss?vel renderizar a imagem final do mapa.",
           reason: "database_error",
           details: getErrorMessage(error),
         },
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         ok: false,
-        message: "Nao foi possivel carregar as coordenadas salvas do mapa.",
+        message: "N?o foi poss?vel carregar as coordenadas salvas do mapa.",
         reason: "database_error",
         details: getErrorMessage(error),
       },
@@ -71,7 +71,7 @@ export async function GET(request: Request) {
 export async function PUT(request: Request) {
   const auth = await requireAdminEventEditorSession();
   if (!auth.ok) {
-    return NextResponse.json({ ok: false, message: "Nao autorizado." }, { status: 401 });
+    return NextResponse.json({ ok: false, message: "N?o autorizado." }, { status: 401 });
   }
 
   if (!assertAdminCsrf(request, auth.session)) {

@@ -225,7 +225,7 @@ export type TicketConversationCart = {
 
 export type TicketConversationTableMapPlace = {
   code: string;
-  type: "bistro" | "table";
+  type: "bistr?" | "table";
   environment: "ground_floor" | "mezzanine";
   capacity?: 2 | 4 | 6 | 8;
 };
