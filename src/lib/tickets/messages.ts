@@ -1,7 +1,7 @@
-﻿const PUBLIC_HOME_MESSAGE =
-  "OlÃ¡, bem-vindo(a) ao Rota5! ðŸ¤ ";
+const PUBLIC_HOME_MESSAGE =
+  "Ol\u00e1, bem-vindo(a) ao Rota5!";
 const PUBLIC_HOME_COMMANDS_MESSAGE =
-  "> Digite *SHOW* para ver o proximo show\n>\n> Digite *TODOS* para ver proximos shows\n>\n> Digite *ENVIAR* para reenviar ingresso\n>\n> Digite *AJUDA* em caso de dÃºvidas\n>\n> Digite *NOVO* para uma nova pesquisa";
+  "Digite *SHOW* para ver o proximo show\n\nDigite *TODOS* para ver proximos shows\n\nDigite *ENVIAR* para reenviar ingresso\n\nDigite *AJUDA* em caso de d\u00favidas\n\nDigite *NOVO* para uma nova pesquisa";
 
 const PUBLIC_HOME_PROMPT = [
   PUBLIC_HOME_MESSAGE,
