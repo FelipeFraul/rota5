@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { formatComboOfferAfterPurchaseTiming } from "@/lib/tickets/comboOfferCron";
 import { requireAdminEventEditorSession } from "@/lib/tickets/services/adminWebAuth";
 
 type MaybeArray<T> = T | T[] | null | undefined;
@@ -54,10 +55,7 @@ function safeDisplayPriority(value: number | null | undefined) {
 
 function formatComboOfferTiming(offer: AdminComboOfferRow) {
   if (offer.send_timing_type === "custom") {
-    const minutes = Number(offer.send_offset_minutes ?? 0);
-    if (minutes >= 1440 && minutes % 1440 === 0) return `${minutes / 1440}d antes`;
-    if (minutes >= 60 && minutes % 60 === 0) return `${minutes / 60}h antes`;
-    return `${minutes || 1}min antes`;
+    return formatComboOfferAfterPurchaseTiming(Number(offer.send_offset_minutes ?? 0));
   }
   if (offer.send_timing_type === "event_day_noon") return "Meio-dia do evento";
   if (offer.send_timing_type === "one_hour_before") return "1h antes do evento";

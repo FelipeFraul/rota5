@@ -53,6 +53,7 @@ export type AdminEventSummary = {
   eventId: string;
   title: string;
   artistName: string;
+  artistIcon: string | null;
   description: string | null;
   city: string;
   state: string;
@@ -95,6 +96,7 @@ type EventRow = {
   id: string;
   title: string;
   artist_name: string;
+  artist_icon: string | null;
   description: string | null;
   city: string;
   state: string;
@@ -1015,6 +1017,7 @@ function toSummary(
     eventId: event.id,
     title: event.title,
     artistName: event.artist_name,
+    artistIcon: event.artist_icon ?? null,
     description: event.description,
     city: event.city,
     state: event.state,
@@ -1057,14 +1060,14 @@ export async function listAdminEvents(input: {
     queries: [] as AdminEventsQueryMetric[],
   };
   const runEventsQuery = async (includeOwnership: boolean) => {
-    let fields = "id, title, artist_name, description, city, state, status, image_url, venue_id, created_at, updated_at, venues(name)";
+    let fields = "id, title, artist_name, artist_icon, description, city, state, status, image_url, venue_id, created_at, updated_at, venues(name)";
     if (includeOwnership) {
-      fields = "id, title, artist_name, description, city, state, status, image_url, venue_id, created_at, updated_at, created_by_admin_user_id, created_by_admin_phone, venues(name)";
+      fields = "id, title, artist_name, artist_icon, description, city, state, status, image_url, venue_id, created_at, updated_at, created_by_admin_user_id, created_by_admin_phone, venues(name)";
     }
     if (!includeSalesOverview) {
-      fields = "id, title, artist_name, city, state, status, image_url, venue_id, created_at, updated_at, venues(name), event_sessions(id, event_id, venue_id, starts_at, status, venues(name))";
+      fields = "id, title, artist_name, artist_icon, city, state, status, image_url, venue_id, created_at, updated_at, venues(name), event_sessions(id, event_id, venue_id, starts_at, status, venues(name))";
       if (includeOwnership) {
-        fields = "id, title, artist_name, city, state, status, image_url, venue_id, created_at, updated_at, created_by_admin_user_id, created_by_admin_phone, venues(name), event_sessions(id, event_id, venue_id, starts_at, status, venues(name))";
+        fields = "id, title, artist_name, artist_icon, city, state, status, image_url, venue_id, created_at, updated_at, created_by_admin_user_id, created_by_admin_phone, venues(name), event_sessions(id, event_id, venue_id, starts_at, status, venues(name))";
       }
     }
     let query = supabase
@@ -1312,8 +1315,8 @@ export async function getAdminEventDetails(eventId: string) {
       .from("events")
       .select(
         includeOwnership
-          ? "id, title, artist_name, description, city, state, status, image_url, venue_id, created_at, created_by_admin_user_id, created_by_admin_phone, venues(name)"
-          : "id, title, artist_name, description, city, state, status, image_url, venue_id, created_at, venues(name)",
+          ? "id, title, artist_name, artist_icon, description, city, state, status, image_url, venue_id, created_at, created_by_admin_user_id, created_by_admin_phone, venues(name)"
+          : "id, title, artist_name, artist_icon, description, city, state, status, image_url, venue_id, created_at, venues(name)",
       )
       .eq("id", eventId)
       .maybeSingle<EventRow>();
@@ -1501,6 +1504,7 @@ export async function listAdminVenues(input: {
 export async function createAdminEvent(input: {
   title: string;
   artistName?: string | null;
+  artistIcon?: string | null;
   city: string;
   state: string;
   venueName: string;
@@ -1528,6 +1532,7 @@ export async function createAdminEvent(input: {
   const eventPayload = {
     title,
     artist_name: artistName,
+    artist_icon: input.artistIcon?.trim() || "🎤",
     description: input.description?.trim() || null,
     city: input.city.trim(),
     state: input.state.trim().toUpperCase(),
@@ -1674,10 +1679,10 @@ export async function duplicateAdminEvent(input: {
   const { data: sourceEvent, error: sourceEventError } = await supabase
     .from("events")
     .select(
-      "id, title, artist_name, description, city, state, image_url, venue_id, venues(name)",
+      "id, title, artist_name, artist_icon, description, city, state, image_url, venue_id, venues(name)",
     )
     .eq("id", input.eventId)
-    .single<Pick<EventRow, "id" | "title" | "artist_name" | "description" | "city" | "state" | "image_url" | "venue_id" | "venues">>();
+    .single<Pick<EventRow, "id" | "title" | "artist_name" | "artist_icon" | "description" | "city" | "state" | "image_url" | "venue_id" | "venues">>();
 
   if (sourceEventError || !sourceEvent) {
     return { ok: false as const, reason: "source_not_found" as const, error: sourceEventError };
@@ -1707,7 +1712,8 @@ export async function duplicateAdminEvent(input: {
   const duplicatedTitle = `${sourceEvent.title} - CÓPIA`;
   const eventPayload = {
     title: duplicatedTitle,
-    artist_name: duplicatedTitle,
+    artist_name: sourceEvent.artist_name,
+    artist_icon: sourceEvent.artist_icon ?? "🎤",
     description: sourceEvent.description,
     city: sourceEvent.city,
     state: sourceEvent.state,
@@ -2185,6 +2191,7 @@ export async function updateAdminEvent(
   values: Partial<{
     title: string;
     artist_name: string;
+    artist_icon: string | null;
     description: string | null;
     city: string;
     state: string;

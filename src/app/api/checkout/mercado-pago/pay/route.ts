@@ -16,6 +16,14 @@ const MAX_PAYMENT_BYTES = 32 * 1024;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+function onlyDigits(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function isValidCheckoutEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 function extractOrderIdFromRequestUrl(request: Request) {
   const referer = request.headers.get("referer");
 
@@ -208,6 +216,17 @@ export async function POST(request: Request) {
 
   if (email != null && typeof email !== "string") {
     return badRequest("E-mail inválido.");
+  }
+
+  if (method === "pix") {
+    const emailValue = typeof email === "string" ? email : "";
+    const cpfValue = typeof identificationNumber === "string" ? identificationNumber : "";
+    if (!isValidCheckoutEmail(emailValue)) {
+      return badRequest("Informe um e-mail valido.");
+    }
+    if (onlyDigits(cpfValue).length !== 11) {
+      return badRequest("Informe o CPF com 11 digitos.");
+    }
   }
 
   const result = await paySelfHostedCheckout({

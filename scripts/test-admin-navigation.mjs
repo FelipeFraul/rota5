@@ -41,7 +41,7 @@ assert.equal(result.nextContext.marker, 3);
 
 const branchPoint = result.nextContext;
 result = transition(branchPoint, "2", "admin_event_edit_menu", 5, "NOVA TELA 4");
-result = transition(result.nextContext, "voltar", "admin_events_list", 999, "ANTIGA");
+result = transition(result.nextContext, "voltei", "admin_events_list", 999, "ANTIGA");
 assert.equal(result.reply, "TELA 3", "o ramo abandonado não reaparece");
 assert.equal(result.nextContext.marker, 3);
 

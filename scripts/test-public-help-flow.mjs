@@ -9,6 +9,7 @@ import {
   getPublicHelpTopicById,
   searchPublicHelpTopics,
 } from "../src/lib/tickets/services/publicHelp.ts";
+import { isPublicHelpBackIntent } from "../src/lib/tickets/services/publicHelpFlow.ts";
 
 const router = readFileSync(
   new URL("../src/lib/tickets/router.ts", import.meta.url),
@@ -111,7 +112,13 @@ const expectedHelpCommandBlock = `export function buildPublicHelpCommandResponse
 const expectedHelpBackIntentBlock = `export function isPublicHelpBackIntent(text: string) {
   const normalized = normalizeHelpFlowText(text);
 
-  return normalized === "voltar" || normalized === "volta";
+  return (
+    normalized === "voltar" ||
+    normalized === "volta" ||
+    normalized === "voltei" ||
+    normalized === "vortei" ||
+    normalized === "back"
+  );
 }
 
 `;
@@ -236,7 +243,7 @@ export function buildPublicHelpMoreResultsResponse({
   if (!baseContext.publicHelp?.hasMore) {
     return {
       reply:
-        "Não encontrei outros tópicos para essa pesquisa. Digite outras duas palavras para uma nova busca de ajuda ou *VOLTAR* para voltar onde estava.",
+        "Não encontrei outros tópicos para essa pesquisa. Digite outras duas palavras para uma nova busca de ajuda ou *Vortei* para voltar onde estava.",
       nextContext: baseContext,
     };
   }
@@ -486,7 +493,7 @@ test("selecao numerica responde topico encontrado sem trocar contexto", () => {
       "*COMO PAGAR POR PIX?*",
       "Abra o link de pagamento e gere o código Pix. Copie o Pix copia e cola, pague no app do banco e aguarde a confirmação. A tela muda para pagamento aprovado quando o sistema recebe a confirmação.",
       "",
-      "Para escolher uma pergunta da pesquisa anterior, digite o número ou digite outras duas palavras para uma nova pesquisa de ajuda. Para voltar onde estava, digite *VOLTAR*",
+      "Para escolher uma pergunta da pesquisa anterior, digite o número ou digite outras duas palavras para uma nova pesquisa de ajuda. Para voltar onde estava, digite *Vortei*",
     ].join("\n"),
   );
 });
@@ -523,8 +530,10 @@ test("SAIR dentro da ajuda volta ao inicio sem compra admin ou reenvio", () => {
   assert.doesNotMatch(helpFlowBlock, /listPaidTicketResendGroupsForPhone/);
 });
 
-test("VOLTAR retorna ao estado anterior salvo no publicHelp", () => {
+test("voltei retorna ao estado anterior salvo no publicHelp", () => {
   assert.equal(normalizeNewlines(publicHelpReturnContextBlock), expectedPublicHelpReturnContextBlock);
+  assert.equal(isPublicHelpBackIntent("voltei"), true);
+  assert.equal(isPublicHelpBackIntent("vortei"), true);
 });
 
 test("fluxo de ajuda nao intercepta fora dos estados de ajuda", () => {

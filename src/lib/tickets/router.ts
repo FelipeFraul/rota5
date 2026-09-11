@@ -1,7 +1,7 @@
-﻿import "server-only";
+import "server-only";
 
 import { getEnv } from "@/lib/env";
-import { logError } from "@/lib/logger";
+import { logError, logWarn } from "@/lib/logger";
 import {
   buildInitialConversationState,
   type TicketConversationCart,
@@ -27,6 +27,8 @@ import {
   formatEventDate,
   formatEventLocation,
   formatOptionLine,
+  formatPublicArtistLine,
+  formatPublicEventName,
   formatPublicEventTitle,
 } from "@/lib/tickets/eventFormatting";
 import {
@@ -552,7 +554,7 @@ const SOCIAL_REPLY_PATTERN =
 const COURTESY_PATTERN =
   /^(?:por favor|obrigado|obrigada|valeu|obg|brigado|brigada)$/;
 const ACTIVE_FLOW_REPLY_PATTERN =
-  /^(?:\d+|sim|s|nao|não|n|esse|essa|quero esse|quero essa|duas|dois|uma|um|meia|inteira|comprar|voltar|back|cancelar)$/;
+  /^(?:\d+|sim|s|nao|não|n|esse|essa|quero esse|quero essa|duas|dois|uma|um|meia|inteira|comprar|voltar|volta|voltei|vortei|back|cancelar)$/;
 const CONVERSATIONAL_FILLER_WORDS = new Set([
   "amigo",
   "amiga",
@@ -1381,9 +1383,11 @@ export function shouldProcessImmediately({
     normalizedMessage === "menu" ||
     normalizedMessage === "inicio" ||
     normalizedMessage === "zero bala" ||
+    normalizedMessage === "novo" ||
     normalizedMessage === "new" ||
     normalizedMessage === "sair" ||
     normalizedMessage === "manda" ||
+    normalizedMessage === "enviar" ||
     normalizedMessage === "again" ||
     normalizedMessage === "reenviar" ||
     normalizedMessage === "reenviar ingresso"
@@ -1716,6 +1720,7 @@ function buildEventOptions(
     sessionId: event.sessionId,
     title: event.title,
     artistName: event.artistName,
+    artistIcon: event.artistIcon ?? null,
     description: event.description,
     startsAt: event.startsAt,
     city: event.city,
@@ -1759,7 +1764,6 @@ function formatSingleEventReply(
   event: TicketEventSearchResult,
   actions: ReturnType<typeof buildPublicEventActions>,
 ) {
-  const title = formatPublicEventTitle(event.title, event.artistName);
   const details = [
     `| Local: *${formatEventLocation(event)}*`,
     `| Data: *${formatEventDate(event.startsAt)}*`,
@@ -1767,7 +1771,8 @@ function formatSingleEventReply(
   const options = formatPublicEventActionLines(event, actions);
 
   return [
-    `🎟️ *${title}*`,
+    `🎟️ *${formatPublicEventName(event.title)}*`,
+    formatPublicArtistLine(event.artistName, event.artistIcon),
     ...details,
     "",
     ...options,
@@ -1778,7 +1783,6 @@ function formatSingleEventOptionReply(
   event: TicketConversationEventOption,
   actions: ReturnType<typeof buildPublicEventActions>,
 ) {
-  const title = formatPublicEventTitle(event.title, event.artistName);
   const details = [
     `| Local: *${formatEventLocation(event)}*`,
     `| Data: *${formatEventDate(event.startsAt)}*`,
@@ -1786,7 +1790,8 @@ function formatSingleEventOptionReply(
   const options = formatPublicEventActionLines(event, actions);
 
   return [
-    `🎟️ *${title}*`,
+    `🎟️ *${formatPublicEventName(event.title)}*`,
+    formatPublicArtistLine(event.artistName, event.artistIcon),
     ...details,
     "",
     ...options,
@@ -1951,7 +1956,8 @@ function formatSingleEventMoreInfo(
   const description = event.description?.trim();
 
   return [
-    `🎟️ *${formatPublicEventTitle(event.title, event.artistName)}*`,
+    `🎟️ *${formatPublicEventName(event.title)}*`,
+    formatPublicArtistLine(event.artistName, event.artistIcon),
     `| Local: *${formatEventLocation(event)}*`,
     `| Data: *${formatEventDate(event.startsAt)}*`,
     "",
@@ -1979,6 +1985,7 @@ function buildSelectedEvent(
     sessionId: event.sessionId,
     title: event.title,
     artistName: event.artistName,
+    artistIcon: event.artistIcon ?? null,
     description: event.description,
     startsAt: event.startsAt,
     city: event.city,
@@ -2001,6 +2008,7 @@ function buildSelectedEventFromContext(
     sessionId: event.sessionId,
     title: event.title,
     artistName: event.artistName,
+    artistIcon: event.artistIcon ?? null,
     description: event.description,
     startsAt: event.startsAt,
     city: event.city,
@@ -2175,7 +2183,7 @@ function formatSectionsReply({
     "",
     sectionLines.join("\n---\n"),
     "",
-    'Digite *BACK* para voltar.',
+    'Digite *Vortei* para voltar.',
     "Para uma nova pesquisa, ZERO BALA",
   ].join("\n");
 }
@@ -2198,7 +2206,7 @@ function formatQuantityPrompt(
     isFree
       ? "Digite o número de ingressos gratuitos, até 4 por pedido. Ex: 2"
       : 'Digite o número de ingressos, *EX: 4*',
-    'Digite *BACK* para voltar.',
+    'Digite *Vortei* para voltar.',
     "Para uma nova pesquisa, ZERO BALA",
   ].join("\n");
 }
@@ -2372,7 +2380,7 @@ function formatCartDecisionReply({ cart }: { cart: TicketConversationCart }) {
       : []),
     "",
     "Digite *1* para finalizar a compra",
-    'Digite *BACK* para voltar.',
+    'Digite *Vortei* para voltar.',
     "Para uma nova pesquisa, ZERO BALA",
   ].join("\n");
 }
@@ -2393,7 +2401,7 @@ function formatTableMapSelectionReply({
     "",
     'Digite o número da mesa ou o bistrô para reservar, *EX: 12*',
     'Digite *0* se não quer mesa ou bistrô.',
-    'Digite *BACK* para voltar.',
+    'Digite *Vortei* para voltar.',
     "Para uma nova pesquisa, ZERO BALA",
   ].join("\n");
 }
@@ -3023,7 +3031,7 @@ function renderAdminSubmenu(config: AdminSubmenuConfig) {
       : []),
     "",
     "Responda com o número da opção.",
-    'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
+    'Digite *Vortei* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
   ].join("\n");
 }
 
@@ -3083,7 +3091,7 @@ function renderAdminEventListFilterMenu() {
     formatOptionLine(4, "todos os eventos"),
     "",
     "Responda com o número da opção.",
-    'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
+    'Digite *Vortei* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
   ].join("\n");
 }
 
@@ -3133,7 +3141,7 @@ function parseAdminMainMenuOption(text: string) {
 function parseAdminSubmenuOption(text: string) {
   const normalized = normalizeAdminText(text);
 
-  if (normalized === "voltar" || normalized === "volta" || normalized === "cancelar") {
+  if (isBackText(text) || normalized === "cancelar") {
     return "back" as const;
   }
 
@@ -3679,7 +3687,7 @@ function formatReservationReply({
     `> Reserva válida até: *${formatTime(reservation.expiresAt)}*`,
     "",
     "Para comprar, digite *COMPRAR*",
-    'Digite *BACK* para voltar.',
+    'Digite *Vortei* para voltar.',
     "Para uma nova pesquisa, ZERO BALA",
   ].join("\n");
 }
@@ -3718,7 +3726,7 @@ function formatReservationContextReply({
     `> Reserva válida até: *${formatTime(reservation.expiresAt)}*`,
     "",
     "Para comprar, digite *COMPRAR*",
-    'Digite *BACK* para voltar.',
+    'Digite *Vortei* para voltar.',
     "Para uma nova pesquisa, ZERO BALA",
   ].join("\n");
 }
@@ -4122,7 +4130,7 @@ function formatPaidTicketResendOptions(groups: PaidTicketResendGroup[]) {
       ),
     ),
     "",
-    "Digite *BACK* para voltar.",
+    "Digite *Vortei* para voltar.",
     "Para uma nova pesquisa, ZERO BALA",
   ].join("\n");
 }
@@ -4135,55 +4143,15 @@ function formatParticipantContactsPrompt(expectedContactsCount: number) {
   ].join("\n");
 }
 
-const PARTICIPANT_FORWARDING_HEADER =
-  "*ENVIE A MENSAGEM ABAIXO PARA SEU(S) ACOMPANHANTE(S).*";
-
-function getRockBarOfficialWhatsAppPhone() {
-  const phone = getEnv().ROCK_BAR_OFFICIAL_WHATSAPP_PHONE?.trim();
-  const normalizedPhone = normalizeWhatsAppPhone(phone);
-
-  if (!phone || !normalizedPhone) {
-    logError("Skipped participant forwarding instructions without valid Rock Bar official WhatsApp phone", {
-      code: "missing_rock_bar_official_whatsapp_phone",
-    });
-    return null;
-  }
-
-  const formattedPhone = formatWhatsAppPhoneForDisplay(normalizedPhone);
-
-  if (!formattedPhone) {
-    logError("Skipped participant forwarding instructions without valid Rock Bar official WhatsApp phone", {
-      code: "invalid_rock_bar_official_whatsapp_phone",
-    });
-    return null;
-  }
-
-  return formattedPhone;
-}
-
-function formatWhatsAppPhoneForDisplay(phone: string) {
-  const withoutCountry = phone.startsWith("55") ? phone.slice(2) : phone;
-  const areaCode = withoutCountry.slice(0, 2);
-  const local = withoutCountry.slice(2);
-
-  if (areaCode.length !== 2 || !/^\d{8,9}$/.test(local)) {
-    return null;
-  }
-
-  return local.length === 9
-    ? `${areaCode} ${local.slice(0, 5)}-${local.slice(5)}`
-    : `${areaCode} ${local.slice(0, 4)}-${local.slice(4)}`;
-}
-
-function formatParticipantForwardingMessage(eventTitle: string) {
-  const officialPhone = getRockBarOfficialWhatsAppPhone();
-
-  if (!officialPhone) return null;
+function formatParticipantForwardingMessage(eventTitle?: string | null) {
+  const displayEventTitle = String(eventTitle ?? "evento").trim() || "evento";
 
   return [
-    `Acabei de comprar nossos ingressos para o *${eventTitle}*. Para receber o seu ingresso, envie uma mensagem com o texto *MEU INGRESSO* para o Rock Bar Pub no telefone abaixo:`,
+    "*INGRESSOS*",
     "",
-    `*${officialPhone}*`,
+    `Acabei de comprar nossos ingressos para o *${displayEventTitle}*. Para receber o seu ingresso, envie uma mensagem com o texto *MEU INGRESSO* para o Rota5 no telefone abaixo:`,
+    "",
+    "*15 99642-6671*",
   ].join("\n");
 }
 
@@ -4743,7 +4711,7 @@ async function handleTicketDeliverySelection({
     );
     const buyerQrTicketId = buyerDelivery.qrImages[0]?.ticketId;
     const participantForwardingMessage = formatParticipantForwardingMessage(
-      buyerReservedTickets[0].eventTitle,
+      buyerReservedTickets[0]?.eventTitle,
     );
 
     if (!buyerQrTicketId) {
@@ -4758,22 +4726,10 @@ async function handleTicketDeliverySelection({
       ? [
           {
             type: "text" as const,
-            body: PARTICIPANT_FORWARDING_HEADER,
-            suppressTitle: true,
-            requiresSuccessfulBuyerDeliveryTicketId: buyerQrTicketId,
-            outboundIdempotencyKey: `paid-ticket-order:${orderId}:participant-forward-title:v1`,
-            outboundReason: "participant_forward_title",
-            outboundBusinessContext: {
-              order_id: orderId,
-              buyer_delivery_ticket_id: buyerQrTicketId,
-            },
-          },
-          {
-            type: "text" as const,
             body: participantForwardingMessage,
             suppressTitle: true,
             requiresSuccessfulBuyerDeliveryTicketId: buyerQrTicketId,
-            outboundIdempotencyKey: `paid-ticket-order:${orderId}:participant-forward-instruction:v1`,
+            outboundIdempotencyKey: `paid-ticket-order:${orderId}:participant-forwarding:v1`,
             outboundReason: "participant_forward_instruction",
             outboundBusinessContext: {
               order_id: orderId,
@@ -4790,7 +4746,7 @@ async function handleTicketDeliverySelection({
 
     return {
       reply: participantForwardingMessage
-        ? PARTICIPANT_FORWARDING_HEADER
+        ? participantForwardingMessage
         : buyerDelivery.message,
       suppressTitle: true,
       outboundMessages,
@@ -5008,7 +4964,13 @@ function isCancelText(text: string) {
 function isBackText(text: string) {
   const normalized = normalizeAdminText(text);
 
-  return normalized === "voltar" || normalized === "volta";
+  return (
+    normalized === "voltar" ||
+    normalized === "volta" ||
+    normalized === "voltei" ||
+    normalized === "vortei" ||
+    normalized === "back"
+  );
 }
 
 function isAdminHomeText(text: string) {
@@ -5041,7 +5003,7 @@ function withAdminNavigationHint(reply: string) {
   return [
     reply,
     "",
-    'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
+    'Digite *Vortei* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
   ].join("\n");
 }
 
@@ -5249,7 +5211,7 @@ function renderGateAccessFilterMenu() {
     formatOptionLine(2, "pausados"),
     "",
     "Responda com o número da opção.",
-    'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
+    'Digite *Vortei* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
   ].join("\n");
 }
 
@@ -5311,7 +5273,7 @@ function renderGateAccessRevokeConfirm(access: {
     `> Evento: ${access.eventTitle ?? "Evento"}`,
     "",
     "Responda SIM para pausar este acesso de portaria.",
-    'Digite *Voltar* para voltar ou *Sair* para sair da área de admin.',
+    'Digite *Vortei* para voltar ou *Sair* para sair da área de admin.',
   ].join("\n");
 }
 
@@ -5333,7 +5295,7 @@ function renderGateValidatorPhonePrompt() {
     "",
     "> Digite o número de telefone",
     "",
-    'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
+    'Digite *Vortei* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
   ].join("\n");
 }
 
@@ -5343,7 +5305,7 @@ function renderGateValidatorPasswordPrompt() {
     "",
     "> Digite a senha para entrar no sistema",
     "",
-    'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
+    'Digite *Vortei* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
   ].join("\n");
 }
 
@@ -5431,7 +5393,7 @@ function renderAdminReportPeriodMenu() {
     formatOptionLine(5, "escolher datas"),
     "",
     "Responda com o número da opção.",
-    'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
+    'Digite *Vortei* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
   ].join("\n");
 }
 
@@ -5441,7 +5403,7 @@ function renderFixedGatePhonePrompt() {
     "",
     "> Digite o número de telefone da portaria fixa.",
     "",
-    'Digite *Voltar* para voltar ou *Cancelar* para abandonar esta tela.',
+    'Digite *Vortei* para voltar ou *Cancelar* para abandonar esta tela.',
   ].join("\n");
 }
 
@@ -5452,7 +5414,7 @@ function renderFixedGateAdminPassphrasePrompt() {
     "> Digite a palavra-chave fixa que o porteiro usará para entrar.",
     "",
     "A palavra-chave será mostrada somente agora e armazenada apenas como hash.",
-    'Digite *Voltar* para voltar ou *Cancelar* para abandonar esta tela.',
+    'Digite *Vortei* para voltar ou *Cancelar* para abandonar esta tela.',
   ].join("\n");
 }
 
@@ -5676,7 +5638,7 @@ function renderAdminUserTypePrompt() {
     formatOptionLine(2, "gerente"),
     formatOptionLine(3, "operador"),
     "",
-    'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
+    'Digite *Vortei* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
   ].join("\n");
 }
 
@@ -5684,7 +5646,7 @@ function renderAdminUserPhonePrompt() {
   return [
     "*QUAL TELEFONE DO ADMINISTRADOR?*",
     "",
-    'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
+    'Digite *Vortei* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
   ].join("\n");
 }
 
@@ -5694,7 +5656,7 @@ function renderAdminUserNamePrompt() {
     "",
     "Digite o nome ou responda PULAR.",
     "",
-    'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
+    'Digite *Vortei* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
   ].join("\n");
 }
 
@@ -5708,7 +5670,7 @@ function renderAdminUserPassphrasePrompt() {
     "",
     "Digite a senha individual que este administrador usará para entrar.",
     "",
-    'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
+    'Digite *Vortei* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
   ].join("\n");
 }
 
@@ -6131,7 +6093,7 @@ function renderAdminReportEventCountPrompt() {
     "",
     "Digite quantos eventos você quer ver (de 1 a 3).",
     "",
-    'Digite *VOLTAR* para voltar, *CANCELAR* para abandonar esta tela ou *SAIR* para sair da área de admin.',
+    'Digite *Vortei* para voltar, *CANCELAR* para abandonar esta tela ou *SAIR* para sair da área de admin.',
   ].join("\n");
 }
 
@@ -6151,7 +6113,7 @@ function renderAdminReportEventSearchPrompt(requestedEventCount: 1 | 2 | 3) {
           .slice(0, requestedEventCount)
           .join(", ")}*`,
     "",
-    'Digite *VOLTAR* para voltar, *CANCELAR* para abandonar esta tela ou *SAIR* para sair da área de admin.',
+    'Digite *Vortei* para voltar, *CANCELAR* para abandonar esta tela ou *SAIR* para sair da área de admin.',
   ].join("\n");
 }
 
@@ -6192,7 +6154,7 @@ function renderAdminReportEventAmbiguityPrompt(input: {
     "",
     input.maximumSelection > 1 ? "Digite *TODOS*, *3*, *2*, *1* ou os números desejados. Ex: 1, 3." : "Digite *1* para usar o último show ou o número da data desejada.",
     "",
-    'Digite *VOLTAR* para voltar, *CANCELAR* para abandonar esta tela ou *SAIR* para sair da área de admin.',
+    'Digite *Vortei* para voltar, *CANCELAR* para abandonar esta tela ou *SAIR* para sair da área de admin.',
   ].join("\n");
 }
 
@@ -6610,7 +6572,8 @@ function getPreviousCreateEventField(draft: Record<string, unknown>) {
   const previousByField: Record<string, string | null> = {
     title: null,
     artistName: "title",
-    city: "artistName",
+    artistIcon: "artistName",
+    city: "artistIcon",
     state: "city",
     venueName: "state",
     imageUrl: "venueName",
@@ -6638,6 +6601,7 @@ function getPreviousCreateEventField(draft: Record<string, unknown>) {
 const CREATE_EVENT_DRAFT_FIELD_ORDER = [
   "title",
   "artistName",
+  "artistIcon",
   "city",
   "state",
   "venueName",
@@ -6661,6 +6625,7 @@ const CREATE_EVENT_DRAFT_FIELD_ORDER = [
 const CREATE_EVENT_DRAFT_DEPENDENT_KEYS: Record<string, string[]> = {
   title: [
     "artistName",
+    "artistIcon",
     "city",
     "state",
     "venueName",
@@ -6688,6 +6653,34 @@ const CREATE_EVENT_DRAFT_DEPENDENT_KEYS: Record<string, string[]> = {
     "lastVenues",
   ],
   artistName: [
+    "artistIcon",
+    "city",
+    "state",
+    "venueName",
+    "imageUrl",
+    "expectedDateCount",
+    "sessionsPerDate",
+    "expectedSessionCount",
+    "currentSessionDateIndex",
+    "currentSessionTimeIndex",
+    "eventDates",
+    "pendingSessionDate",
+    "sessionsStartsAt",
+    "entryModel",
+    "entryCapacityMode",
+    "entryCapacityModeConfirmed",
+    "sharedEntryCapacity",
+    "expectedEntryCount",
+    "currentEntryIndex",
+    "sharedPriceOptions",
+    "initialSections",
+    "pendingNumberedSection",
+    "description",
+    "status",
+    "returnToCreateStatus",
+    "lastVenues",
+  ],
+  artistIcon: [
     "city",
     "state",
     "venueName",
@@ -7133,6 +7126,8 @@ function renderCreateEventPrompt(field?: string) {
   const prompts: Record<string, string> = {
     title: "Qual o nome/título do evento?",
     artistName: "Qual o artista ou atração principal?\n\nSe não houver artista separado, responda PULAR.",
+    artistIcon:
+      "Qual ícone deve aparecer antes do artista?\n\nEx: 🎤 cantor, 🎧 DJ, 🎸 banda. Responda PULAR para usar 🎤.",
     city: "Em qual cidade?",
     state: "Qual UF? Ex: SP",
     venueName:
@@ -7180,6 +7175,8 @@ function renderCreateEventSummary(draft: Record<string, unknown>) {
     "Confirme o novo evento:",
     "",
     `Título: ${draft.title}`,
+    `Artista: ${draft.artistName || "não separado"}`,
+    `Ícone do artista: ${draft.artistIcon || "🎤"}`,
     `Cidade/UF: ${draft.city}/${draft.state}`,
     `Local: ${draft.venueName}`,
     `Foto: ${draft.imageUrl ? "cadastrada" : "ausente"}`,
@@ -7868,7 +7865,7 @@ async function handleAdminEventsFlow({
   const normalized = normalizeAdminText(text);
   const numericOption = text.trim().match(/^\d+$/) ? Number(text.trim()) : null;
 
-  if (baseContext.state === "admin_events_menu" && normalized === "voltar") {
+  if (baseContext.state === "admin_events_menu" && isBackText(text)) {
     return {
       reply: formatAdminMenu(baseContext.admin?.role as AdminRole),
       nextContext: {
@@ -8001,7 +7998,7 @@ async function handleAdminEventsFlow({
           reply: [
             "Não encontrei essa opção na lista atual.",
             "",
-            "Digite o número do evento que aparece na lista ou \"Voltar\".",
+            "Digite o número do evento que aparece na lista ou \"Vortei\".",
           ].join("\n"),
           nextContext: withAdminEventsContext(baseContext, "admin_events_list", adminEvents),
         };
@@ -8247,7 +8244,8 @@ async function handleAdminEventsFlow({
 
     const nextFieldByField: Record<string, string | null> = {
       title: "artistName",
-      artistName: "city",
+      artistName: "artistIcon",
+      artistIcon: "city",
       city: "state",
       state: "venueName",
       venueName: "imageUrl",
@@ -9007,6 +9005,12 @@ async function handleAdminEventsFlow({
       draft[field] = ["pular", "sem", "nenhum", "nao", "não"].includes(normalized)
         ? null
         : text.trim();
+    } else if (field === "artistIcon") {
+      const normalized = normalizeAdminText(text);
+      const value = text.trim();
+      draft[field] = ["pular", "sem", "nenhum", "nao", "não"].includes(normalized)
+        ? "🎤"
+        : value.slice(0, 8);
     } else {
       const value = text.trim();
       if (!value) {
@@ -9130,6 +9134,7 @@ async function handleAdminEventsFlow({
 
     const title = String(draft.title ?? "").trim();
     const artistName = String(draft.artistName ?? "").trim();
+    const artistIcon = String(draft.artistIcon ?? "").trim() || "🎤";
     const city = String(draft.city ?? "").trim();
     const state = String(draft.state ?? "").trim().toUpperCase();
     const venueName = String(draft.venueName ?? "").trim();
@@ -9181,6 +9186,7 @@ async function handleAdminEventsFlow({
     const result = await createAdminEvent({
       title,
       artistName,
+      artistIcon,
       city,
       state,
       venueName,
@@ -11510,7 +11516,7 @@ async function handleAdminEventOperationalSubmenus({
 
     if (adminEvents.mode === "view_prices" || adminEvents.mode === "price_value_updated") {
       return {
-        reply: withAdminNavigationHint("Digite \"Voltar\" para voltar ao menu de valores."),
+        reply: withAdminNavigationHint("Digite \"Vortei\" para voltar ao menu de valores."),
         nextContext: withAdminEventsContext(
           baseContext,
           "admin_event_price_edit_collecting",
@@ -14997,7 +15003,7 @@ export async function routeTicketMessage({
       if (submenuOption === "exit") return endAdminSession();
       if (
         baseContext.state === "admin_report_event_select" &&
-        (normalizeAdminText(text) === "voltar" || normalizeAdminText(text) === "volta") &&
+        isBackText(text) &&
         adminReports.reportType === "sales_event"
       ) {
         return {
@@ -15057,7 +15063,7 @@ export async function routeTicketMessage({
             reply: [
               "*DIVISÃO*",
               "Digite *BAIXAR* para marcar este fechamento como pago.",
-              'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
+              'Digite *Vortei* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
             ].join("\n"),
             nextContext: withAdminReportsContext(
               baseContext,
@@ -15594,7 +15600,7 @@ export async function routeTicketMessage({
               "Digite o intervalo no formato DD/MM/AAAA a DD/MM/AAAA.",
               "Ex: 01/05/2026 a 24/05/2026",
               "",
-              'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
+              'Digite *Vortei* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
             ].join("\n"),
             nextContext: withAdminReportsContext(
               baseContext,
@@ -16172,7 +16178,7 @@ export async function routeTicketMessage({
             ? [
                 "*NÍVEL DE ADMINISTRADOR ATUALIZADO*",
                 `> Perfil: ${formatAdminRoleLabel(adminUsersContext.pendingRole)}`,
-                'Digite *Voltar* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
+                'Digite *Vortei* para voltar, *Cancelar* para abandonar esta tela ou *Sair* para sair da área de admin.',
               ].join("\n")
             : (blockedMessage ?? TICKET_MESSAGES.adminGenericError),
           nextContext: adminReplyContext({
@@ -19064,6 +19070,7 @@ export async function routeTicketMessage({
           ...baseContext,
           step: "showing_events",
           state: "showing_events",
+          selectedEvent: eventMoreInfo,
           eventMoreInfoShown: true,
         },
       };

@@ -1,6 +1,7 @@
 ﻿import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { formatComboOfferAfterPurchaseTiming } from "@/lib/tickets/comboOfferCron";
 import {
   getAdminContactActivity,
   type AdminContactRange,
@@ -512,9 +513,7 @@ async function buildGeneralDashboard(input: { ownerAdminUserId: string; canSeeAl
 
 function formatComboOfferTiming(offer: AdminComboOfferRow) {
   if (offer.send_timing_type === "custom") {
-    return offer.send_offset_minutes
-      ? `${offer.send_offset_minutes} min após compra`
-      : "Após compra";
+    return formatComboOfferAfterPurchaseTiming(Number(offer.send_offset_minutes ?? 0));
   }
   if (offer.send_timing_type === "event_day_noon") return "Meio-dia do evento";
   if (offer.send_timing_type === "one_hour_before") return "1h antes do evento";

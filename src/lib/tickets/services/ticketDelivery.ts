@@ -174,7 +174,6 @@ function formatTicketSummary(tickets: TicketForDelivery[]) {
     `> Data: *${formatEventDate(firstTicket.startsAt)}*`,
     `> Local: *${firstTicket.venueName ?? "A confirmar"}*`,
     `> Ingresso: *${formatTicketSeatCodes(tickets)}*`,
-    `> Mesa/ bistrô: *${formatTableMapPlaceCode(firstTicket.tableMapPlaceCode)}*`,
     `> Código: *${formatTicketCodes(tickets)}*`,
   ].join("\n");
 }

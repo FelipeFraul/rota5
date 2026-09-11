@@ -212,14 +212,14 @@ const HELP_TOPICS: PublicHelpTopic[] = [
     question: "Como cancelar ou sair de uma reserva?",
     keywords: ["cancelar", "sair", "reserva", "encerrar", "desistir", "apagar"],
     answer:
-      "Digite `SAIR` ou `CANCELAR`. Se houver reserva ativa, o sistema cancela e libera os ingressos. Para voltar uma etapa sem sair, digite `VOLTAR`.",
+      "Digite `SAIR` ou `CANCELAR`. Se houver reserva ativa, o sistema cancela e libera os ingressos. Para voltar uma etapa sem sair, digite `Vortei`.",
   },
   {
     id: "voltar",
     question: "Como voltar uma etapa?",
-    keywords: ["voltar", "volta", "etapa", "anterior", "corrigir", "trocar"],
+    keywords: ["vortei", "voltei", "voltar", "volta", "etapa", "anterior", "corrigir", "trocar"],
     answer:
-      "Digite `VOLTAR`. O sistema volta para a ação anterior: evento, setor, quantidade, assentos ou reserva, dependendo de onde você estiver.",
+      "Digite `Vortei`. O sistema volta para a ação anterior: evento, setor, quantidade, assentos ou reserva, dependendo de onde você estiver.",
   },
   {
     id: "sair",
@@ -557,6 +557,6 @@ export function formatPublicHelpAnswer(topic: PublicHelpTopic) {
     `*${topic.question.toUpperCase()}*`,
     topic.answer,
     "",
-    "Para escolher uma pergunta da pesquisa anterior, digite o número ou digite outras duas palavras para uma nova pesquisa de ajuda. Para voltar onde estava, digite *VOLTAR*",
+    "Para escolher uma pergunta da pesquisa anterior, digite o número ou digite outras duas palavras para uma nova pesquisa de ajuda. Para voltar onde estava, digite *Vortei*",
   ].join("\n");
 }

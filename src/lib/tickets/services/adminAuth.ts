@@ -1264,7 +1264,7 @@ export function formatAdminMenu(role: AdminRole) {
     ),
     "",
     "Responda com o número da opção.",
-    'Digite "Voltar" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
+    'Digite "Vortei" para voltar, "Cancelar" para abandonar esta tela ou "Sair" para sair da área de admin.',
   ].join("\n");
 }
 

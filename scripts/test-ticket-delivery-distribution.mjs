@@ -159,7 +159,7 @@ function route(text, context, rawPayload) {
 test("comando global cancela conversa antes de executar estado pendente", async () => {
   const result = await route("cancelar", validatedContext());
 
-  assert.equal(result.reply.includes("bem-vindo"), true);
+  assert.equal(result.reply.includes("ZERO BALA"), true);
   assert.equal(result.nextContext.state, "idle");
   assert.equal(result.nextContext.step, "idle");
   assert.equal(result.nextContext.ticketDelivery, undefined);
@@ -276,9 +276,17 @@ test("imagem do ingresso e instrucao de portaria sao mensagens separadas", () =>
   assert.match(ticketDeliverySource, /sendZapiImage\(\{[\s\S]*phone,[\s\S]*image:\s*qrImage,[\s\S]*\}\)/);
   assert.match(ticketDeliverySource, /paid-ticket-order:\$\{orderId\}:qr-instruction:v1/);
   assert.match(routerSource, /\.\.\.delivery\.qrImages\.map[\s\S]*\{ type: "text" as const, body: delivery\.qrInstructionMessage \}/);
-  assert.match(routerSource, /const PARTICIPANT_FORWARDING_HEADER/);
   assert.match(routerSource, /formatParticipantForwardingMessage/);
-  assert.doesNotMatch(routerSource, /15 99642-6671/);
+  assert.match(routerSource, /\*INGRESSOS\*/);
+  assert.match(routerSource, /15 99642-6671/);
+});
+
+test("resumo textual do ingresso nao exibe mesa ou bistro", () => {
+  const summaryBlock =
+    ticketDeliverySource.match(/function formatTicketSummary[\s\S]*?\.join\("\\n"\);\n}/)?.[0] ?? "";
+
+  assert.doesNotMatch(summaryBlock, /Mesa\/ bistr|Mesa\/Bistr|tableMapPlaceCode/);
+  assert.match(ticketDeliverySource, /tableMapPlaceCode:\s*ticket\.tableMapPlaceCode/);
 });
 
 test("leitura de contact valida e exibe confirmacao sem telefone completo", async () => {
@@ -416,7 +424,7 @@ test("CANCELAR global limpa contatos validados e volta ao inicio", async () => {
 
   assert.equal(result.nextContext.state, "idle");
   assert.equal(result.nextContext.ticketDelivery, undefined);
-  assert.match(result.reply, /bem-vindo/i);
+  assert.match(result.reply, /ZERO BALA/i);
 });
 
 test("CONFIRMAR usa RPC de vinculacao e limpa estado apos sucesso", () => {
@@ -425,40 +433,40 @@ test("CONFIRMAR usa RPC de vinculacao e limpa estado apos sucesso", () => {
   assert.match(routerSource, /getBuyerReservedTicketsForOrder\(orderId\)/);
   assert.match(routerSource, /buildTicketDeliveryPayload\([\s\S]*buyerReservedTickets[\s\S]*"\*INGRESSO RESERVADO\*"/);
   assert.match(routerSource, /outboundMessages = \[[\s\S]*buildPaidTicketResendOutboundMessages\(buyerDelivery\)[\s\S]*participantForwardingMessages/);
-  assert.match(routerSource, /reply:\s*participantForwardingMessage[\s\S]*PARTICIPANT_FORWARDING_HEADER/);
+  assert.match(routerSource, /reply:\s*participantForwardingMessage/);
   assert.match(ticketsServiceSource, /supabase\.rpc\(\s*"assign_participant_contacts_to_order_tickets"/);
   assert.match(ticketsServiceSource, /p_contacts:\s*contacts\.map/);
 });
 
-test("opcao 2 envia duas mensagens finais apos QR do comprador", () => {
+test("opcao 2 envia uma mensagem final de acompanhantes apos QR do comprador", () => {
   const optionTwoBlock =
     routerSource.match(/const buyerDelivery = await buildTicketDeliveryPayload[\s\S]*?nextContext: resetBuyerReservationContext/)?.[0] ?? "";
 
   assert.match(optionTwoBlock, /const buyerQrTicketId = buyerDelivery\.qrImages\[0\]\?\.ticketId/);
-  assert.match(optionTwoBlock, /const participantForwardingMessage = formatParticipantForwardingMessage/);
-  assert.match(routerSource, /const participantForwardingMessages = participantForwardingMessage[\s\S]*body:\s*PARTICIPANT_FORWARDING_HEADER[\s\S]*body:\s*participantForwardingMessage/);
+  assert.match(optionTwoBlock, /const participantForwardingMessage = formatParticipantForwardingMessage\([\s\S]*buyerReservedTickets\[0\]\?\.eventTitle/);
+  assert.match(routerSource, /const participantForwardingMessages = participantForwardingMessage[\s\S]*body:\s*participantForwardingMessage/);
+  assert.doesNotMatch(routerSource, /PARTICIPANT_FORWARDING_HEADER/);
   assert.match(optionTwoBlock, /\.\.\.buildPaidTicketResendOutboundMessages\(buyerDelivery\)[\s\S]*participantForwardingMessages/);
   assert.match(optionTwoBlock, /requiresSuccessfulBuyerDeliveryTicketId:\s*buyerQrTicketId/g);
-  assert.match(routerSource, /\*ENVIE A MENSAGEM ABAIXO PARA SEU\(S\) ACOMPANHANTE\(S\)\.\*/);
+  assert.match(routerSource, /\*INGRESSOS\*/);
+  assert.match(routerSource, /Acabei de comprar nossos ingressos para o \*\$\{displayEventTitle\}\*/);
 });
 
-test("mensagem final usa nome do evento e telefone oficial do Rock Bar", () => {
-  assert.match(routerSource, /Acabei de comprar nossos ingressos para o \*\$\{eventTitle\}\*/);
-  assert.match(routerSource, /Rock Bar Pub no telefone abaixo/);
-  assert.match(routerSource, /ROCK_BAR_OFFICIAL_WHATSAPP_PHONE/);
-  assert.match(envSource, /ROCK_BAR_OFFICIAL_WHATSAPP_PHONE/);
-  assert.match(routerSource, /buyerReservedTickets\[0\]\.eventTitle/);
-  assert.match(routerSource, /formatWhatsAppPhoneForDisplay\(normalizedPhone\)/);
-  assert.match(routerSource, /\$\{areaCode\} \$\{local\.slice\(0, 5\)\}-\$\{local\.slice\(5\)\}/);
-  assert.doesNotMatch(routerSource, /\+55 \$\{areaCode\}/);
+test("mensagem final usa texto de encaminhamento com evento e telefone Rota5", () => {
+  assert.match(routerSource, /Acabei de comprar nossos ingressos para o \*\$\{displayEventTitle\}\*/);
+  assert.match(routerSource, /envie uma mensagem com o texto \*MEU INGRESSO\*/);
+  assert.match(routerSource, /\*15 99642-6671\*/);
+  assert.doesNotMatch(routerSource, /Para que os acompanhantes recebam seus ingressos/);
+  assert.doesNotMatch(routerSource, /para nosso telefone/);
 });
 
-test("mensagem final nao usa nome telefone ou configuracao da Black House", () => {
+test("mensagem final nao usa nome telefone ou configuracao da Black House ou Rock Bar", () => {
   const forwardingBlock =
-    routerSource.match(/const PARTICIPANT_FORWARDING_HEADER[\s\S]*?function formatParticipantContactsConfirmation/)?.[0] ?? "";
+    routerSource.match(/function formatParticipantForwardingMessage[\s\S]*?function formatParticipantContactsConfirmation/)?.[0] ?? "";
 
-  assert.doesNotMatch(forwardingBlock, /Black House|99642-6671|BLACK_HOUSE/i);
-  assert.match(forwardingBlock, /Rock Bar Pub/);
+  assert.doesNotMatch(forwardingBlock, /Black House|Rock Bar Pub|BLACK_HOUSE/i);
+  assert.match(forwardingBlock, /15 99642-6671/);
+  assert.match(forwardingBlock, /Rota5/);
   assert.match(routerSource, /equipe do Rock Bar/);
   assert.doesNotMatch(routerSource, /equipe da Black House/);
   assert.doesNotMatch(routerSource, /Bem-vindo\(a\) à Black House/);
@@ -475,7 +483,7 @@ test("opcao 1 nao recebe mensagens finais de acompanhante", () => {
   const optionOneBlock =
     routerSource.match(/if \(normalizedText === "1"[\s\S]*?return deliverTicketsForOrder/)?.[0] ?? "";
 
-  assert.doesNotMatch(optionOneBlock, /PARTICIPANT_FORWARDING_HEADER|formatParticipantForwardingMessage|requiresSuccessfulBuyerDeliveryTicketId/);
+  assert.doesNotMatch(optionOneBlock, /formatParticipantForwardingMessage|requiresSuccessfulBuyerDeliveryTicketId/);
 });
 
 test("mensagens finais preservam retry sem duplicacao por dependerem do mesmo QR entregue", () => {
@@ -486,18 +494,17 @@ test("mensagens finais preservam retry sem duplicacao por dependerem do mesmo QR
   assert.match(zapiWebhookSource, /delivery\.delivery\.status === "sent"[\s\S]*continue;/);
 });
 
-test("env ausente ou invalido nao derruba webhook e omite mensagens finais", () => {
-  assert.match(routerSource, /if \(!phone \|\| !normalizedPhone\) \{/);
-  assert.match(routerSource, /logError\("Skipped participant forwarding instructions without valid Rock Bar official WhatsApp phone"/);
-  assert.match(routerSource, /return null;/);
-  assert.match(routerSource, /const participantForwardingMessages = participantForwardingMessage[\s\S]*: \[\]/);
+test("mensagem final nao depende de env para acompanhar QR do comprador", () => {
+  assert.doesNotMatch(routerSource, /getRockBarOfficialWhatsAppPhone|formatWhatsAppPhoneForDisplay/);
+  assert.doesNotMatch(routerSource, /Participant forwarding instructions without configured official WhatsApp phone/);
+  assert.match(routerSource, /\*15 99642-6671\*/);
+  assert.match(routerSource, /const participantForwardingMessages = participantForwardingMessage[\s\S]*body:\s*participantForwardingMessage/);
   assert.doesNotMatch(routerSource, /throw new Error\("ROCK_BAR_OFFICIAL_WHATSAPP_PHONE/);
 });
 
 test("mensagens finais possuem chaves idempotentes proprias e duraveis", () => {
-  assert.match(routerSource, /paid-ticket-order:\$\{orderId\}:participant-forward-title:v1/);
-  assert.match(routerSource, /paid-ticket-order:\$\{orderId\}:participant-forward-instruction:v1/);
-  assert.match(routerSource, /outboundReason:\s*"participant_forward_title"/);
+  assert.match(routerSource, /paid-ticket-order:\$\{orderId\}:participant-forwarding:v1/);
+  assert.doesNotMatch(routerSource, /participant-forward-title:v1/);
   assert.match(routerSource, /outboundReason:\s*"participant_forward_instruction"/);
   assert.match(zapiWebhookSource, /outboundMessage\.outboundIdempotencyKey/);
   assert.match(zapiWebhookSource, /markWhatsAppOutboundDeliverySent/);
@@ -507,7 +514,7 @@ test("mensagens finais possuem chaves idempotentes proprias e duraveis", () => {
 test("falha parcial entre mensagens finais mantem status proprio por mensagem", () => {
   assert.match(zapiWebhookSource, /let outboundDeliveryId: string \| null = null/);
   assert.match(zapiWebhookSource, /if \(outboundDeliveryId\) \{[\s\S]*if \(sendResult\.ok\)[\s\S]*markWhatsAppOutboundDeliverySent[\s\S]*else[\s\S]*markWhatsAppOutboundDeliveryFailed/);
-  assert.match(routerSource, /participant-forward-title:v1[\s\S]*participant-forward-instruction:v1/);
+  assert.match(routerSource, /participant-forwarding:v1/);
 });
 
 test("comprador registra primeira entrega valida do QR sem depender de pagamento para oferta", () => {
@@ -596,8 +603,8 @@ test("REENVIAR INGRESSO lista somente eventos e comandos finais", () => {
   assert.match(routerSource, /function formatPaidTicketResendOptions/);
   assert.match(routerSource, /Escolha o evento que deseja receber novamente seu ingresso/);
   assert.match(routerSource, /formatOptionLine\(\s*group\.option,\s*group\.title/);
-  assert.match(routerSource, /Digite \*BACK\* para voltar/);
-  assert.match(routerSource, /Para uma nova pesquisa, \*NEW\*/);
+  assert.match(routerSource, /Digite \*Vortei\* para voltar/);
+  assert.match(routerSource, /Para uma nova pesquisa, ZERO BALA/);
   assert.doesNotMatch(routerSource, /Encontrei ingressos emitidos para este telefone/);
   assert.doesNotMatch(routerSource, /group\.ticketsCount === 1/);
 });
@@ -742,16 +749,20 @@ test("participante fica elegivel para agendamento somente apos QR entregue", () 
 
 test("scheduler coleta comprador e participantes entregues para combo", () => {
   assert.match(comboOffersSource, /export async function sendScheduledComboOffers/);
+  assert.match(comboOffersSource, /rpc\("get_database_now"\)/);
+  assert.match(comboOffersSource, /const now = await getDatabaseNow\(supabase\)/);
+  assert.match(comboOffersSource, /createComboOrderForCheckout[\s\S]*const now = await getDatabaseNow\(supabase\)/);
+  assert.doesNotMatch(comboOffersSource, /const checkoutExpiresAt = new Date\(Date\.now\(\) \+ CHECKOUT_TTL_MINUTES/);
   assert.match(comboOffersSource, /recipient_phone, participant_delivery_status, buyer_qr_delivered_at, participant_delivered_at/);
   assert.doesNotMatch(comboOffersSource, /\.is\("recipient_phone",\s*null\)/);
   assert.match(comboOffersSource, /upsertCustomerFromWhatsApp/);
   assert.match(comboOffersSource, /const phone = ticket\.offer_phone \?\? recipient\?\.phone/);
 });
 
-test("scheduler envia combo para pedido com mesa ou bistro pago", () => {
-  assert.match(comboOffersSource, /official_table_map_reservations!inner\(place_code, status\)/);
+test("scheduler envia combo para pedido pago mesmo sem mesa ou bistro", () => {
+  assert.match(comboOffersSource, /official_table_map_reservations\(place_code, status\)/);
   assert.match(comboOffersSource, /\.eq\("orders\.status",\s*"paid"\)/);
-  assert.match(comboOffersSource, /\.eq\("orders\.official_table_map_reservations\.status",\s*"paid"\)/);
+  assert.doesNotMatch(comboOffersSource, /\.eq\("orders\.official_table_map_reservations\.status",\s*"paid"\)/);
   assert.match(comboOffersSource, /mergeComboOfferCandidateTickets\([\s\S]*eventWindowTickets[\s\S]*recentPurchaseTickets[\s\S]*recentQrDeliveryTickets/);
   assert.match(comboOffersSource, /shouldSendComboOfferNow\([\s\S]*offer,[\s\S]*session\.starts_at,[\s\S]*now,[\s\S]*qrDeliveredAt/);
   assert.match(comboOffersSource, /const shouldSendOnSchedule = shouldSendComboOfferNow/);
@@ -761,7 +772,7 @@ test("scheduler envia combo para pedido com mesa ou bistro pago", () => {
 test("oferta perdida e recuperada uma unica vez quando janela passou mas evento nao iniciou", () => {
   assert.match(comboOffersSource, /function shouldRecoverMissedComboOffer/);
   assert.match(comboOffersSource, /if \(!Number\.isFinite\(start\) \|\| current >= start\) return false/);
-  assert.match(comboOffersSource, /if \(offer\.send_timing_type === "custom"\) \{\s*return false;\s*\}/);
+  assert.match(comboOffersSource, /if \(offer\.send_timing_type === "custom"\) \{[\s\S]*purchaseTime \+ offset \* 60_000/);
   assert.match(comboOffersSource, /const shouldSendAsRecovery =[\s\S]*!shouldSendOnSchedule[\s\S]*shouldRecoverMissedComboOffer\(offer,\s*session\.starts_at,\s*now,\s*qrDeliveredAt\)/);
   assert.match(comboOffersSource, /if \(!shouldSendOnSchedule && !shouldSendAsRecovery\) \{[\s\S]*skippedCount \+= 1/);
   assert.match(comboOffersSource, /combo_offer_delivery_mode:\s*shouldSendAsRecovery \? "recovery" : "scheduled"/);
@@ -778,7 +789,7 @@ test("oferta de combo usa QR entregue e aplica delay global somente fora do flux
   assert.match(comboOffersSource, /if \(!qrDeliveredAt\) \{[\s\S]*skippedCount \+= 1/);
   assert.match(comboOffersSource, /offer\.send_timing_type !== "custom" &&[\s\S]*!hasComboOfferQrDelayElapsed\(\{ qrDeliveredAt, now \}\)/);
   assert.match(comboOffersSource, /combo_offer_qr_delivered_at:\s*qrDeliveredAt/);
-  assert.match(comboOffersSource, /combo_offer_delay_minutes:\s*getComboOfferDelayMinutes\(\)/);
+  assert.match(comboOffersSource, /combo_offer_delay_minutes:[\s\S]*offer\.send_timing_type === "custom"[\s\S]*offer\.send_offset_minutes[\s\S]*getComboOfferDelayMinutes\(\)/);
   assert.doesNotMatch(comboOffersSource, /shouldSendComboOfferNow\([\s\S]*ticket\.issued_at/);
 });
 
@@ -813,6 +824,8 @@ test("deduplicacao fica por telefone evento oferta ticket e tipo de destinatario
 test("multiplos ingressos do mesmo comprador no mesmo pedido nao duplicam oferta", () => {
   assert.match(comboOffersSource, /function uniqueComboOfferCandidateTicketsByOrder/);
   assert.match(comboOffersSource, /const key = `\$\{recipient\.recipientType\}:\$\{recipient\.phone\}:\$\{session\.event_id\}:\$\{order\.id\}`/);
+  assert.match(comboOffersSource, /hasRecipientQrDelivery\(existing,\s*recipient\.recipientType\)/);
+  assert.match(comboOffersSource, /hasRecipientQrDelivery\(candidate,\s*recipient\.recipientType\)/);
 });
 
 test("evento sem oferta nao agenda nada para combo", () => {
@@ -829,15 +842,16 @@ test("oferta temporaria do comprador vincula combo ao pedido e ticket origem", (
 });
 
 test("ofertas de combo incluem comprador e participantes entregues do pedido elegivel", () => {
-  assert.match(comboOffersSource, /\.eq\("orders\.official_table_map_reservations\.status",\s*"paid"\)/);
+  assert.match(comboOffersSource, /\.eq\("orders\.status",\s*"paid"\)/);
+  assert.doesNotMatch(comboOffersSource, /\.eq\("orders\.official_table_map_reservations\.status",\s*"paid"\)/);
   assert.match(comboOffersSource, /const buyerPhone = normalizeWhatsAppPhone\(ticket\.customers\?\.whatsapp_phone\)/);
   assert.match(comboOffersSource, /const recipientPhone = normalizeWhatsAppPhone\(ticket\.recipient_phone\)/);
   assert.match(comboOffersSource, /participant_delivery_status !== "delivered"/);
 });
 
-test("ofertas de combo ignoram pedido sem mesa ou bistro pago", () => {
-  assert.match(comboOffersSource, /official_table_map_reservations!inner\(place_code, status\)/);
-  assert.match(comboOffersSource, /\.eq\("orders\.official_table_map_reservations\.status",\s*"paid"\)/);
+test("ofertas de combo nao exigem mesa ou bistro pago", () => {
+  assert.match(comboOffersSource, /official_table_map_reservations\(place_code, status\)/);
+  assert.doesNotMatch(comboOffersSource, /\.eq\("orders\.official_table_map_reservations\.status",\s*"paid"\)/);
 });
 
 test("ofertas de combo consolidam mesmo telefone e permitem telefones diferentes", () => {

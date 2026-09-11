@@ -2,6 +2,7 @@ import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { formatWhatsAppUppercase } from "@/lib/zapi/format";
+import { sanitizeWhatsAppText } from "@/lib/zapi/textEncoding";
 
 type WhatsAppMessageDirection = "inbound" | "outbound";
 type WhatsAppMessageType = "text" | "image" | "document" | "system";
@@ -142,7 +143,7 @@ export async function saveWhatsAppMessage({
       message_type: messageType,
       body:
         direction === "outbound" && body
-          ? formatWhatsAppUppercase(body)
+          ? formatWhatsAppUppercase(sanitizeWhatsAppText(body))
           : body,
       provider_message_id: providerMessageId,
       raw_metadata: rawMetadata,

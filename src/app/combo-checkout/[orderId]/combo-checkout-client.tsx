@@ -28,6 +28,10 @@ function onlyDigits(value: string): string {
   return value.replace(/\D/g, "");
 }
 
+function isValidCheckoutEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 function formatRemainingTime(milliseconds: number) {
   const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
   const minutes = Math.floor(totalSeconds / 60);
@@ -78,6 +82,7 @@ export default function ComboCheckoutClient({
   const [remainingMs, setRemainingMs] = useState(() =>
     Math.max(0, new Date(order.expiresAt).getTime() - Date.now()),
   );
+  const canGeneratePix = isValidCheckoutEmail(email) && onlyDigits(identificationNumber).length === 11;
 
   const expiresAt = new Intl.DateTimeFormat("pt-BR", {
     hour: "2-digit",
@@ -140,6 +145,11 @@ export default function ComboCheckoutClient({
   }, [checkoutToken, order.orderId, paymentApproved, pixCode]);
 
   async function submitPix() {
+    if (!canGeneratePix) {
+      setMessage("Informe e-mail e CPF para gerar o Pix.");
+      return;
+    }
+
     setLoading(true);
     setMessage(null);
     setPixCode(null);
@@ -175,7 +185,7 @@ export default function ComboCheckoutClient({
       setPixCode(data.qr_code ?? null);
       setPixImage(data.qr_image ?? null);
       setPixCopied(false);
-      setMessage("Pix gerado. Use o QR Code vermelho ou copie o codigo.");
+      setMessage(null);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Nao foi possivel gerar o Pix.");
     } finally {
@@ -270,6 +280,7 @@ export default function ComboCheckoutClient({
           <strong>{remainingLabel}</strong>
         </div>
 
+        {!pixCode ? (
         <div className="checkout-form-block">
           <label className="checkout-label">
             E-mail
@@ -294,18 +305,19 @@ export default function ComboCheckoutClient({
             />
           </label>
         </div>
+        ) : null}
 
         <div className="checkout-form-block">
-          <button
-            type="button"
-            className="checkout-primary-button"
-            onClick={submitPix}
-            disabled={loading}
-          >
-            {loading ? "Gerando Pix..." : `Gerar Pix de ${order.totalLabel}`}
-          </button>
-
-          {pixCode ? (
+          {!pixCode ? (
+            <button
+              type="button"
+              className="checkout-primary-button"
+              onClick={submitPix}
+              disabled={loading || !canGeneratePix}
+            >
+              {loading ? "Gerando Pix..." : "Gerar Pix"}
+            </button>
+          ) : (
             <div className="checkout-pix-box combo-checkout-pix-box">
               {pixImage ? (
                 <img
@@ -331,7 +343,7 @@ export default function ComboCheckoutClient({
                 {pixCopied ? "Copiado" : "Copiar codigo Pix"}
               </button>
             </div>
-          ) : null}
+          )}
         </div>
 
         {message ? <p className="checkout-message">{message}</p> : null}

@@ -91,6 +91,22 @@ export function formatPublicEventTitle(title: string, artistName: string | null 
   return formatAnnouncementTitle(`${trimmedArtist} - ${showTitle || trimmedTitle}`);
 }
 
+export function formatPublicEventName(title: string) {
+  return formatAnnouncementTitle(title.trim());
+}
+
+export function formatPublicArtistLine(
+  artistName: string | null | undefined,
+  artistIcon: string | null | undefined,
+) {
+  const trimmedArtist = artistName?.trim();
+
+  if (!trimmedArtist) return null;
+
+  const icon = artistIcon?.trim() || "🎤";
+  return `${icon} *${formatAnnouncementTitle(trimmedArtist)}*`;
+}
+
 function capitalizeNamePart(value: string) {
   if (!value) return value;
   return value.charAt(0).toLocaleUpperCase("pt-BR") + value.slice(1);

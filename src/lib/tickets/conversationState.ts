@@ -135,6 +135,7 @@ export type TicketConversationEventOption = {
   sessionId: string;
   title: string;
   artistName?: string;
+  artistIcon?: string | null;
   description?: string | null;
   startsAt: string;
   city: string;

@@ -24,7 +24,13 @@ function normalizeCommand(value: string) {
 
 function isBackCommand(value: string) {
   const normalized = normalizeCommand(value);
-  return normalized === "voltar" || normalized === "volta";
+  return (
+    normalized === "voltar" ||
+    normalized === "volta" ||
+    normalized === "voltei" ||
+    normalized === "vortei" ||
+    normalized === "back"
+  );
 }
 
 function isResetCommand(value: string) {

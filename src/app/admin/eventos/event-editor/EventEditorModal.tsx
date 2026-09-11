@@ -62,6 +62,7 @@ function buildDraft(event: EventDetails): Draft {
     event: {
       title: event.title,
       artistName: event.artistName,
+      artistIcon: event.artistIcon ?? "🎤",
       city: event.city,
       state: event.state,
       venueName: event.venueName ?? "",
@@ -338,6 +339,7 @@ export default function EventEditorModal({ eventId, onClose, onSaved }: EventEdi
                   <div className="admin-event-form-grid">
                     <label>Título<input value={draft.event.title} onChange={(event) => setDraft(updateDraftEventTitle(draft, event.target.value))} /></label>
                     <label>Artista<input value={draft.event.artistName} onChange={(event) => setDraft({ ...draft, event: { ...draft.event, artistName: event.target.value } })} /></label>
+                    <label>Ícone do artista<input value={draft.event.artistIcon} maxLength={8} placeholder="🎤" onChange={(event) => setDraft({ ...draft, event: { ...draft.event, artistIcon: event.target.value } })} /></label>
                     <label>Cidade<input value={draft.event.city} onChange={(event) => setDraft({ ...draft, event: { ...draft.event, city: event.target.value } })} /></label>
                     <label>UF<input value={draft.event.state} maxLength={2} onChange={(event) => setDraft({ ...draft, event: { ...draft.event, state: event.target.value.toUpperCase() } })} /></label>
                     <label>Local<input value={draft.event.venueName} onChange={(event) => setDraft({ ...draft, event: { ...draft.event, venueName: event.target.value } })} /></label>

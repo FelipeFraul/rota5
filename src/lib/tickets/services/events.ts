@@ -31,6 +31,7 @@ export type TicketEventSearchResult = {
   eventId: string;
   title: string;
   artistName: string;
+  artistIcon?: string | null;
   description: string | null;
   city: string;
   state: string;
@@ -48,6 +49,7 @@ export type ValidatedEventSession = {
   eventId: string;
   title: string;
   artistName: string;
+  artistIcon?: string | null;
   description: string | null;
   city: string;
   state: string;
@@ -64,6 +66,7 @@ type EventRow = {
   id: string;
   title: string;
   artist_name: string;
+  artist_icon: string | null;
   description: string | null;
   city: string;
   state: string;
@@ -92,6 +95,7 @@ type EventSessionValidationRow = {
     id: string;
     title: string;
     artist_name: string;
+    artist_icon: string | null;
     description: string | null;
     city: string;
     state: string;
@@ -107,6 +111,7 @@ type RankedPublicEventSearchRow = {
   event_id: string;
   title: string;
   artist_name: string;
+  artist_icon: string | null;
   description: string | null;
   city: string;
   state: string;
@@ -314,6 +319,7 @@ function mapRankedSearchRow(row: RankedPublicEventSearchRow): TicketEventSearchR
     eventId: row.event_id,
     title: row.title,
     artistName: row.artist_name,
+    artistIcon: row.artist_icon ?? null,
     description: row.description,
     city: row.city,
     state: row.state,
@@ -442,7 +448,7 @@ export async function searchEvents({
   const effectiveDateFrom = clampPublicSearchDateFrom(dateFrom);
   const eventQuery = supabase
     .from("events")
-    .select("id, title, artist_name, description, city, state, image_url, venue_id, venues(name, status)")
+    .select("id, title, artist_name, artist_icon, description, city, state, image_url, venue_id, venues(name, status)")
     .in("status", PUBLIC_VISIBLE_EVENT_STATUSES);
 
   const artistTerm = artist?.trim();
@@ -570,6 +576,7 @@ export async function searchEvents({
           eventId: event.id,
           title: event.title,
           artistName: event.artist_name,
+          artistIcon: event.artist_icon ?? null,
           description: event.description,
           city: event.city,
           state: event.state,
@@ -622,7 +629,7 @@ export async function listAllPublicEventsByDate({
   const resultLimit = Math.max(1, Math.min(limit, MAX_EVENT_CANDIDATES));
   const { data: events, error: eventsError } = await supabase
     .from("events")
-    .select("id, title, artist_name, description, city, state, image_url, venue_id, venues(name, status)")
+    .select("id, title, artist_name, artist_icon, description, city, state, image_url, venue_id, venues(name, status)")
     .in("status", PUBLIC_VISIBLE_EVENT_STATUSES)
     .limit(MAX_EVENT_CANDIDATES)
     .returns<EventRow[]>();
@@ -665,6 +672,7 @@ export async function listAllPublicEventsByDate({
       eventId: event.id,
       title: event.title,
       artistName: event.artist_name,
+      artistIcon: event.artist_icon ?? null,
       description: event.description,
       city: event.city,
       state: event.state,
@@ -731,7 +739,7 @@ export async function getValidatedEventSession({
   const { data, error } = await supabase
     .from("event_sessions")
     .select(
-      "id, venue_id, starts_at, timezone, status, venues(name, status), events(id, title, artist_name, description, city, state, image_url, venue_id, status, venues(name, status))",
+      "id, venue_id, starts_at, timezone, status, venues(name, status), events(id, title, artist_name, artist_icon, description, city, state, image_url, venue_id, status, venues(name, status))",
     )
     .eq("id", sessionId)
     .eq("event_id", eventId)
@@ -763,6 +771,7 @@ export async function getValidatedEventSession({
     eventId: data.events.id,
     title: data.events.title,
     artistName: data.events.artist_name,
+    artistIcon: data.events.artist_icon ?? null,
     description: data.events.description,
     city: data.events.city,
     state: data.events.state,

@@ -32,7 +32,7 @@ const messages = readFileSync(
 
 const homeMessage = /PUBLIC_HOME_MESSAGE\s*=\s*[\s\S]*bem-vindo\(a\)[\s\S]*Rota5/;
 const homeCommands =
-  /PUBLIC_HOME_COMMANDS_MESSAGE\s*=[\s\S]*BAILÃO[\s\S]*Ver próximos shows, digite CAMBADA[\s\S]*MANDA[\s\S]*DÁ UMA MÃO[\s\S]*ZERO BALA/;
+  /PUBLIC_HOME_COMMANDS_MESSAGE\s*=[\s\S]*\*SHOW\*[\s\S]*\*TODOS\*[\s\S]*\*ENVIAR\*[\s\S]*\*AJUDA\*[\s\S]*\*NOVO\*/;
 
 const customer = {
   id: "customer-public-initial",

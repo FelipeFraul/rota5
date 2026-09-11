@@ -4,6 +4,11 @@ import test from "node:test";
 
 const editorPath = new URL("../src/app/admin/eventos/AdminEventsEditor.tsx", import.meta.url);
 const sectionPath = new URL("../src/app/admin/eventos/combo-editor/AdminComboOffersSection.tsx", import.meta.url);
+const modalPath = new URL("../src/app/admin/eventos/combo-editor/ComboOfferModal.tsx", import.meta.url);
+const comboOffersApiPath = new URL("../src/app/api/admin/combo-offers/route.ts", import.meta.url);
+const comboOfferPatchApiPath = new URL("../src/app/api/admin/combo-offers/[offerId]/route.ts", import.meta.url);
+const comboOfferCronPath = new URL("../src/lib/tickets/comboOfferCron.ts", import.meta.url);
+const vercelConfigPath = new URL("../vercel.json", import.meta.url);
 
 async function source(path) {
   return readFile(path, "utf8");
@@ -67,4 +72,29 @@ test("combo errors, close without saving and metrics/list fields are preserved",
   assert.match(section, /revenueCents: offer\.revenueCents/);
   assert.match(section, /impressions: offer\.impressions/);
   assert.match(section, /clicks: offer\.clicks/);
+});
+
+test("combo custom timing follows cron minimum window and says after purchase", async () => {
+  const [section, modal, comboOffersApi, comboOfferPatchApi, comboOfferCron, vercelConfig] = await Promise.all([
+    source(sectionPath),
+    source(modalPath),
+    source(comboOffersApiPath),
+    source(comboOfferPatchApiPath),
+    source(comboOfferCronPath),
+    source(vercelConfigPath),
+  ]);
+  const config = JSON.parse(vercelConfig);
+  const expireReservationCron = config.crons.find((cron) => cron.path === "/api/cron/expire-reservations");
+
+  assert.equal(expireReservationCron?.schedule, "* * * * *");
+  assert.match(comboOfferCron, /COMBO_OFFER_CRON_WINDOW_MINUTES = 1/);
+  assert.match(comboOfferCron, /formatComboOfferAfterPurchaseTiming/);
+  assert.match(comboOfferCron, /apos compra/);
+  assert.doesNotMatch(comboOfferCron, /\bantes\b/);
+  assert.match(section, /formatComboOfferAfterPurchaseTiming\(customOffsetMinutes\)/);
+  assert.match(modal, /min=\{minimumCustomOffsetMinutes\}/);
+  assert.match(modal, /normalizeComboOfferCustomOffsetMinutes\(Number\(event\.target\.value\)\)/);
+  assert.match(modal, /min apos compra/);
+  assert.match(comboOffersApi, /formatComboOfferAfterPurchaseTiming\(Number\(offer\.send_offset_minutes \?\? 0\)\)/);
+  assert.match(comboOfferPatchApi, /payload\.customOffsetMinutes >= getMinimumComboOfferCustomOffsetMinutes\(\)/);
 });

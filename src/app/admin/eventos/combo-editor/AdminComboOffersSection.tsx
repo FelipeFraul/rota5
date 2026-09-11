@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { formatComboOfferAfterPurchaseTiming } from "@/lib/tickets/comboOfferCron";
 import AdminComboOfferGrid, { type AdminComboOfferCardItem } from "../components/AdminComboOfferGrid";
 import type {
   ComboOfferDraft,
@@ -48,10 +49,7 @@ function wait(ms: number) {
 
 function formatTimingLabel(timingType: ComboOfferTimingType, customOffsetMinutes: number) {
   if (timingType === "custom") {
-    const minutes = Number(customOffsetMinutes || 0);
-    if (minutes >= 1440 && minutes % 1440 === 0) return `${minutes / 1440}d antes`;
-    if (minutes >= 60 && minutes % 60 === 0) return `${minutes / 60}h antes`;
-    return `${minutes || 1}min antes`;
+    return formatComboOfferAfterPurchaseTiming(customOffsetMinutes);
   }
   if (timingType === "event_day_noon") return "Meio-dia do evento";
   if (timingType === "one_hour_before") return "1h antes do evento";

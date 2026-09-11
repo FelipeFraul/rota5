@@ -78,6 +78,21 @@ function repairMojibakeToken(value: string) {
   return mojibakeMarkerCount(repaired) === 0 ? repaired : value;
 }
 
+function normalizeLine(value: string) {
+  return value
+    .replace(/\u00a0/g, " ")
+    .replace(/[\u2018\u2019\u201a\u201b]/g, "'")
+    .replace(/[\u201c\u201d\u201e\u201f]/g, '"')
+    .replace(/[\u2010-\u2015]/g, "-")
+    .replace(/\u2026/g, "...")
+    .replace(/\u00d7/g, "x")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\x09\x20-\x7e]/g, "")
+    .replace(/[ \t]+/g, " ")
+    .trimEnd();
+}
+
 export function sanitizeWhatsAppText(value: string) {
   return value
     .split(/(\s+)/)
@@ -85,5 +100,8 @@ export function sanitizeWhatsAppText(value: string) {
     .join("")
     .replace(/[\u0080-\u009f]/g, "")
     .replace(/\uFFFD/g, "")
-    .normalize("NFC");
+    .split(/\r?\n/)
+    .map((line) => normalizeLine(line))
+    .join("\n")
+    .trim();
 }

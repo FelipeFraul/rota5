@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getMinimumComboOfferCustomOffsetMinutes } from "@/lib/tickets/comboOfferCron";
 import {
   duplicateComboOffer,
   updateComboOfferDetails,
@@ -219,7 +220,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
   const customOffsetMinutes = payload.customOffsetMinutes === undefined
     ? undefined
-    : typeof payload.customOffsetMinutes === "number" && Number.isInteger(payload.customOffsetMinutes) && payload.customOffsetMinutes > 0
+    : typeof payload.customOffsetMinutes === "number" && Number.isInteger(payload.customOffsetMinutes) && payload.customOffsetMinutes >= getMinimumComboOfferCustomOffsetMinutes()
       ? payload.customOffsetMinutes
       : null;
   if (payload.customOffsetMinutes !== undefined && customOffsetMinutes === null) {

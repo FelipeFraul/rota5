@@ -22,6 +22,7 @@ export type EventSummary = {
   eventId: string;
   title: string;
   artistName: string;
+  artistIcon: string | null;
   city: string;
   state: string;
   status: EventStatus;
@@ -152,6 +153,7 @@ export type Draft = {
   event: {
     title: string;
     artistName: string;
+    artistIcon: string;
     city: string;
     state: string;
     venueName: string;

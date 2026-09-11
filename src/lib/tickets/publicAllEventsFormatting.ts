@@ -2,7 +2,8 @@ import type { TicketConversationEventOption } from "@/lib/tickets/conversationSt
 import {
   formatEventDate,
   formatEventLocation,
-  formatPublicEventTitle,
+  formatPublicArtistLine,
+  formatPublicEventName,
 } from "@/lib/tickets/eventFormatting";
 import type { TicketEventSearchResult } from "@/lib/tickets/services/events";
 
@@ -64,12 +65,15 @@ export function formatSingleAllEventReply(
           ];
 
   return [
-    `🎟️ *${formatPublicEventTitle(event.title, event.artistName)}*`,
+    `🎟️ *${formatPublicEventName(event.title)}*`,
+    formatPublicArtistLine(event.artistName, event.artistIcon),
     `| Local: *${formatEventLocation(event)}*`,
     `| Data: *${formatEventDate(event.startsAt)}*`,
     "",
-    ...optionLines.filter((line): line is string => Boolean(line)),
-  ].join("\n");
+    ...optionLines,
+  ]
+    .filter((line): line is string => line !== null)
+    .join("\n");
 }
 
 export function buildPublicEventActions(
@@ -192,4 +196,3 @@ export function buildAllEventsOutboundMessages(
 
   return messages;
 }
-

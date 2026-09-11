@@ -291,6 +291,6 @@ export function formatAdminReportEventSearchResults(input: {
         ).join(", ")}.`,
     "Você também pode fazer outra busca por nome, artista ou data.",
     "",
-    'Digite "VOLTAR" para voltar, "CANCELAR" para abandonar esta tela ou "SAIR" para sair da área de admin.',
+    'Digite "Vortei" para voltar, "CANCELAR" para abandonar esta tela ou "SAIR" para sair da área de admin.',
   ].filter((line): line is string => line !== null).join("\n");
 }

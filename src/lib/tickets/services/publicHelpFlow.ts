@@ -48,7 +48,13 @@ export function hasEnoughHelpTerms(text: string) {
 export function isPublicHelpBackIntent(text: string) {
   const normalized = normalizeHelpFlowText(text);
 
-  return normalized === "voltar" || normalized === "volta";
+  return (
+    normalized === "voltar" ||
+    normalized === "volta" ||
+    normalized === "voltei" ||
+    normalized === "vortei" ||
+    normalized === "back"
+  );
 }
 
 export function buildPublicHelpCommandResponse({
@@ -196,7 +202,7 @@ export function buildPublicHelpMoreResultsResponse({
   if (!baseContext.publicHelp?.hasMore) {
     return {
       reply:
-        "Não encontrei outros tópicos para essa pesquisa. Digite outras duas palavras para uma nova busca de ajuda ou *VOLTAR* para voltar onde estava.",
+        "Não encontrei outros tópicos para essa pesquisa. Digite outras duas palavras para uma nova busca de ajuda ou *Vortei* para voltar onde estava.",
       nextContext: baseContext,
     };
   }

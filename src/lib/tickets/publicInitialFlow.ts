@@ -14,6 +14,7 @@ export function isPublicInitialExitCommand(text: string) {
 
   return (
     normalized === "zero bala" ||
+    normalized === "novo" ||
     normalized === "new" ||
     normalized === "sair" ||
     normalized === "cancela" ||
@@ -27,7 +28,7 @@ export function isPublicInitialExitCommand(text: string) {
 export function isPublicInitialNewCommand(text: string) {
   const normalized = normalizePublicInitialText(text);
 
-  return normalized === "zero bala" || normalized === "new";
+  return normalized === "zero bala" || normalized === "new" || normalized === "novo";
 }
 
 export function isPublicInitialAllEventsCommand(text: string) {
@@ -48,6 +49,7 @@ export function isPublicInitialTicketResendCommand(text: string) {
   return (
     normalized === "again" ||
     normalized === "manda" ||
+    normalized === "enviar" ||
     normalized === "reenviar" ||
     normalized === "reenviar ingresso"
   );

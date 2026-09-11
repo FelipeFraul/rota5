@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import dynamic from "next/dynamic";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
@@ -56,7 +56,7 @@ const GeneralDashboardCards = memo(function GeneralDashboardCards({
           <article>
             <span>Receita</span>
             <strong>{formatCurrency(today.totalRevenueCents)}</strong>
-            <small>Ingressos {formatCurrency(today.ticketRevenueCents)} · Combos {formatCurrency(today.comboRevenueCents)}</small>
+            <small>Ingressos {formatCurrency(today.ticketRevenueCents)} Â· Combos {formatCurrency(today.comboRevenueCents)}</small>
           </article>
           <article>
             <span>Ingressos</span>
@@ -112,13 +112,13 @@ function AdminDashboardSectionComponent({
         if (!active) return;
 
         if (!response.ok || !data.ok || !data.dashboard) {
-          setDashboard({ event: selectedEvent, data: null, loading: false, message: data.message ?? "Não foi possível carregar a dashboard." });
+          setDashboard({ event: selectedEvent, data: null, loading: false, message: data.message ?? "NÃ£o foi possÃ­vel carregar a dashboard." });
           return;
         }
 
         setDashboard({ event: selectedEvent, data: data.dashboard, loading: false, message: null });
       } catch {
-        if (active) setDashboard({ event: selectedEvent, data: null, loading: false, message: "Não foi possível carregar a dashboard." });
+        if (active) setDashboard({ event: selectedEvent, data: null, loading: false, message: "NÃ£o foi possÃ­vel carregar a dashboard." });
       }
     }
 
@@ -159,20 +159,20 @@ function AdminDashboardSectionComponent({
       };
 
       if (!response.ok || !result.ok || !result.dashboard) {
-        setGeneralDashboardMessage(result.message ?? "Não foi possível carregar o dashboard geral.");
+        setGeneralDashboardMessage(result.message ?? "NÃ£o foi possÃ­vel carregar o dashboard geral.");
         return;
       }
 
       setGeneralDashboard(result.dashboard);
     } catch {
-      setGeneralDashboardMessage("Não foi possível carregar o dashboard geral.");
+      setGeneralDashboardMessage("NÃ£o foi possÃ­vel carregar o dashboard geral.");
     } finally {
       setGeneralDashboardLoading(false);
     }
   }, [generalDashboard, generalDashboardLoading]);
 
   useEffect(() => {
-    void loadGeneralDashboard();
+    // The dashboard fetch updates local state when its request resolves.`n    // eslint-disable-next-line react-hooks/set-state-in-effect`n    void loadGeneralDashboard();
   }, [loadGeneralDashboard]);
 
   const loadGeneralContacts = useCallback(async (range: ContactRange) => {
@@ -195,7 +195,7 @@ function AdminDashboardSectionComponent({
         }));
       }
     } catch (error) {
-      console.error("Não foi possível atualizar os contatos.", error);
+      console.error("NÃ£o foi possÃ­vel atualizar os contatos.", error);
     } finally {
       setGeneralContactsLoadingRange((current) => current === range ? null : current);
     }
@@ -203,7 +203,7 @@ function AdminDashboardSectionComponent({
 
   const openGeneralDashboard = useCallback(() => {
     setGeneralDashboardOpen(true);
-    void loadGeneralDashboard();
+    // The dashboard fetch updates local state when its request resolves.`n    // eslint-disable-next-line react-hooks/set-state-in-effect`n    void loadGeneralDashboard();
   }, [loadGeneralDashboard]);
 
   const closeGeneralDashboard = useCallback(() => {
@@ -237,12 +237,12 @@ function AdminDashboardSectionComponent({
         message?: string;
       };
       if (!response.ok || !result.ok || !result.dashboard) {
-        onError(result.message ?? "Não foi possível atualizar o período.");
+        onError(result.message ?? "NÃ£o foi possÃ­vel atualizar o perÃ­odo.");
         return;
       }
       setDashboard((current) => current ? { ...current, data: result.dashboard!, message: null } : current);
     } catch {
-      onError("Não foi possível atualizar o período.");
+      onError("NÃ£o foi possÃ­vel atualizar o perÃ­odo.");
     } finally {
       setEventDashboardRangeLoading(false);
     }
@@ -263,7 +263,7 @@ function AdminDashboardSectionComponent({
       ) : null}
 
       {event && dashboard?.data && contactsOpen ? (
-        <ContactsModal activity={dashboard.data.contactActivity} title={`Contatos compradores — ${dashboard.event.title}`} onClose={closeContacts} />
+        <ContactsModal activity={dashboard.data.contactActivity} title={`Contatos compradores â€” ${dashboard.event.title}`} onClose={closeContacts} />
       ) : null}
 
       {generalDashboardOpen && generalDashboard ? (

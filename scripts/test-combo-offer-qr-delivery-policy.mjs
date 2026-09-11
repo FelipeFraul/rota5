@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const COMBO_OFFER_DELAY_MINUTES = 10;
+const comboOffersSource = readFileSync(
+  new URL("../src/lib/tickets/services/comboOffers.ts", import.meta.url),
+  "utf8",
+);
 
 function iso(minutes) {
   return new Date(Date.UTC(2026, 0, 1, 12, minutes, 0)).toISOString();
@@ -216,6 +221,18 @@ test("scheduler bloqueia sem timestamp, bloqueia antes do delay, envia depois e 
     recipientType: "buyer",
     now: iso(11),
   }), "skipped");
+});
+
+test("oferta apos compra recupera envio perdido usando o tempo configurado", () => {
+  assert.match(
+    comboOffersSource,
+    /offer\.send_timing_type === "custom"[\s\S]*purchaseTime \+ offset \* 60_000/,
+  );
+  assert.doesNotMatch(
+    comboOffersSource,
+    /offer\.send_timing_type === "custom"[\s\S]{0,80}return false;/,
+  );
+  assert.match(comboOffersSource, /offer\.send_timing_type === "custom"[\s\S]*offer\.send_offset_minutes/);
 });
 
 test("backfill com varios deliveries utiliza MIN(sent_at)", () => {

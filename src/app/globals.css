@@ -4382,28 +4382,31 @@ body:has(.checkout-unavailable-shell) iframe {
 
 .admin-combo-send-controls {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(120px, 180px);
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 260px);
   gap: 10px;
 }
 
 .admin-combo-minutes-input {
-  position: relative;
-  display: block;
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
 }
 
 .admin-combo-minutes-input input {
-  padding-right: 48px;
+  direction: rtl;
+  padding-left: 8px;
+  padding-right: 8px;
+  text-align: center;
 }
 
 .admin-combo-minutes-input span {
-  position: absolute;
-  top: 50%;
-  right: 14px;
-  transform: translateY(-50%);
   color: #64748b;
   font-size: 14px;
   font-weight: 900;
+  line-height: 1.2;
   pointer-events: none;
+  white-space: nowrap;
 }
 
 .admin-combo-event-picker {

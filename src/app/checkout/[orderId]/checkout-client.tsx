@@ -51,6 +51,10 @@ function onlyDigits(value: string): string {
   return value.replace(/\D/g, "");
 }
 
+function isValidCheckoutEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 async function copyTextToClipboard(value: string): Promise<boolean> {
   if (navigator.clipboard && window.isSecureContext) {
     try {
@@ -113,6 +117,7 @@ export default function CheckoutClient({
   const [message, setMessage] = useState<string | null>(null);
   const [pixCode, setPixCode] = useState<string | null>(null);
   const [pixCopied, setPixCopied] = useState(false);
+  const canGeneratePix = isValidCheckoutEmail(email) && onlyDigits(identificationNumber).length === 11;
 
   const bin = useMemo(() => onlyDigits(cardNumber).slice(0, 6), [cardNumber]);
   const expiresAt = new Intl.DateTimeFormat("pt-BR", {
@@ -244,6 +249,11 @@ export default function CheckoutClient({
   }
 
   async function submitPix() {
+    if (!canGeneratePix) {
+      setMessage("Informe e-mail e CPF para gerar o Pix.");
+      return;
+    }
+
     setLoading(true);
     setMessage(null);
     setPixCode(null);
@@ -266,7 +276,7 @@ export default function CheckoutClient({
 
       setPixCode(data.qr_code ?? null);
       setPixCopied(false);
-      setMessage("Pix gerado. Copie o código abaixo e pague no app do banco.");
+      setMessage(null);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Não foi possível gerar o Pix.");
     } finally {
@@ -440,6 +450,7 @@ export default function CheckoutClient({
           </div>
         ) : null}
 
+        {!pixCode ? (
         <div className="checkout-form-block">
           <label className="checkout-label">
             E-mail
@@ -464,6 +475,7 @@ export default function CheckoutClient({
             />
           </label>
         </div>
+        ) : null}
 
         {enableCardPayment && mode === "card" ? (
           <div className="checkout-form-block">
@@ -535,15 +547,16 @@ export default function CheckoutClient({
           </div>
         ) : (
           <div className="checkout-form-block">
-            <button
-              type="button"
-              className="checkout-primary-button"
-              onClick={submitPix}
-              disabled={loading}
-            >
-              {loading ? "Gerando Pix..." : `Gerar Pix de ${order.totalLabel}`}
-            </button>
-            {pixCode ? (
+            {!pixCode ? (
+              <button
+                type="button"
+                className="checkout-primary-button"
+                onClick={submitPix}
+                disabled={loading || !canGeneratePix}
+              >
+                {loading ? "Gerando Pix..." : "Gerar Pix"}
+              </button>
+            ) : (
               <div className="checkout-pix-box">
                 <label className="checkout-label">
                   Pix copia e cola
@@ -562,7 +575,7 @@ export default function CheckoutClient({
                   {pixCopied ? "Copiado" : "Copiar codigo Pix"}
                 </button>
               </div>
-            ) : null}
+            )}
           </div>
         )}
 

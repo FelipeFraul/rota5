@@ -1,6 +1,10 @@
-"use client";
+﻿"use client";
 
 import type { FormEvent } from "react";
+import {
+  getMinimumComboOfferCustomOffsetMinutes,
+  normalizeComboOfferCustomOffsetMinutes,
+} from "@/lib/tickets/comboOfferCron";
 import type { ComboOfferDraft, ComboOfferSummary, EventSummary, ComboOfferTimingType } from "../AdminEventsEditor";
 
 type ComboOfferModalProps = {
@@ -32,6 +36,7 @@ export default function ComboOfferModal({
   const selectedEventSet = new Set(selectedEventIds);
   const availableEvents = events.filter((event) => !selectedEventSet.has(event.eventId));
   const eventsById = new Map(events.map((event) => [event.eventId, event]));
+  const minimumCustomOffsetMinutes = getMinimumComboOfferCustomOffsetMinutes();
 
   function addEvent(eventId: string) {
     if (!eventId || selectedEventSet.has(eventId)) return;
@@ -91,7 +96,7 @@ export default function ComboOfferModal({
                 weekdays: event.target.value === "weekday" ? [draft.weekdays[0] ?? 5] : draft.weekdays,
               })}>
                 <option value="all_events">Todos os eventos</option>
-                <option value="event">Eventos especÃ­ficos</option>
+                <option value="event">Eventos específicos</option>
                 <option value="weekday">Dia da semana</option>
               </select>
             </label>
@@ -145,8 +150,8 @@ export default function ComboOfferModal({
                 </select>
                 {draft.timingType === "custom" ? (
                   <span className="admin-combo-minutes-input">
-                    <input type="number" min={1} max={10080} value={draft.customOffsetMinutes} onChange={(event) => onDraftChange({ ...draft, customOffsetMinutes: Math.max(1, Number(event.target.value) || 1) })} />
-                    <span>min</span>
+                    <input type="number" min={minimumCustomOffsetMinutes} max={10080} value={draft.customOffsetMinutes} onChange={(event) => onDraftChange({ ...draft, customOffsetMinutes: normalizeComboOfferCustomOffsetMinutes(Number(event.target.value)) })} />
+                    <span>min apos compra</span>
                   </span>
                 ) : null}
               </span>
