@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -36,7 +36,7 @@ const migrationPaths = [
 ];
 const migrationsDir = path.join(process.cwd(), "supabase", "migrations");
 const reservationsMigrationPath = path.join(process.cwd(), "supabase", "migrations", "20260722000800_create_official_table_map_reservations.sql");
-const scopedReservationsMigrationPath = path.join(process.cwd(), "supabase", "migrations", "20260724000400_scope_official_table_map_reservations_by_session.sql");
+const scopedReservationsMigrationPath = path.join(process.cwd(), "supabase", "migrations", "20260724000600_scope_official_table_map_reservations_by_session.sql");
 const routerPath = path.join(process.cwd(), "src", "lib", "tickets", "router.ts");
 const globalsCssPath = path.join(process.cwd(), "src", "app", "globals.css");
 const rendererPath = path.join(process.cwd(), "src", "lib", "tickets", "tableMap", "renderOfficialTableMap.ts");
