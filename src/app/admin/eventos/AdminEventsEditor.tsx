@@ -607,9 +607,9 @@ export function AdminEventsEditor() {
         onError={handleDashboardError}
       />
 
-      <section className="admin-events-create-board" aria-label="Criar conte?do">
-        <button type="button" onClick={() => setCreatingEvent(true)}><span>Criar evento</span><small>Evento, sess?o, setor e pre?o</small></button>
-        <button type="button" onClick={() => setCreatingCombo(true)}><span>Criar oferta</span><small>Abra a ?rea de ofertas e crie uma nova campanha</small></button>
+      <section className="admin-events-create-board" aria-label="Criar conte\u00fado">
+        <button type="button" onClick={() => setCreatingEvent(true)}><span>Criar evento</span><small>Evento, sess\u00e3o, setor e pre\u00e7o</small></button>
+        <button type="button" onClick={() => setCreatingCombo(true)}><span>Criar oferta</span><small>Abra a \u00e1rea de ofertas e crie uma nova campanha</small></button>
       </section>
 
       <AdminEventsToolbar

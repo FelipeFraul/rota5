@@ -9,7 +9,7 @@
 :root {
   color-scheme: light;
   --app-bg-image: url("/rota5.webp");
-  --font-sans: var(--font-roboto), Roboto, Arial, Helvetica, sans-serif;
+  --font-sans: Arial, Helvetica, sans-serif;
   background: #0b0f18;
   color: #111827;
   font-family: var(--font-sans);
