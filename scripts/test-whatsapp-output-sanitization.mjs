@@ -4,7 +4,7 @@ import test from "node:test";
 
 import { sanitizeWhatsAppText } from "../src/lib/zapi/textEncoding.ts";
 
-test("sanitizeWhatsAppText repairs mojibake and removes non-ascii output characters", () => {
+test("sanitizeWhatsAppText repairs mojibake and preserves Portuguese accents", () => {
   const input =
     "Ola, bem-vindo(a) ao Rota5! \u{1f920}\n" +
     "Show: Joao e Cia \u2014 Sabado, 15/08 as 22:00\n" +
@@ -18,11 +18,11 @@ test("sanitizeWhatsAppText repairs mojibake and removes non-ascii output charact
     [
       "Ola, bem-vindo(a) ao Rota5!",
       "Show: Joao e Cia - Sabado, 15/08 as 22:00",
-      "Texto corrompido: Nao disponivel",
+      "Texto corrompido: N\u00e3o dispon\u00edvel",
       "> Digite *MEU INGRESSO* para receber",
     ].join("\n"),
   );
-  assert.doesNotMatch(result, /[^\x09\x0a\x0d\x20-\x7e]/);
+  assert.match(result, /N\u00e3o dispon\u00edvel/);
 });
 
 test("all central WhatsApp outbound persistence uses the same sanitizer", () => {

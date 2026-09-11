@@ -86,9 +86,9 @@ function normalizeLine(value: string) {
     .replace(/[\u2010-\u2015]/g, "-")
     .replace(/\u2026/g, "...")
     .replace(/\u00d7/g, "x")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^\x09\x20-\x7e]/g, "")
+    // Preserve Portuguese diacritics (á, ç, ã, etc.) for WhatsApp output.
+    // Remove only control characters outside tabs and printable Unicode text.
+    .replace(/[^\x09\x20-\x7e\u00a0-\u00ff]/g, "")
     .replace(/[ \t]+/g, " ")
     .trimEnd();
 }
