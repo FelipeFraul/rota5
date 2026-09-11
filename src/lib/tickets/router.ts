@@ -1382,7 +1382,7 @@ export function shouldProcessImmediately({
     normalizedMessage === "help" ||
     normalizedMessage === "menu" ||
     normalizedMessage === "inicio" ||
-    normalizedMessage === "zero bala" ||
+    normalizedMessage === "novo" ||
     normalizedMessage === "novo" ||
     normalizedMessage === "new" ||
     normalizedMessage === "sair" ||
@@ -1810,13 +1810,13 @@ function formatPublicEventActionLines(
     : null;
 
   if (event.availabilityStatus === "sold_out") {
-    return ["SOLD OUT", moreInfoLine, "Para uma nova pesquisa, ZERO BALA"].filter(
+    return ["SOLD OUT", moreInfoLine, "Para uma nova pesquisa, NOVO"].filter(
       (line): line is string => Boolean(line),
     );
   }
 
   if (event.availabilityStatus === "sales_closed") {
-    return ["VENDAS ENCERRADAS", moreInfoLine, "Para uma nova pesquisa, ZERO BALA"].filter(
+    return ["VENDAS ENCERRADAS", moreInfoLine, "Para uma nova pesquisa, NOVO"].filter(
       (line): line is string => Boolean(line),
     );
   }
@@ -1824,7 +1824,7 @@ function formatPublicEventActionLines(
   return [
     buyAction ? `Digite *${buyAction.option}* para *comprar*` : null,
     moreInfoLine,
-    "Para uma nova pesquisa, ZERO BALA",
+    "Para uma nova pesquisa, NOVO",
   ].filter((line): line is string => Boolean(line));
 }
 
@@ -1970,10 +1970,10 @@ function formatSingleEventMoreInfoOptions(
   event: TicketConversationEventOption | TicketConversationSelectedEvent,
 ) {
   return event.availabilityStatus === "sold_out" || event.availabilityStatus === "sales_closed"
-    ? "Para uma nova pesquisa, ZERO BALA"
+    ? "Para uma nova pesquisa, NOVO"
     : [
         'Digite *1* para *comprar*',
-        "Para uma nova pesquisa, ZERO BALA",
+        "Para uma nova pesquisa, NOVO",
       ].join("\n");
 }
 
@@ -2184,7 +2184,7 @@ function formatSectionsReply({
     sectionLines.join("\n---\n"),
     "",
     'Digite *Vortei* para voltar.',
-    "Para uma nova pesquisa, ZERO BALA",
+    "Para uma nova pesquisa, NOVO",
   ].join("\n");
 }
 
@@ -2207,7 +2207,7 @@ function formatQuantityPrompt(
       ? "Digite o número de ingressos gratuitos, até 4 por pedido. Ex: 2"
       : 'Digite o número de ingressos, *EX: 4*',
     'Digite *Vortei* para voltar.',
-    "Para uma nova pesquisa, ZERO BALA",
+    "Para uma nova pesquisa, NOVO",
   ].join("\n");
 }
 
@@ -2381,7 +2381,7 @@ function formatCartDecisionReply({ cart }: { cart: TicketConversationCart }) {
     "",
     "Digite *1* para finalizar a compra",
     'Digite *Vortei* para voltar.',
-    "Para uma nova pesquisa, ZERO BALA",
+    "Para uma nova pesquisa, NOVO",
   ].join("\n");
 }
 
@@ -2402,7 +2402,7 @@ function formatTableMapSelectionReply({
     'Digite o número da mesa ou o bistrô para reservar, *EX: 12*',
     'Digite *0* se não quer mesa ou bistrô.',
     'Digite *Vortei* para voltar.',
-    "Para uma nova pesquisa, ZERO BALA",
+    "Para uma nova pesquisa, NOVO",
   ].join("\n");
 }
 
@@ -3688,7 +3688,7 @@ function formatReservationReply({
     "",
     "Para comprar, digite *COMPRAR*",
     'Digite *Vortei* para voltar.',
-    "Para uma nova pesquisa, ZERO BALA",
+    "Para uma nova pesquisa, NOVO",
   ].join("\n");
 }
 
@@ -3727,7 +3727,7 @@ function formatReservationContextReply({
     "",
     "Para comprar, digite *COMPRAR*",
     'Digite *Vortei* para voltar.',
-    "Para uma nova pesquisa, ZERO BALA",
+    "Para uma nova pesquisa, NOVO",
   ].join("\n");
 }
 
@@ -4131,7 +4131,7 @@ function formatPaidTicketResendOptions(groups: PaidTicketResendGroup[]) {
     ),
     "",
     "Digite *Vortei* para voltar.",
-    "Para uma nova pesquisa, ZERO BALA",
+    "Para uma nova pesquisa, NOVO",
   ].join("\n");
 }
 

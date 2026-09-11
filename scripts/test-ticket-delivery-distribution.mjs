@@ -159,7 +159,7 @@ function route(text, context, rawPayload) {
 test("comando global cancela conversa antes de executar estado pendente", async () => {
   const result = await route("cancelar", validatedContext());
 
-  assert.equal(result.reply.includes("ZERO BALA"), true);
+  assert.equal(result.reply.includes("NOVO"), true);
   assert.equal(result.nextContext.state, "idle");
   assert.equal(result.nextContext.step, "idle");
   assert.equal(result.nextContext.ticketDelivery, undefined);
@@ -424,7 +424,7 @@ test("CANCELAR global limpa contatos validados e volta ao inicio", async () => {
 
   assert.equal(result.nextContext.state, "idle");
   assert.equal(result.nextContext.ticketDelivery, undefined);
-  assert.match(result.reply, /ZERO BALA/i);
+  assert.match(result.reply, /NOVO/i);
 });
 
 test("CONFIRMAR usa RPC de vinculacao e limpa estado apos sucesso", () => {
@@ -604,7 +604,7 @@ test("REENVIAR INGRESSO lista somente eventos e comandos finais", () => {
   assert.match(routerSource, /Escolha o evento que deseja receber novamente seu ingresso/);
   assert.match(routerSource, /formatOptionLine\(\s*group\.option,\s*group\.title/);
   assert.match(routerSource, /Digite \*Vortei\* para voltar/);
-  assert.match(routerSource, /Para uma nova pesquisa, ZERO BALA/);
+  assert.match(routerSource, /Para uma nova pesquisa, NOVO/);
   assert.doesNotMatch(routerSource, /Encontrei ingressos emitidos para este telefone/);
   assert.doesNotMatch(routerSource, /group\.ticketsCount === 1/);
 });

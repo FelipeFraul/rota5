@@ -13,7 +13,7 @@ export function isPublicInitialExitCommand(text: string) {
   const normalized = normalizePublicInitialText(text);
 
   return (
-    normalized === "zero bala" ||
+    normalized === "novo" ||
     normalized === "novo" ||
     normalized === "new" ||
     normalized === "sair" ||
@@ -28,7 +28,7 @@ export function isPublicInitialExitCommand(text: string) {
 export function isPublicInitialNewCommand(text: string) {
   const normalized = normalizePublicInitialText(text);
 
-  return normalized === "zero bala" || normalized === "new" || normalized === "novo";
+  return normalized === "novo" || normalized === "new" || normalized === "novo";
 }
 
 export function isPublicInitialAllEventsCommand(text: string) {

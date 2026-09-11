@@ -166,8 +166,8 @@ test("execucao real: bootstrap nao se repete apos contexto inicializado", async 
   assert.notEqual(help.outboundMessages?.[0]?.body, TICKET_MESSAGES.genericHelp);
 });
 
-test("execucao real: atalho zero bala retorna reentrada atendimento", async () => {
-  const result = await routePublicText("ZERO BALA", {
+test("execucao real: atalho novo retorna reentrada atendimento", async () => {
+  const result = await routePublicText("NOVO", {
     ...buildInitialConversationState(),
     state: "showing_events",
     step: "showing_events",
@@ -330,12 +330,12 @@ test("REENVIAR aciona reenvio pago e nao compra/admin", () => {
   assert.doesNotMatch(router, /normalized === "reenviar ingresso"[\s\S]{0,600}admin_auth_pending/);
 });
 
-test("SAIR encerra e ZERO BALA volta ao inicio", () => {
+test("SAIR encerra e NOVO volta ao inicio", () => {
   assert.match(router, /function isBuyerReservationExitIntent/);
   assert.match(router, /function isBuyerNewIntent/);
   assert.match(publicInitialFlow, /function isPublicInitialExitCommand/);
   assert.match(publicInitialFlow, /function isPublicInitialNewCommand/);
-  assert.match(publicInitialFlow, /normalized === "zero bala"/);
+  assert.match(publicInitialFlow, /normalized === "novo"/);
   assert.match(publicInitialFlow, /normalized === "new"/);
   assert.match(publicInitialFlow, /normalized === "sair"/);
   assert.match(router, /isBuyerNewIntent\(text\)[\s\S]*TICKET_MESSAGES\.reentryPrompt[\s\S]*TICKET_MESSAGES\.conversationClosed/);

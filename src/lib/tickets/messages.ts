@@ -1,7 +1,7 @@
 const PUBLIC_HOME_MESSAGE =
   "Ol\u00e1, bem-vindo(a) ao Rota5!";
 const PUBLIC_HOME_COMMANDS_MESSAGE =
-  "> Digite *SHOW* para ver o pr\u00f3ximo show\n>\n> Digite *TODOS* para ver pr\u00f3ximos shows\n>\n> Digite *ENVIAR* para reenviar ingresso\n>\n> Digite *AJUDA* em caso de d\u00favidas\n>\n> Digite *NOVO* para uma nova pesquisa";
+  "> Digite *SHOW* para ver o próximo show\n\n> Digite *TODOS* para ver próximos shows\n\n> Digite *ENVIAR* para reenviar ingresso\n\n> Digite *AJUDA* em caso de dúvidas\n\n> Digite *NOVO* para uma nova pesquisa";
 
 const PUBLIC_HOME_PROMPT = [
   PUBLIC_HOME_MESSAGE,
@@ -18,79 +18,79 @@ export const TICKET_MESSAGES = {
   genericHelpPrompt: PUBLIC_HOME_PROMPT,
   reentryPrompt: PUBLIC_REENTRY_PROMPT,
   conversationClosed:
-    "SessÃ£o encerrada. Para iniciar uma nova digite ZERO BALA",
+    "Sessão encerrada. Para iniciar uma nova digite NOVO",
   noEventsFound:
-    "NÃ£o encontrei eventos com essa busca.\n\nTente pesquisar por outro nome, artista, data ou digite TODOS para ver os eventos disponÃ­veis.",
+    "Não encontrei eventos com essa busca.\n\nTente pesquisar por outro nome, artista, data ou digite TODOS para ver os eventos disponíveis.",
   numericInvalidOption:
-    "NÃ£o encontrei essa opÃ§Ã£o. Responda com um nÃºmero da lista.",
+    "Não encontrei essa opção. Responda com um número da lista.",
   numericWithoutContext: PUBLIC_HOME_MESSAGE,
   eventOptionUnavailable:
-    "Essa opÃ§Ã£o nÃ£o estÃ¡ mais disponÃ­vel. FaÃ§a uma nova busca.",
+    "Essa opção não está mais disponível. Faça uma nova busca.",
   noSectionsAvailable:
-    "NÃ£o encontrei setores disponÃ­veis para essa sessÃ£o no momento. FaÃ§a uma nova busca ou tente outro evento.",
+    "Não encontrei setores disponíveis para essa sessão no momento. Faça uma nova busca ou tente outro evento.",
   sectionInvalidOption:
-    "NÃ£o encontrei esse setor. Responda com um nÃºmero da lista.",
+    "Não encontrei esse setor. Responda com um número da lista.",
   sectionUnavailable:
-    "Esse setor nÃ£o estÃ¡ mais disponÃ­vel. Escolha outro setor ou faÃ§a uma nova busca.",
+    "Esse setor não está mais disponível. Escolha outro setor ou faça uma nova busca.",
   noSeatsAvailable:
-    "*SEM DISPONIBILIDADE*\n\nNÃ£o hÃ¡ ingressos suficientes nesse setor para a quantidade solicitada. Veja abaixo outras opÃ§Ãµes disponÃ­veis.",
+    "*SEM DISPONIBILIDADE*\n\nNão há ingressos suficientes nesse setor para a quantidade solicitada. Veja abaixo outras opçÃµes disponíveis.",
   unnumberedSectionPending:
-    "Digite o nÃºmero de ingressos, *EX: 4*",
+    "Digite o número de ingressos, *EX: 4*",
   seatInvalidOption:
-    "ASSENTO INDISPONÃVEL",
+    "ASSENTO INDISPONÍVEL",
   seatUnavailable:
-    "Esse assento nÃ£o estÃ¡ mais disponÃ­vel. Escolha outro assento ou faÃ§a uma nova busca.",
+    "Esse assento não está mais disponível. Escolha outro assento ou faça uma nova busca.",
   seatJustBecameUnavailable:
-    "Esse assento acabou de ficar indisponÃ­vel. Escolha outro assento.",
+    "Esse assento acabou de ficar indisponível. Escolha outro assento.",
   sectionPriceUnavailable:
-    "NÃ£o encontrei preÃ§o ativo para esse setor no momento. Escolha outro setor ou tente mais tarde.",
+    "Não encontrei preço ativo para esse setor no momento. Escolha outro setor ou tente mais tarde.",
   sessionUnavailable:
-    "Essa sessÃ£o nÃ£o estÃ¡ mais disponÃ­vel. FaÃ§a uma nova busca.",
+    "Essa sessão não está mais disponível. Faça uma nova busca.",
   reservationGenericError:
-    "NÃ£o consegui reservar esse assento agora. Tente novamente em instantes.",
+    "Não consegui reservar esse assento agora. Tente novamente em instantes.",
   reservationAlreadyCreated:
-    "VocÃª jÃ¡ tem uma reserva em andamento. No prÃ³ximo passo vamos gerar o link de pagamento ou permitir cancelar/trocar.",
+    "Você já tem uma reserva em andamento. No próximo passo vamos gerar o link de pagamento ou permitir cancelar/trocar.",
   buyerAntiAbuseLimited:
-    "Muitas tentativas em pouco tempo.\nPor seguranÃ§a, aguarde alguns minutos antes de tentar novamente.",
+    "Muitas tentativas em pouco tempo.\nPor segurança, aguarde alguns minutos antes de tentar novamente.",
   paymentLinkPrompt: "Para comprar sua reserva, responda COMPRAR.",
   reservationCancelled:
     `PROCESSO CANCELADO\nSua reserva foi cancelada e os ingressos foram liberados.\n\n${PUBLIC_HOME_MESSAGE}`,
   reservationExpired:
-    "Seu tempo de reserva terminou. Digite ZERO BALA para uma nova pesquisa.",
+    "Seu tempo de reserva terminou. Digite NOVO para uma nova pesquisa.",
   buyerInterestReminder:
-    "ATENDIMENTO\n\nðŸš¨ Ãšltimos ingressos para {EVENTO}. Corra comprar o seu!\n> Digite *1* para comprar\n> Digite *2* para saber mais\n> Para uma nova pesquisa, ZERO BALA",
+    "ATENDIMENTO\n\nðŸš¨ Ãšltimos ingressos para {EVENTO}. Corra comprar o seu!\n> Digite *1* para comprar\n> Digite *2* para saber mais\n> Para uma nova pesquisa, NOVO",
   buyerFlowReset:
     `PROCESSO CANCELADO\n\n${PUBLIC_HOME_MESSAGE}`,
   reservationUnavailableForPayment:
-    "Sua reserva nÃ£o estÃ¡ mais disponÃ­vel. FaÃ§a uma nova busca para escolher outro assento.",
+    "Sua reserva não está mais disponível. Faça uma nova busca para escolher outro assento.",
   checkoutGenericError:
-    "NÃ£o consegui gerar o link de pagamento agora. Tente novamente em instantes.",
+    "Não consegui gerar o link de pagamento agora. Tente novamente em instantes.",
   freeTicketGenericError:
-    "NÃ£o consegui emitir o ingresso gratuito agora. Tente novamente em instantes.",
+    "Não consegui emitir o ingresso gratuito agora. Tente novamente em instantes.",
   gateAdminInvalidCommand:
     "Para criar acesso de portaria ou cozinha, entre no admin, escolha Portaria e cozinha e gere os links de leitura.",
   gateAdminOptionInvalid:
-    "NÃ£o encontrei essa opÃ§Ã£o de portaria. Responda com um nÃºmero do menu.",
+    "Não encontrei essa opção de portaria. Responda com um número do menu.",
   gateAdminCreateError:
-    "NÃ£o consegui criar o acesso de portaria agora. Tente novamente em instantes.",
+    "Não consegui criar o acesso de portaria agora. Tente novamente em instantes.",
   adminReservedNeutral:
-    `NÃ£o consegui entender sua mensagem.\n\n${PUBLIC_HOME_MESSAGE}`,
+    `Não consegui entender sua mensagem.\n\n${PUBLIC_HOME_MESSAGE}`,
   adminAuthPrompt:
-    "Abra o link de login enviado, informe sua senha individual e depois envie aqui o cÃ³digo de uso Ãºnico.",
+    "Abra o link de login enviado, informe sua senha individual e depois envie aqui o código de uso único.",
   adminAuthInvalid:
-    "CÃ³digo invÃ¡lido ou expirado. Envie admin para gerar um novo link de login.",
+    "Código inválido ou expirado. Envie admin para gerar um novo link de login.",
   adminAuthTemporaryLocked:
-    "Muitas tentativas incorretas. Por seguranÃ§a, este acesso foi bloqueado por {minutes} minutos.",
+    "Muitas tentativas incorretas. Por segurança, este acesso foi bloqueado por {minutes} minutos.",
   adminAuthHardLocked:
-    "Este acesso foi bloqueado por seguranÃ§a. PeÃ§a ao Diretor para liberar seu administrador.",
+    "Este acesso foi bloqueado por segurança. Peça ao Diretor para liberar seu administrador.",
   adminAuthMissingPassphrase:
-    "NÃ£o foi possÃ­vel autenticar este acesso. PeÃ§a ao Diretor para redefinir sua senha.",
+    "Não foi possível autenticar este acesso. Peça ao Diretor para redefinir sua senha.",
   adminSessionExpired:
-    "SessÃ£o administrativa encerrada.",
-  adminLogout: "SessÃ£o administrativa encerrada.",
+    "Sessão administrativa encerrada.",
+  adminLogout: "Sessão administrativa encerrada.",
   adminGenericError:
-    "NÃ£o consegui acessar o menu administrativo agora. Tente novamente em instantes.",
+    "Não consegui acessar o menu administrativo agora. Tente novamente em instantes.",
   adminOptionUnavailable:
-    "Essa opÃ§Ã£o administrativa ainda estÃ¡ em construÃ§Ã£o.",
+    "Essa opção administrativa ainda está em construção.",
 } as const;
 
