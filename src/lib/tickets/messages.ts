@@ -33,7 +33,7 @@ export const TICKET_MESSAGES = {
   sectionUnavailable:
     "Esse setor não está mais disponível. Escolha outro setor ou faça uma nova busca.",
   noSeatsAvailable:
-    "*SEM DISPONIBILIDADE*\n\nNão há ingressos suficientes nesse setor para a quantidade solicitada. Veja abaixo outras opçÃµes disponíveis.",
+    "*SEM DISPONIBILIDADE*\n\nNão há ingressos suficientes nesse setor para a quantidade solicitada. Veja abaixo outras opções disponíveis.",
   unnumberedSectionPending:
     "Digite o número de ingressos, *EX: 4*",
   seatInvalidOption:
