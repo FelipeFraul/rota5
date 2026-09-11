@@ -1,4 +1,5 @@
 ﻿import { NextResponse } from "next/server";
+import { z } from "zod";
 import { cookies } from "next/headers";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { formatComboOfferAfterPurchaseTiming } from "@/lib/tickets/comboOfferCron";
@@ -6,8 +7,8 @@ import {
   getAdminContactActivity,
   type AdminContactRange,
 } from "@/lib/tickets/services/adminContactAnalytics";
-import { requireAdminEventEditorSession } from "@/lib/tickets/services/adminWebAuth";
-import { listAdminEvents } from "@/lib/tickets/services/adminEvents";
+import { assertAdminCsrf, requireAdminEventEditorSession } from "@/lib/tickets/services/adminWebAuth";
+import { createAdminEvent, listAdminEvents } from "@/lib/tickets/services/adminEvents";
 import {
   ADMIN_WEB_AUTH_COOKIES,
   decodeAdminWebSessionCookie,
@@ -867,4 +868,42 @@ export async function GET(request: Request) {
       comboOffers,
     });
   }
+}
+
+
+const createEventSchema = z.object({
+  title: z.string().trim().min(1).max(160),
+  artistName: z.string().trim().max(160).optional(),
+  city: z.string().trim().min(1).max(90),
+  state: z.string().trim().length(2),
+  venueName: z.string().trim().min(1).max(160),
+  description: z.string().trim().max(4000).optional(),
+  imageUrl: z.string().url().max(2000).optional().or(z.literal("")),
+  startsAt: z.string().datetime(),
+  sectionName: z.string().trim().min(1).max(120),
+  capacity: z.coerce.number().int().min(1).max(100000),
+  priceCents: z.coerce.number().int().min(0).max(100000000),
+  feeCents: z.coerce.number().int().min(0).max(100000000).default(0),
+});
+
+function slugify(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "entrada";
+}
+
+export async function POST(request: Request) {
+  const auth = await requireAdminEventEditorSession();
+  if (!auth.ok) return NextResponse.json({ ok: false, message: "Sess?o expirada." }, { status: auth.reason === "forbidden" ? 403 : 401 });
+  if (!assertAdminCsrf(request, auth.session)) return NextResponse.json({ ok: false, message: "Sess?o inv?lida." }, { status: 403 });
+
+  const parsed = createEventSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ ok: false, message: "Confira os dados do novo evento." }, { status: 400 });
+  const data = parsed.data;
+  const created = await createAdminEvent({
+    title: data.title, artistName: data.artistName || data.title, artistIcon: "??", city: data.city, state: data.state, venueName: data.venueName,
+    description: data.description || null, imageUrl: data.imageUrl || null, sessionsStartsAt: [data.startsAt], status: "draft",
+    initialSections: [{ name: data.sectionName, slug: slugify(data.sectionName), hasNumberedSeats: false, capacity: data.capacity, createInventorySeats: false, ticketType: "full", label: "Ingresso", priceCents: data.priceCents, feeCents: data.feeCents }],
+    createdByAdminUserId: auth.session.adminUser.id, createdByAdminPhone: auth.session.adminUser.phone,
+  });
+  if (!created.ok) return NextResponse.json({ ok: false, message: "N?o foi poss?vel criar o evento." }, { status: 500 });
+  return NextResponse.json({ ok: true, eventId: created.eventId }, { status: 201 });
 }

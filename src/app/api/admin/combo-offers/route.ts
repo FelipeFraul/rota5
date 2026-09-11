@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { formatComboOfferAfterPurchaseTiming } from "@/lib/tickets/comboOfferCron";
-import { requireAdminEventEditorSession } from "@/lib/tickets/services/adminWebAuth";
+import { assertAdminCsrf, requireAdminEventEditorSession } from "@/lib/tickets/services/adminWebAuth";
 
 type MaybeArray<T> = T | T[] | null | undefined;
 
@@ -225,4 +226,20 @@ export async function GET() {
       { status: 500 },
     );
   }
+}
+
+
+const createComboSchema = z.object({ name: z.string().trim().min(1).max(160), description: z.string().trim().min(1).max(2000), priceCents: z.coerce.number().int().positive(), imageUrl: z.string().url().optional().or(z.literal("")) });
+export async function POST(request: Request) {
+ const auth = await requireAdminEventEditorSession();
+ if (!auth.ok) return NextResponse.json({ ok:false, message:"Sess?o expirada." }, { status: auth.reason === "forbidden" ? 403 : 401 });
+ if (!assertAdminCsrf(request, auth.session)) return NextResponse.json({ ok:false, message:"Sess?o inv?lida." }, { status:403 });
+ const parsed = createComboSchema.safeParse(await request.json().catch(() => null));
+ if (!parsed.success) return NextResponse.json({ ok:false, message:"Confira os dados da oferta." }, { status:400 });
+ const value=parsed.data; const supabase=getSupabaseAdmin();
+ const { data, error } = await supabase.from("combo_offers").insert({ name:value.name, description:value.description, price_cents:value.priceCents, image_url:value.imageUrl || null, status:"paused", send_timing_type:"three_hours_before", created_by_admin_user_id:auth.session.adminUser.id, created_by_admin_phone:auth.session.adminUser.phone }).select("id").single<{id:string}>();
+ if (error || !data) return NextResponse.json({ ok:false, message:"N?o foi poss?vel criar a oferta." }, { status:500 });
+ const { error: scopeError } = await supabase.from("combo_offer_scopes").insert({ offer_id:data.id, scope_type:"all_events" });
+ if (scopeError) { await supabase.from("combo_offers").delete().eq("id",data.id); return NextResponse.json({ok:false,message:"N?o foi poss?vel configurar a oferta."},{status:500}); }
+ return NextResponse.json({ok:true,offerId:data.id},{status:201});
 }

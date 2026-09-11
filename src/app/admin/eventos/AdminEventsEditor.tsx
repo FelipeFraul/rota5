@@ -15,6 +15,8 @@ const AdminDashboardSection = dynamic(() => import("./dashboard/AdminDashboardSe
 const EventEditorModal = dynamic(() => import("./event-editor/EventEditorModal"), {
   loading: () => null,
 });
+const CreateEventModal = dynamic(() => import("./event-editor/CreateEventModal"), { loading: () => null });
+const CreateComboOfferModal = dynamic(() => import("./combo-editor/CreateComboOfferModal"), { loading: () => null });
 
 export type ActiveTab = "event" | "sessions" | "sections" | "prices" | "courtesy" | "tableMap";
 
@@ -368,6 +370,8 @@ export function AdminEventsEditor() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [creatingEvent, setCreatingEvent] = useState(false);
+  const [creatingCombo, setCreatingCombo] = useState(false);
   const [duplicatingEventId, setDuplicatingEventId] = useState<string | null>(null);
   const [dashboardEventId, setDashboardEventId] = useState<string | null>(null);
   const [comboSectionMounted, setComboSectionMounted] = useState(false);
@@ -603,6 +607,11 @@ export function AdminEventsEditor() {
         onError={handleDashboardError}
       />
 
+      <section className="admin-events-create-board" aria-label="Criar conte?do">
+        <button type="button" onClick={() => setCreatingEvent(true)}><span>Criar evento</span><small>Evento, sess?o, setor e pre?o</small></button>
+        <button type="button" onClick={() => setCreatingCombo(true)}><span>Criar oferta</span><small>Abra a ?rea de ofertas e crie uma nova campanha</small></button>
+      </section>
+
       <AdminEventsToolbar
         appliedSearch={appliedSearch}
         status={status}
@@ -631,6 +640,10 @@ export function AdminEventsEditor() {
       {comboSectionMounted ? (
         <AdminComboOffersSection events={events} visible={viewFilter !== "tickets"} />
       ) : null}
+
+      {creatingCombo ? <CreateComboOfferModal onClose={() => setCreatingCombo(false)} onCreated={() => { setCreatingCombo(false); setComboSectionMounted(true); setViewFilter("combos"); }} /> : null}
+
+      {creatingEvent ? <CreateEventModal onClose={() => setCreatingEvent(false)} onCreated={async (eventId) => { setCreatingEvent(false); await loadEvents({ status: "all" }); setEditingEventId(eventId); }} /> : null}
 
       {editingEventId ? (
         <EventEditorModal
