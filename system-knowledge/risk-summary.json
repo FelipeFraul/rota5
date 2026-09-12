@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "generatedAt": "2026-09-12",
-  "stage": "6/8",
-  "sourceCommit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
-  "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
+  "stage": "stabilization/p0-1",
+  "sourceCommit": "7c00adb7db018786494b7b2b5124df3df69284ff",
+  "scope": "Working tree local após correção mínima de bug.create-event-invalid-jsx; nenhuma alteração remota.",
   "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
   "status": "PASS",
   "total": 44,
@@ -46,10 +46,11 @@
     "P4": 2
   },
   "by_status": {
-    "ACTIVE": 32,
+    "ACTIVE": 31,
     "POTENTIAL": 7,
     "LEGACY": 0,
-    "NOT_VALIDATED": 5
+    "NOT_VALIDATED": 5,
+    "RESOLVED": 1
   },
   "high_critical": [
     "bug.create-event-invalid-jsx",
@@ -102,17 +103,19 @@
       "cases": 210,
       "passed": 203,
       "failed": 7,
-      "status": "FAIL"
+      "status": "FAIL",
+      "change_from_baseline": "UNCHANGED"
     },
     "typecheck": {
-      "status": "FAIL",
-      "diagnostics": 5,
-      "root_cause": "CreateEventModal.tsx:19 parse error"
+      "status": "PASS",
+      "diagnostics": 0,
+      "resolution": "CreateEventModal.tsx:19 parses after removing one extra closing div."
     },
     "lint": {
-      "status": "FAIL",
-      "errors": 1,
-      "warnings": 24
+      "status": "PASS",
+      "errors": 0,
+      "warnings": 24,
+      "change_from_baseline": "parse error removed; warnings unchanged"
     },
     "adversarial_pass": {
       "false_positives_removed": 3,
@@ -122,6 +125,39 @@
         "Negrito ausente em NOVO foi mantido como divergência de contrato, não bug autônomo.",
         "Pagamento/status e wrappers/adapters foram reconhecidos como duplicação intencional."
       ]
+    },
+    "build": {
+      "status": "PASS",
+      "warning": "Preexisting NFT/Turbopack broad trace warning remains."
     }
-  }
+  },
+  "active_high_critical": [
+    "bug.combo-redemption-unreachable-consume",
+    "legacy.active-brand-contamination",
+    "risk.gate-credential-revocation-does-not-revoke-session",
+    "risk.admin-event-multistep-partial-state",
+    "risk.vercel-project-identity-drift",
+    "risk.latest-rota5-deployment-error",
+    "gap.default-test-suite-failing",
+    "gap.critical-capability-and-flow-coverage",
+    "gap.test-runner-depends-on-untracked-loader"
+  ],
+  "active_p0_p1": [
+    "bug.combo-redemption-unreachable-consume",
+    "bug.event-duplicate-artist-leak",
+    "bug.user-visible-text-corruption",
+    "legacy.active-brand-contamination",
+    "risk.gate-credential-revocation-does-not-revoke-session",
+    "risk.admin-event-multistep-partial-state",
+    "risk.vercel-project-identity-drift",
+    "risk.latest-rota5-deployment-error",
+    "gap.default-test-suite-failing",
+    "gap.critical-capability-and-flow-coverage",
+    "gap.test-runner-depends-on-untracked-loader",
+    "risk.payment-confirmed-before-external-delivery",
+    "gap.partial-flows-lack-end-to-end-proof"
+  ],
+  "resolved": [
+    "bug.create-event-invalid-jsx"
+  ]
 }

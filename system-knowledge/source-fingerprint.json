@@ -1,32 +1,32 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T04:30:28.246Z",
+  "generatedAt": "2026-09-12T13:36:12.110Z",
   "stage": 8,
-  "head": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
-  "branch": "production",
-  "origin_production": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
-  "head_matches_origin": true,
-  "git_status": [
+  "base_commit": "7c00adb7db018786494b7b2b5124df3df69284ff",
+  "functional_changes_since_base": [
     {
-      "status": " M",
-      "path": "src/lib/tickets/messages.ts"
+      "path": "src/app/admin/eventos/event-editor/CreateEventModal.tsx",
+      "sha256": "51b4f2e30be18fe1109d29f7e8c26703707c379c70ac71cc705e90b994a64ea8",
+      "finding": "bug.create-event-invalid-jsx"
     }
   ],
-  "working_tree_clean": false,
-  "functional_files_modified": [
-    {
-      "path": "src/lib/tickets/messages.ts",
-      "sha256": "c567c2bca0a3494d96ef6242e59139832a4cf648b3a85f02f84ba9f06c937694",
-      "preexisting": true
-    }
-  ],
+  "baseline_commit": "SELF_NOT_RECORDED",
+  "git_observation_at_generation": {
+    "observed_at": "2026-09-12T13:36:12.110Z",
+    "branch": "production",
+    "head": "7c00adb7db018786494b7b2b5124df3df69284ff",
+    "origin_production": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+    "head_matches_origin": false,
+    "working_tree_clean": false,
+    "validity_role": "INFORMATIONAL_ONLY"
+  },
   "package_lock_sha256": "2e2c187914e8a6f554462787a4c5d2f2315ddb59dd06bf85330a9073bd9f529c",
   "migrations_aggregate_hash": "54297f0bfb390f69e4078ac90a6a6a79f23a61f41944005de4cf4119999e5984",
   "migrations_count": 77,
-  "source_tree_fingerprint": "b80104cc5a62831c071c5ee1269eed657896464d3f6f861963bbbd2aace0ffcc",
+  "source_tree_fingerprint": "5320ec9da181b58066acb0c4c86c91542866d6831095cc2442070c229085173f",
   "source_tree_file_count": 344,
   "source_tree_strategy": "Run git ls-files -z; normalize paths to forward slashes; exclude docs/system/**, system-knowledge/**, .tools/baseline/** and any path segment beginning with .stage; sort remaining paths lexicographically; SHA-256 the current bytes of each file; concatenate path + NUL + sha256 + LF; SHA-256 the UTF-8 concatenation.",
-  "freeze_timestamp": "2026-09-12T04:24:28.619Z",
+  "freeze_timestamp": "2026-09-12T13:36:12.110Z",
   "secrets_included": false,
   "source_tree_strategy_version": 2,
   "source_tree_exclusions": [

@@ -10,7 +10,7 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 
 | ID | Tipo | Severidade | Prioridade | Status | Confiança | Título |
 |---|---|---|---|---|---|---|
-| bug.create-event-invalid-jsx | BUG | HIGH | P0 | ACTIVE | CONFIRMED | JSX inválido impede compilar o workspace web de eventos |
+| bug.create-event-invalid-jsx | BUG | HIGH | P0 | RESOLVED | CONFIRMED | JSX inválido impede compilar o workspace web de eventos |
 | bug.combo-redemption-unreachable-consume | BROKEN_FLOW | HIGH | P0 | ACTIVE | CONFIRMED | Caso válido de combo não alcança a RPC que consome o resgate |
 | bug.event-duplicate-artist-leak | BUG | MEDIUM | P1 | ACTIVE | CONFIRMED | Duplicação de evento preserva artista do evento de origem |
 | bug.user-visible-text-corruption | BUG | MEDIUM | P1 | ACTIVE | CONFIRMED | Textos ativos contêm mojibake e substituições por interrogação |
@@ -60,15 +60,17 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 ### bug.create-event-invalid-jsx — JSX inválido impede compilar o workspace web de eventos
 
 - Tipo / severidade / prioridade: **BUG / HIGH / P0**
-- Status / confiança: **ACTIVE / CONFIRMED**
+- Status / confiança: **RESOLVED / CONFIRMED**
 - Problema: CreateEventModal fecha um div antes do footer e deixa o JSX estruturalmente inválido. TypeScript e ESLint param no parse.
-- Evidência: `src/app/admin/eventos/event-editor/CreateEventModal.tsx`:19 — JSX em uma única linha contém fechamento incompatível.; `system-knowledge/flows.json` — admin.web_event_workspace está QUEBRADO pela mesma causa.
+- Evidência: `src/app/admin/eventos/event-editor/CreateEventModal.tsx`:19 — JSX em uma única linha contém fechamento incompatível.; `system-knowledge/flows.json` — admin.web_event_workspace estava QUEBRADO na Baseline V1.0.0 e agora está PARCIAL.
 - Impacto: A aplicação no estado local não passa typecheck/build e o workspace administrativo web não pode ser entregue com segurança.
 - Escopo: domains domain.event-administration, domain.analytics-reporting, domain.combo-commerce-fulfillment; capabilities event.list, event.inspect, event.create, event.edit, event.publish, event.change_status, event.cancel, event.duplicate, combo.list, analytics.general_dashboard, analytics.event_dashboard, analytics.contacts; flows admin.web_event_workspace.
 - Blast radius: **MULTI_DOMAIN**
 - Workaround: APIs e jornada administrativa por WhatsApp continuam estruturalmente presentes.
 - Direção: Restaurar a estrutura JSX e só então revalidar build e workspace.
 - Justificativa da prioridade: P0 porque bloqueia a compilação da baseline local e a evolução segura do principal workspace administrativo.
+
+- Resolução (2026-09-12): removido somente o fechamento `</div>` excedente; typecheck, lint e build passam. npm test permanece 203/210, sem mudança. ID, HIGH e P0 foram preservados como histórico.
 
 ### bug.combo-redemption-unreachable-consume — Caso válido de combo não alcança a RPC que consome o resgate
 

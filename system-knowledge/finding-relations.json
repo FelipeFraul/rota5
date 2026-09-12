@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "generatedAt": "2026-09-12",
-  "stage": "6/8",
-  "sourceCommit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+  "stage": "stabilization/p0-1",
+  "sourceCommit": "7c00adb7db018786494b7b2b5124df3df69284ff",
   "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
   "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
-  "count": 9,
+  "count": 8,
   "relation_types": [
     "CAUSES",
     "AMPLIFIES",
@@ -14,12 +14,6 @@
     "DUPLICATES"
   ],
   "records": [
-    {
-      "from": "bug.create-event-invalid-jsx",
-      "type": "CAUSES",
-      "to": "gap.default-test-suite-failing",
-      "evidence": "O parse error faz lint/typecheck falharem e compromete o gate."
-    },
     {
       "from": "risk.vercel-project-identity-drift",
       "type": "AMPLIFIES",
@@ -67,6 +61,15 @@
       "type": "AMPLIFIES",
       "to": "debt.seat-map-storage-contract-drift",
       "evidence": "Feature parcial e storage sem consumidor pertencem à mesma fronteira de mapa, mas são problemas distintos."
+    }
+  ],
+  "resolved_relations": [
+    {
+      "from": "bug.create-event-invalid-jsx",
+      "type": "CAUSES",
+      "to": "gap.default-test-suite-failing",
+      "removed_at": "2026-09-12",
+      "reason": "O parse error foi resolvido e npm test continua falhando pelos mesmos sete casos independentes."
     }
   ]
 }

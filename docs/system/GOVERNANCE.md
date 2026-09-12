@@ -10,4 +10,4 @@ New capabilities require canonical ID, domain, type, description, modules, entry
 
 Future finding lifecycle: OPEN, MITIGATED, RESOLVED, ACCEPTED, NOT_VALIDATED. Historical Etapa 6 statuses remain unchanged. Resolution preserves the finding ID and records date, evidence, related change and proving test.
 
-Versioning: PATCH for documentary correction without functional change; MINOR for compatible functional change, new capability or flow evolution; MAJOR for significant architectural or contractual change. This freeze remains 1.0.0.
+Versioning: PATCH for documentary correction without functional change; MINOR for compatible functional change, new capability or flow evolution; MAJOR for significant architectural or contractual change. Versions use numeric SemVer (`MAJOR.MINOR.PATCH`) without restricting the major number. Baseline 1.1.0 identifies its frozen source through a base commit, declared functional changes and the final source tree fingerprint. The Git commit containing a baseline is not stored inside its own content, avoiding self-reference; working-tree observations made during generation are informational rather than permanent validity requirements.

@@ -96,8 +96,8 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 ## Execução atual
 
 - npm test: 210 casos, 203 PASS, 7 FAIL.
-- typecheck: FAIL, cinco diagnósticos derivados do parse em CreateEventModal.tsx:19.
-- lint: FAIL, um erro de parse e 24 warnings.
+- typecheck: PASS, zero diagnósticos após a resolução de bug.create-event-invalid-jsx.
+- lint: PASS, zero erros e os mesmos 24 warnings preexistentes.
 - Suíte padrão: 15 arquivos.
 - Testes catalogados fora da suíte: 28 arquivos.
 - Catálogo total: 43 testes, além de auditorias/tools.

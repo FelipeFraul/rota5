@@ -1,9 +1,31 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T04:24:28.619Z",
+  "generatedAt": "2026-09-12T13:36:12.110Z",
   "stage": 8,
-  "count": 1,
+  "count": 2,
   "records": [
+    {
+      "version": "1.1.0",
+      "type": "STABILIZATION_FIX",
+      "status": "FROZEN",
+      "date": "2026-09-12T13:36:12.110Z",
+      "source_commit": "7c00adb7db018786494b7b2b5124df3df69284ff",
+      "finding": "bug.create-event-invalid-jsx",
+      "finding_status": "RESOLVED",
+      "functional_change": "One excess JSX closing div removed from CreateEventModal.tsx.",
+      "flow_change": {
+        "id": "admin.web_event_workspace",
+        "from": "QUEBRADO",
+        "to": "PARCIAL"
+      },
+      "capability_status_changes": [],
+      "gates": {
+        "typecheck": "PASS",
+        "lint": "PASS_WITH_24_WARNINGS",
+        "npm_test": "FAIL_UNCHANGED_203_OF_210",
+        "build": "PASS_WITH_PREEXISTING_WARNING"
+      }
+    },
     {
       "version": "1.0.0",
       "type": "BASELINE_FREEZE",

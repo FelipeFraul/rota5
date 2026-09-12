@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-11",
+  "generatedAt": "2026-09-12",
   "stage": "3/8",
   "id": "capability-catalog.v1",
   "canonical": true,
@@ -3071,7 +3071,7 @@
       ],
       "database_triggers": [],
       "notes": [
-        "CreateEventModal.tsx:19 possui 5 diagnósticos de parse TSX. API/serviço e criação via WhatsApp permanecem estruturalmente presentes. Falhas intermediárias não são uma transação única."
+        "O modal web compila após remoção do fechamento JSX excedente. A capability permanece PARCIAL porque a criação multi-entidade não possui transação única e pode deixar estado intermediário."
       ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
@@ -3105,7 +3105,7 @@
         "result": "Criar evento e dados iniciais; formulário web atual tem erro de parse, caminho de serviço/WhatsApp existe.",
         "validation": "STATIC_SOURCE",
         "limitations": [
-          "CreateEventModal.tsx:19 possui 5 diagnósticos de parse TSX. API/serviço e criação via WhatsApp permanecem estruturalmente presentes. Falhas intermediárias não são uma transação única."
+          "O modal web compila; permanece a limitação de atomicidade da criação multi-entidade."
         ]
       },
       "dependencies": [],
@@ -21229,7 +21229,7 @@
   ],
   "limitations": [
     "Schema remoto, grants efetivos, dados, deploy, cron e entrega real não foram consultados.",
-    "CreateEventModal.tsx:19 não faz parse; isso limita criação web, sem invalidar automaticamente capabilities de outros caminhos.",
+    "CreateEventModal compila no estado atual; event.create permanece PARCIAL pela atomicidade multi-entidade, não por parse.",
     "Há predomínio de contratos de fonte e auditorias não executadas; cobertura não é percentual nem prova fim a fim.",
     "Falhas intermediárias das mutações TypeScript de eventos/combos não têm atomicidade global comprovada.",
     "Mesas desabilitadas na apresentação e exigidas pela escolha de entrega do combo causam incompatibilidade com venda individual.",

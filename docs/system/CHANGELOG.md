@@ -1,5 +1,14 @@
 # Baseline changelog
 
+## BASELINE V1.1.0 — P0-1 RESOLVED
+
+- Date: 2026-09-12T13:36:12.110Z
+- `bug.create-event-invalid-jsx`: RESOLVED with ID/severity/priority history preserved.
+- Functional diff: one excess `</div>` removed from `CreateEventModal.tsx`.
+- Gates: typecheck PASS; lint PASS with 24 preexisting warnings; npm test unchanged at 203/210; build PASS with the existing NFT/Turbopack warning.
+- Flow: `admin.web_event_workspace` changed from QUEBRADO to PARCIAL. Capability statuses did not change.
+- No commit, push, deploy or remote change was performed.
+
 ## BASELINE V1.0.0 — FROZEN
 
 - Date: 2026-09-12T04:24:28.619Z

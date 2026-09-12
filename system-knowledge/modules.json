@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-11",
+  "generatedAt": "2026-09-12",
   "count": 66,
   "records": [
     {
@@ -1048,7 +1048,7 @@
       "domain": "domain.event-administration",
       "path": "src/app/admin/eventos/AdminEventsEditor.tsx; src/app/admin/eventos/components; src/app/admin/eventos/event-editor",
       "responsibility": "Coordenar lista, filtros, cards e modais de criação/edição.",
-      "status": "PARCIALMENTE CONFIRMADO",
+      "status": "CONFIRMADO",
       "exports": [
         "AdminEventsEditor",
         "EventEditorModal",
@@ -1078,7 +1078,7 @@
         "export EventEditorModal",
         "export CreateEventModal"
       ],
-      "notes": "CreateEventModal não faz parse; ciclo de imports somente de tipos com componentes."
+      "notes": "CreateEventModal volta a fazer parse; typecheck e build locais passam. O ciclo de imports permanece somente de tipos com componentes."
     },
     {
       "id": "event-admin.program-importer",

@@ -11,7 +11,7 @@ Esta lista contém **18 registros**. Ela evita transformar ausência de evidênc
 | U-005 | NÃO VALIDADO | Consistência das variáveis por ambiente | schema e `.env.example` divergem em alguns nomes | presença/valor em Development, Preview e Production; nenhuma credencial foi registrada |
 | U-006 | NÃO VALIDADO | Configuração dos webhooks Z-API e Mercado Pago | duas rotas POST e validação de segredo/assinatura estão no código | URLs cadastradas, segredo correspondente, retries e entrega reais |
 | U-007 | NÃO VALIDADO | Execução dos cron jobs | `vercel.json` agenda duas rotas por minuto; rotas exigem `CRON_SECRET` | plano compatível, cron ativo, autenticação e histórico de execuções |
-| U-008 | PARCIALMENTE CONFIRMADO | Relação entre UI observada e fonte atual quebrada | typecheck/lint/build falham em `CreateEventModal.tsx`, embora exista evidência anterior de página acessível | qual commit/build está em produção e como o modal atual chegou ao artefato publicado |
+| U-008 | PARCIALMENTE CONFIRMADO | Relação entre fonte local corrigida e UI publicada | typecheck/lint/build locais passam após a correção de `CreateEventModal.tsx` | o commit/build efetivamente publicado continua NOT_VALIDATED |
 | U-009 | PARCIALMENTE CONFIRMADO | Alcance total da corrupção textual | teste de mojibake falha; fontes têm `?`, `Ã` e mensagens divergentes | todo texto afetado em browser, WhatsApp, banco e dados externos |
 | U-010 | PARCIALMENTE CONFIRMADO | Resultado dos testes fora de `npm test` | Etapa 3 executou 39 dos 43 arquivos, incluindo 25 dos 28 fora da suíte padrão: 276 casos aprovados e 20 falhas | três testes reais não executados; teste padrão do mapa apenas inspecionado nesta etapa. Ver capability-test-coverage.md |
 | U-011 | ÓRFÃO / POSSÍVEL LEGADO | `seat_map_renders` e Storage | tabela/trigger/RLS e `SEAT_MAP_STORAGE_BUCKET` existem; nenhuma chamada `.storage`, upload/download ou `.from('seat_map_renders')` foi encontrada | uso externo, dados remotos, intenção de retomada ou aposentadoria |
@@ -27,7 +27,7 @@ Esta lista contém **18 registros**. Ela evita transformar ausência de evidênc
 
 ### Compilação versus testes de estrutura
 
-`test-admin-events-editor-event-modal-extraction.mjs` existe e valida a presença de estruturas do modal, mas está fora de `npm test` e não detecta que `CreateEventModal.tsx` não faz parse. TypeScript, ESLint e Next build detectam o erro. Logo, a presença do teste não confirma a validade do componente.
+`test-admin-events-editor-event-modal-extraction.mjs` passou 4/4 após a correção, mas continua fora de `npm test`. A validade sintática foi comprovada separadamente por TypeScript, ESLint e Next build.
 
 ### Texto sanitizado versus fonte corrompida
 

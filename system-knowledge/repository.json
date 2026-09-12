@@ -1,6 +1,6 @@
 {
     "schemaVersion":  1,
-    "generatedAt":  "2026-09-11",
+    "generatedAt":  "2026-09-12",
     "baseline":  {
                      "stage":  "1/8",
                      "name":  "Reconhecimento total do sistema",
@@ -107,7 +107,7 @@
                         "type":  "frontend-area",
                         "path":  "src/app/admin",
                         "purpose":  "Login, eventos, ofertas, dashboards, contatos, operação e mapa.",
-                        "status":  "PARCIALMENTE CONFIRMADO",
+                        "status":  "CONFIRMADO",
                         "evidence":  [
                                          "src/app/admin/eventos/AdminEventsEditor.tsx",
                                          "src/app/admin/operacao/page.tsx",
@@ -118,7 +118,7 @@
                                              "/api/admin/combo-offers",
                                              "/api/admin/operational-dashboard"
                                          ],
-                        "notes":  "CreateEventModal.tsx não faz parse no commit auditado."
+                        "notes":  "CreateEventModal compila; typecheck, lint e build locais passam após a correção mínima."
                     },
                     {
                         "id":  "repo-checkout",
@@ -418,22 +418,22 @@
                         },
     "validation":  {
                        "typecheck":  {
-                                         "status":  "FAIL",
-                                         "evidence":  "JSX inválido em CreateEventModal.tsx"
+                                         "status":  "PASS",
+                                         "evidence":  "0 diagnósticos após a correção mínima"
                                      },
                        "lint":  {
-                                    "status":  "FAIL",
-                                    "evidence":  "1 erro de parsing e 24 warnings"
+                                    "status":  "PASS",
+                                    "evidence":  "0 erros e 24 warnings preexistentes"
                                 },
                        "build":  {
-                                     "status":  "FAIL",
-                                     "evidence":  "parsing de CreateEventModal.tsx"
+                                     "status":  "PASS",
+                                     "evidence":  "compilação concluída; warning NFT/Turbopack preexistente"
                                  },
                        "tests":  {
                                      "status":  "FAIL",
                                      "total":  210,
-                                     "passed":  204,
-                                     "failed":  6
+                                     "passed":  203,
+                                     "failed":  7
                                  }
                    }
 }

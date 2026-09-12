@@ -483,9 +483,9 @@ Foram identificados **66 modules principais**. Um module pode representar um arq
 - **Integrações:** Nenhum identificado
 - **Efeitos colaterais:** fetch APIs admin e mantém estado React
 - **Testes relacionados:** `test-admin-events-editor-event-modal-extraction.mjs`, `test-admin-events-editor-toolbar-extraction.mjs`
-- **Status:** PARCIALMENTE CONFIRMADO
+- **Status:** CONFIRMADO
 - **Evidência:** `src/app/admin/eventos/AdminEventsEditor.tsx; src/app/admin/eventos/components; src/app/admin/eventos/event-editor`, `export AdminEventsEditor`, `export EventEditorModal`, `export CreateEventModal`
-- **Notas:** CreateEventModal não faz parse; ciclo de imports somente de tipos com componentes.
+- **Notas:** CreateEventModal volta a fazer parse; typecheck e build locais passam. O ciclo de imports permanece somente de tipos com componentes.
 
 ### `event-admin.program-importer` — Importador de programação de eventos
 

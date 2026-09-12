@@ -273,7 +273,7 @@ A descoberta foi executada entrypoint-first sobre 56 entradas, capability-first 
 
 ## `admin.web_event_workspace` — Workspace web de eventos, combos e dashboards
 
-- **Tipo/status:** ADMIN_JOURNEY / QUEBRADO
+- **Tipo/status:** ADMIN_JOURNEY / PARCIAL
 - **Ator/trigger:** admin / ADMIN_ACTION
 - **Entradas:** `page-admin-events`, `http-admin-events`, `http-admin-event-id`, `http-admin-combos`, `http-admin-combo-id`
 - **Objetivo/happy path:** Operar catálogo administrativo pela página web.
@@ -301,7 +301,7 @@ A descoberta foi executada entrypoint-first sobre 56 entradas, capability-first 
 **Branches e erros**
 
 - APIs validam sessão/CSRF e executam consultas/mutações.
-- A página importa CreateEventModal.tsx com JSX incompleto; o build/typecheck/lint não compilam o workspace atual.
+- A página e o CreateEventModal compilam; a jornada permanece parcial por criação multi-entidade e testes source-contract falhos não relacionados ao parse.
 - Chamadas diretas às APIs permanecem estruturalmente existentes.
 - Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso.
 

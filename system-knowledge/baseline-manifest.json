@@ -1,25 +1,36 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T04:24:28.619Z",
+  "generatedAt": "2026-09-12T13:36:12.110Z",
   "stage": 8,
   "baseline_id": "rota5-baseline-v1",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "status": "FROZEN",
-  "frozen_at": "2026-09-12T04:24:28.619Z",
-  "source_commit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
-  "branch": "production",
-  "origin_commit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
-  "head_matches_origin": true,
-  "working_tree_state": {
-    "clean": false,
-    "reason": "Baseline artifacts are untracked and src/lib/tickets/messages.ts has a preexisting functional modification.",
-    "snapshot_is_pure_commit": false,
-    "preexisting_functional_changes": [
+  "frozen_at": "2026-09-12T13:36:12.110Z",
+  "source_state": {
+    "base_commit": "7c00adb7db018786494b7b2b5124df3df69284ff",
+    "source_tree_fingerprint": "5320ec9da181b58066acb0c4c86c91542866d6831095cc2442070c229085173f",
+    "source_tree_file_count": 344,
+    "functional_changes_since_base": [
       {
-        "path": "src/lib/tickets/messages.ts",
-        "sha256": "c567c2bca0a3494d96ef6242e59139832a4cf648b3a85f02f84ba9f06c937694"
+        "path": "src/app/admin/eventos/event-editor/CreateEventModal.tsx",
+        "change": "Remove one extra JSX closing div.",
+        "finding": "bug.create-event-invalid-jsx",
+        "sha256": "51b4f2e30be18fe1109d29f7e8c26703707c379c70ac71cc705e90b994a64ea8"
       }
-    ]
+    ],
+    "generated_from_working_tree": true,
+    "baseline_commit": "SELF_NOT_RECORDED",
+    "baseline_commit_policy": "The Git commit containing this baseline is intentionally not embedded in its own content to avoid self-reference."
+  },
+  "git_observation_at_generation": {
+    "observed_at": "2026-09-12T13:36:12.110Z",
+    "branch": "production",
+    "head": "7c00adb7db018786494b7b2b5124df3df69284ff",
+    "origin_production": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+    "head_matches_origin": false,
+    "working_tree_clean": false,
+    "validity_role": "INFORMATIONAL_ONLY",
+    "note": "Historical observation made while generating the freeze; future working-tree state is not a baseline validity requirement."
   },
   "baseline_integrity": {
     "status": "PASS",
@@ -28,13 +39,14 @@
   },
   "product_health": {
     "status": "BROKEN",
-    "reason": "3 P0, 10 HIGH, 2 broken flows, 7 partial flows, npm test/typecheck/lint failing and infrastructure drift.",
+    "reason": "2 active P0, 9 active HIGH, 1 broken flow, 8 partial flows, npm test failing and infrastructure drift; typecheck, lint and build now pass.",
     "findings": 44,
-    "p0": 3,
-    "high": 10,
+    "active_p0": 2,
+    "active_high": 9,
     "critical": 0,
-    "broken_flows": 2,
-    "partial_flows": 7
+    "resolved": 1,
+    "broken_flows": 1,
+    "partial_flows": 8
   },
   "confidence": "HIGH",
   "canonical_counts": {
@@ -67,12 +79,10 @@
   "unresolved_evidence_count": 10,
   "contradictions_pending": 0,
   "p0_findings": [
-    "bug.create-event-invalid-jsx",
     "bug.combo-redemption-unreachable-consume",
     "risk.vercel-project-identity-drift"
   ],
   "high_findings": [
-    "bug.create-event-invalid-jsx",
     "bug.combo-redemption-unreachable-consume",
     "legacy.active-brand-contamination",
     "risk.gate-credential-revocation-does-not-revoke-session",
@@ -237,8 +247,11 @@
     "self_exclusion": "baseline-integrity.json is excluded to avoid circularity."
   },
   "notes": [
-    "The observed snapshot includes a preexisting functional change and is not the pure source commit.",
-    "FROZEN means documentation is internally frozen; no commit, push or deploy was performed.",
+    "Baseline 1.1.0 records the resolved JSX P0 over base commit 7c00adb7db018786494b7b2b5124df3df69284ff and identifies the final functional source state by fingerprint.",
+    "FROZEN validity depends on source_state and validated artifacts, not on the current Git working-tree state.",
     "NOT_VALIDATED does not mean BROKEN."
+  ],
+  "resolved_findings": [
+    "bug.create-event-invalid-jsx"
   ]
 }

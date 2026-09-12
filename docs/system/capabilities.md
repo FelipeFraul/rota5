@@ -92,7 +92,7 @@ As referências de entrada e implementação apontam para código executável; a
 - **Revogação de acesso não revoga sessão:** `pauseGateAccess` e `revokeFixedGateAccess` só alteram suas credenciais. `validateGateSessionToken` consulta a sessão/evento, sem revalidar a credencial de origem. Revogação por ID de sessão existe como serviço órfão.
 - **Automação além da expiração:** o cron de reservas também lembra interesse sem compra, expira sessões administrativas e dispara ofertas de combo. A consulta administrativa de eventos pode marcar eventos/sessões passados como finished.
 - **Batches não respondem clientes:** o webhook responde imediatamente. O cron reclama e cancela lotes; seus helpers não comprovam capacidade de resposta assíncrona ativa.
-- **Criação web parcial:** `CreateEventModal.tsx:19` tem cinco diagnósticos de parse. O caminho API/WhatsApp permanece no catálogo; o erro não foi generalizado para o restante do sistema.
+- **Criação web:** o fechamento JSX excedente foi removido e typecheck/lint/build passam. `event.create` permanece PARCIAL somente pela criação multi-entidade sem transação única.
 
 ## Caminhos sobrepostos e granularidade
 
@@ -385,7 +385,7 @@ Criar evento e dados iniciais; formulário web atual tem erro de parse, caminho 
 - **Testes:** `test-002`, `test-006`, `audit.admin-event-creation-flow`.
 - **Requer / dependentes:** — / —.
 - **Evidência:** [src/lib/tickets/services/adminEvents.ts:1504](../../src/lib/tickets/services/adminEvents.ts#L1504); [src/app/api/admin/events/route.ts:893](../../src/app/api/admin/events/route.ts#L893); [src/lib/tickets/router.ts:7853](../../src/lib/tickets/router.ts#L7853). Demais call sites e entradas no JSON canônico.
-- **Limitações/notas:** CreateEventModal.tsx:19 possui 5 diagnósticos de parse TSX. API/serviço e criação via WhatsApp permanecem estruturalmente presentes. Falhas intermediárias não são uma transação única.
+- **Limitações/notas:** O modal web compila. A capability permanece PARCIAL porque falhas intermediárias da criação multi-entidade não formam uma transação única.
 
 #### event.edit — Editar dados e local de evento
 
@@ -1870,7 +1870,7 @@ Após execução, enviar resumo ao telefone do solicitante se disponível; ausê
 ## Limites e prontidão
 
 - Schema remoto, grants efetivos, dados, deploy, cron e entrega real não foram consultados.
-- CreateEventModal.tsx:19 não faz parse; isso limita criação web, sem invalidar automaticamente capabilities de outros caminhos.
+- CreateEventModal.tsx compila após a correção mínima; nenhuma das 12 capabilities relacionadas mudou de status. `event.create` continua PARCIAL pela atomicidade multi-entidade.
 - Há predomínio de contratos de fonte e auditorias não executadas; cobertura não é percentual nem prova fim a fim.
 - Falhas intermediárias das mutações TypeScript de eventos/combos não têm atomicidade global comprovada.
 - Mesas desabilitadas na apresentação e exigidas pela escolha de entrega do combo causam incompatibilidade com venda individual.

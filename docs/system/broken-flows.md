@@ -2,13 +2,9 @@
 
 ## Flows quebrados
 
-### `admin.web_event_workspace`
+### Reclassificado após estabilização
 
-- **Objetivo:** operar eventos, combos e dashboards pela página administrativa.
-- **Quebra:** `src/app/admin/eventos/event-editor/CreateEventModal.tsx` contém JSX incompleto; lint, typecheck e build falham antes de disponibilizar o workspace atual.
-- **Capabilities afetadas:** `admin.authorize`, `event.list`, `event.inspect`, `event.create`, `event.edit`, `event.publish`, `event.change_status`, `event.cancel`, `event.duplicate`, `combo.list`, `analytics.general_dashboard`, `analytics.event_dashboard`, `analytics.contacts`
-- **Consequência:** journey da página não pode ser apresentado como funcional; APIs continuam estruturalmente existentes.
-- **Evidência:** baseline de testes/build e `system-knowledge/capabilities.json`.
+`admin.web_event_workspace` passou de QUEBRADO para PARCIAL: o JSX foi corrigido e typecheck/lint/build passam. Permanecem criação multi-entidade parcial e testes source-contract falhos independentes.
 
 ### `kitchen.combo_redemption`
 
@@ -29,6 +25,7 @@
 | `admin.whatsapp_event_management` | Criação começa em draft e pode publicar. Edição percorre estados conversacionais e valida cada entidade. Preço tem evidência parcial e falhas intermediárias podem deixar draft/resíduos. |
 | `admin.courtesy_management` | Emissão usa RPC transacional e produz pedido/ticket pagos. Cancelamento invalida ticket/cortesia; reenvio reutiliza entrega. Limite por setor via workspace web é parcial. |
 | `table_map.calibration` | GET renderiza/lê; POST valida e persiste coordenadas. Assets/estado visual e execução browser não foram integralmente validados. |
+| `admin.web_event_workspace` | O workspace compila; criação multi-entidade e testes source-contract mantêm a jornada parcial. |
 
 O status PARCIAL diferencia elos internos não integralmente comprovados de integrações apenas não executadas. Flows estruturalmente completos com serviço externo não acionado permanecem CONFIRMADO e carregam essa limitação nas notas.
 

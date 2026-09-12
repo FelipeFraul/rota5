@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedAt": "2026-09-12",
-  "stage": "6/8",
-  "sourceCommit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+  "stage": "stabilization/p0-1",
+  "sourceCommit": "7c00adb7db018786494b7b2b5124df3df69284ff",
   "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
   "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
   "count": 44,
@@ -13,7 +13,7 @@
       "type": "BUG",
       "severity": "HIGH",
       "priority": "P0",
-      "status": "ACTIVE",
+      "status": "RESOLVED",
       "confidence": "CONFIRMED",
       "description": "CreateEventModal fecha um div antes do footer e deixa o JSX estruturalmente inválido. TypeScript e ESLint param no parse.",
       "evidence": [
@@ -24,7 +24,7 @@
         },
         {
           "path": "system-knowledge/flows.json",
-          "claim": "admin.web_event_workspace está QUEBRADO pela mesma causa."
+          "claim": "admin.web_event_workspace foi reclassificado de QUEBRADO para PARCIAL após os gates locais passarem."
         }
       ],
       "impact": "A aplicação no estado local não passa typecheck/build e o workspace administrativo web não pode ser entregue com segurança.",
@@ -63,7 +63,42 @@
       "blast_radius": "MULTI_DOMAIN",
       "workaround": "APIs e jornada administrativa por WhatsApp continuam estruturalmente presentes.",
       "direction": "Restaurar a estrutura JSX e só então revalidar build e workspace.",
-      "priority_justification": "P0 porque bloqueia a compilação da baseline local e a evolução segura do principal workspace administrativo."
+      "priority_justification": "P0 porque bloqueia a compilação da baseline local e a evolução segura do principal workspace administrativo.",
+      "historical_status_at_baseline_v1_0_0": "ACTIVE",
+      "resolution": {
+        "date": "2026-09-12",
+        "base_commit": "7c00adb7db018786494b7b2b5124df3df69284ff",
+        "change": "Removido apenas o </div> excedente entre a mensagem do formulário e o footer em CreateEventModal.tsx.",
+        "evidence": [
+          {
+            "command": "npm run typecheck",
+            "result": "PASS, 0 diagnostics"
+          },
+          {
+            "command": "npm run lint",
+            "result": "PASS, 0 errors and 24 preexisting warnings"
+          },
+          {
+            "command": "npm test",
+            "result": "FAIL, unchanged: 203/210 pass and 7 preexisting failures"
+          },
+          {
+            "command": "npm run build",
+            "result": "PASS with the preexisting NFT/Turbopack warning"
+          },
+          {
+            "command": "node --test scripts/test-admin-events-editor-event-modal-extraction.mjs",
+            "result": "PASS, 4/4"
+          }
+        ],
+        "related_flow": {
+          "id": "admin.web_event_workspace",
+          "before": "QUEBRADO",
+          "after": "PARCIAL"
+        },
+        "lifecycle_policy": "ID, severity and priority preserved; status migrated from historical ACTIVE to RESOLVED with explicit evidence."
+      },
+      "current_impact": "O bloqueio de parse foi removido. Nenhuma regra de negócio ou layout foi alterado."
     },
     {
       "id": "bug.combo-redemption-unreachable-consume",

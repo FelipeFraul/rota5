@@ -46,7 +46,7 @@ Os resultados acima são CONFIRMADOS para a execução local. Eles não foram co
 | `test-admin-events-editor-card-memoization.mjs` | grids/cards memoizados | contrato de fonte | não | não renderiza browser |
 | `test-admin-events-editor-combo-section-extraction.mjs` | isolamento da seção de combos | contrato de fonte | não | não chama API real |
 | `test-admin-events-editor-dashboard-section-extraction.mjs` | extração do dashboard | contrato de fonte | não | não renderiza nem mede rede |
-| `test-admin-events-editor-event-modal-extraction.mjs` | extração do modal de evento | contrato de fonte | não | não detectou o JSX inválido atual |
+| `test-admin-events-editor-event-modal-extraction.mjs` | extração do modal de evento | contrato de fonte | não | PASS 4/4 após a correção; typecheck/build provam o parse |
 | `test-admin-events-editor-lazy-modals.mjs` | imports lazy de modais | contrato de fonte | não | não executa bundle |
 | `test-admin-events-editor-toolbar-extraction.mjs` | filtros e busca do toolbar | contrato de fonte | não | não exercita UI real |
 | `test-admin-events-fast-mode.mjs` | payload rápido de eventos | contrato de fonte | não | sem banco |
@@ -127,9 +127,9 @@ Limitação comum: várias ferramentas usam Supabase real/service role, criam da
 
 | Comando | Resultado | Evidência principal |
 | --- | --- | --- |
-| `npm run typecheck` | FAIL | JSX inválido em `CreateEventModal.tsx` |
-| `npm run lint` | FAIL | 1 erro de parsing e 24 warnings |
-| `npm run build` | FAIL | parsing do mesmo modal; warning NFT/Turbopack no mapa |
+| `npm run typecheck` | PASS | 0 diagnósticos após a correção mínima |
+| `npm run lint` | PASS | 0 erros; 24 warnings preexistentes |
+| `npm run build` | PASS | compilação concluída; warning NFT/Turbopack preexistente no mapa |
 | `npm test` | FAIL | 203/210 passaram; 7 falharam |
 
 O lint sinalizou ainda imports, funções e variáveis sem uso, uso de `<img>` e uma dependência desnecessária de hook. Esses sinais foram inventariados como possíveis lacunas/legado; nenhum foi alterado.

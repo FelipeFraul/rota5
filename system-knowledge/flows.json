@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-11",
+  "generatedAt": "2026-09-12",
   "stage": 4,
   "id": "rota5.flow-catalog.v1",
   "canonical": true,
@@ -14,9 +14,9 @@
       "OPERATIONAL_PROCESS": 3
     },
     "by_status": {
-      "PARCIAL": 7,
+      "PARCIAL": 8,
       "CONFIRMADO": 25,
-      "QUEBRADO": 2
+      "QUEBRADO": 1
     },
     "steps": 169,
     "state_transitions": 66,
@@ -1336,13 +1336,13 @@
         "analytics.event_dashboard",
         "analytics.contacts"
       ],
-      "status": "QUEBRADO",
+      "status": "PARCIAL",
       "goal": "Operar catálogo administrativo pela página web.",
       "branches": {
         "happy_path": "Operar catálogo administrativo pela página web.",
         "alternative_paths": [
           "APIs validam sessão/CSRF e executam consultas/mutações.",
-          "A página importa CreateEventModal.tsx com JSX incompleto; o build/typecheck/lint não compilam o workspace atual.",
+          "A página e o CreateEventModal compilam; a jornada permanece parcial por criação multi-entidade e testes source-contract falhos não relacionados ao parse.",
           "Chamadas diretas às APIs permanecem estruturalmente existentes."
         ],
         "error_paths": [
@@ -1359,7 +1359,7 @@
       "actors": [
         "admin"
       ],
-      "implementation_status": "QUEBRADO",
+      "implementation_status": "PARCIAL",
       "test_status": "FAILING",
       "domains": [
         "domain.admin-identity-access",
@@ -1437,10 +1437,10 @@
       ],
       "evidence": [
         {
-          "kind": "build_blocker",
+          "kind": "local_validation",
           "path": "src/app/admin/eventos/event-editor/CreateEventModal.tsx",
           "line": 19,
-          "claim": "Incomplete JSX blocks the current page workspace from compiling."
+          "claim": "Fechamento JSX excedente removido; typecheck, lint e build locais passam em 2026-09-12."
         },
         {
           "kind": "implementation",

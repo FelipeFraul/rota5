@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T04:24:28.619Z",
+  "generatedAt": "2026-09-12T13:36:12.110Z",
   "stage": 8,
   "baseline_id": "rota5-baseline-v1",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "status": "FROZEN",
   "domains": 17,
   "modules": 66,
@@ -39,7 +39,6 @@
     "P4": 2
   },
   "broken_flows": [
-    "admin.web_event_workspace",
     "kitchen.combo_redemption"
   ],
   "partial_flows": [
@@ -49,10 +48,10 @@
     "combo.delivery_choice",
     "admin.whatsapp_event_management",
     "admin.courtesy_management",
-    "table_map.calibration"
+    "table_map.calibration",
+    "admin.web_event_workspace"
   ],
   "p0_findings": [
-    "bug.create-event-invalid-jsx",
     "bug.combo-redemption-unreachable-consume",
     "risk.vercel-project-identity-drift"
   ],
@@ -87,17 +86,25 @@
       "status": "FAIL",
       "cases": 210,
       "passed": 203,
-      "failed": 7
+      "failed": 7,
+      "change": "UNCHANGED"
     },
     "typecheck": {
-      "status": "FAIL",
-      "diagnostics": 5
+      "status": "PASS",
+      "diagnostics": 0
     },
     "lint": {
-      "status": "FAIL",
-      "errors": 1,
+      "status": "PASS",
+      "errors": 0,
       "warnings": 24
     },
+    "build": {
+      "status": "PASS",
+      "warnings": 1
+    },
     "baseline_integrity": "PASS"
-  }
+  },
+  "resolved_findings": [
+    "bug.create-event-invalid-jsx"
+  ]
 }

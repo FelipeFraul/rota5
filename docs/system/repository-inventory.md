@@ -51,7 +51,7 @@ Arquivos ignorados como `.env`, `.env.local`, `.next/`, `.tmp/`, `.vercel/` e `n
 
 `AdminEventsEditor.tsx` coordena busca, filtros e modais. Componentes foram extraídos para `components/`, `dashboard/`, `contacts/`, `combo-editor/` e `event-editor/`. O filtro inicial de eventos é `published`; criação e duplicação produzem evento `draft` no serviço e o carregamento pós-criação pede `status=all`. A diferença entre estado do filtro e recarga está confirmada no código, mas seu efeito completo no navegador permanece parcialmente validado.
 
-`CreateEventModal.tsx` contém JSX sem fechamento correspondente no commit-base. O erro foi reproduzido por TypeScript, ESLint e build. O serviço `createAdminEvent` cria/reutiliza local, depois evento, sessões, setores, assentos e preços em chamadas sequenciais. `duplicateAdminEvent` cria um novo local e copia sessões, setores, assentos, assentos por sessão e preços; não foi encontrada uma RPC transacional para o fluxo completo. Essas são descrições do fluxo, não avaliação de arquitetura.
+`CreateEventModal.tsx` tinha um fechamento `</div>` excedente na Baseline V1.0.0. A correção mínima removeu esse token; TypeScript, ESLint e build agora passam. O serviço `createAdminEvent` cria/reutiliza local, depois evento, sessões, setores, assentos e preços em chamadas sequenciais. `duplicateAdminEvent` cria um novo local e copia sessões, setores, assentos, assentos por sessão e preços; não foi encontrada uma RPC transacional para o fluxo completo. Essas são descrições do fluxo, não avaliação de arquitetura.
 
 ## Módulos de domínio
 

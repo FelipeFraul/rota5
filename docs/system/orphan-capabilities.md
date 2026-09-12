@@ -47,7 +47,7 @@ O predicado que permite consumir um combo válido exige `paid`, `issued` e escop
 | Capability | Limitação |
 | --- | --- |
 | messaging.help | Dois casos de busca/seleção falham na execução local. Estrutura de retorno existe; assertivas com texto esperado não comprovam falha de toda busca. |
-| event.create | CreateEventModal.tsx:19 possui 5 diagnósticos de parse TSX. API/serviço e criação via WhatsApp permanecem estruturalmente presentes. Falhas intermediárias não são uma transação única. |
+| event.create | O modal web compila. A capability permanece PARCIAL porque falhas intermediárias da criação multi-entidade não são uma transação única. |
 | event.price_edit | API aceita label e o diálogo chama updateAdminPrice, mas o contrato do campo web Nome no ingresso falha. Não se assume que a superfície visual ofereça toda a edição. |
 | courtesy.section_limit | API PATCH existe e grava limites, mas aba courtesy do EventEditorModal é ocultada por constante false; consumidor humano visual não confirmado. |
 | courtesy.public_issue | O router chama emissão zero-value e a RPC existe. A apresentação filtra ticket_type free e desliga cortesias; apenas zero-value de outro tipo ou contexto persistido pode alcançar o ramo. Nenhum dado remoto foi consultado. |

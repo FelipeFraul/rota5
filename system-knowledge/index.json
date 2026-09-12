@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T04:24:28.619Z",
+  "generatedAt": "2026-09-12T13:36:12.110Z",
   "stage": 8,
   "id": "rota5-machine-catalog-index",
   "baseline_id": "rota5-baseline-v1",
@@ -16,7 +16,7 @@
       "depends_on": [],
       "generated_by_stage": 2,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.baseline-integrity",
@@ -30,7 +30,7 @@
       ],
       "generated_by_stage": 8,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.baseline-manifest",
@@ -47,7 +47,7 @@
       ],
       "generated_by_stage": 8,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.baseline-v1",
@@ -69,7 +69,7 @@
       ],
       "generated_by_stage": 8,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.capabilities",
@@ -81,7 +81,7 @@
       "depends_on": [],
       "generated_by_stage": 3,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.capability-relations",
@@ -93,7 +93,7 @@
       "depends_on": [],
       "generated_by_stage": 3,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.changelog",
@@ -105,7 +105,7 @@
       "depends_on": [],
       "generated_by_stage": 8,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.completeness",
@@ -117,7 +117,7 @@
       "depends_on": [],
       "generated_by_stage": 7,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.configuration-drift",
@@ -129,7 +129,7 @@
       "depends_on": [],
       "generated_by_stage": 5,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.contradictions",
@@ -141,7 +141,7 @@
       "depends_on": [],
       "generated_by_stage": 7,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.coverage",
@@ -153,7 +153,7 @@
       "depends_on": [],
       "generated_by_stage": 7,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.cron",
@@ -165,7 +165,7 @@
       "depends_on": [],
       "generated_by_stage": 5,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.cross-audit",
@@ -177,7 +177,7 @@
       "depends_on": [],
       "generated_by_stage": 7,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.data-model",
@@ -189,7 +189,7 @@
       "depends_on": [],
       "generated_by_stage": 5,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.database-objects",
@@ -201,7 +201,7 @@
       "depends_on": [],
       "generated_by_stage": 5,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.database-relations",
@@ -213,7 +213,7 @@
       "depends_on": [],
       "generated_by_stage": 5,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.dead-or-legacy",
@@ -225,7 +225,7 @@
       "depends_on": [],
       "generated_by_stage": 6,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.dependencies",
@@ -237,7 +237,7 @@
       "depends_on": [],
       "generated_by_stage": 2,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.domains",
@@ -249,7 +249,7 @@
       "depends_on": [],
       "generated_by_stage": 2,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.entrypoints",
@@ -261,7 +261,7 @@
       "depends_on": [],
       "generated_by_stage": 1,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.environment",
@@ -273,7 +273,7 @@
       "depends_on": [],
       "generated_by_stage": 5,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.finding-relations",
@@ -285,7 +285,7 @@
       "depends_on": [],
       "generated_by_stage": 6,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.findings",
@@ -301,7 +301,7 @@
       ],
       "generated_by_stage": 6,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.flow-relations",
@@ -313,7 +313,7 @@
       "depends_on": [],
       "generated_by_stage": 4,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.flow-steps",
@@ -328,7 +328,7 @@
       ],
       "generated_by_stage": 4,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.flows",
@@ -344,7 +344,7 @@
       ],
       "generated_by_stage": 4,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.health",
@@ -356,7 +356,7 @@
       "depends_on": [],
       "generated_by_stage": 6,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.index",
@@ -368,7 +368,7 @@
       "depends_on": [],
       "generated_by_stage": 8,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.infrastructure",
@@ -380,7 +380,7 @@
       "depends_on": [],
       "generated_by_stage": 5,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.integration-runtime",
@@ -392,7 +392,7 @@
       "depends_on": [],
       "generated_by_stage": 5,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.integrations",
@@ -404,7 +404,7 @@
       "depends_on": [],
       "generated_by_stage": 1,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.modules",
@@ -416,7 +416,7 @@
       "depends_on": [],
       "generated_by_stage": 2,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.observability",
@@ -428,7 +428,7 @@
       "depends_on": [],
       "generated_by_stage": 5,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.repository",
@@ -440,7 +440,7 @@
       "depends_on": [],
       "generated_by_stage": 1,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.risk-summary",
@@ -452,7 +452,7 @@
       "depends_on": [],
       "generated_by_stage": 6,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.runtime-validation",
@@ -464,7 +464,7 @@
       "depends_on": [],
       "generated_by_stage": 5,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.self-reading",
@@ -478,7 +478,7 @@
       ],
       "generated_by_stage": 8,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.source-fingerprint",
@@ -490,7 +490,7 @@
       "depends_on": [],
       "generated_by_stage": 8,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.state-transitions",
@@ -506,7 +506,7 @@
       ],
       "generated_by_stage": 4,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.test-gaps",
@@ -518,7 +518,7 @@
       "depends_on": [],
       "generated_by_stage": 6,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.tests",
@@ -530,7 +530,7 @@
       "depends_on": [],
       "generated_by_stage": 1,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.unresolved-evidence",
@@ -542,7 +542,7 @@
       "depends_on": [],
       "generated_by_stage": 7,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     },
     {
       "id": "catalog.webhooks",
@@ -554,7 +554,7 @@
       "depends_on": [],
       "generated_by_stage": 5,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T04:24:28.619Z"
+      "last_validated_at": "2026-09-12T13:36:12.110Z"
     }
   ]
 }

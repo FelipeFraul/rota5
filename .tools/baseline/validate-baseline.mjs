@@ -120,7 +120,7 @@ if (integrity) {
 
 const fingerprint = catalogs['source-fingerprint'];
 if (fingerprint) {
-  for (const key of ['head','branch','origin_production','package_lock_sha256','migrations_aggregate_hash','source_tree_fingerprint','freeze_timestamp']) if (!fingerprint[key]) add('SOURCE_FINGERPRINT_FIELD_MISSING',key);
+  for (const key of ['base_commit','package_lock_sha256','migrations_aggregate_hash','source_tree_fingerprint','freeze_timestamp']) if (!fingerprint[key]) add('SOURCE_FINGERPRINT_FIELD_MISSING',key);
   const canonicalExclusions=['docs/system/**','system-knowledge/**','.tools/baseline/**','**/.stage*'];
   if (JSON.stringify(fingerprint.source_tree_exclusions)!==JSON.stringify(canonicalExclusions)) add('SOURCE_FINGERPRINT_EXCLUSIONS_INVALID','Canonical baseline and .stage exclusions are required.');
   const excluded=(value)=>{
@@ -134,7 +134,10 @@ if (fingerprint) {
   if(fingerprint.source_tree_fingerprint!==sha256(Buffer.from(material,'utf8'))) add('SOURCE_TREE_FINGERPRINT_MISMATCH','source-fingerprint.json');
 }
 const manifest = catalogs['baseline-manifest'];
-if (manifest?.baseline_id!=='rota5-baseline-v1'||manifest?.version!=='1.0.0'||manifest?.status!=='FROZEN') add('MANIFEST_IDENTITY_INVALID','baseline-manifest.json');
+if (manifest?.baseline_id!=='rota5-baseline-v1'||!/^\d+\.\d+\.\d+$/.test(manifest?.version||'')||manifest?.status!=='FROZEN') add('MANIFEST_IDENTITY_INVALID','baseline-manifest.json');
+if (!manifest?.source_state?.base_commit || manifest.source_state.source_tree_fingerprint!==fingerprint?.source_tree_fingerprint || manifest.source_state.baseline_commit!=='SELF_NOT_RECORDED') add('MANIFEST_SOURCE_STATE_INVALID','baseline-manifest.json');
+if (!manifest?.source_state?.functional_changes_since_base?.some(change=>change.path==='src/app/admin/eventos/event-editor/CreateEventModal.tsx')) add('MANIFEST_FUNCTIONAL_CHANGE_MISSING','baseline-manifest.json');
+if (manifest?.git_observation_at_generation?.validity_role!=='INFORMATIONAL_ONLY') add('MANIFEST_TRANSIENT_STATE_ROLE_INVALID','baseline-manifest.json');
 if (!catalogs['self-reading']?.query_routes?.IMPACT_ANALYSIS) add('SELF_READING_ROUTE_MISSING','IMPACT_ANALYSIS');
 
 if (errors.length) {

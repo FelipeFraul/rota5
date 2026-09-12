@@ -3,9 +3,11 @@
 This document orders current findings; it does not introduce features or patches.
 
 ## P0 — BEFORE EVOLUTION
-- `bug.create-event-invalid-jsx` — JSX inválido impede compilar o workspace web de eventos
 - `bug.combo-redemption-unreachable-consume` — Caso válido de combo não alcança a RPC que consome o resgate
 - `risk.vercel-project-identity-drift` — Domínio declarado pertence a site, enquanto checkout local está ligado a rota5
+
+## RESOLVED
+- `bug.create-event-invalid-jsx` — JSX corrigido; typecheck, lint e build passam.
 
 ## P1 — EARLY STABILIZATION
 - `bug.event-duplicate-artist-leak` — Duplicação de evento preserva artista do evento de origem

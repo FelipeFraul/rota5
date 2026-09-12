@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedAt": "2026-09-12",
-  "stage": "6/8",
-  "sourceCommit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+  "stage": "stabilization/p0-1",
+  "sourceCommit": "7c00adb7db018786494b7b2b5124df3df69284ff",
   "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
   "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
   "vocabulary": [
@@ -16,13 +16,19 @@
   "system": {
     "id": "system.rota5",
     "health": "BROKEN",
-    "reason": "Dois flows quebrados e gate local de compilação/testes falho.",
+    "reason": "Um flow permanece quebrado, dois P0 permanecem ativos, npm test continua falhando e há drift de infraestrutura.",
     "finding_counts_by_severity": {
       "CRITICAL": 0,
       "HIGH": 10,
       "MEDIUM": 23,
       "LOW": 9,
       "INFO": 2
+    },
+    "active_findings": {
+      "P0": 2,
+      "HIGH": 9,
+      "CRITICAL": 0,
+      "RESOLVED": 1
     }
   },
   "domains": [
@@ -87,7 +93,6 @@
       "id": "domain.event-administration",
       "health": "DEGRADED",
       "findings": [
-        "bug.create-event-invalid-jsx",
         "bug.event-duplicate-artist-leak",
         "risk.admin-event-multistep-partial-state",
         "debt.router-responsibility-concentration",
@@ -177,7 +182,6 @@
       "id": "domain.combo-commerce-fulfillment",
       "health": "BROKEN",
       "findings": [
-        "bug.create-event-invalid-jsx",
         "bug.combo-redemption-unreachable-consume",
         "bug.user-visible-text-corruption",
         "risk.gate-credential-revocation-does-not-revoke-session",
@@ -208,7 +212,6 @@
       "id": "domain.analytics-reporting",
       "health": "DEGRADED",
       "findings": [
-        "bug.create-event-invalid-jsx",
         "bug.user-visible-text-corruption",
         "debt.large-mixed-service-modules"
       ]
@@ -361,24 +364,19 @@
       "id": "event.list",
       "health": "HEALTHY",
       "canonical_status": "CONFIRMADA",
-      "findings": [
-        "bug.create-event-invalid-jsx"
-      ]
+      "findings": []
     },
     {
       "id": "event.inspect",
       "health": "HEALTHY",
       "canonical_status": "CONFIRMADA",
-      "findings": [
-        "bug.create-event-invalid-jsx"
-      ]
+      "findings": []
     },
     {
       "id": "event.create",
       "health": "DEGRADED",
       "canonical_status": "PARCIAL",
       "findings": [
-        "bug.create-event-invalid-jsx",
         "risk.admin-event-multistep-partial-state"
       ]
     },
@@ -386,24 +384,19 @@
       "id": "event.edit",
       "health": "HEALTHY",
       "canonical_status": "CONFIRMADA",
-      "findings": [
-        "bug.create-event-invalid-jsx"
-      ]
+      "findings": []
     },
     {
       "id": "event.publish",
       "health": "HEALTHY",
       "canonical_status": "CONFIRMADA",
-      "findings": [
-        "bug.create-event-invalid-jsx"
-      ]
+      "findings": []
     },
     {
       "id": "event.change_status",
       "health": "HEALTHY",
       "canonical_status": "CONFIRMADA",
       "findings": [
-        "bug.create-event-invalid-jsx",
         "gap.critical-capability-and-flow-coverage"
       ]
     },
@@ -412,7 +405,6 @@
       "health": "HEALTHY",
       "canonical_status": "CONFIRMADA",
       "findings": [
-        "bug.create-event-invalid-jsx",
         "gap.critical-capability-and-flow-coverage"
       ]
     },
@@ -421,7 +413,6 @@
       "health": "DEGRADED",
       "canonical_status": "CONFIRMADA",
       "findings": [
-        "bug.create-event-invalid-jsx",
         "bug.event-duplicate-artist-leak"
       ]
     },
@@ -832,9 +823,7 @@
       "id": "combo.list",
       "health": "HEALTHY",
       "canonical_status": "CONFIRMADA",
-      "findings": [
-        "bug.create-event-invalid-jsx"
-      ]
+      "findings": []
     },
     {
       "id": "combo.create",
@@ -1031,7 +1020,6 @@
       "health": "DEGRADED",
       "canonical_status": "CONFIRMADA",
       "findings": [
-        "bug.create-event-invalid-jsx",
         "bug.user-visible-text-corruption"
       ]
     },
@@ -1040,7 +1028,6 @@
       "health": "DEGRADED",
       "canonical_status": "CONFIRMADA",
       "findings": [
-        "bug.create-event-invalid-jsx",
         "bug.user-visible-text-corruption"
       ]
     },
@@ -1048,9 +1035,7 @@
       "id": "analytics.contacts",
       "health": "DEGRADED",
       "canonical_status": "CONFIRMADA",
-      "findings": [
-        "bug.create-event-invalid-jsx"
-      ]
+      "findings": []
     },
     {
       "id": "analytics.operational",
@@ -1276,10 +1261,9 @@
     },
     {
       "id": "admin.web_event_workspace",
-      "health": "BROKEN",
-      "canonical_status": "QUEBRADO",
+      "health": "DEGRADED",
+      "canonical_status": "PARCIAL",
       "findings": [
-        "bug.create-event-invalid-jsx",
         "bug.event-duplicate-artist-leak",
         "bug.user-visible-text-corruption",
         "risk.admin-event-multistep-partial-state"
@@ -1572,5 +1556,8 @@
       "health": "HEALTHY",
       "reason": "Aliases observados responderam 200; um deployment mais recente permanece ERROR."
     }
+  ],
+  "resolved_findings": [
+    "bug.create-event-invalid-jsx"
   ]
 }
