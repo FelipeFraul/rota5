@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T15:29:26.315Z",
-  "stage": "stabilization/p0-3",
+  "generatedAt": "2026-09-12T16:41:28.048Z",
+  "stage": "stabilization/taxonomy-correction",
   "id": "rota5-self-reading-v1",
   "baseline_id": "rota5-baseline-v1",
   "bootstrap_files": [
@@ -200,7 +200,8 @@
         "flows.json",
         "runtime-validation.json"
       ],
-      "method": "Não confunda integridade da baseline com saúde do produto."
+      "method": "Não confunda integridade da baseline com saúde do produto.",
+      "product_health_update": "Three P0 findings are RESOLVED and no P0 remains ACTIVE. Product health remains BROKEN because six HIGH findings are ACTIVE, one HIGH finding is POTENTIAL, seven HIGH findings remain open, seven preexisting npm-test failures and other unresolved risks remain."
     }
   },
   "validation_rules": [

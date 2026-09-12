@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T16:14:21.248Z",
-  "stage": "stabilization/p0-3",
+  "generatedAt": "2026-09-12T22:20:40.719Z",
+  "stage": "stabilization/validator-hardening",
   "baseline_id": "rota5-baseline-v1",
   "algorithm": "SHA-256",
   "count": 95,
   "aggregate_strategy": "Sort records by path; concatenate path + NUL + sha256 + LF; SHA-256 the UTF-8 concatenation.",
-  "aggregate_hash": "e35ddb5ac9ed4f634eca5a9e484aa1d62b18a30eeff31c3063cccd9206a3cb1b",
+  "aggregate_hash": "5f20fac8416d69f5b522184224b9eb27d7fc0bef6b810ad8bd2f2e63fa099ef1",
   "records": [
     {
       "path": ".tools/baseline/validate-baseline.mjs",
-      "size": 17828,
-      "sha256": "50c367df0121cab9b39672dbdf7f885dc06851fec589391c85fa27bd78dd2a64"
+      "size": 27016,
+      "sha256": "4ba48ccba588d9ada0cec0ca8cdb1c6614fbeb1e972889b68c8216eaf9c4489a"
     },
     {
       "path": "docs/system/AI-READ-ME.md",
@@ -20,13 +20,13 @@
     },
     {
       "path": "docs/system/BASELINE-V1.md",
-      "size": 2459,
-      "sha256": "2736b0b724db1741311d820c3b496058634069135987adde813d376f7dfa560d"
+      "size": 2492,
+      "sha256": "5eeda1ccba4088009a74b73b456dcf7de3e83027a92fe61bb9b01b3c480abe58"
     },
     {
       "path": "docs/system/CANONICAL-INDEX.md",
       "size": 7118,
-      "sha256": "fb326c54572ad6c6e43d204d984d6109ff4f41c5a9383ac673c32088892d6b49"
+      "sha256": "8560433f373388e4035947636b18f3b362fb59822a68a580599b28e379eb8fe3"
     },
     {
       "path": "docs/system/CHANGE-PROTOCOL.md",
@@ -35,13 +35,13 @@
     },
     {
       "path": "docs/system/CHANGELOG.md",
-      "size": 2582,
-      "sha256": "b3d599e125d4eec7cc96ce7fd1df6baffc758b866d583f177c23c403ad702178"
+      "size": 3232,
+      "sha256": "bfab2a7b8900bf54af2da62bd6ce319f4a302fcd3a0f31f3f2f125e1cad0b6d8"
     },
     {
       "path": "docs/system/GOVERNANCE.md",
-      "size": 1834,
-      "sha256": "d9bd44e0688017b57beace7689d6da8322f5eaa1304b3104e2d2d29120d8a399"
+      "size": 3132,
+      "sha256": "f04a4ba16ecd8ecf22dab0bb9136cc5996797d3ce25d3479831c2b7113003a3e"
     },
     {
       "path": "docs/system/KNOWN-LIMITS.md",
@@ -50,13 +50,13 @@
     },
     {
       "path": "docs/system/NEXT-ACTIONS.md",
-      "size": 5207,
-      "sha256": "41ad2b8c25ab3735ba44135c6bc0957e039d1eb874f3b602126f284758b9d956"
+      "size": 5246,
+      "sha256": "a6310a40263ed3cbe9cd3c270bacb707f85886d89c20f5ed2f19552733373ff8"
     },
     {
       "path": "docs/system/README.md",
       "size": 2481,
-      "sha256": "34ed5e39e90b5d24c4c3e72eb708a9ffdb72658834f47346734280a0d8b67aea"
+      "sha256": "18217cbb5a3525035e008358a06e295216ce9361ec24f9206d0b493081add446"
     },
     {
       "path": "docs/system/architecture-hotspots.md",
@@ -215,8 +215,8 @@
     },
     {
       "path": "docs/system/quality-summary.md",
-      "size": 1944,
-      "sha256": "ea0627de8ce8b3af20226cc3925fb1c4eb6907f2d4719735c2b3ccf7e6d8ce93"
+      "size": 1988,
+      "sha256": "de1708a020e744a9a926dfa3d53a1d140ecdc8a47f378732cce78428061c71b1"
     },
     {
       "path": "docs/system/repository-inventory.md",
@@ -280,13 +280,13 @@
     },
     {
       "path": "system-knowledge/baseline-manifest.json",
-      "size": 8410,
-      "sha256": "dd0a403f96487c0dfac11addb6df976ed622d1bba4e83ddc64bd19a09c9e3536"
+      "size": 9577,
+      "sha256": "a0d8fb0e6f22fae417477bd4fbf1516b081c0b0b30d6c2dc26927138f96e925c"
     },
     {
       "path": "system-knowledge/baseline-v1.json",
-      "size": 2721,
-      "sha256": "bcc743bba165be68dddcbae691158b2d8c3e84284c16d5beb1c2424cf345428f"
+      "size": 3637,
+      "sha256": "d795df75d90cef2c705624574a8db15f8350a5714a34d02d1e9477e30c347f90"
     },
     {
       "path": "system-knowledge/capabilities.json",
@@ -300,8 +300,8 @@
     },
     {
       "path": "system-knowledge/changelog.json",
-      "size": 4823,
-      "sha256": "5e1afdb3d3be5f88cef44ed4e116cadad8c805b8e249690ed9c85759c0ad29ff"
+      "size": 5472,
+      "sha256": "3ba4f0a0ae5197dc5efbcdc9fcc5e4862a5449077277477cbf309b98986226e4"
     },
     {
       "path": "system-knowledge/completeness.json",
@@ -380,8 +380,8 @@
     },
     {
       "path": "system-knowledge/findings.json",
-      "size": 83091,
-      "sha256": "8285d9527bc7d1a4e57f7eb1542c8f90bc1880254d726c83b22dccaafca81c1f"
+      "size": 85571,
+      "sha256": "f19ea62c49f9d8f975915a51b2fee752bca6c702e08f22d25b90143041722451"
     },
     {
       "path": "system-knowledge/flow-relations.json",
@@ -400,8 +400,8 @@
     },
     {
       "path": "system-knowledge/health.json",
-      "size": 40720,
-      "sha256": "d0083abd647c5f64e7614781e928ba21f32707ca52b596baf038ec6716e73d0d"
+      "size": 40853,
+      "sha256": "05bb23b25fbbfb0e4634acd9abbbcd93969aa91f9e2e818bae32fccdf2f1cedb"
     },
     {
       "path": "system-knowledge/index.json",
@@ -440,8 +440,8 @@
     },
     {
       "path": "system-knowledge/risk-summary.json",
-      "size": 5092,
-      "sha256": "313e0436c7f2cd97e9a06603b33d7a76e87381957bc080fdebc688ea3951a667"
+      "size": 6447,
+      "sha256": "a37892bbb97b5e49b68b92d8b37838961413d776f13780f0e792c1b3bb2e50a4"
     },
     {
       "path": "system-knowledge/runtime-validation.json",
@@ -450,8 +450,8 @@
     },
     {
       "path": "system-knowledge/self-reading.json",
-      "size": 9119,
-      "sha256": "558707cc4157a76c5567023cf8446d3e38c7a64b747b29ac1eeb1cf3327b80b5"
+      "size": 9428,
+      "sha256": "30ec58582a95c308bd686936377d1ad45464d9aeeaffcea894fd4e10f9d19e25"
     },
     {
       "path": "system-knowledge/source-fingerprint.json",

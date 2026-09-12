@@ -11,17 +11,17 @@ Nenhum finding P0 ativo.
 - `bug.combo-redemption-unreachable-consume` — caminho atômico restaurado localmente; equivalência remota continua não validada.
 - `risk.vercel-project-identity-drift` — cadeia canônica separada como `FelipeFraul/rota5` `production` → Vercel `rota5`; nenhum deployment realizado.
 
-## P1 — EARLY STABILIZATION
+## P1 — ACTIVE AND POTENTIAL STABILIZATION
 - `bug.event-duplicate-artist-leak` — Duplicação de evento preserva artista do evento de origem
 - `bug.user-visible-text-corruption` — Textos ativos contêm mojibake e substituições por interrogação
 - `legacy.active-brand-contamination` — Superfícies Rota5 exibem referências e assets Black House/RockBar
 - `risk.gate-credential-revocation-does-not-revoke-session` — Pausa/revogação da credencial não invalida sessões de leitor já emitidas
-- `risk.admin-event-multistep-partial-state` — Criação de evento e catálogo inicial cruza entidades sem transação única
+- `risk.admin-event-multistep-partial-state` (POTENTIAL) — Criação de evento e catálogo inicial cruza entidades sem transação única
 - `risk.latest-rota5-deployment-error` — Deployment mais recente do projeto rota5 está em ERROR
 - `gap.default-test-suite-failing` — Suíte padrão está vermelha com sete casos falhos
 - `gap.critical-capability-and-flow-coverage` — Capabilities e flows relevantes não têm teste direto
 - `gap.test-runner-depends-on-untracked-loader` — npm test depende de loader em diretório temporário não versionado
-- `risk.payment-confirmed-before-external-delivery` — Confirmação atômica e entrega externa formam fronteira de consistência eventual
+- `risk.payment-confirmed-before-external-delivery` (POTENTIAL) — Confirmação atômica e entrega externa formam fronteira de consistência eventual
 - `gap.partial-flows-lack-end-to-end-proof` — Sete flows parciais não possuem prova ponta a ponta
 
 ## P2 — STRUCTURAL DEBT

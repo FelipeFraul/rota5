@@ -1,6 +1,6 @@
 # Canonical human index
 
-Status for every entry: **FROZEN** at Baseline V1.3.0. Machine discovery begins at `system-knowledge/index.json`.
+Status for every entry: **FROZEN** at Baseline V1.3.1. Machine discovery begins at `system-knowledge/index.json`.
 
 ## System
 

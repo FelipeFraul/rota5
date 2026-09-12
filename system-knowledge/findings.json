@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T15:29:26.315Z",
-  "stage": "stabilization/p0-3",
+  "generatedAt": "2026-09-12T22:16:13.706Z",
+  "stage": "stabilization/validator-hardening",
   "sourceCommit": "121b7a8a4870f5933bd0cf0d45f12a8d71132424",
   "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
   "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
@@ -2129,5 +2129,100 @@
       "direction": "Manter uma matriz verificável de autorização por entrypoint e reduzir privilégios quando possível.",
       "priority_justification": "P2 por ser risco estrutural real com controles presentes e sem exploração confirmada."
     }
-  ]
+  ],
+  "finding_status_taxonomy": {
+    "schema_version": 1,
+    "canonical_statuses": [
+      "ACTIVE",
+      "POTENTIAL",
+      "OPEN",
+      "MITIGATED",
+      "RESOLVED",
+      "ACCEPTED",
+      "NOT_VALIDATED"
+    ],
+    "historical_statuses": [
+      "ACTIVE",
+      "POTENTIAL"
+    ],
+    "future_lifecycle_statuses": [
+      "OPEN",
+      "MITIGATED",
+      "RESOLVED",
+      "ACCEPTED",
+      "NOT_VALIDATED"
+    ],
+    "statuses": {
+      "ACTIVE": {
+        "confirmed": true,
+        "operational_open": true,
+        "active_metric": true,
+        "potential_metric": false,
+        "release_blocking": true,
+        "stabilization_queue": true,
+        "validation_queue": false,
+        "closed": false
+      },
+      "POTENTIAL": {
+        "confirmed": false,
+        "operational_open": true,
+        "active_metric": false,
+        "potential_metric": true,
+        "release_blocking": false,
+        "stabilization_queue": true,
+        "validation_queue": false,
+        "closed": false
+      },
+      "OPEN": {
+        "confirmed": true,
+        "operational_open": true,
+        "active_metric": false,
+        "potential_metric": false,
+        "release_blocking": true,
+        "stabilization_queue": true,
+        "validation_queue": false,
+        "closed": false
+      },
+      "MITIGATED": {
+        "confirmed": true,
+        "operational_open": true,
+        "active_metric": false,
+        "potential_metric": false,
+        "release_blocking": true,
+        "stabilization_queue": true,
+        "validation_queue": false,
+        "closed": false
+      },
+      "RESOLVED": {
+        "confirmed": true,
+        "operational_open": false,
+        "active_metric": false,
+        "potential_metric": false,
+        "release_blocking": false,
+        "stabilization_queue": false,
+        "validation_queue": false,
+        "closed": true
+      },
+      "ACCEPTED": {
+        "confirmed": true,
+        "operational_open": false,
+        "active_metric": false,
+        "potential_metric": false,
+        "release_blocking": false,
+        "stabilization_queue": false,
+        "validation_queue": false,
+        "closed": true
+      },
+      "NOT_VALIDATED": {
+        "confirmed": false,
+        "operational_open": false,
+        "active_metric": false,
+        "potential_metric": false,
+        "release_blocking": false,
+        "stabilization_queue": false,
+        "validation_queue": true,
+        "closed": false
+      }
+    }
+  }
 }

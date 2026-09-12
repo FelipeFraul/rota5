@@ -44,7 +44,6 @@ const committedFunctionalSource = (commit) => {
   const tracked = childProcess.execFileSync('git',['ls-tree','-r','-z','--name-only',commit],{cwd:root}).toString('utf8').split('\0').filter(Boolean);
   return aggregateSourceFingerprint(tracked, value => childProcess.execFileSync('git',['cat-file','blob',`${commit}:${value}`],{cwd:root,stdio:['ignore','pipe','pipe'],maxBuffer:64*1024*1024}));
 };
-
 const required = [
   'baseline-manifest.json','baseline-v1.json','index.json','self-reading.json',
   'source-fingerprint.json','changelog.json','baseline-integrity.json'
@@ -180,6 +179,98 @@ if (fingerprint) {
 const manifest = catalogs['baseline-manifest'];
 if (manifest?.baseline_id!=='rota5-baseline-v1'||!/^\d+\.\d+\.\d+$/.test(manifest?.version||'')||manifest?.status!=='FROZEN') add('MANIFEST_IDENTITY_INVALID','baseline-manifest.json');
 if (!manifest?.source_state?.base_commit || manifest.source_state.source_tree_fingerprint!==fingerprint?.source_tree_fingerprint || manifest.source_state.baseline_commit!=='SELF_NOT_RECORDED') add('MANIFEST_SOURCE_STATE_INVALID','baseline-manifest.json');
+if (catalogs['baseline-v1']?.version !== manifest?.version) add('BASELINE_VERSION_MISMATCH',`${catalogs['baseline-v1']?.version} != ${manifest?.version}`);
+const taxonomy = catalogs.findings?.finding_status_taxonomy;
+const taxonomyProperties = ['confirmed','operational_open','active_metric','potential_metric','release_blocking','stabilization_queue','validation_queue','closed'];
+const taxonomyStatuses = taxonomy?.statuses;
+const canonicalFindingStatuses = taxonomy?.canonical_statuses;
+const exactStatusSet = (left, right) => Array.isArray(left) && Array.isArray(right) && left.length===right.length && left.every(value=>right.includes(value));
+if (!Array.isArray(canonicalFindingStatuses) || new Set(canonicalFindingStatuses).size!==canonicalFindingStatuses.length || !taxonomyStatuses || typeof taxonomyStatuses!=='object') add('FINDING_TAXONOMY_SCHEMA_INVALID','findings.json');
+if (!exactStatusSet(canonicalFindingStatuses,Object.keys(taxonomyStatuses||{}))) add('FINDING_TAXONOMY_STATUS_SET_MISMATCH','findings.json');
+if (!exactStatusSet(taxonomy?.future_lifecycle_statuses,manifest?.governance?.finding_lifecycle)) add('FINDING_TAXONOMY_GOVERNANCE_LIFECYCLE_MISMATCH','baseline-manifest.json');
+const governanceText = fs.readFileSync(path.join(docsDir,'GOVERNANCE.md'),'utf8');
+if (!governanceText.includes('system-knowledge/findings.json') || !governanceText.includes('machine-readable')) add('GOVERNANCE_TAXONOMY_REFERENCE_MISSING','docs/system/GOVERNANCE.md');
+for (const status of canonicalFindingStatuses || []) {
+  const semantics = taxonomyStatuses?.[status];
+  if (!semantics || taxonomyProperties.some(key=>typeof semantics[key]!=='boolean')) { add('FINDING_TAXONOMY_STATUS_SCHEMA_INVALID',status); continue; }
+  if ((semantics.active_metric || semantics.potential_metric || semantics.release_blocking) && !semantics.operational_open) add('FINDING_TAXONOMY_SEMANTIC_INVALID',`${status}: metric or gate requires operational_open`);
+  if ((semantics.active_metric || semantics.release_blocking) && !semantics.confirmed) add('FINDING_TAXONOMY_SEMANTIC_INVALID',`${status}: active metric or gate requires confirmed`);
+  if (semantics.potential_metric && semantics.confirmed) add('FINDING_TAXONOMY_SEMANTIC_INVALID',`${status}: potential metric must be unconfirmed`);
+  if (semantics.active_metric && semantics.potential_metric) add('FINDING_TAXONOMY_SEMANTIC_INVALID',`${status}: cannot be both active and potential`);
+  if (semantics.operational_open!==semantics.stabilization_queue) add('FINDING_TAXONOMY_SEMANTIC_INVALID',`${status}: operational_open and stabilization_queue must match`);
+  if (semantics.closed && (semantics.operational_open || semantics.release_blocking || semantics.stabilization_queue || semantics.validation_queue)) add('FINDING_TAXONOMY_SEMANTIC_INVALID',`${status}: closed status cannot remain queued or open`);
+  if (semantics.validation_queue && (semantics.confirmed || semantics.operational_open || semantics.release_blocking || semantics.stabilization_queue)) add('FINDING_TAXONOMY_SEMANTIC_INVALID',`${status}: validation queue must be unconfirmed and non-operational`);
+}
+const hasTaxonomyFlag = (finding, flag) => Boolean(taxonomyStatuses?.[finding.status]?.[flag]);
+const isActiveFinding = (finding) => hasTaxonomyFlag(finding,'active_metric');
+const isPotentialFinding = (finding) => hasTaxonomyFlag(finding,'potential_metric');
+const isOpenFinding = (finding) => hasTaxonomyFlag(finding,'operational_open');
+const isResolvedFinding = (finding) => hasTaxonomyFlag(finding,'closed') && finding.status==='RESOLVED';
+const blocksRelease = (finding) => hasTaxonomyFlag(finding,'release_blocking');
+for (const finding of findings) if (!canonicalFindingStatuses?.includes(finding.status)) add('FINDING_STATUS_INVALID',`${finding.id}: ${finding.status}`);
+const isReleaseGateApplicable = (finding) => ['P0','P1'].includes(finding.priority) || ['CRITICAL','HIGH'].includes(finding.severity);
+const derivedGroups = {
+  active_p0: findings.filter(finding => isActiveFinding(finding) && finding.priority==='P0'),
+  active_high: findings.filter(finding => isActiveFinding(finding) && finding.severity==='HIGH'),
+  potential_high: findings.filter(finding => isPotentialFinding(finding) && finding.severity==='HIGH'),
+  open_high: findings.filter(finding => isOpenFinding(finding) && finding.severity==='HIGH'),
+  resolved: findings.filter(isResolvedFinding),
+  active_p0_p1: findings.filter(finding => isActiveFinding(finding) && ['P0','P1'].includes(finding.priority)),
+  potential_p0_p1: findings.filter(finding => isPotentialFinding(finding) && ['P0','P1'].includes(finding.priority)),
+  open_p0_p1: findings.filter(finding => isOpenFinding(finding) && ['P0','P1'].includes(finding.priority)),
+  release_blocking: findings.filter(finding => blocksRelease(finding) && isReleaseGateApplicable(finding))
+};
+const derivedFindingIds = (name) => derivedGroups[name].map(finding => finding.id);
+const sameIds = (actual, expected) => Array.isArray(actual) && actual.length===expected.length && actual.every((id,index) => id===expected[index]);
+const checkDerivedCount = (owner, actual, name) => {
+  if (actual !== derivedGroups[name].length) add('DERIVED_FINDING_COUNT_MISMATCH',`${owner}: ${actual} != ${derivedGroups[name].length}`);
+};
+const checkDerivedIds = (owner, actual, name) => {
+  if (!sameIds(actual, derivedFindingIds(name))) add('DERIVED_FINDING_LIST_MISMATCH',owner);
+};
+if (!catalogs.findings?.finding_status_taxonomy) add('FINDING_STATUS_TAXONOMY_MISSING','findings.json');
+if (manifest?.product_health) {
+  checkDerivedCount('baseline-manifest.product_health.active_p0',manifest.product_health.active_p0,'active_p0');
+  checkDerivedCount('baseline-manifest.product_health.active_high',manifest.product_health.active_high,'active_high');
+  checkDerivedCount('baseline-manifest.product_health.potential_high',manifest.product_health.potential_high,'potential_high');
+  checkDerivedCount('baseline-manifest.product_health.open_high',manifest.product_health.open_high,'open_high');
+  checkDerivedCount('baseline-manifest.product_health.resolved',manifest.product_health.resolved,'resolved');
+  checkDerivedIds('baseline-manifest.active_high_findings',manifest.active_high_findings,'active_high');
+  checkDerivedIds('baseline-manifest.potential_high_findings',manifest.potential_high_findings,'potential_high');
+  checkDerivedIds('baseline-manifest.open_high_findings',manifest.open_high_findings,'open_high');
+  checkDerivedIds('baseline-manifest.high_findings',manifest.high_findings,'open_high');
+}
+const riskSummary = catalogs['risk-summary'];
+if (riskSummary) {
+  checkDerivedIds('risk-summary.active_high_critical',riskSummary.active_high_critical,'active_high');
+  checkDerivedIds('risk-summary.potential_high_critical',riskSummary.potential_high_critical,'potential_high');
+  checkDerivedIds('risk-summary.open_high_critical',riskSummary.open_high_critical,'open_high');
+  checkDerivedIds('risk-summary.active_p0_p1',riskSummary.active_p0_p1,'active_p0_p1');
+  checkDerivedIds('risk-summary.potential_p0_p1',riskSummary.potential_p0_p1,'potential_p0_p1');
+  checkDerivedIds('risk-summary.open_p0_p1',riskSummary.open_p0_p1,'open_p0_p1');
+}
+const statusGroupCount = (status) => findings.filter(finding => finding.status===status).length;
+if (riskSummary?.by_status) for (const status of canonicalFindingStatuses) {
+  if (riskSummary.by_status[status] !== statusGroupCount(status)) add('DERIVED_FINDING_STATUS_COUNT_MISMATCH',`risk-summary.by_status.${status}`);
+}
+const healthFindingCounts = catalogs.health?.system?.active_findings;
+if (healthFindingCounts) {
+  checkDerivedCount('health.system.active_findings.P0',healthFindingCounts.P0,'active_p0');
+  checkDerivedCount('health.system.active_findings.HIGH',healthFindingCounts.HIGH,'active_high');
+  checkDerivedCount('health.system.active_findings.POTENTIAL_HIGH',healthFindingCounts.POTENTIAL_HIGH,'potential_high');
+  checkDerivedCount('health.system.active_findings.OPEN_HIGH',healthFindingCounts.OPEN_HIGH,'open_high');
+  checkDerivedCount('health.system.active_findings.RESOLVED',healthFindingCounts.RESOLVED,'resolved');
+}
+const baselineFindingMetrics = catalogs['baseline-v1']?.finding_status_metrics;
+if (baselineFindingMetrics) for (const name of ['active_p0','active_high','potential_high','open_high','resolved']) checkDerivedCount(`baseline-v1.finding_status_metrics.${name}`,baselineFindingMetrics[name],name);
+const releaseGate = catalogs['baseline-v1']?.product_gate_status?.release_gate;
+if (!releaseGate || releaseGate.applicable_threshold!=='priority in {P0, P1} or severity in {CRITICAL, HIGH}') add('RELEASE_GATE_SCHEMA_INVALID','baseline-v1.product_gate_status.release_gate');
+else {
+  checkDerivedCount('baseline-v1.product_gate_status.release_gate.blocking_count',releaseGate.blocking_count,'release_blocking');
+  checkDerivedIds('baseline-v1.product_gate_status.release_gate.blocking_findings',releaseGate.blocking_findings,'release_blocking');
+  const expectedStatus = derivedGroups.release_blocking.length ? 'BLOCKED' : 'PASS';
+  if (releaseGate.status!==expectedStatus) add('RELEASE_GATE_STATUS_MISMATCH',`${releaseGate.status} != ${expectedStatus}`);
+}
 const functionalChanges = manifest?.source_state?.functional_changes_since_base;
 if (!Array.isArray(functionalChanges)) add('MANIFEST_FUNCTIONAL_CHANGES_INVALID','baseline-manifest.json');
 let resolvedBaseCommit;

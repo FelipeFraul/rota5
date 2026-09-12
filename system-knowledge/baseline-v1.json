@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T15:29:26.315Z",
-  "stage": "stabilization/p0-3",
+  "generatedAt": "2026-09-12T22:16:13.706Z",
+  "stage": "stabilization/validator-hardening",
   "baseline_id": "rota5-baseline-v1",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "status": "FROZEN",
   "domains": 17,
   "modules": 66,
@@ -100,11 +100,35 @@
     },
     "baseline_integrity": "PASS",
     "infrastructure_health": "DEGRADED",
-    "current_head_deployed": false
+    "current_head_deployed": false,
+    "release_gate": {
+      "status": "BLOCKED",
+      "applicable_threshold": "priority in {P0, P1} or severity in {CRITICAL, HIGH}",
+      "blocking_count": 9,
+      "blocking_findings": [
+        "bug.event-duplicate-artist-leak",
+        "bug.user-visible-text-corruption",
+        "legacy.active-brand-contamination",
+        "risk.gate-credential-revocation-does-not-revoke-session",
+        "risk.latest-rota5-deployment-error",
+        "gap.default-test-suite-failing",
+        "gap.critical-capability-and-flow-coverage",
+        "gap.test-runner-depends-on-untracked-loader",
+        "gap.partial-flows-lack-end-to-end-proof"
+      ],
+      "semantics_source": "system-knowledge/findings.json.finding_status_taxonomy.statuses.release_blocking"
+    }
   },
   "resolved_findings": [
     "bug.create-event-invalid-jsx",
     "bug.combo-redemption-unreachable-consume",
     "risk.vercel-project-identity-drift"
-  ]
+  ],
+  "finding_status_metrics": {
+    "active_p0": 0,
+    "active_high": 6,
+    "potential_high": 1,
+    "open_high": 7,
+    "resolved": 3
+  }
 }

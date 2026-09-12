@@ -1,5 +1,12 @@
 # Baseline changelog
 
+## BASELINE V1.3.1 — FINDING TAXONOMY CORRECTED
+
+- Corrected derived finding metrics without changing product code or any finding status.
+- `ACTIVE` now counts strictly as ACTIVE: 0 P0 and 6 HIGH. `POTENTIAL` is tracked separately: 1 HIGH. `OPEN` is explicit: 7 HIGH.
+- `risk.admin-event-multistep-partial-state` remains `POTENTIAL/HIGH`; its static evidence supports a risk hypothesis but not an observed intermediate failure.
+- Reconciled the complete lifecycle: `OPEN` and `MITIGATED` are confirmed, operationally open statuses; `ACCEPTED` and `NOT_VALIDATED` are excluded from operational-open and release-blocking metrics by explicit policy.
+
 ## BASELINE V1.3.0 — P0-3 RESOLVED
 
 - Resolved `risk.vercel-project-identity-drift` while preserving its historical ID, severity, priority, root cause and evidence.
