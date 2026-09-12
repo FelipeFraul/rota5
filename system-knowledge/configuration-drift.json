@@ -1,33 +1,41 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-11",
-  "stage": 5,
+  "generatedAt": "2026-09-12T15:29:26.315Z",
+  "stage": "stabilization/p0-3",
   "count": 4,
-  "critical": 2,
+  "critical": 1,
   "records": [
     {
       "id": "drift.vercel-project-domain",
       "object": "production domain/project",
-      "local": "next.config.ts declara blackhouseclubedecomedia.vercel.app; link local aponta para rota5",
-      "remote": "domínio declarado pertence ao projeto site; alias do projeto ligado é rota5-khaki.vercel.app",
-      "runtime": "ambos os healthchecks respondem 200",
-      "result": "DRIFT",
+      "local": "origin FelipeFraul/rota5; branch production; projeto local Vercel rota5",
+      "remote": "Vercel rota5 ligado a FelipeFraul/rota5; Production Branch production",
+      "runtime": "Nenhum deployment novo; git.deploymentEnabled=false",
+      "result": "MATCH",
       "severity": "CRITICAL",
-      "impact": "Ambiguidade operacional e origem CORS de assets vinculada a projeto diferente.",
+      "impact": "Ambiguidade operacional removida; publicação do HEAD continua deliberadamente pendente.",
       "evidence_source": [
         "LOCAL_DECLARED",
         "REMOTE_CONFIG",
         "RUNTIME_OBSERVED"
       ],
-      "expected": "Domínio público e projeto ligado identificarem a mesma implantação canônica.",
-      "observed": "blackhouseclubedecomedia.vercel.app serve o projeto site; o checkout local está ligado a rota5 e rota5-khaki.vercel.app serve rota5.",
+      "expected": "GitHub FelipeFraul/rota5, branch production e Vercel rota5 formam a cadeia canônica.",
+      "observed": "A cadeia canônica coincide. site e FelipeFraul/ticketeira são infraestrutura da Ticketeira e apenas evidência histórica.",
       "evidence": [
-        "next.config.ts",
+        "git remote -v",
+        "git rev-parse HEAD origin/production",
         ".vercel/project.json",
-        "Vercel inspect dpl_EPmLTLjcgP2483Qp6UtVk73Kn3FF",
-        "Vercel inspect dpl_4fUuUVNXgCfYgTiJjvdLuDdxXSA9"
+        "Vercel project metadata",
+        "vercel.json"
       ],
-      "status": "DRIFT"
+      "status": "RESOLVED",
+      "historical_result": "DRIFT",
+      "historical_status": "DRIFT",
+      "resolution": {
+        "date": "2026-09-12T15:29:26.315Z",
+        "finding": "risk.vercel-project-identity-drift",
+        "current_head_deployed": false
+      }
     },
     {
       "id": "drift.vercel-latest-deployment",
@@ -148,10 +156,10 @@
     },
     {
       "object": "Vercel project/domain",
-      "local": "rota5 link + domínio blackhouse",
-      "remote": "projetos rota5 e site distintos",
-      "runtime": "ambos respondem",
-      "result": "DRIFT"
+      "local": "origin FelipeFraul/rota5; production; projeto local rota5",
+      "remote": "Vercel rota5 → FelipeFraul/rota5; Production Branch production",
+      "runtime": "auto-deploy Git desabilitado; nenhum novo deployment",
+      "result": "MATCH"
     },
     {
       "object": "Environment variable presence",
@@ -181,6 +189,12 @@
       "Registro remoto dos dois webhooks",
       "Execução recente dos crons",
       "Configuração Auth do Supabase"
-    ]
+    ],
+    "p0_3_reaudit": {
+      "infrastructure_identity": "CORRECT",
+      "current_head_deployed_to_production": false,
+      "git_auto_deploy": "DISABLED",
+      "ticketeira_role": "HISTORICAL_CAUSE_EVIDENCE_ONLY"
+    }
   }
 }

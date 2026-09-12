@@ -10,6 +10,40 @@ const errors = [];
 const add = (code, detail) => errors.push({ code, detail });
 const sha256 = (buffer) => crypto.createHash('sha256').update(buffer).digest('hex');
 const readJson = (name) => JSON.parse(fs.readFileSync(path.join(jsonDir, name), 'utf8'));
+const canonicalSourceExclusions = ['docs/system/**','system-knowledge/**','.tools/baseline/**','**/.stage*'];
+const normalizeRepoPath = (value) => value.replaceAll('\\','/');
+const sourcePathIsExcluded = (value) => {
+  const normalized = normalizeRepoPath(value);
+  if (normalized.startsWith('docs/system/') || normalized.startsWith('system-knowledge/') || normalized.startsWith('.tools/baseline/')) return true;
+  return normalized.split('/').some(segment => segment.startsWith('.stage'));
+};
+const aggregateSourceFingerprint = (paths, readBytes) => {
+  const normalizedPaths = paths.map(normalizeRepoPath).filter(value => !sourcePathIsExcluded(value)).sort();
+  const material = normalizedPaths.map(value => `${value}\0${sha256(readBytes(value))}\n`).join('');
+  return {
+    fileCount: normalizedPaths.length,
+    fingerprint: sha256(Buffer.from(material,'utf8'))
+  };
+};
+const currentFunctionalSource = () => {
+  const tracked = childProcess.execFileSync('git',['ls-files','-z'],{cwd:root}).toString('utf8').split('\0').filter(Boolean);
+  const unstaged = new Set(childProcess.execFileSync('git',['diff','--name-only','-z','--'],{cwd:root,stdio:['ignore','pipe','pipe']}).toString('utf8').split('\0').filter(Boolean).map(normalizeRepoPath));
+  return aggregateSourceFingerprint(tracked, value => {
+    if (unstaged.has(value)) {
+      const absolute = path.join(root,value);
+      return fs.existsSync(absolute) ? fs.readFileSync(absolute) : Buffer.from('WORKTREE_FILE_DELETED','utf8');
+    }
+    return childProcess.execFileSync('git',['cat-file','blob',`:${value}`],{cwd:root,stdio:['ignore','pipe','pipe'],maxBuffer:64*1024*1024});
+  });
+};
+const resolveCommit = (revision) => {
+  if (typeof revision !== 'string' || !/^[0-9a-f]{40}$/i.test(revision)) throw new Error('base_commit must be a full 40-character hexadecimal commit id');
+  return childProcess.execFileSync('git',['rev-parse','--verify',`${revision}^{commit}`],{cwd:root,stdio:['ignore','pipe','pipe']}).toString('utf8').trim();
+};
+const committedFunctionalSource = (commit) => {
+  const tracked = childProcess.execFileSync('git',['ls-tree','-r','-z','--name-only',commit],{cwd:root}).toString('utf8').split('\0').filter(Boolean);
+  return aggregateSourceFingerprint(tracked, value => childProcess.execFileSync('git',['cat-file','blob',`${commit}:${value}`],{cwd:root,stdio:['ignore','pipe','pipe'],maxBuffer:64*1024*1024}));
+};
 
 const required = [
   'baseline-manifest.json','baseline-v1.json','index.json','self-reading.json',
@@ -135,25 +169,44 @@ if (integrity) {
 }
 
 const fingerprint = catalogs['source-fingerprint'];
+let currentSource;
 if (fingerprint) {
   for (const key of ['base_commit','package_lock_sha256','migrations_aggregate_hash','source_tree_fingerprint','freeze_timestamp']) if (!fingerprint[key]) add('SOURCE_FINGERPRINT_FIELD_MISSING',key);
-  const canonicalExclusions=['docs/system/**','system-knowledge/**','.tools/baseline/**','**/.stage*'];
-  if (JSON.stringify(fingerprint.source_tree_exclusions)!==JSON.stringify(canonicalExclusions)) add('SOURCE_FINGERPRINT_EXCLUSIONS_INVALID','Canonical baseline and .stage exclusions are required.');
-  const excluded=(value)=>{
-    const normalized=value.replaceAll('\\','/');
-    if(normalized.startsWith('docs/system/')||normalized.startsWith('system-knowledge/')||normalized.startsWith('.tools/baseline/')) return true;
-    return normalized.split('/').some(segment=>segment.startsWith('.stage'));
-  };
-  const tracked=childProcess.execFileSync('git',['ls-files','-z'],{cwd:root}).toString('utf8').split('\0').filter(Boolean).map(value=>value.replaceAll('\\','/')).filter(value=>!excluded(value)).sort();
-  const material=tracked.map(value=>value+'\0'+sha256(fs.readFileSync(path.join(root,value)))+'\n').join('');
-  if(fingerprint.source_tree_file_count!==tracked.length) add('SOURCE_FINGERPRINT_FILE_COUNT_MISMATCH',`${fingerprint.source_tree_file_count} != ${tracked.length}`);
-  if(fingerprint.source_tree_fingerprint!==sha256(Buffer.from(material,'utf8'))) add('SOURCE_TREE_FINGERPRINT_MISMATCH','source-fingerprint.json');
+  if (JSON.stringify(fingerprint.source_tree_exclusions)!==JSON.stringify(canonicalSourceExclusions)) add('SOURCE_FINGERPRINT_EXCLUSIONS_INVALID','Canonical baseline and .stage exclusions are required.');
+  currentSource = currentFunctionalSource();
+  if(fingerprint.source_tree_file_count!==currentSource.fileCount) add('SOURCE_FINGERPRINT_FILE_COUNT_MISMATCH',`${fingerprint.source_tree_file_count} != ${currentSource.fileCount}`);
+  if(fingerprint.source_tree_fingerprint!==currentSource.fingerprint) add('SOURCE_TREE_FINGERPRINT_MISMATCH','source-fingerprint.json');
 }
 const manifest = catalogs['baseline-manifest'];
 if (manifest?.baseline_id!=='rota5-baseline-v1'||!/^\d+\.\d+\.\d+$/.test(manifest?.version||'')||manifest?.status!=='FROZEN') add('MANIFEST_IDENTITY_INVALID','baseline-manifest.json');
 if (!manifest?.source_state?.base_commit || manifest.source_state.source_tree_fingerprint!==fingerprint?.source_tree_fingerprint || manifest.source_state.baseline_commit!=='SELF_NOT_RECORDED') add('MANIFEST_SOURCE_STATE_INVALID','baseline-manifest.json');
 const functionalChanges = manifest?.source_state?.functional_changes_since_base;
-if (!Array.isArray(functionalChanges) || functionalChanges.length === 0) add('MANIFEST_FUNCTIONAL_CHANGE_MISSING','baseline-manifest.json');
+if (!Array.isArray(functionalChanges)) add('MANIFEST_FUNCTIONAL_CHANGES_INVALID','baseline-manifest.json');
+let resolvedBaseCommit;
+if (manifest?.source_state?.base_commit) {
+  try {
+    resolvedBaseCommit = resolveCommit(manifest.source_state.base_commit);
+  } catch (error) {
+    add('MANIFEST_BASE_COMMIT_INVALID',`${manifest.source_state.base_commit}: ${error.message}`);
+  }
+}
+if (Array.isArray(functionalChanges) && functionalChanges.length === 0) {
+  if (manifest?.source_state?.generated_from_working_tree !== false) add('MANIFEST_PURE_COMMIT_FLAG_INVALID','baseline-manifest.json');
+  if (resolvedBaseCommit) {
+    try {
+      const baseSource = committedFunctionalSource(resolvedBaseCommit);
+      const manifestFingerprint = manifest?.source_state?.source_tree_fingerprint;
+      if (baseSource.fingerprint !== manifestFingerprint) add('MANIFEST_PURE_COMMIT_BASE_FINGERPRINT_MISMATCH',`${baseSource.fingerprint} != ${manifestFingerprint}`);
+      if (currentSource?.fingerprint !== manifestFingerprint) add('MANIFEST_PURE_COMMIT_CURRENT_FINGERPRINT_MISMATCH',`${currentSource?.fingerprint} != ${manifestFingerprint}`);
+      if (baseSource.fileCount !== currentSource?.fileCount) add('MANIFEST_PURE_COMMIT_FILE_COUNT_MISMATCH',`${baseSource.fileCount} != ${currentSource?.fileCount}`);
+
+      const headDiffPaths = childProcess.execFileSync('git',['diff','--name-only','-z',`${resolvedBaseCommit}..HEAD`,'--'],{cwd:root,stdio:['ignore','pipe','pipe']}).toString('utf8').split('\0').filter(Boolean).map(normalizeRepoPath).filter(value => !sourcePathIsExcluded(value)).sort();
+      if (headDiffPaths.length) add('MANIFEST_PURE_COMMIT_FUNCTIONAL_HEAD_DIFF',headDiffPaths.join(', '));
+    } catch (error) {
+      add('MANIFEST_PURE_COMMIT_RECONSTRUCTION_FAILED',error.message);
+    }
+  }
+}
 for (const change of functionalChanges || []) {
   const absolute = path.join(root, change.path || '');
   if (!change.path || !fs.existsSync(absolute)) add('MANIFEST_FUNCTIONAL_CHANGE_PATH_INVALID',change.path || '(missing path)');

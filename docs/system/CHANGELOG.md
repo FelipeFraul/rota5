@@ -1,5 +1,13 @@
 # Baseline changelog
 
+## BASELINE V1.3.0 — P0-3 RESOLVED
+
+- Resolved `risk.vercel-project-identity-drift` while preserving its historical ID, severity, priority, root cause and evidence.
+- Canonical chain: GitHub `FelipeFraul/rota5`, branch `production`, Vercel `rota5` (`prj_dl7tt8fZbw88ZQV0GhklY0akEwbf`).
+- Vercel `site` and GitHub `FelipeFraul/ticketeira` are Ticketeira infrastructure and remain only as historical cause evidence.
+- Git auto-deployment remains disabled; no deployment was created and HEAD `9302cbd46aec802fef371e9c948e7d558c3dfc2a` is not declared published.
+- Source state is the pure base commit with zero functional changes since base; product health remains BROKEN and infrastructure health is DEGRADED.
+
 ## BASELINE V1.2.0 — P0-2 RESOLVED
 
 - Resolved `bug.combo-redemption-unreachable-consume` with a minimal guard change in `src/lib/tickets/services/comboRedemptions.ts`.

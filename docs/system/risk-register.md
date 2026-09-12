@@ -22,7 +22,7 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 | risk.rate-limit-fails-open | SECURITY | MEDIUM | P2 | ACTIVE | CONFIRMED | Falha do rate limiter libera a requisição |
 | risk.remote-database-controls-unvalidated | UNKNOWN | MEDIUM | P2 | NOT_VALIDATED | CONFIRMED | Controles remotos de banco além do schema visível não foram validados |
 | risk.remote-webhook-registration-unvalidated | INTEGRATION | MEDIUM | P2 | NOT_VALIDATED | HIGH | Registro remoto dos dois webhooks não foi confirmado |
-| risk.vercel-project-identity-drift | CONFIGURATION_DRIFT | HIGH | P0 | ACTIVE | CONFIRMED | Domínio declarado pertence a site, enquanto checkout local está ligado a rota5 |
+| risk.vercel-project-identity-drift | CONFIGURATION_DRIFT | HIGH | P0 | RESOLVED | CONFIRMED | Identidade Git/Vercel do Rota5 separada da Ticketeira |
 | risk.latest-rota5-deployment-error | INFRASTRUCTURE | HIGH | P1 | ACTIVE | CONFIRMED | Deployment mais recente do projeto rota5 está em ERROR |
 | risk.published-commit-unvalidated | OPERATIONAL | MEDIUM | P2 | NOT_VALIDATED | CONFIRMED | Commit publicado não pode ser reconciliado com o HEAD auditado |
 | risk.local-runtime-env-incomplete | CONFIGURATION_DRIFT | MEDIUM | P2 | ACTIVE | CONFIRMED | Ambiente local não contém todas as variáveis exigidas |
@@ -215,18 +215,14 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 - Direção: Validar URLs, eventos inscritos e última entrega sem gerar transação.
 - Justificativa da prioridade: P2 pela dependência externa crítica, com ocorrência ainda não comprovada.
 
-### risk.vercel-project-identity-drift — Domínio declarado pertence a site, enquanto checkout local está ligado a rota5
+### risk.vercel-project-identity-drift — Identidade Git/Vercel do Rota5 separada da Ticketeira
 
 - Tipo / severidade / prioridade: **CONFIGURATION_DRIFT / HIGH / P0**
-- Status / confiança: **ACTIVE / CONFIRMED**
-- Problema: next.config.ts declara blackhouseclubedecomedia.vercel.app, resolvido para o projeto site; .vercel/project.json liga o workspace ao projeto rota5.
-- Evidência: `next.config.ts`:3 — Origin declarado Black House.; `system-knowledge/infrastructure.json` — Projetos remoto declarado e ligado são diferentes.; `system-knowledge/configuration-drift.json` — Drift catalogado na Etapa 5.
-- Impacto: Deploy, cron, URLs de checkout e validação de produção podem atingir projetos diferentes sem que o operador perceba.
-- Escopo: domains domain.platform-runtime, domain.orders-payments; capabilities payment.checkout_create, payment.checkout_view; flows ticket.purchase.
-- Blast radius: **SYSTEM_WIDE**
-- Workaround: Ambos os aliases responderam health 200 na observação, mas representam deployments distintos.
-- Direção: Estabelecer um único projeto/domínio canônico antes de qualquer deploy.
-- Justificativa da prioridade: P0 porque qualquer evolução/deploy pode ser aplicada ao alvo errado.
+- Status / confiança: **RESOLVED / CONFIRMED**
+- Causa raiz: separação incorreta de identidade Git/Vercel entre Rota5 e Ticketeira.
+- Evidência atual: `origin` e `origin/production` identificam `FelipeFraul/rota5`; `.vercel/project.json` identifica `rota5`; Vercel liga o projeto ao mesmo repo e à branch `production`; `git.deploymentEnabled=false`.
+- Histórico preservado: Vercel `site` e GitHub `FelipeFraul/ticketeira` pertencem à Ticketeira e explicam a confusão anterior, sem integrar a cadeia operacional atual do Rota5.
+- Estado de release: nenhum deployment novo; o HEAD atual não está publicado.
 
 ### risk.latest-rota5-deployment-error — Deployment mais recente do projeto rota5 está em ERROR
 

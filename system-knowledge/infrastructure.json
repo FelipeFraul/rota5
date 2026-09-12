@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-11",
-  "stage": 5,
-  "sourceCommit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+  "generatedAt": "2026-09-12T15:29:26.315Z",
+  "stage": "stabilization/p0-3",
+  "sourceCommit": "9302cbd46aec802fef371e9c948e7d558c3dfc2a",
   "application": {
     "framework": "Next.js 16.2.6",
     "runtime": "Node.js 24.x no projeto Vercel",
@@ -43,44 +43,53 @@
       "database_target": "Determinado por env, valor não persistido",
       "integration_mode": "providers configurados",
       "domain": [
-        "blackhouseclubedecomedia.vercel.app",
         "rota5-khaki.vercel.app"
       ],
-      "deployment": "Dois projetos Vercel observados no domínio declarado e no link local"
+      "deployment": "Projeto Vercel rota5; HEAD atual ainda não publicado; auto-deploy Git desabilitado."
     }
   ],
   "vercel": {
     "linked_project": {
       "name": "rota5",
       "project_id": "prj_dl7tt8fZbw88ZQV0GhklY0akEwbf",
-      "status": "REMOTE_CONFIG"
-    },
-    "declared_domain_project": {
-      "domain": "blackhouseclubedecomedia.vercel.app",
-      "project": "site",
-      "deployment": "dpl_EPmLTLjcgP2483Qp6UtVk73Kn3FF",
-      "state": "READY",
-      "evidence_source": "REMOTE_CONFIG"
+      "status": "REMOTE_CONFIG",
+      "git_repository": "FelipeFraul/rota5",
+      "production_branch": "production",
+      "git_auto_deploy": "DISABLED"
     },
     "linked_project_production": {
       "alias": "rota5-khaki.vercel.app",
       "ready_deployment": "dpl_4fUuUVNXgCfYgTiJjvdLuDdxXSA9",
       "latest_deployment_state": "ERROR",
-      "evidence_source": "REMOTE_CONFIG"
+      "evidence_source": "REMOTE_CONFIG",
+      "current_head": "9302cbd46aec802fef371e9c948e7d558c3dfc2a",
+      "current_head_deployed": false,
+      "new_deployment_during_separation": false
     },
     "published_commit": {
       "status": "NOT_VALIDATED",
-      "reason": "Metadados do deployment consultado não expuseram gitSource/commit."
+      "reason": "Nenhum release do HEAD atual foi realizado; o deployment servido continua anterior à separação."
     },
     "crons": 2,
-    "environment_variable_names": 24
+    "environment_variable_names": 24,
+    "historical_ticketeira_evidence": {
+      "vercel_project": "site",
+      "github_repository": "FelipeFraul/ticketeira",
+      "classification": "TICKETEIRA_INFRASTRUCTURE_NOT_ROTA5_OPERATIONAL_INFRASTRUCTURE",
+      "note": "Preserved only as historical evidence of the identity-drift root cause."
+    }
   },
   "github": {
-    "repository": "FelipeFraul/ticketeira",
+    "repository": "FelipeFraul/rota5",
     "visibility": "private",
-    "default_branch": "main",
-    "production_branch_commit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
-    "evidence_source": "REMOTE_CONFIG"
+    "production_branch": "production",
+    "production_branch_commit": "9302cbd46aec802fef371e9c948e7d558c3dfc2a",
+    "evidence_source": "REMOTE_CONFIG",
+    "historical_remote": {
+      "repository": "FelipeFraul/ticketeira",
+      "remote": "ticketeira-old",
+      "classification": "TICKETEIRA_HISTORY_ONLY"
+    }
   },
   "configuration_files": [
     {
@@ -97,7 +106,7 @@
     },
     {
       "path": "vercel.json",
-      "impact": "dois schedules cron"
+      "impact": "dois schedules cron e bloqueio temporário de deployments Git"
     },
     {
       "path": "tsconfig.json",
@@ -191,5 +200,11 @@
       "validation": "permissão e escopo de evento",
       "trust": "cliente autenticado"
     }
-  ]
+  ],
+  "identity_reaudit": {
+    "status": "CORRECT",
+    "finding": "risk.vercel-project-identity-drift",
+    "current_head_deployed_to_production": false,
+    "remote_changes_during_baseline_update": "NONE"
+  }
 }

@@ -2,18 +2,14 @@
 
 Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb8442f95493de3ca4ec4d4c997b e o working tree descrito no machine-readable. Esta etapa registra fatos e riscos; não aplica correções.
 
-### risk.vercel-project-identity-drift — Domínio declarado pertence a site, enquanto checkout local está ligado a rota5
+### risk.vercel-project-identity-drift — Identidade Git/Vercel do Rota5 separada da Ticketeira
 
 - Tipo / severidade / prioridade: **CONFIGURATION_DRIFT / HIGH / P0**
-- Status / confiança: **ACTIVE / CONFIRMED**
-- Problema: next.config.ts declara blackhouseclubedecomedia.vercel.app, resolvido para o projeto site; .vercel/project.json liga o workspace ao projeto rota5.
-- Evidência: `next.config.ts`:3 — Origin declarado Black House.; `system-knowledge/infrastructure.json` — Projetos remoto declarado e ligado são diferentes.; `system-knowledge/configuration-drift.json` — Drift catalogado na Etapa 5.
-- Impacto: Deploy, cron, URLs de checkout e validação de produção podem atingir projetos diferentes sem que o operador perceba.
-- Escopo: domains domain.platform-runtime, domain.orders-payments; capabilities payment.checkout_create, payment.checkout_view; flows ticket.purchase.
-- Blast radius: **SYSTEM_WIDE**
-- Workaround: Ambos os aliases responderam health 200 na observação, mas representam deployments distintos.
-- Direção: Estabelecer um único projeto/domínio canônico antes de qualquer deploy.
-- Justificativa da prioridade: P0 porque qualquer evolução/deploy pode ser aplicada ao alvo errado.
+- Status / confiança: **RESOLVED / CONFIRMED**
+- Causa raiz: separação incorreta de identidade Git/Vercel entre Rota5 e Ticketeira.
+- Evidência atual: `origin` e `origin/production` identificam `FelipeFraul/rota5`; `.vercel/project.json` identifica `rota5`; Vercel liga o projeto ao mesmo repo e à branch `production`; `git.deploymentEnabled=false`.
+- Histórico preservado: Vercel `site` e GitHub `FelipeFraul/ticketeira` pertencem à Ticketeira e explicam a confusão anterior, sem integrar a cadeia operacional atual do Rota5.
+- Estado de release: nenhum deployment novo; o HEAD atual não está publicado.
 
 ### risk.latest-rota5-deployment-error — Deployment mais recente do projeto rota5 está em ERROR
 

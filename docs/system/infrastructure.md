@@ -1,12 +1,12 @@
 # Infrastructure AS-IS — Etapa 5
 
-A aplicação é Next.js 16.2.6. O projeto Vercel ligado ao checkout local é `rota5`, configurado para Node.js 24.x e região `iad1`. O domínio codificado em `next.config.ts` pertence a outro projeto Vercel, `site`; ambos os aliases validados responderam ao healthcheck.
+A aplicação é Next.js 16.2.6. A cadeia operacional canônica é GitHub `FelipeFraul/rota5`, branch `production`, ligada ao projeto Vercel `rota5` (`prj_dl7tt8fZbw88ZQV0GhklY0akEwbf`). O projeto Vercel `site` e o GitHub `FelipeFraul/ticketeira` pertencem à Ticketeira e são apenas evidência histórica da causa do finding resolvido.
 
 ## Ambientes observados
 
 - **local:** `.env` e `.env.example`; configuração incompleta para o schema central de `getEnv()`.
 - **preview:** target e URLs de preview existem na Vercel; banco e modo de integrações dependem de env e seus valores não foram lidos.
-- **production:** variáveis e deployments existem na Vercel. Foram observados dois projetos relacionados pelos aliases, sem ambiente staging comprovado.
+- **production:** variáveis e deployments existem no projeto Vercel `rota5`. O HEAD atual não foi publicado e o auto-deploy Git permanece desabilitado.
 
 ## Configuração funcional
 
@@ -15,7 +15,7 @@ A aplicação é Next.js 16.2.6. O projeto Vercel ligado ao checkout local é `r
 | `package.json` | comandos, dependências e runtime da aplicação |
 | `package-lock.json` | resolução exata de dependências |
 | `next.config.ts` | headers de segurança e CORS de assets estáticos |
-| `vercel.json` | dois schedules cron |
+| `vercel.json` | dois schedules cron e bloqueio temporário de deployments Git |
 | `tsconfig.json` | compilação e aliases |
 | `eslint.config.mjs` | validação estática |
 | `src/proxy.ts` | proteção edge e sessões |

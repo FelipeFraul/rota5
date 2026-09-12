@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-11",
-  "stage": 5,
+  "generatedAt": "2026-09-12T15:29:26.315Z",
+  "stage": "stabilization/p0-3",
   "count": 44,
   "remotePresenceValidated": 24,
   "records": [
@@ -830,6 +830,14 @@
   ],
   "validation": {
     "status": "PASS",
-    "secret_values_stored": false
+    "secret_values_stored": false,
+    "infrastructure_identity": {
+      "status": "PASS",
+      "github": "FelipeFraul/rota5",
+      "branch": "production",
+      "vercel_project": "rota5",
+      "git_auto_deploy": "DISABLED",
+      "current_head_deployed": false
+    }
   }
 }

@@ -28,3 +28,7 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 ## Limites
 
 Não houve pentest, carga destrutiva, pagamento, WhatsApp, cron, mutação de banco, alteração Vercel, deploy, commit ou push. Internals remotos do PostgreSQL e registros remotos de webhook continuam NOT_VALIDATED.
+
+## Estado da Baseline 1.3.0
+
+A identidade de infraestrutura foi corrigida e não há P0 ativo. Permanecem 7 HIGH ativos, 0 flows quebrados, 9 flows parciais e as mesmas 7 falhas de `npm test`; por isso PRODUCT_HEALTH continua BROKEN. INFRASTRUCTURE_HEALTH é DEGRADED, pois o último deployment permanece ERROR e o HEAD atual não foi publicado.

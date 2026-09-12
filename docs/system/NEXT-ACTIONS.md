@@ -3,10 +3,13 @@
 This document orders current findings; it does not introduce features or patches.
 
 ## P0 — BEFORE EVOLUTION
-- `risk.vercel-project-identity-drift` — Domínio declarado pertence a site, enquanto checkout local está ligado a rota5
+
+Nenhum finding P0 ativo.
 
 ## RESOLVED
 - `bug.create-event-invalid-jsx` — JSX corrigido; typecheck, lint e build passam.
+- `bug.combo-redemption-unreachable-consume` — caminho atômico restaurado localmente; equivalência remota continua não validada.
+- `risk.vercel-project-identity-drift` — cadeia canônica separada como `FelipeFraul/rota5` `production` → Vercel `rota5`; nenhum deployment realizado.
 
 ## P1 — EARLY STABILIZATION
 - `bug.event-duplicate-artist-leak` — Duplicação de evento preserva artista do evento de origem

@@ -4,7 +4,7 @@
 
 | ID | Resultado | Severidade | Local | Remoto | Impacto |
 | --- | --- | --- | --- | --- | --- |
-| `drift.vercel-project-domain` | DRIFT | CRITICAL | next.config.ts declara blackhouseclubedecomedia.vercel.app; link local aponta para rota5 | domínio declarado pertence ao projeto site; alias do projeto ligado é rota5-khaki.vercel.app | Ambiguidade operacional e origem CORS de assets vinculada a projeto diferente. |
+| `drift.vercel-project-domain` | MATCH / RESOLVED | CRITICAL (histórico) | origin `FelipeFraul/rota5`, branch `production`, projeto local `rota5` | Vercel `rota5` ligado ao mesmo repo/branch | Identidade correta; HEAD ainda não publicado. |
 | `drift.vercel-latest-deployment` | DRIFT | CRITICAL | baseline HEAD em origin/production | deployment mais recente do projeto rota5 em ERROR; anterior READY atende o alias | O último deploy não é o que atende produção e o commit servido não pôde ser provado. |
 | `drift.local-environment` | DRIFT | HIGH | arquivo .env não contém todos os campos obrigatórios de src/lib/env.ts | 24 nomes presentes na Vercel | Inicialização local que chama getEnv() pode falhar até completar a configuração. |
 | `drift.supabase-storage-bucket` | DRIFT | LOW | variável obrigatória e presente remotamente; nenhum uso .storage encontrado | listBuckets retornou zero buckets | Configuração sem recurso remoto correspondente; hoje sem consumidor funcional encontrado. |
@@ -20,13 +20,13 @@
 | Mercado Pago webhook registration | /api/webhook/payment/mercado-pago | NOT_VALIDATED | credencial aceitou leitura de conta | NOT_VALIDATED |
 | Vercel crons | 2 | 2 | execução não disparada | MATCH |
 | Published commit | a141c6004421fb8442f95493de3ca4ec4d4c997b | metadata de commit ausente | health 200 | NOT_VALIDATED |
-| Vercel project/domain | rota5 link + domínio blackhouse | projetos rota5 e site distintos | ambos respondem | DRIFT |
+| Vercel project/domain | `FelipeFraul/rota5` + `production` + projeto `rota5` | Vercel `rota5` → mesmo repo/branch | auto-deploy desabilitado; nenhum deployment | MATCH |
 | Environment variable presence | 15/44 | 24/44 | aplicação remota saudável | PARTIAL_MATCH |
 | Supabase Storage bucket | referência SEAT_MAP_STORAGE_BUCKET | 0 buckets | sem uso .storage | DRIFT |
 
 ## Segunda passagem
 
-O ambiente externo revelou a divisão entre os projetos Vercel `site` e `rota5`, o erro no deployment mais recente e a conectividade atual dos provedores. O repositório declara migrations, webhooks, crons e bucket, mas não foi possível provar o histórico de migrations, os internos do PostgreSQL, registros de webhook, execuções recentes do cron, commit servido, Supabase Auth ou bucket correspondente. Nenhum drift foi corrigido.
+A reauditoria separou as identidades: `FelipeFraul/rota5` e Vercel `rota5` formam a cadeia operacional do Rota5; `site` e `FelipeFraul/ticketeira` pertencem à Ticketeira e permanecem apenas como evidência histórica. O deployment mais recente de `rota5` continua em ERROR e o HEAD atual não foi publicado.
 
 ## Revalidação do storage
 

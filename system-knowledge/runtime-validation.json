@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-11",
-  "stage": 5,
+  "generatedAt": "2026-09-12T15:29:26.315Z",
+  "stage": "stabilization/p0-3",
   "count": 15,
   "ok": 12,
   "records": [
@@ -81,12 +81,13 @@
       "method": "CLI_READ",
       "evidence_source": "REMOTE_CONFIG",
       "status": "PASS",
-      "result": "Projeto rota5 e configuração Node.js 24.x observados.",
+      "result": "Projeto rota5 (prj_dl7tt8fZbw88ZQV0GhklY0akEwbf) ligado a FelipeFraul/rota5; Production Branch production.",
       "side_effect_free": true,
       "expected": "Ler configuração do projeto ligado.",
       "evidence": [
         "REMOTE_CONFIG",
-        "Vercel linked project"
+        ".vercel/project.json",
+        "Vercel project metadata"
       ]
     },
     {
@@ -105,13 +106,13 @@
     },
     {
       "id": "runtime.vercel-declared-domain",
-      "target": "Vercel declared production domain",
+      "target": "Historical Ticketeira domain classification",
       "method": "CLI_READ",
       "evidence_source": "REMOTE_CONFIG",
       "status": "PASS",
-      "result": "Domínio declarado resolve deployment READY do projeto site.",
+      "result": "O projeto site e FelipeFraul/ticketeira pertencem à Ticketeira e não integram a cadeia operacional canônica do Rota5.",
       "side_effect_free": true,
-      "expected": "Resolver domínio para deployment/projeto.",
+      "expected": "Classificar a evidência histórica sem tratar site como infraestrutura concorrente do Rota5.",
       "evidence": [
         "REMOTE_CONFIG",
         "Vercel declared production domain"
@@ -123,7 +124,7 @@
       "method": "CLI_READ",
       "evidence_source": "REMOTE_CONFIG",
       "status": "FAIL",
-      "result": "Mais recente dpl_9VYjvCcu63MmUsDchK9Tx3WEnjVa (2026-09-11 16:57:57 -03) está ERROR; dpl_4fUuUVNXgCfYgTiJjvdLuDdxXSA9 (16:41:52 -03) está READY e serve rota5-khaki.vercel.app.",
+      "result": "Nenhum deployment novo foi criado. O deployment mais recente permanece ERROR e o HEAD 9302cbd não está publicado.",
       "side_effect_free": true,
       "expected": "Identificar deployment mais recente e deployment servido.",
       "evidence": [
@@ -165,12 +166,12 @@
       "method": "CLI_READ",
       "evidence_source": "REMOTE_CONFIG",
       "status": "PASS",
-      "result": "Repositório privado existe; branch default main.",
+      "result": "Repositório privado FelipeFraul/rota5 existe; branch operacional production.",
       "side_effect_free": true,
       "expected": "Confirmar existência e metadata do repositório.",
       "evidence": [
         "REMOTE_CONFIG",
-        "GitHub repository metadata"
+        "GitHub FelipeFraul/rota5"
       ]
     },
     {
@@ -179,7 +180,7 @@
       "method": "GIT_READ",
       "evidence_source": "REMOTE_CONFIG",
       "status": "PASS",
-      "result": "origin/production e HEAD apontam para o commit baseline.",
+      "result": "HEAD e origin/production apontam para 9302cbd46aec802fef371e9c948e7d558c3dfc2a.",
       "side_effect_free": true,
       "expected": "Comparar HEAD e origin/production sem inferir deploy.",
       "evidence": [
@@ -216,5 +217,11 @@
       ]
     }
   ],
-  "prohibited_actions_performed": false
+  "prohibited_actions_performed": false,
+  "identity_reaudit": {
+    "status": "PASS",
+    "git_auto_deploy": "DISABLED",
+    "current_head_deployed": false,
+    "deployment_performed": false
+  }
 }

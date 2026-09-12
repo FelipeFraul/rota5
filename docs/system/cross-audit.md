@@ -40,3 +40,7 @@ Uma reconstrução sem consultar `docs/system` ou `system-knowledge` recontou Ap
 ## Integridade
 
 Foram corrigidas duas contradições documentais: gate duplicado da Etapa 5 no README e snapshot desatualizado da suíte padrão. Há dez grupos de evidência remota ainda NOT_VALIDATED, todos explicitados em `unresolved-evidence.md`. A varredura final não encontrou BOM, U+FFFD, corrupção dos próprios artefatos nem valores de segredo. Nenhuma mudança funcional ou remota foi realizada.
+
+## Reauditoria de estabilização P0.3
+
+O finding `risk.vercel-project-identity-drift` foi resolvido. A evidência da Etapa 7 permanece histórica; a cadeia atual é `FelipeFraul/rota5` `production` → Vercel `rota5`. Nenhum deployment foi realizado e o HEAD atual não está publicado.

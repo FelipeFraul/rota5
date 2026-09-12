@@ -1,6 +1,6 @@
 # ROTA5 SYSTEM KNOWLEDGE
 
-**Current baseline:** v1.2.0 — FROZEN
+**Current baseline:** v1.3.0 — FROZEN
 
 **Start here:** [AI-READ-ME.md](AI-READ-ME.md) · [BASELINE-V1.md](BASELINE-V1.md) · [CANONICAL-INDEX.md](CANONICAL-INDEX.md)
 
@@ -34,4 +34,4 @@ The machine bootstrap is `system-knowledge/baseline-manifest.json`; routing is i
 [Governance](GOVERNANCE.md) · [Change protocol](CHANGE-PROTOCOL.md) · [Known limits](KNOWN-LIMITS.md) · [Changelog](CHANGELOG.md)
 
 ## Audit history
-Etapa 1 mapped the repository; Etapa 2 reconstructed architecture; Etapa 3 cataloged capabilities; Etapa 4 cataloged flows and states; Etapa 5 reconstructed data, integrations, infrastructure and runtime; Etapa 6 audited risk and technical debt; Etapa 7 cross-audited completeness; Etapa 8 froze Baseline V1.0.0. Historical detail remains in the indexed documents and machine catalogs. Baseline integrity is PASS while product health is BROKEN. Stabilization P0-1 resolved the invalid JSX; `admin.web_event_workspace` is now PARCIAL and typecheck/lint/build pass.
+Etapa 1 mapped the repository; Etapa 2 reconstructed architecture; Etapa 3 cataloged capabilities; Etapa 4 cataloged flows and states; Etapa 5 reconstructed data, integrations, infrastructure and runtime; Etapa 6 audited risk and technical debt; Etapa 7 cross-audited completeness; Etapa 8 froze Baseline V1.0.0. Historical detail remains in the indexed documents and machine catalogs. Baseline integrity is PASS while product health is BROKEN. Stabilization resolved P0-1 and P0-2, then P0-3 separated the Git/Vercel identity: `FelipeFraul/rota5` on `production` now maps to Vercel `rota5`. No P0 remains active; product health remains BROKEN and infrastructure health is DEGRADED.

@@ -178,5 +178,13 @@
     "functional": false,
     "remote": false
   },
-  "readyForStage8": true
+  "readyForStage8": true,
+  "stabilization_p0_3_reaudit": {
+    "generatedAt": "2026-09-12T15:29:26.315Z",
+    "finding": "risk.vercel-project-identity-drift",
+    "status": "RESOLVED",
+    "infrastructure_identity": "CORRECT",
+    "current_head_deployed": false,
+    "note": "Historical Stage 7 evidence remains preserved under findings.p0."
+  }
 }

@@ -1,9 +1,25 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T14:12:39.549Z",
-  "stage": "stabilization/p0-2",
-  "count": 4,
+  "generatedAt": "2026-09-12T15:29:26.315Z",
+  "stage": "stabilization/p0-3",
+  "count": 5,
   "records": [
+    {
+      "version": "1.3.0",
+      "type": "INFRASTRUCTURE_IDENTITY_FIX",
+      "status": "FROZEN",
+      "date": "2026-09-12T15:29:26.315Z",
+      "source_commit": "9302cbd46aec802fef371e9c948e7d558c3dfc2a",
+      "finding": "risk.vercel-project-identity-drift",
+      "finding_status": "RESOLVED",
+      "infrastructure_change": "Canonical Rota5 chain is FelipeFraul/rota5 production → Vercel rota5; Ticketeira assets are historical cause evidence only.",
+      "source_state": "PURE_COMMIT",
+      "functional_changes_since_base": 0,
+      "deployment": "NOT_PERFORMED",
+      "git_auto_deploy": "DISABLED",
+      "product_health": "BROKEN",
+      "infrastructure_health": "DEGRADED"
+    },
     {
       "version": "1.2.0",
       "type": "STABILIZATION_FIX",

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T14:12:39.549Z",
-  "stage": "stabilization/p0-2",
+  "generatedAt": "2026-09-12T15:29:26.315Z",
+  "stage": "stabilization/p0-3",
   "sourceCommit": "121b7a8a4870f5933bd0cf0d45f12a8d71132424",
   "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
   "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
@@ -720,7 +720,7 @@
       "type": "CONFIGURATION_DRIFT",
       "severity": "HIGH",
       "priority": "P0",
-      "status": "ACTIVE",
+      "status": "RESOLVED",
       "confidence": "CONFIRMED",
       "description": "next.config.ts declara blackhouseclubedecomedia.vercel.app, resolvido para o projeto site; .vercel/project.json liga o workspace ao projeto rota5.",
       "evidence": [
@@ -764,7 +764,40 @@
       "blast_radius": "SYSTEM_WIDE",
       "workaround": "Ambos os aliases responderam health 200 na observação, mas representam deployments distintos.",
       "direction": "Estabelecer um único projeto/domínio canônico antes de qualquer deploy.",
-      "priority_justification": "P0 porque qualquer evolução/deploy pode ser aplicada ao alvo errado."
+      "priority_justification": "P0 porque qualquer evolução/deploy pode ser aplicada ao alvo errado.",
+      "historical_status_at_baseline_v1_2_0": "ACTIVE",
+      "root_cause": "Separação incorreta de identidade Git/Vercel entre Rota5 e Ticketeira.",
+      "resolution": {
+        "date": "2026-09-12T15:29:26.315Z",
+        "base_commit": "9302cbd46aec802fef371e9c948e7d558c3dfc2a",
+        "change": "A cadeia operacional canônica foi separada: origin FelipeFraul/rota5 na branch production e projeto Vercel rota5 ligado ao mesmo repositório e branch.",
+        "evidence": [
+          {
+            "claim": "HEAD e origin/production coincidem.",
+            "value": "9302cbd46aec802fef371e9c948e7d558c3dfc2a"
+          },
+          {
+            "path": ".vercel/project.json",
+            "claim": "Checkout local ligado ao projeto Vercel rota5.",
+            "project_id": "prj_dl7tt8fZbw88ZQV0GhklY0akEwbf"
+          },
+          {
+            "claim": "Vercel rota5 ligado a FelipeFraul/rota5 com Production Branch production.",
+            "evidence_source": "REMOTE_CONFIG"
+          },
+          {
+            "path": "vercel.json",
+            "claim": "git.deploymentEnabled=false bloqueia deployments Git durante a preparação do release."
+          },
+          {
+            "claim": "Nenhum deployment novo foi criado; o HEAD atual não está publicado.",
+            "evidence_source": "REMOTE_CONFIG"
+          }
+        ],
+        "historical_cause_evidence": "O projeto Vercel site e o repositório FelipeFraul/ticketeira pertencem à Ticketeira e permanecem apenas como evidência histórica.",
+        "lifecycle_policy": "ID, severity, priority, root cause and prior evidence preserved; ACTIVE migrated explicitly to RESOLVED."
+      },
+      "current_impact": "A identidade operacional do Rota5 está correta. O release do HEAD continua pendente e o auto-deploy Git permanece desabilitado."
     },
     {
       "id": "risk.latest-rota5-deployment-error",
