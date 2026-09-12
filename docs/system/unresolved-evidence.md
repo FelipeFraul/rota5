@@ -1,0 +1,18 @@
+# Evidências ainda não validáveis — Etapa 7
+
+Os dez grupos abaixo foram revisitados. Continuam sem evidência suficiente; nenhum permaneceu NOT_VALIDATED por esquecimento.
+
+| Área | Evidência pendente |
+| --- | --- |
+| DATA | Corpos SQL, constraints, índices, triggers, RLS, policies e grants efetivos do PostgreSQL remoto |
+| DATA | Histórico e ordem efetivamente aplicados das 77 migrations no ambiente remoto |
+| INFRASTRUCTURE | Configuração efetiva do Supabase Auth |
+| INTEGRATIONS | Registro remoto dos webhooks Z-API e Mercado Pago |
+| RUNTIME | Histórico recente de entrega, retries e falhas dos webhooks |
+| RUNTIME | Execução efetiva recente dos dois crons |
+| INFRASTRUCTURE | Commit/source SHA efetivamente publicado nos deployments observados |
+| INFRASTRUCTURE | Causa do deployment mais recente do projeto rota5 em ERROR |
+| SECURITY | Visibilidade real de linhas via chave anon |
+| REPOSITORY | Consumidores externos/dinâmicos de exports e assets classificados como órfãos/legado |
+
+Essas lacunas não impedem o PASS documental: a baseline não promove configuração local a estado remoto e não transforma ausência de evidência em falha. Fonte canônica: `system-knowledge/unresolved-evidence.json`.

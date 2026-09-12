@@ -1,0 +1,195 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-09-11",
+  "stage": 5,
+  "sourceCommit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+  "application": {
+    "framework": "Next.js 16.2.6",
+    "runtime": "Node.js 24.x no projeto Vercel",
+    "regions": [
+      "iad1"
+    ],
+    "health_path": "/api/health"
+  },
+  "environments": [
+    {
+      "id": "environment.local",
+      "name": "local",
+      "evidence_source": "LOCAL_DECLARED",
+      "config": [
+        ".env",
+        ".env.example"
+      ],
+      "database_target": "Supabase configurado por env; identidade não persistida",
+      "integration_mode": "credenciais locais presentes parcialmente",
+      "domain": "localhost/APP_BASE_URL",
+      "deployment": "processo local"
+    },
+    {
+      "id": "environment.preview",
+      "name": "preview",
+      "evidence_source": "REMOTE_CONFIG",
+      "config": "Variáveis Vercel por target; nomes observados",
+      "database_target": "Determinado por env, valor não lido",
+      "integration_mode": "Determinado por env",
+      "domain": "URLs de preview Vercel",
+      "deployment": "Vercel preview referenciado pelo projeto"
+    },
+    {
+      "id": "environment.production",
+      "name": "production",
+      "evidence_source": "REMOTE_CONFIG",
+      "config": "24 nomes de variáveis observados",
+      "database_target": "Determinado por env, valor não persistido",
+      "integration_mode": "providers configurados",
+      "domain": [
+        "blackhouseclubedecomedia.vercel.app",
+        "rota5-khaki.vercel.app"
+      ],
+      "deployment": "Dois projetos Vercel observados no domínio declarado e no link local"
+    }
+  ],
+  "vercel": {
+    "linked_project": {
+      "name": "rota5",
+      "project_id": "prj_dl7tt8fZbw88ZQV0GhklY0akEwbf",
+      "status": "REMOTE_CONFIG"
+    },
+    "declared_domain_project": {
+      "domain": "blackhouseclubedecomedia.vercel.app",
+      "project": "site",
+      "deployment": "dpl_EPmLTLjcgP2483Qp6UtVk73Kn3FF",
+      "state": "READY",
+      "evidence_source": "REMOTE_CONFIG"
+    },
+    "linked_project_production": {
+      "alias": "rota5-khaki.vercel.app",
+      "ready_deployment": "dpl_4fUuUVNXgCfYgTiJjvdLuDdxXSA9",
+      "latest_deployment_state": "ERROR",
+      "evidence_source": "REMOTE_CONFIG"
+    },
+    "published_commit": {
+      "status": "NOT_VALIDATED",
+      "reason": "Metadados do deployment consultado não expuseram gitSource/commit."
+    },
+    "crons": 2,
+    "environment_variable_names": 24
+  },
+  "github": {
+    "repository": "FelipeFraul/ticketeira",
+    "visibility": "private",
+    "default_branch": "main",
+    "production_branch_commit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+    "evidence_source": "REMOTE_CONFIG"
+  },
+  "configuration_files": [
+    {
+      "path": "package.json",
+      "impact": "comandos, dependências e runtime da aplicação"
+    },
+    {
+      "path": "package-lock.json",
+      "impact": "resolução exata de dependências"
+    },
+    {
+      "path": "next.config.ts",
+      "impact": "headers de segurança e CORS de assets estáticos"
+    },
+    {
+      "path": "vercel.json",
+      "impact": "dois schedules cron"
+    },
+    {
+      "path": "tsconfig.json",
+      "impact": "compilação e aliases"
+    },
+    {
+      "path": "eslint.config.mjs",
+      "impact": "validação estática"
+    },
+    {
+      "path": "src/proxy.ts",
+      "impact": "proteção edge e sessões"
+    },
+    {
+      "path": "src/lib/env.ts",
+      "impact": "validação central de ambiente"
+    }
+  ],
+  "storage": [
+    {
+      "id": "storage.static-assets",
+      "provider": "repository/Vercel",
+      "producer": "build e arquivos versionados",
+      "consumer": "Next.js/browser",
+      "lifecycle": "versionado com deploy",
+      "database_reference": "nenhuma",
+      "access": "público conforme rota",
+      "remote_validation": "RUNTIME_OBSERVED"
+    },
+    {
+      "id": "storage.generated-images",
+      "provider": "memória/filesystem temporário",
+      "producer": "qrcode + sharp e ferramentas de mapa",
+      "consumer": "Z-API/browser/auditorias",
+      "lifecycle": "buffer/base64 ou .tmp em ferramentas",
+      "database_reference": "seat_map_renders e metadados de mensagens",
+      "access": "server/tooling",
+      "remote_validation": "PARTIAL_MATCH"
+    },
+    {
+      "id": "storage.supabase",
+      "provider": "Supabase Storage",
+      "producer": "nenhum uso .storage encontrado",
+      "consumer": "nenhum consumidor encontrado",
+      "lifecycle": "não implementado no código observado",
+      "database_reference": "SEAT_MAP_STORAGE_BUCKET configurado",
+      "access": "NOT_VALIDATED",
+      "remote_validation": "REMOTE_CONFIG: 0 buckets"
+    }
+  ],
+  "security_boundaries": [
+    {
+      "from": "browser",
+      "to": "API",
+      "auth": "cookies, segredo interno ou superfície pública conforme rota",
+      "validation": "Zod/validação de handler e proxy",
+      "trust": "input não confiável"
+    },
+    {
+      "from": "API",
+      "to": "Supabase",
+      "auth": "service role",
+      "validation": "autorização da aplicação antes da operação",
+      "trust": "servidor contorna RLS"
+    },
+    {
+      "from": "provider",
+      "to": "webhook",
+      "auth": "segredo Z-API ou assinatura Mercado Pago",
+      "validation": "assinatura/payload/deduplicação",
+      "trust": "rede externa"
+    },
+    {
+      "from": "Vercel cron",
+      "to": "API",
+      "auth": "Bearer CRON_SECRET",
+      "validation": "comparação do segredo",
+      "trust": "scheduler externo"
+    },
+    {
+      "from": "scripts",
+      "to": "Supabase",
+      "auth": "service role/DATABASE_URL",
+      "validation": "pré-condições do script",
+      "trust": "operador local"
+    },
+    {
+      "from": "admin/gate/kitchen",
+      "to": "API",
+      "auth": "sessão assinada, segredo ou credencial de acesso",
+      "validation": "permissão e escopo de evento",
+      "trust": "cliente autenticado"
+    }
+  ]
+}

@@ -1,0 +1,834 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-11",
+  "count": 56,
+  "countingRule": "25 route modules + 14 pages + 1 proxy + 8 npm commands + 6 operational scripts + 2 external cron triggers; overlaps intentionally retained.",
+  "records": [
+    {
+      "id": "http-admin-open",
+      "name": "GET /admin/eventos/abrir/[token]",
+      "type": "route",
+      "path": "src/app/admin/eventos/abrir/[token]/route.ts",
+      "purpose": "Consumir link administrativo e definir cookies de sessão/CSRF.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-admin-combos",
+      "name": "GET/POST /api/admin/combo-offers",
+      "type": "api-route",
+      "path": "src/app/api/admin/combo-offers/route.ts",
+      "purpose": "Listar e criar ofertas de combo.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-admin-combo-id",
+      "name": "PATCH/POST/DELETE /api/admin/combo-offers/[offerId]",
+      "type": "api-route",
+      "path": "src/app/api/admin/combo-offers/[offerId]/route.ts",
+      "purpose": "Editar, duplicar/acionar e excluir oferta.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-admin-events",
+      "name": "GET/POST /api/admin/events",
+      "type": "api-route",
+      "path": "src/app/api/admin/events/route.ts",
+      "purpose": "Listar/criar eventos e servir consultas administrativas.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-admin-event-id",
+      "name": "GET/PATCH/POST/DELETE /api/admin/events/[eventId]",
+      "type": "api-route",
+      "path": "src/app/api/admin/events/[eventId]/route.ts",
+      "purpose": "Ler, editar, duplicar/acionar e excluir evento.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-admin-login",
+      "name": "GET/POST /api/admin/login/verify",
+      "type": "api-route",
+      "path": "src/app/api/admin/login/verify/route.ts",
+      "purpose": "Validar login administrativo.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-admin-ops",
+      "name": "GET /api/admin/operational-dashboard",
+      "type": "api-route",
+      "path": "src/app/api/admin/operational-dashboard/route.ts",
+      "purpose": "Carregar painel operacional.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-admin-map",
+      "name": "GET/PUT /api/admin/table-map",
+      "type": "api-route",
+      "path": "src/app/api/admin/table-map/route.ts",
+      "purpose": "Ler e persistir coordenadas do mapa oficial.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-checkout-mp",
+      "name": "POST /api/checkout/mercado-pago",
+      "type": "api-route",
+      "path": "src/app/api/checkout/mercado-pago/route.ts",
+      "purpose": "Executar checkout interno protegido.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado"
+      ],
+      "dependencies": [
+        "Mercado Pago",
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-checkout-pay",
+      "name": "POST /api/checkout/mercado-pago/pay",
+      "type": "api-route",
+      "path": "src/app/api/checkout/mercado-pago/pay/route.ts",
+      "purpose": "Criar pagamento Pix de ingresso.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado"
+      ],
+      "dependencies": [
+        "Mercado Pago",
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-checkout-status",
+      "name": "GET /api/checkout/status",
+      "type": "api-route",
+      "path": "src/app/api/checkout/status/route.ts",
+      "purpose": "Consultar checkout de ingresso.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-combo-pay",
+      "name": "POST /api/combo-checkout/mercado-pago/pay",
+      "type": "api-route",
+      "path": "src/app/api/combo-checkout/mercado-pago/pay/route.ts",
+      "purpose": "Criar pagamento Pix de combo.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado"
+      ],
+      "dependencies": [
+        "Mercado Pago",
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-combo-status",
+      "name": "GET /api/combo-checkout/status",
+      "type": "api-route",
+      "path": "src/app/api/combo-checkout/status/route.ts",
+      "purpose": "Consultar checkout de combo.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-cron-expire",
+      "name": "GET/POST /api/cron/expire-reservations",
+      "type": "cron-route",
+      "path": "src/app/api/cron/expire-reservations/route.ts",
+      "purpose": "Expirar reservas vencidas.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-cron-batches",
+      "name": "GET/POST /api/cron/process-whatsapp-batches",
+      "type": "cron-route",
+      "path": "src/app/api/cron/process-whatsapp-batches/route.ts",
+      "purpose": "Processar/finalizar batches WhatsApp.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-gate-consult",
+      "name": "POST /api/gate/session/consult",
+      "type": "api-route",
+      "path": "src/app/api/gate/session/consult/route.ts",
+      "purpose": "Consultar ingresso na portaria.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-gate-scan",
+      "name": "POST /api/gate/session/scan",
+      "type": "api-route",
+      "path": "src/app/api/gate/session/scan/route.ts",
+      "purpose": "Interpretar QR de ingresso.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-gate-validate",
+      "name": "POST /api/gate/session/validate",
+      "type": "api-route",
+      "path": "src/app/api/gate/session/validate/route.ts",
+      "purpose": "Validar sessão do leitor e retornar resumo de portaria; não consumir ingresso.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado",
+        "src/app/api/gate/session/validate/route.ts:48 chama validateGateSessionToken e buildPublicGateSessionDtoWithSummary"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-health",
+      "name": "GET /api/health",
+      "type": "api-route",
+      "path": "src/app/api/health/route.ts",
+      "purpose": "Responder health check.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-kitchen-open",
+      "name": "GET/POST /api/kitchen/session/open",
+      "type": "api-route",
+      "path": "src/app/api/kitchen/session/open/route.ts",
+      "purpose": "Abrir/vincular sessão de cozinha.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-kitchen-prepare",
+      "name": "POST /api/kitchen/session/prepare",
+      "type": "api-route",
+      "path": "src/app/api/kitchen/session/prepare/route.ts",
+      "purpose": "Registrar preparação de combo.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-kitchen-scan",
+      "name": "POST /api/kitchen/session/scan",
+      "type": "api-route",
+      "path": "src/app/api/kitchen/session/scan/route.ts",
+      "purpose": "Interpretar QR de combo.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-kitchen-validate",
+      "name": "POST /api/kitchen/session/validate",
+      "type": "api-route",
+      "path": "src/app/api/kitchen/session/validate/route.ts",
+      "purpose": "Validar token/dispositivo da cozinha e retornar pedidos; não consumir resgate.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado",
+        "src/app/api/kitchen/session/validate/route.ts:66 chama validateKitchenOrdersToken"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-mp-webhook",
+      "name": "POST /api/webhook/payment/mercado-pago",
+      "type": "webhook",
+      "path": "src/app/api/webhook/payment/mercado-pago/route.ts",
+      "purpose": "Processar notificação assinada de pagamento.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado"
+      ],
+      "dependencies": [
+        "Mercado Pago",
+        "Supabase"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "http-zapi-webhook",
+      "name": "POST /api/webhook/zapi",
+      "type": "webhook",
+      "path": "src/app/api/webhook/zapi/route.ts",
+      "purpose": "Receber e responder mensagens WhatsApp.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "handler HTTP exportado"
+      ],
+      "dependencies": [
+        "Z-API",
+        "Supabase",
+        "src/lib/tickets/router.ts"
+      ],
+      "notes": "Exposição e tráfego de produção não validados."
+    },
+    {
+      "id": "page-root",
+      "name": "/",
+      "type": "page",
+      "path": "src/app/page.tsx",
+      "purpose": "Shell raiz vazio.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "export default em page.tsx"
+      ],
+      "dependencies": [
+        "Next.js"
+      ],
+      "notes": "Execução de produção não validada."
+    },
+    {
+      "id": "page-admin-events",
+      "name": "/admin/eventos",
+      "type": "page",
+      "path": "src/app/admin/eventos/page.tsx",
+      "purpose": "Catálogo/editor de eventos e ofertas.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "export default em page.tsx"
+      ],
+      "dependencies": [
+        "Next.js"
+      ],
+      "notes": "Execução de produção não validada."
+    },
+    {
+      "id": "page-admin-login",
+      "name": "/admin/login/[token]",
+      "type": "page",
+      "path": "src/app/admin/login/[token]/page.tsx",
+      "purpose": "Formulário de login por token.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "export default em page.tsx"
+      ],
+      "dependencies": [
+        "Next.js"
+      ],
+      "notes": "Execução de produção não validada."
+    },
+    {
+      "id": "page-admin-ops",
+      "name": "/admin/operacao",
+      "type": "page",
+      "path": "src/app/admin/operacao/page.tsx",
+      "purpose": "Painel operacional.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "export default em page.tsx"
+      ],
+      "dependencies": [
+        "Next.js"
+      ],
+      "notes": "Execução de produção não validada."
+    },
+    {
+      "id": "page-checkout",
+      "name": "/checkout/[orderId]",
+      "type": "page",
+      "path": "src/app/checkout/[orderId]/page.tsx",
+      "purpose": "Checkout de ingresso.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "export default em page.tsx"
+      ],
+      "dependencies": [
+        "Next.js"
+      ],
+      "notes": "Execução de produção não validada."
+    },
+    {
+      "id": "page-checkout-success",
+      "name": "/checkout/success",
+      "type": "page",
+      "path": "src/app/checkout/success/page.tsx",
+      "purpose": "Retorno de pagamento aprovado.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "export default em page.tsx"
+      ],
+      "dependencies": [
+        "Next.js"
+      ],
+      "notes": "Execução de produção não validada."
+    },
+    {
+      "id": "page-checkout-pending",
+      "name": "/checkout/pending",
+      "type": "page",
+      "path": "src/app/checkout/pending/page.tsx",
+      "purpose": "Retorno pendente.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "export default em page.tsx"
+      ],
+      "dependencies": [
+        "Next.js"
+      ],
+      "notes": "Execução de produção não validada."
+    },
+    {
+      "id": "page-checkout-failure",
+      "name": "/checkout/failure",
+      "type": "page",
+      "path": "src/app/checkout/failure/page.tsx",
+      "purpose": "Retorno com falha.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "export default em page.tsx"
+      ],
+      "dependencies": [
+        "Next.js"
+      ],
+      "notes": "Execução de produção não validada."
+    },
+    {
+      "id": "page-combo-checkout",
+      "name": "/combo-checkout/[orderId]",
+      "type": "page",
+      "path": "src/app/combo-checkout/[orderId]/page.tsx",
+      "purpose": "Checkout de combo.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "export default em page.tsx"
+      ],
+      "dependencies": [
+        "Next.js"
+      ],
+      "notes": "Execução de produção não validada."
+    },
+    {
+      "id": "page-gate",
+      "name": "/gate/session/[token]",
+      "type": "page",
+      "path": "src/app/gate/session/[token]/page.tsx",
+      "purpose": "Scanner de portaria.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "export default em page.tsx"
+      ],
+      "dependencies": [
+        "Next.js"
+      ],
+      "notes": "Execução de produção não validada."
+    },
+    {
+      "id": "page-kitchen-access",
+      "name": "/kitchen/access",
+      "type": "page",
+      "path": "src/app/kitchen/access/page.tsx",
+      "purpose": "Entrada de dispositivo da cozinha.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "export default em page.tsx"
+      ],
+      "dependencies": [
+        "Next.js"
+      ],
+      "notes": "Execução de produção não validada."
+    },
+    {
+      "id": "page-kitchen-session",
+      "name": "/kitchen/session/[token]",
+      "type": "page",
+      "path": "src/app/kitchen/session/[token]/page.tsx",
+      "purpose": "Scanner de cozinha.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "export default em page.tsx"
+      ],
+      "dependencies": [
+        "Next.js"
+      ],
+      "notes": "Execução de produção não validada."
+    },
+    {
+      "id": "page-offer-reader",
+      "name": "/offer-reader/session/[token]",
+      "type": "page",
+      "path": "src/app/offer-reader/session/[token]/page.tsx",
+      "purpose": "Leitor de oferta/combo.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "export default em page.tsx"
+      ],
+      "dependencies": [
+        "Next.js"
+      ],
+      "notes": "Execução de produção não validada."
+    },
+    {
+      "id": "page-ticket",
+      "name": "/tickets/[token]",
+      "type": "page",
+      "path": "src/app/tickets/[token]/page.tsx",
+      "purpose": "Visualização pública de ingresso.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "export default em page.tsx"
+      ],
+      "dependencies": [
+        "Next.js"
+      ],
+      "notes": "Execução de produção não validada."
+    },
+    {
+      "id": "proxy",
+      "name": "Next proxy",
+      "type": "middleware",
+      "path": "src/proxy.ts",
+      "purpose": "Aplicar headers e rate limit por matcher.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "export async function proxy",
+        "export const config"
+      ],
+      "dependencies": [
+        "consume_rate_limit"
+      ]
+    },
+    {
+      "id": "npm-dev",
+      "name": "npm run dev",
+      "type": "dev-command",
+      "path": "next dev",
+      "purpose": "Iniciar desenvolvimento.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "package.json scripts"
+      ]
+    },
+    {
+      "id": "npm-build",
+      "name": "npm run build",
+      "type": "build-command",
+      "path": "next build",
+      "purpose": "Gerar build de produção.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "package.json scripts"
+      ]
+    },
+    {
+      "id": "npm-test",
+      "name": "npm test",
+      "type": "test-command",
+      "path": "package.json",
+      "purpose": "Executar 15 arquivos de teste explícitos.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "package.json scripts"
+      ]
+    },
+    {
+      "id": "npm-start",
+      "name": "npm start",
+      "type": "runtime-command",
+      "path": "next start",
+      "purpose": "Iniciar build Next.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "package.json scripts"
+      ]
+    },
+    {
+      "id": "npm-codex-requests",
+      "name": "npm run codex:requests",
+      "type": "script-command",
+      "path": "scripts/list-codex-requests.mjs",
+      "purpose": "Listar pedidos Codex aprovados.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "package.json scripts"
+      ]
+    },
+    {
+      "id": "npm-codex-runner",
+      "name": "npm run codex:runner",
+      "type": "script-command",
+      "path": "scripts/codex-local-runner.mjs",
+      "purpose": "Iniciar polling/executor Codex local.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "package.json scripts"
+      ]
+    },
+    {
+      "id": "script-codex-runner",
+      "name": "Codex local runner",
+      "type": "operational-script",
+      "path": "scripts/codex-local-runner.mjs",
+      "purpose": "Consultar pedidos, executar CLI e enviar resultado opcional.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "evidence": [
+        "programa executável no diretório scripts"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Execução atual não validada."
+    },
+    {
+      "id": "script-codex-list",
+      "name": "List Codex requests",
+      "type": "operational-script",
+      "path": "scripts/list-codex-requests.mjs",
+      "purpose": "Listar pedidos por telefone.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "evidence": [
+        "programa executável no diretório scripts"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Execução atual não validada."
+    },
+    {
+      "id": "script-import",
+      "name": "Import programação",
+      "type": "operational-script",
+      "path": "scripts/import-programacao-events.mjs",
+      "purpose": "Importar eventos de programacao.md.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "evidence": [
+        "programa executável no diretório scripts"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Execução atual não validada."
+    },
+    {
+      "id": "script-bh-rename",
+      "name": "Rename Black House sections",
+      "type": "operational-script",
+      "path": "scripts/rename-black-house-ticket-sections.mjs",
+      "purpose": "Renomear setores Black House.",
+      "status": "POSSÍVEL LEGADO",
+      "evidence": [
+        "programa executável no diretório scripts"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Execução atual não validada."
+    },
+    {
+      "id": "script-bh-split",
+      "name": "Split Black House items",
+      "type": "operational-script",
+      "path": "scripts/split-black-house-special-items.mjs",
+      "purpose": "Dividir itens especiais Black House.",
+      "status": "POSSÍVEL LEGADO",
+      "evidence": [
+        "programa executável no diretório scripts"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Execução atual não validada."
+    },
+    {
+      "id": "script-bh-update",
+      "name": "Update Black House sectors",
+      "type": "operational-script",
+      "path": "scripts/update-black-house-sectors.mjs",
+      "purpose": "Atualizar setores Black House.",
+      "status": "POSSÍVEL LEGADO",
+      "evidence": [
+        "programa executável no diretório scripts"
+      ],
+      "dependencies": [
+        "Supabase"
+      ],
+      "notes": "Execução atual não validada."
+    },
+    {
+      "id": "trigger-cron-expire",
+      "name": "Vercel cron: expire reservations",
+      "type": "external-trigger",
+      "path": "vercel.json",
+      "purpose": "Disparar /api/cron/expire-reservations a cada minuto.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "evidence": [
+        "schedule '* * * * *' em vercel.json"
+      ],
+      "dependencies": [
+        "Vercel",
+        "CRON_SECRET"
+      ],
+      "notes": "Ativação remota não validada."
+    },
+    {
+      "id": "trigger-cron-batches",
+      "name": "Vercel cron: WhatsApp batches",
+      "type": "external-trigger",
+      "path": "vercel.json",
+      "purpose": "Disparar /api/cron/process-whatsapp-batches a cada minuto.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "evidence": [
+        "schedule '* * * * *' em vercel.json"
+      ],
+      "dependencies": [
+        "Vercel",
+        "CRON_SECRET"
+      ],
+      "notes": "Ativação remota não validada."
+    },
+    {
+      "id": "npm-lint",
+      "name": "npm run lint",
+      "type": "npm-command",
+      "path": "package.json",
+      "purpose": "Verificar fonte com ESLint.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "package.json scripts"
+      ],
+      "dependencies": [
+        "node"
+      ],
+      "notes": "Incluído na Etapa 3: toolchain, sem capability funcional independente."
+    },
+    {
+      "id": "npm-typecheck",
+      "name": "npm run typecheck",
+      "type": "npm-command",
+      "path": "package.json",
+      "purpose": "Verificar tipos TypeScript sem emissão.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "package.json scripts"
+      ],
+      "dependencies": [
+        "node"
+      ],
+      "notes": "Incluído na Etapa 3: toolchain, sem capability funcional independente."
+    }
+  ]
+}

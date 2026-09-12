@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-12",
+  "stage": "6/8",
+  "sourceCommit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+  "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
+  "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
+  "count": 9,
+  "relation_types": [
+    "CAUSES",
+    "AMPLIFIES",
+    "MASKS",
+    "DEPENDS_ON",
+    "DUPLICATES"
+  ],
+  "records": [
+    {
+      "from": "bug.create-event-invalid-jsx",
+      "type": "CAUSES",
+      "to": "gap.default-test-suite-failing",
+      "evidence": "O parse error faz lint/typecheck falharem e compromete o gate."
+    },
+    {
+      "from": "risk.vercel-project-identity-drift",
+      "type": "AMPLIFIES",
+      "to": "risk.published-commit-unvalidated",
+      "evidence": "Dois projetos tornam a reconciliação do artefato publicado ambígua."
+    },
+    {
+      "from": "risk.vercel-project-identity-drift",
+      "type": "AMPLIFIES",
+      "to": "legacy.active-brand-contamination",
+      "evidence": "Domínio Black House e projeto rota5 aparecem na mesma configuração operacional."
+    },
+    {
+      "from": "gap.critical-flow-correlation",
+      "type": "MASKS",
+      "to": "risk.payment-confirmed-before-external-delivery",
+      "evidence": "Sem correlação única, confirmação e entrega precisam ser reconstruídas por IDs diferentes."
+    },
+    {
+      "from": "orphan.gate-session-revoke",
+      "type": "AMPLIFIES",
+      "to": "risk.gate-credential-revocation-does-not-revoke-session",
+      "evidence": "A função granular existe, mas não há fluxo que a acione."
+    },
+    {
+      "from": "debt.router-responsibility-concentration",
+      "type": "AMPLIFIES",
+      "to": "risk.whatsapp-conversation-context-race",
+      "evidence": "Coordenação de estado e efeitos no mesmo módulo amplia a janela e revisão do fluxo."
+    },
+    {
+      "from": "gap.source-contract-assertion-bias",
+      "type": "CAUSES",
+      "to": "gap.default-test-suite-failing",
+      "evidence": "Três falhas atuais são expectativas textuais/estruturais sem defeito funcional equivalente provado."
+    },
+    {
+      "from": "risk.remote-database-controls-unvalidated",
+      "type": "DEPENDS_ON",
+      "to": "gap.remote-database-behavior-tests",
+      "evidence": "Fechar a incerteza exige evidência remota e testes de invariantes."
+    },
+    {
+      "from": "legacy.table-map-presentation-disabled",
+      "type": "AMPLIFIES",
+      "to": "debt.seat-map-storage-contract-drift",
+      "evidence": "Feature parcial e storage sem consumidor pertencem à mesma fronteira de mapa, mas são problemas distintos."
+    }
+  ]
+}

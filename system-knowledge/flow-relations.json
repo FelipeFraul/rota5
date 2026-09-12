@@ -1,0 +1,396 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-09-11",
+  "stage": 4,
+  "count": 21,
+  "types": [
+    "TRIGGERS",
+    "CONTINUES_AS",
+    "RETRIES_AS",
+    "RECOVERS_WITH",
+    "ALTERNATIVE_TO",
+    "SUBFLOW_OF"
+  ],
+  "records": [
+    {
+      "id": "flowrel.001",
+      "from": "whatsapp.inbound_dispatch",
+      "type": "TRIGGERS",
+      "to": "whatsapp.public_discovery",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/app/api/webhook/zapi/route.ts",
+          "line": 1540,
+          "end_line": 1565,
+          "symbol": "POST",
+          "claim": "O dispatcher autenticado chama routeTicketMessage, que seleciona o fluxo público quando não há ramo especial anterior."
+        }
+      ],
+      "status": "STATIC_SOURCE"
+    },
+    {
+      "id": "flowrel.002",
+      "from": "whatsapp.public_discovery",
+      "type": "CONTINUES_AS",
+      "to": "ticket.purchase",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/router.ts",
+          "line": 1969,
+          "end_line": 1978,
+          "symbol": "formatSingleEventMoreInfoOptions",
+          "claim": "A descoberta oferece a ação comprar somente quando o evento permite venda, encaminhando ao fluxo de compra."
+        }
+      ],
+      "status": "STATIC_SOURCE"
+    },
+    {
+      "id": "flowrel.003",
+      "from": "ticket.purchase",
+      "type": "CONTINUES_AS",
+      "to": "ticket.checkout",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/router.ts",
+          "line": 18234,
+          "end_line": 18271,
+          "symbol": "routeTicketMessage",
+          "claim": "A confirmação COMPRAR cria checkout para a reserva e devolve o link de pagamento."
+        }
+      ],
+      "status": "STATIC_SOURCE"
+    },
+    {
+      "id": "flowrel.004",
+      "from": "ticket.checkout",
+      "type": "CONTINUES_AS",
+      "to": "ticket.payment_confirmation",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/checkout.ts",
+          "line": 1215,
+          "end_line": 1244,
+          "symbol": "paySelfHostedCheckout",
+          "claim": "O checkout registra no provedor a URL do webhook que executa a confirmação de pagamento."
+        }
+      ],
+      "status": "STATIC_SOURCE"
+    },
+    {
+      "id": "flowrel.005",
+      "from": "ticket.payment_confirmation",
+      "type": "CONTINUES_AS",
+      "to": "ticket.delivery",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/app/api/webhook/payment/mercado-pago/route.ts",
+          "line": 528,
+          "end_line": 552,
+          "symbol": "POST",
+          "claim": "Depois de confirmar um pedido pago, o webhook inicia entrega direta ou solicita a preferência de entrega."
+        }
+      ],
+      "status": "STATIC_SOURCE"
+    },
+    {
+      "id": "flowrel.006",
+      "from": "ticket.delivery",
+      "type": "CONTINUES_AS",
+      "to": "ticket.view",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/ticketDelivery.ts",
+          "line": 695,
+          "end_line": 705,
+          "symbol": "deliverTicketsForOrder",
+          "claim": "A entrega monta a URL assinada do ingresso que será aberta no flow de visualização."
+        }
+      ],
+      "status": "STATIC_SOURCE"
+    },
+    {
+      "id": "flowrel.007",
+      "from": "ticket.purchase",
+      "type": "ALTERNATIVE_TO",
+      "to": "courtesy.public",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/router.ts",
+          "line": 18210,
+          "end_line": 18232,
+          "symbol": "routeTicketMessage",
+          "claim": "Uma reserva gratuita emite ingresso sem checkout externo, constituindo alternativa pública ao caminho pago."
+        }
+      ],
+      "status": "STATIC_SOURCE"
+    },
+    {
+      "id": "flowrel.008",
+      "from": "combo.offer_distribution",
+      "type": "TRIGGERS",
+      "to": "combo.purchase",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 2352,
+          "end_line": 2600,
+          "symbol": "sendScheduledComboOffers",
+          "claim": "O agendador seleciona compradores elegíveis, cria a oferta/pedido e envia o link do checkout de combo."
+        }
+      ],
+      "status": "STATIC_SOURCE"
+    },
+    {
+      "id": "flowrel.009",
+      "from": "combo.purchase",
+      "type": "CONTINUES_AS",
+      "to": "combo.payment_confirmation",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 1200,
+          "end_line": 1212,
+          "symbol": "payPublicComboCheckout",
+          "claim": "O pagamento do combo informa o mesmo webhook que confirma o pedido de combo aprovado."
+        }
+      ],
+      "status": "STATIC_SOURCE"
+    },
+    {
+      "id": "flowrel.010",
+      "from": "combo.payment_confirmation",
+      "type": "CONTINUES_AS",
+      "to": "kitchen.combo_redemption",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/app/api/webhook/payment/mercado-pago/route.ts",
+          "line": 380,
+          "end_line": 430,
+          "symbol": "POST",
+          "claim": "A confirmação do combo emite o resgate e entrega seu QR, que alimenta o flow posterior de leitura na cozinha."
+        }
+      ],
+      "status": "STATIC_SOURCE"
+    },
+    {
+      "id": "flowrel.011",
+      "from": "gate.ticket_admission",
+      "type": "TRIGGERS",
+      "to": "gate.combo_release",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/gateValidation.ts",
+          "line": 108,
+          "end_line": 132,
+          "symbol": "validateGateScan",
+          "claim": "Quando a entrada do ingresso é permitida, a validação chama a liberação dos combos do comprador para a cozinha."
+        }
+      ],
+      "status": "STATIC_SOURCE"
+    },
+    {
+      "id": "flowrel.012",
+      "from": "gate.combo_release",
+      "type": "CONTINUES_AS",
+      "to": "kitchen.session_prepare",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "line": 492,
+          "end_line": 638,
+          "symbol": "releaseComboOrdersForKitchenAfterGateEntry",
+          "claim": "A liberação pela portaria marca o resgate como visível para a cozinha e avisa que o pedido entrou em preparo."
+        }
+      ],
+      "status": "STATIC_SOURCE"
+    },
+    {
+      "id": "flowrel.013",
+      "from": "kitchen.session_prepare",
+      "type": "CONTINUES_AS",
+      "to": "kitchen.combo_redemption",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "line": 641,
+          "end_line": 932,
+          "symbol": "startKitchenOrderPreparation",
+          "claim": "A preparação registra o estado da cozinha e disponibiliza o QR para a leitura que conclui o resgate."
+        }
+      ],
+      "status": "STATIC_SOURCE"
+    },
+    {
+      "id": "flowrel.014",
+      "from": "kitchen.combo_redemption",
+      "type": "TRIGGERS",
+      "to": "combo.delivery_choice",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "line": 1094,
+          "end_line": 1205,
+          "symbol": "validateComboRedemptionScan",
+          "claim": "Um scan válido sem escolha de entrega envia o prompt e preserva o resgate issued para resposta no WhatsApp."
+        }
+      ],
+      "status": "STATIC_SOURCE"
+    },
+    {
+      "id": "flowrel.015",
+      "from": "combo.delivery_choice",
+      "type": "RECOVERS_WITH",
+      "to": "kitchen.combo_redemption",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/router.ts",
+          "line": 4006,
+          "end_line": 4072,
+          "symbol": "handleComboDeliveryConfirmation",
+          "claim": "A resposta confirma local/mesa e deixa o resgate pronto para nova leitura na cozinha."
+        }
+      ],
+      "status": "STATIC_SOURCE"
+    },
+    {
+      "id": "flowrel.016",
+      "from": "admin.whatsapp_session",
+      "type": "CONTINUES_AS",
+      "to": "admin.whatsapp_event_management",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/router.ts",
+          "line": 16455,
+          "end_line": 16482,
+          "symbol": "routeTicketMessage",
+          "claim": "Após autenticar e autorizar o submenu, o router despacha o contexto administrativo para handleAdminEventsFlow."
+        }
+      ],
+      "status": "STATIC_SOURCE"
+    },
+    {
+      "id": "flowrel.017",
+      "from": "admin.web_session",
+      "type": "CONTINUES_AS",
+      "to": "admin.web_event_workspace",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/app/admin/eventos/abrir/[token]/route.ts",
+          "line": 38,
+          "end_line": 45,
+          "symbol": "GET",
+          "claim": "O link autenticado cria a sessão web e redireciona diretamente para /admin/eventos."
+        }
+      ],
+      "status": "STATIC_SOURCE"
+    },
+    {
+      "id": "flowrel.018",
+      "from": "reservation.expiration",
+      "type": "RECOVERS_WITH",
+      "to": "ticket.purchase",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/reservationExpiry.ts",
+          "line": 51,
+          "end_line": 69,
+          "symbol": "buildReservationExpiredMessage",
+          "claim": "A expiração envia a orientação NOVO e limpa o contexto da reserva, permitindo reiniciar a compra."
+        }
+      ],
+      "status": "STATIC_SOURCE"
+    },
+    {
+      "id": "flowrel.019",
+      "from": "whatsapp.batch_processing",
+      "type": "RETRIES_AS",
+      "to": "whatsapp.batch_processing",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/app/api/cron/process-whatsapp-batches/route.ts",
+          "line": 54,
+          "end_line": 78,
+          "symbol": "rescheduleClaimedBatch",
+          "claim": "Falhas de processamento reagendam o mesmo lote com backoff e limite de tentativas."
+        }
+      ],
+      "status": "STATIC_SOURCE"
+    },
+    {
+      "id": "flowrel.020",
+      "from": "codex.automation",
+      "type": "SUBFLOW_OF",
+      "to": "whatsapp.inbound_dispatch",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/app/api/webhook/zapi/route.ts",
+          "line": 1242,
+          "end_line": 1525,
+          "symbol": "POST",
+          "claim": "O pedido Codex é um ramo especial do dispatcher inbound, processado antes do roteamento público geral."
+        }
+      ],
+      "status": "STATIC_SOURCE"
+    },
+    {
+      "id": "flowrel.021",
+      "from": "platform.edge_request_protection",
+      "type": "CONTINUES_AS",
+      "to": "ticket.checkout",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/proxy.ts",
+          "line": 154,
+          "end_line": 207,
+          "symbol": "proxy",
+          "claim": "O proxy cobre as páginas pelo matcher, aplica proteção e devolve NextResponse.next para a rota de destino, incluindo checkout."
+        }
+      ],
+      "status": "STATIC_SOURCE"
+    }
+  ],
+  "validation": {
+    "status": "PASS",
+    "flow_references": true,
+    "unique_ids": true,
+    "relation_type_audit": true,
+    "semantic_cycle_audit": true,
+    "legitimate_cycles": [
+      {
+        "flows": [
+          "kitchen.combo_redemption",
+          "combo.delivery_choice"
+        ],
+        "reason": "O scan solicita a escolha; após a escolha, um novo scan conclui o resgate."
+      },
+      {
+        "flows": [
+          "whatsapp.batch_processing"
+        ],
+        "reason": "RETRIES_AS representa o retry limitado do próprio lote."
+      }
+    ],
+    "evidence_reconciled": true
+  }
+}

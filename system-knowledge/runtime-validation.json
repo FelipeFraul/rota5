@@ -1,0 +1,220 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-09-11",
+  "stage": 5,
+  "count": 15,
+  "ok": 12,
+  "records": [
+    {
+      "id": "runtime.supabase-openapi",
+      "target": "Supabase PostgREST OpenAPI",
+      "method": "GET",
+      "evidence_source": "REMOTE_SCHEMA",
+      "status": "PASS",
+      "result": "44 tabelas e 33 rotas RPC retornadas; nomes de colunas comparados.",
+      "side_effect_free": true,
+      "expected": "Schema OpenAPI acessível sem escrita.",
+      "evidence": [
+        "REMOTE_SCHEMA",
+        "Supabase PostgREST OpenAPI"
+      ]
+    },
+    {
+      "id": "runtime.supabase-anon-head",
+      "target": "Supabase anon HEAD",
+      "method": "HEAD",
+      "evidence_source": "RUNTIME_OBSERVED",
+      "status": "PARTIAL",
+      "result": "7 consultas aceitas e 37 negadas; HEAD não prova visibilidade de linhas.",
+      "side_effect_free": true,
+      "expected": "Caracterizar aceitação anon sem ler ou alterar linhas.",
+      "evidence": [
+        "RUNTIME_OBSERVED",
+        "Supabase anon HEAD"
+      ]
+    },
+    {
+      "id": "runtime.supabase-storage",
+      "target": "Supabase Storage listBuckets",
+      "method": "GET",
+      "evidence_source": "REMOTE_CONFIG",
+      "status": "PASS",
+      "result": "Consulta somente leitura retornou zero buckets.",
+      "side_effect_free": true,
+      "expected": "Listar buckets sem alteração.",
+      "evidence": [
+        "REMOTE_CONFIG",
+        "Supabase Storage listBuckets"
+      ]
+    },
+    {
+      "id": "runtime.zapi-status",
+      "target": "Z-API instance status",
+      "method": "GET",
+      "evidence_source": "RUNTIME_OBSERVED",
+      "status": "PASS",
+      "result": "HTTP 200; instância e smartphone conectados.",
+      "side_effect_free": true,
+      "expected": "Consultar conectividade sem enviar mensagem.",
+      "evidence": [
+        "RUNTIME_OBSERVED",
+        "Z-API instance status"
+      ]
+    },
+    {
+      "id": "runtime.mercado-pago-account",
+      "target": "Mercado Pago account metadata",
+      "method": "GET",
+      "evidence_source": "RUNTIME_OBSERVED",
+      "status": "PASS",
+      "result": "HTTP 200; identidade de conta retornada; site_id MLB.",
+      "side_effect_free": true,
+      "expected": "Validar credencial em metadata sem criar pagamento.",
+      "evidence": [
+        "RUNTIME_OBSERVED",
+        "Mercado Pago account metadata"
+      ]
+    },
+    {
+      "id": "runtime.vercel-project",
+      "target": "Vercel linked project",
+      "method": "CLI_READ",
+      "evidence_source": "REMOTE_CONFIG",
+      "status": "PASS",
+      "result": "Projeto rota5 e configuração Node.js 24.x observados.",
+      "side_effect_free": true,
+      "expected": "Ler configuração do projeto ligado.",
+      "evidence": [
+        "REMOTE_CONFIG",
+        "Vercel linked project"
+      ]
+    },
+    {
+      "id": "runtime.vercel-env",
+      "target": "Vercel environment names",
+      "method": "CLI_READ",
+      "evidence_source": "REMOTE_CONFIG",
+      "status": "PASS",
+      "result": "24 nomes observados; valores não lidos nem persistidos.",
+      "side_effect_free": true,
+      "expected": "Listar somente nomes e targets.",
+      "evidence": [
+        "REMOTE_CONFIG",
+        "Vercel environment names"
+      ]
+    },
+    {
+      "id": "runtime.vercel-declared-domain",
+      "target": "Vercel declared production domain",
+      "method": "CLI_READ",
+      "evidence_source": "REMOTE_CONFIG",
+      "status": "PASS",
+      "result": "Domínio declarado resolve deployment READY do projeto site.",
+      "side_effect_free": true,
+      "expected": "Resolver domínio para deployment/projeto.",
+      "evidence": [
+        "REMOTE_CONFIG",
+        "Vercel declared production domain"
+      ]
+    },
+    {
+      "id": "runtime.vercel-linked-deployment",
+      "target": "Vercel linked production deployment",
+      "method": "CLI_READ",
+      "evidence_source": "REMOTE_CONFIG",
+      "status": "FAIL",
+      "result": "Mais recente dpl_9VYjvCcu63MmUsDchK9Tx3WEnjVa (2026-09-11 16:57:57 -03) está ERROR; dpl_4fUuUVNXgCfYgTiJjvdLuDdxXSA9 (16:41:52 -03) está READY e serve rota5-khaki.vercel.app.",
+      "side_effect_free": true,
+      "expected": "Identificar deployment mais recente e deployment servido.",
+      "evidence": [
+        "REMOTE_CONFIG",
+        "Vercel linked production deployment"
+      ]
+    },
+    {
+      "id": "runtime.health-declared",
+      "target": "Health declared domain",
+      "method": "GET",
+      "evidence_source": "RUNTIME_OBSERVED",
+      "status": "PASS",
+      "result": "GET /api/health retornou HTTP 200 e status ok.",
+      "side_effect_free": true,
+      "expected": "Health HTTP 200.",
+      "evidence": [
+        "RUNTIME_OBSERVED",
+        "Health declared domain"
+      ]
+    },
+    {
+      "id": "runtime.health-linked",
+      "target": "Health linked alias",
+      "method": "GET",
+      "evidence_source": "RUNTIME_OBSERVED",
+      "status": "PASS",
+      "result": "GET /api/health retornou HTTP 200 e status ok.",
+      "side_effect_free": true,
+      "expected": "Health HTTP 200.",
+      "evidence": [
+        "RUNTIME_OBSERVED",
+        "Health linked alias"
+      ]
+    },
+    {
+      "id": "runtime.github-repository",
+      "target": "GitHub repository metadata",
+      "method": "CLI_READ",
+      "evidence_source": "REMOTE_CONFIG",
+      "status": "PASS",
+      "result": "Repositório privado existe; branch default main.",
+      "side_effect_free": true,
+      "expected": "Confirmar existência e metadata do repositório.",
+      "evidence": [
+        "REMOTE_CONFIG",
+        "GitHub repository metadata"
+      ]
+    },
+    {
+      "id": "runtime.git-production",
+      "target": "Git production branch",
+      "method": "GIT_READ",
+      "evidence_source": "REMOTE_CONFIG",
+      "status": "PASS",
+      "result": "origin/production e HEAD apontam para o commit baseline.",
+      "side_effect_free": true,
+      "expected": "Comparar HEAD e origin/production sem inferir deploy.",
+      "evidence": [
+        "REMOTE_CONFIG",
+        "Git production branch"
+      ]
+    },
+    {
+      "id": "runtime.codex-version",
+      "target": "Codex CLI version",
+      "method": "CLI_LOCAL_READ",
+      "evidence_source": "RUNTIME_OBSERVED",
+      "status": "PASS",
+      "result": "codex-cli 0.147.0 observado localmente.",
+      "side_effect_free": true,
+      "expected": "Confirmar CLI local disponível.",
+      "evidence": [
+        "RUNTIME_OBSERVED",
+        "Codex CLI version"
+      ]
+    },
+    {
+      "id": "runtime.vercel-logs",
+      "target": "Vercel runtime logs",
+      "method": "CLI_READ",
+      "evidence_source": "RUNTIME_OBSERVED",
+      "status": "PARTIAL",
+      "result": "50 registros na janela consultada, com 1 entrada de erro; conteúdo sensível não persistido.",
+      "side_effect_free": true,
+      "expected": "Amostrar logs sem persistir conteúdo sensível.",
+      "evidence": [
+        "RUNTIME_OBSERVED",
+        "Vercel runtime logs"
+      ]
+    }
+  ],
+  "prohibited_actions_performed": false
+}

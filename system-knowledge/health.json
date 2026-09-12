@@ -1,0 +1,1576 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-12",
+  "stage": "6/8",
+  "sourceCommit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+  "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
+  "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
+  "vocabulary": [
+    "HEALTHY",
+    "DEGRADED",
+    "BROKEN",
+    "ORPHANED",
+    "UNKNOWN"
+  ],
+  "note": "ORPHANED é usado apenas na dimensão capability solicitada; agregados usam HEALTHY/DEGRADED/BROKEN/UNKNOWN.",
+  "system": {
+    "id": "system.rota5",
+    "health": "BROKEN",
+    "reason": "Dois flows quebrados e gate local de compilação/testes falho.",
+    "finding_counts_by_severity": {
+      "CRITICAL": 0,
+      "HIGH": 10,
+      "MEDIUM": 23,
+      "LOW": 9,
+      "INFO": 2
+    }
+  },
+  "domains": [
+    {
+      "id": "domain.platform-runtime",
+      "health": "DEGRADED",
+      "findings": [
+        "legacy.active-brand-contamination",
+        "risk.rate-limit-fails-open",
+        "risk.remote-database-controls-unvalidated",
+        "risk.vercel-project-identity-drift",
+        "risk.latest-rota5-deployment-error",
+        "risk.published-commit-unvalidated",
+        "risk.local-runtime-env-incomplete",
+        "debt.seat-map-storage-contract-drift",
+        "gap.default-test-suite-failing",
+        "gap.real-integration-tests-outside-default",
+        "gap.source-contract-assertion-bias",
+        "gap.test-runner-depends-on-untracked-loader",
+        "debt.direct-supabase-access-spread",
+        "risk.production-capable-scripts-outside-test-isolation",
+        "risk.service-role-application-authorization-boundary"
+      ]
+    },
+    {
+      "id": "domain.brand-presentation",
+      "health": "DEGRADED",
+      "findings": [
+        "legacy.active-brand-contamination",
+        "dead.brand-logo-component",
+        "legacy.table-map-presentation-disabled"
+      ]
+    },
+    {
+      "id": "domain.whatsapp-conversations",
+      "health": "DEGRADED",
+      "findings": [
+        "bug.user-visible-text-corruption",
+        "legacy.active-brand-contamination",
+        "risk.github-issue-create-replay",
+        "risk.remote-webhook-registration-unvalidated",
+        "gap.critical-flow-correlation",
+        "debt.router-responsibility-concentration",
+        "debt.zapi-webhook-responsibility-coupling",
+        "risk.payment-confirmed-before-external-delivery",
+        "risk.whatsapp-conversation-context-race",
+        "gap.partial-flows-lack-end-to-end-proof",
+        "debt.distributed-status-literals"
+      ]
+    },
+    {
+      "id": "domain.customer-risk",
+      "health": "HEALTHY",
+      "findings": []
+    },
+    {
+      "id": "domain.event-catalog",
+      "health": "DEGRADED",
+      "findings": []
+    },
+    {
+      "id": "domain.event-administration",
+      "health": "DEGRADED",
+      "findings": [
+        "bug.create-event-invalid-jsx",
+        "bug.event-duplicate-artist-leak",
+        "risk.admin-event-multistep-partial-state",
+        "debt.router-responsibility-concentration",
+        "gap.critical-capability-and-flow-coverage",
+        "debt.direct-supabase-access-spread",
+        "debt.large-mixed-service-modules",
+        "risk.production-capable-scripts-outside-test-isolation",
+        "gap.partial-flows-lack-end-to-end-proof",
+        "debt.distributed-status-literals"
+      ]
+    },
+    {
+      "id": "domain.reservation-inventory",
+      "health": "DEGRADED",
+      "findings": [
+        "risk.admin-event-multistep-partial-state",
+        "risk.remote-database-controls-unvalidated",
+        "debt.router-responsibility-concentration",
+        "gap.real-integration-tests-outside-default",
+        "gap.remote-database-behavior-tests",
+        "gap.partial-flows-lack-end-to-end-proof"
+      ]
+    },
+    {
+      "id": "domain.orders-payments",
+      "health": "DEGRADED",
+      "findings": [
+        "bug.user-visible-text-corruption",
+        "legacy.active-brand-contamination",
+        "risk.remote-database-controls-unvalidated",
+        "risk.remote-webhook-registration-unvalidated",
+        "risk.vercel-project-identity-drift",
+        "gap.critical-flow-correlation",
+        "debt.router-responsibility-concentration",
+        "gap.remote-database-behavior-tests",
+        "debt.direct-supabase-access-spread",
+        "risk.payment-confirmed-before-external-delivery",
+        "debt.payment-reconciliation-duplication-is-intentional",
+        "risk.checkout-status-fixed-polling",
+        "gap.client-errors-not-persisted",
+        "debt.distributed-status-literals"
+      ]
+    },
+    {
+      "id": "domain.ticketing-delivery",
+      "health": "DEGRADED",
+      "findings": [
+        "risk.remote-database-controls-unvalidated",
+        "gap.critical-flow-correlation",
+        "gap.remote-database-behavior-tests",
+        "orphan.ticket-validation-history",
+        "debt.direct-supabase-access-spread",
+        "risk.payment-confirmed-before-external-delivery"
+      ]
+    },
+    {
+      "id": "domain.admin-identity-access",
+      "health": "DEGRADED",
+      "findings": [
+        "risk.gate-credential-revocation-does-not-revoke-session",
+        "risk.service-role-application-authorization-boundary"
+      ]
+    },
+    {
+      "id": "domain.gate-admission",
+      "health": "DEGRADED",
+      "findings": [
+        "risk.gate-credential-revocation-does-not-revoke-session",
+        "debt.router-responsibility-concentration",
+        "gap.critical-capability-and-flow-coverage",
+        "orphan.gate-session-revoke",
+        "orphan.gate-sessions-list",
+        "gap.client-errors-not-persisted"
+      ]
+    },
+    {
+      "id": "domain.courtesy",
+      "health": "DEGRADED",
+      "findings": [
+        "debt.router-responsibility-concentration",
+        "orphan.courtesy-event-limit",
+        "legacy.table-map-presentation-disabled",
+        "gap.partial-flows-lack-end-to-end-proof"
+      ]
+    },
+    {
+      "id": "domain.combo-commerce-fulfillment",
+      "health": "BROKEN",
+      "findings": [
+        "bug.create-event-invalid-jsx",
+        "bug.combo-redemption-unreachable-consume",
+        "bug.user-visible-text-corruption",
+        "risk.gate-credential-revocation-does-not-revoke-session",
+        "risk.combo-metadata-read-modify-write-race",
+        "gap.critical-flow-correlation",
+        "debt.router-responsibility-concentration",
+        "gap.real-integration-tests-outside-default",
+        "gap.remote-database-behavior-tests",
+        "debt.direct-supabase-access-spread",
+        "debt.large-mixed-service-modules",
+        "risk.checkout-status-fixed-polling",
+        "gap.partial-flows-lack-end-to-end-proof",
+        "gap.client-errors-not-persisted",
+        "debt.distributed-status-literals"
+      ]
+    },
+    {
+      "id": "domain.table-map",
+      "health": "DEGRADED",
+      "findings": [
+        "debt.seat-map-storage-contract-drift",
+        "orphan.seat-map-renders-table",
+        "legacy.table-map-presentation-disabled",
+        "gap.partial-flows-lack-end-to-end-proof"
+      ]
+    },
+    {
+      "id": "domain.analytics-reporting",
+      "health": "DEGRADED",
+      "findings": [
+        "bug.create-event-invalid-jsx",
+        "bug.user-visible-text-corruption",
+        "debt.large-mixed-service-modules"
+      ]
+    },
+    {
+      "id": "domain.background-processing",
+      "health": "DEGRADED",
+      "findings": [
+        "debt.zapi-webhook-responsibility-coupling",
+        "gap.critical-capability-and-flow-coverage"
+      ]
+    },
+    {
+      "id": "domain.codex-automation",
+      "health": "DEGRADED",
+      "findings": [
+        "risk.github-issue-create-replay",
+        "debt.zapi-webhook-responsibility-coupling",
+        "gap.critical-capability-and-flow-coverage",
+        "risk.production-capable-scripts-outside-test-isolation"
+      ]
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "platform.limit_requests",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "risk.rate-limit-fails-open"
+      ]
+    },
+    {
+      "id": "brand.present_individual_offers",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "legacy.active-brand-contamination"
+      ]
+    },
+    {
+      "id": "messaging.receive",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "risk.remote-webhook-registration-unvalidated",
+        "debt.zapi-webhook-responsibility-coupling",
+        "risk.whatsapp-conversation-context-race"
+      ]
+    },
+    {
+      "id": "messaging.respond",
+      "health": "DEGRADED",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "bug.user-visible-text-corruption",
+        "gap.critical-flow-correlation",
+        "debt.zapi-webhook-responsibility-coupling",
+        "risk.whatsapp-conversation-context-race"
+      ]
+    },
+    {
+      "id": "messaging.start",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "messaging.close",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "messaging.help",
+      "health": "DEGRADED",
+      "canonical_status": "PARCIAL",
+      "findings": [
+        "bug.user-visible-text-corruption",
+        "legacy.active-brand-contamination"
+      ]
+    },
+    {
+      "id": "messaging.navigate_admin",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "messaging.protect_delivery",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "customer.identify",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "customer.limit_reservations",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "customer.limit_checkout",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "catalog.search",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "catalog.list",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "catalog.details",
+      "health": "DEGRADED",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "catalog.offers",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "catalog.seat_map",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "catalog.enforce_visibility",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "event.list",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "bug.create-event-invalid-jsx"
+      ]
+    },
+    {
+      "id": "event.inspect",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "bug.create-event-invalid-jsx"
+      ]
+    },
+    {
+      "id": "event.create",
+      "health": "DEGRADED",
+      "canonical_status": "PARCIAL",
+      "findings": [
+        "bug.create-event-invalid-jsx",
+        "risk.admin-event-multistep-partial-state"
+      ]
+    },
+    {
+      "id": "event.edit",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "bug.create-event-invalid-jsx"
+      ]
+    },
+    {
+      "id": "event.publish",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "bug.create-event-invalid-jsx"
+      ]
+    },
+    {
+      "id": "event.change_status",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "bug.create-event-invalid-jsx",
+        "gap.critical-capability-and-flow-coverage"
+      ]
+    },
+    {
+      "id": "event.cancel",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "bug.create-event-invalid-jsx",
+        "gap.critical-capability-and-flow-coverage"
+      ]
+    },
+    {
+      "id": "event.duplicate",
+      "health": "DEGRADED",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "bug.create-event-invalid-jsx",
+        "bug.event-duplicate-artist-leak"
+      ]
+    },
+    {
+      "id": "event.session_create",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "risk.admin-event-multistep-partial-state"
+      ]
+    },
+    {
+      "id": "event.session_edit",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "event.section_create",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "risk.admin-event-multistep-partial-state"
+      ]
+    },
+    {
+      "id": "event.section_edit",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "event.capacity_set",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "event.seats_create",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "risk.admin-event-multistep-partial-state"
+      ]
+    },
+    {
+      "id": "event.seats_block",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "event.price_create",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "risk.admin-event-multistep-partial-state"
+      ]
+    },
+    {
+      "id": "event.price_edit",
+      "health": "DEGRADED",
+      "canonical_status": "PARCIAL",
+      "findings": []
+    },
+    {
+      "id": "event.auto_finish",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "gap.critical-capability-and-flow-coverage"
+      ]
+    },
+    {
+      "id": "event.import_program",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "event.legacy_rename",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "event.legacy_split",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "event.legacy_update",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "reservation.cart",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "reservation.create",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "reservation.resume",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "reservation.cancel",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "reservation.expire",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "payment.checkout_create",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "risk.vercel-project-identity-drift"
+      ]
+    },
+    {
+      "id": "payment.checkout_view",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "bug.user-visible-text-corruption",
+        "legacy.active-brand-contamination",
+        "risk.vercel-project-identity-drift"
+      ]
+    },
+    {
+      "id": "payment.pay_pix",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "payment.status",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "debt.payment-reconciliation-duplication-is-intentional",
+        "risk.checkout-status-fixed-polling"
+      ]
+    },
+    {
+      "id": "payment.confirm",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "ticket.deliver",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "gap.critical-flow-correlation",
+        "risk.payment-confirmed-before-external-delivery"
+      ]
+    },
+    {
+      "id": "ticket.delivery_choice",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "ticket.assign_participants",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "ticket.claim_participant",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "ticket.resend",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "ticket.view",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "ticket.admin_lookup",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "ticket.validation_history",
+      "health": "ORPHANED",
+      "canonical_status": "ÓRFÃ",
+      "findings": [
+        "orphan.ticket-validation-history"
+      ]
+    },
+    {
+      "id": "admin.login",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "admin.web_session",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "admin.logout",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "admin.authorize",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "admin.lockout",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "admin.users_list",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "admin.user_create",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "admin.role_change",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "admin.user_disable",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "admin.user_reactivate",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "admin.password_renew",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "admin.unlock",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "gate.access_create",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "gate.access_list",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "gate.access_pause",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "risk.gate-credential-revocation-does-not-revoke-session"
+      ]
+    },
+    {
+      "id": "gate.fixed_create",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "gap.critical-capability-and-flow-coverage"
+      ]
+    },
+    {
+      "id": "gate.fixed_list",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "gate.fixed_revoke",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "risk.gate-credential-revocation-does-not-revoke-session",
+        "gap.critical-capability-and-flow-coverage"
+      ]
+    },
+    {
+      "id": "gate.open",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "gate.consult",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "gate.admit",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "gate.session_revoke",
+      "health": "ORPHANED",
+      "canonical_status": "ÓRFÃ",
+      "findings": [
+        "orphan.gate-session-revoke"
+      ]
+    },
+    {
+      "id": "courtesy.issue",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "courtesy.list",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "courtesy.resend",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "courtesy.cancel",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "courtesy.section_limit",
+      "health": "DEGRADED",
+      "canonical_status": "PARCIAL",
+      "findings": []
+    },
+    {
+      "id": "courtesy.event_limit",
+      "health": "ORPHANED",
+      "canonical_status": "ÓRFÃ",
+      "findings": [
+        "orphan.courtesy-event-limit"
+      ]
+    },
+    {
+      "id": "courtesy.public_issue",
+      "health": "DEGRADED",
+      "canonical_status": "PARCIAL",
+      "findings": [
+        "legacy.table-map-presentation-disabled"
+      ]
+    },
+    {
+      "id": "combo.list",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "bug.create-event-invalid-jsx"
+      ]
+    },
+    {
+      "id": "combo.create",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "combo.edit",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "combo.scope",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "combo.schedule",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "combo.activate",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "combo.duplicate",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "combo.delete",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "combo.offer_send",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "combo.checkout_create",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "combo.checkout_view",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "combo.pay_pix",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "combo.status",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "risk.checkout-status-fixed-polling"
+      ]
+    },
+    {
+      "id": "combo.confirm",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "gap.critical-flow-correlation"
+      ]
+    },
+    {
+      "id": "combo.deliver_qr",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "combo.expire",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "combo.kitchen_open",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "bug.user-visible-text-corruption",
+        "risk.gate-credential-revocation-does-not-revoke-session"
+      ]
+    },
+    {
+      "id": "combo.kitchen_release",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "risk.combo-metadata-read-modify-write-race"
+      ]
+    },
+    {
+      "id": "combo.prepare",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "combo.delivery_prompt",
+      "health": "DEGRADED",
+      "canonical_status": "PARCIAL",
+      "findings": [
+        "bug.combo-redemption-unreachable-consume",
+        "risk.combo-metadata-read-modify-write-race"
+      ]
+    },
+    {
+      "id": "combo.delivery_choose",
+      "health": "DEGRADED",
+      "canonical_status": "PARCIAL",
+      "findings": [
+        "risk.combo-metadata-read-modify-write-race"
+      ]
+    },
+    {
+      "id": "combo.redeem",
+      "health": "BROKEN",
+      "canonical_status": "QUEBRADA",
+      "findings": [
+        "bug.combo-redemption-unreachable-consume"
+      ]
+    },
+    {
+      "id": "table_map.preview",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "debt.seat-map-storage-contract-drift"
+      ]
+    },
+    {
+      "id": "table_map.calibrate",
+      "health": "DEGRADED",
+      "canonical_status": "PARCIAL",
+      "findings": [
+        "legacy.table-map-presentation-disabled"
+      ]
+    },
+    {
+      "id": "table_map.reserve",
+      "health": "DEGRADED",
+      "canonical_status": "PARCIAL",
+      "findings": [
+        "legacy.table-map-presentation-disabled"
+      ]
+    },
+    {
+      "id": "table_map.sync_status",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "analytics.sales",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "analytics.division",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "analytics.settle",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "analytics.general_dashboard",
+      "health": "DEGRADED",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "bug.create-event-invalid-jsx",
+        "bug.user-visible-text-corruption"
+      ]
+    },
+    {
+      "id": "analytics.event_dashboard",
+      "health": "DEGRADED",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "bug.create-event-invalid-jsx",
+        "bug.user-visible-text-corruption"
+      ]
+    },
+    {
+      "id": "analytics.contacts",
+      "health": "DEGRADED",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "bug.create-event-invalid-jsx"
+      ]
+    },
+    {
+      "id": "analytics.operational",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "analytics.track_click",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "background.notify_expiry",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "background.remind_interest",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "background.expire_admin",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "background.close_inactive",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "background.cancel_batches",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "automation.request",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "automation.issue",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "risk.github-issue-create-replay",
+        "debt.zapi-webhook-responsibility-coupling",
+        "gap.critical-capability-and-flow-coverage"
+      ]
+    },
+    {
+      "id": "automation.list",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "automation.execute",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "automation.notify",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "payment.return_notice",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": [
+        "legacy.active-brand-contamination"
+      ]
+    },
+    {
+      "id": "analytics.general_report",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "analytics.section_sales",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "analytics.pending_orders",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "analytics.expired_reservations",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "analytics.gate_checkins",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "analytics.ticket_usage",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "analytics.courtesies",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADA",
+      "findings": []
+    },
+    {
+      "id": "gate.sessions_list",
+      "health": "ORPHANED",
+      "canonical_status": "ÓRFÃ",
+      "findings": [
+        "orphan.gate-sessions-list"
+      ]
+    }
+  ],
+  "flows": [
+    {
+      "id": "whatsapp.public_discovery",
+      "health": "DEGRADED",
+      "canonical_status": "PARCIAL",
+      "findings": [
+        "bug.user-visible-text-corruption",
+        "legacy.active-brand-contamination",
+        "debt.router-responsibility-concentration",
+        "risk.whatsapp-conversation-context-race",
+        "gap.partial-flows-lack-end-to-end-proof"
+      ]
+    },
+    {
+      "id": "ticket.purchase",
+      "health": "DEGRADED",
+      "canonical_status": "PARCIAL",
+      "findings": [
+        "legacy.active-brand-contamination",
+        "risk.vercel-project-identity-drift",
+        "debt.router-responsibility-concentration",
+        "legacy.table-map-presentation-disabled",
+        "debt.payment-reconciliation-duplication-is-intentional",
+        "gap.partial-flows-lack-end-to-end-proof",
+        "gap.client-errors-not-persisted"
+      ]
+    },
+    {
+      "id": "ticket.checkout",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": []
+    },
+    {
+      "id": "ticket.delivery",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": [
+        "gap.critical-flow-correlation",
+        "risk.payment-confirmed-before-external-delivery"
+      ]
+    },
+    {
+      "id": "ticket.view",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": []
+    },
+    {
+      "id": "courtesy.public",
+      "health": "DEGRADED",
+      "canonical_status": "PARCIAL",
+      "findings": [
+        "legacy.table-map-presentation-disabled",
+        "gap.partial-flows-lack-end-to-end-proof"
+      ]
+    },
+    {
+      "id": "combo.purchase",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": []
+    },
+    {
+      "id": "combo.delivery_choice",
+      "health": "DEGRADED",
+      "canonical_status": "PARCIAL",
+      "findings": [
+        "risk.combo-metadata-read-modify-write-race",
+        "debt.router-responsibility-concentration",
+        "gap.partial-flows-lack-end-to-end-proof"
+      ]
+    },
+    {
+      "id": "admin.whatsapp_session",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": [
+        "debt.router-responsibility-concentration"
+      ]
+    },
+    {
+      "id": "admin.web_session",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": []
+    },
+    {
+      "id": "admin.web_event_workspace",
+      "health": "BROKEN",
+      "canonical_status": "QUEBRADO",
+      "findings": [
+        "bug.create-event-invalid-jsx",
+        "bug.event-duplicate-artist-leak",
+        "bug.user-visible-text-corruption",
+        "risk.admin-event-multistep-partial-state"
+      ]
+    },
+    {
+      "id": "admin.whatsapp_event_management",
+      "health": "DEGRADED",
+      "canonical_status": "PARCIAL",
+      "findings": [
+        "bug.event-duplicate-artist-leak",
+        "risk.admin-event-multistep-partial-state",
+        "debt.router-responsibility-concentration",
+        "gap.partial-flows-lack-end-to-end-proof"
+      ]
+    },
+    {
+      "id": "admin.combo_management",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": []
+    },
+    {
+      "id": "admin.courtesy_management",
+      "health": "DEGRADED",
+      "canonical_status": "PARCIAL",
+      "findings": [
+        "debt.router-responsibility-concentration",
+        "gap.partial-flows-lack-end-to-end-proof"
+      ]
+    },
+    {
+      "id": "admin.user_management",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": []
+    },
+    {
+      "id": "admin.reporting",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": []
+    },
+    {
+      "id": "admin.operational_dashboard",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": []
+    },
+    {
+      "id": "gate.access_management",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": []
+    },
+    {
+      "id": "gate.ticket_admission",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": []
+    },
+    {
+      "id": "kitchen.session_prepare",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": []
+    },
+    {
+      "id": "kitchen.combo_redemption",
+      "health": "BROKEN",
+      "canonical_status": "QUEBRADO",
+      "findings": [
+        "bug.combo-redemption-unreachable-consume",
+        "bug.user-visible-text-corruption",
+        "risk.gate-credential-revocation-does-not-revoke-session",
+        "risk.combo-metadata-read-modify-write-race",
+        "gap.client-errors-not-persisted"
+      ]
+    },
+    {
+      "id": "table_map.calibration",
+      "health": "DEGRADED",
+      "canonical_status": "PARCIAL",
+      "findings": [
+        "legacy.table-map-presentation-disabled",
+        "gap.partial-flows-lack-end-to-end-proof"
+      ]
+    },
+    {
+      "id": "whatsapp.inbound_dispatch",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": [
+        "risk.remote-webhook-registration-unvalidated",
+        "debt.zapi-webhook-responsibility-coupling",
+        "risk.whatsapp-conversation-context-race"
+      ]
+    },
+    {
+      "id": "ticket.payment_confirmation",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": []
+    },
+    {
+      "id": "combo.payment_confirmation",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": [
+        "gap.critical-flow-correlation"
+      ]
+    },
+    {
+      "id": "reservation.expiration",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": []
+    },
+    {
+      "id": "combo.offer_distribution",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": []
+    },
+    {
+      "id": "whatsapp.batch_processing",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": []
+    },
+    {
+      "id": "event.auto_finish",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": [
+        "gap.critical-capability-and-flow-coverage"
+      ]
+    },
+    {
+      "id": "gate.combo_release",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": []
+    },
+    {
+      "id": "event.program_import",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": [
+        "gap.critical-capability-and-flow-coverage"
+      ]
+    },
+    {
+      "id": "blackhouse.maintenance",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": [
+        "gap.critical-capability-and-flow-coverage"
+      ]
+    },
+    {
+      "id": "codex.automation",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": [
+        "risk.github-issue-create-replay",
+        "debt.zapi-webhook-responsibility-coupling",
+        "gap.critical-capability-and-flow-coverage"
+      ]
+    },
+    {
+      "id": "platform.edge_request_protection",
+      "health": "HEALTHY",
+      "canonical_status": "CONFIRMADO",
+      "findings": []
+    }
+  ],
+  "integrations": [
+    {
+      "id": "integration-supabase",
+      "health": "DEGRADED",
+      "reason": "Validação remota parcial na Etapa 5.",
+      "findings": [
+        "bug.combo-redemption-unreachable-consume",
+        "risk.rate-limit-fails-open",
+        "risk.remote-database-controls-unvalidated",
+        "risk.local-runtime-env-incomplete",
+        "debt.seat-map-storage-contract-drift",
+        "gap.critical-flow-correlation",
+        "debt.zapi-webhook-responsibility-coupling",
+        "gap.real-integration-tests-outside-default",
+        "gap.remote-database-behavior-tests",
+        "orphan.seat-map-renders-table",
+        "debt.direct-supabase-access-spread",
+        "risk.payment-confirmed-before-external-delivery",
+        "risk.whatsapp-conversation-context-race",
+        "debt.payment-reconciliation-duplication-is-intentional",
+        "risk.checkout-status-fixed-polling",
+        "risk.production-capable-scripts-outside-test-isolation",
+        "risk.service-role-application-authorization-boundary"
+      ]
+    },
+    {
+      "id": "integration-zapi",
+      "health": "DEGRADED",
+      "reason": "Validação remota parcial na Etapa 5.",
+      "findings": [
+        "risk.github-issue-create-replay",
+        "risk.remote-webhook-registration-unvalidated",
+        "risk.local-runtime-env-incomplete",
+        "gap.critical-flow-correlation",
+        "debt.zapi-webhook-responsibility-coupling",
+        "risk.payment-confirmed-before-external-delivery",
+        "risk.whatsapp-conversation-context-race"
+      ]
+    },
+    {
+      "id": "integration-mercado-pago",
+      "health": "DEGRADED",
+      "reason": "Validação remota parcial na Etapa 5.",
+      "findings": [
+        "legacy.active-brand-contamination",
+        "risk.remote-webhook-registration-unvalidated",
+        "risk.local-runtime-env-incomplete",
+        "gap.critical-flow-correlation",
+        "risk.payment-confirmed-before-external-delivery",
+        "debt.payment-reconciliation-duplication-is-intentional",
+        "risk.checkout-status-fixed-polling"
+      ]
+    },
+    {
+      "id": "integration-vercel",
+      "health": "DEGRADED",
+      "reason": "Validação remota parcial na Etapa 5.",
+      "findings": [
+        "legacy.active-brand-contamination",
+        "risk.vercel-project-identity-drift",
+        "risk.latest-rota5-deployment-error",
+        "risk.published-commit-unvalidated",
+        "risk.local-runtime-env-incomplete"
+      ]
+    },
+    {
+      "id": "integration-github",
+      "health": "DEGRADED",
+      "reason": "Validação remota parcial na Etapa 5.",
+      "findings": [
+        "risk.github-issue-create-replay",
+        "risk.published-commit-unvalidated",
+        "risk.local-runtime-env-incomplete",
+        "debt.zapi-webhook-responsibility-coupling"
+      ]
+    },
+    {
+      "id": "integration-codex-cli",
+      "health": "DEGRADED",
+      "reason": "Validação remota parcial na Etapa 5.",
+      "findings": [
+        "risk.local-runtime-env-incomplete"
+      ]
+    }
+  ],
+  "infrastructure": [
+    {
+      "id": "infrastructure.vercel-linkage",
+      "health": "BROKEN",
+      "findings": [
+        "risk.vercel-project-identity-drift",
+        "risk.latest-rota5-deployment-error",
+        "risk.published-commit-unvalidated"
+      ]
+    },
+    {
+      "id": "infrastructure.environment",
+      "health": "DEGRADED",
+      "findings": [
+        "risk.local-runtime-env-incomplete"
+      ]
+    },
+    {
+      "id": "infrastructure.storage",
+      "health": "DEGRADED",
+      "findings": [
+        "debt.seat-map-storage-contract-drift",
+        "orphan.seat-map-renders-table"
+      ]
+    },
+    {
+      "id": "infrastructure.runtime-health",
+      "health": "HEALTHY",
+      "reason": "Aliases observados responderam 200; um deployment mais recente permanece ERROR."
+    }
+  ]
+}

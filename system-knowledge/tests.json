@@ -1,0 +1,1154 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-12",
+  "count": 43,
+  "defaultSuite": {
+    "command": "npm test",
+    "fileCount": 15,
+    "observedCases": 210,
+    "passed": 203,
+    "failed": 7,
+    "status": "FAIL",
+    "failingFiles": [
+      "test-admin-auth-pending-cancel.mjs",
+      "test-admin-event-artist-name-leak.mjs",
+      "test-message-mojibake.mjs",
+      "test-public-availability-classification.mjs",
+      "test-public-help-flow.mjs",
+      "test-whatsapp-batch-compat.mjs"
+    ],
+    "evidence": "Execução local reproduzida na Etapa 6 e na auditoria cruzada da Etapa 7 em 2026-09-12.",
+    "previousSnapshot": {
+      "date": "2026-09-11",
+      "observedCases": 210,
+      "passed": 204,
+      "failed": 6,
+      "note": "Resultado histórico preservado; não representa o HEAD observado em 2026-09-12."
+    }
+  },
+  "nonDefaultTestFileCount": 28,
+  "auditScriptCount": 3,
+  "auditToolCount": 21,
+  "records": [
+    {
+      "id": "test-001",
+      "name": "test-admin-auth-pending-cancel.mjs",
+      "type": "source-contract+module",
+      "path": "scripts/test-admin-auth-pending-cancel.mjs",
+      "purpose": "Autenticação admin pendente, cancelamento e precedência",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "arquivo scripts/test-admin-auth-pending-cancel.mjs",
+        "incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "lastObservedResult": "FAIL",
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "FAIL"
+    },
+    {
+      "id": "test-002",
+      "name": "test-admin-event-artist-name-leak.mjs",
+      "type": "source-contract+module",
+      "path": "scripts/test-admin-event-artist-name-leak.mjs",
+      "purpose": "Isolamento e sincronização de artista na criação/duplicação",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "arquivo scripts/test-admin-event-artist-name-leak.mjs",
+        "incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "lastObservedResult": "FAIL",
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "FAIL"
+    },
+    {
+      "id": "test-003",
+      "name": "test-admin-events-editor-card-memoization.mjs",
+      "type": "source-contract",
+      "path": "scripts/test-admin-events-editor-card-memoization.mjs",
+      "purpose": "Memoização e ações de cards/grids admin",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-admin-events-editor-card-memoization.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-004",
+      "name": "test-admin-events-editor-combo-section-extraction.mjs",
+      "type": "source-contract",
+      "path": "scripts/test-admin-events-editor-combo-section-extraction.mjs",
+      "purpose": "Extração e estado da seção de combos",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-admin-events-editor-combo-section-extraction.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-005",
+      "name": "test-admin-events-editor-dashboard-section-extraction.mjs",
+      "type": "source-contract",
+      "path": "scripts/test-admin-events-editor-dashboard-section-extraction.mjs",
+      "purpose": "Extração do dashboard admin",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-admin-events-editor-dashboard-section-extraction.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "FAIL"
+    },
+    {
+      "id": "test-006",
+      "name": "test-admin-events-editor-event-modal-extraction.mjs",
+      "type": "source-contract",
+      "path": "scripts/test-admin-events-editor-event-modal-extraction.mjs",
+      "purpose": "Extração e superfícies do modal de evento",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-admin-events-editor-event-modal-extraction.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-007",
+      "name": "test-admin-events-editor-lazy-modals.mjs",
+      "type": "source-contract",
+      "path": "scripts/test-admin-events-editor-lazy-modals.mjs",
+      "purpose": "Carregamento lazy dos modais",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-admin-events-editor-lazy-modals.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-008",
+      "name": "test-admin-events-editor-toolbar-extraction.mjs",
+      "type": "source-contract",
+      "path": "scripts/test-admin-events-editor-toolbar-extraction.mjs",
+      "purpose": "Busca, filtros e toolbar admin",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-admin-events-editor-toolbar-extraction.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-009",
+      "name": "test-admin-events-fast-mode.mjs",
+      "type": "source-contract",
+      "path": "scripts/test-admin-events-fast-mode.mjs",
+      "purpose": "Payload rápido da lista de eventos",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-admin-events-fast-mode.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "FAIL"
+    },
+    {
+      "id": "test-010",
+      "name": "test-admin-events-fast-rpc.mjs",
+      "type": "source-contract+sql-contract",
+      "path": "scripts/test-admin-events-fast-rpc.mjs",
+      "purpose": "RPC rápida, autenticação e isolamento por admin",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-admin-events-fast-rpc.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-011",
+      "name": "test-admin-navigation.mjs",
+      "type": "module",
+      "path": "scripts/test-admin-navigation.mjs",
+      "purpose": "Pilha de navegação administrativa",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-admin-navigation.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Escopo limitado ao módulo/cenário do arquivo.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-012",
+      "name": "test-admin-operational-dashboard.mjs",
+      "type": "source-contract+sql-contract",
+      "path": "scripts/test-admin-operational-dashboard.mjs",
+      "purpose": "Endpoint, RPC e UI do painel operacional",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "arquivo scripts/test-admin-operational-dashboard.mjs",
+        "incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "lastObservedResult": "PASS",
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-013",
+      "name": "test-admin-section-capacity-rpc-real.mjs",
+      "type": "supabase-real+postgres",
+      "path": "scripts/test-admin-section-capacity-rpc-real.mjs",
+      "purpose": "Atomicidade e capacidade de setor",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-admin-section-capacity-rpc-real.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Exige ambiente externo e pode criar/remover fixtures; não executado nesta etapa."
+    },
+    {
+      "id": "test-014",
+      "name": "test-admin-slow-endpoints-optimized.mjs",
+      "type": "source-contract+sql-contract",
+      "path": "scripts/test-admin-slow-endpoints-optimized.mjs",
+      "purpose": "RPCs otimizadas de detalhe e dashboard",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-admin-slow-endpoints-optimized.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-015",
+      "name": "test-admin-ticket-price-label-edit.mjs",
+      "type": "source-contract",
+      "path": "scripts/test-admin-ticket-price-label-edit.mjs",
+      "purpose": "Edição independente do nome no ingresso",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-admin-ticket-price-label-edit.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "FAIL"
+    },
+    {
+      "id": "test-016",
+      "name": "test-admin-web-auth-fast.mjs",
+      "type": "source-contract",
+      "path": "scripts/test-admin-web-auth-fast.mjs",
+      "purpose": "Cookie e resolução rápida da sessão admin",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-admin-web-auth-fast.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-017",
+      "name": "test-admin-whatsapp-outbound-status.mjs",
+      "type": "source-contract",
+      "path": "scripts/test-admin-whatsapp-outbound-status.mjs",
+      "purpose": "Status outbound na análise de contatos",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-admin-whatsapp-outbound-status.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "FAIL"
+    },
+    {
+      "id": "test-018",
+      "name": "test-checkout-pix-requirements.mjs",
+      "type": "source-contract",
+      "path": "scripts/test-checkout-pix-requirements.mjs",
+      "purpose": "Obrigatoriedade de e-mail e CPF no Pix",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-checkout-pix-requirements.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-019",
+      "name": "test-combo-offer-priority.mjs",
+      "type": "source-contract+sql-contract",
+      "path": "scripts/test-combo-offer-priority.mjs",
+      "purpose": "Prioridade, escolha e dedupe de ofertas",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-combo-offer-priority.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "FAIL"
+    },
+    {
+      "id": "test-020",
+      "name": "test-combo-offer-priority-real.mjs",
+      "type": "supabase-real+local-http",
+      "path": "scripts/test-combo-offer-priority-real.mjs",
+      "purpose": "Oferta prioritária com Supabase e HTTP local",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-combo-offer-priority-real.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Exige ambiente externo e pode criar/remover fixtures; não executado nesta etapa."
+    },
+    {
+      "id": "test-021",
+      "name": "test-combo-offer-qr-delivery-policy.mjs",
+      "type": "source-contract+module",
+      "path": "scripts/test-combo-offer-qr-delivery-policy.mjs",
+      "purpose": "Timestamp, atraso e dedupe da oferta após QR",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "arquivo scripts/test-combo-offer-qr-delivery-policy.mjs",
+        "incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "lastObservedResult": "PASS",
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-022",
+      "name": "test-combo-qr-image-template.mjs",
+      "type": "module+image-render",
+      "path": "scripts/test-combo-qr-image-template.mjs",
+      "purpose": "Renderização da imagem QR de combo",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "arquivo scripts/test-combo-qr-image-template.mjs",
+        "incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "lastObservedResult": "PASS",
+      "notes": "Escopo limitado ao módulo/cenário do arquivo.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-023",
+      "name": "test-conversation-inactivity.mjs",
+      "type": "module",
+      "path": "scripts/test-conversation-inactivity.mjs",
+      "purpose": "TTL e encerramento de conversa",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "arquivo scripts/test-conversation-inactivity.mjs",
+        "incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "lastObservedResult": "PASS",
+      "notes": "Escopo limitado ao módulo/cenário do arquivo.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-024",
+      "name": "test-function-search-path-hardening.mjs",
+      "type": "sql-contract",
+      "path": "scripts/test-function-search-path-hardening.mjs",
+      "purpose": "Search path e grants de funções SQL",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-function-search-path-hardening.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Escopo limitado ao módulo/cenário do arquivo.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-025",
+      "name": "test-message-mojibake.mjs",
+      "type": "source-scan",
+      "path": "scripts/test-message-mojibake.mjs",
+      "purpose": "Ausência de mojibake em mensagens",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "arquivo scripts/test-message-mojibake.mjs",
+        "incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "lastObservedResult": "FAIL",
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "FAIL"
+    },
+    {
+      "id": "test-026",
+      "name": "test-official-table-map.mjs",
+      "type": "source-contract+module+image-render",
+      "path": "scripts/test-official-table-map.mjs",
+      "purpose": "Catálogo, coordenadas e render do mapa oficial",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "arquivo scripts/test-official-table-map.mjs",
+        "incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "lastObservedResult": "PASS",
+      "notes": "Confirma texto/estrutura e não prova integração ou browser."
+    },
+    {
+      "id": "test-027",
+      "name": "test-paid-delivery-conversation-fallback.mjs",
+      "type": "source-contract",
+      "path": "scripts/test-paid-delivery-conversation-fallback.mjs",
+      "purpose": "Entrega paga sem conversa disponível",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-paid-delivery-conversation-fallback.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-028",
+      "name": "test-paid-delivery-outbound-idempotency.mjs",
+      "type": "source-contract+sql-contract",
+      "path": "scripts/test-paid-delivery-outbound-idempotency.mjs",
+      "purpose": "Idempotência/claim da entrega outbound",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-paid-delivery-outbound-idempotency.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-029",
+      "name": "test-public-all-events-formatting.mjs",
+      "type": "source-contract+module",
+      "path": "scripts/test-public-all-events-formatting.mjs",
+      "purpose": "Formatação, paginação e fotos do comando TODOS",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "arquivo scripts/test-public-all-events-formatting.mjs",
+        "incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "lastObservedResult": "PASS",
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-030",
+      "name": "test-public-availability-classification.mjs",
+      "type": "source-contract+module",
+      "path": "scripts/test-public-availability-classification.mjs",
+      "purpose": "Classificação e ações por disponibilidade",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "arquivo scripts/test-public-availability-classification.mjs",
+        "incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "lastObservedResult": "FAIL",
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "FAIL"
+    },
+    {
+      "id": "test-031",
+      "name": "test-public-event-visibility-policy.mjs",
+      "type": "source-contract+module",
+      "path": "scripts/test-public-event-visibility-policy.mjs",
+      "purpose": "Janela temporal e política de visibilidade",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "arquivo scripts/test-public-event-visibility-policy.mjs",
+        "incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "lastObservedResult": "PASS",
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-032",
+      "name": "test-public-help-flow.mjs",
+      "type": "source-contract+module",
+      "path": "scripts/test-public-help-flow.mjs",
+      "purpose": "Busca, seleção e estado da ajuda pública",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "arquivo scripts/test-public-help-flow.mjs",
+        "incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "lastObservedResult": "FAIL",
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "FAIL"
+    },
+    {
+      "id": "test-033",
+      "name": "test-public-initial-flow.mjs",
+      "type": "source-contract+module",
+      "path": "scripts/test-public-initial-flow.mjs",
+      "purpose": "Bootstrap, comandos e entrada pública",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "arquivo scripts/test-public-initial-flow.mjs",
+        "incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "lastObservedResult": "PASS",
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-034",
+      "name": "test-reservation-load-safe.mjs",
+      "type": "supabase-real+source-contract",
+      "path": "scripts/test-reservation-load-safe.mjs",
+      "purpose": "Concorrência e carga de reservas",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-reservation-load-safe.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Exige ambiente externo e pode criar/remover fixtures; não executado nesta etapa."
+    },
+    {
+      "id": "test-035",
+      "name": "test-single-event-more-info-buy-context.mjs",
+      "type": "source-contract",
+      "path": "scripts/test-single-event-more-info-buy-context.mjs",
+      "purpose": "Contexto de compra após mais informações",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-single-event-more-info-buy-context.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-036",
+      "name": "test-ticket-delivery-distribution.mjs",
+      "type": "source-contract+module",
+      "path": "scripts/test-ticket-delivery-distribution.mjs",
+      "purpose": "Distribuição, reenvio e precedência de comandos",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "arquivo scripts/test-ticket-delivery-distribution.mjs",
+        "incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "lastObservedResult": "PASS",
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-037",
+      "name": "test-ticket-qr-image-template.mjs",
+      "type": "source-contract",
+      "path": "scripts/test-ticket-qr-image-template.mjs",
+      "purpose": "Uso do template Rota5 no QR",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-ticket-qr-image-template.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-038",
+      "name": "test-whatsapp-batch-compat.mjs",
+      "type": "source-contract+sql-contract",
+      "path": "scripts/test-whatsapp-batch-compat.mjs",
+      "purpose": "Claim, finish, retry e pipeline de batches",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "arquivo scripts/test-whatsapp-batch-compat.mjs",
+        "incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "lastObservedResult": "FAIL",
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "FAIL"
+    },
+    {
+      "id": "test-039",
+      "name": "test-whatsapp-messaging-regressions.mjs",
+      "type": "source-contract+module",
+      "path": "scripts/test-whatsapp-messaging-regressions.mjs",
+      "purpose": "Isolamento e roteamento de mensagens inbound",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-whatsapp-messaging-regressions.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-040",
+      "name": "test-whatsapp-operational-outbound-null-conversation.mjs",
+      "type": "source-contract",
+      "path": "scripts/test-whatsapp-operational-outbound-null-conversation.mjs",
+      "purpose": "Outbound operacional sem conversation_id",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-whatsapp-operational-outbound-null-conversation.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "FAIL"
+    },
+    {
+      "id": "test-041",
+      "name": "test-whatsapp-outbound-delivery-security.mjs",
+      "type": "source-contract+sql-contract",
+      "path": "scripts/test-whatsapp-outbound-delivery-security.mjs",
+      "purpose": "Service role, RLS e grants outbound",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-whatsapp-outbound-delivery-security.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-042",
+      "name": "test-whatsapp-outbound-metadata-contract.mjs",
+      "type": "source-contract",
+      "path": "scripts/test-whatsapp-outbound-metadata-contract.mjs",
+      "purpose": "Contrato de metadados sent/failed",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-whatsapp-outbound-metadata-contract.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-043",
+      "name": "test-whatsapp-output-sanitization.mjs",
+      "type": "source-contract+module",
+      "path": "scripts/test-whatsapp-output-sanitization.mjs",
+      "purpose": "Sanitização central do texto WhatsApp",
+      "status": "NÃO VALIDADO",
+      "evidence": [
+        "arquivo scripts/test-whatsapp-output-sanitization.mjs",
+        "não incluído no script npm test"
+      ],
+      "dependencies": [
+        "node",
+        "node:assert"
+      ],
+      "notes": "Confirma texto/estrutura e não prova integração ou browser.",
+      "stage3ObservedResult": "PASS"
+    }
+  ],
+  "stage3Validation": {
+    "date": "2026-09-11",
+    "scope": "39 arquivos test-*.mjs executados isoladamente via node --experimental-loader=./.tmp/typescript-alias-loader.mjs --test --test-reporter=tap; não é reexecução integral de npm test.",
+    "fileCount": 39,
+    "observedCases": 296,
+    "passed": 276,
+    "failed": 20,
+    "failingFileCount": 12,
+    "skippedFiles": [
+      "scripts/test-admin-section-capacity-rpc-real.mjs",
+      "scripts/test-combo-offer-priority-real.mjs",
+      "scripts/test-reservation-load-safe.mjs",
+      "scripts/test-official-table-map.mjs"
+    ],
+    "reason": "Três arquivos exigem banco real; teste do mapa escreve fixtures/artefatos em .tmp. Demais auditorias foram apenas lidas.",
+    "results": [
+      {
+        "test": "test-001",
+        "passed": 7,
+        "failed": 1,
+        "exitCode": 1,
+        "failures": [
+          "admin_auth_pending cancela login com logout sem executar outros ramos"
+        ]
+      },
+      {
+        "test": "test-002",
+        "passed": 6,
+        "failed": 1,
+        "exitCode": 1,
+        "failures": [
+          "duplicacao explicita nao herda artist_name do evento origem"
+        ]
+      },
+      {
+        "test": "test-003",
+        "passed": 4,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-004",
+        "passed": 5,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-005",
+        "passed": 1,
+        "failed": 4,
+        "exitCode": 1,
+        "failures": [
+          "AdminDashboardSection owns general dashboard, event dashboard, contacts and fetches",
+          "dashboard callbacks are memoized and errors flow back to the editor",
+          "general contacts are cached by range outside the modal",
+          "general dashboard has a dedicated lazy endpoint"
+        ]
+      },
+      {
+        "test": "test-006",
+        "passed": 4,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-007",
+        "passed": 2,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-008",
+        "passed": 3,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-009",
+        "passed": 4,
+        "failed": 1,
+        "exitCode": 1,
+        "failures": [
+          "fast payload keeps only list fields and empty metrics"
+        ]
+      },
+      {
+        "test": "test-010",
+        "passed": 5,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-011",
+        "passed": 1,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-012",
+        "passed": 4,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-014",
+        "passed": 3,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-015",
+        "passed": 0,
+        "failed": 1,
+        "exitCode": 1,
+        "failures": [
+          "admin price ticket label remains independently editable"
+        ]
+      },
+      {
+        "test": "test-016",
+        "passed": 5,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-017",
+        "passed": 3,
+        "failed": 3,
+        "exitCode": 1,
+        "failures": [
+          "admin panel labels outbound statuses without implying delivery or reading",
+          "failed outbound attempts remain visible and visually distinct",
+          "conversation history is scoped to displayed customers and includes paid outbound-only buyers"
+        ]
+      },
+      {
+        "test": "test-018",
+        "passed": 1,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-019",
+        "passed": 4,
+        "failed": 3,
+        "exitCode": 1,
+        "failures": [
+          "combo offers have an editable delivery priority",
+          "dedupe is by event and only successful WhatsApp sends count as delivered",
+          "duplicated combo offers remain editable by the admin who duplicated them"
+        ]
+      },
+      {
+        "test": "test-021",
+        "passed": 8,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-022",
+        "passed": 9,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-023",
+        "passed": 1,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-024",
+        "passed": 3,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-025",
+        "passed": 0,
+        "failed": 1,
+        "exitCode": 1,
+        "failures": [
+          "mensagens publicas e administrativas nao contem mojibake"
+        ]
+      },
+      {
+        "test": "test-027",
+        "passed": 4,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-028",
+        "passed": 10,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-029",
+        "passed": 11,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-030",
+        "passed": 20,
+        "failed": 1,
+        "exitCode": 1,
+        "failures": [
+          "more info continua disponivel para sold out e vendas encerradas"
+        ]
+      },
+      {
+        "test": "test-031",
+        "passed": 8,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-032",
+        "passed": 6,
+        "failed": 2,
+        "exitCode": 1,
+        "failures": [
+          "busca por topico retorna resultados e preserva publicHelp e step",
+          "selecao numerica responde topico encontrado sem trocar contexto"
+        ]
+      },
+      {
+        "test": "test-033",
+        "passed": 24,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-035",
+        "passed": 2,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-036",
+        "passed": 79,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-037",
+        "passed": 1,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-038",
+        "passed": 6,
+        "failed": 1,
+        "exitCode": 1,
+        "failures": [
+          "cron finalizes inactive open conversations without duplicating finalizers"
+        ]
+      },
+      {
+        "test": "test-039",
+        "passed": 6,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-040",
+        "passed": 5,
+        "failed": 1,
+        "exitCode": 1,
+        "failures": [
+          "admin analytics can include outbound without conversation when includeAllContacts is true and keeps paid-conversation filter otherwise"
+        ]
+      },
+      {
+        "test": "test-041",
+        "passed": 5,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-042",
+        "passed": 4,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      },
+      {
+        "test": "test-043",
+        "passed": 2,
+        "failed": 0,
+        "exitCode": 0,
+        "failures": []
+      }
+    ]
+  },
+  "crossAuditValidation": {
+    "date": "2026-09-12",
+    "command": "npm test",
+    "result": {
+      "cases": 210,
+      "passed": 203,
+      "failed": 7,
+      "failingFileCount": 6
+    },
+    "safeLocalExecution": true,
+    "note": "stage3Validation permanece histórico e não foi reinterpretado."
+  }
+}

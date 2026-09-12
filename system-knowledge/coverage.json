@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-12",
+  "stage": 7,
+  "count": 18,
+  "unclassifiedTotal": 0,
+  "status": "PASS",
+  "records": [
+    {
+      "category": "DOMAINS",
+      "expected": 17,
+      "observed": 17,
+      "unclassified": 0,
+      "status": "PASS"
+    },
+    {
+      "category": "MODULES",
+      "expected": 66,
+      "observed": 66,
+      "unclassified": 0,
+      "status": "PASS"
+    },
+    {
+      "category": "ENTRYPOINTS",
+      "expected": 56,
+      "observed": 56,
+      "unclassified": 0,
+      "status": "PASS"
+    },
+    {
+      "category": "CAPABILITIES",
+      "expected": 140,
+      "observed": 140,
+      "unclassified": 0,
+      "status": "PASS"
+    },
+    {
+      "category": "FLOWS",
+      "expected": 34,
+      "observed": 34,
+      "unclassified": 0,
+      "status": "PASS"
+    },
+    {
+      "category": "FLOW_STEPS",
+      "expected": 169,
+      "observed": 169,
+      "unclassified": 0,
+      "status": "PASS"
+    },
+    {
+      "category": "STATE_TRANSITIONS",
+      "expected": 66,
+      "observed": 66,
+      "unclassified": 0,
+      "status": "PASS"
+    },
+    {
+      "category": "TABLES",
+      "expected": 44,
+      "observed": 44,
+      "unclassified": 0,
+      "status": "PASS"
+    },
+    {
+      "category": "MIGRATIONS",
+      "expected": 77,
+      "observed": 77,
+      "unclassified": 0,
+      "status": "PASS"
+    },
+    {
+      "category": "SQL_FUNCTIONS",
+      "expected": 33,
+      "observed": 33,
+      "unclassified": 0,
+      "status": "PASS"
+    },
+    {
+      "category": "TRIGGERS",
+      "expected": 33,
+      "observed": 33,
+      "unclassified": 0,
+      "status": "PASS"
+    },
+    {
+      "category": "DATA_RELATIONS",
+      "expected": 2223,
+      "observed": 2223,
+      "unclassified": 0,
+      "status": "PASS"
+    },
+    {
+      "category": "INTEGRATIONS",
+      "expected": 6,
+      "observed": 6,
+      "unclassified": 0,
+      "status": "PASS"
+    },
+    {
+      "category": "WEBHOOKS",
+      "expected": 2,
+      "observed": 2,
+      "unclassified": 0,
+      "status": "PASS"
+    },
+    {
+      "category": "CRONS",
+      "expected": 2,
+      "observed": 2,
+      "unclassified": 0,
+      "status": "PASS"
+    },
+    {
+      "category": "ENV_VARS",
+      "expected": 44,
+      "observed": 44,
+      "unclassified": 0,
+      "status": "PASS"
+    },
+    {
+      "category": "TESTS",
+      "expected": 43,
+      "observed": 43,
+      "unclassified": 0,
+      "status": "PASS"
+    },
+    {
+      "category": "FINDINGS",
+      "expected": 44,
+      "observed": 44,
+      "unclassified": 0,
+      "status": "PASS"
+    }
+  ]
+}

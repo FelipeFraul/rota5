@@ -1,0 +1,589 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-11",
+  "id": "architecture.as-is.v1",
+  "name": "Arquitetura as-is do Rota5",
+  "type": "architecture-baseline",
+  "status": "CONFIRMADO",
+  "evidence": [
+    "package.json",
+    "src/app",
+    "src/lib",
+    "supabase/migrations",
+    "vercel.json",
+    "grafo estático de 428 imports"
+  ],
+  "sourceCommit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+  "topology": {
+    "style": "Aplicação Next.js única com App Router, route handlers server-side, serviços TypeScript com acesso direto ao Supabase e regras transacionais adicionais em RPCs PostgreSQL.",
+    "deploymentUnit": "Um projeto Next.js conforme package.json/next.config.ts/vercel.json.",
+    "status": "PARCIALMENTE CONFIRMADO",
+    "notes": "A unidade publicada na Vercel e o banco remoto não foram validados."
+  },
+  "counts": {
+    "domains": 17,
+    "modules": 66,
+    "dependencies": 817,
+    "layers": 9,
+    "hotspots": 14,
+    "directDatabaseAccessOutsideServices": 11,
+    "allImportGraphCircularComponents": 2,
+    "runtimeCircularComponents": 0
+  },
+  "layers": [
+    {
+      "id": "layer.presentation",
+      "name": "Apresentação/UI",
+      "type": "architectural-layer",
+      "purpose": "Páginas e componentes React, scanners e checkouts.",
+      "status": "CONFIRMADO",
+      "modules": [
+        "brand.shell-assets",
+        "event-admin.ui",
+        "payment.api-ui",
+        "ticket.public-page",
+        "gate.ui-api",
+        "combo.checkout-ui-api",
+        "combo.kitchen-reader-ui-api",
+        "combo.admin-ui",
+        "table-map.admin-ui-api",
+        "analytics.operational-dashboard",
+        "analytics.admin-dashboard-ui"
+      ]
+    },
+    {
+      "id": "layer.entrypoints",
+      "name": "Entradas HTTP e comandos",
+      "type": "architectural-layer",
+      "purpose": "Route handlers, páginas, proxy, cron e CLIs.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "system-knowledge/entrypoints.json"
+      ],
+      "modules": [
+        "event-admin.program-importer",
+        "platform.edge-proxy",
+        "event-admin.black-house-maintenance"
+      ]
+    },
+    {
+      "id": "layer.orchestration",
+      "name": "Orquestração e routing",
+      "type": "architectural-layer",
+      "purpose": "Coordenar intenções, webhooks e handlers com múltiplos domains.",
+      "status": "CONFIRMADO",
+      "modules": [
+        "messaging.webhook",
+        "messaging.router",
+        "payment.webhook",
+        "event-admin.api",
+        "background.expire-cron",
+        "background.batch-cron"
+      ]
+    },
+    {
+      "id": "layer.domain-services",
+      "name": "Serviços e regras de domínio",
+      "type": "architectural-layer",
+      "purpose": "Regras, validações e coordenação de persistência.",
+      "status": "CONFIRMADO",
+      "modules": [
+        "catalog.events",
+        "catalog.visibility",
+        "catalog.inventory-read",
+        "event-admin.service",
+        "reservation.service",
+        "reservation.expiry",
+        "customer-risk.service",
+        "payment.checkout",
+        "payment.primitives",
+        "ticket.service",
+        "ticket.delivery",
+        "ticket.free-issuance",
+        "admin.ticket-operations",
+        "admin.auth",
+        "admin.users",
+        "gate.access-session",
+        "gate.validation",
+        "courtesy.service",
+        "combo.offers",
+        "combo.redemption",
+        "table-map.reservation",
+        "analytics.reports",
+        "analytics.contacts"
+      ]
+    },
+    {
+      "id": "layer.data-access",
+      "name": "Acesso a dados",
+      "type": "architectural-layer",
+      "purpose": "Chamadas PostgREST/RPC distribuídas em services, handlers e módulos de mapa/rate limit.",
+      "status": "CONFIRMADO",
+      "modules": [
+        "platform.supabase-client"
+      ],
+      "notes": "Não há camada repository dedicada; 11 arquivos fora de services acessam Supabase diretamente."
+    },
+    {
+      "id": "layer.database",
+      "name": "Banco e transações SQL",
+      "type": "architectural-layer",
+      "purpose": "Tabelas, constraints, RLS, triggers, helpers e RPCs.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "evidence": [
+        "77 migrations",
+        "44 tabelas",
+        "33 funções",
+        "33 triggers"
+      ],
+      "notes": "Estado remoto não validado."
+    },
+    {
+      "id": "layer.integration",
+      "name": "Adapters e integrações externas",
+      "type": "architectural-layer",
+      "purpose": "Supabase, Z-API, Mercado Pago, GitHub, Vercel e Codex CLI.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "modules": [
+        "integration.zapi",
+        "integration.mercado-pago",
+        "automation.github-issues",
+        "automation.local-runner"
+      ],
+      "evidence": [
+        "system-knowledge/integrations.json"
+      ]
+    },
+    {
+      "id": "layer.background",
+      "name": "Processamento agendado",
+      "type": "architectural-layer",
+      "purpose": "Expiração, finalização de conversa e batches.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "modules": [
+        "background.expire-cron",
+        "background.batch-cron",
+        "reservation.expiry",
+        "messaging.finalizer",
+        "messaging.batches"
+      ]
+    },
+    {
+      "id": "layer.cross-cutting",
+      "name": "Infraestrutura transversal",
+      "type": "architectural-layer",
+      "purpose": "Ambiente, logging, respostas, rate limit, marca e estado compartilhado.",
+      "status": "CONFIRMADO",
+      "modules": [
+        "platform.env",
+        "platform.logging",
+        "platform.http",
+        "platform.rate-limit",
+        "brand.presentation",
+        "messaging.state"
+      ]
+    }
+  ],
+  "runtimeChains": [
+    {
+      "id": "chain.whatsapp",
+      "entrypoint": "http-zapi-webhook",
+      "path": [
+        "messaging.webhook",
+        "messaging.router",
+        "domain services",
+        "platform.supabase-client",
+        "integration.zapi"
+      ],
+      "status": "CONFIRMADO"
+    },
+    {
+      "id": "chain.ticket-payment",
+      "entrypoint": "http-checkout-pay",
+      "path": [
+        "payment.api-ui",
+        "payment.checkout",
+        "integration.mercado-pago",
+        "payment.webhook",
+        "database.function.confirm_paid_ticket_order",
+        "ticket.delivery",
+        "integration.zapi"
+      ],
+      "status": "CONFIRMADO"
+    },
+    {
+      "id": "chain.combo-payment",
+      "entrypoint": "http-combo-pay",
+      "path": [
+        "combo.checkout-ui-api",
+        "combo.offers",
+        "integration.mercado-pago",
+        "payment.webhook",
+        "combo.offers",
+        "combo.qr",
+        "integration.zapi"
+      ],
+      "status": "CONFIRMADO"
+    },
+    {
+      "id": "chain.admin-event",
+      "entrypoint": "page-admin-events",
+      "path": [
+        "event-admin.ui",
+        "event-admin.api",
+        "admin.auth",
+        "event-admin.service",
+        "platform.supabase-client"
+      ],
+      "status": "PARCIALMENTE CONFIRMADO"
+    },
+    {
+      "id": "chain.gate",
+      "entrypoint": "page-gate",
+      "path": [
+        "gate.ui-api",
+        "gate.access-session",
+        "gate.validation",
+        "database.function.validate_ticket_entry"
+      ],
+      "status": "CONFIRMADO"
+    },
+    {
+      "id": "chain.kitchen",
+      "entrypoint": "page-offer-reader",
+      "path": [
+        "combo.kitchen-reader-ui-api",
+        "gate.access-session",
+        "combo.redemption",
+        "database.function.validate_combo_redemption"
+      ],
+      "status": "PARCIALMENTE CONFIRMADO",
+      "notes": "Gate da Etapa 3: combo.redeem permanece QUEBRADA. Em src/lib/tickets/services/comboRedemptions.ts:1035-1231, o ramo paid + issued + escopo valido sempre retorna antes da RPC validate_combo_redemption (:1462). A ligacao com a RPC e estatica, sem consumo final pelo leitor atual."
+    },
+    {
+      "id": "chain.expire",
+      "entrypoint": "trigger-cron-expire",
+      "path": [
+        "background.expire-cron",
+        "reservation.expiry",
+        "database.function.expire_reservations",
+        "integration.zapi"
+      ],
+      "status": "PARCIALMENTE CONFIRMADO"
+    },
+    {
+      "id": "chain.batches",
+      "entrypoint": "trigger-cron-batches",
+      "path": [
+        "background.batch-cron",
+        "messaging.finalizer",
+        "messaging.batches"
+      ],
+      "status": "PARCIALMENTE CONFIRMADO",
+      "notes": "O processamento de reply cancela batches intencionalmente no código atual."
+    },
+    {
+      "id": "chain.program-import",
+      "entrypoint": "script-import",
+      "path": [
+        "event-admin.program-importer",
+        "integration-supabase",
+        "database catalog/inventory"
+      ],
+      "status": "PARCIALMENTE CONFIRMADO",
+      "notes": "O script cria cliente Supabase próprio e só grava com --apply; execução atual não validada."
+    },
+    {
+      "id": "chain.edge-proxy",
+      "entrypoint": "proxy",
+      "path": [
+        "platform.edge-proxy",
+        "database.function.consume_rate_limit",
+        "integration-supabase"
+      ],
+      "status": "CONFIRMADO"
+    }
+  ],
+  "databaseGroups": [
+    {
+      "id": "dbgroup.messaging",
+      "domain": "domain.whatsapp-conversations",
+      "tables": [
+        "conversations",
+        "whatsapp_messages",
+        "whatsapp_outbound_deliveries",
+        "whatsapp_message_batches",
+        "whatsapp_message_batch_messages"
+      ],
+      "functions": [
+        "append_whatsapp_message_batch",
+        "claim_due_whatsapp_message_batches",
+        "finish_whatsapp_message_batch",
+        "reschedule_whatsapp_message_batch",
+        "claim_whatsapp_outbound_delivery"
+      ]
+    },
+    {
+      "id": "dbgroup.customers-risk",
+      "domain": "domain.customer-risk",
+      "tables": [
+        "customers",
+        "buyer_risk_events"
+      ],
+      "functions": [
+        "lock_customer_active_reservation_slot",
+        "lock_validate_and_record_reservation_buyer_risk"
+      ]
+    },
+    {
+      "id": "dbgroup.catalog",
+      "domain": "domain.event-catalog",
+      "tables": [
+        "venues",
+        "venue_sections",
+        "seats",
+        "events",
+        "event_sessions",
+        "event_aliases",
+        "ticket_prices"
+      ],
+      "functions": [
+        "normalize_event_search_text",
+        "search_public_events_ranked",
+        "list_admin_events_fast",
+        "get_admin_event_editor_payload",
+        "update_admin_section_capacity"
+      ]
+    },
+    {
+      "id": "dbgroup.reservation",
+      "domain": "domain.reservation-inventory",
+      "tables": [
+        "session_seats",
+        "reservations",
+        "reservation_items"
+      ],
+      "functions": [
+        "reserve_seats",
+        "reserve_ticket_cart",
+        "cancel_pending_reservation",
+        "expire_reservations",
+        "enforce_one_active_reservation_per_customer"
+      ]
+    },
+    {
+      "id": "dbgroup.payment",
+      "domain": "domain.orders-payments",
+      "tables": [
+        "orders",
+        "payments",
+        "payment_events"
+      ],
+      "functions": [
+        "confirm_paid_ticket_order"
+      ]
+    },
+    {
+      "id": "dbgroup.ticket",
+      "domain": "domain.ticketing-delivery",
+      "tables": [
+        "tickets",
+        "ticket_validation_events"
+      ],
+      "functions": [
+        "assign_participant_contacts_to_order_tickets",
+        "mark_buyer_ticket_qr_delivered"
+      ]
+    },
+    {
+      "id": "dbgroup.admin",
+      "domain": "domain.admin-identity-access",
+      "tables": [
+        "admin_users",
+        "admin_sessions",
+        "admin_auth_attempts",
+        "admin_login_challenges"
+      ],
+      "functions": []
+    },
+    {
+      "id": "dbgroup.gate",
+      "domain": "domain.gate-admission",
+      "tables": [
+        "gate_accesses",
+        "fixed_gate_accesses",
+        "gate_sessions"
+      ],
+      "functions": [
+        "validate_ticket_entry"
+      ]
+    },
+    {
+      "id": "dbgroup.courtesy",
+      "domain": "domain.courtesy",
+      "tables": [
+        "courtesies",
+        "courtesy_limits",
+        "courtesy_section_limits"
+      ],
+      "functions": [
+        "issue_courtesy_order",
+        "issue_admin_courtesy_order",
+        "lock_and_validate_courtesy_limits",
+        "issue_public_free_ticket_order"
+      ]
+    },
+    {
+      "id": "dbgroup.combo",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_offers",
+        "combo_offer_scopes",
+        "combo_offer_event_locks",
+        "combo_orders",
+        "combo_payments",
+        "combo_redemptions",
+        "combo_redemption_events"
+      ],
+      "functions": [
+        "get_database_now",
+        "validate_combo_redemption"
+      ]
+    },
+    {
+      "id": "dbgroup.table-map",
+      "domain": "domain.table-map",
+      "tables": [
+        "official_table_map_places",
+        "official_table_map_reservations",
+        "seat_map_renders"
+      ],
+      "functions": [
+        "reserve_official_table_map_place",
+        "sync_official_table_map_reservation_status"
+      ]
+    },
+    {
+      "id": "dbgroup.analytics",
+      "domain": "domain.analytics-reporting",
+      "tables": [
+        "division_settlements"
+      ],
+      "functions": [
+        "get_admin_general_dashboard_summary",
+        "get_admin_intelligence_dashboard"
+      ]
+    }
+  ],
+  "brandArchitecture": {
+    "runtimeTenantSelectorFound": false,
+    "tenantColumnFound": false,
+    "brandAbstractionFound": false,
+    "featureFlags": [
+      "ROTA5_PRESENTATION_INDIVIDUAL_TICKETS_ONLY",
+      "ROTA5_PRESENTATION_TABLE_MAP_ENABLED",
+      "ROTA5_PRESENTATION_COURTESY_ENABLED"
+    ],
+    "rota5": [
+      "src/lib/tickets/rota5Presentation.ts",
+      "src/app/globals.css",
+      "public/rota5.webp",
+      "public/ticket_sistema.webp"
+    ],
+    "rockbar": [
+      "ROCK_BAR_OFFICIAL_WHATSAPP_PHONE",
+      "mensagens/fallbacks no router e QR",
+      "referências CSS a assets ausentes"
+    ],
+    "blackHouse": [
+      "next.config.ts productionOrigin",
+      "scripts/*black-house*.mjs",
+      "public/ticket_blackhouse.psd",
+      "mensagens/logs/fallbacks"
+    ],
+    "status": "POSSÍVEL LEGADO",
+    "notes": "A coexistência é fixa e espalhada; não foi encontrado comportamento condicionado por estabelecimento."
+  },
+  "boundaries": {
+    "dedicatedRepositoryLayerFound": false,
+    "serverActionsFound": false,
+    "directDatabaseAccessOutsideServices": 11,
+    "runtimeCircularComponents": 0,
+    "typeImportCircularComponents": 2,
+    "globalState": [
+      "cachedEnv em src/lib/env.ts",
+      "cached Supabase client em src/lib/supabase/admin.ts"
+    ],
+    "mixedResponsibilities": [
+      "router.ts combina routing, regras, formatação e orquestração",
+      "comboOffers.ts combina catálogo, checkout, pagamento, entrega e scheduler",
+      "rotas admin de eventos agregam autenticação, queries diretas, métricas e operações",
+      "webhook Mercado Pago combina handler, idempotência, consulta e confirmação",
+      "componentes admin mantêm regras de formulário e chamadas API"
+    ]
+  },
+  "importMetrics": {
+    "fileEdges": 428,
+    "runtimeEdgesApproximation": 403,
+    "topFanIn": [
+      {
+        "path": "src/lib/supabase/admin.ts",
+        "count": 44
+      },
+      {
+        "path": "src/lib/logger.ts",
+        "count": 22
+      },
+      {
+        "path": "src/lib/http/responses.ts",
+        "count": 17
+      },
+      {
+        "path": "src/lib/security/rateLimit.ts",
+        "count": 16
+      },
+      {
+        "path": "src/lib/tickets/services/gateSessions.ts",
+        "count": 15
+      }
+    ],
+    "topFanOut": [
+      {
+        "path": "src/lib/tickets/router.ts",
+        "count": 41
+      },
+      {
+        "path": "src/app/api/webhook/zapi/route.ts",
+        "count": 22
+      },
+      {
+        "path": "src/lib/tickets/services/comboOffers.ts",
+        "count": 15
+      },
+      {
+        "path": "src/lib/tickets/services/ticketDelivery.ts",
+        "count": 11
+      },
+      {
+        "path": "src/app/api/webhook/payment/mercado-pago/route.ts",
+        "count": 10
+      }
+    ]
+  },
+  "hotspots": [
+    "hotspot.router",
+    "hotspot.zapi-webhook",
+    "hotspot.combo-offers",
+    "hotspot.admin-events-service",
+    "hotspot.admin-events-api",
+    "hotspot.admin-editor-cycle",
+    "hotspot.supabase-client",
+    "hotspot.central-tables",
+    "hotspot.payment-webhook",
+    "hotspot.gate-sessions",
+    "hotspot.brand-spread",
+    "hotspot.table-map-boundary",
+    "hotspot.batch-disabled",
+    "hotspot.admin-reports"
+  ]
+}

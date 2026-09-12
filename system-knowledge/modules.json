@@ -1,0 +1,2765 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-11",
+  "count": 66,
+  "records": [
+    {
+      "id": "platform.env",
+      "name": "Configuração de ambiente",
+      "type": "module",
+      "domain": "domain.platform-runtime",
+      "path": "src/lib/env.ts",
+      "responsibility": "Validar e cachear configuração server-side.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "getEnv"
+      ],
+      "calledBy": [
+        "módulos server-side"
+      ],
+      "calls": [],
+      "tables": [],
+      "integrations": [],
+      "sideEffects": [
+        "lança erro se configuração for inválida"
+      ],
+      "tests": [],
+      "evidence": [
+        "src/lib/env.ts",
+        "export getEnv"
+      ]
+    },
+    {
+      "id": "platform.supabase-client",
+      "name": "Cliente Supabase administrativo",
+      "type": "module",
+      "domain": "domain.platform-runtime",
+      "path": "src/lib/supabase/admin.ts",
+      "responsibility": "Criar e reutilizar cliente service-role.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "getSupabaseAdmin"
+      ],
+      "calledBy": [
+        "44 arquivos de src pelo fan-in estático"
+      ],
+      "calls": [
+        "platform.env"
+      ],
+      "tables": [],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "abre chamadas remotas PostgREST/RPC"
+      ],
+      "tests": [],
+      "evidence": [
+        "src/lib/supabase/admin.ts",
+        "export getSupabaseAdmin"
+      ]
+    },
+    {
+      "id": "platform.logging",
+      "name": "Logger estruturado",
+      "type": "module",
+      "domain": "domain.platform-runtime",
+      "path": "src/lib/logger.ts",
+      "responsibility": "Emitir JSON e mascarar dados sensíveis.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "logInfo",
+        "logWarn",
+        "logError"
+      ],
+      "calledBy": [
+        "22 arquivos de src"
+      ],
+      "calls": [],
+      "tables": [],
+      "integrations": [],
+      "sideEffects": [
+        "escreve em console"
+      ],
+      "tests": [],
+      "evidence": [
+        "src/lib/logger.ts",
+        "export logInfo",
+        "export logWarn",
+        "export logError"
+      ]
+    },
+    {
+      "id": "platform.http",
+      "name": "Respostas HTTP compartilhadas",
+      "type": "module",
+      "domain": "domain.platform-runtime",
+      "path": "src/lib/http/responses.ts",
+      "responsibility": "Padronizar respostas JSON e erros HTTP.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "jsonOk",
+        "jsonError",
+        "unauthorized",
+        "tooManyRequests",
+        "badRequest",
+        "methodNotAllowed"
+      ],
+      "calledBy": [
+        "17 arquivos de src"
+      ],
+      "calls": [],
+      "tables": [],
+      "integrations": [],
+      "sideEffects": [
+        "cria Response"
+      ],
+      "tests": [],
+      "evidence": [
+        "src/lib/http/responses.ts",
+        "export jsonOk",
+        "export jsonError",
+        "export unauthorized"
+      ]
+    },
+    {
+      "id": "platform.rate-limit",
+      "name": "Rate limit compartilhado",
+      "type": "module",
+      "domain": "domain.platform-runtime",
+      "path": "src/lib/security/rateLimit.ts",
+      "responsibility": "Calcular escopo, consumir limite por RPC e construir resposta 429.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "consumeRateLimit",
+        "rateLimitResponse",
+        "hashRateLimitScope"
+      ],
+      "calledBy": [
+        "16 arquivos de src"
+      ],
+      "calls": [
+        "platform.supabase-client",
+        "platform.logging",
+        "platform.http"
+      ],
+      "tables": [],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "grava/atualiza rate_limit_events via RPC"
+      ],
+      "tests": [
+        "test-function-search-path-hardening.mjs"
+      ],
+      "evidence": [
+        "src/lib/security/rateLimit.ts",
+        "export consumeRateLimit",
+        "export rateLimitResponse",
+        "export hashRateLimitScope"
+      ]
+    },
+    {
+      "id": "platform.edge-proxy",
+      "name": "Proxy de segurança e rate limit de páginas",
+      "type": "module",
+      "domain": "domain.platform-runtime",
+      "path": "src/proxy.ts",
+      "responsibility": "Aplicar Content Security Policy e rate limit de páginas por chamada REST direta ao Supabase.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "proxy",
+        "config"
+      ],
+      "calledBy": [
+        "proxy"
+      ],
+      "calls": [
+        "database.function.consume_rate_limit"
+      ],
+      "tables": [],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "define headers CSP e nonce",
+        "consome rate limit por REST RPC"
+      ],
+      "tests": [],
+      "evidence": [
+        "src/proxy.ts",
+        "export proxy",
+        "export config",
+        "fetch /rest/v1/rpc/consume_rate_limit"
+      ],
+      "notes": "Implementa rate limit próprio no runtime de proxy em vez de importar platform.rate-limit."
+    },
+    {
+      "id": "integration.zapi",
+      "name": "Adapter Z-API",
+      "type": "module",
+      "domain": "domain.platform-runtime",
+      "path": "src/lib/zapi/client.ts; src/lib/zapi/format.ts; src/lib/zapi/textEncoding.ts",
+      "responsibility": "Enviar texto/imagem e normalizar formato/encoding WhatsApp.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "sendZapiText",
+        "sendZapiImage",
+        "sanitizeWhatsAppText",
+        "formatSystemActionLines"
+      ],
+      "calledBy": [
+        "messaging.webhook",
+        "ticket.delivery",
+        "reservation.expiry",
+        "messaging.finalizer",
+        "combo.offers",
+        "combo.redemption"
+      ],
+      "calls": [
+        "platform.env"
+      ],
+      "tables": [],
+      "integrations": [
+        "integration-zapi"
+      ],
+      "sideEffects": [
+        "requisições HTTP ao provedor"
+      ],
+      "tests": [
+        "test-whatsapp-output-sanitization.mjs",
+        "test-message-mojibake.mjs"
+      ],
+      "evidence": [
+        "src/lib/zapi/client.ts; src/lib/zapi/format.ts; src/lib/zapi/textEncoding.ts",
+        "export sendZapiText",
+        "export sendZapiImage",
+        "export sanitizeWhatsAppText"
+      ]
+    },
+    {
+      "id": "integration.mercado-pago",
+      "name": "Adapter Mercado Pago",
+      "type": "module",
+      "domain": "domain.platform-runtime",
+      "path": "src/lib/mercado-pago/client.ts; src/lib/mercado-pago/webhook.ts",
+      "responsibility": "Criar/consultar pagamentos e validar/interpretar webhook.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "createMercadoPagoPayment",
+        "getMercadoPagoPayment",
+        "validateMercadoPagoWebhookSignature",
+        "parseMercadoPagoWebhookPayload"
+      ],
+      "calledBy": [
+        "payment.checkout",
+        "payment.webhook",
+        "combo.offers"
+      ],
+      "calls": [
+        "platform.env"
+      ],
+      "tables": [],
+      "integrations": [
+        "integration-mercado-pago"
+      ],
+      "sideEffects": [
+        "requisições HTTP ao provedor"
+      ],
+      "tests": [
+        "test-checkout-pix-requirements.mjs"
+      ],
+      "evidence": [
+        "src/lib/mercado-pago/client.ts; src/lib/mercado-pago/webhook.ts",
+        "export createMercadoPagoPayment",
+        "export getMercadoPagoPayment",
+        "export validateMercadoPagoWebhookSignature"
+      ]
+    },
+    {
+      "id": "automation.github-issues",
+      "name": "Adapter GitHub Issues",
+      "type": "module",
+      "domain": "domain.codex-automation",
+      "path": "src/lib/github/issues.ts",
+      "responsibility": "Criar issue GitHub a partir de pedido aprovado.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "createGitHubIssue"
+      ],
+      "calledBy": [
+        "messaging.webhook"
+      ],
+      "calls": [],
+      "tables": [],
+      "integrations": [
+        "integration-github"
+      ],
+      "sideEffects": [
+        "requisição HTTP cria issue"
+      ],
+      "tests": [],
+      "evidence": [
+        "src/lib/github/issues.ts",
+        "export createGitHubIssue"
+      ]
+    },
+    {
+      "id": "brand.presentation",
+      "name": "Flags de apresentação Rota5",
+      "type": "module",
+      "domain": "domain.brand-presentation",
+      "path": "src/lib/tickets/rota5Presentation.ts",
+      "responsibility": "Fixar disponibilidade de ingresso individual, mapa e cortesia.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "ROTA5_PRESENTATION_INDIVIDUAL_TICKETS_ONLY",
+        "ROTA5_PRESENTATION_TABLE_MAP_ENABLED",
+        "ROTA5_PRESENTATION_COURTESY_ENABLED"
+      ],
+      "calledBy": [
+        "messaging.router",
+        "catalog.inventory-read"
+      ],
+      "calls": [],
+      "tables": [],
+      "integrations": [],
+      "sideEffects": [],
+      "tests": [
+        "test-public-initial-flow.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/rota5Presentation.ts",
+        "export ROTA5_PRESENTATION_INDIVIDUAL_TICKETS_ONLY",
+        "export ROTA5_PRESENTATION_TABLE_MAP_ENABLED",
+        "export ROTA5_PRESENTATION_COURTESY_ENABLED"
+      ],
+      "notes": "Dois flags são duplicados no EventEditorModal."
+    },
+    {
+      "id": "brand.shell-assets",
+      "name": "Shell e assets de marca",
+      "type": "module",
+      "domain": "domain.brand-presentation",
+      "path": "src/app/InformationPage.tsx; src/app/BrandLogo.tsx; src/app/globals.css; public",
+      "responsibility": "Renderizar layout compartilhado, fundos, logo, fontes e templates.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "exports": [
+        "InformationPage",
+        "BrandLogo"
+      ],
+      "calledBy": [
+        "páginas web",
+        "ticket.qr",
+        "combo.qr",
+        "table-map.catalog-render"
+      ],
+      "calls": [],
+      "tables": [],
+      "integrations": [],
+      "sideEffects": [
+        "leitura de assets do filesystem/browser"
+      ],
+      "tests": [
+        "test-ticket-qr-image-template.mjs",
+        "test-combo-qr-image-template.mjs"
+      ],
+      "evidence": [
+        "src/app/InformationPage.tsx; src/app/BrandLogo.tsx; src/app/globals.css; public",
+        "export InformationPage",
+        "export BrandLogo"
+      ],
+      "notes": "BrandLogo não possui importador; referências RockBar/Black House coexistem."
+    },
+    {
+      "id": "messaging.webhook",
+      "name": "Handler do webhook Z-API",
+      "type": "module",
+      "domain": "domain.whatsapp-conversations",
+      "path": "src/app/api/webhook/zapi/route.ts",
+      "responsibility": "Autenticar inbound, aplicar idempotência/rate limit, persistir, rotear e responder.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "POST",
+        "GET",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ],
+      "calledBy": [
+        "http-zapi-webhook"
+      ],
+      "calls": [
+        "platform.http",
+        "platform.logging",
+        "platform.rate-limit",
+        "integration.zapi",
+        "automation.github-issues",
+        "messaging.router",
+        "messaging.state",
+        "messaging.customers",
+        "messaging.conversations",
+        "messaging.messages",
+        "messaging.outbound-deliveries",
+        "ticket.service",
+        "admin.auth"
+      ],
+      "tables": [
+        "customers",
+        "conversations",
+        "whatsapp_messages",
+        "whatsapp_outbound_deliveries"
+      ],
+      "integrations": [
+        "integration-zapi",
+        "integration-github",
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "grava mensagens/conversa/delivery; envia WhatsApp; pode criar issue"
+      ],
+      "tests": [
+        "test-public-initial-flow.mjs",
+        "test-whatsapp-messaging-regressions.mjs",
+        "test-paid-delivery-outbound-idempotency.mjs"
+      ],
+      "evidence": [
+        "src/app/api/webhook/zapi/route.ts",
+        "export POST",
+        "export GET",
+        "export PUT"
+      ]
+    },
+    {
+      "id": "messaging.router",
+      "name": "Máquina de estados central",
+      "type": "module",
+      "domain": "domain.whatsapp-conversations",
+      "path": "src/lib/tickets/router.ts",
+      "responsibility": "Classificar intenção e orquestrar fluxos públicos, compra, admin, portaria, cortesia, relatórios e combos.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "exports": [
+        "classifyPublicMessageIntent",
+        "shouldProcessImmediately",
+        "resolveIncomingMessageIntent",
+        "routeTicketMessage"
+      ],
+      "calledBy": [
+        "messaging.webhook",
+        "auditorias .tools"
+      ],
+      "calls": [
+        "messaging.state",
+        "messaging.public-dialog",
+        "catalog.events",
+        "catalog.inventory-read",
+        "reservation.service",
+        "payment.checkout",
+        "ticket.delivery",
+        "admin.auth",
+        "event-admin.service",
+        "courtesy.service",
+        "gate.access-session",
+        "analytics.reports",
+        "combo.offers",
+        "combo.redemption"
+      ],
+      "tables": [],
+      "integrations": [],
+      "sideEffects": [
+        "coordena múltiplas gravações e respostas por serviços"
+      ],
+      "tests": [
+        "test-public-initial-flow.mjs",
+        "test-admin-auth-pending-cancel.mjs",
+        "test-ticket-delivery-distribution.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/router.ts",
+        "export classifyPublicMessageIntent",
+        "export shouldProcessImmediately",
+        "export resolveIncomingMessageIntent"
+      ],
+      "notes": "Combina routing, regra de negócio, formatação e orquestração em 19.367 linhas."
+    },
+    {
+      "id": "messaging.state",
+      "name": "Estado de conversa",
+      "type": "module",
+      "domain": "domain.whatsapp-conversations",
+      "path": "src/lib/tickets/conversationState.ts",
+      "responsibility": "Definir passos/contexto e expiração do estado persistido.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "TicketConversationState",
+        "TicketConversationStep",
+        "buildInitialConversationState"
+      ],
+      "calledBy": [
+        "messaging.router",
+        "messaging.webhook",
+        "messaging.finalizer",
+        "messaging.public-dialog"
+      ],
+      "calls": [],
+      "tables": [],
+      "integrations": [],
+      "sideEffects": [],
+      "tests": [
+        "test-conversation-inactivity.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/conversationState.ts",
+        "export TicketConversationState",
+        "export TicketConversationStep",
+        "export buildInitialConversationState"
+      ]
+    },
+    {
+      "id": "messaging.public-dialog",
+      "name": "Diálogo público e formatação",
+      "type": "module",
+      "domain": "domain.whatsapp-conversations",
+      "path": "src/lib/tickets/messages.ts; src/lib/tickets/publicInitialFlow.ts; src/lib/tickets/publicAllEventsFormatting.ts; src/lib/tickets/eventFormatting.ts; src/lib/tickets/numericOptions.ts; src/lib/tickets/phones.ts; src/lib/tickets/services/publicEntryGate.ts; src/lib/tickets/services/publicHelp.ts; src/lib/tickets/services/publicHelpFlow.ts",
+      "responsibility": "Reconhecer comandos públicos, produzir ajuda/listagens e normalizar opções/telefone.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "exports": [
+        "TICKET_MESSAGES",
+        "isPublicInitialHelpCommand",
+        "buildAllEventsOutboundMessages",
+        "buildPublicEntryGateResponse",
+        "searchPublicHelpTopics"
+      ],
+      "calledBy": [
+        "messaging.router",
+        "messaging.webhook"
+      ],
+      "calls": [
+        "messaging.state",
+        "catalog.visibility"
+      ],
+      "tables": [],
+      "integrations": [],
+      "sideEffects": [],
+      "tests": [
+        "test-public-help-flow.mjs",
+        "test-public-all-events-formatting.mjs",
+        "test-message-mojibake.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/messages.ts; src/lib/tickets/publicInitialFlow.ts; src/lib/tickets/publicAllEventsFormatting.ts; src/lib/tickets/eventFormatting.ts; src/lib/tickets/numericOptions.ts; src/lib/tickets/phones.ts; src/lib/tickets/services/publicEntryGate.ts; src/lib/tickets/services/publicHelp.ts; src/lib/tickets/services/publicHelpFlow.ts",
+        "export TICKET_MESSAGES",
+        "export isPublicInitialHelpCommand",
+        "export buildAllEventsOutboundMessages"
+      ],
+      "notes": "Testes atuais detectam corrupção textual."
+    },
+    {
+      "id": "messaging.customers",
+      "name": "Repositório de clientes",
+      "type": "module",
+      "domain": "domain.customer-risk",
+      "path": "src/lib/tickets/services/customers.ts",
+      "responsibility": "Criar/localizar cliente por telefone WhatsApp.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "getOrCreateCustomer",
+        "getCustomerById"
+      ],
+      "calledBy": [
+        "messaging.webhook",
+        "combo.offers",
+        "reservation.expiry"
+      ],
+      "calls": [
+        "platform.supabase-client"
+      ],
+      "tables": [
+        "customers"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "select/insert/update customers"
+      ],
+      "tests": [],
+      "evidence": [
+        "src/lib/tickets/services/customers.ts",
+        "export getOrCreateCustomer",
+        "export getCustomerById"
+      ]
+    },
+    {
+      "id": "messaging.conversations",
+      "name": "Repositório de conversas",
+      "type": "module",
+      "domain": "domain.whatsapp-conversations",
+      "path": "src/lib/tickets/services/conversations.ts",
+      "responsibility": "Criar, carregar e atualizar contexto/status de conversa.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "getOrCreateOpenConversation",
+        "updateConversationContext",
+        "closeConversation"
+      ],
+      "calledBy": [
+        "messaging.webhook",
+        "combo.offers"
+      ],
+      "calls": [
+        "platform.supabase-client"
+      ],
+      "tables": [
+        "conversations"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "select/insert/update conversations"
+      ],
+      "tests": [],
+      "evidence": [
+        "src/lib/tickets/services/conversations.ts",
+        "export getOrCreateOpenConversation",
+        "export updateConversationContext",
+        "export closeConversation"
+      ]
+    },
+    {
+      "id": "messaging.messages",
+      "name": "Persistência e metadados de mensagens",
+      "type": "module",
+      "domain": "domain.whatsapp-conversations",
+      "path": "src/lib/tickets/services/messages.ts; src/lib/tickets/services/outboundMessages.ts",
+      "responsibility": "Consultar/gravar mensagens e padronizar metadados outbound.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "findInboundMessageByProviderId",
+        "saveWhatsAppMessage",
+        "buildWhatsAppOutboundMetadata"
+      ],
+      "calledBy": [
+        "messaging.webhook",
+        "ticket.delivery",
+        "reservation.expiry",
+        "messaging.finalizer",
+        "combo.offers",
+        "combo.redemption"
+      ],
+      "calls": [
+        "platform.supabase-client",
+        "integration.zapi"
+      ],
+      "tables": [
+        "whatsapp_messages"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "select/insert whatsapp_messages"
+      ],
+      "tests": [
+        "test-whatsapp-outbound-metadata-contract.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/messages.ts; src/lib/tickets/services/outboundMessages.ts",
+        "export findInboundMessageByProviderId",
+        "export saveWhatsAppMessage",
+        "export buildWhatsAppOutboundMetadata"
+      ]
+    },
+    {
+      "id": "messaging.outbound-deliveries",
+      "name": "Unidades idempotentes outbound",
+      "type": "module",
+      "domain": "domain.whatsapp-conversations",
+      "path": "src/lib/tickets/services/whatsappOutboundDeliveries.ts",
+      "responsibility": "Criar, reivindicar e finalizar tentativas de envio.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "getOrCreateWhatsAppOutboundDelivery",
+        "claimWhatsAppOutboundDelivery",
+        "markWhatsAppOutboundDeliverySent",
+        "markWhatsAppOutboundDeliveryFailed"
+      ],
+      "calledBy": [
+        "messaging.webhook",
+        "ticket.delivery",
+        "combo.offers"
+      ],
+      "calls": [
+        "platform.supabase-client"
+      ],
+      "tables": [
+        "whatsapp_outbound_deliveries"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "insert/update deliveries; claim RPC"
+      ],
+      "tests": [
+        "test-paid-delivery-outbound-idempotency.mjs",
+        "test-whatsapp-outbound-delivery-security.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/whatsappOutboundDeliveries.ts",
+        "export getOrCreateWhatsAppOutboundDelivery",
+        "export claimWhatsAppOutboundDelivery",
+        "export markWhatsAppOutboundDeliverySent"
+      ]
+    },
+    {
+      "id": "messaging.batches",
+      "name": "Lotes de mensagens WhatsApp",
+      "type": "module",
+      "domain": "domain.whatsapp-conversations",
+      "path": "src/lib/tickets/services/whatsappMessageBatches.ts; src/lib/tickets/services/whatsappBatchCore.ts",
+      "responsibility": "Agregar, reivindicar, concluir e reagendar batches.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "exports": [
+        "appendInboundMessageToBatch",
+        "claimDueWhatsAppMessageBatches",
+        "finishWhatsAppMessageBatch",
+        "rescheduleWhatsAppMessageBatch"
+      ],
+      "calledBy": [
+        "background.batch-cron"
+      ],
+      "calls": [
+        "platform.supabase-client"
+      ],
+      "tables": [
+        "whatsapp_message_batches",
+        "whatsapp_message_batch_messages"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "RPCs alteram batches"
+      ],
+      "tests": [
+        "test-whatsapp-batch-compat.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/whatsappMessageBatches.ts; src/lib/tickets/services/whatsappBatchCore.ts",
+        "export appendInboundMessageToBatch",
+        "export claimDueWhatsAppMessageBatches",
+        "export finishWhatsAppMessageBatch"
+      ],
+      "notes": "Há ciclo de imports somente de tipo com whatsappBatchCore."
+    },
+    {
+      "id": "messaging.finalizer",
+      "name": "Finalizador de conversas inativas",
+      "type": "module",
+      "domain": "domain.whatsapp-conversations",
+      "path": "src/lib/tickets/services/conversationFinalizer.ts",
+      "responsibility": "Localizar conversas inativas, notificar e fechar/resetar contexto.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "finalizeInactiveWhatsAppConversations"
+      ],
+      "calledBy": [
+        "background.batch-cron"
+      ],
+      "calls": [
+        "platform.supabase-client",
+        "platform.logging",
+        "integration.zapi",
+        "messaging.state",
+        "messaging.messages"
+      ],
+      "tables": [
+        "conversations",
+        "customers",
+        "whatsapp_messages"
+      ],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "sideEffects": [
+        "envia WhatsApp e atualiza conversa/mensagem"
+      ],
+      "tests": [
+        "test-conversation-inactivity.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/conversationFinalizer.ts",
+        "export finalizeInactiveWhatsAppConversations"
+      ]
+    },
+    {
+      "id": "catalog.events",
+      "name": "Consulta de eventos",
+      "type": "module",
+      "domain": "domain.event-catalog",
+      "path": "src/lib/tickets/services/events.ts",
+      "responsibility": "Buscar/listar eventos e validar sessão selecionada.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "searchEvents",
+        "listAllPublicEventsByDate",
+        "getEventById",
+        "getValidatedEventSession"
+      ],
+      "calledBy": [
+        "messaging.router"
+      ],
+      "calls": [
+        "platform.supabase-client",
+        "catalog.visibility"
+      ],
+      "tables": [
+        "events",
+        "event_sessions"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "select e RPC de busca"
+      ],
+      "tests": [
+        "test-public-event-visibility-policy.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/events.ts",
+        "export searchEvents",
+        "export listAllPublicEventsByDate",
+        "export getEventById"
+      ]
+    },
+    {
+      "id": "catalog.visibility",
+      "name": "Visibilidade e disponibilidade pública",
+      "type": "module",
+      "domain": "domain.event-catalog",
+      "path": "src/lib/tickets/services/publicEventVisibility.ts; src/lib/tickets/services/publicAvailability.ts",
+      "responsibility": "Calcular janela, status listável e disponibilidade real.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "isPublicEventVisible",
+        "classifyPublicAvailability",
+        "getCurrentPublicAvailabilityStatusForSession"
+      ],
+      "calledBy": [
+        "catalog.events",
+        "messaging.public-dialog",
+        "catalog.inventory-read",
+        "payment.checkout",
+        "combo.offers"
+      ],
+      "calls": [
+        "platform.supabase-client"
+      ],
+      "tables": [
+        "event_sessions",
+        "session_seats",
+        "ticket_prices"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "consultas de disponibilidade"
+      ],
+      "tests": [
+        "test-public-availability-classification.mjs",
+        "test-public-event-visibility-policy.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/publicEventVisibility.ts; src/lib/tickets/services/publicAvailability.ts",
+        "export isPublicEventVisible",
+        "export classifyPublicAvailability",
+        "export getCurrentPublicAvailabilityStatusForSession"
+      ]
+    },
+    {
+      "id": "catalog.inventory-read",
+      "name": "Leitura de setores e assentos",
+      "type": "module",
+      "domain": "domain.event-catalog",
+      "path": "src/lib/tickets/services/sections.ts; src/lib/tickets/services/seats.ts; src/lib/tickets/services/seatMapImage.ts; src/lib/tickets/services/pngImage.ts",
+      "responsibility": "Listar ofertas/capacidade/assentos e gerar mapa simples.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "listAvailableSections",
+        "getAvailableSectionForSession",
+        "listAvailableSeats",
+        "listSeatMap",
+        "buildSeatMapPngDataUrl"
+      ],
+      "calledBy": [
+        "messaging.router",
+        "courtesy.service"
+      ],
+      "calls": [
+        "platform.supabase-client",
+        "catalog.visibility",
+        "brand.presentation"
+      ],
+      "tables": [
+        "venue_sections",
+        "event_sessions",
+        "session_seats",
+        "ticket_prices",
+        "tickets",
+        "courtesy_section_limits"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "consultas e geração de buffer PNG"
+      ],
+      "tests": [
+        "test-official-table-map.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/sections.ts; src/lib/tickets/services/seats.ts; src/lib/tickets/services/seatMapImage.ts; src/lib/tickets/services/pngImage.ts",
+        "export listAvailableSections",
+        "export getAvailableSectionForSession",
+        "export listAvailableSeats"
+      ]
+    },
+    {
+      "id": "event-admin.service",
+      "name": "Serviço administrativo de eventos",
+      "type": "module",
+      "domain": "domain.event-administration",
+      "path": "src/lib/tickets/services/adminEvents.ts; src/lib/tickets/services/adminSessions.ts; src/lib/tickets/services/adminSections.ts; src/lib/tickets/services/adminSeats.ts; src/lib/tickets/services/adminPrices.ts",
+      "responsibility": "Listar e mutar evento, sessão, setor, assento, preço, duplicação e capacidade.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "exports": [
+        "listAdminEvents",
+        "getAdminEventDetails",
+        "createAdminEvent",
+        "duplicateAdminEvent",
+        "updateAdminEvent",
+        "updateAdminSectionCapacity"
+      ],
+      "calledBy": [
+        "messaging.router",
+        "event-admin.api"
+      ],
+      "calls": [
+        "platform.supabase-client",
+        "table-map.catalog-render"
+      ],
+      "tables": [
+        "venues",
+        "venue_sections",
+        "seats",
+        "events",
+        "event_sessions",
+        "session_seats",
+        "ticket_prices",
+        "reservations",
+        "reservation_items",
+        "payments",
+        "tickets",
+        "courtesy_section_limits",
+        "official_table_map_reservations"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "múltiplas mutações sequenciais e RPC de capacidade"
+      ],
+      "tests": [
+        "test-admin-event-artist-name-leak.mjs",
+        "test-admin-section-capacity-rpc-real.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/adminEvents.ts; src/lib/tickets/services/adminSessions.ts; src/lib/tickets/services/adminSections.ts; src/lib/tickets/services/adminSeats.ts; src/lib/tickets/services/adminPrices.ts",
+        "export listAdminEvents",
+        "export getAdminEventDetails",
+        "export createAdminEvent"
+      ]
+    },
+    {
+      "id": "event-admin.api",
+      "name": "APIs administrativas de eventos",
+      "type": "module",
+      "domain": "domain.event-administration",
+      "path": "src/app/api/admin/events/route.ts; src/app/api/admin/events/[eventId]/route.ts",
+      "responsibility": "Autenticar/validar pedidos e agregar CRUD, detalhes, métricas, contatos e dashboards.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "GET",
+        "POST",
+        "PATCH",
+        "DELETE"
+      ],
+      "calledBy": [
+        "http-admin-events",
+        "http-admin-event-id"
+      ],
+      "calls": [
+        "platform.supabase-client",
+        "admin.auth",
+        "event-admin.service",
+        "analytics.contacts",
+        "courtesy.service",
+        "combo.offers"
+      ],
+      "tables": [
+        "events",
+        "session_seats",
+        "ticket_prices",
+        "tickets",
+        "ticket_validation_events",
+        "whatsapp_messages",
+        "combo_offers",
+        "combo_orders",
+        "combo_redemptions"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "consulta direta a tabelas/RPCs e mutações via serviços"
+      ],
+      "tests": [
+        "test-admin-events-fast-mode.mjs",
+        "test-admin-events-fast-rpc.mjs",
+        "test-admin-slow-endpoints-optimized.mjs"
+      ],
+      "evidence": [
+        "src/app/api/admin/events/route.ts; src/app/api/admin/events/[eventId]/route.ts",
+        "export GET",
+        "export POST",
+        "export PATCH"
+      ]
+    },
+    {
+      "id": "event-admin.ui",
+      "name": "Editor/lista web de eventos",
+      "type": "module",
+      "domain": "domain.event-administration",
+      "path": "src/app/admin/eventos/AdminEventsEditor.tsx; src/app/admin/eventos/components; src/app/admin/eventos/event-editor",
+      "responsibility": "Coordenar lista, filtros, cards e modais de criação/edição.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "exports": [
+        "AdminEventsEditor",
+        "EventEditorModal",
+        "CreateEventModal"
+      ],
+      "calledBy": [
+        "page-admin-events"
+      ],
+      "calls": [
+        "event-admin.api",
+        "table-map.admin-ui-api",
+        "analytics.admin-dashboard-ui",
+        "combo.admin-ui"
+      ],
+      "tables": [],
+      "integrations": [],
+      "sideEffects": [
+        "fetch APIs admin e mantém estado React"
+      ],
+      "tests": [
+        "test-admin-events-editor-event-modal-extraction.mjs",
+        "test-admin-events-editor-toolbar-extraction.mjs"
+      ],
+      "evidence": [
+        "src/app/admin/eventos/AdminEventsEditor.tsx; src/app/admin/eventos/components; src/app/admin/eventos/event-editor",
+        "export AdminEventsEditor",
+        "export EventEditorModal",
+        "export CreateEventModal"
+      ],
+      "notes": "CreateEventModal não faz parse; ciclo de imports somente de tipos com componentes."
+    },
+    {
+      "id": "event-admin.program-importer",
+      "name": "Importador de programação de eventos",
+      "type": "module",
+      "domain": "domain.event-administration",
+      "path": "scripts/import-programacao-events.mjs",
+      "responsibility": "Interpretar programacao.md e consultar, verificar ou gravar catálogo e inventário no Supabase.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "exports": [
+        "programa CLI"
+      ],
+      "calledBy": [
+        "script-import"
+      ],
+      "calls": [],
+      "tables": [
+        "admin_users",
+        "events",
+        "event_sessions",
+        "venues",
+        "venue_sections",
+        "ticket_prices",
+        "seats",
+        "session_seats"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "lê programacao.md",
+        "com --apply cria ou remove eventos, sessões, setores, preços, assentos e inventário"
+      ],
+      "tests": [],
+      "evidence": [
+        "scripts/import-programacao-events.mjs",
+        "createClient",
+        "parseProgramacao",
+        "importEvent",
+        "--apply",
+        "--summary",
+        "--verify"
+      ],
+      "notes": "VENUE, CITY e STATE são constantes fixas para Black House/Sorocaba/SP; execução atual não validada."
+    },
+    {
+      "id": "event-admin.black-house-maintenance",
+      "name": "Manutenção operacional Black House",
+      "type": "module",
+      "domain": "domain.event-administration",
+      "path": "scripts/rename-black-house-ticket-sections.mjs; scripts/split-black-house-special-items.mjs; scripts/update-black-house-sectors.mjs",
+      "responsibility": "Inspecionar e, com --apply, normalizar setores, preços e inventário fixos da Black House.",
+      "status": "POSSÍVEL LEGADO",
+      "exports": [
+        "programas CLI"
+      ],
+      "calledBy": [
+        "script-bh-rename",
+        "script-bh-split",
+        "script-bh-update"
+      ],
+      "calls": [],
+      "tables": [
+        "venues",
+        "venue_sections",
+        "ticket_prices",
+        "events",
+        "reservation_items",
+        "seats",
+        "session_seats",
+        "reservations"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "consulta escopo Black House/Sorocaba",
+        "com --apply altera setores, preços, assentos e inventário"
+      ],
+      "tests": [],
+      "evidence": [
+        "scripts/rename-black-house-ticket-sections.mjs",
+        "scripts/split-black-house-special-items.mjs",
+        "scripts/update-black-house-sectors.mjs",
+        "createClient",
+        "--apply"
+      ],
+      "notes": "Os três scripts fixam Black House e Sorocaba; vigência operacional não validada."
+    },
+    {
+      "id": "reservation.service",
+      "name": "Serviço de reservas",
+      "type": "module",
+      "domain": "domain.reservation-inventory",
+      "path": "src/lib/tickets/services/reservations.ts",
+      "responsibility": "Encontrar, criar e cancelar reservas numeradas, não numeradas e carrinho.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "findActivePendingReservationForCustomer",
+        "cancelPendingReservationForCustomer",
+        "reserveSelectedSeat",
+        "reserveUnnumberedSectionTickets",
+        "reserveTicketCart"
+      ],
+      "calledBy": [
+        "messaging.router",
+        "payment.checkout",
+        "admin.ticket-operations"
+      ],
+      "calls": [
+        "platform.supabase-client",
+        "customer-risk.service"
+      ],
+      "tables": [
+        "orders",
+        "reservations",
+        "seats",
+        "session_seats",
+        "venue_sections"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "RPCs transacionais e leituras auxiliares"
+      ],
+      "tests": [
+        "test-reservation-load-safe.mjs",
+        "test-public-availability-classification.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/reservations.ts",
+        "export findActivePendingReservationForCustomer",
+        "export cancelPendingReservationForCustomer",
+        "export reserveSelectedSeat"
+      ]
+    },
+    {
+      "id": "reservation.expiry",
+      "name": "Expiração e notificação de reservas",
+      "type": "module",
+      "domain": "domain.reservation-inventory",
+      "path": "src/lib/tickets/services/reservationExpiry.ts",
+      "responsibility": "Executar expiração, notificar comprador e ajustar conversas/sessões admin.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "expireReservationsAndNotify"
+      ],
+      "calledBy": [
+        "background.expire-cron"
+      ],
+      "calls": [
+        "platform.supabase-client",
+        "platform.logging",
+        "integration.zapi",
+        "messaging.messages"
+      ],
+      "tables": [
+        "reservations",
+        "customers",
+        "conversations",
+        "whatsapp_messages",
+        "admin_sessions"
+      ],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "sideEffects": [
+        "RPC expira; envia WhatsApp; grava mensagem/contexto"
+      ],
+      "tests": [
+        "test-reservation-load-safe.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/reservationExpiry.ts",
+        "export expireReservationsAndNotify"
+      ]
+    },
+    {
+      "id": "customer-risk.service",
+      "name": "Risco do comprador",
+      "type": "module",
+      "domain": "domain.customer-risk",
+      "path": "src/lib/tickets/services/buyerRisk.ts",
+      "responsibility": "Avaliar limites/sinais de abuso e registrar eventos.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "recordBuyerRiskEvent",
+        "checkReservationRisk",
+        "recordReservationCreated",
+        "recordReservationCancelled",
+        "checkCheckoutRisk"
+      ],
+      "calledBy": [
+        "reservation.service",
+        "payment.checkout"
+      ],
+      "calls": [
+        "platform.supabase-client",
+        "platform.logging"
+      ],
+      "tables": [
+        "buyer_risk_events",
+        "customers"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "select/insert de risco"
+      ],
+      "tests": [],
+      "evidence": [
+        "src/lib/tickets/services/buyerRisk.ts",
+        "export recordBuyerRiskEvent",
+        "export checkReservationRisk",
+        "export recordReservationCreated"
+      ]
+    },
+    {
+      "id": "payment.checkout",
+      "name": "Serviço de checkout de ingresso",
+      "type": "module",
+      "domain": "domain.orders-payments",
+      "path": "src/lib/tickets/services/checkout.ts",
+      "responsibility": "Criar pedido, validar acesso, reconciliar e criar pagamento Pix.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "createCheckoutForReservation",
+        "getPublicCheckoutOrder",
+        "trackTicketCheckoutClick",
+        "verifyPublicCheckoutAccess",
+        "reconcileApprovedCheckoutPayment",
+        "paySelfHostedCheckout"
+      ],
+      "calledBy": [
+        "messaging.router",
+        "payment.api-ui"
+      ],
+      "calls": [
+        "platform.env",
+        "platform.supabase-client",
+        "platform.logging",
+        "integration.mercado-pago",
+        "customer-risk.service",
+        "payment.primitives",
+        "catalog.visibility",
+        "ticket.delivery"
+      ],
+      "tables": [
+        "customers",
+        "event_sessions",
+        "orders",
+        "payments",
+        "reservation_items",
+        "reservations",
+        "session_seats",
+        "venue_sections"
+      ],
+      "integrations": [
+        "integration-supabase",
+        "integration-mercado-pago"
+      ],
+      "sideEffects": [
+        "insere/atualiza pedido/pagamento; chama MP; pode entregar ingresso"
+      ],
+      "tests": [
+        "test-checkout-pix-requirements.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/checkout.ts",
+        "export createCheckoutForReservation",
+        "export getPublicCheckoutOrder",
+        "export trackTicketCheckoutClick"
+      ]
+    },
+    {
+      "id": "payment.api-ui",
+      "name": "Checkout web e APIs de ingresso",
+      "type": "module",
+      "domain": "domain.orders-payments",
+      "path": "src/app/checkout; src/app/api/checkout",
+      "responsibility": "Renderizar checkout/retornos e expor criação/status.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "pages checkout",
+        "route handlers"
+      ],
+      "calledBy": [
+        "page-checkout",
+        "page-checkout-success",
+        "page-checkout-pending",
+        "page-checkout-failure",
+        "http-checkout-mp",
+        "http-checkout-pay",
+        "http-checkout-status"
+      ],
+      "calls": [
+        "payment.checkout",
+        "platform.rate-limit",
+        "platform.http"
+      ],
+      "tables": [
+        "orders"
+      ],
+      "integrations": [
+        "integration-mercado-pago",
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "fetch API; API cria/consulta pagamento"
+      ],
+      "tests": [
+        "test-checkout-pix-requirements.mjs"
+      ],
+      "evidence": [
+        "src/app/checkout; src/app/api/checkout",
+        "export pages checkout",
+        "export route handlers"
+      ]
+    },
+    {
+      "id": "payment.webhook",
+      "name": "Handler Mercado Pago",
+      "type": "module",
+      "domain": "domain.orders-payments",
+      "path": "src/app/api/webhook/payment/mercado-pago/route.ts",
+      "responsibility": "Validar webhook, registrar evento, consultar pagamento e confirmar pedido ticket/combo.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "POST"
+      ],
+      "calledBy": [
+        "http-mp-webhook"
+      ],
+      "calls": [
+        "platform.env",
+        "platform.http",
+        "platform.logging",
+        "platform.rate-limit",
+        "platform.supabase-client",
+        "integration.mercado-pago",
+        "payment.primitives",
+        "ticket.delivery",
+        "combo.offers"
+      ],
+      "tables": [
+        "orders",
+        "payments",
+        "payment_events",
+        "combo_orders"
+      ],
+      "integrations": [
+        "integration-supabase",
+        "integration-mercado-pago",
+        "integration-zapi"
+      ],
+      "sideEffects": [
+        "registra payment_event; confirma pedido; aciona entrega"
+      ],
+      "tests": [
+        "test-paid-delivery-outbound-idempotency.mjs"
+      ],
+      "evidence": [
+        "src/app/api/webhook/payment/mercado-pago/route.ts",
+        "export POST"
+      ]
+    },
+    {
+      "id": "payment.primitives",
+      "name": "Primitivas de pagamento",
+      "type": "module",
+      "domain": "domain.orders-payments",
+      "path": "src/lib/tickets/services/payments.ts",
+      "responsibility": "Converter valores e construir/extrair referência externa.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "buildOrderExternalReference",
+        "extractOrderIdFromExternalReference",
+        "decimalAmountToCents",
+        "centsToDecimalAmount"
+      ],
+      "calledBy": [
+        "payment.checkout",
+        "payment.webhook",
+        "combo.offers"
+      ],
+      "calls": [],
+      "tables": [],
+      "integrations": [],
+      "sideEffects": [],
+      "tests": [
+        "test-checkout-pix-requirements.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/payments.ts",
+        "export buildOrderExternalReference",
+        "export extractOrderIdFromExternalReference",
+        "export decimalAmountToCents"
+      ]
+    },
+    {
+      "id": "ticket.service",
+      "name": "Serviço de ingressos e tokens",
+      "type": "module",
+      "domain": "domain.ticketing-delivery",
+      "path": "src/lib/tickets/services/tickets.ts; src/lib/tickets/services/publicDtos.ts",
+      "responsibility": "Assinar/verificar token, consultar ingresso, participantes e marcações de entrega.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "createSignedTicketToken",
+        "verifySignedTicketToken",
+        "getTicketsForOrder",
+        "assignParticipantContactsToOrderTickets",
+        "getTicketBySignedToken"
+      ],
+      "calledBy": [
+        "messaging.router",
+        "messaging.webhook",
+        "ticket.delivery",
+        "ticket.public-page",
+        "gate.validation",
+        "combo.offers"
+      ],
+      "calls": [
+        "platform.supabase-client",
+        "gate.access-session"
+      ],
+      "tables": [
+        "customers",
+        "tickets",
+        "ticket_validation_events",
+        "official_table_map_reservations"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "RPCs e updates de entrega"
+      ],
+      "tests": [
+        "test-ticket-delivery-distribution.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/tickets.ts; src/lib/tickets/services/publicDtos.ts",
+        "export createSignedTicketToken",
+        "export verifySignedTicketToken",
+        "export getTicketsForOrder"
+      ]
+    },
+    {
+      "id": "ticket.delivery",
+      "name": "Entrega de ingressos",
+      "type": "module",
+      "domain": "domain.ticketing-delivery",
+      "path": "src/lib/tickets/services/ticketDelivery.ts",
+      "responsibility": "Montar preferência/payload e enviar ingressos ao comprador/participantes.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "buildTicketDeliveryMessage",
+        "buildTicketDeliveryPayload",
+        "requestTicketDeliveryPreferenceForOrder",
+        "deliverTicketsForOrder"
+      ],
+      "calledBy": [
+        "messaging.router",
+        "payment.checkout",
+        "payment.webhook"
+      ],
+      "calls": [
+        "platform.supabase-client",
+        "integration.zapi",
+        "ticket.service",
+        "ticket.qr",
+        "messaging.messages",
+        "messaging.outbound-deliveries",
+        "table-map.catalog-render"
+      ],
+      "tables": [
+        "conversations",
+        "orders"
+      ],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "sideEffects": [
+        "gera imagens; envia WhatsApp; grava delivery/mensagem"
+      ],
+      "tests": [
+        "test-ticket-delivery-distribution.mjs",
+        "test-paid-delivery-conversation-fallback.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/ticketDelivery.ts",
+        "export buildTicketDeliveryMessage",
+        "export buildTicketDeliveryPayload",
+        "export requestTicketDeliveryPreferenceForOrder"
+      ]
+    },
+    {
+      "id": "ticket.qr",
+      "name": "Renderizador QR de ingresso",
+      "type": "module",
+      "domain": "domain.ticketing-delivery",
+      "path": "src/lib/tickets/services/ticketQrImage.ts",
+      "responsibility": "Compor QR e textos no template de ingresso.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "generateTicketQrImage",
+        "ticketQrImageToDataUrl"
+      ],
+      "calledBy": [
+        "ticket.delivery"
+      ],
+      "calls": [
+        "brand.shell-assets"
+      ],
+      "tables": [],
+      "integrations": [],
+      "sideEffects": [
+        "lê template/fontes e gera buffer/data URL"
+      ],
+      "tests": [
+        "test-ticket-qr-image-template.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/ticketQrImage.ts",
+        "export generateTicketQrImage",
+        "export ticketQrImageToDataUrl"
+      ]
+    },
+    {
+      "id": "ticket.public-page",
+      "name": "Página pública de ingresso",
+      "type": "module",
+      "domain": "domain.ticketing-delivery",
+      "path": "src/app/tickets/[token]/page.tsx",
+      "responsibility": "Resolver token e mostrar dados do ingresso.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "default page"
+      ],
+      "calledBy": [
+        "page-ticket"
+      ],
+      "calls": [
+        "ticket.service",
+        "brand.shell-assets"
+      ],
+      "tables": [],
+      "integrations": [],
+      "sideEffects": [
+        "consulta server-side"
+      ],
+      "tests": [],
+      "evidence": [
+        "src/app/tickets/[token]/page.tsx",
+        "export default page"
+      ]
+    },
+    {
+      "id": "ticket.free-issuance",
+      "name": "Emissão gratuita pública",
+      "type": "module",
+      "domain": "domain.ticketing-delivery",
+      "path": "src/lib/tickets/services/publicFreeTickets.ts",
+      "responsibility": "Emitir pedido/ingresso sem pagamento respeitando limites.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "issuePublicFreeTicketsForOrder"
+      ],
+      "calledBy": [
+        "messaging.router"
+      ],
+      "calls": [
+        "platform.supabase-client",
+        "catalog.visibility"
+      ],
+      "tables": [
+        "courtesy_section_limits",
+        "orders",
+        "reservation_items",
+        "reservations",
+        "tickets"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "RPC transacional de emissão"
+      ],
+      "tests": [
+        "test-public-availability-classification.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/publicFreeTickets.ts",
+        "export issuePublicFreeTicketsForOrder"
+      ]
+    },
+    {
+      "id": "admin.ticket-operations",
+      "name": "Operações admin de ingressos",
+      "type": "module",
+      "domain": "domain.ticketing-delivery",
+      "path": "src/lib/tickets/services/adminTickets.ts",
+      "responsibility": "Buscar ingressos/reservas, validações e cancelar pendência.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "findAdminTicketsByPhone",
+        "findAdminPendingReservationsByInput",
+        "findAdminTicketByCode",
+        "listAdminTicketValidations",
+        "cancelAdminPendingReservation"
+      ],
+      "calledBy": [
+        "messaging.router"
+      ],
+      "calls": [
+        "platform.supabase-client",
+        "reservation.service"
+      ],
+      "tables": [
+        "customers",
+        "orders",
+        "payments",
+        "reservations",
+        "tickets",
+        "ticket_validation_events"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "consultas e cancelamento RPC via reservation"
+      ],
+      "tests": [],
+      "evidence": [
+        "src/lib/tickets/services/adminTickets.ts",
+        "export findAdminTicketsByPhone",
+        "export findAdminPendingReservationsByInput",
+        "export findAdminTicketByCode"
+      ]
+    },
+    {
+      "id": "admin.auth",
+      "name": "Autenticação/autorização admin",
+      "type": "module",
+      "domain": "domain.admin-identity-access",
+      "path": "src/lib/tickets/services/adminAuth.ts; src/lib/tickets/services/adminLoginFlow.ts; src/lib/tickets/services/adminWebAuth.ts",
+      "responsibility": "Gerir hash, permissões, challenges, sessões WhatsApp/web, cookie e CSRF.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "ADMIN_ROLE_PERMISSIONS",
+        "startAdminLogin",
+        "createAdminSession",
+        "requireAdminEventEditorSession",
+        "assertAdminCsrf"
+      ],
+      "calledBy": [
+        "messaging.router",
+        "messaging.webhook",
+        "admin.login-ui-api",
+        "event-admin.api",
+        "combo.admin-ui",
+        "analytics.operational-dashboard"
+      ],
+      "calls": [
+        "platform.env",
+        "platform.supabase-client",
+        "platform.logging",
+        "messaging.state"
+      ],
+      "tables": [
+        "admin_users",
+        "admin_sessions",
+        "admin_auth_attempts",
+        "admin_login_challenges"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "insert/update/revoke sessão e challenge; cookies por handlers"
+      ],
+      "tests": [
+        "test-admin-auth-pending-cancel.mjs",
+        "test-admin-web-auth-fast.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/adminAuth.ts; src/lib/tickets/services/adminLoginFlow.ts; src/lib/tickets/services/adminWebAuth.ts",
+        "export ADMIN_ROLE_PERMISSIONS",
+        "export startAdminLogin",
+        "export createAdminSession"
+      ]
+    },
+    {
+      "id": "admin.users",
+      "name": "Administração de usuários admin",
+      "type": "module",
+      "domain": "domain.admin-identity-access",
+      "path": "src/lib/tickets/services/adminUsers.ts",
+      "responsibility": "Listar/criar/desabilitar/reativar usuários, mudar papel e senha.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "listAdminUsers",
+        "createAdminUser",
+        "updateAdminRole",
+        "disableAdminUser",
+        "reactivateAdminUser",
+        "renewAdminPassphrase"
+      ],
+      "calledBy": [
+        "messaging.router"
+      ],
+      "calls": [
+        "platform.supabase-client",
+        "admin.auth"
+      ],
+      "tables": [
+        "admin_users",
+        "admin_sessions",
+        "admin_auth_attempts"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "muta usuários/sessões/tentativas"
+      ],
+      "tests": [],
+      "evidence": [
+        "src/lib/tickets/services/adminUsers.ts",
+        "export listAdminUsers",
+        "export createAdminUser",
+        "export updateAdminRole"
+      ]
+    },
+    {
+      "id": "admin.login-ui-api",
+      "name": "Login administrativo web",
+      "type": "module",
+      "domain": "domain.admin-identity-access",
+      "path": "src/app/admin/login; src/app/admin/eventos/abrir/[token]/route.ts; src/app/api/admin/login/verify/route.ts",
+      "responsibility": "Consumir link/código, validar challenge e estabelecer cookies.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "page/login form",
+        "GET abrir token",
+        "POST verify"
+      ],
+      "calledBy": [
+        "page-admin-login",
+        "http-admin-open",
+        "http-admin-login"
+      ],
+      "calls": [
+        "admin.auth",
+        "platform.rate-limit",
+        "platform.logging",
+        "brand.shell-assets"
+      ],
+      "tables": [],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "define/remove cookies e consome challenge"
+      ],
+      "tests": [
+        "test-admin-web-auth-fast.mjs"
+      ],
+      "evidence": [
+        "src/app/admin/login; src/app/admin/eventos/abrir/[token]/route.ts; src/app/api/admin/login/verify/route.ts",
+        "export page/login form",
+        "export GET abrir token",
+        "export POST verify"
+      ]
+    },
+    {
+      "id": "gate.access-session",
+      "name": "Acessos e sessões de portaria/cozinha",
+      "type": "module",
+      "domain": "domain.gate-admission",
+      "path": "src/lib/tickets/services/gateTokens.ts; src/lib/tickets/services/gateSessions.ts; src/lib/tickets/services/gateAccesses.ts; src/lib/tickets/services/fixedGateAccesses.ts; src/lib/tickets/services/gateAccessAuth.ts",
+      "responsibility": "Criar/hash tokens, gerir acessos, sessões e vínculo de dispositivo.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "createGateSession",
+        "validateGateSessionToken",
+        "claimKitchenSessionDevice",
+        "createGateAccess",
+        "createFixedGateAccess"
+      ],
+      "calledBy": [
+        "messaging.router",
+        "gate.validation",
+        "gate.ui-api",
+        "combo.redemption"
+      ],
+      "calls": [
+        "platform.env",
+        "platform.supabase-client",
+        "admin.auth"
+      ],
+      "tables": [
+        "events",
+        "event_sessions",
+        "gate_sessions",
+        "gate_accesses",
+        "fixed_gate_accesses"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "insere/atualiza acessos e sessões"
+      ],
+      "tests": [],
+      "evidence": [
+        "src/lib/tickets/services/gateTokens.ts; src/lib/tickets/services/gateSessions.ts; src/lib/tickets/services/gateAccesses.ts; src/lib/tickets/services/fixedGateAccesses.ts; src/lib/tickets/services/gateAccessAuth.ts",
+        "export createGateSession",
+        "export validateGateSessionToken",
+        "export claimKitchenSessionDevice"
+      ]
+    },
+    {
+      "id": "gate.validation",
+      "name": "Validação/consulta de ingresso",
+      "type": "module",
+      "domain": "domain.gate-admission",
+      "path": "src/lib/tickets/services/gateValidation.ts; src/lib/tickets/services/gateTicketConsultation.ts",
+      "responsibility": "Interpretar código, consultar e validar entrada no escopo da sessão.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "validateGateScan",
+        "validateGateTicketCode",
+        "consultGateTicket"
+      ],
+      "calledBy": [
+        "gate.ui-api",
+        "messaging.router"
+      ],
+      "calls": [
+        "platform.supabase-client",
+        "platform.logging",
+        "gate.access-session",
+        "ticket.service",
+        "combo.redemption"
+      ],
+      "tables": [
+        "tickets",
+        "ticket_validation_events"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "chama validate_ticket_entry e registra evento"
+      ],
+      "tests": [
+        "test-public-event-visibility-policy.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/gateValidation.ts; src/lib/tickets/services/gateTicketConsultation.ts",
+        "export validateGateScan",
+        "export validateGateTicketCode",
+        "export consultGateTicket"
+      ]
+    },
+    {
+      "id": "gate.ui-api",
+      "name": "Portaria web e APIs",
+      "type": "module",
+      "domain": "domain.gate-admission",
+      "path": "src/app/gate; src/app/api/gate",
+      "responsibility": "Renderizar scanner e expor consult/scan/validate.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "GateSessionScanner",
+        "route handlers"
+      ],
+      "calledBy": [
+        "page-gate",
+        "http-gate-consult",
+        "http-gate-scan",
+        "http-gate-validate"
+      ],
+      "calls": [
+        "gate.access-session",
+        "gate.validation",
+        "platform.rate-limit",
+        "platform.http"
+      ],
+      "tables": [],
+      "integrations": [],
+      "sideEffects": [
+        "usa câmera; fetch APIs; valida ingresso"
+      ],
+      "tests": [],
+      "evidence": [
+        "src/app/gate; src/app/api/gate",
+        "export GateSessionScanner",
+        "export route handlers"
+      ]
+    },
+    {
+      "id": "courtesy.service",
+      "name": "Serviço de cortesias",
+      "type": "module",
+      "domain": "domain.courtesy",
+      "path": "src/lib/tickets/services/adminCourtesies.ts",
+      "responsibility": "Listar alvos, emitir/cancelar cortesia e montar entrega.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "issueAdminCourtesy",
+        "listCourtesyEvents",
+        "listCourtesiesForEvent",
+        "cancelCourtesyForEvent",
+        "buildCourtesyDeliveryForPhone"
+      ],
+      "calledBy": [
+        "messaging.router",
+        "event-admin.api"
+      ],
+      "calls": [
+        "platform.supabase-client",
+        "ticket.service",
+        "catalog.inventory-read",
+        "catalog.visibility"
+      ],
+      "tables": [
+        "courtesies",
+        "courtesy_limits",
+        "courtesy_section_limits",
+        "customers",
+        "events",
+        "event_sessions",
+        "session_seats",
+        "ticket_prices",
+        "tickets"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "RPC de emissão e mutações de cortesia"
+      ],
+      "tests": [
+        "audit_admin_courtesies.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/adminCourtesies.ts",
+        "export issueAdminCourtesy",
+        "export listCourtesyEvents",
+        "export listCourtesiesForEvent"
+      ]
+    },
+    {
+      "id": "combo.offers",
+      "name": "Serviço monolítico de ofertas/checkout/entrega",
+      "type": "module",
+      "domain": "domain.combo-commerce-fulfillment",
+      "path": "src/lib/tickets/services/comboOffers.ts; src/lib/tickets/comboOfferCron.ts",
+      "responsibility": "CRUD de ofertas, pedido/checkout, Pix, confirmação, expiração, seleção agendada e entrega.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "exports": [
+        "createComboOffer",
+        "listComboOffers",
+        "duplicateComboOffer",
+        "createComboOrderForCheckout",
+        "payComboCheckout",
+        "deliverComboOrder",
+        "confirmPaidComboOrder",
+        "sendScheduledComboOffers"
+      ],
+      "calledBy": [
+        "messaging.router",
+        "payment.webhook",
+        "combo.checkout-ui-api",
+        "combo.admin-ui"
+      ],
+      "calls": [
+        "platform.env",
+        "platform.supabase-client",
+        "platform.logging",
+        "integration.mercado-pago",
+        "integration.zapi",
+        "messaging.customers",
+        "messaging.conversations",
+        "messaging.messages",
+        "messaging.outbound-deliveries",
+        "payment.primitives",
+        "catalog.visibility",
+        "combo.qr"
+      ],
+      "tables": [
+        "combo_offers",
+        "combo_offer_scopes",
+        "combo_offer_event_locks",
+        "combo_orders",
+        "combo_payments",
+        "combo_redemptions",
+        "event_sessions",
+        "official_table_map_reservations",
+        "orders",
+        "tickets",
+        "whatsapp_messages"
+      ],
+      "integrations": [
+        "integration-supabase",
+        "integration-mercado-pago",
+        "integration-zapi"
+      ],
+      "sideEffects": [
+        "muta catálogo/pedidos; chama MP; envia WhatsApp/QR"
+      ],
+      "tests": [
+        "test-combo-offer-priority.mjs",
+        "test-combo-offer-priority-real.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/comboOffers.ts; src/lib/tickets/comboOfferCron.ts",
+        "export createComboOffer",
+        "export listComboOffers",
+        "export duplicateComboOffer"
+      ]
+    },
+    {
+      "id": "combo.checkout-ui-api",
+      "name": "Checkout web e APIs de combo",
+      "type": "module",
+      "domain": "domain.combo-commerce-fulfillment",
+      "path": "src/app/combo-checkout; src/app/api/combo-checkout",
+      "responsibility": "Renderizar checkout e expor pay/status de combo.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "pages combo checkout",
+        "route handlers"
+      ],
+      "calledBy": [
+        "page-combo-checkout",
+        "http-combo-pay",
+        "http-combo-status"
+      ],
+      "calls": [
+        "combo.offers",
+        "platform.rate-limit",
+        "platform.http"
+      ],
+      "tables": [],
+      "integrations": [
+        "integration-mercado-pago",
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "fetch API e cria/consulta pagamento"
+      ],
+      "tests": [
+        "test-checkout-pix-requirements.mjs"
+      ],
+      "evidence": [
+        "src/app/combo-checkout; src/app/api/combo-checkout",
+        "export pages combo checkout",
+        "export route handlers"
+      ]
+    },
+    {
+      "id": "combo.redemption",
+      "name": "Preparo e resgate de combo",
+      "type": "module",
+      "domain": "domain.combo-commerce-fulfillment",
+      "path": "src/lib/tickets/services/comboRedemptions.ts",
+      "responsibility": "Validar sessão/QR, liberar após entrada, preparar e solicitar escolha de entrega; consumo final está bloqueado no leitor atual.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "exports": [
+        "validateKitchenSessionToken",
+        "releaseComboOrdersForKitchenAfterGateEntry",
+        "startKitchenOrderPreparation",
+        "validateComboRedemptionScan",
+        "confirmComboDeliveryChoice"
+      ],
+      "calledBy": [
+        "messaging.router",
+        "gate.validation",
+        "combo.kitchen-reader-ui-api"
+      ],
+      "calls": [
+        "platform.supabase-client",
+        "integration.zapi",
+        "combo.offers",
+        "combo.qr",
+        "gate.access-session",
+        "messaging.messages",
+        "catalog.visibility",
+        "table-map.catalog-render"
+      ],
+      "tables": [
+        "combo_redemptions",
+        "combo_redemption_events",
+        "event_sessions",
+        "official_table_map_reservations",
+        "tickets"
+      ],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "sideEffects": [
+        "RPC de validação; updates; envia mensagens/QR"
+      ],
+      "tests": [
+        "audit_combo_redemption_security.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/comboRedemptions.ts",
+        "export validateKitchenSessionToken",
+        "export releaseComboOrdersForKitchenAfterGateEntry",
+        "export startKitchenOrderPreparation",
+        "src/lib/tickets/services/comboRedemptions.ts:1035-1231;1462"
+      ],
+      "notes": "Correção Etapa 3: comboRedemptions.ts:1035–1231 retorna para todo combo válido paid/issued antes da RPC validate_combo_redemption em :1462. A RPC isolada não confirma conclusão de entrega pelo leitor."
+    },
+    {
+      "id": "combo.qr",
+      "name": "Renderizador QR de combo",
+      "type": "module",
+      "domain": "domain.combo-commerce-fulfillment",
+      "path": "src/lib/tickets/services/comboQrImage.ts",
+      "responsibility": "Compor QR e dados no template de combo.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "generateComboQrImageBuffer",
+        "generateComboQrImage",
+        "comboQrImageToDataUrl"
+      ],
+      "calledBy": [
+        "combo.offers",
+        "combo.redemption"
+      ],
+      "calls": [
+        "brand.shell-assets"
+      ],
+      "tables": [],
+      "integrations": [],
+      "sideEffects": [
+        "lê template/fontes e gera imagem"
+      ],
+      "tests": [
+        "test-combo-qr-image-template.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/comboQrImage.ts",
+        "export generateComboQrImageBuffer",
+        "export generateComboQrImage",
+        "export comboQrImageToDataUrl"
+      ]
+    },
+    {
+      "id": "combo.kitchen-reader-ui-api",
+      "name": "Cozinha e leitor de ofertas",
+      "type": "module",
+      "domain": "domain.combo-commerce-fulfillment",
+      "path": "src/app/kitchen; src/app/offer-reader; src/app/api/kitchen",
+      "responsibility": "Abrir dispositivo/sessão, ler QR, preparar e validar combo.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "KitchenAccessClient",
+        "KitchenSessionScanner",
+        "OfferQrScanner",
+        "route handlers"
+      ],
+      "calledBy": [
+        "page-kitchen-access",
+        "page-kitchen-session",
+        "page-offer-reader",
+        "http-kitchen-open",
+        "http-kitchen-prepare",
+        "http-kitchen-scan",
+        "http-kitchen-validate"
+      ],
+      "calls": [
+        "combo.redemption",
+        "gate.access-session",
+        "platform.rate-limit",
+        "platform.http"
+      ],
+      "tables": [],
+      "integrations": [],
+      "sideEffects": [
+        "usa câmera/cookies; fetch APIs; muta preparo/resgate"
+      ],
+      "tests": [],
+      "evidence": [
+        "src/app/kitchen; src/app/offer-reader; src/app/api/kitchen",
+        "export KitchenAccessClient",
+        "export KitchenSessionScanner",
+        "export OfferQrScanner"
+      ]
+    },
+    {
+      "id": "combo.admin-ui",
+      "name": "Admin de ofertas de combo",
+      "type": "module",
+      "domain": "domain.combo-commerce-fulfillment",
+      "path": "src/app/admin/eventos/combo-editor; src/app/admin/eventos/components/AdminComboOfferCard.tsx; src/app/admin/eventos/components/AdminComboOfferGrid.tsx; src/app/api/admin/combo-offers",
+      "responsibility": "Listar, criar, editar, duplicar e excluir ofertas.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "AdminComboOffersSection",
+        "ComboOfferModal",
+        "CreateComboOfferModal",
+        "route handlers"
+      ],
+      "calledBy": [
+        "event-admin.ui",
+        "http-admin-combos",
+        "http-admin-combo-id"
+      ],
+      "calls": [
+        "admin.auth",
+        "combo.offers",
+        "platform.supabase-client"
+      ],
+      "tables": [
+        "combo_offers",
+        "combo_offer_scopes",
+        "combo_orders",
+        "whatsapp_messages"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "fetch API; APIs consultam/mutam ofertas"
+      ],
+      "tests": [
+        "test-admin-events-editor-combo-section-extraction.mjs"
+      ],
+      "evidence": [
+        "src/app/admin/eventos/combo-editor; src/app/admin/eventos/components/AdminComboOfferCard.tsx; src/app/admin/eventos/components/AdminComboOfferGrid.tsx; src/app/api/admin/combo-offers",
+        "export AdminComboOffersSection",
+        "export ComboOfferModal",
+        "export CreateComboOfferModal"
+      ]
+    },
+    {
+      "id": "table-map.catalog-render",
+      "name": "Catálogo, coordenadas e render do mapa",
+      "type": "module",
+      "domain": "domain.table-map",
+      "path": "src/lib/tickets/tableMap; src/lib/tickets/services/seatMapImage.ts; src/lib/tickets/services/pngImage.ts",
+      "responsibility": "Definir lugares/metadados, ler coordenadas e renderizar PNG/SVG.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "OFFICIAL_TABLE_MAP_PLACES",
+        "getOfficialTableMapPlaces",
+        "renderOfficialTableMap",
+        "buildSeatMapPngDataUrl"
+      ],
+      "calledBy": [
+        "table-map.reservation",
+        "table-map.admin-ui-api",
+        "ticket.delivery",
+        "combo.redemption"
+      ],
+      "calls": [
+        "platform.supabase-client",
+        "brand.shell-assets"
+      ],
+      "tables": [
+        "official_table_map_places"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "lê DB e filesystem; gera buffers"
+      ],
+      "tests": [
+        "test-official-table-map.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/tableMap; src/lib/tickets/services/seatMapImage.ts; src/lib/tickets/services/pngImage.ts",
+        "export OFFICIAL_TABLE_MAP_PLACES",
+        "export getOfficialTableMapPlaces",
+        "export renderOfficialTableMap"
+      ]
+    },
+    {
+      "id": "table-map.reservation",
+      "name": "Reserva de lugar oficial",
+      "type": "module",
+      "domain": "domain.table-map",
+      "path": "src/lib/tickets/services/officialTableMapReservations.ts",
+      "responsibility": "Listar disponibilidade, produzir imagem e reservar lugar.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "listOfficialTableMapAvailability",
+        "buildOfficialTableMapAvailabilityImage",
+        "reserveOfficialTableMapPlace"
+      ],
+      "calledBy": [
+        "messaging.router"
+      ],
+      "calls": [
+        "platform.supabase-client",
+        "platform.logging",
+        "table-map.catalog-render"
+      ],
+      "tables": [
+        "official_table_map_reservations"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "consulta e RPC de reserva"
+      ],
+      "tests": [
+        "test-official-table-map.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/officialTableMapReservations.ts",
+        "export listOfficialTableMapAvailability",
+        "export buildOfficialTableMapAvailabilityImage",
+        "export reserveOfficialTableMapPlace"
+      ]
+    },
+    {
+      "id": "table-map.admin-ui-api",
+      "name": "Calibrador e API do mapa",
+      "type": "module",
+      "domain": "domain.table-map",
+      "path": "src/app/admin/AdminTableMapCalibrator.tsx; src/app/admin/eventos/event-editor/EventTableMapTab.tsx; src/app/api/admin/table-map/route.ts; src/lib/tickets/tableMap/persistOfficialPlaces.ts",
+      "responsibility": "Editar, validar, persistir coordenadas e gerar preview.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "AdminTableMapCalibrator",
+        "EventTableMapTab",
+        "GET",
+        "PUT",
+        "persistOfficialTableMapPlaces"
+      ],
+      "calledBy": [
+        "event-admin.ui",
+        "http-admin-map"
+      ],
+      "calls": [
+        "admin.auth",
+        "table-map.catalog-render",
+        "platform.supabase-client"
+      ],
+      "tables": [
+        "official_table_map_places"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "fetch API; upsert coordenadas; render preview"
+      ],
+      "tests": [
+        "test-official-table-map.mjs"
+      ],
+      "evidence": [
+        "src/app/admin/AdminTableMapCalibrator.tsx; src/app/admin/eventos/event-editor/EventTableMapTab.tsx; src/app/api/admin/table-map/route.ts; src/lib/tickets/tableMap/persistOfficialPlaces.ts",
+        "export AdminTableMapCalibrator",
+        "export EventTableMapTab",
+        "export GET"
+      ]
+    },
+    {
+      "id": "analytics.reports",
+      "name": "Relatórios administrativos",
+      "type": "module",
+      "domain": "domain.analytics-reporting",
+      "path": "src/lib/tickets/services/adminReports.ts; src/lib/tickets/services/adminReportEvents.ts",
+      "responsibility": "Selecionar eventos, agregar vendas/cortesias/divisão e registrar baixa.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "exports": [
+        "buildAdminGeneralReport",
+        "buildAdminDivisionReport",
+        "buildAdminSalesEventReports",
+        "buildAdminReport",
+        "searchAdminReportEvents"
+      ],
+      "calledBy": [
+        "messaging.router"
+      ],
+      "calls": [
+        "platform.supabase-client",
+        "admin.auth"
+      ],
+      "tables": [
+        "courtesies",
+        "division_settlements",
+        "events",
+        "payments",
+        "reservations",
+        "session_seats",
+        "ticket_prices",
+        "ticket_validation_events",
+        "tickets"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "consultas agregadas e update/insert de settlement"
+      ],
+      "tests": [
+        "audit_admin_reports.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/adminReports.ts; src/lib/tickets/services/adminReportEvents.ts",
+        "export buildAdminGeneralReport",
+        "export buildAdminDivisionReport",
+        "export buildAdminSalesEventReports"
+      ],
+      "notes": "Contém função Legacy sem uso reportada pelo lint."
+    },
+    {
+      "id": "analytics.contacts",
+      "name": "Analytics de contatos",
+      "type": "module",
+      "domain": "domain.analytics-reporting",
+      "path": "src/lib/tickets/services/adminContactAnalytics.ts",
+      "responsibility": "Combinar mensagens, reservas e operadores por contato/período.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "getAdminContactActivity"
+      ],
+      "calledBy": [
+        "event-admin.api"
+      ],
+      "calls": [
+        "platform.supabase-client"
+      ],
+      "tables": [
+        "admin_users",
+        "fixed_gate_accesses",
+        "gate_accesses",
+        "reservations",
+        "whatsapp_messages"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "consultas agregadas"
+      ],
+      "tests": [
+        "test-admin-whatsapp-outbound-status.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/adminContactAnalytics.ts",
+        "export getAdminContactActivity"
+      ]
+    },
+    {
+      "id": "analytics.operational-dashboard",
+      "name": "Painel operacional API/página",
+      "type": "module",
+      "domain": "domain.analytics-reporting",
+      "path": "src/app/admin/operacao; src/app/api/admin/operational-dashboard/route.ts; src/lib/tickets/services/operationalDashboardTypes.ts",
+      "responsibility": "Autenticar e carregar séries/alertas por RPC para UI.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "useOperationalDashboard",
+        "OperationalDashboardSection",
+        "GET"
+      ],
+      "calledBy": [
+        "page-admin-ops",
+        "http-admin-ops"
+      ],
+      "calls": [
+        "admin.auth",
+        "platform.supabase-client"
+      ],
+      "tables": [],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "sideEffects": [
+        "RPC get_admin_intelligence_dashboard; fetch cliente"
+      ],
+      "tests": [
+        "test-admin-operational-dashboard.mjs"
+      ],
+      "evidence": [
+        "src/app/admin/operacao; src/app/api/admin/operational-dashboard/route.ts; src/lib/tickets/services/operationalDashboardTypes.ts",
+        "export useOperationalDashboard",
+        "export OperationalDashboardSection",
+        "export GET"
+      ]
+    },
+    {
+      "id": "analytics.admin-dashboard-ui",
+      "name": "Dashboards dentro do editor",
+      "type": "module",
+      "domain": "domain.analytics-reporting",
+      "path": "src/app/admin/eventos/dashboard; src/app/admin/eventos/contacts",
+      "responsibility": "Renderizar dashboard geral/evento e contatos usando APIs de eventos.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "AdminDashboardSection",
+        "GeneralDashboardModal",
+        "EventDashboardModal",
+        "ContactsModal"
+      ],
+      "calledBy": [
+        "event-admin.ui"
+      ],
+      "calls": [
+        "event-admin.api",
+        "analytics.contacts"
+      ],
+      "tables": [],
+      "integrations": [],
+      "sideEffects": [
+        "fetch APIs e estado React"
+      ],
+      "tests": [
+        "test-admin-events-editor-dashboard-section-extraction.mjs"
+      ],
+      "evidence": [
+        "src/app/admin/eventos/dashboard; src/app/admin/eventos/contacts",
+        "export AdminDashboardSection",
+        "export GeneralDashboardModal",
+        "export EventDashboardModal"
+      ]
+    },
+    {
+      "id": "background.expire-cron",
+      "name": "Cron de expiração",
+      "type": "module",
+      "domain": "domain.background-processing",
+      "path": "src/app/api/cron/expire-reservations/route.ts",
+      "responsibility": "Autenticar CRON_SECRET, aplicar rate limit e disparar expiração/notificação.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "GET",
+        "POST"
+      ],
+      "calledBy": [
+        "http-cron-expire",
+        "trigger-cron-expire"
+      ],
+      "calls": [
+        "platform.http",
+        "platform.logging",
+        "platform.rate-limit",
+        "reservation.expiry"
+      ],
+      "tables": [],
+      "integrations": [
+        "integration-vercel"
+      ],
+      "sideEffects": [
+        "executa lote de expiração"
+      ],
+      "tests": [
+        "test-reservation-load-safe.mjs"
+      ],
+      "evidence": [
+        "src/app/api/cron/expire-reservations/route.ts",
+        "export GET",
+        "export POST"
+      ]
+    },
+    {
+      "id": "background.batch-cron",
+      "name": "Cron de batches e conversas",
+      "type": "module",
+      "domain": "domain.background-processing",
+      "path": "src/app/api/cron/process-whatsapp-batches/route.ts",
+      "responsibility": "Autenticar cron, finalizar conversas e claim/cancel/retry de batches.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "exports": [
+        "processDueWhatsAppMessageBatches",
+        "GET",
+        "POST"
+      ],
+      "calledBy": [
+        "http-cron-batches",
+        "trigger-cron-batches"
+      ],
+      "calls": [
+        "platform.http",
+        "platform.logging",
+        "platform.rate-limit",
+        "messaging.batches",
+        "messaging.finalizer"
+      ],
+      "tables": [],
+      "integrations": [
+        "integration-vercel"
+      ],
+      "sideEffects": [
+        "cancela batches com reason configurado; finaliza conversas"
+      ],
+      "tests": [
+        "test-whatsapp-batch-compat.mjs"
+      ],
+      "evidence": [
+        "src/app/api/cron/process-whatsapp-batches/route.ts",
+        "export processDueWhatsAppMessageBatches",
+        "export GET",
+        "export POST"
+      ],
+      "notes": "Pipeline de resposta ao cliente por batch está desabilitado."
+    },
+    {
+      "id": "automation.codex-requests",
+      "name": "Classificação de pedidos Codex",
+      "type": "module",
+      "domain": "domain.codex-automation",
+      "path": "src/lib/tickets/codexRequests.ts",
+      "responsibility": "Restringir telefone autorizado e detectar pedido Codex no contexto.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "isCodexRequest",
+        "getCodexAllowedPhones"
+      ],
+      "calledBy": [
+        "messaging.webhook",
+        "automation.local-runner"
+      ],
+      "calls": [
+        "messaging.state"
+      ],
+      "tables": [],
+      "integrations": [],
+      "sideEffects": [],
+      "tests": [],
+      "evidence": [
+        "src/lib/tickets/codexRequests.ts",
+        "export isCodexRequest",
+        "export getCodexAllowedPhones"
+      ]
+    },
+    {
+      "id": "automation.local-runner",
+      "name": "Runner e listador Codex local",
+      "type": "module",
+      "domain": "domain.codex-automation",
+      "path": "scripts/codex-local-runner.mjs; scripts/list-codex-requests.mjs",
+      "responsibility": "Consultar pedidos aprovados, executar processo Codex e enviar resumo opcional.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "exports": [
+        "programas CLI"
+      ],
+      "calledBy": [
+        "npm-codex-runner",
+        "npm-codex-requests",
+        "script-codex-runner",
+        "script-codex-list"
+      ],
+      "calls": [
+        "automation.codex-requests",
+        "integration.zapi"
+      ],
+      "tables": [
+        "whatsapp_messages"
+      ],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi",
+        "integration-codex-cli"
+      ],
+      "sideEffects": [
+        "spawn de processo; consulta mensagens; envio externo"
+      ],
+      "tests": [],
+      "evidence": [
+        "scripts/codex-local-runner.mjs; scripts/list-codex-requests.mjs",
+        "export programas CLI"
+      ]
+    }
+  ]
+}

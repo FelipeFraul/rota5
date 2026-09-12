@@ -1,0 +1,129 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-09-11",
+  "stage": 5,
+  "overall": "PARTIAL",
+  "logger": {
+    "path": "src/lib/logger.ts",
+    "structured_json": true,
+    "levels": [
+      "info",
+      "warn",
+      "error"
+    ],
+    "redaction": [
+      "token/secret/key/authorization/password/access_token/service_role",
+      "phone/WhatsApp masking",
+      "long string truncation"
+    ],
+    "request_id": "NOT_UNIVERSAL"
+  },
+  "identifiers": [
+    "provider_message_id",
+    "payment/provider IDs",
+    "order/reservation/ticket IDs",
+    "webhook request-id when supplied"
+  ],
+  "audit_trails": [
+    "payment_events",
+    "ticket_validation_events",
+    "combo_redemption_events",
+    "whatsapp_outbound_deliveries",
+    "buyer_risk_events",
+    "rate_limit_events"
+  ],
+  "deployment_logs": {
+    "status": "RUNTIME_OBSERVED",
+    "sample_size": 50,
+    "errors": 1
+  },
+  "flow_assessments": [
+    {
+      "id": "observability.ticket-purchase",
+      "flow_id": "ticket.purchase",
+      "status": "PARTIAL",
+      "reason": "IDs de customer, reservation e order permitem correlação manual; não há request ID universal nem trace distribuído."
+    },
+    {
+      "id": "observability.whatsapp-inbound",
+      "flow_id": "whatsapp.inbound_dispatch",
+      "status": "PARTIAL",
+      "reason": "Entrada, persistência e erros têm logs/IDs, sem request ID universal."
+    },
+    {
+      "id": "observability.ticket-payment",
+      "flow_id": "ticket.payment_confirmation",
+      "status": "PARTIAL",
+      "reason": "order/payment/provider IDs ajudam correlação; não há trace distribuído."
+    },
+    {
+      "id": "observability.combo-payment",
+      "flow_id": "combo.payment_confirmation",
+      "status": "PARTIAL",
+      "reason": "IDs persistidos e payment_events; correlação depende de busca manual."
+    },
+    {
+      "id": "observability.ticket-delivery",
+      "flow_id": "ticket.delivery",
+      "status": "PARTIAL",
+      "reason": "delivery/idempotency/provider IDs persistidos e falhas registradas."
+    },
+    {
+      "id": "observability.reservation-expiry",
+      "flow_id": "reservation.expiration",
+      "status": "PARTIAL",
+      "reason": "cron e operações possuem logs, sem histórico remoto completo validado."
+    },
+    {
+      "id": "observability.whatsapp-batches",
+      "flow_id": "whatsapp.batch_processing",
+      "status": "STRONG",
+      "reason": "claim, attempts, next_attempt_at, erro e estado terminal persistidos."
+    },
+    {
+      "id": "observability.gate-admission",
+      "flow_id": "gate.ticket_admission",
+      "status": "PARTIAL",
+      "reason": "eventos de validação persistidos; sem correlation ID ponta a ponta."
+    },
+    {
+      "id": "observability.codex",
+      "flow_id": "codex.automation",
+      "status": "PARTIAL",
+      "reason": "estado da request e runner registrados; processo externo sem trace comum."
+    }
+  ],
+  "traceability": "É possível reconstruir partes relevantes por IDs persistidos e logs, mas não seguir todos os fluxos automaticamente de ponta a ponta.",
+  "surface_assessments": [
+    {
+      "surface": "ticket purchase",
+      "status": "PARTIAL",
+      "trace": "request -> services -> reservation/order -> payment link, por IDs e logs parciais"
+    },
+    {
+      "surface": "payment confirmation",
+      "status": "PARTIAL",
+      "trace": "webhook/status -> payment_events/RPC -> tickets -> delivery, sem trace universal"
+    },
+    {
+      "surface": "WhatsApp",
+      "status": "PARTIAL",
+      "trace": "provider_message_id -> conversation/messages -> router -> outbound delivery"
+    },
+    {
+      "surface": "combo",
+      "status": "PARTIAL",
+      "trace": "order/payment/redemption IDs persistidos, correlação manual"
+    },
+    {
+      "surface": "cron",
+      "status": "PARTIAL",
+      "trace": "logs e estados/claims persistidos; última execução remota não validada"
+    },
+    {
+      "surface": "webhook",
+      "status": "PARTIAL",
+      "trace": "provider/request IDs e eventos persistidos variam por provider"
+    }
+  ]
+}

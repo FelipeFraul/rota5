@@ -1,0 +1,119 @@
+# Dead code, órfãos e legado
+
+Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb8442f95493de3ca4ec4d4c997b e o working tree descrito no machine-readable. Esta etapa registra fatos e riscos; não aplica correções.
+
+### legacy.active-brand-contamination — Superfícies Rota5 exibem referências e assets Black House/RockBar
+
+- Tipo / severidade / prioridade: **LEGACY / HIGH / P1**
+- Status / confiança: **ACTIVE / CONFIRMED**
+- Problema: Checkout, ajuda e logs de pagamento usam Black House; CSS de checkout usa rockbar.webp/rockbar_mb.webp; domínio canônico declarado também é Black House.
+- Evidência: `src/app/checkout/pending/page.tsx`:8 — Mensagem de pagamento cita Black House.; `src/app/checkout/success/page.tsx`:8 — Mensagem de confirmação cita Black House.; `src/app/globals.css`:174 — Checkout usa rockbar.webp.; `next.config.ts`:3 — Origin de produção aponta para domínio Black House.
+- Impacto: A marca, confiança de pagamento e identidade visual podem ser incorretas para compradores Rota5, além de aumentar o risco de operar o projeto errado.
+- Escopo: domains domain.brand-presentation, domain.orders-payments, domain.whatsapp-conversations, domain.platform-runtime; capabilities brand.present_individual_offers, payment.checkout_view, payment.return_notice, messaging.help; flows ticket.purchase, whatsapp.public_discovery.
+- Blast radius: **MULTI_DOMAIN**
+- Workaround: Nenhum seletor de marca/tenant foi encontrado.
+- Direção: Definir a identidade canônica antes de classificar cada referência como compartilhada ou legado removível.
+- Justificativa da prioridade: P1 porque referências legadas estão ativas em pagamento e comunicação ao cliente.
+
+### dead.brand-logo-component — BrandLogo.tsx não possui consumidor encontrado
+
+- Tipo / severidade / prioridade: **DEAD_CODE / LOW / P3**
+- Status / confiança: **ACTIVE / CONFIRMED**
+- Problema: BrandLogo exporta um componente comum, mas a busca de imports/uso encontrou somente sua própria definição.
+- Evidência: `src/app/BrandLogo.tsx`:7 — Export default sem consumidor estático encontrado.
+- Impacto: Mantém um componente e asset contract que aparentam ativos, aumentando ruído de marca e manutenção.
+- Escopo: domains domain.brand-presentation; capabilities —; flows —.
+- Blast radius: **LOCAL**
+- Workaround: Nenhum impacto funcional atual comprovado.
+- Direção: Confirmar ausência de import dinâmico antes de remoção futura.
+- Justificativa da prioridade: LOW com alcance LOCAL, considerando probabilidade, workaround e capacidade de detecção.
+
+### orphan.ticket-validation-history — Capability de histórico de validações não tem entrypoint
+
+- Tipo / severidade / prioridade: **ORPHAN / LOW / P3**
+- Status / confiança: **ACTIVE / CONFIRMED**
+- Problema: listAdminTicketValidations existe e foi catalogada, mas nenhuma rota, UI ou comando alcançável foi encontrado.
+- Evidência: `system-knowledge/capabilities.json` — ticket.validation_history está ÓRFÃ.; `src/lib/tickets/services/adminTickets.ts` — Implementação do histórico existe.
+- Impacto: Código e consulta ficam sem uso operacional comprovado.
+- Escopo: domains domain.ticketing-delivery; capabilities ticket.validation_history; flows —.
+- Blast radius: **LOCAL**
+- Workaround: Nenhum necessário ou comprovado.
+- Direção: Decidir se ganhará entrypoint ou será removida.
+- Justificativa da prioridade: LOW com alcance LOCAL, considerando probabilidade, workaround e capacidade de detecção.
+
+### orphan.gate-session-revoke — Capability de revogar sessão de leitor não tem entrypoint
+
+- Tipo / severidade / prioridade: **ORPHAN / MEDIUM / P2**
+- Status / confiança: **ACTIVE / CONFIRMED**
+- Problema: revokeGateSession existe, mas o catálogo não encontra consumidor/entrypoint; isso impede usar a revogação granular como resposta operacional comum.
+- Evidência: `src/lib/tickets/services/gateSessions.ts`:488 — Função de revogação existe.; `system-knowledge/capabilities.json` — gate.session_revoke está ÓRFÃ.
+- Impacto: Sessões emitidas não podem ser revogadas pelo fluxo catalogado, ampliando o risco de autorização já registrado.
+- Escopo: domains domain.gate-admission; capabilities gate.session_revoke; flows —.
+- Blast radius: **DOMAIN**
+- Workaround: Alteração direta no banco seria possível, mas não é um fluxo de produto.
+- Direção: Expor a capacidade com autorização administrativa apropriada.
+- Justificativa da prioridade: P2 porque a ausência agrava revogação, embora a função exista.
+
+### orphan.courtesy-event-limit — Limite global de cortesia existe sem entrypoint
+
+- Tipo / severidade / prioridade: **ORPHAN / LOW / P3**
+- Status / confiança: **ACTIVE / CONFIRMED**
+- Problema: setCourtesyLimit está implementada, porém courtesy.event_limit não participa de flow/entrypoint; o fluxo usa limite por setor parcialmente.
+- Evidência: `system-knowledge/capabilities.json` — courtesy.event_limit está ÓRFÃ.; `src/lib/tickets/services/adminCourtesies.ts` — Serviço contém a operação.
+- Impacto: A regra global pode ficar divergente ou sem governança operacional.
+- Escopo: domains domain.courtesy; capabilities courtesy.event_limit; flows —.
+- Blast radius: **DOMAIN**
+- Workaround: Nenhum necessário ou comprovado.
+- Direção: Definir se a regra global é legado ou deve ter gestão.
+- Justificativa da prioridade: LOW com alcance DOMAIN, considerando probabilidade, workaround e capacidade de detecção.
+
+### orphan.gate-sessions-list — Listagem de sessões de leitor não tem entrypoint
+
+- Tipo / severidade / prioridade: **ORPHAN / LOW / P3**
+- Status / confiança: **ACTIVE / CONFIRMED**
+- Problema: listGateSessions consulta até 50 sessões, mas não há consumidor alcançável catalogado.
+- Evidência: `src/lib/tickets/services/gateSessions.ts`:510 — Listagem está implementada.; `system-knowledge/capabilities.json` — gate.sessions_list está ÓRFÃ.
+- Impacto: Operadores não têm visão catalogada das sessões ativas/revogadas, dificultando diagnóstico e resposta.
+- Escopo: domains domain.gate-admission; capabilities gate.sessions_list; flows —.
+- Blast radius: **DOMAIN**
+- Workaround: Nenhum necessário ou comprovado.
+- Direção: Conectar a uma superfície administrativa ou remover se legado.
+- Justificativa da prioridade: LOW com alcance DOMAIN, considerando probabilidade, workaround e capacidade de detecção.
+
+### orphan.seat-map-renders-table — seat_map_renders não tem consumidor de aplicação confirmado
+
+- Tipo / severidade / prioridade: **ORPHAN / LOW / P3**
+- Status / confiança: **NOT_VALIDATED / HIGH**
+- Problema: A tabela existe no modelo, mas não há .from("seat_map_renders") nem função local que a consuma; uso externo/dinâmico não pôde ser excluído.
+- Evidência: `system-knowledge/data-model.json` — Tabela seat_map_renders catalogada.; `system-knowledge/infrastructure.json` — Imagens atuais usam buffer/base64 e nenhum .storage.
+- Impacto: Tabela pode acumular custo e confundir o modelo de persistência de mapas.
+- Escopo: domains domain.table-map; capabilities —; flows —.
+- Blast radius: **LOCAL**
+- Workaround: Nenhum necessário ou comprovado.
+- Direção: Verificar uso externo e retenção antes de classificar como dead code.
+- Justificativa da prioridade: LOW com alcance LOCAL, considerando probabilidade, workaround e capacidade de detecção.
+
+### legacy.table-map-presentation-disabled — Mapa oficial e cortesia permanecem implementados, mas desativados na apresentação Rota5
+
+- Tipo / severidade / prioridade: **LEGACY / MEDIUM / P2**
+- Status / confiança: **ACTIVE / CONFIRMED**
+- Problema: ROTA5_PRESENTATION_TABLE_MAP_ENABLED e ROTA5_PRESENTATION_COURTESY_ENABLED são false, enquanto serviços, API, tabela, assets e flows continuam presentes/parciais.
+- Evidência: `src/lib/tickets/rota5Presentation.ts`:2 — Flags desativam mapa e cortesia na apresentação.; `system-knowledge/flows.json` — ticket.purchase e table_map.calibration permanecem PARCIAL.; `system-knowledge/infrastructure.json` — Contrato de storage não implementado.
+- Impacto: Há duas realidades operacionais: código e dados de mesa/cortesia existem, mas a jornada pública Rota5 não os oferece integralmente.
+- Escopo: domains domain.table-map, domain.courtesy, domain.brand-presentation; capabilities table_map.reserve, table_map.calibrate, courtesy.public_issue; flows ticket.purchase, courtesy.public, table_map.calibration.
+- Blast radius: **MULTI_DOMAIN**
+- Workaround: Jornada individual de ingresso permanece ativa.
+- Direção: Classificar explicitamente o que é produto futuro, compartilhado ou legado.
+- Justificativa da prioridade: MEDIUM com alcance MULTI_DOMAIN, considerando probabilidade, workaround e capacidade de detecção.
+
+## Classificação de candidatos
+
+| Item | Classificação | Motivo |
+|---|---|---|
+| BrandLogo.tsx | DEAD_CODE | Sem consumidor estático encontrado |
+| 4 capabilities standalone | ORPHAN | Implementadas sem entrypoint/flow |
+| seat_map_renders | EXTERNAL_USAGE_UNKNOWN | Sem consumidor local; remoto externo não excluído |
+| assets sem referência | EXTERNAL_USAGE_UNKNOWN | Podem ser consumidos por CSS, URL ou operação externa |
+| scripts Black House | ACTIVE_SHARED/BLACKHOUSE_LEGACY pendente | Scripts operacionais explícitos, não dead code |
+| rockbar.webp / rockbar_mb.webp | ROCKBAR_LEGACY ativo | CSS do checkout referencia os assets |
+| flags de mesa/cortesia | UNKNOWN/LEGACY | Implementação presente e apresentação Rota5 desativada |

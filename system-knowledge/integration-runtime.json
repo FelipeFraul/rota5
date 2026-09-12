@@ -1,0 +1,360 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-09-11",
+  "stage": 5,
+  "sourceCommit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+  "count": 6,
+  "remoteValidated": 5,
+  "records": [
+    {
+      "id": "integration-supabase",
+      "provider": "Supabase/PostgreSQL",
+      "purpose": "Persistência relacional e RPCs transacionais.",
+      "modules": [
+        "platform.supabase-client"
+      ],
+      "capabilities": [
+        "reservation.create",
+        "payment.confirm",
+        "ticket.deliver"
+      ],
+      "flows": [
+        "ticket.purchase",
+        "ticket.payment_confirmation",
+        "combo.payment_confirmation"
+      ],
+      "entrypoints": [
+        "http-zapi-webhook",
+        "http-mp-webhook",
+        "http-cron-expire",
+        "http-cron-batches"
+      ],
+      "environment_variables": [
+        "SUPABASE_URL",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "SUPABASE_ANON_KEY",
+        "DATABASE_URL"
+      ],
+      "authentication": "Service role no servidor; anon key apenas em ferramentas de auditoria; DATABASE_URL em script operacional.",
+      "outbound_calls": [
+        "PostgREST .from()",
+        "PostgREST RPC"
+      ],
+      "inbound_calls": [],
+      "webhooks": [],
+      "retry": "Implementado por fluxos específicos, sem retry global do cliente.",
+      "timeout": "Sem timeout global explícito no cliente Supabase.",
+      "idempotency": "Constraints, RPCs transacionais e chaves específicas por fluxo.",
+      "error_handling": "Erros verificados pelos serviços e handlers.",
+      "logs": "Logger estruturado em handlers; cobertura varia por fluxo.",
+      "local_status": "LOCAL_DECLARED",
+      "remote_status": "REMOTE_SCHEMA",
+      "runtime_status": "RUNTIME_OBSERVED",
+      "consistency": "PARTIAL_MATCH",
+      "evidence": [
+        "src/lib/supabase/admin.ts",
+        "supabase/migrations",
+        "Supabase PostgREST OpenAPI: 44 tabelas e 33 rotas RPC"
+      ],
+      "gate_validation": {
+        "local_declared": "SIM",
+        "remote_config": "VALIDATED",
+        "runtime_observed": "SIM"
+      }
+    },
+    {
+      "id": "integration-zapi",
+      "provider": "Z-API / WhatsApp",
+      "purpose": "Receber e enviar mensagens WhatsApp.",
+      "modules": [
+        "integration.zapi",
+        "messaging.webhook",
+        "messaging.outbound-deliveries",
+        "messaging.batches"
+      ],
+      "capabilities": [
+        "messaging.receive",
+        "messaging.respond",
+        "ticket.deliver",
+        "combo.offer_send"
+      ],
+      "flows": [
+        "whatsapp.inbound_dispatch",
+        "whatsapp.batch_processing",
+        "ticket.delivery"
+      ],
+      "entrypoints": [
+        "http-zapi-webhook"
+      ],
+      "environment_variables": [
+        "ZAPI_INSTANCE_ID",
+        "ZAPI_INSTANCE_TOKEN",
+        "ZAPI_CLIENT_TOKEN",
+        "ZAPI_BASE_URL",
+        "ZAPI_WEBHOOK_SECRET"
+      ],
+      "authentication": "Instance token no caminho, Client-Token no header e segredo próprio no webhook.",
+      "outbound_calls": [
+        "POST send-text",
+        "POST send-image"
+      ],
+      "inbound_calls": [
+        "POST /api/webhook/zapi"
+      ],
+      "webhooks": [
+        "webhook.zapi"
+      ],
+      "retry": "Fila de deliveries/batches controla tentativas; cliente HTTP não possui retry global.",
+      "timeout": "10 s no cliente.",
+      "idempotency": "provider_message_id, idempotency_key e claims persistidos.",
+      "error_handling": "Falhas persistidas e reprogramadas; estado terminal registrado conforme o fluxo.",
+      "logs": "Logs estruturados com telefone mascarado e segredos redigidos.",
+      "local_status": "LOCAL_DECLARED",
+      "remote_status": "REMOTE_CONFIG",
+      "runtime_status": "RUNTIME_OBSERVED",
+      "consistency": "PARTIAL_MATCH",
+      "evidence": [
+        "src/lib/zapi",
+        "src/app/api/webhook/zapi/route.ts",
+        "GET de status da instância: HTTP 200, connected=true"
+      ],
+      "gate_validation": {
+        "local_declared": "SIM",
+        "remote_config": "VALIDATED",
+        "runtime_observed": "SIM"
+      },
+      "validation_limit": "Conexão e credenciais observadas; registro remoto do webhook e mensagem ponta a ponta NOT_VALIDATED."
+    },
+    {
+      "id": "integration-mercado-pago",
+      "provider": "Mercado Pago",
+      "purpose": "Pix, checkout, consulta e confirmação de pagamentos.",
+      "modules": [
+        "integration.mercado-pago",
+        "payment.checkout",
+        "payment.webhook",
+        "payment.primitives"
+      ],
+      "capabilities": [
+        "payment.checkout_create",
+        "payment.pay_pix",
+        "payment.status",
+        "payment.confirm",
+        "combo.pay_pix",
+        "combo.confirm"
+      ],
+      "flows": [
+        "ticket.checkout",
+        "ticket.payment_confirmation",
+        "combo.payment_confirmation"
+      ],
+      "entrypoints": [
+        "http-checkout-mp",
+        "http-checkout-pay",
+        "http-checkout-status",
+        "http-combo-pay",
+        "http-combo-status",
+        "http-mp-webhook"
+      ],
+      "environment_variables": [
+        "PAYMENT_PROVIDER",
+        "MERCADO_PAGO_ACCESS_TOKEN",
+        "MERCADO_PAGO_WEBHOOK_SECRET",
+        "MERCADO_PAGO_API_BASE_URL",
+        "NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY",
+        "CHECKOUT_INTERNAL_SECRET"
+      ],
+      "authentication": "Bearer token outbound; assinatura x-signature e request-id inbound; segredo interno no checkout.",
+      "outbound_calls": [
+        "POST preferences",
+        "POST payments",
+        "GET payment"
+      ],
+      "inbound_calls": [
+        "POST /api/webhook/payment/mercado-pago"
+      ],
+      "webhooks": [
+        "webhook.mercado-pago"
+      ],
+      "retry": "Sem retry global do cliente; reconciliação por consulta e webhook.",
+      "timeout": "10 s no cliente.",
+      "idempotency": "X-Idempotency-Key na criação de pagamento e deduplicação de payment_events.",
+      "error_handling": "Status HTTP e payload validados; evento persiste resultado/falha.",
+      "logs": "IDs de pedido/pagamento presentes em pontos do fluxo.",
+      "local_status": "LOCAL_DECLARED",
+      "remote_status": "REMOTE_CONFIG",
+      "runtime_status": "RUNTIME_OBSERVED",
+      "consistency": "PARTIAL_MATCH",
+      "evidence": [
+        "src/lib/mercado-pago",
+        "src/app/api/webhook/payment/mercado-pago/route.ts",
+        "GET /users/me: HTTP 200, site_id=MLB"
+      ],
+      "gate_validation": {
+        "local_declared": "SIM",
+        "remote_config": "VALIDATED",
+        "runtime_observed": "SIM"
+      },
+      "validation_limit": "Credencial aceita para GET /users/me; webhook, pagamento, Pix e fluxo ponta a ponta NOT_VALIDATED."
+    },
+    {
+      "id": "integration-vercel",
+      "provider": "Vercel",
+      "purpose": "Hospedagem Next.js e agendamento cron.",
+      "modules": [
+        "background.expire-cron",
+        "background.batch-cron"
+      ],
+      "capabilities": [
+        "reservation.expire",
+        "messaging.respond"
+      ],
+      "flows": [
+        "reservation.expiration",
+        "whatsapp.batch_processing"
+      ],
+      "entrypoints": [
+        "http-cron-expire",
+        "http-cron-batches",
+        "trigger-cron-expire",
+        "trigger-cron-batches"
+      ],
+      "environment_variables": [
+        "CRON_SECRET",
+        "VERCEL_URL",
+        "VERCEL_GIT_COMMIT_SHA"
+      ],
+      "authentication": "Conta Vercel existente; cron autentica por Bearer CRON_SECRET.",
+      "outbound_calls": [],
+      "inbound_calls": [
+        "GET dos crons pela Vercel"
+      ],
+      "webhooks": [],
+      "retry": "Agendamento a cada minuto; sem política de retry documentada no vercel.json.",
+      "timeout": "Plataforma; não declarado localmente.",
+      "idempotency": "Handlers usam seleção/claims transacionais conforme o fluxo.",
+      "error_handling": "HTTP status e logs de execução.",
+      "logs": "Logs de deployment/runtime acessíveis em leitura.",
+      "local_status": "LOCAL_DECLARED",
+      "remote_status": "REMOTE_CONFIG",
+      "runtime_status": "RUNTIME_OBSERVED",
+      "consistency": "DRIFT",
+      "evidence": [
+        "vercel.json",
+        ".vercel/project.json",
+        "vercel project/deployment/env/logs em leitura"
+      ],
+      "gate_validation": {
+        "local_declared": "SIM",
+        "remote_config": "VALIDATED",
+        "runtime_observed": "SIM"
+      }
+    },
+    {
+      "id": "integration-github",
+      "provider": "GitHub Issues",
+      "purpose": "Criar issue para pedido Codex aprovado.",
+      "modules": [
+        "automation.github-issues",
+        "automation.codex-requests"
+      ],
+      "capabilities": [
+        "automation.request",
+        "automation.issue"
+      ],
+      "flows": [
+        "codex.automation"
+      ],
+      "entrypoints": [
+        "http-zapi-webhook"
+      ],
+      "environment_variables": [
+        "GITHUB_ISSUES_REPOSITORY",
+        "GITHUB_REPOSITORY",
+        "GITHUB_ISSUES_TOKEN"
+      ],
+      "authentication": "Bearer token quando configurado; gh local autenticado para leitura.",
+      "outbound_calls": [
+        "POST GitHub Issues"
+      ],
+      "inbound_calls": [],
+      "webhooks": [],
+      "retry": "Sem retry explícito.",
+      "timeout": "Sem timeout explícito.",
+      "idempotency": "Não há chave de idempotência explícita na chamada de criação.",
+      "error_handling": "Resultados not_configured, github_error e network_error.",
+      "logs": "Resultado tratado pelo fluxo Codex.",
+      "local_status": "LOCAL_DECLARED",
+      "remote_status": "REMOTE_CONFIG",
+      "runtime_status": "NOT_VALIDATED",
+      "consistency": "PARTIAL_MATCH",
+      "evidence": [
+        "src/lib/github/issues.ts",
+        "GitHub repo view: FelipeFraul/ticketeira privado, default main"
+      ],
+      "gate_validation": {
+        "local_declared": "SIM",
+        "remote_config": "VALIDATED",
+        "runtime_observed": "NAO"
+      }
+    },
+    {
+      "id": "integration-codex-cli",
+      "provider": "Codex CLI local",
+      "purpose": "Executar localmente pedidos aprovados.",
+      "modules": [
+        "automation.local-runner",
+        "automation.codex-requests"
+      ],
+      "capabilities": [
+        "automation.list",
+        "automation.execute",
+        "automation.notify"
+      ],
+      "flows": [
+        "codex.automation"
+      ],
+      "entrypoints": [
+        "npm-codex-runner",
+        "script-codex-runner"
+      ],
+      "environment_variables": [
+        "CODEX_CLI_PATH",
+        "CODEX_RUNNER_POLL_SECONDS",
+        "CODEX_WHATSAPP_PHONES",
+        "SUPABASE_URL",
+        "SUPABASE_SERVICE_ROLE_KEY"
+      ],
+      "authentication": "Sessão local do CLI e service role para fila.",
+      "outbound_calls": [
+        "processo Codex local",
+        "Z-API opcional para resultado"
+      ],
+      "inbound_calls": [],
+      "webhooks": [],
+      "retry": "Polling configurável; execução não tem retry genérico documentado.",
+      "timeout": "Não identificado.",
+      "idempotency": "Claim de request no banco reduz dupla execução.",
+      "error_handling": "Estado e erro da execução persistidos.",
+      "logs": "Console do runner e registros da fila.",
+      "local_status": "LOCAL_DECLARED",
+      "remote_status": "NOT_VALIDATED",
+      "runtime_status": "RUNTIME_OBSERVED",
+      "consistency": "PARTIAL_MATCH",
+      "evidence": [
+        "scripts/codex-local-runner.mjs",
+        "codex-cli 0.147.0 observado localmente"
+      ],
+      "gate_validation": {
+        "local_declared": "SIM",
+        "remote_config": "NOT_VALIDATED",
+        "runtime_observed": "SIM"
+      }
+    }
+  ],
+  "validation": {
+    "status": "PASS",
+    "references_use_existing_catalog_ids": true,
+    "secret_values_stored": false
+  }
+}

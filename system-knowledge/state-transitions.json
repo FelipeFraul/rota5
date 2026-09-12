@@ -1,0 +1,1410 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-09-11",
+  "stage": 4,
+  "count": 66,
+  "records": [
+    {
+      "id": "state.001",
+      "entity": "conversation",
+      "to_state": "open",
+      "capability": "messaging.receive",
+      "flow": "whatsapp.inbound_dispatch",
+      "trigger": "WEBHOOK",
+      "implementation": "create open conversation for inbound contact",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/conversations.ts",
+          "line": 17,
+          "end_line": 65,
+          "symbol": "getOrCreateOpenConversation",
+          "claim": "Localizar conversa aberta ou inserir uma conversa open para o contato recebido."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.002",
+      "entity": "event_session",
+      "from_state": "sales_open|sales_closed",
+      "to_state": "scheduled",
+      "capability": "event.session_edit",
+      "flow": "admin.whatsapp_event_management",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "return session to scheduled",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/router.ts",
+          "line": 10516,
+          "end_line": 10532,
+          "symbol": "handleAdminEventsFlow",
+          "claim": "Aceitar scheduled, sales_open ou sales_closed na edição e persistir via updateAdminSession."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.003",
+      "entity": "conversation",
+      "from_state": "open",
+      "to_state": "closed",
+      "capability": "background.close_inactive",
+      "flow": "whatsapp.batch_processing",
+      "trigger": "CRON",
+      "implementation": "finalize inactive conversation",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/conversationFinalizer.ts",
+          "line": 205,
+          "end_line": 235,
+          "symbol": "finalizeInactiveWhatsAppConversations",
+          "claim": "Avisar encerramento e fechar/resetar conversa aberta inativa, com controle por mensagem finalizadora."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.004",
+      "entity": "event",
+      "to_state": "draft",
+      "capability": "event.create",
+      "flow": "admin.whatsapp_event_management",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "create event",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminEvents.ts",
+          "line": 1504,
+          "end_line": 1666,
+          "symbol": "createAdminEvent",
+          "claim": "Criar evento e dados iniciais; formulário web atual tem erro de parse, caminho de serviço/WhatsApp existe."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.005",
+      "entity": "event",
+      "from_state": "draft",
+      "to_state": "published",
+      "capability": "event.publish",
+      "flow": "admin.whatsapp_event_management",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "publish event",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/router.ts",
+          "line": 7853,
+          "end_line": 9860,
+          "symbol": "handleAdminEventsFlow",
+          "claim": "Mudar estado para published; diálogo verifica inventário comprável, API aplica seu próprio contrato."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.006",
+      "entity": "event",
+      "from_state": "draft|published",
+      "to_state": "cancelled",
+      "capability": "event.cancel",
+      "flow": "admin.web_event_workspace",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "cancel event",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/app/api/admin/events/[eventId]/route.ts",
+          "line": 959,
+          "end_line": 976,
+          "symbol": "DELETE",
+          "claim": "DELETE grava status cancelled; não faz exclusão física nem estorno."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.007",
+      "entity": "event",
+      "from_state": "published",
+      "to_state": "finished",
+      "capability": "event.auto_finish",
+      "flow": "event.auto_finish",
+      "trigger": "INTERNAL_EVENT",
+      "implementation": "finish elapsed event",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminCourtesies.ts",
+          "line": 309,
+          "end_line": 354,
+          "symbol": "finishPastPublishedEvents",
+          "claim": "Consulta de eventos para cortesias/portaria/relatórios pode persistir finished nos eventos publicados passados."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.008",
+      "entity": "event_session",
+      "to_state": "scheduled",
+      "capability": "event.session_create",
+      "flow": "admin.whatsapp_event_management",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "create session",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminEvents.ts",
+          "line": 2209,
+          "end_line": 2228,
+          "symbol": "createAdminSession",
+          "claim": "Cadastrar data, horário, timezone e estado de nova sessão."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.009",
+      "entity": "event_session",
+      "from_state": "scheduled|sales_closed",
+      "to_state": "sales_open",
+      "capability": "event.session_edit",
+      "flow": "admin.whatsapp_event_management",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "open session sales",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/router.ts",
+          "line": 10516,
+          "end_line": 10532,
+          "symbol": "handleAdminEventsFlow",
+          "claim": "Aceitar sales_open na edição e persistir via updateAdminSession."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.010",
+      "entity": "event_session",
+      "from_state": "scheduled|sales_open",
+      "to_state": "sales_closed",
+      "capability": "event.session_edit",
+      "flow": "admin.whatsapp_event_management",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "close session sales",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/router.ts",
+          "line": 10516,
+          "end_line": 10532,
+          "symbol": "handleAdminEventsFlow",
+          "claim": "Aceitar sales_closed na edição e persistir via updateAdminSession."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.011",
+      "entity": "session_seat",
+      "from_state": "available",
+      "to_state": "reserved",
+      "capability": "reservation.create",
+      "flow": "ticket.purchase",
+      "trigger": "USER_ACTION",
+      "implementation": "reserve inventory",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/reservations.ts",
+          "line": 689,
+          "end_line": 976,
+          "symbol": "reserveTicketCart",
+          "claim": "Criar reserva temporária e pedido com valores congelados; carrinho é consumidor atual, helpers simples não têm chamador de produção."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.012",
+      "entity": "session_seat",
+      "from_state": "reserved",
+      "to_state": "sold",
+      "capability": "payment.confirm",
+      "flow": "ticket.payment_confirmation",
+      "trigger": "WEBHOOK",
+      "implementation": "confirm paid ticket",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/app/api/webhook/payment/mercado-pago/route.ts",
+          "line": 218,
+          "end_line": 574,
+          "symbol": "POST",
+          "claim": "Autenticar notificação, consultar provedor e confirmar com validação de referência/valor e RPC idempotente."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.013",
+      "entity": "session_seat",
+      "from_state": "reserved",
+      "to_state": "available",
+      "capability": "reservation.cancel",
+      "flow": "ticket.purchase",
+      "trigger": "USER_ACTION",
+      "implementation": "release cancelled hold",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/reservations.ts",
+          "line": 328,
+          "end_line": 434,
+          "symbol": "cancelPendingReservationForCustomer",
+          "claim": "Cancelar por cliente ou operador autorizado, rejeitando pedidos já pagos."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.014",
+      "entity": "session_seat",
+      "from_state": "reserved",
+      "to_state": "available",
+      "capability": "reservation.expire",
+      "flow": "reservation.expiration",
+      "trigger": "CRON",
+      "implementation": "release expired hold",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/reservationExpiry.ts",
+          "line": 668,
+          "end_line": 740,
+          "symbol": "expireReservationsAndNotify",
+          "claim": "Executar expiração transacional pelo banco."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.015",
+      "entity": "seat",
+      "from_state": "active",
+      "to_state": "blocked",
+      "capability": "event.seats_block",
+      "flow": "admin.whatsapp_event_management",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "block seat",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminEvents.ts",
+          "line": 2599,
+          "end_line": 2633,
+          "symbol": "updateAdminSeatStatuses",
+          "claim": "Atualizar a tabela seats para blocked após checar uso operacional."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.016",
+      "entity": "ticket_price",
+      "from_state": "active",
+      "to_state": "inactive",
+      "capability": "event.price_edit",
+      "flow": "admin.whatsapp_event_management",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "disable price",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminEvents.ts",
+          "line": 2728,
+          "end_line": 2756,
+          "symbol": "updateAdminPrice",
+          "claim": "Alterar preço/taxa, label, início/fim e estado; contrato de UI de label falha."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.017",
+      "entity": "reservation",
+      "to_state": "active",
+      "capability": "reservation.create",
+      "flow": "ticket.purchase",
+      "trigger": "USER_ACTION",
+      "implementation": "create hold",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/reservations.ts",
+          "line": 689,
+          "end_line": 976,
+          "symbol": "reserveTicketCart",
+          "claim": "Criar reserva temporária e pedido com valores congelados; carrinho é consumidor atual, helpers simples não têm chamador de produção."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.018",
+      "entity": "reservation",
+      "from_state": "active",
+      "to_state": "paid",
+      "capability": "payment.confirm",
+      "flow": "ticket.payment_confirmation",
+      "trigger": "WEBHOOK",
+      "implementation": "confirm order",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/app/api/webhook/payment/mercado-pago/route.ts",
+          "line": 218,
+          "end_line": 574,
+          "symbol": "POST",
+          "claim": "Autenticar notificação, consultar provedor e confirmar com validação de referência/valor e RPC idempotente."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.019",
+      "entity": "reservation",
+      "from_state": "active",
+      "to_state": "cancelled",
+      "capability": "reservation.cancel",
+      "flow": "ticket.purchase",
+      "trigger": "USER_ACTION",
+      "implementation": "cancel hold",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/reservations.ts",
+          "line": 328,
+          "end_line": 434,
+          "symbol": "cancelPendingReservationForCustomer",
+          "claim": "Cancelar por cliente ou operador autorizado, rejeitando pedidos já pagos."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.020",
+      "entity": "reservation",
+      "from_state": "active",
+      "to_state": "expired",
+      "capability": "reservation.expire",
+      "flow": "reservation.expiration",
+      "trigger": "CRON",
+      "implementation": "expire hold",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/reservationExpiry.ts",
+          "line": 668,
+          "end_line": 740,
+          "symbol": "expireReservationsAndNotify",
+          "claim": "Executar expiração transacional pelo banco."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.021",
+      "entity": "order",
+      "to_state": "pending_payment",
+      "capability": "payment.checkout_create",
+      "flow": "ticket.purchase",
+      "trigger": "USER_ACTION",
+      "implementation": "create order",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/checkout.ts",
+          "line": 464,
+          "end_line": 770,
+          "symbol": "createCheckoutForReservation",
+          "claim": "Gerar/reutilizar checkout associado a reserva válida e registrar referência externa."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.022",
+      "entity": "order",
+      "from_state": "pending_payment",
+      "to_state": "paid",
+      "capability": "payment.confirm",
+      "flow": "ticket.payment_confirmation",
+      "trigger": "WEBHOOK",
+      "implementation": "confirm payment",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/app/api/webhook/payment/mercado-pago/route.ts",
+          "line": 218,
+          "end_line": 574,
+          "symbol": "POST",
+          "claim": "Autenticar notificação, consultar provedor e confirmar com validação de referência/valor e RPC idempotente."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.023",
+      "entity": "order",
+      "from_state": "draft|pending_payment",
+      "to_state": "cancelled",
+      "capability": "reservation.cancel",
+      "flow": "ticket.purchase",
+      "trigger": "USER_ACTION",
+      "implementation": "cancel pending order",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/reservations.ts",
+          "line": 328,
+          "end_line": 434,
+          "symbol": "cancelPendingReservationForCustomer",
+          "claim": "Cancelar por cliente ou operador autorizado, rejeitando pedidos já pagos."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.024",
+      "entity": "order",
+      "from_state": "pending_payment",
+      "to_state": "expired",
+      "capability": "reservation.expire",
+      "flow": "reservation.expiration",
+      "trigger": "CRON",
+      "implementation": "expire pending order",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/reservationExpiry.ts",
+          "line": 668,
+          "end_line": 740,
+          "symbol": "expireReservationsAndNotify",
+          "claim": "Executar expiração transacional pelo banco."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.025",
+      "entity": "payment",
+      "to_state": "pending",
+      "capability": "payment.pay_pix",
+      "flow": "ticket.checkout",
+      "trigger": "HTTP_REQUEST",
+      "implementation": "create Pix",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/checkout.ts",
+          "line": 1099,
+          "end_line": 1317,
+          "symbol": "paySelfHostedCheckout",
+          "claim": "Validar e-mail/documento e gerar cobrança Pix com idempotência e QR."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.026",
+      "entity": "payment",
+      "from_state": "pending",
+      "to_state": "approved",
+      "capability": "payment.confirm",
+      "flow": "ticket.payment_confirmation",
+      "trigger": "WEBHOOK",
+      "implementation": "approve provider payment",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/app/api/webhook/payment/mercado-pago/route.ts",
+          "line": 218,
+          "end_line": 574,
+          "symbol": "POST",
+          "claim": "Autenticar notificação, consultar provedor e confirmar com validação de referência/valor e RPC idempotente."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.027",
+      "entity": "payment",
+      "from_state": "pending",
+      "to_state": "rejected",
+      "capability": "payment.pay_pix",
+      "flow": "ticket.checkout",
+      "trigger": "HTTP_REQUEST",
+      "implementation": "persist provider rejection during Pix creation",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/checkout.ts",
+          "line": 1263,
+          "end_line": 1293,
+          "symbol": "createCheckoutPayment",
+          "claim": "Mapear o status retornado pelo provedor e atualizar o pagamento recém-criado."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.028",
+      "entity": "event_session",
+      "from_state": "scheduled|sales_open|sales_closed",
+      "to_state": "cancelled",
+      "capability": "event.session_edit",
+      "flow": "admin.whatsapp_event_management",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "cancel session without deleting sales data",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/router.ts",
+          "line": 10382,
+          "end_line": 10414,
+          "symbol": "handleAdminEventsFlow",
+          "claim": "Confirmar o cancelamento e persistir status cancelled via updateAdminSession."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.029",
+      "entity": "ticket",
+      "to_state": "issued",
+      "capability": "payment.confirm",
+      "flow": "ticket.payment_confirmation",
+      "trigger": "WEBHOOK",
+      "implementation": "issue paid ticket",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/app/api/webhook/payment/mercado-pago/route.ts",
+          "line": 218,
+          "end_line": 574,
+          "symbol": "POST",
+          "claim": "Autenticar notificação, consultar provedor e confirmar com validação de referência/valor e RPC idempotente."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.030",
+      "entity": "ticket",
+      "from_state": "issued",
+      "to_state": "used",
+      "capability": "gate.admit",
+      "flow": "gate.ticket_admission",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "consume admission",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/gateValidation.ts",
+          "line": 172,
+          "end_line": 211,
+          "symbol": "validateGateScan",
+          "claim": "Validar assinatura, evento, sessão e uso anterior; consumir ingresso atomicamente e registrar tentativa."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.031",
+      "entity": "ticket",
+      "from_state": "issued",
+      "to_state": "cancelled",
+      "capability": "courtesy.cancel",
+      "flow": "admin.courtesy_management",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "cancel courtesy ticket",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminCourtesies.ts",
+          "line": 997,
+          "end_line": 1097,
+          "symbol": "cancelCourtesyForEvent",
+          "claim": "Cancelar cortesia específica, por beneficiário ou lote do evento e liberar inventário aplicável."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.032",
+      "entity": "ticket.participant_delivery",
+      "to_state": "awaiting_participant_request",
+      "capability": "ticket.assign_participants",
+      "flow": "ticket.delivery",
+      "trigger": "USER_ACTION",
+      "implementation": "reserve for participant",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/tickets.ts",
+          "line": 534,
+          "end_line": 588,
+          "symbol": "assignParticipantContactsToOrderTickets",
+          "claim": "Validar telefones/quantidade, reservar ingresso do comprador e associar participantes atomicamente."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.033",
+      "entity": "ticket.participant_delivery",
+      "from_state": "awaiting_participant_request",
+      "to_state": "delivered",
+      "capability": "ticket.claim_participant",
+      "flow": "ticket.delivery",
+      "trigger": "USER_ACTION",
+      "implementation": "claim participant ticket",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/router.ts",
+          "line": 4074,
+          "end_line": 4118,
+          "symbol": "handleParticipantTicketRequest",
+          "claim": "Participante solicita seus ingressos por telefone; envio exitoso marca entrega."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.034",
+      "entity": "whatsapp_outbound_delivery",
+      "to_state": "pending",
+      "capability": "messaging.protect_delivery",
+      "flow": "ticket.delivery",
+      "trigger": "INTERNAL_EVENT",
+      "implementation": "create idempotent delivery record",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/whatsappOutboundDeliveries.ts",
+          "line": 42,
+          "end_line": 89,
+          "symbol": "getOrCreateWhatsAppOutboundDelivery",
+          "claim": "Criar registro pending por chave idempotente ou recuperar o existente."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.035",
+      "entity": "whatsapp_outbound_delivery",
+      "from_state": "pending",
+      "to_state": "sending",
+      "capability": "messaging.protect_delivery",
+      "flow": "ticket.delivery",
+      "trigger": "INTERNAL_EVENT",
+      "implementation": "claim delivery before provider call",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/whatsappOutboundDeliveries.ts",
+          "line": 91,
+          "end_line": 112,
+          "symbol": "claimWhatsAppOutboundDelivery",
+          "claim": "Reivindicar entrega pending e movê-la para sending antes do envio."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.036",
+      "entity": "whatsapp_outbound_delivery",
+      "from_state": "sending",
+      "to_state": "sent",
+      "capability": "ticket.deliver",
+      "flow": "ticket.delivery",
+      "trigger": "INTERNAL_EVENT",
+      "implementation": "mark delivery sent",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/whatsappOutboundDeliveries.ts",
+          "line": 114,
+          "end_line": 146,
+          "symbol": "markWhatsAppOutboundDeliverySent",
+          "claim": "Persistir sent após aceite do envio pelo provedor."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.037",
+      "entity": "gate_access",
+      "to_state": "active",
+      "capability": "gate.access_create",
+      "flow": "gate.access_management",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "create credential",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/gateAccesses.ts",
+          "line": 72,
+          "end_line": 136,
+          "symbol": "createGateAccess",
+          "claim": "Cadastrar validador com telefone/senha e escopo de evento/sessão."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.038",
+      "entity": "gate_access",
+      "from_state": "active",
+      "to_state": "paused",
+      "capability": "gate.access_pause",
+      "flow": "gate.access_management",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "pause credential",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/gateAccesses.ts",
+          "line": 198,
+          "end_line": 224,
+          "symbol": "pauseGateAccess",
+          "claim": "Pausar autorização de acesso por evento; não revoga automaticamente sessões de leitor já emitidas."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.039",
+      "entity": "fixed_gate_access",
+      "to_state": "active",
+      "capability": "gate.fixed_create",
+      "flow": "gate.access_management",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "create fixed credential",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/fixedGateAccesses.ts",
+          "line": 57,
+          "end_line": 98,
+          "symbol": "createFixedGateAccess",
+          "claim": "Cadastrar acesso por telefone/senha ligado ao administrador proprietário."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.040",
+      "entity": "fixed_gate_access",
+      "from_state": "active",
+      "to_state": "revoked",
+      "capability": "gate.fixed_revoke",
+      "flow": "gate.access_management",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "revoke fixed credential",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/fixedGateAccesses.ts",
+          "line": 115,
+          "end_line": 136,
+          "symbol": "revokeFixedGateAccess",
+          "claim": "Revogar credencial fixa; não altera sessões de leitor já emitidas."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.041",
+      "entity": "gate_session",
+      "to_state": "active",
+      "capability": "gate.open",
+      "flow": "gate.ticket_admission",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "open reader session",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/gateSessions.ts",
+          "line": 127,
+          "end_line": 280,
+          "symbol": "createGateSession",
+          "claim": "Emitir link opaco, verificar sessão e carregar resumo do leitor no escopo autorizado."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.042",
+      "entity": "combo_offer",
+      "to_state": "active",
+      "capability": "combo.create",
+      "flow": "admin.combo_management",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "create WhatsApp offer with database default active",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 394,
+          "end_line": 471,
+          "symbol": "createComboOffer",
+          "claim": "Inserir oferta pelo serviço sem sobrescrever o status active padrão do banco."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.043",
+      "entity": "combo_offer",
+      "from_state": "paused",
+      "to_state": "active",
+      "capability": "combo.activate",
+      "flow": "admin.combo_management",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "activate offer",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 535,
+          "end_line": 545,
+          "symbol": "updateComboOfferStatus",
+          "claim": "Alterar active/paused para controlar elegibilidade da oferta."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.044",
+      "entity": "combo_offer",
+      "from_state": "active",
+      "to_state": "paused",
+      "capability": "combo.activate",
+      "flow": "admin.combo_management",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "pause offer",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 535,
+          "end_line": 545,
+          "symbol": "updateComboOfferStatus",
+          "claim": "Alterar active/paused para controlar elegibilidade da oferta."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.045",
+      "entity": "combo_offer",
+      "from_state": "active|paused",
+      "to_state": "deleted",
+      "capability": "combo.delete",
+      "flow": "admin.combo_management",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "logical delete",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/app/api/admin/combo-offers/[offerId]/route.ts",
+          "line": 323,
+          "end_line": 338,
+          "symbol": "DELETE",
+          "claim": "Marcar deleted, preservando pedidos e histórico."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.046",
+      "entity": "combo_order",
+      "to_state": "pending_payment",
+      "capability": "combo.checkout_create",
+      "flow": "combo.offer_distribution",
+      "trigger": "CRON",
+      "implementation": "create offered checkout",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 868,
+          "end_line": 1014,
+          "symbol": "createComboOrderForCheckout",
+          "claim": "Criar pedido associado a ingresso/pedido origem ou renovar checkout pendente/expirado elegível."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.047",
+      "entity": "combo_order",
+      "from_state": "pending_payment",
+      "to_state": "paid",
+      "capability": "combo.confirm",
+      "flow": "combo.payment_confirmation",
+      "trigger": "WEBHOOK",
+      "implementation": "confirm combo",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 1697,
+          "end_line": 1765,
+          "symbol": "confirmPaidComboOrder",
+          "claim": "Validar referência/valor/vínculo e persistir pedido pago e pagamento aprovado em operações separadas."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.048",
+      "entity": "combo_order",
+      "from_state": "pending_payment",
+      "to_state": "expired",
+      "capability": "combo.expire",
+      "flow": "combo.offer_distribution",
+      "trigger": "CRON",
+      "implementation": "expire checkout",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 1767,
+          "end_line": 1793,
+          "symbol": "expireComboOrders",
+          "claim": "Marcar pedidos pendentes vencidos como expired."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.049",
+      "entity": "combo_payment",
+      "to_state": "pending",
+      "capability": "combo.pay_pix",
+      "flow": "combo.purchase",
+      "trigger": "HTTP_REQUEST",
+      "implementation": "create Pix",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 1110,
+          "end_line": 1267,
+          "symbol": "payComboCheckout",
+          "claim": "Solicitar Pix ao provedor e reutilizar tentativa conforme estado/idempotência."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.050",
+      "entity": "combo_payment",
+      "from_state": "pending",
+      "to_state": "approved",
+      "capability": "combo.confirm",
+      "flow": "combo.payment_confirmation",
+      "trigger": "WEBHOOK",
+      "implementation": "approve combo payment",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 1697,
+          "end_line": 1765,
+          "symbol": "confirmPaidComboOrder",
+          "claim": "Validar referência/valor/vínculo e persistir pedido pago e pagamento aprovado em operações separadas."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.051",
+      "entity": "combo_redemption",
+      "to_state": "issued",
+      "capability": "combo.confirm",
+      "flow": "combo.payment_confirmation",
+      "trigger": "WEBHOOK",
+      "implementation": "issue redemption QR",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 1366,
+          "end_line": 1404,
+          "symbol": "confirmPaidComboOrder",
+          "claim": "Inserir combo_redemption issued depois da confirmação do pedido pago."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.052",
+      "entity": "combo_redemption",
+      "from_state": "issued",
+      "to_state": "used",
+      "capability": "combo.redeem",
+      "flow": "kitchen.combo_redemption",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "consume via RPC; blocked in current reader",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "line": 935,
+          "end_line": 1513,
+          "symbol": "validateComboRedemptionScan",
+          "claim": "Existe RPC de consumo, mas o ramo antecipado captura todo combo pago/emitido válido e impede chegar ao consumo pelo leitor atual."
+        }
+      ],
+      "status": "BLOCKED_IN_CURRENT_READER"
+    },
+    {
+      "id": "state.053",
+      "entity": "combo_offer",
+      "to_state": "paused",
+      "capability": "combo.create",
+      "flow": "admin.combo_management",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "create web offer initially paused",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/app/api/admin/combo-offers/route.ts",
+          "line": 220,
+          "end_line": 255,
+          "symbol": "POST",
+          "claim": "Inserir pela API web uma nova oferta com status paused."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.054",
+      "entity": "whatsapp_message_batch",
+      "from_state": "collecting",
+      "to_state": "processing",
+      "capability": "background.cancel_batches",
+      "flow": "whatsapp.batch_processing",
+      "trigger": "CRON",
+      "implementation": "claim due batch",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/app/api/cron/process-whatsapp-batches/route.ts",
+          "line": 109,
+          "end_line": 182,
+          "symbol": "processDueWhatsAppMessageBatches",
+          "claim": "Reclamar lotes e cancelar com customer_reply_pipeline_disabled; erros podem ser reagendados com limite."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.055",
+      "entity": "whatsapp_message_batch",
+      "from_state": "processing",
+      "to_state": "failed",
+      "capability": "background.cancel_batches",
+      "flow": "whatsapp.batch_processing",
+      "trigger": "CRON",
+      "implementation": "fail batch after retry limit",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "supabase/migrations/20260720000300_fix_whatsapp_batch_retry_rpc_ambiguity.sql",
+          "line": 73,
+          "end_line": 120,
+          "symbol": "reschedule_whatsapp_message_batch",
+          "claim": "Mover lote processing para failed quando attempt_count alcança o limite."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.056",
+      "entity": "whatsapp_message_batch",
+      "from_state": "processing",
+      "to_state": "cancelled",
+      "capability": "background.cancel_batches",
+      "flow": "whatsapp.batch_processing",
+      "trigger": "CRON",
+      "implementation": "cancel while reply pipeline is disabled",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/app/api/cron/process-whatsapp-batches/route.ts",
+          "line": 88,
+          "end_line": 103,
+          "symbol": "processBatch",
+          "claim": "Finalizar lote reclamado como cancelled porque o pipeline de respostas está desativado."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.057",
+      "entity": "whatsapp_message_batch",
+      "from_state": "processing",
+      "to_state": "collecting",
+      "capability": "background.cancel_batches",
+      "flow": "whatsapp.batch_processing",
+      "trigger": "CRON",
+      "implementation": "reschedule retry",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/whatsappMessageBatches.ts",
+          "line": 451,
+          "end_line": 513,
+          "symbol": "rescheduleWhatsAppMessageBatch",
+          "claim": "Reagendar lote processing como collecting enquanto o limite de tentativas não foi atingido."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.058",
+      "entity": "official_table_map_reservation",
+      "to_state": "active",
+      "capability": "table_map.reserve",
+      "flow": "ticket.purchase",
+      "trigger": "USER_ACTION",
+      "implementation": "reserve place",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/officialTableMapReservations.ts",
+          "line": 182,
+          "end_line": 220,
+          "symbol": "reserveOfficialTableMapPlace",
+          "claim": "Reservar lugar compatível com quantidade e sessão; entrada normal está desabilitada pela flag Rota5."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.059",
+      "entity": "official_table_map_reservation",
+      "from_state": "active",
+      "to_state": "paid",
+      "capability": "table_map.sync_status",
+      "flow": "ticket.payment_confirmation",
+      "trigger": "DATABASE_TRIGGER",
+      "implementation": "sync paid reservation",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "supabase/migrations/20260722000800_create_official_table_map_reservations.sql",
+          "line": 1,
+          "end_line": 201,
+          "claim": "Implementação operacional/SQL lida; não executada."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.060",
+      "entity": "official_table_map_reservation",
+      "from_state": "active",
+      "to_state": "cancelled|expired",
+      "capability": "table_map.sync_status",
+      "flow": "reservation.expiration",
+      "trigger": "DATABASE_TRIGGER",
+      "implementation": "sync terminal reservation",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "supabase/migrations/20260722000800_create_official_table_map_reservations.sql",
+          "line": 1,
+          "end_line": 201,
+          "claim": "Implementação operacional/SQL lida; não executada."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.061",
+      "entity": "whatsapp_outbound_delivery",
+      "from_state": "sending",
+      "to_state": "failed",
+      "capability": "ticket.deliver",
+      "flow": "ticket.delivery",
+      "trigger": "INTERNAL_EVENT",
+      "implementation": "mark delivery failed after claimed send",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/whatsappOutboundDeliveries.ts",
+          "line": 148,
+          "end_line": 190,
+          "symbol": "markWhatsAppOutboundDeliveryFailed",
+          "claim": "Persistir failed e o erro depois de uma tentativa de envio já reivindicada."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.062",
+      "entity": "event_session",
+      "from_state": "scheduled|sales_open|sales_closed",
+      "to_state": "finished",
+      "capability": "event.auto_finish",
+      "flow": "event.auto_finish",
+      "trigger": "INTERNAL_EVENT",
+      "implementation": "finish sessions of past event",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminCourtesies.ts",
+          "line": 309,
+          "end_line": 354,
+          "symbol": "finishPastPublishedEvents",
+          "claim": "Consulta de eventos para cortesias/portaria/relatórios pode persistir finished nos eventos publicados passados."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.063",
+      "entity": "admin_session",
+      "to_state": "active",
+      "capability": "admin.web_session",
+      "flow": "admin.web_session",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "create authenticated web session",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminAuth.ts",
+          "line": 1362,
+          "end_line": 1414,
+          "symbol": "createAdminWebSession",
+          "claim": "Criar sessão web ativa depois da autenticação administrativa."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.064",
+      "entity": "admin_session",
+      "from_state": "active",
+      "to_state": "expired",
+      "capability": "background.expire_admin",
+      "flow": "reservation.expiration",
+      "trigger": "CRON",
+      "implementation": "expire and notify admin session",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/reservationExpiry.ts",
+          "line": 602,
+          "end_line": 657,
+          "symbol": "expireAdminSessionsAndNotify",
+          "claim": "Marcar sessões vencidas e restaurar contexto público após aviso."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.065",
+      "entity": "courtesy",
+      "to_state": "issued",
+      "capability": "courtesy.issue",
+      "flow": "admin.courtesy_management",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "issue courtesy",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminCourtesies.ts",
+          "line": 738,
+          "end_line": 822,
+          "symbol": "issueAdminCourtesy",
+          "claim": "Validar limite/beneficiário, reservar lugares e emitir ingresso gratuito com identificação do emissor."
+        }
+      ],
+      "status": "OBSERVED"
+    },
+    {
+      "id": "state.066",
+      "entity": "courtesy",
+      "from_state": "issued",
+      "to_state": "cancelled",
+      "capability": "courtesy.cancel",
+      "flow": "admin.courtesy_management",
+      "trigger": "ADMIN_ACTION",
+      "implementation": "cancel courtesy",
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminCourtesies.ts",
+          "line": 997,
+          "end_line": 1097,
+          "symbol": "cancelCourtesyForEvent",
+          "claim": "Cancelar cortesia específica, por beneficiário ou lote do evento e liberar inventário aplicável."
+        }
+      ],
+      "status": "OBSERVED"
+    }
+  ],
+  "entities": [
+    "conversation",
+    "event_session",
+    "event",
+    "session_seat",
+    "seat",
+    "ticket_price",
+    "reservation",
+    "order",
+    "payment",
+    "ticket",
+    "ticket.participant_delivery",
+    "whatsapp_outbound_delivery",
+    "gate_access",
+    "fixed_gate_access",
+    "gate_session",
+    "combo_offer",
+    "combo_order",
+    "combo_payment",
+    "combo_redemption",
+    "whatsapp_message_batch",
+    "official_table_map_reservation",
+    "admin_session",
+    "courtesy"
+  ],
+  "notes": [
+    "Null/omitted from_state means insertion; no unstored prior state is invented.",
+    "A pipe in a state denotes multiple explicitly allowed source/target states, not an intermediate state.",
+    "state.052 is implemented in SQL but blocked in the current reader path.",
+    "Gate Etapa 4: quatro transições sem caminho executável foram substituídas por ramos observados dos mesmos lifecycles; evidências e entidades inexatas foram corrigidas."
+  ],
+  "validation": {
+    "status": "PASS",
+    "flow_references": true,
+    "capability_references": true,
+    "unique_ids": true,
+    "executable_transition_audit": true
+  }
+}

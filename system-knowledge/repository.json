@@ -1,0 +1,439 @@
+{
+    "schemaVersion":  1,
+    "generatedAt":  "2026-09-11",
+    "baseline":  {
+                     "stage":  "1/8",
+                     "name":  "Reconhecimento total do sistema",
+                     "sourceCommit":  "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+                     "branch":  "production",
+                     "inspectedTrackedFiles":  344,
+                     "evidencePolicy":  [
+                                            "CONFIRMADO",
+                                            "PARCIALMENTE CONFIRMADO",
+                                            "NÃO VALIDADO",
+                                            "ÓRFÃO",
+                                            "POSSÍVEL LEGADO",
+                                            "DESCONHECIDO"
+                                        ]
+                 },
+    "counts":  {
+                   "trackedFilesAtStart":  344,
+                   "apiRouteModules":  25,
+                   "pageRoutes":  14,
+                   "migrations":  77,
+                   "createdTables":  44,
+                   "referencedTables":  43,
+                   "sqlFunctionNames":  33,
+                   "directlyReferencedRpcNames":  26,
+                   "triggerNames":  33,
+                   "views":  0,
+                   "createPolicyStatements":  0,
+                   "testFiles":  43,
+                   "auditScripts":  3,
+                   "auditTools":  21,
+                   "publicAssets":  15
+               },
+    "records":  [
+                    {
+                        "id":  "repo-app",
+                        "name":  "Aplicação Next.js",
+                        "type":  "application",
+                        "path":  "src/app",
+                        "purpose":  "Páginas, componentes e rotas HTTP no App Router.",
+                        "status":  "CONFIRMADO",
+                        "evidence":  [
+                                         "src/app/layout.tsx",
+                                         "src/app/page.tsx",
+                                         "25 arquivos src/app/**/route.ts",
+                                         "14 arquivos src/app/**/page.tsx"
+                                     ],
+                        "dependencies":  [
+                                             "next",
+                                             "react",
+                                             "react-dom"
+                                         ]
+                    },
+                    {
+                        "id":  "repo-proxy",
+                        "name":  "Proxy de segurança e rate limit",
+                        "type":  "middleware",
+                        "path":  "src/proxy.ts",
+                        "purpose":  "Aplicar CSP/headers e rate limit em páginas públicas sensíveis.",
+                        "status":  "CONFIRMADO",
+                        "evidence":  [
+                                         "export async function proxy",
+                                         "export const config"
+                                     ],
+                        "dependencies":  [
+                                             "src/lib/security/rateLimit.ts"
+                                         ]
+                    },
+                    {
+                        "id":  "repo-router",
+                        "name":  "Router de tickets e conversas",
+                        "type":  "domain-router",
+                        "path":  "src/lib/tickets/router.ts",
+                        "purpose":  "Executar a máquina de estados pública, administrativa, de compra, portaria, cozinha, relatórios, cortesias e ofertas.",
+                        "status":  "CONFIRMADO",
+                        "evidence":  [
+                                         "export function classifyPublicMessageIntent",
+                                         "export function resolveIncomingMessageIntent",
+                                         "export async function routeTicketMessage"
+                                     ],
+                        "dependencies":  [
+                                             "src/lib/tickets/conversationState.ts",
+                                             "src/lib/tickets/services"
+                                         ]
+                    },
+                    {
+                        "id":  "repo-services",
+                        "name":  "Serviços de tickets",
+                        "type":  "module-group",
+                        "path":  "src/lib/tickets/services",
+                        "purpose":  "Persistência e regras de eventos, reservas, pedidos, pagamentos, ingressos, administração, combos, acessos e mensagens.",
+                        "status":  "CONFIRMADO",
+                        "evidence":  [
+                                         "imports do router e das rotas API",
+                                         "arquivos src/lib/tickets/services/*.ts"
+                                     ],
+                        "dependencies":  [
+                                             "src/lib/supabase/admin.ts",
+                                             "supabase/migrations"
+                                         ]
+                    },
+                    {
+                        "id":  "repo-admin-ui",
+                        "name":  "Admin web",
+                        "type":  "frontend-area",
+                        "path":  "src/app/admin",
+                        "purpose":  "Login, eventos, ofertas, dashboards, contatos, operação e mapa.",
+                        "status":  "PARCIALMENTE CONFIRMADO",
+                        "evidence":  [
+                                         "src/app/admin/eventos/AdminEventsEditor.tsx",
+                                         "src/app/admin/operacao/page.tsx",
+                                         "src/app/admin/login/[token]/page.tsx"
+                                     ],
+                        "dependencies":  [
+                                             "/api/admin/events",
+                                             "/api/admin/combo-offers",
+                                             "/api/admin/operational-dashboard"
+                                         ],
+                        "notes":  "CreateEventModal.tsx não faz parse no commit auditado."
+                    },
+                    {
+                        "id":  "repo-checkout",
+                        "name":  "Checkout de ingresso e combo",
+                        "type":  "frontend-and-api-area",
+                        "path":  "src/app/checkout; src/app/combo-checkout; src/app/api/checkout; src/app/api/combo-checkout",
+                        "purpose":  "Criar e acompanhar pagamentos Pix.",
+                        "status":  "PARCIALMENTE CONFIRMADO",
+                        "evidence":  [
+                                         "rotas pay/status",
+                                         "clientes React de checkout"
+                                     ],
+                        "dependencies":  [
+                                             "Mercado Pago",
+                                             "Supabase"
+                                         ]
+                    },
+                    {
+                        "id":  "repo-access",
+                        "name":  "Portaria, cozinha e leitor de oferta",
+                        "type":  "frontend-and-api-area",
+                        "path":  "src/app/gate; src/app/kitchen; src/app/offer-reader",
+                        "purpose":  "Ler QR e validar ingresso/preparo/resgate.",
+                        "status":  "PARCIALMENTE CONFIRMADO",
+                        "evidence":  [
+                                         "GateSessionScanner.tsx",
+                                         "KitchenSessionScanner.tsx",
+                                         "OfferQrScanner.tsx",
+                                         "rotas /api/gate e /api/kitchen"
+                                     ],
+                        "dependencies":  [
+                                             "qr-scanner",
+                                             "validate_ticket_entry",
+                                             "validate_combo_redemption"
+                                         ]
+                    },
+                    {
+                        "id":  "repo-database",
+                        "name":  "Schema Supabase/PostgreSQL",
+                        "type":  "database",
+                        "path":  "supabase/migrations",
+                        "purpose":  "Definir schema, índices, constraints, RLS, grants, triggers e RPCs.",
+                        "status":  "PARCIALMENTE CONFIRMADO",
+                        "evidence":  [
+                                         "77 migrations SQL",
+                                         "44 CREATE TABLE",
+                                         "33 nomes de função",
+                                         "33 nomes de trigger"
+                                     ],
+                        "dependencies":  [
+                                             "PostgreSQL",
+                                             "Supabase"
+                                         ],
+                        "notes":  "Estado remoto das migrations não validado."
+                    },
+                    {
+                        "id":  "repo-tests",
+                        "name":  "Testes Node",
+                        "type":  "test-suite",
+                        "path":  "scripts/test-*.mjs",
+                        "purpose":  "Proteger contratos de fonte/SQL, módulos isolados, renderização e alguns fluxos reais.",
+                        "status":  "PARCIALMENTE CONFIRMADO",
+                        "evidence":  [
+                                         "43 arquivos",
+                                         "package.json executa 15",
+                                         "npm test: 204/210 pass"
+                                     ],
+                        "dependencies":  [
+                                             "node:test",
+                                             ".tmp/typescript-alias-loader.mjs"
+                                         ],
+                        "notes":  "6 casos falham; 28 arquivos não pertencem ao comando padrão."
+                    },
+                    {
+                        "id":  "repo-audit-tools",
+                        "name":  "Ferramentas de auditoria integrada",
+                        "type":  "audit-suite",
+                        "path":  ".tools",
+                        "purpose":  "Criar fixtures, executar fluxos integrados e verificar cleanup/segurança.",
+                        "status":  "CONFIRMADO",
+                        "evidence":  [
+                                         "21 arquivos audit_*.mjs"
+                                     ],
+                        "dependencies":  [
+                                             "Supabase",
+                                             "variáveis locais"
+                                         ],
+                        "notes":  "Não executadas nesta etapa."
+                    },
+                    {
+                        "id":  "repo-operational-scripts",
+                        "name":  "Scripts operacionais",
+                        "type":  "script-group",
+                        "path":  "scripts",
+                        "purpose":  "Runner Codex, importação, listagem e manutenção Black House.",
+                        "status":  "PARCIALMENTE CONFIRMADO",
+                        "evidence":  [
+                                         "6 scripts não-test/não-audit"
+                                     ],
+                        "dependencies":  [
+                                             "Supabase",
+                                             "Z-API",
+                                             "Codex CLI"
+                                         ],
+                        "notes":  "Três scripts têm escopo Black House e foram classificados como possível legado."
+                    },
+                    {
+                        "id":  "repo-assets",
+                        "name":  "Assets públicos",
+                        "type":  "asset-group",
+                        "path":  "public",
+                        "purpose":  "Marca, fundos, mapa, templates QR, fontes e arte-fonte.",
+                        "status":  "PARCIALMENTE CONFIRMADO",
+                        "evidence":  [
+                                         "15 arquivos públicos",
+                                         "referências em CSS, BrandLogo e geradores QR"
+                                     ],
+                        "dependencies":  [
+                                             "sharp",
+                                             "qrcode"
+                                         ],
+                        "notes":  "Cinco imagens sem consumidor textual; CSS referencia dois arquivos RockBar ausentes."
+                    },
+                    {
+                        "id":  "repo-feature-flags",
+                        "name":  "Flags de apresentação Rota5",
+                        "type":  "feature-flags",
+                        "path":  "src/lib/tickets/rota5Presentation.ts",
+                        "purpose":  "Restringir ingresso individual e desabilitar mapa/cortesia na apresentação.",
+                        "status":  "CONFIRMADO",
+                        "evidence":  [
+                                         "ROTA5_PRESENTATION_INDIVIDUAL_TICKETS_ONLY=true",
+                                         "ROTA5_PRESENTATION_TABLE_MAP_ENABLED=false",
+                                         "ROTA5_PRESENTATION_COURTESY_ENABLED=false"
+                                     ],
+                        "notes":  "Mapa e cortesia também estão duplicados como constantes em EventEditorModal.tsx."
+                    },
+                    {
+                        "id":  "repo-observability",
+                        "name":  "Logging estruturado",
+                        "type":  "observability",
+                        "path":  "src/lib/logger.ts",
+                        "purpose":  "Emitir JSON e mascarar campos sensíveis/telefones.",
+                        "status":  "PARCIALMENTE CONFIRMADO",
+                        "evidence":  [
+                                         "logInfo",
+                                         "logWarn",
+                                         "logError",
+                                         "maskSensitive"
+                                     ],
+                        "dependencies":  [
+                                             "console"
+                                         ],
+                        "notes":  "Coleta, retenção e alertas externos não validados."
+                    },
+                    {
+                        "id":  "repo-storage-orphan",
+                        "name":  "Render de mapa em storage",
+                        "type":  "apparent-orphan",
+                        "path":  "supabase/migrations/20260522000100_create_ticketing_schema.sql",
+                        "purpose":  "Persistir caminho e versão de render de mapa conforme o schema.",
+                        "status":  "ÓRFÃO",
+                        "evidence":  [
+                                         "tabela seat_map_renders",
+                                         "SEAT_MAP_STORAGE_BUCKET em src/lib/env.ts",
+                                         "nenhuma referência .from(\u0027seat_map_renders\u0027) ou Supabase Storage encontrada"
+                                     ],
+                        "dependencies":  [
+                                             "Supabase Storage"
+                                         ],
+                        "notes":  "Ausência de consumidor é estática; uso externo/remoto é desconhecido."
+                    },
+                    {
+                        "id":  "repo-brand-legacy",
+                        "name":  "Referências RockBar e Black House",
+                        "type":  "legacy-signal",
+                        "path":  "src; scripts; supabase; public; next.config.ts",
+                        "purpose":  "Mensagens, fallbacks, scripts, comments, asset-fonte e origem CORS herdados.",
+                        "status":  "POSSÍVEL LEGADO",
+                        "evidence":  [
+                                         "ROCK_BAR_OFFICIAL_WHATSAPP_PHONE",
+                                         "ticket_blackhouse.psd",
+                                         "scripts/*black-house*.mjs",
+                                         "blackhouseclubedecomedia.vercel.app",
+                                         "mensagens Rock Bar/Black House"
+                                     ],
+                        "notes":  "Não foi encontrado seletor runtime de tenant que explique a coexistência."
+                    },
+                    {
+                        "id":  "repo-brand-logo-orphan",
+                        "name":  "BrandLogo",
+                        "type":  "apparent-orphan",
+                        "path":  "src/app/BrandLogo.tsx",
+                        "purpose":  "Renderizar logo Rota5.",
+                        "status":  "ÓRFÃO",
+                        "evidence":  [
+                                         "zero imports de entrada no grafo estático de src",
+                                         "referencia public/logo_rota5.avif"
+                                     ],
+                        "dependencies":  [
+                                             "public/logo_rota5.avif"
+                                         ],
+                        "notes":  "Busca considerou imports estáticos, relativos e dinâmicos; alcance externo não foi encontrado."
+                    },
+                    {
+                        "id":  "repo-actions-hooks-schemas",
+                        "name":  "Actions, hooks, schemas e tipos",
+                        "type":  "code-organization",
+                        "path":  "src",
+                        "purpose":  "Registrar onde esses mecanismos aparecem no repositório.",
+                        "status":  "CONFIRMADO",
+                        "evidence":  [
+                                         "nenhuma diretiva use server",
+                                         "hook src/app/admin/operacao/useOperationalDashboard.ts",
+                                         "schemas Zod em src/lib/env.ts e rotas admin",
+                                         "tipos colocados junto aos módulos"
+                                     ],
+                        "notes":  "Não há diretórios dedicados actions, hooks, schemas, validators, types, fixtures ou mocks."
+                    }
+                ],
+    "databaseObjects":  {
+                            "tables":  [
+                                           "admin_auth_attempts",
+                                           "admin_login_challenges",
+                                           "admin_sessions",
+                                           "admin_users",
+                                           "buyer_risk_events",
+                                           "combo_offer_event_locks",
+                                           "combo_offer_scopes",
+                                           "combo_offers",
+                                           "combo_orders",
+                                           "combo_payments",
+                                           "combo_redemption_events",
+                                           "combo_redemptions",
+                                           "conversations",
+                                           "courtesies",
+                                           "courtesy_limits",
+                                           "courtesy_section_limits",
+                                           "customers",
+                                           "division_settlements",
+                                           "event_aliases",
+                                           "event_sessions",
+                                           "events",
+                                           "fixed_gate_accesses",
+                                           "gate_accesses",
+                                           "gate_sessions",
+                                           "official_table_map_places",
+                                           "official_table_map_reservations",
+                                           "orders",
+                                           "payment_events",
+                                           "payments",
+                                           "rate_limit_events",
+                                           "reservation_items",
+                                           "reservations",
+                                           "seat_map_renders",
+                                           "seats",
+                                           "session_seats",
+                                           "ticket_prices",
+                                           "ticket_validation_events",
+                                           "tickets",
+                                           "venue_sections",
+                                           "venues",
+                                           "whatsapp_message_batch_messages",
+                                           "whatsapp_message_batches",
+                                           "whatsapp_messages",
+                                           "whatsapp_outbound_deliveries"
+                                       ],
+                            "directRpcReferences":  [
+                                                        "append_whatsapp_message_batch",
+                                                        "assign_participant_contacts_to_order_tickets",
+                                                        "cancel_pending_reservation",
+                                                        "claim_due_whatsapp_message_batches",
+                                                        "claim_whatsapp_outbound_delivery",
+                                                        "confirm_paid_ticket_order",
+                                                        "consume_rate_limit",
+                                                        "expire_reservations",
+                                                        "finish_whatsapp_message_batch",
+                                                        "get_admin_event_editor_payload",
+                                                        "get_admin_general_dashboard_summary",
+                                                        "get_admin_intelligence_dashboard",
+                                                        "get_database_now",
+                                                        "issue_admin_courtesy_order",
+                                                        "issue_courtesy_order",
+                                                        "issue_public_free_ticket_order",
+                                                        "list_admin_events_fast",
+                                                        "mark_buyer_ticket_qr_delivered",
+                                                        "reschedule_whatsapp_message_batch",
+                                                        "reserve_official_table_map_place",
+                                                        "reserve_seats",
+                                                        "reserve_ticket_cart",
+                                                        "search_public_events_ranked",
+                                                        "update_admin_section_capacity",
+                                                        "validate_combo_redemption",
+                                                        "validate_ticket_entry"
+                                                    ],
+                            "notes":  "26 nomes chamados diretamente foram confirmados, incluindo chamadas cujo nome aparece na linha seguinte a .rpc(."
+                        },
+    "validation":  {
+                       "typecheck":  {
+                                         "status":  "FAIL",
+                                         "evidence":  "JSX inválido em CreateEventModal.tsx"
+                                     },
+                       "lint":  {
+                                    "status":  "FAIL",
+                                    "evidence":  "1 erro de parsing e 24 warnings"
+                                },
+                       "build":  {
+                                     "status":  "FAIL",
+                                     "evidence":  "parsing de CreateEventModal.tsx"
+                                 },
+                       "tests":  {
+                                     "status":  "FAIL",
+                                     "total":  210,
+                                     "passed":  204,
+                                     "failed":  6
+                                 }
+                   }
+}

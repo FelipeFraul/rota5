@@ -1,0 +1,182 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-12",
+  "stage": 7,
+  "status": "PASS",
+  "sourceCommit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+  "question": "Podemos confiar na BASELINE V1 como representação do Rota5 atual?",
+  "answer": "SIM, dentro dos limites UNKNOWN/NOT_VALIDATED explicitamente preservados.",
+  "frozenScope": {
+    "branch": "production",
+    "head": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+    "originProduction": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+    "headMatchesOrigin": true,
+    "workingTree": {
+      "preexistingFunctionalChange": "src/lib/tickets/messages.ts",
+      "sha256": "c567c2bca0a3494d96ef6242e59139832a4cf648b3a85f02f84ba9f06c937694",
+      "newFunctionalDrift": false
+    },
+    "baselineBeforeStage7": {
+      "documents": 39,
+      "json": 31,
+      "total": 70
+    }
+  },
+  "artifactInventory": {
+    "documentsAfterStage7": 44,
+    "jsonAfterStage7": 36,
+    "totalAfterStage7": 80,
+    "missing": 0,
+    "temporaryAfterCleanup": 0,
+    "duplicateConcurrentVersions": 0,
+    "abandonedJson": 0,
+    "unindexedStage7Artifacts": 0
+  },
+  "parseAndGraph": {
+    "jsonParsed": 36,
+    "invalidJson": 0,
+    "duplicateIds": 0,
+    "brokenReferences": 0,
+    "coverageUnclassifiedTotal": 0
+  },
+  "canonicalCounts": {
+    "DOMAINS": 17,
+    "MODULES": 66,
+    "ENTRYPOINTS": 56,
+    "CAPABILITIES": 140,
+    "FLOWS": 34,
+    "FLOW_STEPS": 169,
+    "STATE_TRANSITIONS": 66,
+    "TABLES": 44,
+    "MIGRATIONS": 77,
+    "SQL_FUNCTIONS": 33,
+    "TRIGGERS": 33,
+    "DATA_RELATIONS": 2223,
+    "INTEGRATIONS": 6,
+    "WEBHOOKS": 2,
+    "CRONS": 2,
+    "ENV_VARS": 44,
+    "TESTS": 43,
+    "FINDINGS": 44
+  },
+  "capabilityCoverage": {
+    "total": 140,
+    "inFlows": 136,
+    "standalone": 4,
+    "orphans": 4,
+    "partial": 9,
+    "broken": 1,
+    "withTest": 103,
+    "withoutTest": 37,
+    "withFailingTest": 14,
+    "unclassified": 0
+  },
+  "flowCoverage": {
+    "total": 34,
+    "confirmed": 25,
+    "partial": 7,
+    "broken": 2,
+    "steps": 169,
+    "transitions": 66,
+    "withoutStatus": 0
+  },
+  "statefulModel": {
+    "tables": 22,
+    "entities": 23,
+    "transitions": 66,
+    "inventedStatesFound": 0
+  },
+  "runtimeChecks": {
+    "total": 15,
+    "pass": 12,
+    "partial": 2,
+    "fail": 1,
+    "mutableEndpointsCalled": 0
+  },
+  "currentGates": {
+    "npmTest": {
+      "status": "FAIL",
+      "cases": 210,
+      "passed": 203,
+      "failed": 7,
+      "failingFiles": 6
+    },
+    "typecheck": {
+      "status": "FAIL",
+      "diagnostics": 5,
+      "rootCause": "CreateEventModal.tsx:19"
+    },
+    "lint": {
+      "status": "FAIL",
+      "errors": 1,
+      "warnings": 24,
+      "scope": "product files; rerun after temporary audit generators were removed"
+    }
+  },
+  "findings": {
+    "total": 44,
+    "removed": 0,
+    "added": 0,
+    "reclassified": 0,
+    "critical": 0,
+    "high": 10,
+    "p0": [
+      "bug.create-event-invalid-jsx",
+      "bug.combo-redemption-unreachable-consume",
+      "risk.vercel-project-identity-drift"
+    ],
+    "p0Decision": "KEPT",
+    "highEvidenceMissing": 0
+  },
+  "criticalSearch": {
+    "result": "NONE_PROVEN",
+    "areas": [
+      "money",
+      "payment",
+      "ticket duplication",
+      "authorization",
+      "service role",
+      "data loss",
+      "reservation race",
+      "replay",
+      "webhook spoofing",
+      "wrong production"
+    ]
+  },
+  "independentSecondPass": {
+    "status": "PASS",
+    "sources": [
+      "repository",
+      "migrations",
+      "configuration",
+      "tests",
+      "read-only runtime"
+    ],
+    "newCoreAreasFound": 0,
+    "newEntrypointsFound": 0,
+    "newCapabilitiesFound": 0,
+    "newIntegrationsFound": 0,
+    "newFindingsFound": 0
+  },
+  "contradictions": {
+    "found": 2,
+    "corrected": 2,
+    "pending": 0
+  },
+  "unresolvedEvidenceCount": 10,
+  "encoding": {
+    "bom": 0,
+    "replacementCharacter": 0,
+    "baselineMojibake": 0,
+    "note": "Texto corrompido citado como evidência do produto não é corrupção do artefato baseline."
+  },
+  "secrets": {
+    "found": false,
+    "valuesPersisted": false
+  },
+  "changes": {
+    "functional": false,
+    "remote": false
+  },
+  "readyForStage8": true
+}

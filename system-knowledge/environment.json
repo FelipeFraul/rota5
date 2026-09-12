@@ -1,0 +1,835 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-09-11",
+  "stage": 5,
+  "count": 44,
+  "remotePresenceValidated": 24,
+  "records": [
+    {
+      "id": "env.admin_session_ttl_minutes",
+      "name": "ADMIN_SESSION_TTL_MINUTES",
+      "required": false,
+      "consumers": [
+        "src\\lib\\tickets\\services\\adminAuth.ts",
+        "src/lib/env.ts",
+        ".env.example"
+      ],
+      "category": "application",
+      "expected_environment": "server",
+      "secret": false,
+      "presence_local": "NO",
+      "presence_remote": "UNKNOWN",
+      "purpose": "Configurar admin session ttl minutes.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "NOT_VALIDATED",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.admin_web_session_ttl_minutes",
+      "name": "ADMIN_WEB_SESSION_TTL_MINUTES",
+      "required": false,
+      "consumers": [
+        "src\\lib\\tickets\\services\\adminAuth.ts"
+      ],
+      "category": "application",
+      "expected_environment": "server",
+      "secret": false,
+      "presence_local": "NO",
+      "presence_remote": "UNKNOWN",
+      "purpose": "Configurar admin web session ttl minutes.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "NOT_VALIDATED",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.app_base_url",
+      "name": "APP_BASE_URL",
+      "required": true,
+      "consumers": [
+        "src\\lib\\tickets\\codexRequests.ts",
+        "src\\lib\\tickets\\router.ts",
+        "src\\lib\\tickets\\services\\adminAuth.ts",
+        "src\\lib\\tickets\\services\\comboOffers.ts",
+        "src/lib/env.ts",
+        ".env.example"
+      ],
+      "category": "application",
+      "expected_environment": "server",
+      "secret": false,
+      "presence_local": "NO",
+      "presence_remote": "YES",
+      "purpose": "Configurar app base url.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.checkout_internal_secret",
+      "name": "CHECKOUT_INTERNAL_SECRET",
+      "required": true,
+      "consumers": [
+        "src\\app\\api\\admin\\login\\verify\\route.ts",
+        "src\\app\\api\\checkout\\mercado-pago\\route.ts",
+        "src\\lib\\tickets\\services\\adminAuth.ts",
+        "src/lib/env.ts",
+        ".env.example"
+      ],
+      "category": "payment",
+      "expected_environment": "server",
+      "secret": true,
+      "presence_local": "NO",
+      "presence_remote": "YES",
+      "purpose": "Configurar checkout internal secret.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.codex_cli_path",
+      "name": "CODEX_CLI_PATH",
+      "required": false,
+      "consumers": [
+        "scripts\\codex-local-runner.mjs"
+      ],
+      "category": "automation",
+      "expected_environment": "local",
+      "secret": false,
+      "presence_local": "NO",
+      "presence_remote": "UNKNOWN",
+      "purpose": "Configurar codex cli path.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "NOT_VALIDATED",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.codex_runner_poll_seconds",
+      "name": "CODEX_RUNNER_POLL_SECONDS",
+      "required": false,
+      "consumers": [
+        "scripts\\codex-local-runner.mjs"
+      ],
+      "category": "automation",
+      "expected_environment": "server",
+      "secret": false,
+      "presence_local": "NO",
+      "presence_remote": "UNKNOWN",
+      "purpose": "Configurar codex runner poll seconds.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "NOT_VALIDATED",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.codex_whatsapp_phone",
+      "name": "CODEX_WHATSAPP_PHONE",
+      "required": false,
+      "consumers": [
+        "scripts\\list-codex-requests.mjs"
+      ],
+      "category": "messaging",
+      "expected_environment": "server",
+      "secret": false,
+      "presence_local": "NO",
+      "presence_remote": "UNKNOWN",
+      "purpose": "Configurar codex whatsapp phone.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "NOT_VALIDATED",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.codex_whatsapp_phones",
+      "name": "CODEX_WHATSAPP_PHONES",
+      "required": false,
+      "consumers": [
+        "src\\lib\\tickets\\codexRequests.ts",
+        "scripts\\codex-local-runner.mjs",
+        ".env.example"
+      ],
+      "category": "messaging",
+      "expected_environment": "server",
+      "secret": false,
+      "presence_local": "NO",
+      "presence_remote": "UNKNOWN",
+      "purpose": "Configurar codex whatsapp phones.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "NOT_VALIDATED",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.combo_offer_delay_minutes",
+      "name": "COMBO_OFFER_DELAY_MINUTES",
+      "required": false,
+      "consumers": [
+        "src\\lib\\tickets\\config.ts"
+      ],
+      "category": "application",
+      "expected_environment": "server",
+      "secret": false,
+      "presence_local": "NO",
+      "presence_remote": "UNKNOWN",
+      "purpose": "Configurar combo offer delay minutes.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "NOT_VALIDATED",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.conversation_inactivity_ttl_minutes",
+      "name": "CONVERSATION_INACTIVITY_TTL_MINUTES",
+      "required": false,
+      "consumers": [
+        "src\\app\\api\\webhook\\zapi\\route.ts",
+        "src\\lib\\tickets\\services\\conversationFinalizer.ts",
+        ".env.example"
+      ],
+      "category": "application",
+      "expected_environment": "server",
+      "secret": false,
+      "presence_local": "NO",
+      "presence_remote": "UNKNOWN",
+      "purpose": "Configurar conversation inactivity ttl minutes.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "NOT_VALIDATED",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.cron_secret",
+      "name": "CRON_SECRET",
+      "required": true,
+      "consumers": [
+        "src\\app\\api\\cron\\expire-reservations\\route.ts",
+        "src\\app\\api\\cron\\process-whatsapp-batches\\route.ts",
+        ".env.example"
+      ],
+      "category": "hosting-runtime",
+      "expected_environment": "server",
+      "secret": true,
+      "presence_local": "NO",
+      "presence_remote": "YES",
+      "purpose": "Configurar cron secret.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.database_url",
+      "name": "DATABASE_URL",
+      "required": true,
+      "consumers": [
+        "scripts\\test-admin-section-capacity-rpc-real.mjs"
+      ],
+      "category": "database",
+      "expected_environment": "server",
+      "secret": true,
+      "presence_local": "YES",
+      "presence_remote": "YES",
+      "purpose": "Configurar database url.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.full_intent_audit",
+      "name": "FULL_INTENT_AUDIT",
+      "required": false,
+      "consumers": [
+        "scripts\\audit-whatsapp-intent-100.mjs"
+      ],
+      "category": "application",
+      "expected_environment": "server",
+      "secret": false,
+      "presence_local": "NO",
+      "presence_remote": "UNKNOWN",
+      "purpose": "Configurar full intent audit.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "NOT_VALIDATED",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.gate_admin_secret",
+      "name": "GATE_ADMIN_SECRET",
+      "required": true,
+      "consumers": [
+        "src/lib/env.ts",
+        ".env.example"
+      ],
+      "category": "application",
+      "expected_environment": "server",
+      "secret": true,
+      "presence_local": "NO",
+      "presence_remote": "YES",
+      "purpose": "Configurar gate admin secret.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.gate_session_secret",
+      "name": "GATE_SESSION_SECRET",
+      "required": true,
+      "consumers": [
+        "src/lib/env.ts",
+        ".env.example"
+      ],
+      "category": "application",
+      "expected_environment": "server",
+      "secret": true,
+      "presence_local": "NO",
+      "presence_remote": "YES",
+      "purpose": "Configurar gate session secret.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.gate_session_ttl_minutes",
+      "name": "GATE_SESSION_TTL_MINUTES",
+      "required": true,
+      "consumers": [
+        "src/lib/env.ts",
+        ".env.example"
+      ],
+      "category": "application",
+      "expected_environment": "server",
+      "secret": false,
+      "presence_local": "NO",
+      "presence_remote": "YES",
+      "purpose": "Configurar gate session ttl minutes.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.github_issues_repository",
+      "name": "GITHUB_ISSUES_REPOSITORY",
+      "required": false,
+      "consumers": [
+        "src\\lib\\github\\issues.ts",
+        ".env.example"
+      ],
+      "category": "automation",
+      "expected_environment": "server",
+      "secret": false,
+      "presence_local": "NO",
+      "presence_remote": "UNKNOWN",
+      "purpose": "Configurar github issues repository.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "NOT_VALIDATED",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.github_issues_token",
+      "name": "GITHUB_ISSUES_TOKEN",
+      "required": false,
+      "consumers": [
+        "src\\lib\\github\\issues.ts",
+        ".env.example"
+      ],
+      "category": "automation",
+      "expected_environment": "server",
+      "secret": true,
+      "presence_local": "NO",
+      "presence_remote": "UNKNOWN",
+      "purpose": "Configurar github issues token.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "NOT_VALIDATED",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.github_repository",
+      "name": "GITHUB_REPOSITORY",
+      "required": false,
+      "consumers": [
+        "src\\lib\\github\\issues.ts"
+      ],
+      "category": "automation",
+      "expected_environment": "server",
+      "secret": false,
+      "presence_local": "NO",
+      "presence_remote": "UNKNOWN",
+      "purpose": "Configurar github repository.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "NOT_VALIDATED",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.manual_test_payment_secret",
+      "name": "MANUAL_TEST_PAYMENT_SECRET",
+      "required": false,
+      "consumers": [],
+      "category": "payment",
+      "expected_environment": "server",
+      "secret": true,
+      "presence_local": "YES",
+      "presence_remote": "YES",
+      "purpose": "Configurar manual test payment secret.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REMOTE_ONLY"
+    },
+    {
+      "id": "env.mercado_pago_access_token",
+      "name": "MERCADO_PAGO_ACCESS_TOKEN",
+      "required": true,
+      "consumers": [
+        "src/lib/env.ts",
+        ".env.example"
+      ],
+      "category": "payment",
+      "expected_environment": "server",
+      "secret": true,
+      "presence_local": "YES",
+      "presence_remote": "YES",
+      "purpose": "Configurar mercado pago access token.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.mercado_pago_api_base_url",
+      "name": "MERCADO_PAGO_API_BASE_URL",
+      "required": false,
+      "consumers": [
+        "src\\lib\\mercado-pago\\client.ts",
+        "src/lib/env.ts",
+        ".env.example"
+      ],
+      "category": "payment",
+      "expected_environment": "server",
+      "secret": false,
+      "presence_local": "NO",
+      "presence_remote": "UNKNOWN",
+      "purpose": "Configurar mercado pago api base url.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "NOT_VALIDATED",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.mercado_pago_webhook_secret",
+      "name": "MERCADO_PAGO_WEBHOOK_SECRET",
+      "required": true,
+      "consumers": [
+        "src/lib/env.ts",
+        ".env.example"
+      ],
+      "category": "payment",
+      "expected_environment": "server",
+      "secret": true,
+      "presence_local": "YES",
+      "presence_remote": "YES",
+      "purpose": "Configurar mercado pago webhook secret.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.next_public_mercado_pago_public_key",
+      "name": "NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY",
+      "required": true,
+      "consumers": [
+        "src\\app\\checkout\\[orderId]\\page.tsx",
+        "src\\app\\combo-checkout\\[orderId]\\page.tsx",
+        "src/lib/env.ts",
+        ".env.example"
+      ],
+      "category": "payment",
+      "expected_environment": "browser-build-and-server",
+      "secret": false,
+      "presence_local": "YES",
+      "presence_remote": "YES",
+      "purpose": "Configurar next public mercado pago public key.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.next_public_supabase_anon_key",
+      "name": "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "required": true,
+      "consumers": [
+        ".tools/audit_system_closure.mjs"
+      ],
+      "category": "database",
+      "expected_environment": "browser-build-and-server",
+      "secret": true,
+      "presence_local": "NO",
+      "presence_remote": "UNKNOWN",
+      "purpose": "Configurar next public supabase anon key.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "NOT_VALIDATED",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.node_env",
+      "name": "NODE_ENV",
+      "required": false,
+      "consumers": [
+        "src\\app\\admin\\eventos\\abrir\\[token]\\route.ts",
+        "src\\app\\api\\admin\\login\\verify\\route.ts",
+        "src\\app\\api\\kitchen\\session\\open\\route.ts",
+        "src\\lib\\tickets\\tableMap\\persistOfficialPlaces.ts",
+        "src\\proxy.ts"
+      ],
+      "category": "application",
+      "expected_environment": "server",
+      "secret": false,
+      "presence_local": "NO",
+      "presence_remote": "UNKNOWN",
+      "purpose": "Configurar node env.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "NOT_VALIDATED",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.path",
+      "name": "PATH",
+      "required": false,
+      "consumers": [
+        ".tools\\audit_admin_reports.mjs"
+      ],
+      "category": "application",
+      "expected_environment": "local",
+      "secret": false,
+      "presence_local": "YES",
+      "presence_remote": "UNKNOWN",
+      "purpose": "Configurar path.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "NOT_VALIDATED",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.payment_provider",
+      "name": "PAYMENT_PROVIDER",
+      "required": true,
+      "consumers": [
+        "src/lib/env.ts",
+        ".env.example"
+      ],
+      "category": "payment",
+      "expected_environment": "server",
+      "secret": false,
+      "presence_local": "NO",
+      "presence_remote": "YES",
+      "purpose": "Configurar payment provider.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.rock_bar_official_whatsapp_phone",
+      "name": "ROCK_BAR_OFFICIAL_WHATSAPP_PHONE",
+      "required": false,
+      "consumers": [
+        "src/lib/env.ts"
+      ],
+      "category": "messaging",
+      "expected_environment": "server",
+      "secret": false,
+      "presence_local": "NO",
+      "presence_remote": "UNKNOWN",
+      "purpose": "Configurar rock bar official whatsapp phone.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "NOT_VALIDATED",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.seat_map_storage_bucket",
+      "name": "SEAT_MAP_STORAGE_BUCKET",
+      "required": true,
+      "consumers": [
+        "src/lib/env.ts",
+        ".env.example"
+      ],
+      "category": "application",
+      "expected_environment": "server",
+      "secret": false,
+      "presence_local": "NO",
+      "presence_remote": "YES",
+      "purpose": "Configurar seat map storage bucket.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.supabase_access_token",
+      "name": "SUPABASE_ACCESS_TOKEN",
+      "required": false,
+      "consumers": [
+        "docs/SUPABASE_SETUP.md"
+      ],
+      "category": "database",
+      "expected_environment": "server",
+      "secret": true,
+      "presence_local": "NO",
+      "presence_remote": "YES",
+      "purpose": "Configurar supabase access token.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.supabase_anon_key",
+      "name": "SUPABASE_ANON_KEY",
+      "required": true,
+      "consumers": [
+        "scripts\\test-combo-offer-priority-real.mjs",
+        "src/lib/env.ts",
+        ".env.example"
+      ],
+      "category": "database",
+      "expected_environment": "server",
+      "secret": true,
+      "presence_local": "YES",
+      "presence_remote": "YES",
+      "purpose": "Configurar supabase anon key.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.supabase_service_role_key",
+      "name": "SUPABASE_SERVICE_ROLE_KEY",
+      "required": true,
+      "consumers": [
+        "src\\app\\api\\admin\\login\\verify\\route.ts",
+        "src\\lib\\supabase\\admin.ts",
+        "src\\proxy.ts",
+        "scripts\\audit-whatsapp-santana-search.mjs",
+        "scripts\\codex-local-runner.mjs",
+        "scripts\\import-programacao-events.mjs",
+        "scripts\\list-codex-requests.mjs",
+        "scripts\\rename-black-house-ticket-sections.mjs",
+        "scripts\\split-black-house-special-items.mjs",
+        "scripts\\test-admin-section-capacity-rpc-real.mjs",
+        "scripts\\test-combo-offer-priority-real.mjs",
+        "scripts\\update-black-house-sectors.mjs",
+        "src/lib/env.ts",
+        ".env.example"
+      ],
+      "category": "database",
+      "expected_environment": "server",
+      "secret": true,
+      "presence_local": "YES",
+      "presence_remote": "YES",
+      "purpose": "Configurar supabase service role key.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.supabase_url",
+      "name": "SUPABASE_URL",
+      "required": true,
+      "consumers": [
+        "src\\app\\api\\admin\\login\\verify\\route.ts",
+        "src\\lib\\supabase\\admin.ts",
+        "src\\proxy.ts",
+        "scripts\\audit-whatsapp-santana-search.mjs",
+        "scripts\\codex-local-runner.mjs",
+        "scripts\\import-programacao-events.mjs",
+        "scripts\\list-codex-requests.mjs",
+        "scripts\\rename-black-house-ticket-sections.mjs",
+        "scripts\\split-black-house-special-items.mjs",
+        "scripts\\test-admin-section-capacity-rpc-real.mjs",
+        "scripts\\test-combo-offer-priority-real.mjs",
+        "scripts\\update-black-house-sectors.mjs",
+        "src/lib/env.ts",
+        ".env.example"
+      ],
+      "category": "database",
+      "expected_environment": "server",
+      "secret": false,
+      "presence_local": "YES",
+      "presence_remote": "YES",
+      "purpose": "Configurar supabase url.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.ticket_qr_secret",
+      "name": "TICKET_QR_SECRET",
+      "required": true,
+      "consumers": [
+        "src/lib/env.ts",
+        ".env.example"
+      ],
+      "category": "application",
+      "expected_environment": "server",
+      "secret": true,
+      "presence_local": "NO",
+      "presence_remote": "YES",
+      "purpose": "Configurar ticket qr secret.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.ticket_reservation_ttl_minutes",
+      "name": "TICKET_RESERVATION_TTL_MINUTES",
+      "required": true,
+      "consumers": [
+        "src/lib/env.ts",
+        ".env.example"
+      ],
+      "category": "application",
+      "expected_environment": "server",
+      "secret": false,
+      "presence_local": "NO",
+      "presence_remote": "YES",
+      "purpose": "Configurar ticket reservation ttl minutes.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.userprofile",
+      "name": "USERPROFILE",
+      "required": false,
+      "consumers": [
+        "scripts\\codex-local-runner.mjs"
+      ],
+      "category": "application",
+      "expected_environment": "local",
+      "secret": false,
+      "presence_local": "YES",
+      "presence_remote": "UNKNOWN",
+      "purpose": "Configurar userprofile.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "NOT_VALIDATED",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.vercel_git_commit_sha",
+      "name": "VERCEL_GIT_COMMIT_SHA",
+      "required": false,
+      "consumers": [
+        "src\\lib\\tickets\\codexRequests.ts"
+      ],
+      "category": "hosting-runtime",
+      "expected_environment": "server",
+      "secret": false,
+      "presence_local": "NO",
+      "presence_remote": "UNKNOWN",
+      "purpose": "Configurar vercel git commit sha.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "NOT_VALIDATED",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.vercel_url",
+      "name": "VERCEL_URL",
+      "required": false,
+      "consumers": [
+        "src\\lib\\tickets\\codexRequests.ts"
+      ],
+      "category": "hosting-runtime",
+      "expected_environment": "server",
+      "secret": false,
+      "presence_local": "NO",
+      "presence_remote": "UNKNOWN",
+      "purpose": "Configurar vercel url.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "NOT_VALIDATED",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.zapi_base_url",
+      "name": "ZAPI_BASE_URL",
+      "required": true,
+      "consumers": [
+        "scripts\\codex-local-runner.mjs",
+        "scripts\\test-combo-offer-priority-real.mjs",
+        "src/lib/env.ts",
+        ".env.example"
+      ],
+      "category": "messaging",
+      "expected_environment": "server",
+      "secret": false,
+      "presence_local": "YES",
+      "presence_remote": "YES",
+      "purpose": "Configurar zapi base url.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.zapi_client_token",
+      "name": "ZAPI_CLIENT_TOKEN",
+      "required": true,
+      "consumers": [
+        "scripts\\codex-local-runner.mjs",
+        "src/lib/env.ts",
+        ".env.example"
+      ],
+      "category": "messaging",
+      "expected_environment": "server",
+      "secret": true,
+      "presence_local": "YES",
+      "presence_remote": "YES",
+      "purpose": "Configurar zapi client token.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.zapi_instance_id",
+      "name": "ZAPI_INSTANCE_ID",
+      "required": true,
+      "consumers": [
+        "scripts\\codex-local-runner.mjs",
+        "src/lib/env.ts",
+        ".env.example"
+      ],
+      "category": "messaging",
+      "expected_environment": "server",
+      "secret": true,
+      "presence_local": "YES",
+      "presence_remote": "YES",
+      "purpose": "Configurar zapi instance id.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.zapi_instance_token",
+      "name": "ZAPI_INSTANCE_TOKEN",
+      "required": true,
+      "consumers": [
+        "scripts\\codex-local-runner.mjs",
+        "src/lib/env.ts",
+        ".env.example"
+      ],
+      "category": "messaging",
+      "expected_environment": "server",
+      "secret": true,
+      "presence_local": "YES",
+      "presence_remote": "YES",
+      "purpose": "Configurar zapi instance token.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REFERENCED"
+    },
+    {
+      "id": "env.zapi_webhook_secret",
+      "name": "ZAPI_WEBHOOK_SECRET",
+      "required": true,
+      "consumers": [
+        "src\\app\\api\\webhook\\zapi\\route.ts",
+        "src/lib/env.ts",
+        ".env.example"
+      ],
+      "category": "messaging",
+      "expected_environment": "server",
+      "secret": true,
+      "presence_local": "YES",
+      "presence_remote": "YES",
+      "purpose": "Configurar zapi webhook secret.",
+      "evidence_source_local": "LOCAL_DECLARED",
+      "evidence_source_remote": "REMOTE_CONFIG",
+      "classification": "REFERENCED"
+    }
+  ],
+  "validation": {
+    "status": "PASS",
+    "secret_values_stored": false
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-12",
+  "stage": 7,
+  "count": 2,
+  "corrected": 2,
+  "pending": 0,
+  "records": [
+    {
+      "id": "contradiction.readme-stage5-gate",
+      "status": "CORRECTED",
+      "materiality": "MATERIAL",
+      "files": [
+        "docs/system/README.md"
+      ],
+      "previous": "Duas seções concorrentes da Etapa 5 declaravam PARTIAL e PASS; o índice dizia cobrir somente Etapas 1–5 apesar da Etapa 6 existente.",
+      "current": "Mantido apenas o gate final PASS da Etapa 5; índice atualizado até a Etapa 7.",
+      "reason": "O bloco PARTIAL era um snapshot anterior ao gate final e aparecia como decisão concorrente.",
+      "evidence": [
+        "docs/system/README.md",
+        "system-knowledge/data-model.json.validation",
+        "system-knowledge/runtime-validation.json"
+      ]
+    },
+    {
+      "id": "contradiction.default-suite-current-result",
+      "status": "CORRECTED",
+      "materiality": "MATERIAL",
+      "files": [
+        "system-knowledge/tests.json",
+        "docs/system/tests-inventory.md",
+        "docs/system/README.md"
+      ],
+      "previous": "npm test: 210 casos, 204 PASS, 6 FAIL, 5 arquivos com falha (execução de 2026-09-11).",
+      "current": "npm test: 210 casos, 203 PASS, 7 FAIL, 6 arquivos com falha (execuções reproduzidas em 2026-09-12).",
+      "reason": "test-whatsapp-batch-compat.mjs agora falha no contrato textual de finalização; o snapshot antigo foi preservado como histórico.",
+      "evidence": [
+        "npm test em 2026-09-12",
+        "system-knowledge/risk-summary.json.validation.npm_test",
+        "scripts/test-whatsapp-batch-compat.mjs"
+      ]
+    }
+  ]
+}

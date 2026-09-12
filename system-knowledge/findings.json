@@ -1,0 +1,2038 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-12",
+  "stage": "6/8",
+  "sourceCommit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+  "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
+  "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
+  "count": 44,
+  "records": [
+    {
+      "id": "bug.create-event-invalid-jsx",
+      "title": "JSX inválido impede compilar o workspace web de eventos",
+      "type": "BUG",
+      "severity": "HIGH",
+      "priority": "P0",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "CreateEventModal fecha um div antes do footer e deixa o JSX estruturalmente inválido. TypeScript e ESLint param no parse.",
+      "evidence": [
+        {
+          "path": "src/app/admin/eventos/event-editor/CreateEventModal.tsx",
+          "line": 19,
+          "claim": "JSX em uma única linha contém fechamento incompatível."
+        },
+        {
+          "path": "system-knowledge/flows.json",
+          "claim": "admin.web_event_workspace está QUEBRADO pela mesma causa."
+        }
+      ],
+      "impact": "A aplicação no estado local não passa typecheck/build e o workspace administrativo web não pode ser entregue com segurança.",
+      "domains": [
+        "domain.event-administration",
+        "domain.analytics-reporting",
+        "domain.combo-commerce-fulfillment"
+      ],
+      "modules": [
+        "event-admin.ui"
+      ],
+      "entrypoints": [
+        "page-admin-events"
+      ],
+      "capabilities": [
+        "event.list",
+        "event.inspect",
+        "event.create",
+        "event.edit",
+        "event.publish",
+        "event.change_status",
+        "event.cancel",
+        "event.duplicate",
+        "combo.list",
+        "analytics.general_dashboard",
+        "analytics.event_dashboard",
+        "analytics.contacts"
+      ],
+      "flows": [
+        "admin.web_event_workspace"
+      ],
+      "tests": [
+        "npm run typecheck",
+        "npm run lint"
+      ],
+      "blast_radius": "MULTI_DOMAIN",
+      "workaround": "APIs e jornada administrativa por WhatsApp continuam estruturalmente presentes.",
+      "direction": "Restaurar a estrutura JSX e só então revalidar build e workspace.",
+      "priority_justification": "P0 porque bloqueia a compilação da baseline local e a evolução segura do principal workspace administrativo."
+    },
+    {
+      "id": "bug.combo-redemption-unreachable-consume",
+      "title": "Caso válido de combo não alcança a RPC que consome o resgate",
+      "type": "BROKEN_FLOW",
+      "severity": "HIGH",
+      "priority": "P0",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "Todos os ramos observados de paid + issued + escopo válido retornam antes da chamada validate_combo_redemption; a transição issued→used não ocorre pelo fluxo analisado.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "line": 935,
+          "claim": "Início da validação do scan."
+        },
+        {
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "line": 1462,
+          "claim": "RPC de consumo aparece depois dos retornos dos casos válidos."
+        },
+        {
+          "path": "system-knowledge/flows.json",
+          "claim": "kitchen.combo_redemption está QUEBRADO."
+        }
+      ],
+      "impact": "A cozinha pode validar ou orientar entrega sem concluir atomicamente o consumo, permitindo reapresentação e divergência de estado.",
+      "domains": [
+        "domain.combo-commerce-fulfillment"
+      ],
+      "modules": [
+        "combo.redemption",
+        "combo.kitchen-reader-ui-api"
+      ],
+      "entrypoints": [
+        "page-offer-reader",
+        "http-kitchen-scan"
+      ],
+      "capabilities": [
+        "combo.redeem",
+        "combo.delivery_prompt"
+      ],
+      "flows": [
+        "kitchen.combo_redemption"
+      ],
+      "tables": [
+        "combo_redemptions",
+        "combo_redemption_events"
+      ],
+      "functions": [
+        "validate_combo_redemption"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "blast_radius": "DOMAIN",
+      "workaround": "Não há conclusão equivalente comprovada no mesmo fluxo.",
+      "direction": "Reconectar o caminho válido à transição atômica existente.",
+      "priority_justification": "P0 porque o fluxo operacional de consumo está comprovadamente quebrado e afeta controle de entrega."
+    },
+    {
+      "id": "bug.event-duplicate-artist-leak",
+      "title": "Duplicação de evento preserva artista do evento de origem",
+      "type": "BUG",
+      "severity": "MEDIUM",
+      "priority": "P1",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "O título duplicado recebe sufixo, mas artist_name copia sourceEvent.artist_name, contrariando o contrato testado de sincronizar artista ao novo título.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/adminEvents.ts",
+          "line": 1712,
+          "claim": "Cria duplicatedTitle."
+        },
+        {
+          "path": "src/lib/tickets/services/adminEvents.ts",
+          "line": 1715,
+          "claim": "Copia artist_name da origem."
+        },
+        {
+          "path": "scripts/test-admin-event-artist-name-leak.mjs",
+          "line": 143,
+          "claim": "Teste direto falha nesta divergência."
+        }
+      ],
+      "impact": "Um rascunho duplicado pode exibir ou persistir artista incoerente com o título, exigindo correção manual.",
+      "domains": [
+        "domain.event-administration"
+      ],
+      "modules": [
+        "event-admin.service"
+      ],
+      "capabilities": [
+        "event.duplicate"
+      ],
+      "flows": [
+        "admin.whatsapp_event_management",
+        "admin.web_event_workspace"
+      ],
+      "tables": [
+        "events"
+      ],
+      "tests": [
+        "test-002"
+      ],
+      "blast_radius": "DOMAIN",
+      "workaround": "Editar manualmente o artista após duplicar.",
+      "direction": "Alinhar a regra de duplicação ao contrato de título/artista.",
+      "priority_justification": "P1 por produzir dado administrativo incorreto em uma ação ativa, com workaround manual."
+    },
+    {
+      "id": "bug.user-visible-text-corruption",
+      "title": "Textos ativos contêm mojibake e substituições por interrogação",
+      "type": "BUG",
+      "severity": "MEDIUM",
+      "priority": "P1",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "A varredura encontra mojibake no dashboard; mensagens, ajuda, checkout e leitor de combo contêm bytes de emoji interpretados incorretamente e interrogações no lugar de acentos.",
+      "evidence": [
+        {
+          "path": "src/app/admin/eventos/dashboard/AdminDashboardSection.tsx",
+          "line": 59,
+          "claim": "Separador e mensagens do dashboard contêm sequências mojibake."
+        },
+        {
+          "path": "src/lib/tickets/messages.ts",
+          "line": 61,
+          "claim": "Emoji está armazenado como sequência de bytes interpretada incorretamente."
+        },
+        {
+          "path": "src/lib/tickets/services/publicHelp.ts",
+          "line": 176,
+          "claim": "ID e keywords usam interrogação no lugar do acento."
+        },
+        {
+          "path": "scripts/test-message-mojibake.mjs",
+          "line": 18,
+          "claim": "Teste de mensagens falha com nove ocorrências no dashboard."
+        }
+      ],
+      "impact": "Usuários e administradores recebem texto corrompido; IDs/keywords corrompidos também alteram resultados e contratos de busca.",
+      "domains": [
+        "domain.whatsapp-conversations",
+        "domain.analytics-reporting",
+        "domain.orders-payments",
+        "domain.combo-commerce-fulfillment"
+      ],
+      "modules": [
+        "messaging.messages",
+        "messaging.public-dialog",
+        "analytics.admin-dashboard-ui",
+        "payment.checkout",
+        "combo.kitchen-reader-ui-api"
+      ],
+      "capabilities": [
+        "messaging.respond",
+        "messaging.help",
+        "payment.checkout_view",
+        "combo.kitchen_open",
+        "analytics.general_dashboard",
+        "analytics.event_dashboard"
+      ],
+      "flows": [
+        "whatsapp.public_discovery",
+        "admin.web_event_workspace",
+        "kitchen.combo_redemption"
+      ],
+      "tests": [
+        "test-025",
+        "test-032"
+      ],
+      "blast_radius": "MULTI_DOMAIN",
+      "workaround": "O sanitizador de saída repara apenas parte dos casos e não corrige IDs ou UI web.",
+      "direction": "Normalizar os arquivos fonte e ampliar a verificação para corrupção por substituição e bytes reinterpretados.",
+      "priority_justification": "P1 porque o defeito é visível em jornadas públicas e administrativas e já quebra testes."
+    },
+    {
+      "id": "legacy.active-brand-contamination",
+      "title": "Superfícies Rota5 exibem referências e assets Black House/RockBar",
+      "type": "LEGACY",
+      "severity": "HIGH",
+      "priority": "P1",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "Checkout, ajuda e logs de pagamento usam Black House; CSS de checkout usa rockbar.webp/rockbar_mb.webp; domínio canônico declarado também é Black House.",
+      "evidence": [
+        {
+          "path": "src/app/checkout/pending/page.tsx",
+          "line": 8,
+          "claim": "Mensagem de pagamento cita Black House."
+        },
+        {
+          "path": "src/app/checkout/success/page.tsx",
+          "line": 8,
+          "claim": "Mensagem de confirmação cita Black House."
+        },
+        {
+          "path": "src/app/globals.css",
+          "line": 174,
+          "claim": "Checkout usa rockbar.webp."
+        },
+        {
+          "path": "next.config.ts",
+          "line": 3,
+          "claim": "Origin de produção aponta para domínio Black House."
+        }
+      ],
+      "impact": "A marca, confiança de pagamento e identidade visual podem ser incorretas para compradores Rota5, além de aumentar o risco de operar o projeto errado.",
+      "domains": [
+        "domain.brand-presentation",
+        "domain.orders-payments",
+        "domain.whatsapp-conversations",
+        "domain.platform-runtime"
+      ],
+      "modules": [
+        "brand.presentation",
+        "payment.checkout",
+        "messaging.public-dialog"
+      ],
+      "entrypoints": [
+        "page-checkout",
+        "page-checkout-pending",
+        "page-checkout-success"
+      ],
+      "capabilities": [
+        "brand.present_individual_offers",
+        "payment.checkout_view",
+        "payment.return_notice",
+        "messaging.help"
+      ],
+      "flows": [
+        "ticket.purchase",
+        "whatsapp.public_discovery"
+      ],
+      "integrations": [
+        "integration-vercel",
+        "integration-mercado-pago"
+      ],
+      "blast_radius": "MULTI_DOMAIN",
+      "workaround": "Nenhum seletor de marca/tenant foi encontrado.",
+      "direction": "Definir a identidade canônica antes de classificar cada referência como compartilhada ou legado removível.",
+      "priority_justification": "P1 porque referências legadas estão ativas em pagamento e comunicação ao cliente."
+    },
+    {
+      "id": "risk.gate-credential-revocation-does-not-revoke-session",
+      "title": "Pausa/revogação da credencial não invalida sessões de leitor já emitidas",
+      "type": "AUTHORIZATION",
+      "severity": "HIGH",
+      "priority": "P1",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "pauseGateAccess e revokeFixedGateAccess alteram somente as tabelas de credenciais. validateGateSessionToken autoriza consultando gate_sessions e não consulta a credencial originadora.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/gateAccesses.ts",
+          "line": 126,
+          "claim": "Pausa apenas gate_accesses."
+        },
+        {
+          "path": "src/lib/tickets/services/fixedGateAccesses.ts",
+          "line": 84,
+          "claim": "Revoga apenas fixed_gate_accesses."
+        },
+        {
+          "path": "src/lib/tickets/services/gateSessions.ts",
+          "line": 282,
+          "claim": "Validação consulta token/status/expiração da sessão."
+        }
+      ],
+      "impact": "Um operador removido pode continuar usando um link já emitido até expiração, inclusive para portaria ou cozinha.",
+      "domains": [
+        "domain.gate-admission",
+        "domain.combo-commerce-fulfillment",
+        "domain.admin-identity-access"
+      ],
+      "modules": [
+        "gate.access-session"
+      ],
+      "entrypoints": [
+        "http-gate-scan",
+        "http-kitchen-scan"
+      ],
+      "capabilities": [
+        "gate.access_pause",
+        "gate.fixed_revoke",
+        "gate.admit",
+        "combo.kitchen_open"
+      ],
+      "flows": [
+        "gate.ticket_admission",
+        "kitchen.combo_redemption"
+      ],
+      "tables": [
+        "gate_accesses",
+        "fixed_gate_accesses",
+        "gate_sessions"
+      ],
+      "blast_radius": "MULTI_DOMAIN",
+      "workaround": "Revogar diretamente gate_sessions existe como função órfã, sem entrypoint catalogado.",
+      "direction": "Vincular e invalidar sessões derivadas ao revogar a credencial fonte.",
+      "priority_justification": "P1 porque mantém autorização operacional após revogação explícita."
+    },
+    {
+      "id": "risk.admin-event-multistep-partial-state",
+      "title": "Criação de evento e catálogo inicial cruza entidades sem transação única",
+      "type": "DATA_INTEGRITY",
+      "severity": "HIGH",
+      "priority": "P1",
+      "status": "POTENTIAL",
+      "confidence": "HIGH",
+      "description": "createAdminEvent coordena evento, local, sessão, setor, assentos, preços e mapa por chamadas Supabase sequenciais; o catálogo marca event.create como PARCIAL e registra possibilidade de resíduos.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/adminEvents.ts",
+          "claim": "Serviço executa criação multi-entidade via aplicação."
+        },
+        {
+          "path": "system-knowledge/capabilities.json",
+          "claim": "event.create está PARCIAL."
+        },
+        {
+          "path": "system-knowledge/flows.json",
+          "claim": "admin.whatsapp_event_management documenta drafts/resíduos em falhas intermediárias."
+        }
+      ],
+      "impact": "Falha intermediária pode deixar rascunho ou inventário incompleto e exigir limpeza manual antes de tentar novamente.",
+      "domains": [
+        "domain.event-administration",
+        "domain.reservation-inventory"
+      ],
+      "modules": [
+        "event-admin.service"
+      ],
+      "capabilities": [
+        "event.create",
+        "event.session_create",
+        "event.section_create",
+        "event.seats_create",
+        "event.price_create"
+      ],
+      "flows": [
+        "admin.whatsapp_event_management",
+        "admin.web_event_workspace"
+      ],
+      "tables": [
+        "events",
+        "venues",
+        "event_sessions",
+        "venue_sections",
+        "seats",
+        "session_seats",
+        "ticket_prices"
+      ],
+      "blast_radius": "MULTI_DOMAIN",
+      "workaround": "Operar/limpar o rascunho parcialmente criado de forma manual.",
+      "direction": "Definir uma fronteira transacional para a criação composta.",
+      "priority_justification": "P1 pela quantidade de entidades e pelo risco de estado persistente incompleto."
+    },
+    {
+      "id": "risk.combo-metadata-read-modify-write-race",
+      "title": "Atualizações concorrentes podem sobrescrever metadados do combo",
+      "type": "CONCURRENCY",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "POTENTIAL",
+      "confidence": "HIGH",
+      "description": "O scan lê raw_metadata e depois grava um objeto mesclado em atualização separada; scans, cozinha e confirmação do cliente podem atualizar o mesmo JSON sem lock ou versão observável.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "line": 1025,
+          "claim": "Lê metadata do resgate."
+        },
+        {
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "line": 1113,
+          "claim": "Relê e atualiza raw_metadata por read-modify-write."
+        },
+        {
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "line": 1300,
+          "claim": "Outro ramo também atualiza metadados do mesmo registro."
+        }
+      ],
+      "impact": "Campos de entrega, preparo ou notificação podem se perder sob operações simultâneas, prejudicando a recuperação operacional.",
+      "domains": [
+        "domain.combo-commerce-fulfillment"
+      ],
+      "modules": [
+        "combo.redemption"
+      ],
+      "capabilities": [
+        "combo.delivery_prompt",
+        "combo.delivery_choose",
+        "combo.kitchen_release"
+      ],
+      "flows": [
+        "combo.delivery_choice",
+        "kitchen.combo_redemption"
+      ],
+      "tables": [
+        "combo_redemptions"
+      ],
+      "blast_radius": "DOMAIN",
+      "workaround": "Alguns ramos releem metadados imediatamente antes do update, reduzindo mas não eliminando a janela.",
+      "direction": "Serializar ou versionar atualizações de estado do resgate.",
+      "priority_justification": "P2 porque depende de concorrência, mas afeta estado operacional persistido."
+    },
+    {
+      "id": "risk.github-issue-create-replay",
+      "title": "Criação de issue não possui chave de idempotência",
+      "type": "IDEMPOTENCY",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "POTENTIAL",
+      "confidence": "HIGH",
+      "description": "createGitHubIssue sempre executa POST e não envia chave nem consulta vínculo existente antes de criar; repetição após timeout pode duplicar issue.",
+      "evidence": [
+        {
+          "path": "src/lib/github/issues.ts",
+          "line": 35,
+          "claim": "Função cria issue via POST sem chave de idempotência."
+        },
+        {
+          "path": "src/app/api/webhook/zapi/route.ts",
+          "line": 8,
+          "claim": "Webhook integra criação ao fluxo de automação."
+        }
+      ],
+      "impact": "Retry manual ou ambiguidade de rede pode abrir issues duplicadas para a mesma solicitação Codex.",
+      "domains": [
+        "domain.codex-automation",
+        "domain.whatsapp-conversations"
+      ],
+      "modules": [
+        "automation.github-issues",
+        "messaging.webhook"
+      ],
+      "capabilities": [
+        "automation.issue"
+      ],
+      "flows": [
+        "codex.automation"
+      ],
+      "integrations": [
+        "integration-github",
+        "integration-zapi"
+      ],
+      "blast_radius": "EXTERNAL",
+      "workaround": "A solicitação persiste número/URL após sucesso observado; não cobre resposta perdida.",
+      "direction": "Persistir uma chave/vínculo antes ou durante a operação externa.",
+      "priority_justification": "P2 porque exige replay/timeout e o impacto externo é reversível, mas gera duplicação operacional."
+    },
+    {
+      "id": "risk.rate-limit-fails-open",
+      "title": "Falha do rate limiter libera a requisição",
+      "type": "SECURITY",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "consumeRateLimit registra warning e retorna allowed em exceção, deixando endpoints públicos sem proteção durante indisponibilidade do banco/RPC.",
+      "evidence": [
+        {
+          "path": "src/lib/security/rateLimit.ts",
+          "line": 127,
+          "claim": "Catch explicitamente registra “failed open”."
+        }
+      ],
+      "impact": "Ataques de volume ou abuso não são contidos justamente durante falha da dependência de rate limit.",
+      "domains": [
+        "domain.platform-runtime"
+      ],
+      "modules": [
+        "platform.rate-limit"
+      ],
+      "entrypoints": [
+        "proxy",
+        "http-zapi-webhook",
+        "http-mp-webhook",
+        "http-checkout-pay",
+        "http-gate-scan"
+      ],
+      "capabilities": [
+        "platform.limit_requests"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "blast_radius": "SYSTEM_WIDE",
+      "workaround": "Autenticação/assinatura e validações específicas continuam aplicáveis onde existem.",
+      "direction": "Definir política de degradação por criticidade de endpoint.",
+      "priority_justification": "P2 porque é uma escolha ativa de disponibilidade com condição específica, sem exploração observada."
+    },
+    {
+      "id": "risk.remote-database-controls-unvalidated",
+      "title": "Controles remotos de banco além do schema visível não foram validados",
+      "type": "UNKNOWN",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "NOT_VALIDATED",
+      "confidence": "CONFIRMED",
+      "description": "OpenAPI confirmou tabelas/colunas/RPCs, mas não constraints, índices, triggers, corpos de função, migrations aplicadas, RLS, policies, grants ou Auth remoto.",
+      "evidence": [
+        {
+          "path": "system-knowledge/data-model.json",
+          "claim": "Validação remota limitada ao contrato exposto."
+        },
+        {
+          "path": "system-knowledge/integrations.json",
+          "claim": "Integração Supabase registra explicitamente os controles não validados."
+        }
+      ],
+      "impact": "A baseline não pode afirmar que guardas locais de integridade, concorrência e autorização existem com a mesma forma em produção.",
+      "domains": [
+        "domain.platform-runtime",
+        "domain.reservation-inventory",
+        "domain.orders-payments",
+        "domain.ticketing-delivery"
+      ],
+      "modules": [
+        "platform.supabase-client"
+      ],
+      "tables": [
+        "*"
+      ],
+      "functions": [
+        "*"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "blast_radius": "SYSTEM_WIDE",
+      "workaround": "Comparação de 44 tabelas/colunas e 33 RPCs reduz a incerteza de superfície.",
+      "direction": "Comparar metadados e definições remotas por canal autorizado.",
+      "priority_justification": "P2 porque é incerteza relevante, não vulnerabilidade ou divergência comprovada."
+    },
+    {
+      "id": "risk.remote-webhook-registration-unvalidated",
+      "title": "Registro remoto dos dois webhooks não foi confirmado",
+      "type": "INTEGRATION",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "NOT_VALIDATED",
+      "confidence": "HIGH",
+      "description": "Handlers, segredos e saúde dos provedores foram observados, mas não a configuração que entrega eventos Z-API e Mercado Pago aos endpoints corretos.",
+      "evidence": [
+        {
+          "path": "system-knowledge/integrations.json",
+          "claim": "Notas de Z-API e Mercado Pago deixam registro de webhook NOT_VALIDATED."
+        },
+        {
+          "path": "system-knowledge/webhooks.json",
+          "claim": "Catálogo contém dois webhooks locais."
+        }
+      ],
+      "impact": "Mensagens ou confirmações de pagamento podem não chegar mesmo com aplicação e credenciais saudáveis.",
+      "domains": [
+        "domain.whatsapp-conversations",
+        "domain.orders-payments"
+      ],
+      "modules": [
+        "messaging.webhook",
+        "payment.webhook"
+      ],
+      "entrypoints": [
+        "http-zapi-webhook",
+        "http-mp-webhook"
+      ],
+      "capabilities": [
+        "messaging.receive",
+        "payment.confirm"
+      ],
+      "flows": [
+        "whatsapp.inbound_dispatch",
+        "ticket.payment_confirmation"
+      ],
+      "integrations": [
+        "integration-zapi",
+        "integration-mercado-pago"
+      ],
+      "blast_radius": "EXTERNAL",
+      "workaround": "Status dos provedores e rotas locais foram validados; registro e entrega real permanecem desconhecidos.",
+      "direction": "Validar URLs, eventos inscritos e última entrega sem gerar transação.",
+      "priority_justification": "P2 pela dependência externa crítica, com ocorrência ainda não comprovada."
+    },
+    {
+      "id": "risk.vercel-project-identity-drift",
+      "title": "Domínio declarado pertence a site, enquanto checkout local está ligado a rota5",
+      "type": "CONFIGURATION_DRIFT",
+      "severity": "HIGH",
+      "priority": "P0",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "next.config.ts declara blackhouseclubedecomedia.vercel.app, resolvido para o projeto site; .vercel/project.json liga o workspace ao projeto rota5.",
+      "evidence": [
+        {
+          "path": "next.config.ts",
+          "line": 3,
+          "claim": "Origin declarado Black House."
+        },
+        {
+          "path": "system-knowledge/infrastructure.json",
+          "claim": "Projetos remoto declarado e ligado são diferentes."
+        },
+        {
+          "path": "system-knowledge/configuration-drift.json",
+          "claim": "Drift catalogado na Etapa 5."
+        }
+      ],
+      "impact": "Deploy, cron, URLs de checkout e validação de produção podem atingir projetos diferentes sem que o operador perceba.",
+      "domains": [
+        "domain.platform-runtime",
+        "domain.orders-payments"
+      ],
+      "modules": [
+        "platform.env",
+        "payment.checkout"
+      ],
+      "entrypoints": [
+        "page-checkout",
+        "http-checkout-pay"
+      ],
+      "capabilities": [
+        "payment.checkout_create",
+        "payment.checkout_view"
+      ],
+      "flows": [
+        "ticket.purchase"
+      ],
+      "integrations": [
+        "integration-vercel"
+      ],
+      "blast_radius": "SYSTEM_WIDE",
+      "workaround": "Ambos os aliases responderam health 200 na observação, mas representam deployments distintos.",
+      "direction": "Estabelecer um único projeto/domínio canônico antes de qualquer deploy.",
+      "priority_justification": "P0 porque qualquer evolução/deploy pode ser aplicada ao alvo errado."
+    },
+    {
+      "id": "risk.latest-rota5-deployment-error",
+      "title": "Deployment mais recente do projeto rota5 está em ERROR",
+      "type": "INFRASTRUCTURE",
+      "severity": "HIGH",
+      "priority": "P1",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "A inspeção remota encontrou o deployment mais recente de rota5 em ERROR, enquanto rota5-khaki permanece apontando para um deployment anterior READY.",
+      "evidence": [
+        {
+          "path": "system-knowledge/runtime-validation.json",
+          "claim": "runtime.vercel-linked-deployment = FAIL."
+        },
+        {
+          "path": "system-knowledge/infrastructure.json",
+          "claim": "Registra ready_deployment e latest_deployment_state ERROR."
+        }
+      ],
+      "impact": "Mudanças recentes não chegam ao alias produtivo e uma promoção/redeploy sem diagnóstico pode causar indisponibilidade.",
+      "domains": [
+        "domain.platform-runtime"
+      ],
+      "modules": [
+        "platform.edge-proxy"
+      ],
+      "integrations": [
+        "integration-vercel"
+      ],
+      "blast_radius": "EXTERNAL",
+      "workaround": "O alias rota5-khaki observado continua saudável em deployment anterior.",
+      "direction": "Diagnosticar o build do deployment falho depois da baseline.",
+      "priority_justification": "P1 porque a produção observada está acessível, mas a linha de entrega mais recente falhou."
+    },
+    {
+      "id": "risk.published-commit-unvalidated",
+      "title": "Commit publicado não pode ser reconciliado com o HEAD auditado",
+      "type": "OPERATIONAL",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "NOT_VALIDATED",
+      "confidence": "CONFIRMED",
+      "description": "Os metadados retornados pelo deployment consultado não expuseram gitSource/commit; o HEAD local e origin/production foram confirmados, sem vínculo comprovado com o alias.",
+      "evidence": [
+        {
+          "path": "system-knowledge/infrastructure.json",
+          "claim": "published_commit está NOT_VALIDATED."
+        },
+        {
+          "path": "system-knowledge/runtime-validation.json",
+          "claim": "Validação Vercel não reconcilia commit."
+        }
+      ],
+      "impact": "Não é possível afirmar que a fotografia de código auditada corresponde ao binário publicado.",
+      "domains": [
+        "domain.platform-runtime"
+      ],
+      "modules": [
+        "platform.edge-proxy"
+      ],
+      "integrations": [
+        "integration-vercel",
+        "integration-github"
+      ],
+      "blast_radius": "SYSTEM_WIDE",
+      "workaround": "Health e identidades de deployment foram observados separadamente.",
+      "direction": "Registrar SHA de origem nos deployments e reconciliar com a baseline.",
+      "priority_justification": "P2 por limitar a confiança operacional sem provar divergência funcional."
+    },
+    {
+      "id": "risk.local-runtime-env-incomplete",
+      "title": "Ambiente local não contém todas as variáveis exigidas",
+      "type": "CONFIGURATION_DRIFT",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "A Etapa 5 encontrou 44 variáveis catalogadas e presença remota de 24 nomes; o ambiente local usado na auditoria permanece incompleto.",
+      "evidence": [
+        {
+          "path": "system-knowledge/environment.json",
+          "claim": "Inventário e presença por ambiente."
+        },
+        {
+          "path": "system-knowledge/configuration-drift.json",
+          "claim": "Drift local/remoto catalogado."
+        }
+      ],
+      "impact": "Testes e execução local podem falhar ou seguir branches diferentes de produção, reduzindo reprodutibilidade.",
+      "domains": [
+        "domain.platform-runtime"
+      ],
+      "modules": [
+        "platform.env"
+      ],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi",
+        "integration-mercado-pago",
+        "integration-vercel",
+        "integration-github",
+        "integration-codex-cli"
+      ],
+      "blast_radius": "SYSTEM_WIDE",
+      "workaround": "Testes estáticos e checks remotos específicos podem ser executados de forma isolada.",
+      "direction": "Definir conjuntos mínimos por modo de execução.",
+      "priority_justification": "P2 por afetar validação e operação local, sem evidência de ausência no ambiente remoto."
+    },
+    {
+      "id": "debt.seat-map-storage-contract-drift",
+      "title": "Variável de bucket existe sem consumidor nem bucket remoto",
+      "type": "CONFIGURATION_DRIFT",
+      "severity": "LOW",
+      "priority": "P3",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "SEAT_MAP_STORAGE_BUCKET é catalogada, mas não há uso .storage no código e o Supabase remoto retornou zero buckets.",
+      "evidence": [
+        {
+          "path": "system-knowledge/infrastructure.json",
+          "claim": "storage.supabase registra variável, zero buckets e nenhum consumidor."
+        },
+        {
+          "path": "system-knowledge/environment.json",
+          "claim": "Variável está no inventário."
+        }
+      ],
+      "impact": "A configuração sugere uma persistência que não existe, confundindo operação e manutenção do mapa.",
+      "domains": [
+        "domain.table-map",
+        "domain.platform-runtime"
+      ],
+      "modules": [
+        "table-map.catalog-render",
+        "platform.env"
+      ],
+      "capabilities": [
+        "table_map.preview"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "blast_radius": "DOMAIN",
+      "workaround": "Imagens atuais usam buffer/base64 ou filesystem temporário.",
+      "direction": "Decidir se o contrato é legado ou infraestrutura ainda não implementada.",
+      "priority_justification": "LOW com alcance DOMAIN, considerando probabilidade, workaround e capacidade de detecção."
+    },
+    {
+      "id": "gap.critical-flow-correlation",
+      "title": "Fluxos críticos não têm correlação ponta a ponta",
+      "type": "OBSERVABILITY",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "Há logs estruturados e tabelas de eventos/delivery, mas não foi encontrado um correlation/request ID comum atravessando webhook, RPC, pagamento, ticket e WhatsApp; runtime de logs ficou PARTIAL.",
+      "evidence": [
+        {
+          "path": "docs/system/observability.md",
+          "claim": "Status canônico PARTIAL."
+        },
+        {
+          "path": "system-knowledge/runtime-validation.json",
+          "claim": "runtime.vercel-logs = PARTIAL."
+        },
+        {
+          "path": "src/app/api/webhook/payment/mercado-pago/route.ts",
+          "claim": "Logs usam IDs locais sem correlação comum de jornada."
+        }
+      ],
+      "impact": "Falhas entre confirmação, emissão e entrega exigem correlação manual e podem mascarar duplicidade ou estado intermediário.",
+      "domains": [
+        "domain.orders-payments",
+        "domain.ticketing-delivery",
+        "domain.whatsapp-conversations",
+        "domain.combo-commerce-fulfillment"
+      ],
+      "modules": [
+        "payment.webhook",
+        "ticket.delivery",
+        "messaging.webhook",
+        "combo.redemption"
+      ],
+      "capabilities": [
+        "payment.confirm",
+        "ticket.deliver",
+        "messaging.respond",
+        "combo.confirm"
+      ],
+      "flows": [
+        "ticket.payment_confirmation",
+        "ticket.delivery",
+        "combo.payment_confirmation"
+      ],
+      "integrations": [
+        "integration-mercado-pago",
+        "integration-zapi",
+        "integration-supabase"
+      ],
+      "blast_radius": "MULTI_DOMAIN",
+      "workaround": "IDs de pedido, pagamento, mensagem e delivery persistidos permitem reconstrução parcial.",
+      "direction": "Propagar um identificador comum nos registros e logs críticos.",
+      "priority_justification": "P2 porque reduz detecção e diagnóstico, mas não prova falha funcional."
+    },
+    {
+      "id": "debt.router-responsibility-concentration",
+      "title": "Roteador conversacional concentra coordenação de muitos domínios",
+      "type": "ARCHITECTURE",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "router.ts tem 19.367 linhas, fan-out 41 e coordena parsing, estado, autorização, catálogo, reserva, pagamento, combo, cortesia, gate, formatting e persistência.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/router.ts",
+          "line": 1,
+          "claim": "Roteador central."
+        },
+        {
+          "path": "docs/system/architecture-hotspots.md",
+          "claim": "Hotspot registra tamanho e fan-out."
+        }
+      ],
+      "impact": "Mudanças locais têm superfície de regressão ampla e tornam branches inalcançáveis ou prioridades de estado difíceis de revisar.",
+      "domains": [
+        "domain.whatsapp-conversations",
+        "domain.event-administration",
+        "domain.reservation-inventory",
+        "domain.orders-payments",
+        "domain.courtesy",
+        "domain.combo-commerce-fulfillment",
+        "domain.gate-admission"
+      ],
+      "modules": [
+        "messaging.router"
+      ],
+      "entrypoints": [
+        "http-zapi-webhook"
+      ],
+      "flows": [
+        "whatsapp.public_discovery",
+        "ticket.purchase",
+        "admin.whatsapp_session",
+        "admin.whatsapp_event_management",
+        "admin.courtesy_management",
+        "combo.delivery_choice"
+      ],
+      "blast_radius": "MULTI_DOMAIN",
+      "workaround": "Serviços extraídos e testes de contrato cobrem partes dos ramos.",
+      "direction": "Separar fronteiras por estado/domínio em etapa posterior.",
+      "priority_justification": "P2 pelo alcance e histórico de regressões, sem tratar tamanho isolado como defeito."
+    },
+    {
+      "id": "debt.zapi-webhook-responsibility-coupling",
+      "title": "Handler Z-API acopla transporte, deduplicação, automação e entrega",
+      "type": "COUPLING",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "A rota Z-API tem 1.950 linhas, fan-out 22, chama router, GitHub, persistence, batches e envio externo no mesmo entrypoint.",
+      "evidence": [
+        {
+          "path": "src/app/api/webhook/zapi/route.ts",
+          "line": 1,
+          "claim": "Handler de webhook central."
+        },
+        {
+          "path": "docs/system/architecture-hotspots.md",
+          "claim": "Hotspot registra fan-out e responsabilidades."
+        }
+      ],
+      "impact": "Falha ou alteração no transporte pode afetar múltiplas jornadas e dificulta isolar retries e observabilidade.",
+      "domains": [
+        "domain.whatsapp-conversations",
+        "domain.codex-automation",
+        "domain.background-processing"
+      ],
+      "modules": [
+        "messaging.webhook"
+      ],
+      "entrypoints": [
+        "http-zapi-webhook"
+      ],
+      "capabilities": [
+        "messaging.receive",
+        "messaging.respond",
+        "automation.issue"
+      ],
+      "flows": [
+        "whatsapp.inbound_dispatch",
+        "codex.automation"
+      ],
+      "integrations": [
+        "integration-zapi",
+        "integration-github",
+        "integration-supabase"
+      ],
+      "blast_radius": "MULTI_DOMAIN",
+      "workaround": "Persistência de mensagens e deliveries oferece alguns limites internos.",
+      "direction": "Formalizar fronteiras de transporte, despacho e side effects.",
+      "priority_justification": "MEDIUM com alcance MULTI_DOMAIN, considerando probabilidade, workaround e capacidade de detecção."
+    },
+    {
+      "id": "gap.default-test-suite-failing",
+      "title": "Suíte padrão está vermelha com sete casos falhos",
+      "type": "TEST_GAP",
+      "severity": "HIGH",
+      "priority": "P1",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "npm test executou 210 casos: 203 passaram e 7 falharam em seis arquivos; a suíte não oferece sinal verde de regressão.",
+      "evidence": [
+        {
+          "path": "package.json",
+          "claim": "npm test contém 15 arquivos."
+        },
+        {
+          "path": "scripts/test-admin-auth-pending-cancel.mjs",
+          "line": 32,
+          "claim": "Expectativa de logout falha."
+        },
+        {
+          "path": "scripts/test-admin-event-artist-name-leak.mjs",
+          "line": 143,
+          "claim": "Duplicação falha."
+        },
+        {
+          "path": "scripts/test-public-help-flow.mjs",
+          "line": 420,
+          "claim": "Dois casos falham."
+        },
+        {
+          "path": "scripts/test-whatsapp-batch-compat.mjs",
+          "line": 82,
+          "claim": "Contrato textual falha."
+        }
+      ],
+      "impact": "Mudanças futuras não conseguem distinguir regressões novas de falhas preexistentes sem triagem manual.",
+      "domains": [
+        "domain.platform-runtime"
+      ],
+      "modules": [],
+      "tests": [
+        "npm test"
+      ],
+      "blast_radius": "SYSTEM_WIDE",
+      "workaround": "203 casos passam e cada falha foi triada nesta etapa.",
+      "direction": "Reconciliar defeitos reais e expectativas obsoletas em etapa de remediação.",
+      "priority_justification": "P1 porque uma baseline evolutiva precisa de um gate padrão confiável."
+    },
+    {
+      "id": "gap.critical-capability-and-flow-coverage",
+      "title": "Capabilities e flows relevantes não têm teste direto",
+      "type": "TEST_GAP",
+      "severity": "HIGH",
+      "priority": "P1",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "37 capabilities não têm referência de teste e 4 flows não têm teste; entre eles há status/eventos, acesso fixo, automação Codex e finalização de evento.",
+      "evidence": [
+        {
+          "path": "system-knowledge/capabilities.json",
+          "claim": "metrics.without_test = 37."
+        },
+        {
+          "path": "system-knowledge/flows.json",
+          "claim": "metrics.without_test = 4."
+        }
+      ],
+      "impact": "Regressões em autorização, mutações e automação externa podem chegar sem detecção automatizada.",
+      "domains": [
+        "domain.event-administration",
+        "domain.gate-admission",
+        "domain.codex-automation",
+        "domain.background-processing"
+      ],
+      "modules": [],
+      "capabilities": [
+        "event.change_status",
+        "event.cancel",
+        "gate.fixed_create",
+        "gate.fixed_revoke",
+        "automation.issue",
+        "event.auto_finish"
+      ],
+      "flows": [
+        "event.auto_finish",
+        "event.program_import",
+        "blackhouse.maintenance",
+        "codex.automation"
+      ],
+      "blast_radius": "MULTI_DOMAIN",
+      "workaround": "Há auditorias manuais e contratos indiretos para parte da superfície.",
+      "direction": "Priorizar testes por criticidade e side effect, não por contagem bruta.",
+      "priority_justification": "P1 pela presença de ações privilegiadas e externas sem teste direto."
+    },
+    {
+      "id": "gap.real-integration-tests-outside-default",
+      "title": "Testes reais e de integração ficam fora da suíte padrão",
+      "type": "TEST_GAP",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "28 arquivos de teste catalogados não pertencem ao npm test; casos com Supabase real e HTTP local exigem ambiente e foram pulados na validação ampla.",
+      "evidence": [
+        {
+          "path": "system-knowledge/tests.json",
+          "claim": "nonDefaultTestFileCount = 28 e lista dependências de ambiente."
+        },
+        {
+          "path": "scripts/test-reservation-load-safe.mjs",
+          "claim": "Teste real de reserva fora da suíte padrão."
+        },
+        {
+          "path": "scripts/test-combo-offer-priority-real.mjs",
+          "claim": "Teste real de combo fora da suíte padrão."
+        }
+      ],
+      "impact": "O gate padrão cobre principalmente módulos/contratos e pode passar sem validar banco, concorrência ou integrações reais.",
+      "domains": [
+        "domain.platform-runtime",
+        "domain.reservation-inventory",
+        "domain.combo-commerce-fulfillment"
+      ],
+      "modules": [],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "tests": [
+        "test-013",
+        "test-020",
+        "test-034"
+      ],
+      "blast_radius": "MULTI_DOMAIN",
+      "workaround": "Scripts reais podem ser executados manualmente em ambiente controlado.",
+      "direction": "Criar camadas de suíte explícitas e reproduzíveis por dependência.",
+      "priority_justification": "MEDIUM com alcance MULTI_DOMAIN, considerando probabilidade, workaround e capacidade de detecção."
+    },
+    {
+      "id": "gap.source-contract-assertion-bias",
+      "title": "Parte relevante dos testes valida texto-fonte e regex de implementação",
+      "type": "TEST_GAP",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "O catálogo classifica muitos testes como source-contract; falhas atuais por negrito e estrutura textual demonstram acoplamento a representação interna sem necessariamente indicar defeito do comportamento.",
+      "evidence": [
+        {
+          "path": "system-knowledge/tests.json",
+          "claim": "Tipos source-contract predominam em arquivos catalogados."
+        },
+        {
+          "path": "scripts/test-whatsapp-batch-compat.mjs",
+          "line": 82,
+          "claim": "Regex rejeita *NOVO* apesar da semântica preservada."
+        },
+        {
+          "path": "scripts/test-public-availability-classification.mjs",
+          "claim": "Regex exige apresentação literal de NEW/NOVO."
+        }
+      ],
+      "impact": "Refactors e ajustes de texto geram falsos negativos, enquanto comportamento integrado pode continuar sem prova.",
+      "domains": [
+        "domain.platform-runtime"
+      ],
+      "modules": [],
+      "tests": [
+        "test-030",
+        "test-038"
+      ],
+      "blast_radius": "SYSTEM_WIDE",
+      "workaround": "Alguns arquivos também executam funções diretamente.",
+      "direction": "Migrar assertivas críticas para comportamento e manter contratos de fonte apenas onde necessários.",
+      "priority_justification": "MEDIUM com alcance SYSTEM_WIDE, considerando probabilidade, workaround e capacidade de detecção."
+    },
+    {
+      "id": "gap.test-runner-depends-on-untracked-loader",
+      "title": "npm test depende de loader em diretório temporário não versionado",
+      "type": "TEST_GAP",
+      "severity": "HIGH",
+      "priority": "P1",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "package.json aponta para ./.tmp/typescript-alias-loader.mjs; git não rastreia arquivos em .tmp, embora o loader exista nesta máquina.",
+      "evidence": [
+        {
+          "path": "package.json",
+          "claim": "Script test referencia .tmp/typescript-alias-loader.mjs."
+        },
+        {
+          "path": ".gitignore",
+          "claim": ".tmp é área ignorada/temporária conforme inventário do repositório."
+        }
+      ],
+      "impact": "Um checkout limpo ou CI pode falhar antes de executar qualquer teste por ausência do loader.",
+      "domains": [
+        "domain.platform-runtime"
+      ],
+      "modules": [],
+      "tests": [
+        "npm test"
+      ],
+      "blast_radius": "SYSTEM_WIDE",
+      "workaround": "O arquivo existe no workspace auditado.",
+      "direction": "Versionar o mecanismo de resolução ou usar configuração padrão do runner.",
+      "priority_justification": "P1 porque compromete a portabilidade do único gate padrão."
+    },
+    {
+      "id": "gap.remote-database-behavior-tests",
+      "title": "Equivalência remota de RPCs, triggers e constraints não tem teste de baseline",
+      "type": "TEST_GAP",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "NOT_VALIDATED",
+      "confidence": "CONFIRMED",
+      "description": "33 nomes de RPC coincidem parcialmente com definições locais, mas corpos, triggers, constraints e índices remotos não foram inspecionados; testes reais não fazem parte do npm test.",
+      "evidence": [
+        {
+          "path": "system-knowledge/database-objects.json",
+          "claim": "Catálogo local/rotas remotas."
+        },
+        {
+          "path": "system-knowledge/runtime-validation.json",
+          "claim": "OpenAPI não prova comportamento interno."
+        },
+        {
+          "path": "system-knowledge/tests.json",
+          "claim": "Testes reais ficam fora do gate padrão."
+        }
+      ],
+      "impact": "A camada responsável por atomicidade e idempotência pode divergir do repositório sem detecção pelo gate local.",
+      "domains": [
+        "domain.reservation-inventory",
+        "domain.orders-payments",
+        "domain.ticketing-delivery",
+        "domain.combo-commerce-fulfillment"
+      ],
+      "modules": [
+        "platform.supabase-client"
+      ],
+      "functions": [
+        "*"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "blast_radius": "MULTI_DOMAIN",
+      "workaround": "Nomes de 30 RPCs de aplicação coincidem e rotas remotas foram observadas.",
+      "direction": "Adicionar verificação não destrutiva de definição/versão e testes controlados de invariantes.",
+      "priority_justification": "MEDIUM com alcance MULTI_DOMAIN, considerando probabilidade, workaround e capacidade de detecção."
+    },
+    {
+      "id": "dead.brand-logo-component",
+      "title": "BrandLogo.tsx não possui consumidor encontrado",
+      "type": "DEAD_CODE",
+      "severity": "LOW",
+      "priority": "P3",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "BrandLogo exporta um componente comum, mas a busca de imports/uso encontrou somente sua própria definição.",
+      "evidence": [
+        {
+          "path": "src/app/BrandLogo.tsx",
+          "line": 7,
+          "claim": "Export default sem consumidor estático encontrado."
+        }
+      ],
+      "impact": "Mantém um componente e asset contract que aparentam ativos, aumentando ruído de marca e manutenção.",
+      "domains": [
+        "domain.brand-presentation"
+      ],
+      "modules": [
+        "brand.presentation"
+      ],
+      "blast_radius": "LOCAL",
+      "workaround": "Nenhum impacto funcional atual comprovado.",
+      "direction": "Confirmar ausência de import dinâmico antes de remoção futura.",
+      "priority_justification": "LOW com alcance LOCAL, considerando probabilidade, workaround e capacidade de detecção."
+    },
+    {
+      "id": "orphan.ticket-validation-history",
+      "title": "Capability de histórico de validações não tem entrypoint",
+      "type": "ORPHAN",
+      "severity": "LOW",
+      "priority": "P3",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "listAdminTicketValidations existe e foi catalogada, mas nenhuma rota, UI ou comando alcançável foi encontrado.",
+      "evidence": [
+        {
+          "path": "system-knowledge/capabilities.json",
+          "claim": "ticket.validation_history está ÓRFÃ."
+        },
+        {
+          "path": "src/lib/tickets/services/adminTickets.ts",
+          "claim": "Implementação do histórico existe."
+        }
+      ],
+      "impact": "Código e consulta ficam sem uso operacional comprovado.",
+      "domains": [
+        "domain.ticketing-delivery"
+      ],
+      "modules": [
+        "admin.ticket-operations"
+      ],
+      "capabilities": [
+        "ticket.validation_history"
+      ],
+      "tables": [
+        "ticket_validation_events"
+      ],
+      "blast_radius": "LOCAL",
+      "direction": "Decidir se ganhará entrypoint ou será removida.",
+      "priority_justification": "LOW com alcance LOCAL, considerando probabilidade, workaround e capacidade de detecção."
+    },
+    {
+      "id": "orphan.gate-session-revoke",
+      "title": "Capability de revogar sessão de leitor não tem entrypoint",
+      "type": "ORPHAN",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "revokeGateSession existe, mas o catálogo não encontra consumidor/entrypoint; isso impede usar a revogação granular como resposta operacional comum.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/gateSessions.ts",
+          "line": 488,
+          "claim": "Função de revogação existe."
+        },
+        {
+          "path": "system-knowledge/capabilities.json",
+          "claim": "gate.session_revoke está ÓRFÃ."
+        }
+      ],
+      "impact": "Sessões emitidas não podem ser revogadas pelo fluxo catalogado, ampliando o risco de autorização já registrado.",
+      "domains": [
+        "domain.gate-admission"
+      ],
+      "modules": [
+        "gate.access-session"
+      ],
+      "capabilities": [
+        "gate.session_revoke"
+      ],
+      "tables": [
+        "gate_sessions"
+      ],
+      "blast_radius": "DOMAIN",
+      "workaround": "Alteração direta no banco seria possível, mas não é um fluxo de produto.",
+      "direction": "Expor a capacidade com autorização administrativa apropriada.",
+      "priority_justification": "P2 porque a ausência agrava revogação, embora a função exista."
+    },
+    {
+      "id": "orphan.courtesy-event-limit",
+      "title": "Limite global de cortesia existe sem entrypoint",
+      "type": "ORPHAN",
+      "severity": "LOW",
+      "priority": "P3",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "setCourtesyLimit está implementada, porém courtesy.event_limit não participa de flow/entrypoint; o fluxo usa limite por setor parcialmente.",
+      "evidence": [
+        {
+          "path": "system-knowledge/capabilities.json",
+          "claim": "courtesy.event_limit está ÓRFÃ."
+        },
+        {
+          "path": "src/lib/tickets/services/adminCourtesies.ts",
+          "claim": "Serviço contém a operação."
+        }
+      ],
+      "impact": "A regra global pode ficar divergente ou sem governança operacional.",
+      "domains": [
+        "domain.courtesy"
+      ],
+      "modules": [
+        "courtesy.service"
+      ],
+      "capabilities": [
+        "courtesy.event_limit"
+      ],
+      "tables": [
+        "courtesy_limits"
+      ],
+      "blast_radius": "DOMAIN",
+      "direction": "Definir se a regra global é legado ou deve ter gestão.",
+      "priority_justification": "LOW com alcance DOMAIN, considerando probabilidade, workaround e capacidade de detecção."
+    },
+    {
+      "id": "orphan.gate-sessions-list",
+      "title": "Listagem de sessões de leitor não tem entrypoint",
+      "type": "ORPHAN",
+      "severity": "LOW",
+      "priority": "P3",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "listGateSessions consulta até 50 sessões, mas não há consumidor alcançável catalogado.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/gateSessions.ts",
+          "line": 510,
+          "claim": "Listagem está implementada."
+        },
+        {
+          "path": "system-knowledge/capabilities.json",
+          "claim": "gate.sessions_list está ÓRFÃ."
+        }
+      ],
+      "impact": "Operadores não têm visão catalogada das sessões ativas/revogadas, dificultando diagnóstico e resposta.",
+      "domains": [
+        "domain.gate-admission"
+      ],
+      "modules": [
+        "gate.access-session"
+      ],
+      "capabilities": [
+        "gate.sessions_list"
+      ],
+      "tables": [
+        "gate_sessions"
+      ],
+      "blast_radius": "DOMAIN",
+      "direction": "Conectar a uma superfície administrativa ou remover se legado.",
+      "priority_justification": "LOW com alcance DOMAIN, considerando probabilidade, workaround e capacidade de detecção."
+    },
+    {
+      "id": "orphan.seat-map-renders-table",
+      "title": "seat_map_renders não tem consumidor de aplicação confirmado",
+      "type": "ORPHAN",
+      "severity": "LOW",
+      "priority": "P3",
+      "status": "NOT_VALIDATED",
+      "confidence": "HIGH",
+      "description": "A tabela existe no modelo, mas não há .from(\"seat_map_renders\") nem função local que a consuma; uso externo/dinâmico não pôde ser excluído.",
+      "evidence": [
+        {
+          "path": "system-knowledge/data-model.json",
+          "claim": "Tabela seat_map_renders catalogada."
+        },
+        {
+          "path": "system-knowledge/infrastructure.json",
+          "claim": "Imagens atuais usam buffer/base64 e nenhum .storage."
+        }
+      ],
+      "impact": "Tabela pode acumular custo e confundir o modelo de persistência de mapas.",
+      "domains": [
+        "domain.table-map"
+      ],
+      "modules": [
+        "table-map.catalog-render"
+      ],
+      "tables": [
+        "seat_map_renders"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "blast_radius": "LOCAL",
+      "direction": "Verificar uso externo e retenção antes de classificar como dead code.",
+      "priority_justification": "LOW com alcance LOCAL, considerando probabilidade, workaround e capacidade de detecção."
+    },
+    {
+      "id": "legacy.table-map-presentation-disabled",
+      "title": "Mapa oficial e cortesia permanecem implementados, mas desativados na apresentação Rota5",
+      "type": "LEGACY",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "ROTA5_PRESENTATION_TABLE_MAP_ENABLED e ROTA5_PRESENTATION_COURTESY_ENABLED são false, enquanto serviços, API, tabela, assets e flows continuam presentes/parciais.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/rota5Presentation.ts",
+          "line": 2,
+          "claim": "Flags desativam mapa e cortesia na apresentação."
+        },
+        {
+          "path": "system-knowledge/flows.json",
+          "claim": "ticket.purchase e table_map.calibration permanecem PARCIAL."
+        },
+        {
+          "path": "system-knowledge/infrastructure.json",
+          "claim": "Contrato de storage não implementado."
+        }
+      ],
+      "impact": "Há duas realidades operacionais: código e dados de mesa/cortesia existem, mas a jornada pública Rota5 não os oferece integralmente.",
+      "domains": [
+        "domain.table-map",
+        "domain.courtesy",
+        "domain.brand-presentation"
+      ],
+      "modules": [
+        "brand.presentation",
+        "table-map.catalog-render",
+        "table-map.reservation"
+      ],
+      "capabilities": [
+        "table_map.reserve",
+        "table_map.calibrate",
+        "courtesy.public_issue"
+      ],
+      "flows": [
+        "ticket.purchase",
+        "courtesy.public",
+        "table_map.calibration"
+      ],
+      "tables": [
+        "official_table_map_places",
+        "official_table_map_reservations",
+        "seat_map_renders"
+      ],
+      "blast_radius": "MULTI_DOMAIN",
+      "workaround": "Jornada individual de ingresso permanece ativa.",
+      "direction": "Classificar explicitamente o que é produto futuro, compartilhado ou legado.",
+      "priority_justification": "MEDIUM com alcance MULTI_DOMAIN, considerando probabilidade, workaround e capacidade de detecção."
+    },
+    {
+      "id": "debt.direct-supabase-access-spread",
+      "title": "Acesso privilegiado ao Supabase está espalhado por services e routes",
+      "type": "COUPLING",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "getSupabaseAdmin e chamadas .from/.rpc aparecem transversalmente em módulos de domínio e handlers, ligando regra, persistência e service role.",
+      "evidence": [
+        {
+          "path": "src/lib/supabase/admin.ts",
+          "claim": "Cliente administrativo central."
+        },
+        {
+          "path": "docs/system/architecture-hotspots.md",
+          "claim": "Supabase admin tem fan-in 44."
+        },
+        {
+          "path": "system-knowledge/dependencies.json",
+          "claim": "817 dependências catalogadas mostram o acesso transversal."
+        }
+      ],
+      "impact": "Mudanças de schema, política de erro ou autorização exigem revisão ampla e um erro de boundary pode operar com privilégios elevados.",
+      "domains": [
+        "domain.platform-runtime",
+        "domain.event-administration",
+        "domain.orders-payments",
+        "domain.ticketing-delivery",
+        "domain.combo-commerce-fulfillment"
+      ],
+      "modules": [
+        "platform.supabase-client"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "blast_radius": "SYSTEM_WIDE",
+      "workaround": "O módulo do cliente mantém segredo no servidor e RLS local está habilitado.",
+      "direction": "Concentrar contratos de dados e autorização por caso de uso.",
+      "priority_justification": "MEDIUM com alcance SYSTEM_WIDE, considerando probabilidade, workaround e capacidade de detecção."
+    },
+    {
+      "id": "debt.large-mixed-service-modules",
+      "title": "Serviços grandes misturam consulta, regra, formatting e efeitos",
+      "type": "MAINTAINABILITY",
+      "severity": "LOW",
+      "priority": "P3",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "adminEvents.ts tem 2.758 linhas, comboOffers.ts 2.669 e adminReports.ts 1.512; os hotspots mostram múltiplas responsabilidades/fan-out.",
+      "evidence": [
+        {
+          "path": "docs/system/architecture-hotspots.md",
+          "claim": "Métricas e responsabilidades dos 14 hotspots."
+        },
+        {
+          "path": "src/lib/tickets/services/adminEvents.ts",
+          "line": 1,
+          "claim": "Serviço administrativo amplo."
+        },
+        {
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 1,
+          "claim": "Serviço de oferta e distribuição amplo."
+        }
+      ],
+      "impact": "A revisão e alteração dessas áreas exige contexto extenso e aumenta risco de regressão, sem defeito funcional adicional comprovado.",
+      "domains": [
+        "domain.event-administration",
+        "domain.combo-commerce-fulfillment",
+        "domain.analytics-reporting"
+      ],
+      "modules": [
+        "event-admin.service",
+        "combo.offers",
+        "analytics.reports"
+      ],
+      "blast_radius": "MULTI_DOMAIN",
+      "direction": "Separar responsabilidades em etapa futura guiada pelos flows.",
+      "priority_justification": "LOW com alcance MULTI_DOMAIN, considerando probabilidade, workaround e capacidade de detecção."
+    },
+    {
+      "id": "risk.payment-confirmed-before-external-delivery",
+      "title": "Confirmação atômica e entrega externa formam fronteira de consistência eventual",
+      "type": "DATA_INTEGRITY",
+      "severity": "MEDIUM",
+      "priority": "P1",
+      "status": "POTENTIAL",
+      "confidence": "HIGH",
+      "description": "A RPC confirma pedido/emite tickets; depois o handler chama entrega Z-API. Falha de entrega é registrada e não reverte pagamento/emissão, exigindo reaper/reenvio.",
+      "evidence": [
+        {
+          "path": "src/app/api/webhook/payment/mercado-pago/route.ts",
+          "line": 497,
+          "claim": "Confirma pedido por confirm_paid_ticket_order."
+        },
+        {
+          "path": "src/app/api/webhook/payment/mercado-pago/route.ts",
+          "line": 538,
+          "claim": "Entrega ocorre depois da confirmação."
+        },
+        {
+          "path": "src/lib/tickets/services/whatsappOutboundDeliveries.ts",
+          "line": 14,
+          "claim": "Delivery persiste idempotency_key e estado."
+        }
+      ],
+      "impact": "Cliente pode ficar temporariamente pago e emitido sem receber o ingresso; a recuperação depende da fila/reaper e observabilidade.",
+      "domains": [
+        "domain.orders-payments",
+        "domain.ticketing-delivery",
+        "domain.whatsapp-conversations"
+      ],
+      "modules": [
+        "payment.webhook",
+        "ticket.delivery",
+        "messaging.outbound-deliveries"
+      ],
+      "capabilities": [
+        "payment.confirm",
+        "ticket.deliver"
+      ],
+      "flows": [
+        "ticket.payment_confirmation",
+        "ticket.delivery"
+      ],
+      "tables": [
+        "orders",
+        "payments",
+        "tickets",
+        "whatsapp_outbound_deliveries"
+      ],
+      "functions": [
+        "confirm_paid_ticket_order"
+      ],
+      "integrations": [
+        "integration-mercado-pago",
+        "integration-zapi",
+        "integration-supabase"
+      ],
+      "blast_radius": "MULTI_DOMAIN",
+      "workaround": "Idempotency key, estados de delivery, reenvio e reaper reduzem o risco e permitem recuperação.",
+      "direction": "Tratar a fronteira como saga observável com recuperação testada.",
+      "priority_justification": "P1 pelo vínculo com dinheiro/entrega, apesar das mitigações existentes."
+    },
+    {
+      "id": "risk.whatsapp-conversation-context-race",
+      "title": "Mensagens simultâneas podem competir pela atualização do contexto conversacional",
+      "type": "CONCURRENCY",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "POTENTIAL",
+      "confidence": "MEDIUM",
+      "description": "Deduplicação protege message ID e batches têm claim RPC, mas o webhook lê estado, roteia e atualiza conversation context em etapas de aplicação; não foi encontrado lock/versionamento comum ao despacho.",
+      "evidence": [
+        {
+          "path": "src/app/api/webhook/zapi/route.ts",
+          "line": 832,
+          "claim": "POST coordena leitura, roteamento, envio e persistência."
+        },
+        {
+          "path": "src/lib/tickets/services/conversations.ts",
+          "claim": "Contexto é lido/atualizado por chamadas separadas."
+        },
+        {
+          "path": "src/lib/tickets/services/messages.ts",
+          "line": 116,
+          "claim": "Inbound deduplica mensagem, não serializa toda a conversa."
+        }
+      ],
+      "impact": "Duas mensagens válidas próximas podem produzir respostas fora de ordem ou sobrescrever o estado esperado.",
+      "domains": [
+        "domain.whatsapp-conversations"
+      ],
+      "modules": [
+        "messaging.webhook",
+        "messaging.router",
+        "messaging.conversations"
+      ],
+      "entrypoints": [
+        "http-zapi-webhook"
+      ],
+      "capabilities": [
+        "messaging.receive",
+        "messaging.respond"
+      ],
+      "flows": [
+        "whatsapp.inbound_dispatch",
+        "whatsapp.public_discovery"
+      ],
+      "tables": [
+        "whatsapp_messages",
+        "conversations"
+      ],
+      "integrations": [
+        "integration-zapi",
+        "integration-supabase"
+      ],
+      "blast_radius": "DOMAIN",
+      "workaround": "Chave de mensagem evita reprocessar o mesmo inbound; não cobre dois inbounds distintos concorrentes.",
+      "direction": "Serializar processamento por conversa ou aplicar versão otimista.",
+      "priority_justification": "MEDIUM com alcance DOMAIN, considerando probabilidade, workaround e capacidade de detecção."
+    },
+    {
+      "id": "debt.payment-reconciliation-duplication-is-intentional",
+      "title": "Webhook e consulta de status repetem confirmação com guardas idempotentes",
+      "type": "DUPLICATION",
+      "severity": "INFO",
+      "priority": "P4",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "Existem caminhos alternativos de confirmação por webhook e polling/status; ambos convergem para RPCs que retornam idempotent e evitam nova entrega quando a confirmação já ocorreu.",
+      "evidence": [
+        {
+          "path": "src/app/api/webhook/payment/mercado-pago/route.ts",
+          "line": 497,
+          "claim": "Webhook usa RPC atômica."
+        },
+        {
+          "path": "src/app/api/checkout/status/route.ts",
+          "claim": "Status pode reconciliar aprovação."
+        },
+        {
+          "path": "supabase/migrations",
+          "claim": "Definições locais de confirmação contêm guardas/idempotência."
+        }
+      ],
+      "impact": "A duplicação aumenta superfície de manutenção, mas fornece reconciliação legítima e não há defeito duplicado comprovado.",
+      "domains": [
+        "domain.orders-payments"
+      ],
+      "modules": [
+        "payment.webhook",
+        "payment.api-ui"
+      ],
+      "capabilities": [
+        "payment.confirm",
+        "payment.status"
+      ],
+      "flows": [
+        "ticket.payment_confirmation",
+        "ticket.purchase"
+      ],
+      "integrations": [
+        "integration-mercado-pago",
+        "integration-supabase"
+      ],
+      "blast_radius": "DOMAIN",
+      "workaround": "RPC central e flag idempotent são a mitigação atual.",
+      "direction": "Preservar invariantes comuns ao manter os dois gatilhos.",
+      "priority_justification": "P4 por ser duplicação intencional com guardas, registrada para evitar falso positivo."
+    },
+    {
+      "id": "risk.checkout-status-fixed-polling",
+      "title": "Checkouts consultam status a cada cinco segundos sem backoff",
+      "type": "PERFORMANCE",
+      "severity": "LOW",
+      "priority": "P3",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "Clientes de checkout iniciam setInterval de 5 s e silenciam falhas enquanto a página permanece aberta.",
+      "evidence": [
+        {
+          "path": "src/app/checkout/[orderId]/checkout-client.tsx",
+          "line": 220,
+          "claim": "Polling fixo de 5 segundos."
+        },
+        {
+          "path": "src/app/combo-checkout/[orderId]/combo-checkout-client.tsx",
+          "line": 138,
+          "claim": "Polling equivalente para combo."
+        }
+      ],
+      "impact": "Muitas páginas abertas ampliam chamadas ao status/MP e logs, sobretudo durante incidentes de integração.",
+      "domains": [
+        "domain.orders-payments",
+        "domain.combo-commerce-fulfillment"
+      ],
+      "modules": [
+        "payment.checkout",
+        "combo.checkout-ui-api"
+      ],
+      "entrypoints": [
+        "page-checkout",
+        "page-combo-checkout"
+      ],
+      "capabilities": [
+        "payment.status",
+        "combo.status"
+      ],
+      "integrations": [
+        "integration-mercado-pago",
+        "integration-supabase"
+      ],
+      "blast_radius": "MULTI_DOMAIN",
+      "workaround": "Polling termina com a página e a aprovação; rate limit protege endpoints.",
+      "direction": "Aplicar backoff/limite ou evento push em etapa futura.",
+      "priority_justification": "LOW com alcance MULTI_DOMAIN, considerando probabilidade, workaround e capacidade de detecção."
+    },
+    {
+      "id": "risk.production-capable-scripts-outside-test-isolation",
+      "title": "Scripts reais podem ler ou alterar ambientes remotos por configuração",
+      "type": "OPERATIONAL",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "POTENTIAL",
+      "confidence": "HIGH",
+      "description": "O repositório contém auditorias e testes *-real/*-prod e scripts de manutenção que usam service role/DATABASE_URL; eles ficam fora do npm test e dependem de pré-condições/flags específicas.",
+      "evidence": [
+        {
+          "path": "system-knowledge/tests.json",
+          "claim": "Testes reais são dependentes de ambiente e fora da suíte padrão."
+        },
+        {
+          "path": "scripts/test-combo-offer-priority-real.mjs",
+          "claim": "Teste real combina Supabase e HTTP local."
+        },
+        {
+          "path": "scripts/update-black-house-sectors.mjs",
+          "line": 38,
+          "claim": "Script de manutenção consulta e pode atualizar escopo remoto."
+        }
+      ],
+      "impact": "Execução no ambiente errado pode criar, alterar ou remover dados operacionais.",
+      "domains": [
+        "domain.codex-automation",
+        "domain.event-administration",
+        "domain.platform-runtime"
+      ],
+      "modules": [
+        "automation.local-runner"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "blast_radius": "EXTERNAL",
+      "workaround": "Vários scripts exigem --apply ou usam nomes de auditoria e limpeza explícita; não há runner único impondo isolamento.",
+      "direction": "Classificar scripts por efeito e ambiente com guardas uniformes.",
+      "priority_justification": "MEDIUM com alcance EXTERNAL, considerando probabilidade, workaround e capacidade de detecção."
+    },
+    {
+      "id": "gap.partial-flows-lack-end-to-end-proof",
+      "title": "Sete flows parciais não possuem prova ponta a ponta",
+      "type": "TEST_GAP",
+      "severity": "MEDIUM",
+      "priority": "P1",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "Os sete flows permanecem PARCIAL após revalidação; testes cobrem ramos ou contratos, mas não demonstram todos os terminais, integrações e recuperação.",
+      "evidence": [
+        {
+          "path": "system-knowledge/flows.json",
+          "claim": "whatsapp.public_discovery, ticket.purchase, courtesy.public, combo.delivery_choice, admin.whatsapp_event_management, admin.courtesy_management e table_map.calibration estão PARCIAL."
+        }
+      ],
+      "impact": "A saúde dessas jornadas não pode ser promovida a HEALTHY e regressões entre módulos podem escapar.",
+      "domains": [
+        "domain.whatsapp-conversations",
+        "domain.reservation-inventory",
+        "domain.courtesy",
+        "domain.combo-commerce-fulfillment",
+        "domain.event-administration",
+        "domain.table-map"
+      ],
+      "modules": [],
+      "flows": [
+        "whatsapp.public_discovery",
+        "ticket.purchase",
+        "courtesy.public",
+        "combo.delivery_choice",
+        "admin.whatsapp_event_management",
+        "admin.courtesy_management",
+        "table_map.calibration"
+      ],
+      "blast_radius": "MULTI_DOMAIN",
+      "workaround": "Cada flow possui evidência estrutural e cobertura parcial documentada.",
+      "direction": "Criar cenários end-to-end não destrutivos para cada terminal crítico.",
+      "priority_justification": "P1 porque são jornadas de compra/admin/entrega ativas, embora não estejam todas quebradas."
+    },
+    {
+      "id": "gap.client-errors-not-persisted",
+      "title": "Falhas de polling e scanner ficam apenas no estado do cliente",
+      "type": "OBSERVABILITY",
+      "severity": "LOW",
+      "priority": "P3",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "Vários catch em checkout/scanners apenas atualizam texto local ou ignoram erro de polling; não há persistência/telemetria do erro do browser.",
+      "evidence": [
+        {
+          "path": "src/app/checkout/[orderId]/checkout-client.tsx",
+          "line": 215,
+          "claim": "Falha de polling é silenciosa."
+        },
+        {
+          "path": "src/app/gate/session/[token]/GateSessionScanner.tsx",
+          "line": 279,
+          "claim": "Falha de scan vira mensagem local."
+        },
+        {
+          "path": "src/app/kitchen/session/[token]/KitchenSessionScanner.tsx",
+          "line": 208,
+          "claim": "Falha de atualização vira notice local."
+        }
+      ],
+      "impact": "Incidentes de browser, câmera e conectividade não aparecem na observabilidade do servidor, reduzindo diagnóstico.",
+      "domains": [
+        "domain.orders-payments",
+        "domain.gate-admission",
+        "domain.combo-commerce-fulfillment"
+      ],
+      "modules": [
+        "payment.checkout",
+        "gate.ui-api",
+        "combo.kitchen-reader-ui-api"
+      ],
+      "flows": [
+        "ticket.purchase",
+        "gate.ticket_admission",
+        "kitchen.combo_redemption"
+      ],
+      "blast_radius": "MULTI_DOMAIN",
+      "workaround": "O operador/cliente recebe feedback visual e tentativas subsequentes podem recuperar.",
+      "direction": "Definir telemetria mínima e sem dados sensíveis para falhas críticas do cliente.",
+      "priority_justification": "LOW com alcance MULTI_DOMAIN, considerando probabilidade, workaround e capacidade de detecção."
+    },
+    {
+      "id": "debt.distributed-status-literals",
+      "title": "Estados e mensagens de negócio estão distribuídos em arquivos extensos",
+      "type": "MAINTAINABILITY",
+      "severity": "INFO",
+      "priority": "P4",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "Status de evento, sessão, pagamento, entrega e conversa aparecem em unions, branches, SQL e strings de UI/router; o catálogo reconstruiu 66 transições para reconciliá-los.",
+      "evidence": [
+        {
+          "path": "system-knowledge/state-transitions.json",
+          "claim": "66 transições catalogadas."
+        },
+        {
+          "path": "src/lib/tickets/router.ts",
+          "claim": "Branches de estado conversacional."
+        },
+        {
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "claim": "Estados operacionais também vivem em raw_metadata."
+        }
+      ],
+      "impact": "Alterações de lifecycle exigem sincronização manual entre aplicação, SQL, UI e testes.",
+      "domains": [
+        "domain.event-administration",
+        "domain.orders-payments",
+        "domain.combo-commerce-fulfillment",
+        "domain.whatsapp-conversations"
+      ],
+      "modules": [
+        "messaging.router",
+        "combo.redemption",
+        "payment.webhook"
+      ],
+      "blast_radius": "MULTI_DOMAIN",
+      "direction": "Centralizar contratos de estado gradualmente, guiado pelo catálogo.",
+      "priority_justification": "INFO com alcance MULTI_DOMAIN, considerando probabilidade, workaround e capacidade de detecção."
+    },
+    {
+      "id": "risk.service-role-application-authorization-boundary",
+      "title": "A autorização da aplicação protege operações que usam service role",
+      "type": "SECURITY",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "POTENTIAL",
+      "confidence": "HIGH",
+      "description": "APIs server-side usam o cliente administrativo que contorna RLS; segurança depende de cada handler validar sessão, CSRF, segredo, token e ownership antes da consulta/mutação.",
+      "evidence": [
+        {
+          "path": "src/lib/supabase/admin.ts",
+          "claim": "Cria cliente com service role no servidor."
+        },
+        {
+          "path": "system-knowledge/infrastructure.json",
+          "claim": "Boundary API→Supabase registra bypass de RLS."
+        },
+        {
+          "path": "system-knowledge/entrypoints.json",
+          "claim": "56 entrypoints ampliam a superfície a revisar."
+        }
+      ],
+      "impact": "Uma omissão de autorização em um único handler teria privilégios amplos no banco; nenhuma rota explorável foi confirmada nesta etapa.",
+      "domains": [
+        "domain.platform-runtime",
+        "domain.admin-identity-access"
+      ],
+      "modules": [
+        "platform.supabase-client",
+        "admin.auth"
+      ],
+      "entrypoints": [
+        "*"
+      ],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "blast_radius": "SYSTEM_WIDE",
+      "workaround": "server-only, proxy, cookies, CSRF, tokens e schemas são usados nas rotas catalogadas.",
+      "direction": "Manter uma matriz verificável de autorização por entrypoint e reduzir privilégios quando possível.",
+      "priority_justification": "P2 por ser risco estrutural real com controles presentes e sem exploração confirmada."
+    }
+  ]
+}

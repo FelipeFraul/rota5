@@ -1,0 +1,14 @@
+# Contradições da baseline — Etapa 7
+
+Foram encontradas **2 contradições materiais**, ambas corrigidas e registradas sem ocultar a métrica anterior. Não há contradição material pendente.
+
+| ID | Antes | Depois | Evidência | Estado |
+| --- | --- | --- | --- | --- |
+| `contradiction.readme-stage5-gate` | README continha gates concorrentes PARTIAL e PASS para a Etapa 5 e índice desatualizado. | Mantido o gate final PASS e índice atualizado até a Etapa 7. | Gate final da Etapa 5 e artefatos da Etapa 6. | CORRECTED |
+| `contradiction.default-suite-current-result` | Snapshot corrente dizia 204/210, 6 falhas, 5 arquivos. | Snapshot atual diz 203/210, 7 falhas, 6 arquivos; o anterior permanece histórico. | Duas execuções em 12/09/2026 e `risk-summary.json`. | CORRECTED |
+
+## Alteração de métrica
+
+`npm test`: **204 PASS / 6 FAIL → 203 PASS / 7 FAIL**. O novo caso falho está em `test-whatsapp-batch-compat.mjs`. Nenhuma outra métrica canônica foi alterada.
+
+Fonte machine-readable: `system-knowledge/contradictions.json`.

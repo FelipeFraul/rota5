@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-12",
+  "stage": "6/8",
+  "sourceCommit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+  "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
+  "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
+  "count": 11,
+  "by_classification": {
+    "DEAD_CODE": 1,
+    "ORPHAN": 4,
+    "EXTERNAL_USAGE_UNKNOWN": 2,
+    "ROCKBAR_LEGACY": 1,
+    "BLACKHOUSE_LEGACY": 1,
+    "ACTIVE_SHARED": 1,
+    "UNKNOWN": 1
+  },
+  "records": [
+    {
+      "id": "dead.brand-logo-component",
+      "classification": "DEAD_CODE",
+      "status": "CONFIRMED",
+      "path": "src/app/BrandLogo.tsx",
+      "finding": "dead.brand-logo-component"
+    },
+    {
+      "id": "orphan.ticket-validation-history",
+      "classification": "ORPHAN",
+      "status": "CONFIRMED",
+      "symbol": "listAdminTicketValidations",
+      "finding": "orphan.ticket-validation-history"
+    },
+    {
+      "id": "orphan.gate-session-revoke",
+      "classification": "ORPHAN",
+      "status": "CONFIRMED",
+      "symbol": "revokeGateSession",
+      "finding": "orphan.gate-session-revoke"
+    },
+    {
+      "id": "orphan.courtesy-event-limit",
+      "classification": "ORPHAN",
+      "status": "CONFIRMED",
+      "symbol": "setCourtesyLimit",
+      "finding": "orphan.courtesy-event-limit"
+    },
+    {
+      "id": "orphan.gate-sessions-list",
+      "classification": "ORPHAN",
+      "status": "CONFIRMED",
+      "symbol": "listGateSessions",
+      "finding": "orphan.gate-sessions-list"
+    },
+    {
+      "id": "orphan.seat-map-renders-table",
+      "classification": "EXTERNAL_USAGE_UNKNOWN",
+      "status": "NOT_VALIDATED",
+      "table": "seat_map_renders",
+      "finding": "orphan.seat-map-renders-table"
+    },
+    {
+      "id": "legacy.rockbar-assets",
+      "classification": "ROCKBAR_LEGACY",
+      "status": "ACTIVE",
+      "paths": [
+        "public/rockbar.webp",
+        "public/rockbar_mb.webp",
+        "src/app/globals.css"
+      ],
+      "finding": "legacy.active-brand-contamination"
+    },
+    {
+      "id": "legacy.blackhouse-copy",
+      "classification": "BLACKHOUSE_LEGACY",
+      "status": "ACTIVE",
+      "paths": [
+        "src/app/checkout/pending/page.tsx",
+        "src/app/checkout/success/page.tsx",
+        "src/lib/tickets/services/publicHelp.ts"
+      ],
+      "finding": "legacy.active-brand-contamination"
+    },
+    {
+      "id": "legacy.blackhouse-maintenance-scripts",
+      "classification": "ACTIVE_SHARED",
+      "status": "ACTIVE",
+      "paths": [
+        "scripts/import-programacao-events.mjs",
+        "scripts/rename-black-house-ticket-sections.mjs",
+        "scripts/split-black-house-special-items.mjs",
+        "scripts/update-black-house-sectors.mjs"
+      ],
+      "finding": "risk.production-capable-scripts-outside-test-isolation"
+    },
+    {
+      "id": "legacy.table-map-disabled",
+      "classification": "UNKNOWN",
+      "status": "ACTIVE",
+      "path": "src/lib/tickets/rota5Presentation.ts",
+      "finding": "legacy.table-map-presentation-disabled"
+    },
+    {
+      "id": "orphan.assets-group",
+      "classification": "EXTERNAL_USAGE_UNKNOWN",
+      "status": "NOT_VALIDATED",
+      "path": "public/",
+      "note": "Assets sem referência estática não foram promovidos individualmente a DEAD_CODE."
+    }
+  ]
+}

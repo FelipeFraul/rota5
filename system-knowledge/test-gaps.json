@@ -1,0 +1,238 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-12",
+  "stage": "6/8",
+  "sourceCommit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+  "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
+  "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
+  "count": 7,
+  "default_suite": {
+    "cases": 210,
+    "passed": 203,
+    "failed": 7,
+    "status": "FAIL"
+  },
+  "records": [
+    {
+      "id": "gap.default-test-suite-failing",
+      "title": "Suíte padrão está vermelha com sete casos falhos",
+      "severity": "HIGH",
+      "priority": "P1",
+      "status": "ACTIVE",
+      "evidence": [
+        {
+          "path": "package.json",
+          "claim": "npm test contém 15 arquivos."
+        },
+        {
+          "path": "scripts/test-admin-auth-pending-cancel.mjs",
+          "line": 32,
+          "claim": "Expectativa de logout falha."
+        },
+        {
+          "path": "scripts/test-admin-event-artist-name-leak.mjs",
+          "line": 143,
+          "claim": "Duplicação falha."
+        },
+        {
+          "path": "scripts/test-public-help-flow.mjs",
+          "line": 420,
+          "claim": "Dois casos falham."
+        },
+        {
+          "path": "scripts/test-whatsapp-batch-compat.mjs",
+          "line": 82,
+          "claim": "Contrato textual falha."
+        }
+      ],
+      "affected": {
+        "capabilities": [],
+        "flows": [],
+        "integrations": [],
+        "tests": [
+          "npm test"
+        ]
+      }
+    },
+    {
+      "id": "gap.critical-capability-and-flow-coverage",
+      "title": "Capabilities e flows relevantes não têm teste direto",
+      "severity": "HIGH",
+      "priority": "P1",
+      "status": "ACTIVE",
+      "evidence": [
+        {
+          "path": "system-knowledge/capabilities.json",
+          "claim": "metrics.without_test = 37."
+        },
+        {
+          "path": "system-knowledge/flows.json",
+          "claim": "metrics.without_test = 4."
+        }
+      ],
+      "affected": {
+        "capabilities": [
+          "event.change_status",
+          "event.cancel",
+          "gate.fixed_create",
+          "gate.fixed_revoke",
+          "automation.issue",
+          "event.auto_finish"
+        ],
+        "flows": [
+          "event.auto_finish",
+          "event.program_import",
+          "blackhouse.maintenance",
+          "codex.automation"
+        ],
+        "integrations": [],
+        "tests": []
+      }
+    },
+    {
+      "id": "gap.real-integration-tests-outside-default",
+      "title": "Testes reais e de integração ficam fora da suíte padrão",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "ACTIVE",
+      "evidence": [
+        {
+          "path": "system-knowledge/tests.json",
+          "claim": "nonDefaultTestFileCount = 28 e lista dependências de ambiente."
+        },
+        {
+          "path": "scripts/test-reservation-load-safe.mjs",
+          "claim": "Teste real de reserva fora da suíte padrão."
+        },
+        {
+          "path": "scripts/test-combo-offer-priority-real.mjs",
+          "claim": "Teste real de combo fora da suíte padrão."
+        }
+      ],
+      "affected": {
+        "capabilities": [],
+        "flows": [],
+        "integrations": [
+          "integration-supabase"
+        ],
+        "tests": [
+          "test-013",
+          "test-020",
+          "test-034"
+        ]
+      }
+    },
+    {
+      "id": "gap.source-contract-assertion-bias",
+      "title": "Parte relevante dos testes valida texto-fonte e regex de implementação",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "ACTIVE",
+      "evidence": [
+        {
+          "path": "system-knowledge/tests.json",
+          "claim": "Tipos source-contract predominam em arquivos catalogados."
+        },
+        {
+          "path": "scripts/test-whatsapp-batch-compat.mjs",
+          "line": 82,
+          "claim": "Regex rejeita *NOVO* apesar da semântica preservada."
+        },
+        {
+          "path": "scripts/test-public-availability-classification.mjs",
+          "claim": "Regex exige apresentação literal de NEW/NOVO."
+        }
+      ],
+      "affected": {
+        "capabilities": [],
+        "flows": [],
+        "integrations": [],
+        "tests": [
+          "test-030",
+          "test-038"
+        ]
+      }
+    },
+    {
+      "id": "gap.test-runner-depends-on-untracked-loader",
+      "title": "npm test depende de loader em diretório temporário não versionado",
+      "severity": "HIGH",
+      "priority": "P1",
+      "status": "ACTIVE",
+      "evidence": [
+        {
+          "path": "package.json",
+          "claim": "Script test referencia .tmp/typescript-alias-loader.mjs."
+        },
+        {
+          "path": ".gitignore",
+          "claim": ".tmp é área ignorada/temporária conforme inventário do repositório."
+        }
+      ],
+      "affected": {
+        "capabilities": [],
+        "flows": [],
+        "integrations": [],
+        "tests": [
+          "npm test"
+        ]
+      }
+    },
+    {
+      "id": "gap.remote-database-behavior-tests",
+      "title": "Equivalência remota de RPCs, triggers e constraints não tem teste de baseline",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "NOT_VALIDATED",
+      "evidence": [
+        {
+          "path": "system-knowledge/database-objects.json",
+          "claim": "Catálogo local/rotas remotas."
+        },
+        {
+          "path": "system-knowledge/runtime-validation.json",
+          "claim": "OpenAPI não prova comportamento interno."
+        },
+        {
+          "path": "system-knowledge/tests.json",
+          "claim": "Testes reais ficam fora do gate padrão."
+        }
+      ],
+      "affected": {
+        "capabilities": [],
+        "flows": [],
+        "integrations": [
+          "integration-supabase"
+        ],
+        "tests": []
+      }
+    },
+    {
+      "id": "gap.partial-flows-lack-end-to-end-proof",
+      "title": "Sete flows parciais não possuem prova ponta a ponta",
+      "severity": "MEDIUM",
+      "priority": "P1",
+      "status": "ACTIVE",
+      "evidence": [
+        {
+          "path": "system-knowledge/flows.json",
+          "claim": "whatsapp.public_discovery, ticket.purchase, courtesy.public, combo.delivery_choice, admin.whatsapp_event_management, admin.courtesy_management e table_map.calibration estão PARCIAL."
+        }
+      ],
+      "affected": {
+        "capabilities": [],
+        "flows": [
+          "whatsapp.public_discovery",
+          "ticket.purchase",
+          "courtesy.public",
+          "combo.delivery_choice",
+          "admin.whatsapp_event_management",
+          "admin.courtesy_management",
+          "table_map.calibration"
+        ],
+        "integrations": [],
+        "tests": []
+      }
+    }
+  ]
+}

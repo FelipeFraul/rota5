@@ -1,0 +1,186 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-09-11",
+  "stage": 5,
+  "count": 4,
+  "critical": 2,
+  "records": [
+    {
+      "id": "drift.vercel-project-domain",
+      "object": "production domain/project",
+      "local": "next.config.ts declara blackhouseclubedecomedia.vercel.app; link local aponta para rota5",
+      "remote": "domínio declarado pertence ao projeto site; alias do projeto ligado é rota5-khaki.vercel.app",
+      "runtime": "ambos os healthchecks respondem 200",
+      "result": "DRIFT",
+      "severity": "CRITICAL",
+      "impact": "Ambiguidade operacional e origem CORS de assets vinculada a projeto diferente.",
+      "evidence_source": [
+        "LOCAL_DECLARED",
+        "REMOTE_CONFIG",
+        "RUNTIME_OBSERVED"
+      ],
+      "expected": "Domínio público e projeto ligado identificarem a mesma implantação canônica.",
+      "observed": "blackhouseclubedecomedia.vercel.app serve o projeto site; o checkout local está ligado a rota5 e rota5-khaki.vercel.app serve rota5.",
+      "evidence": [
+        "next.config.ts",
+        ".vercel/project.json",
+        "Vercel inspect dpl_EPmLTLjcgP2483Qp6UtVk73Kn3FF",
+        "Vercel inspect dpl_4fUuUVNXgCfYgTiJjvdLuDdxXSA9"
+      ],
+      "status": "DRIFT"
+    },
+    {
+      "id": "drift.vercel-latest-deployment",
+      "object": "latest production deployment of linked project",
+      "local": "baseline HEAD em origin/production",
+      "remote": "deployment mais recente do projeto rota5 em ERROR; anterior READY atende o alias",
+      "runtime": "health do alias responde 200",
+      "result": "DRIFT",
+      "severity": "CRITICAL",
+      "impact": "O último deploy não é o que atende produção e o commit servido não pôde ser provado.",
+      "evidence_source": [
+        "REMOTE_CONFIG",
+        "RUNTIME_OBSERVED"
+      ],
+      "expected": "Deployment de produção mais recente READY e associado ao alias público.",
+      "observed": "dpl_9VYjvCcu63MmUsDchK9Tx3WEnjVa é o mais recente e está ERROR; dpl_4fUuUVNXgCfYgTiJjvdLuDdxXSA9 está READY e serve rota5-khaki.vercel.app.",
+      "evidence": [
+        "Vercel ls rota5",
+        "Vercel inspect dos dois deployments"
+      ],
+      "status": "DRIFT"
+    },
+    {
+      "id": "drift.local-environment",
+      "object": "local environment completeness",
+      "local": "arquivo .env não contém todos os campos obrigatórios de src/lib/env.ts",
+      "remote": "24 nomes presentes na Vercel",
+      "runtime": "health remoto responde 200",
+      "result": "DRIFT",
+      "severity": "HIGH",
+      "impact": "Inicialização local que chama getEnv() pode falhar até completar a configuração.",
+      "evidence_source": [
+        "LOCAL_DECLARED",
+        "REMOTE_CONFIG"
+      ],
+      "expected": "Variáveis obrigatórias do schema central presentes no ambiente local que executa a aplicação.",
+      "observed": "15 de 44 variáveis catalogadas presentes localmente; 24 nomes presentes na Vercel.",
+      "evidence": [
+        "src/lib/env.ts",
+        ".env presence-only scan",
+        "Vercel env ls"
+      ],
+      "status": "DRIFT"
+    },
+    {
+      "id": "drift.supabase-storage-bucket",
+      "object": "SEAT_MAP_STORAGE_BUCKET",
+      "local": "variável obrigatória e presente remotamente; nenhum uso .storage encontrado",
+      "remote": "listBuckets retornou zero buckets",
+      "runtime": "nenhum produtor/consumidor Supabase Storage observado",
+      "result": "DRIFT",
+      "severity": "LOW",
+      "impact": "Configuração sem recurso remoto correspondente; hoje sem consumidor funcional encontrado.",
+      "evidence_source": [
+        "LOCAL_DECLARED",
+        "REMOTE_CONFIG"
+      ],
+      "expected": "Variável de bucket corresponder a recurso e consumidor implementados.",
+      "observed": "SEAT_MAP_STORAGE_BUCKET está presente remotamente; Supabase retornou zero buckets; nenhuma chamada .storage foi encontrada.",
+      "evidence": [
+        "src/lib/env.ts",
+        "Vercel env ls",
+        "Supabase GET /storage/v1/bucket",
+        "source scan for .storage"
+      ],
+      "status": "DRIFT"
+    }
+  ],
+  "declared_remote_runtime_matrix": [
+    {
+      "object": "Supabase tables/columns",
+      "local": "44 tabelas reconstruídas",
+      "remote": "44 tabelas e colunas via OpenAPI",
+      "runtime": "OpenAPI HTTP 200",
+      "result": "MATCH"
+    },
+    {
+      "object": "Supabase constraints/indexes/triggers/RLS/policies/grants",
+      "local": "catalogados quando declarados",
+      "remote": "NOT_VALIDATED",
+      "runtime": "NOT_VALIDATED",
+      "result": "NOT_VALIDATED"
+    },
+    {
+      "object": "Supabase RPC surface",
+      "local": "33 funções SQL; 30 expostas como RPC esperada",
+      "remote": "33 RPCs: 30 da aplicação + 3 extensões",
+      "runtime": "OpenAPI HTTP 200",
+      "result": "PARTIAL_MATCH"
+    },
+    {
+      "object": "Z-API webhook registration",
+      "local": "/api/webhook/zapi",
+      "remote": "NOT_VALIDATED",
+      "runtime": "instância conectada",
+      "result": "NOT_VALIDATED"
+    },
+    {
+      "object": "Mercado Pago webhook registration",
+      "local": "/api/webhook/payment/mercado-pago",
+      "remote": "NOT_VALIDATED",
+      "runtime": "credencial aceitou leitura de conta",
+      "result": "NOT_VALIDATED"
+    },
+    {
+      "object": "Vercel crons",
+      "local": "2",
+      "remote": "2",
+      "runtime": "execução não disparada",
+      "result": "MATCH"
+    },
+    {
+      "object": "Published commit",
+      "local": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+      "remote": "metadata de commit ausente",
+      "runtime": "health 200",
+      "result": "NOT_VALIDATED"
+    },
+    {
+      "object": "Vercel project/domain",
+      "local": "rota5 link + domínio blackhouse",
+      "remote": "projetos rota5 e site distintos",
+      "runtime": "ambos respondem",
+      "result": "DRIFT"
+    },
+    {
+      "object": "Environment variable presence",
+      "local": "15/44",
+      "remote": "24/44",
+      "runtime": "aplicação remota saudável",
+      "result": "PARTIAL_MATCH"
+    },
+    {
+      "object": "Supabase Storage bucket",
+      "local": "referência SEAT_MAP_STORAGE_BUCKET",
+      "remote": "0 buckets",
+      "runtime": "sem uso .storage",
+      "result": "DRIFT"
+    }
+  ],
+  "second_pass": {
+    "external_not_revealed_by_repository": [
+      "O domínio declarado está associado ao projeto Vercel site, enquanto o repositório está ligado a rota5.",
+      "O deployment mais recente de rota5 está em ERROR; um deployment anterior atende o alias.",
+      "A instância Z-API está conectada e a credencial Mercado Pago responde."
+    ],
+    "locally_declared_not_proven_externally": [
+      "Commit efetivamente servido",
+      "Migrations aplicadas",
+      "Constraints, indexes, triggers, RLS, policies e grants remotos",
+      "Registro remoto dos dois webhooks",
+      "Execução recente dos crons",
+      "Configuração Auth do Supabase"
+    ]
+  }
+}

@@ -18,9 +18,9 @@ export const TICKET_MESSAGES = {
   genericHelpPrompt: PUBLIC_HOME_PROMPT,
   reentryPrompt: PUBLIC_REENTRY_PROMPT,
   conversationClosed:
-    "Sessão encerrada. Para iniciar uma nova digite NOVO",
+    "Sessão encerrada. Para iniciar uma nova digite *NOVO*",
   noEventsFound:
-    "Não encontrei eventos com essa busca.\n\nTente pesquisar por outro nome, artista, data ou digite TODOS para ver os eventos disponíveis.",
+    "Não encontrei eventos com essa busca.\n\nTente pesquisar por outro nome, artista, data ou digite *TODOS* para ver os eventos disponíveis.",
   numericInvalidOption:
     "Não encontrei essa opção. Responda com um número da lista.",
   numericWithoutContext: PUBLIC_HOME_MESSAGE,
@@ -52,13 +52,13 @@ export const TICKET_MESSAGES = {
     "Você já tem uma reserva em andamento. No próximo passo vamos gerar o link de pagamento ou permitir cancelar/trocar.",
   buyerAntiAbuseLimited:
     "Muitas tentativas em pouco tempo.\nPor segurança, aguarde alguns minutos antes de tentar novamente.",
-  paymentLinkPrompt: "Para comprar sua reserva, responda COMPRAR.",
+  paymentLinkPrompt: "Para comprar sua reserva, responda *COMPRAR*.",
   reservationCancelled:
     `PROCESSO CANCELADO\nSua reserva foi cancelada e os ingressos foram liberados.\n\n${PUBLIC_HOME_MESSAGE}`,
   reservationExpired:
-    "Seu tempo de reserva terminou. Digite NOVO para uma nova pesquisa.",
+    "Seu tempo de reserva terminou. Digite *NOVO* para uma nova pesquisa.",
   buyerInterestReminder:
-    "ATENDIMENTO\n\nðŸš¨ Ãšltimos ingressos para {EVENTO}. Corra comprar o seu!\n> Digite *1* para comprar\n> Digite *2* para saber mais\n> Para uma nova pesquisa, NOVO",
+    "ATENDIMENTO\n\nðŸš¨ Últimos ingressos para {EVENTO}. Corra comprar o seu!\n> Digite *1* para comprar\n> Digite *2* para saber mais\n> Para uma nova pesquisa, *NOVO*",
   buyerFlowReset:
     `PROCESSO CANCELADO\n\n${PUBLIC_HOME_MESSAGE}`,
   reservationUnavailableForPayment:

@@ -1,0 +1,244 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-12T04:24:28.619Z",
+  "stage": 8,
+  "baseline_id": "rota5-baseline-v1",
+  "version": "1.0.0",
+  "status": "FROZEN",
+  "frozen_at": "2026-09-12T04:24:28.619Z",
+  "source_commit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+  "branch": "production",
+  "origin_commit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+  "head_matches_origin": true,
+  "working_tree_state": {
+    "clean": false,
+    "reason": "Baseline artifacts are untracked and src/lib/tickets/messages.ts has a preexisting functional modification.",
+    "snapshot_is_pure_commit": false,
+    "preexisting_functional_changes": [
+      {
+        "path": "src/lib/tickets/messages.ts",
+        "sha256": "c567c2bca0a3494d96ef6242e59139832a4cf648b3a85f02f84ba9f06c937694"
+      }
+    ]
+  },
+  "baseline_integrity": {
+    "status": "PASS",
+    "validator": ".tools/baseline/validate-baseline.mjs",
+    "scope": "Internal documentation and machine-readable consistency; separate from product health."
+  },
+  "product_health": {
+    "status": "BROKEN",
+    "reason": "3 P0, 10 HIGH, 2 broken flows, 7 partial flows, npm test/typecheck/lint failing and infrastructure drift.",
+    "findings": 44,
+    "p0": 3,
+    "high": 10,
+    "critical": 0,
+    "broken_flows": 2,
+    "partial_flows": 7
+  },
+  "confidence": "HIGH",
+  "canonical_counts": {
+    "domains": 17,
+    "modules": 66,
+    "entrypoints": 56,
+    "capabilities": 140,
+    "flows": 34,
+    "flow_steps": 169,
+    "state_transitions": 66,
+    "tables": 44,
+    "stateful_tables": 22,
+    "stateful_entities": 23,
+    "migrations": 77,
+    "sql_functions": 33,
+    "triggers": 33,
+    "data_relations": 2223,
+    "integrations": 6,
+    "webhooks": 2,
+    "crons": 2,
+    "environment_variables": 44,
+    "tests": 43,
+    "findings": 44
+  },
+  "artifact_counts": {
+    "human_documents": 52,
+    "machine_readable_json": 43,
+    "total": 95
+  },
+  "unresolved_evidence_count": 10,
+  "contradictions_pending": 0,
+  "p0_findings": [
+    "bug.create-event-invalid-jsx",
+    "bug.combo-redemption-unreachable-consume",
+    "risk.vercel-project-identity-drift"
+  ],
+  "high_findings": [
+    "bug.create-event-invalid-jsx",
+    "bug.combo-redemption-unreachable-consume",
+    "legacy.active-brand-contamination",
+    "risk.gate-credential-revocation-does-not-revoke-session",
+    "risk.admin-event-multistep-partial-state",
+    "risk.vercel-project-identity-drift",
+    "risk.latest-rota5-deployment-error",
+    "gap.default-test-suite-failing",
+    "gap.critical-capability-and-flow-coverage",
+    "gap.test-runner-depends-on-untracked-loader"
+  ],
+  "canonical_catalogs": [
+    "system-knowledge/architecture.json",
+    "system-knowledge/domains.json",
+    "system-knowledge/modules.json",
+    "system-knowledge/dependencies.json",
+    "system-knowledge/entrypoints.json",
+    "system-knowledge/capabilities.json",
+    "system-knowledge/capability-relations.json",
+    "system-knowledge/flows.json",
+    "system-knowledge/flow-steps.json",
+    "system-knowledge/flow-relations.json",
+    "system-knowledge/state-transitions.json",
+    "system-knowledge/data-model.json",
+    "system-knowledge/database-objects.json",
+    "system-knowledge/database-relations.json",
+    "system-knowledge/integrations.json",
+    "system-knowledge/integration-runtime.json",
+    "system-knowledge/infrastructure.json",
+    "system-knowledge/environment.json",
+    "system-knowledge/webhooks.json",
+    "system-knowledge/cron.json",
+    "system-knowledge/runtime-validation.json",
+    "system-knowledge/tests.json",
+    "system-knowledge/findings.json",
+    "system-knowledge/finding-relations.json",
+    "system-knowledge/risk-summary.json",
+    "system-knowledge/health.json",
+    "system-knowledge/cross-audit.json",
+    "system-knowledge/contradictions.json",
+    "system-knowledge/unresolved-evidence.json",
+    "system-knowledge/completeness.json",
+    "system-knowledge/coverage.json"
+  ],
+  "human_documentation": [
+    "docs/system/AI-READ-ME.md",
+    "docs/system/BASELINE-V1.md",
+    "docs/system/CANONICAL-INDEX.md",
+    "docs/system/CHANGE-PROTOCOL.md",
+    "docs/system/CHANGELOG.md",
+    "docs/system/GOVERNANCE.md",
+    "docs/system/KNOWN-LIMITS.md",
+    "docs/system/NEXT-ACTIONS.md",
+    "docs/system/README.md",
+    "docs/system/architecture-hotspots.md",
+    "docs/system/architecture.md",
+    "docs/system/baseline-contradictions.md",
+    "docs/system/broken-flows.md",
+    "docs/system/bugs.md",
+    "docs/system/capabilities.md",
+    "docs/system/capability-matrix.md",
+    "docs/system/capability-test-coverage.md",
+    "docs/system/completeness-scorecard.md",
+    "docs/system/configuration-drift.md",
+    "docs/system/coverage-proof.md",
+    "docs/system/cross-audit.md",
+    "docs/system/data-integrity-risks.md",
+    "docs/system/data-model.md",
+    "docs/system/database-runtime.md",
+    "docs/system/dead-or-legacy.md",
+    "docs/system/dependencies.md",
+    "docs/system/domains.md",
+    "docs/system/entrypoints.md",
+    "docs/system/environment-variables.md",
+    "docs/system/external-dependencies.md",
+    "docs/system/flow-matrix.md",
+    "docs/system/flow-test-coverage.md",
+    "docs/system/flows.md",
+    "docs/system/infrastructure-risks.md",
+    "docs/system/infrastructure.md",
+    "docs/system/integration-risks.md",
+    "docs/system/integrations-runtime.md",
+    "docs/system/modules.md",
+    "docs/system/observability.md",
+    "docs/system/orphan-capabilities.md",
+    "docs/system/quality-summary.md",
+    "docs/system/repository-inventory.md",
+    "docs/system/risk-register.md",
+    "docs/system/runtime-validation.md",
+    "docs/system/security-risks.md",
+    "docs/system/state-transitions.md",
+    "docs/system/technical-debt.md",
+    "docs/system/test-gaps.md",
+    "docs/system/tests-inventory.md",
+    "docs/system/unknowns.md",
+    "docs/system/unresolved-evidence.md",
+    "docs/system/webhooks-cron.md"
+  ],
+  "reading_order": [
+    "docs/system/AI-READ-ME.md",
+    "system-knowledge/baseline-manifest.json",
+    "system-knowledge/index.json",
+    "system-knowledge/self-reading.json",
+    "docs/system/BASELINE-V1.md",
+    "docs/system/CANONICAL-INDEX.md"
+  ],
+  "source_precedence": [
+    {
+      "rank": 1,
+      "source": "Observed behavior/runtime with evidence"
+    },
+    {
+      "rank": 2,
+      "source": "Current code, migrations and configuration"
+    },
+    {
+      "rank": 3,
+      "source": "Validated machine-readable catalogs"
+    },
+    {
+      "rank": 4,
+      "source": "Markdown documentation"
+    },
+    {
+      "rank": 5,
+      "source": "Historical documentation"
+    },
+    {
+      "rank": 6,
+      "source": "Inference"
+    }
+  ],
+  "governance": {
+    "central_rule": "NENHUMA MUDANÇA FUNCIONAL É CONSIDERADA CONCLUÍDA ATÉ QUE A DOCUMENTAÇÃO IMPACTADA SEJA ATUALIZADA.",
+    "lifecycle": [
+      "PROPOSAL",
+      "IMPACT_ANALYSIS",
+      "IMPLEMENTATION",
+      "TESTS",
+      "AUDIT",
+      "DOCUMENTATION",
+      "VALIDATION",
+      "NEW_BASELINE_STATE"
+    ],
+    "versioning": {
+      "PATCH": "Correção documental sem mudança funcional.",
+      "MINOR": "Mudança funcional compatível, nova capability ou evolução de flow.",
+      "MAJOR": "Mudança arquitetural ou contratual significativa."
+    },
+    "validator": "node .tools/baseline/validate-baseline.mjs",
+    "finding_lifecycle": [
+      "OPEN",
+      "MITIGATED",
+      "RESOLVED",
+      "ACCEPTED",
+      "NOT_VALIDATED"
+    ]
+  },
+  "integrity_hashes": {
+    "algorithm": "SHA-256",
+    "artifact_catalog": "system-knowledge/baseline-integrity.json",
+    "aggregate_hash_field": "baseline-integrity.json.aggregate_hash",
+    "self_exclusion": "baseline-integrity.json is excluded to avoid circularity."
+  },
+  "notes": [
+    "The observed snapshot includes a preexisting functional change and is not the pure source commit.",
+    "FROZEN means documentation is internally frozen; no commit, push or deploy was performed.",
+    "NOT_VALIDATED does not mean BROKEN."
+  ]
+}

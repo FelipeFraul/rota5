@@ -1,0 +1,272 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-11",
+  "count": 6,
+  "records": [
+    {
+      "id": "integration-supabase",
+      "name": "Supabase/PostgreSQL",
+      "type": "database-service",
+      "path": "src/lib/supabase/admin.ts",
+      "purpose": "Persistência, consultas e execução de RPCs.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "evidence": [
+        "@supabase/supabase-js em package.json",
+        "77 migrations em supabase/migrations",
+        "chamadas .from() e .rpc() em services/routes",
+        "Etapa 5: system-knowledge/integration-runtime.json"
+      ],
+      "dependencies": [
+        "SUPABASE_URL",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "SUPABASE_ANON_KEY"
+      ],
+      "notes": "Schema remoto confirmou 44 tabelas, nomes de colunas e 33 rotas RPC. Constraints, índices, triggers, RLS, policies, grants e migrations remotas permanecem NOT_VALIDATED."
+    },
+    {
+      "id": "integration-zapi",
+      "name": "Z-API / WhatsApp",
+      "type": "messaging-service",
+      "path": "src/lib/zapi; src/app/api/webhook/zapi/route.ts",
+      "purpose": "Receber e enviar mensagens WhatsApp.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "evidence": [
+        "webhook POST exportado",
+        "cliente HTTP Z-API",
+        "persistência em whatsapp_messages e whatsapp_outbound_deliveries",
+        "Etapa 5: system-knowledge/integration-runtime.json"
+      ],
+      "dependencies": [
+        "ZAPI_INSTANCE_ID",
+        "ZAPI_INSTANCE_TOKEN",
+        "ZAPI_CLIENT_TOKEN",
+        "ZAPI_BASE_URL",
+        "ZAPI_WEBHOOK_SECRET"
+      ],
+      "notes": "Status remoto retornou instância e smartphone conectados. Registro do webhook e entrega real não foram validados; nenhuma mensagem foi enviada."
+    },
+    {
+      "id": "integration-mercado-pago",
+      "name": "Mercado Pago",
+      "type": "payment-service",
+      "path": "src/lib/mercado-pago; src/app/api/webhook/payment/mercado-pago/route.ts",
+      "purpose": "Criar Pix, consultar pagamento e confirmar pedidos por webhook.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "evidence": [
+        "cliente Mercado Pago",
+        "validação de assinatura",
+        "rotas pay de ingresso/combo",
+        "SDK web nos clientes checkout",
+        "Etapa 5: system-knowledge/integration-runtime.json"
+      ],
+      "dependencies": [
+        "PAYMENT_PROVIDER",
+        "MERCADO_PAGO_ACCESS_TOKEN",
+        "MERCADO_PAGO_WEBHOOK_SECRET",
+        "MERCADO_PAGO_API_BASE_URL",
+        "NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY",
+        "CHECKOUT_INTERNAL_SECRET"
+      ],
+      "notes": "Credencial aceitou leitura segura da identidade da conta (site MLB). Registro do webhook e pagamentos reais não foram validados."
+    },
+    {
+      "id": "integration-vercel",
+      "name": "Vercel",
+      "type": "hosting-and-scheduler",
+      "path": "vercel.json; .vercelignore; next.config.ts",
+      "purpose": "Hospedar Next.js e disparar duas rotas cron.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "evidence": [
+        "duas schedules '* * * * *'",
+        "referências VERCEL_URL e VERCEL_GIT_COMMIT_SHA",
+        "Etapa 5: system-knowledge/integration-runtime.json"
+      ],
+      "dependencies": [
+        "CRON_SECRET",
+        "VERCEL_URL",
+        "VERCEL_GIT_COMMIT_SHA"
+      ],
+      "notes": "Projeto, deployments, 24 nomes de env, Node 24.x, região, crons e health foram validados. Há drift entre projeto/domínio e o commit publicado permanece NOT_VALIDATED."
+    },
+    {
+      "id": "integration-github",
+      "name": "GitHub Issues",
+      "type": "issue-service",
+      "path": "src/lib/github/issues.ts",
+      "purpose": "Criar issue a partir de pedido Codex aprovado recebido por WhatsApp.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "evidence": [
+        "requisição à API GitHub",
+        "chamada pelo webhook Z-API via codexRequests",
+        "Etapa 5: system-knowledge/integration-runtime.json"
+      ],
+      "dependencies": [
+        "GITHUB_ISSUES_REPOSITORY",
+        "GITHUB_REPOSITORY",
+        "GITHUB_ISSUES_TOKEN"
+      ],
+      "notes": "Repositório privado FelipeFraul/ticketeira foi confirmado em leitura. Nenhuma issue foi criada; token de aplicação e execução do fluxo permanecem não validados."
+    },
+    {
+      "id": "integration-codex-cli",
+      "name": "Codex CLI local",
+      "type": "local-external-process",
+      "path": "scripts/codex-local-runner.mjs",
+      "purpose": "Executar pedidos aprovados em processo Codex local e enviar resultado opcional.",
+      "status": "PARCIALMENTE CONFIRMADO",
+      "evidence": [
+        "child process do comando Codex",
+        "scripts NPM codex:runner/codex:requests",
+        "Etapa 5: system-knowledge/integration-runtime.json"
+      ],
+      "dependencies": [
+        "CODEX_CLI_PATH",
+        "CODEX_RUNNER_POLL_SECONDS",
+        "CODEX_WHATSAPP_PHONES",
+        "SUPABASE_URL",
+        "SUPABASE_SERVICE_ROLE_KEY"
+      ],
+      "notes": "codex-cli 0.147.0 foi observado localmente. Runner ativo e execução de pedido real não foram validados."
+    }
+  ],
+  "libraries": [
+    {
+      "id": "lib-next",
+      "name": "next",
+      "type": "framework",
+      "path": "package.json",
+      "purpose": "Aplicação web e API.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "installed 16.2.6"
+      ],
+      "dependencies": [
+        "react",
+        "react-dom"
+      ]
+    },
+    {
+      "id": "lib-supabase",
+      "name": "@supabase/supabase-js",
+      "type": "sdk",
+      "path": "package.json",
+      "purpose": "Cliente Supabase.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "installed 2.106.1"
+      ]
+    },
+    {
+      "id": "lib-zod",
+      "name": "zod",
+      "type": "validation-library",
+      "path": "package.json",
+      "purpose": "Schemas de ambiente e payload.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "installed 4.4.3"
+      ]
+    },
+    {
+      "id": "lib-qrcode",
+      "name": "qrcode",
+      "type": "image-library",
+      "path": "package.json",
+      "purpose": "Gerar QR.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "installed 1.5.4"
+      ]
+    },
+    {
+      "id": "lib-sharp",
+      "name": "sharp",
+      "type": "image-library",
+      "path": "package.json",
+      "purpose": "Compor imagens.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "installed 0.34.5"
+      ]
+    },
+    {
+      "id": "lib-qr-scanner",
+      "name": "qr-scanner",
+      "type": "browser-library",
+      "path": "package.json",
+      "purpose": "Ler QR via câmera.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "installed 1.4.2"
+      ]
+    },
+    {
+      "id": "lib-server-only",
+      "name": "server-only",
+      "type": "boundary-library",
+      "path": "package.json",
+      "purpose": "Marcar módulos somente servidor.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "installed 0.0.1"
+      ]
+    }
+  ],
+  "environment": {
+    "centrallyValidated": [
+      "APP_BASE_URL",
+      "SUPABASE_URL",
+      "SUPABASE_ANON_KEY",
+      "SUPABASE_SERVICE_ROLE_KEY",
+      "ZAPI_INSTANCE_ID",
+      "ZAPI_INSTANCE_TOKEN",
+      "ZAPI_CLIENT_TOKEN",
+      "ZAPI_BASE_URL",
+      "ZAPI_WEBHOOK_SECRET",
+      "ROCK_BAR_OFFICIAL_WHATSAPP_PHONE",
+      "CHECKOUT_INTERNAL_SECRET",
+      "PAYMENT_PROVIDER",
+      "MERCADO_PAGO_ACCESS_TOKEN",
+      "MERCADO_PAGO_WEBHOOK_SECRET",
+      "MERCADO_PAGO_API_BASE_URL",
+      "NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY",
+      "ADMIN_SESSION_TTL_MINUTES",
+      "TICKET_RESERVATION_TTL_MINUTES",
+      "TICKET_QR_SECRET",
+      "SEAT_MAP_STORAGE_BUCKET",
+      "GATE_ADMIN_SECRET",
+      "GATE_SESSION_SECRET",
+      "GATE_SESSION_TTL_MINUTES"
+    ],
+    "additionallyReferenced": [
+      "ADMIN_WEB_SESSION_TTL_MINUTES",
+      "CODEX_CLI_PATH",
+      "CODEX_RUNNER_POLL_SECONDS",
+      "CODEX_WHATSAPP_PHONE",
+      "CODEX_WHATSAPP_PHONES",
+      "COMBO_OFFER_DELAY_MINUTES",
+      "CONVERSATION_INACTIVITY_TTL_MINUTES",
+      "CRON_SECRET",
+      "DATABASE_URL",
+      "FULL_INTENT_AUDIT",
+      "GITHUB_REPOSITORY",
+      "GITHUB_ISSUES_REPOSITORY",
+      "GITHUB_ISSUES_TOKEN",
+      "NODE_ENV",
+      "PATH",
+      "USERPROFILE",
+      "VERCEL_GIT_COMMIT_SHA",
+      "VERCEL_URL"
+    ],
+    "evidence": [
+      "src/lib/env.ts",
+      ".env.example",
+      "process.env references in src, scripts and .tools"
+    ],
+    "notes": "Somente nomes foram inventariados; valores não fazem parte desta baseline."
+  },
+  "stage5Correction": {
+    "reason": "Evidência read-only externa tornou notas anteriores factualmente incompletas.",
+    "metricsChanged": false
+  }
+}

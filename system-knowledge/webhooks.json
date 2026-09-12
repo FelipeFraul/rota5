@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-09-11",
+  "stage": 5,
+  "count": 2,
+  "remoteConfirmed": 0,
+  "records": [
+    {
+      "id": "webhook.zapi",
+      "provider": "Z-API",
+      "path": "/api/webhook/zapi",
+      "method": "POST",
+      "authentication": "ZAPI_WEBHOOK_SECRET",
+      "validation": "segredo, payload e normalização do remetente",
+      "event_types": [
+        "mensagem recebida e callbacks suportados pelo handler"
+      ],
+      "idempotency": "provider_message_id e persistência de mensagens/deliveries",
+      "persistence": [
+        "customers",
+        "conversations",
+        "whatsapp_messages",
+        "whatsapp_message_batches"
+      ],
+      "retries": "batches/deliveries persistem attempts e next_attempt_at",
+      "downstream_capabilities": [
+        "messaging.receive",
+        "messaging.respond",
+        "automation.request"
+      ],
+      "downstream_flows": [
+        "whatsapp.inbound_dispatch",
+        "whatsapp.batch_processing",
+        "codex.automation"
+      ],
+      "error_handling": "respostas HTTP e logs estruturados",
+      "remote_registration_status": "NOT_VALIDATED",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "src/app/api/webhook/zapi/route.ts"
+      ]
+    },
+    {
+      "id": "webhook.mercado-pago",
+      "provider": "Mercado Pago",
+      "path": "/api/webhook/payment/mercado-pago",
+      "method": "POST",
+      "authentication": "MERCADO_PAGO_WEBHOOK_SECRET com x-signature/request-id",
+      "validation": "assinatura, identificador do pagamento e consulta ao provider",
+      "event_types": [
+        "payment"
+      ],
+      "idempotency": "payment_events e confirmação transacional evitam reprocessamento funcional",
+      "persistence": [
+        "payment_events",
+        "payments",
+        "orders",
+        "combo_orders"
+      ],
+      "retries": "reentrega do provider; sem scheduler local exclusivo",
+      "downstream_capabilities": [
+        "payment.confirm",
+        "ticket.deliver",
+        "combo.confirm"
+      ],
+      "downstream_flows": [
+        "ticket.payment_confirmation",
+        "combo.payment_confirmation"
+      ],
+      "error_handling": "status HTTP, persistência do evento e logs",
+      "remote_registration_status": "NOT_VALIDATED",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "src/app/api/webhook/payment/mercado-pago/route.ts"
+      ]
+    }
+  ]
+}

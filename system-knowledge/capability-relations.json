@@ -1,0 +1,548 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-11",
+  "stage": "3/8",
+  "count": 36,
+  "capability_catalog": "system-knowledge/capabilities.json",
+  "direction_convention": "REQUIRES: origem depende do destino; TRIGGERS: origem aciona destino sob condição; EXTENDS: origem estende destino; ALTERNATIVE_TO: alternativa funcional. dependencies contém somente alvos REQUIRES, dependent_capabilities é o inverso.",
+  "records": [
+    {
+      "id": "caprel.001",
+      "from": "messaging.receive",
+      "type": "TRIGGERS",
+      "to": "customer.identify",
+      "condition": "Webhook localiza/cadastra cliente antes de persistir contexto.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/customers.ts",
+          "line": 40,
+          "symbol": "upsertCustomerFromWhatsApp"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.002",
+      "from": "messaging.receive",
+      "type": "TRIGGERS",
+      "to": "messaging.respond",
+      "condition": "Após roteamento, envia resultados; não se aplica a mensagens ignoradas.",
+      "evidence": [
+        {
+          "path": "src/app/api/webhook/zapi/route.ts",
+          "line": 704,
+          "symbol": "sendOutboundMessage"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.003",
+      "from": "reservation.create",
+      "type": "REQUIRES",
+      "to": "customer.limit_reservations",
+      "condition": "Caminho padrão verifica risco antes de chamar RPC; skipBuyerRisk é exceção interna explícita.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/reservations.ts",
+          "line": 689,
+          "symbol": "reserveTicketCart"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.004",
+      "from": "reservation.create",
+      "type": "REQUIRES",
+      "to": "catalog.offers",
+      "condition": "Revalida oferta, preço e sessão antes da reserva.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/reservations.ts",
+          "line": 689,
+          "symbol": "reserveTicketCart"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.005",
+      "from": "reservation.cancel",
+      "type": "TRIGGERS",
+      "to": "table_map.sync_status",
+      "condition": "Mudança de status da reserva pode acionar trigger para mesa já vinculada.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/reservations.ts",
+          "line": 328,
+          "symbol": "cancelPendingReservationForCustomer"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.006",
+      "from": "reservation.expire",
+      "type": "TRIGGERS",
+      "to": "table_map.sync_status",
+      "condition": "RPC muda reservas para expired; trigger sincroniza mesa existente.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/reservationExpiry.ts",
+          "line": 668,
+          "symbol": "expireReservationsAndNotify"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.007",
+      "from": "payment.checkout_create",
+      "type": "REQUIRES",
+      "to": "customer.limit_checkout",
+      "condition": "Serviço avalia risco no caminho de geração de checkout.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/checkout.ts",
+          "line": 464,
+          "symbol": "createCheckoutForReservation"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.008",
+      "from": "payment.pay_pix",
+      "type": "REQUIRES",
+      "to": "payment.checkout_create",
+      "condition": "Pagamento self-hosted resolve/reutiliza checkout da reserva.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/checkout.ts",
+          "line": 1099,
+          "symbol": "paySelfHostedCheckout"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.009",
+      "from": "payment.status",
+      "type": "TRIGGERS",
+      "to": "payment.confirm",
+      "condition": "Apenas quando consulta externa encontra aprovação compatível.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/checkout.ts",
+          "line": 1014,
+          "symbol": "reconcileApprovedCheckoutPayment"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.010",
+      "from": "payment.confirm",
+      "type": "TRIGGERS",
+      "to": "ticket.deliver",
+      "condition": "Webhook para compra unitária e reconciliação encaminham entrega após confirmação.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/ticketDelivery.ts",
+          "line": 507,
+          "symbol": "deliverTicketsForOrder"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.011",
+      "from": "payment.confirm",
+      "type": "TRIGGERS",
+      "to": "ticket.delivery_choice",
+      "condition": "Webhook encaminha escolha para pedidos com múltiplos ingressos.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/ticketDelivery.ts",
+          "line": 305,
+          "symbol": "requestTicketDeliveryPreferenceForOrder"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.012",
+      "from": "payment.confirm",
+      "type": "TRIGGERS",
+      "to": "table_map.sync_status",
+      "condition": "Confirmação muda reserva para paid; trigger sincroniza mesa já existente.",
+      "evidence": [
+        {
+          "path": "supabase/migrations/20260722000800_create_official_table_map_reservations.sql",
+          "line": 1
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.013",
+      "from": "ticket.delivery_choice",
+      "type": "TRIGGERS",
+      "to": "ticket.assign_participants",
+      "condition": "Escolha de distribuição e contatos válidos chama RPC de atribuição.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/router.ts",
+          "line": 4593,
+          "symbol": "handleTicketDeliverySelection"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.014",
+      "from": "ticket.delivery_choice",
+      "type": "TRIGGERS",
+      "to": "ticket.deliver",
+      "condition": "Escolha de receber no comprador encaminha entrega.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/router.ts",
+          "line": 4593,
+          "symbol": "handleTicketDeliverySelection"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.015",
+      "from": "ticket.claim_participant",
+      "type": "EXTENDS",
+      "to": "ticket.deliver",
+      "condition": "Extensão para destinatário participante, com marcação própria após envio exitoso.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/tickets.ts",
+          "line": 750,
+          "symbol": "markParticipantTicketDelivered"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.016",
+      "from": "ticket.resend",
+      "type": "ALTERNATIVE_TO",
+      "to": "ticket.deliver",
+      "condition": "Obtém QR por solicitação explícita em vez do disparo inicial; mantém regras próprias de titularidade.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/router.ts",
+          "line": 4469,
+          "symbol": "handlePaidTicketResendCommand"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.017",
+      "from": "ticket.deliver",
+      "type": "REQUIRES",
+      "to": "messaging.protect_delivery",
+      "condition": "Entrega paga reclama unidade idempotente de texto e de cada QR.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/ticketDelivery.ts",
+          "line": 507,
+          "symbol": "deliverTicketsForOrder"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.018",
+      "from": "combo.deliver_qr",
+      "type": "REQUIRES",
+      "to": "messaging.protect_delivery",
+      "condition": "Entrega de combo possui unidades independentes para texto e QR.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 1348,
+          "symbol": "deliverComboOrder"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.019",
+      "from": "courtesy.public_issue",
+      "type": "ALTERNATIVE_TO",
+      "to": "courtesy.issue",
+      "condition": "Alternativas de emissão gratuita: reserva pública de valor zero versus concessão administrativa; escopos e limites diferem.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/publicFreeTickets.ts",
+          "line": 219,
+          "symbol": "issuePublicFreeTicketsForOrder"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.020",
+      "from": "combo.offer_send",
+      "type": "TRIGGERS",
+      "to": "combo.checkout_create",
+      "condition": "Oferta elegível cria/reutiliza pedido antes de enviar link.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 2352,
+          "symbol": "sendScheduledComboOffers"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.021",
+      "from": "combo.confirm",
+      "type": "TRIGGERS",
+      "to": "combo.deliver_qr",
+      "condition": "Webhook de combo aprovado confirma e encaminha entrega.",
+      "evidence": [
+        {
+          "path": "src/app/api/webhook/payment/mercado-pago/route.ts",
+          "line": 218,
+          "symbol": "POST"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.022",
+      "from": "combo.kitchen_release",
+      "type": "REQUIRES",
+      "to": "gate.admit",
+      "condition": "Neste caminho automático, entrada permitida é o gatilho para liberar combo à cozinha.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "line": 492,
+          "symbol": "releaseComboOrdersForKitchenAfterGateEntry"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.023",
+      "from": "gate.admit",
+      "type": "TRIGGERS",
+      "to": "combo.kitchen_release",
+      "condition": "Após allowed, chama liberação da cozinha; erro de liberação é tratado separadamente.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/gateValidation.ts",
+          "line": 76,
+          "symbol": "validateTicketEntry"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.024",
+      "from": "combo.prepare",
+      "type": "REQUIRES",
+      "to": "combo.kitchen_open",
+      "condition": "Valida sessão/dispositivo da cozinha antes da mutação.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "line": 641,
+          "symbol": "startKitchenOrderPreparation"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.025",
+      "from": "combo.delivery_prompt",
+      "type": "REQUIRES",
+      "to": "combo.kitchen_open",
+      "condition": "Exige sessão de cozinha com papel reader e dispositivo correspondente.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "line": 935,
+          "symbol": "validateComboRedemptionScan"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.026",
+      "from": "combo.delivery_prompt",
+      "type": "REQUIRES",
+      "to": "table_map.reserve",
+      "condition": "Exige registro de mesa paga do pedido/cliente; flag atual limita sua criação.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "line": 935,
+          "symbol": "validateComboRedemptionScan"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.027",
+      "from": "combo.delivery_prompt",
+      "type": "TRIGGERS",
+      "to": "combo.delivery_choose",
+      "condition": "Envio do prompt grava contexto combo_delivery_confirming para resposta posterior.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "line": 935,
+          "symbol": "validateComboRedemptionScan"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.028",
+      "from": "combo.delivery_choose",
+      "type": "REQUIRES",
+      "to": "table_map.reserve",
+      "condition": "Revalida mesa paga e registra local solicitado.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "line": 1515,
+          "symbol": "confirmComboDeliveryChoice"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.029",
+      "from": "combo.redeem",
+      "type": "REQUIRES",
+      "to": "combo.prepare",
+      "condition": "RPC exige preparo; relação estrutural não remove o bloqueio anterior do leitor.",
+      "evidence": [
+        {
+          "path": "supabase/migrations/20260629000300_require_combo_preparation_before_redemption.sql",
+          "line": 1
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.030",
+      "from": "table_map.reserve",
+      "type": "REQUIRES",
+      "to": "reservation.create",
+      "condition": "Reserva oficial recebe IDs da reserva/pedido de ingressos.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/router.ts",
+          "line": 2419,
+          "symbol": "finalizeTicketCartReservation"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.031",
+      "from": "table_map.reserve",
+      "type": "TRIGGERS",
+      "to": "reservation.cancel",
+      "condition": "Se reserva da mesa falha, router cancela a reserva de ingressos recém-criada.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/router.ts",
+          "line": 2419,
+          "symbol": "finalizeTicketCartReservation"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.032",
+      "from": "background.notify_expiry",
+      "type": "REQUIRES",
+      "to": "reservation.expire",
+      "condition": "Notifica reservas retornadas pela RPC e expiradas recentes sem aviso.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/reservationExpiry.ts",
+          "line": 668,
+          "symbol": "expireReservationsAndNotify"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.033",
+      "from": "background.cancel_batches",
+      "type": "TRIGGERS",
+      "to": "background.close_inactive",
+      "condition": "Após tratar lotes, o mesmo cron executa finalizador de conversas.",
+      "evidence": [
+        {
+          "path": "src/app/api/cron/process-whatsapp-batches/route.ts",
+          "line": 109,
+          "symbol": "processDueWhatsAppMessageBatches"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.034",
+      "from": "automation.request",
+      "type": "TRIGGERS",
+      "to": "automation.issue",
+      "condition": "Pedido autorizado pode criar issue quando integração disponível.",
+      "evidence": [
+        {
+          "path": "src/app/api/webhook/zapi/route.ts",
+          "line": 772,
+          "symbol": "createIssueForCodexRequest"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.035",
+      "from": "automation.execute",
+      "type": "TRIGGERS",
+      "to": "automation.notify",
+      "condition": "Após execução, processRequest monta e envia resumo quando há telefone.",
+      "evidence": [
+        {
+          "path": "scripts/codex-local-runner.mjs",
+          "line": 1
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.036",
+      "from": "analytics.settle",
+      "type": "REQUIRES",
+      "to": "analytics.division",
+      "condition": "Baixa persiste o draft de divisão confirmado no diálogo.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/adminReports.ts",
+          "line": 617,
+          "symbol": "markDivisionSettlementPaid"
+        }
+      ],
+      "validation": "STATIC_SOURCE"
+    }
+  ],
+  "notes": "Relações locais entre capacidades, com condições; não constitui flows.json nem catálogo de fluxos."
+}

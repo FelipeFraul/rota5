@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-12",
+  "stage": 7,
+  "globalConfidence": "HIGH",
+  "count": 10,
+  "records": [
+    {
+      "area": "REPOSITORY",
+      "status": "HIGH_CONFIDENCE",
+      "justification": "Branch, HEAD, origin, working tree e inventários físicos foram recontados; paths catalogados existem.",
+      "missingEvidence": "Possíveis consumidores externos ao repositório.",
+      "higherConfidenceRequires": "Inventário externo de consumidores e artefatos publicados."
+    },
+    {
+      "area": "ARCHITECTURE",
+      "status": "HIGH_CONFIDENCE",
+      "justification": "17 domains, 66 modules e grafo de 817 dependências foram reconciliados com código e catálogos.",
+      "missingEvidence": "Comportamento carregado dinamicamente fora do repo.",
+      "higherConfidenceRequires": "Telemetria/import graph de runtime."
+    },
+    {
+      "area": "CAPABILITIES",
+      "status": "HIGH_CONFIDENCE",
+      "justification": "140 registros possuem cadeia ENTRY → IMPLEMENTATION → DATA/INTEGRATION → RESULT ou limitação explícita; zero sem classificação.",
+      "missingEvidence": "Execução ponta a ponta de parte das capabilities.",
+      "higherConfidenceRequires": "Evidência E2E segura para capacidades críticas."
+    },
+    {
+      "area": "FLOWS",
+      "status": "HIGH_CONFIDENCE",
+      "justification": "34 flows, 169 steps e 66 transitions têm referências válidas; branches e terminais foram rechecados.",
+      "missingEvidence": "Execução E2E de flows que dependem de serviços externos.",
+      "higherConfidenceRequires": "Traces E2E controlados."
+    },
+    {
+      "area": "DATA",
+      "status": "MEDIUM_CONFIDENCE",
+      "justification": "44 tabelas e OpenAPI remoto coincidem; 77 migrations e definições finais locais foram recontadas.",
+      "missingEvidence": "Internos PostgreSQL e histórico remoto.",
+      "higherConfidenceRequires": "Catálogo PostgreSQL remoto read-only."
+    },
+    {
+      "area": "INTEGRATIONS",
+      "status": "MEDIUM_CONFIDENCE",
+      "justification": "As 6 integrações e suas dependências foram reencontradas; superfícies seguras responderam.",
+      "missingEvidence": "Registro/histórico de webhooks e chamadas reais.",
+      "higherConfidenceRequires": "Configuração e logs read-only dos provedores."
+    },
+    {
+      "area": "INFRASTRUCTURE",
+      "status": "MEDIUM_CONFIDENCE",
+      "justification": "Projetos, aliases, healthchecks, crons e drift site × rota5 foram revalidados.",
+      "missingEvidence": "Commit publicado e causa do deployment ERROR.",
+      "higherConfidenceRequires": "Metadados e logs completos do deployment."
+    },
+    {
+      "area": "TESTS",
+      "status": "MEDIUM_CONFIDENCE",
+      "justification": "43 arquivos foram recontados e a suíte padrão foi reexecutada: 203/210.",
+      "missingEvidence": "28 arquivos fora da suíte; testes reais mutáveis não executados.",
+      "higherConfidenceRequires": "Ambiente isolado para a suíte ampliada e testes reais."
+    },
+    {
+      "area": "RISKS",
+      "status": "HIGH_CONFIDENCE",
+      "justification": "44 findings foram confrontados com evidência; 3 P0 e todos os 10 HIGH permaneceram calibrados; nenhum CRITICAL foi provado.",
+      "missingEvidence": "Riscos dependentes de estado remoto não exposto.",
+      "higherConfidenceRequires": "Evidência remota dos itens NOT_VALIDATED."
+    },
+    {
+      "area": "RUNTIME",
+      "status": "MEDIUM_CONFIDENCE",
+      "justification": "15 checks foram revisados; distribuição canônica permanece 12 PASS, 2 PARTIAL e 1 FAIL.",
+      "missingEvidence": "Execuções mutáveis, cron/webhook history e logs completos.",
+      "higherConfidenceRequires": "Observação read-only adicional ou ambiente isolado."
+    }
+  ]
+}

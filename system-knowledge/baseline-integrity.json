@@ -1,0 +1,588 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-12T04:30:28.345Z",
+  "stage": 8,
+  "baseline_id": "rota5-baseline-v1",
+  "algorithm": "SHA-256",
+  "count": 95,
+  "aggregate_strategy": "Sort records by path; concatenate path + NUL + sha256 + LF; SHA-256 the UTF-8 concatenation.",
+  "aggregate_hash": "1d5c19fc35499a6cbcfc8cb93da4f839fc73fbf2de4c47474c4dd48c0a2512bf",
+  "records": [
+    {
+      "path": ".tools/baseline/validate-baseline.mjs",
+      "sha256": "25c377e6edf704797cb71dbcc45b8218cba4af32edc99bff15fa3462652ddf1c",
+      "size": 12187,
+      "category": "VALIDATION_TOOLING"
+    },
+    {
+      "path": "docs/system/AI-READ-ME.md",
+      "sha256": "801dac42a49d794941d1142cd24bd5386a6dca50456d370a4a5a1c299e446e57",
+      "size": 1047,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/BASELINE-V1.md",
+      "sha256": "712588f595707dd1ddf8fdc4088fe263fb7d5145be8e3d4eff3949417d36f282",
+      "size": 2171,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/CANONICAL-INDEX.md",
+      "sha256": "abde96fb82fa70c23640a75ad96a14b236766984a31f5ff86778a60ad6b45c4b",
+      "size": 7118,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/CHANGE-PROTOCOL.md",
+      "sha256": "96b8e141caf66714904bc373952b70d80e1c3ff7b74680f85b6d9f56850cbc6c",
+      "size": 785,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/CHANGELOG.md",
+      "sha256": "9cdd674196cef802f13d2e9807bf6ddabde004f968eb796d719f227980b0fa26",
+      "size": 698,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/GOVERNANCE.md",
+      "sha256": "395d9680764612b0911e96177824a257ad06716bfe38763366212cfbd595bef7",
+      "size": 1450,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/KNOWN-LIMITS.md",
+      "sha256": "940464141fba067f463c19d060a5bc41f24a9c10d3e3a01041cdc4a2b4fa511d",
+      "size": 1551,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/NEXT-ACTIONS.md",
+      "sha256": "1b6292aa9bc1ce9ce4ed8badc73bb208308c9eba1f87c717170e0ce25a371c46",
+      "size": 5125,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/README.md",
+      "sha256": "06f9cc0bb70005bd0bbb24016d255d9685f4ad02ca889e97086997ca54c0a5c0",
+      "size": 2243,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/architecture-hotspots.md",
+      "sha256": "50d7074e763fbc70d50ce2b5ee9e4a8687829ebe813ea34e0c6fa3bae8c2923e",
+      "size": 11222,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/architecture.md",
+      "sha256": "f686a5510f0571d7fde9a35a5393d64313c4343abd58565aa3ae4796a92686cc",
+      "size": 10795,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/baseline-contradictions.md",
+      "sha256": "48c089d7a95b61a7b2775b7bc80e14710fdbf50fa51bbeb963e5e98f55471937",
+      "size": 1051,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/broken-flows.md",
+      "sha256": "c21e00a7581d4e19951beea6131371ff030b67409e49df58e07d0fed39ea0416",
+      "size": 3664,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/bugs.md",
+      "sha256": "b43355485779bed966fac4a94f66ad98a42beb943fcd85b209e4c3abae9399be",
+      "size": 6309,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/capabilities.md",
+      "sha256": "fc4e6803ec3b887718f0b2a1d7271bdd331b5d873d50292439811ae5497f3ad9",
+      "size": 162051,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/capability-matrix.md",
+      "sha256": "a7bfb0fbdfc0161fa552879eb329d9af4e9933683f57d3c330fc76f9de340e7f",
+      "size": 76101,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/capability-test-coverage.md",
+      "sha256": "fe41bed9a1eec215130628d808da76a3849b522d9fc9e0b9c862174ac37b1e7e",
+      "size": 23831,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/completeness-scorecard.md",
+      "sha256": "a2f33fe313647761cc64bf4e54edd3f8fd80081a5cefff08eee30c90657685d8",
+      "size": 2127,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/configuration-drift.md",
+      "sha256": "7b9d9fef8c02a7cfbb40fbf85b79ccee6c63113a8c40ee4a915ecd4b64dc76e7",
+      "size": 3355,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/coverage-proof.md",
+      "sha256": "d63c0d4c6463a36bc3795b041a8c19be8e9ad355c8aac6ce9dbeb314136cf6df",
+      "size": 1001,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/cross-audit.md",
+      "sha256": "23f165e09f54c3189014c5604a3c4e8d59abc5cea89b8ba585570ebb6c45a4aa",
+      "size": 3501,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/data-integrity-risks.md",
+      "sha256": "afd0e715bd7d855fbc38061598504e770e25ab3fbc83f52c534181f4b69a9af3",
+      "size": 8029,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/data-model.md",
+      "sha256": "0015e575ad46fd1bdc0d06e3fc16171e855ee40d6fd0b6cbda2ebe576e9e2e3f",
+      "size": 6529,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/database-runtime.md",
+      "sha256": "0275eef2e2aa7afb41f7d5a87d9c93faf73519dfcba8aee4d98b49d3a35dcb84",
+      "size": 11910,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/dead-or-legacy.md",
+      "sha256": "012d6afd57823059a828691aa5d56e11da293088ab0bfe7f02fdd17ce99eeaf4",
+      "size": 9610,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/dependencies.md",
+      "sha256": "380a9c0d625bde4ae8d85f99bbf7e3902ab3578f131838e9033e88eafc26b689",
+      "size": 11676,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/domains.md",
+      "sha256": "2fb12241a9dfe271b9ebd8b71348704cccaae0ff646ddce69441f7207966799f",
+      "size": 21700,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/entrypoints.md",
+      "sha256": "8e64edc44b63a7ae859369be091c3ba4ab0f242a6190b8e675ed53c05948d059",
+      "size": 9859,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/environment-variables.md",
+      "sha256": "9ac75ac9db43b186923f29aaa77a76a571f315da605a0f130aa52775083eabc8",
+      "size": 7434,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/external-dependencies.md",
+      "sha256": "f6054f79c453e4b461a2e9a3c98d53c0f085dc8a15d6f9b1b8846c8f665b31c8",
+      "size": 9670,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/flow-matrix.md",
+      "sha256": "82b69b59348f708aaf557f5f2a1f69d0a2a68367a6a1ed26dafbe5784b28f8f5",
+      "size": 8772,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/flow-test-coverage.md",
+      "sha256": "a17c1b3e0c78be5fc5dd8d7791aa2e4cf840bdf4e6ce18ae515679fbae3064ea",
+      "size": 8186,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/flows.md",
+      "sha256": "68f5f8815d78ac4026c357b71e520981cb7f539f8f2884e67efbe8b5d49ac6c9",
+      "size": 60510,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/infrastructure-risks.md",
+      "sha256": "f77de2f1fabc1d8c97bae30085a1e8ac3c6877da9bcc288b47d8fb57c348dd0f",
+      "size": 7535,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/infrastructure.md",
+      "sha256": "d0b49d2147364f56b014a03146794a2874b710c752a733fc14770006a9366fdb",
+      "size": 2477,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/integration-risks.md",
+      "sha256": "8cd324cd7dcd01268104b284f452ecb898ab25041fd7947a1ca45ccd440ac374",
+      "size": 6331,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/integrations-runtime.md",
+      "sha256": "bbc128da7420f676ceb8b11702d7caeb46cbcbad2d62f17647f4ea0dd7ef187e",
+      "size": 6259,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/modules.md",
+      "sha256": "a0157d20efc5c486ce3a5f07ed5c516281eda1454b043dff33aadc928bb715ee",
+      "size": 81911,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/observability.md",
+      "sha256": "217b80981c29375ee849b3a2957c436ec3ad26d2caa3cf14c4e057df76b84f3d",
+      "size": 2001,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/orphan-capabilities.md",
+      "sha256": "8eed5309febb5ecfaa44280e67a57aa2474a02145d2d34ed129b8fd43b600c92",
+      "size": 7312,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/quality-summary.md",
+      "sha256": "b0c457cf98b5a4724938bc66e446623abe8802b7695ce65aa2c828537f22c6e0",
+      "size": 1597,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/repository-inventory.md",
+      "sha256": "92d2a6c33b3e75e37cfc65a73c314c1d848224e260a150119d9e9af0ebf3740f",
+      "size": 14467,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/risk-register.md",
+      "sha256": "412e56f2247be7c055f71d8b6ef5397775d68dc63b5384bc4aebc69cc74046de",
+      "size": 62461,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/runtime-validation.md",
+      "sha256": "8426652e89a97902294368a5db382051d06f061156cbaba6a744c2e6134e0bb3",
+      "size": 3041,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/security-risks.md",
+      "sha256": "6d90e806eb6924a2f1badc62dd062d91d2586c48678e1a7be16bcfd30a1352d9",
+      "size": 5580,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/state-transitions.md",
+      "sha256": "b900d9678e2c86a66a0e6da3bf1588fe9f6b2b58f1c992d5ef85460d103e947e",
+      "size": 12403,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/technical-debt.md",
+      "sha256": "c57e26deee6c1692ac04d8d7a1abe2683016d0ad6aa1d195a490d6b1a50e0012",
+      "size": 9272,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/test-gaps.md",
+      "sha256": "420f2584a80c67052289e786e06f4009804488e3fba86ad4b2a36fe27e0f3eb7",
+      "size": 9758,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/tests-inventory.md",
+      "sha256": "bc22ccd48c30bd7dac5afb2de13f7c522ed5decef529c828772222c95205f2cf",
+      "size": 11894,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/unknowns.md",
+      "sha256": "62785044420a71d07c8b867254cb8543f01ea0d2b1b5f3b87958d87804f7d9b4",
+      "size": 7112,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/unresolved-evidence.md",
+      "sha256": "4148cf865c8e84dba79846b93042a1af7654e4e938d6c58b4b5d21f15258f595",
+      "size": 1238,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "docs/system/webhooks-cron.md",
+      "sha256": "99c210e351b85295dfb0f6301297c420e8f78c1111542d49859b90bc11776aae",
+      "size": 1273,
+      "category": "HUMAN_DOCUMENTATION"
+    },
+    {
+      "path": "system-knowledge/architecture.json",
+      "sha256": "ede40bf640110786331cd8f939df86262a57f84b6b411aed43574f8898493e4c",
+      "size": 16533,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/baseline-manifest.json",
+      "sha256": "21ff6094c66a8aa3cb717ab4bfca77c9e3cde5f615c7dcdf914362875aed4c98",
+      "size": 7972,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/baseline-v1.json",
+      "sha256": "20a728ff581670211ec10a960b29a14a5f458b361b67d89973c280be12603603",
+      "size": 2478,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/capabilities.json",
+      "sha256": "1720efb06833074c76043e3a5dec26b9876f78cd5932406d3eb946ef159e1642",
+      "size": 719140,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/capability-relations.json",
+      "sha256": "380bb74e214ded4f54b9c61858729206e63350bac76f1a1f3fefe0594d237b8b",
+      "size": 16616,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/changelog.json",
+      "sha256": "9885f1b1b2f646709ef38d47396ba76d11006ecfbe9e149e830c0d070ae6faf4",
+      "size": 1236,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/completeness.json",
+      "sha256": "c46a89e96bd04269c5d8ff08c6fb014755936d10d7066e42456e0f40e12d6ba9",
+      "size": 3783,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/configuration-drift.json",
+      "sha256": "82ab499fc54c512e286fc42aa42d5464cfc001a1b8d7b64e621b2ef8d5422dc2",
+      "size": 6956,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/contradictions.json",
+      "sha256": "bf2ab4443b72cc57644b85c88ec1d058776b04bc33b9a531b7be3bc7eadf7f8d",
+      "size": 1686,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/coverage.json",
+      "sha256": "23c66acd44fcb2bcc9d32fe0aab6e4baa111d708f77d4e878abf38441e8c1dd7",
+      "size": 2604,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/cron.json",
+      "sha256": "05e8a0505f60414135089aa258bae4c5f7437898e80bf86cc1d8294b11132fb9",
+      "size": 2151,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/cross-audit.json",
+      "sha256": "c51b97c41001c122dfde1b2a3108ac041ca1675942c6fe5464f22e5dd8c613c0",
+      "size": 4185,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/data-model.json",
+      "sha256": "59f0a9feb04e1060769706ae518dfbeaa73a9238a7d369a1cb7417c9fc52f370",
+      "size": 422093,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/database-objects.json",
+      "sha256": "3d842287ffff25f476c7eb5c3fe5cf1c1aa127df57c31e54e1cb60d011944667",
+      "size": 194950,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/database-relations.json",
+      "sha256": "7a2e3a8c55026fdd27feab596da49cf20cc91cd1b6410a0d6715db62ba9a6330",
+      "size": 1037576,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/dead-or-legacy.json",
+      "sha256": "aab7f1f1c6845a28874c064bed454e3a89c31f4ca317f52ff5b7bcae77eb5a7e",
+      "size": 3539,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/dependencies.json",
+      "sha256": "d4a4820309f2688eb59f10bba01728c667fb52a971382db80fc3800a2b4a9154",
+      "size": 334649,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/domains.json",
+      "sha256": "0a4b45cb9a7df63410536840d716c425a1442ea98f86dffa10f964047f803c44",
+      "size": 23085,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/entrypoints.json",
+      "sha256": "62e34c645703ea45166a3306254fbc8eb436f210700aa74dfd0dda57219489b3",
+      "size": 24263,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/environment.json",
+      "sha256": "9157739d5da389c408f4fc23726ce43057a648eb5e03956b06617122dfe7c26f",
+      "size": 26522,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/finding-relations.json",
+      "sha256": "2f643a901655fcfe36d05e197bd5904d5daa39bf4b52540eed6a1f8b384180dd",
+      "size": 2859,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/findings.json",
+      "sha256": "747bf320e5f1b6f1da5ae5ad26afab0a7388513a511793ad4ea851050de57fac",
+      "size": 78648,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/flow-relations.json",
+      "sha256": "5958aea21af0349bc5e9b0e73652038695c6090e8e8d51385085fb8a57fa9050",
+      "size": 12150,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/flow-steps.json",
+      "sha256": "8d494225eeff4629edcf3ce46cfcbb82977f2673bfde54de91c76df116f05236",
+      "size": 296540,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/flows.json",
+      "sha256": "33f9591f93fe490d42c35ff63f7ea3fbb1cd1ae356bb91b4218f51def31128d9",
+      "size": 180455,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/health.json",
+      "sha256": "41258aacf28e3a18df71d409e37afcb0b3addf8f4a1b2551d1fedec10feceacd",
+      "size": 41311,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/index.json",
+      "sha256": "523ece676c99645b7f0863cacf8ad7bf7cdc06f8887545b4938bc54c00a2889f",
+      "size": 17779,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/infrastructure.json",
+      "sha256": "733d71590863f1f8ad15c58ff2fe72a839d16726169851d712ffb78b8632132b",
+      "size": 5959,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/integration-runtime.json",
+      "sha256": "5fea0d55432cf24726b38ee53a37b04645ef9c8a8449d8cdb39d420a9fa90eb8",
+      "size": 11743,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/integrations.json",
+      "sha256": "d1b0452818c6c021a6f240be9b7ac4124594c5c750e9029bdbcf93d382845f18",
+      "size": 8641,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/modules.json",
+      "sha256": "009051d6f792e5e7d7198cbac1408f6d3f359a19ace45586fb3de6f478a8ff65",
+      "size": 82390,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/observability.json",
+      "sha256": "eef980a96eefb4f8df6e46fa0f17337ed29f29e4f6d24912b83f9d35abe12474",
+      "size": 4073,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/repository.json",
+      "sha256": "376c0247adef7e395814862666f3c305acbe1d68be9dd58d0f0624288e7d2bec",
+      "size": 25865,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/risk-summary.json",
+      "sha256": "c740a131633d573c693e5f5fc222b13a163d2d730e4d1729419fa79eb07c3256",
+      "size": 3662,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/runtime-validation.json",
+      "sha256": "3509a8ef88da19406252522be0eef80098fa4a58d9a8ebe5f0974bc42aa82f7b",
+      "size": 7032,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/self-reading.json",
+      "sha256": "5f50470e1e5b164554b86e74cd3383f7540e63d5927125833b7f13cffee60d64",
+      "size": 8980,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/source-fingerprint.json",
+      "sha256": "e31694e4cbc12c2358dfee7f3297ff0ea899e859d14053c07c1afec6268ef487",
+      "size": 1939,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/state-transitions.json",
+      "sha256": "a43ff2b0cecccb2c47b6b90ca8e823c2b80561f46616f9651deaa2e3820677f4",
+      "size": 45154,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/test-gaps.json",
+      "sha256": "70453f32c93dfb04f4ba4881ca0e561b829c3aff5cafab90d98568acaddb398d",
+      "size": 6996,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/tests.json",
+      "sha256": "e3f1acfa544e6134a7af9059bdf7e8ddf85e6c45f61a3ba2c7e7317c11025a3b",
+      "size": 35656,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/unresolved-evidence.json",
+      "sha256": "4e0fb596f1824ccc21da1475c08f7c416cdd1f5ca42cee09d1c8765a615fe705",
+      "size": 4433,
+      "category": "MACHINE_READABLE"
+    },
+    {
+      "path": "system-knowledge/webhooks.json",
+      "sha256": "c7e14a80b0f5c71189d372bdd2ed2a79eaaac1292496f313f46a4ded3b275d8a",
+      "size": 2431,
+      "category": "MACHINE_READABLE"
+    }
+  ],
+  "exclusions": [
+    {
+      "path": "system-knowledge/baseline-integrity.json",
+      "reason": "Excluded to avoid hashing the file that stores its own hash."
+    }
+  ]
+}

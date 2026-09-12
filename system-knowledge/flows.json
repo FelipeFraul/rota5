@@ -1,0 +1,6172 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-09-11",
+  "stage": 4,
+  "id": "rota5.flow-catalog.v1",
+  "canonical": true,
+  "count": 34,
+  "metrics": {
+    "total": 34,
+    "by_type": {
+      "USER_JOURNEY": 8,
+      "ADMIN_JOURNEY": 14,
+      "SYSTEM_PROCESS": 9,
+      "OPERATIONAL_PROCESS": 3
+    },
+    "by_status": {
+      "PARCIAL": 7,
+      "CONFIRMADO": 25,
+      "QUEBRADO": 2
+    },
+    "steps": 169,
+    "state_transitions": 66,
+    "with_test": 30,
+    "without_test": 4,
+    "with_failing_test": 8,
+    "capabilities_in_flows": 136,
+    "capabilities_standalone": 4,
+    "capabilities_unclassified": 0,
+    "functional_entrypoints_unclassified": 0,
+    "relations": 21
+  },
+  "actors": [
+    "customer",
+    "admin",
+    "gate_operator",
+    "kitchen_operator",
+    "Z-API",
+    "Mercado Pago",
+    "cron",
+    "internal scheduler check",
+    "database-backed gate scan",
+    "operational_script",
+    "admin_and_local_operator",
+    "edge_runtime"
+  ],
+  "trigger_types": [
+    "USER_ACTION",
+    "HTTP_REQUEST",
+    "ADMIN_ACTION",
+    "WEBHOOK",
+    "CRON",
+    "INTERNAL_EVENT",
+    "SCRIPT"
+  ],
+  "status_vocabulary": [
+    "CONFIRMADO",
+    "PARCIAL",
+    "QUEBRADO",
+    "ÓRFÃO",
+    "NÃO_TESTADO",
+    "DESCONHECIDO"
+  ],
+  "test_status_vocabulary": [
+    "COVERED",
+    "PARTIAL",
+    "UNCOVERED",
+    "FAILING",
+    "UNKNOWN"
+  ],
+  "records": [
+    {
+      "id": "whatsapp.public_discovery",
+      "name": "Descoberta pública por WhatsApp",
+      "type": "USER_JOURNEY",
+      "actor": "customer",
+      "trigger": {
+        "type": "USER_ACTION",
+        "entrypoints": [
+          "http-zapi-webhook"
+        ]
+      },
+      "entrypoints": [
+        "http-zapi-webhook"
+      ],
+      "capabilities": [
+        "brand.present_individual_offers",
+        "messaging.start",
+        "messaging.help",
+        "messaging.close",
+        "catalog.search",
+        "catalog.list",
+        "catalog.details",
+        "catalog.offers",
+        "catalog.seat_map"
+      ],
+      "status": "PARCIAL",
+      "goal": "Iniciar ou navegar uma conversa até consultar evento, oferta ou mapa.",
+      "branches": {
+        "happy_path": "Iniciar ou navegar uma conversa até consultar evento, oferta ou mapa.",
+        "alternative_paths": [
+          "Comando inicial abre/reusa conversa e mostra opções.",
+          "Busca, listagem, detalhe, ajuda, nova pesquisa e encerramento seguem ramos do router.",
+          "Entrada inválida volta a ajuda/opções."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "RESULT_SHOWN",
+        "CONVERSATION_CLOSED",
+        "FAILURE"
+      ],
+      "notes": [
+        "Ajuda está PARCIAL e possui teste falhando; comandos são validados no router, não por documentação histórica."
+      ],
+      "actors": [
+        "customer"
+      ],
+      "implementation_status": "PARCIAL",
+      "test_status": "FAILING",
+      "domains": [
+        "domain.brand-presentation",
+        "domain.whatsapp-conversations",
+        "domain.event-catalog"
+      ],
+      "modules": [
+        "brand.presentation",
+        "catalog.inventory-read",
+        "messaging.router",
+        "messaging.state",
+        "messaging.public-dialog",
+        "messaging.conversations",
+        "catalog.events",
+        "catalog.visibility",
+        "table-map.catalog-render"
+      ],
+      "tables": [
+        "ticket_prices",
+        "venue_sections",
+        "conversations",
+        "events",
+        "event_sessions",
+        "event_aliases",
+        "venues",
+        "session_seats",
+        "seats"
+      ],
+      "database_functions": [
+        "search_public_events_ranked"
+      ],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [
+        "test-033",
+        "audit.whatsapp-intent-100",
+        "audit.whatsapp-intent-gate",
+        "test-032",
+        "audit.buy-flow",
+        "audit.whatsapp-santana-search",
+        "test-029",
+        "test-030",
+        "test-035",
+        "audit.seatmap-qr-image"
+      ],
+      "failing_tests": [
+        "test-032",
+        "test-030"
+      ],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/sections.ts",
+          "line": 99,
+          "end_line": 108,
+          "symbol": "filterPresentationTicketTypes",
+          "claim": "Exibir apenas a oferta selecionada por preço e ocultar tipos free e setores mesa/bistrô."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/router.ts",
+          "line": 12204,
+          "end_line": 19366,
+          "symbol": "routeTicketMessage",
+          "claim": "Primeiro contato e comandos de reentrada produzem abertura e estado inicial."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/router.ts",
+          "line": 2772,
+          "end_line": 2798,
+          "symbol": "handlePublicHelpMessage",
+          "claim": "AJUDA recebe termos, pagina resultados, responde tópico e permite voltar ao contexto anterior."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/router.ts",
+          "line": 12204,
+          "end_line": 19366,
+          "symbol": "routeTicketMessage",
+          "claim": "SAIR encerra o contexto público; reentrada reinicia o atendimento."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/events.ts",
+          "line": 419,
+          "end_line": 623,
+          "symbol": "searchEvents",
+          "claim": "Retornar sessões relevantes usando busca ranqueada com fallback de consultas."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/events.ts",
+          "line": 625,
+          "end_line": 714,
+          "symbol": "listAllPublicEventsByDate",
+          "claim": "TODOS lista eventos elegíveis com informações, fotos e opções distribuídas em mensagens."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/router.ts",
+          "line": 1927,
+          "end_line": 1951,
+          "symbol": "buildEventMoreInfoSelection",
+          "claim": "Mais informações preserva evento escolhido e oferece compra apenas se disponível."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/sections.ts",
+          "line": 197,
+          "end_line": 403,
+          "symbol": "listAvailableSections",
+          "claim": "Apresentar ofertas por sessão com preço, taxa, janela de vendas e capacidade."
+        }
+      ]
+    },
+    {
+      "id": "ticket.purchase",
+      "name": "Reserva de ingresso pela conversa",
+      "type": "USER_JOURNEY",
+      "actor": "customer",
+      "trigger": {
+        "type": "USER_ACTION",
+        "entrypoints": [
+          "http-zapi-webhook"
+        ]
+      },
+      "entrypoints": [
+        "http-zapi-webhook"
+      ],
+      "capabilities": [
+        "customer.identify",
+        "customer.limit_reservations",
+        "catalog.enforce_visibility",
+        "catalog.offers",
+        "reservation.cart",
+        "reservation.create",
+        "reservation.resume",
+        "reservation.cancel",
+        "table_map.reserve",
+        "payment.checkout_create"
+      ],
+      "status": "PARCIAL",
+      "goal": "Converter seleção pública em reserva, pedido e checkout.",
+      "branches": {
+        "happy_path": "Converter seleção pública em reserva, pedido e checkout.",
+        "alternative_paths": [
+          "Cliente seleciona evento/sessão/setor/tipo/assento conforme disponibilidade.",
+          "Reserva ativa pode ser retomada ou cancelada.",
+          "Mapa oficial é branch parcial; reserva comum permanece estruturalmente presente."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "SUCCESS",
+        "FAILURE"
+      ],
+      "notes": [
+        "O mapa oficial é um branch parcial; a reserva comum permanece estruturalmente presente e falhas intermediárias podem exigir retomada ou cancelamento."
+      ],
+      "actors": [
+        "customer"
+      ],
+      "implementation_status": "PARCIAL",
+      "test_status": "PARTIAL",
+      "domains": [
+        "domain.customer-risk",
+        "domain.event-catalog",
+        "domain.reservation-inventory",
+        "domain.table-map",
+        "domain.orders-payments"
+      ],
+      "modules": [
+        "messaging.customers",
+        "customer-risk.service",
+        "reservation.service",
+        "catalog.visibility",
+        "catalog.events",
+        "catalog.inventory-read",
+        "messaging.router",
+        "messaging.state",
+        "payment.checkout",
+        "admin.ticket-operations",
+        "table-map.reservation",
+        "table-map.catalog-render",
+        "payment.api-ui",
+        "payment.primitives"
+      ],
+      "tables": [
+        "customers",
+        "buyer_risk_events",
+        "event_sessions",
+        "events",
+        "venue_sections",
+        "session_seats",
+        "ticket_prices",
+        "conversations",
+        "reservations",
+        "reservation_items",
+        "orders",
+        "seats",
+        "payments",
+        "official_table_map_reservations"
+      ],
+      "database_functions": [
+        "reserve_ticket_cart",
+        "reserve_seats",
+        "cancel_pending_reservation",
+        "reserve_official_table_map_place"
+      ],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [
+        "audit.buyer-anti-abuse",
+        "test-031",
+        "test-030",
+        "audit.buy-flow",
+        "test-034",
+        "audit.seatmap-qr-image",
+        "audit.admin-orders-tickets",
+        "audit.cancel-pending-reservation-rpc",
+        "audit.reservation-expiration-cancel",
+        "test-026",
+        "audit.mercado-pago-security"
+      ],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/customers.ts",
+          "line": 40,
+          "end_line": 116,
+          "symbol": "upsertCustomerFromWhatsApp",
+          "claim": "Normalizar telefone e localizar ou criar identidade do comprador."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/buyerRisk.ts",
+          "line": 282,
+          "end_line": 400,
+          "symbol": "checkReservationRisk",
+          "claim": "Avaliar frequência, quantidade e histórico antes de reservar e registrar sinais."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/publicEventVisibility.ts",
+          "line": 148,
+          "end_line": 169,
+          "symbol": "isPublicEventVisible",
+          "claim": "Aplicar finalidade compra/oferta/ingresso e horário de corte local de sessão."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/sections.ts",
+          "line": 197,
+          "end_line": 403,
+          "symbol": "listAvailableSections",
+          "claim": "Apresentar ofertas por sessão com preço, taxa, janela de vendas e capacidade."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/router.ts",
+          "line": 2281,
+          "end_line": 2353,
+          "symbol": "addSelectionToCart",
+          "claim": "Escolher setores, quantidades e lugares, adicionar itens e revisar antes de reservar."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/reservations.ts",
+          "line": 689,
+          "end_line": 976,
+          "symbol": "reserveTicketCart",
+          "claim": "Criar reserva temporária e pedido com valores congelados; carrinho é consumidor atual, helpers simples não têm chamador de produção."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/reservations.ts",
+          "line": 301,
+          "end_line": 326,
+          "symbol": "findActivePendingReservationForCustomer",
+          "claim": "Reutilizar pendência ativa e obter link sem criar nova reserva simultânea."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/reservations.ts",
+          "line": 328,
+          "end_line": 434,
+          "symbol": "cancelPendingReservationForCustomer",
+          "claim": "Cancelar por cliente ou operador autorizado, rejeitando pedidos já pagos."
+        }
+      ]
+    },
+    {
+      "id": "ticket.checkout",
+      "name": "Pagamento Pix de ingresso pelo checkout",
+      "type": "USER_JOURNEY",
+      "actor": "customer",
+      "trigger": {
+        "type": "USER_ACTION",
+        "entrypoints": [
+          "page-checkout",
+          "http-checkout-mp",
+          "http-checkout-pay",
+          "http-checkout-status",
+          "page-checkout-success",
+          "page-checkout-pending",
+          "page-checkout-failure"
+        ]
+      },
+      "entrypoints": [
+        "page-checkout",
+        "http-checkout-mp",
+        "http-checkout-pay",
+        "http-checkout-status",
+        "page-checkout-success",
+        "page-checkout-pending",
+        "page-checkout-failure"
+      ],
+      "capabilities": [
+        "customer.limit_checkout",
+        "payment.checkout_view",
+        "payment.pay_pix",
+        "payment.status",
+        "payment.return_notice",
+        "analytics.track_click"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Abrir pedido reservado, iniciar Pix e observar estado do pagamento.",
+      "branches": {
+        "happy_path": "Abrir pedido reservado, iniciar Pix e observar estado do pagamento.",
+        "alternative_paths": [
+          "Pedido expirado ou inválido falha antes do pagamento.",
+          "Status pode continuar pendente, confirmar pagamento ou mostrar retorno success/pending/failure.",
+          "Criação Pix aplica rate limit e validações de comprador."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "SUCCESS",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "customer"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "PARTIAL",
+      "domains": [
+        "domain.customer-risk",
+        "domain.orders-payments",
+        "domain.analytics-reporting"
+      ],
+      "modules": [
+        "customer-risk.service",
+        "payment.checkout",
+        "payment.api-ui",
+        "integration.mercado-pago",
+        "brand.shell-assets",
+        "combo.offers"
+      ],
+      "tables": [
+        "buyer_risk_events",
+        "customers",
+        "orders",
+        "reservations",
+        "reservation_items",
+        "venue_sections",
+        "payments",
+        "tickets",
+        "combo_orders"
+      ],
+      "database_functions": [
+        "confirm_paid_ticket_order"
+      ],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi",
+        "integration-mercado-pago"
+      ],
+      "tests": [
+        "audit.buyer-anti-abuse",
+        "test-018",
+        "audit.mercado-pago-security"
+      ],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/buyerRisk.ts",
+          "line": 434,
+          "end_line": 510,
+          "symbol": "checkCheckoutRisk",
+          "claim": "Recusar checkout temporariamente quando limites do comprador forem excedidos."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/checkout.ts",
+          "line": 772,
+          "end_line": 924,
+          "symbol": "getPublicCheckoutOrder",
+          "claim": "Validar token e exibir pedido, valor, formulário e dados Pix no cliente web."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/checkout.ts",
+          "line": 1099,
+          "end_line": 1317,
+          "symbol": "paySelfHostedCheckout",
+          "claim": "Validar e-mail/documento e gerar cobrança Pix com idempotência e QR."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/checkout.ts",
+          "line": 1014,
+          "end_line": 1097,
+          "symbol": "reconcileApprovedCheckoutPayment",
+          "claim": "Consultar estado; polling pode buscar aprovação no provedor, confirmar e entregar ingresso."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/app/checkout/success/page.tsx",
+          "line": 3,
+          "end_line": 11,
+          "symbol": "CheckoutSuccessPage",
+          "claim": "Renderizar páginas informativas estáticas de sucesso/pendência/falha; elas não consultam nem confirmam pagamento."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/checkout.ts",
+          "line": 926,
+          "end_line": 954,
+          "symbol": "trackTicketCheckoutClick",
+          "claim": "Persistir instante de abertura e contagem de cliques nos metadados do checkout de ingresso ou combo."
+        }
+      ]
+    },
+    {
+      "id": "ticket.delivery",
+      "name": "Distribuição e reenvio de ingressos",
+      "type": "USER_JOURNEY",
+      "actor": "customer",
+      "trigger": {
+        "type": "USER_ACTION",
+        "entrypoints": [
+          "http-zapi-webhook"
+        ]
+      },
+      "entrypoints": [
+        "http-zapi-webhook"
+      ],
+      "capabilities": [
+        "messaging.protect_delivery",
+        "ticket.deliver",
+        "ticket.delivery_choice",
+        "ticket.assign_participants",
+        "ticket.claim_participant",
+        "ticket.resend"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Entregar QR ao comprador ou distribuir ingressos entre participantes.",
+      "branches": {
+        "happy_path": "Entregar QR ao comprador ou distribuir ingressos entre participantes.",
+        "alternative_paths": [
+          "Comprador pode manter ingressos, escolher distribuição ou reenviar.",
+          "Participante pode reivindicar ingresso reservado ao contato.",
+          "Outbox evita entregas duplicadas e registra falha para retry."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "SUCCESS",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "customer"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "PARTIAL",
+      "domains": [
+        "domain.whatsapp-conversations",
+        "domain.ticketing-delivery"
+      ],
+      "modules": [
+        "messaging.outbound-deliveries",
+        "ticket.delivery",
+        "combo.offers",
+        "ticket.service",
+        "ticket.qr",
+        "messaging.router",
+        "messaging.webhook"
+      ],
+      "tables": [
+        "whatsapp_outbound_deliveries",
+        "tickets",
+        "customers",
+        "orders",
+        "conversations",
+        "whatsapp_messages"
+      ],
+      "database_functions": [
+        "claim_whatsapp_outbound_delivery",
+        "mark_buyer_ticket_qr_delivered",
+        "assign_participant_contacts_to_order_tickets"
+      ],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [
+        "test-028",
+        "test-041",
+        "test-027",
+        "test-036",
+        "test-037",
+        "audit.mercado-pago-security",
+        "audit.seatmap-qr-image"
+      ],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/whatsappOutboundDeliveries.ts",
+          "line": 42,
+          "end_line": 89,
+          "symbol": "getOrCreateWhatsAppOutboundDelivery",
+          "claim": "Reivindicar cada entrega por chave idempotente e persistir sent/failed; nova tentativa depende de novo consumidor."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/ticketDelivery.ts",
+          "line": 507,
+          "end_line": 1038,
+          "symbol": "deliverTicketsForOrder",
+          "claim": "Enviar resumo e imagem assinada; marcar primeiro QR somente após envio aceito."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/ticketDelivery.ts",
+          "line": 305,
+          "end_line": 505,
+          "symbol": "requestTicketDeliveryPreferenceForOrder",
+          "claim": "Em compra múltipla, oferecer entrega ao comprador ou contatos de participantes."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/tickets.ts",
+          "line": 534,
+          "end_line": 588,
+          "symbol": "assignParticipantContactsToOrderTickets",
+          "claim": "Validar telefones/quantidade, reservar ingresso do comprador e associar participantes atomicamente."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/router.ts",
+          "line": 4074,
+          "end_line": 4118,
+          "symbol": "handleParticipantTicketRequest",
+          "claim": "Participante solicita seus ingressos por telefone; envio exitoso marca entrega."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/router.ts",
+          "line": 4469,
+          "end_line": 4540,
+          "symbol": "handlePaidTicketResendCommand",
+          "claim": "REENVIAR lista grupos e devolve QR elegível respeitando titularidade e janela pública."
+        }
+      ]
+    },
+    {
+      "id": "ticket.view",
+      "name": "Visualização pública do ingresso",
+      "type": "USER_JOURNEY",
+      "actor": "customer",
+      "trigger": {
+        "type": "HTTP_REQUEST",
+        "entrypoints": [
+          "page-ticket"
+        ]
+      },
+      "entrypoints": [
+        "page-ticket"
+      ],
+      "capabilities": [
+        "ticket.view",
+        "catalog.enforce_visibility"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Exibir ingresso associado a token público válido.",
+      "branches": {
+        "happy_path": "Exibir ingresso associado a token público válido.",
+        "alternative_paths": [
+          "Token inválido/ausente termina em erro ou conteúdo indisponível.",
+          "Ingresso válido renderiza dados e QR conforme estado."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "SUCCESS",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "customer"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "PARTIAL",
+      "domains": [
+        "domain.ticketing-delivery",
+        "domain.event-catalog"
+      ],
+      "modules": [
+        "ticket.service",
+        "ticket.public-page",
+        "brand.shell-assets",
+        "catalog.visibility",
+        "catalog.events"
+      ],
+      "tables": [
+        "tickets",
+        "orders",
+        "event_sessions",
+        "events"
+      ],
+      "database_functions": [],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [
+        "test-031"
+      ],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/tickets.ts",
+          "line": 804,
+          "end_line": 831,
+          "symbol": "getTicketBySignedToken",
+          "claim": "Verificar assinatura e exibir ingresso válido com QR e dados públicos reduzidos."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/publicEventVisibility.ts",
+          "line": 148,
+          "end_line": 169,
+          "symbol": "isPublicEventVisible",
+          "claim": "Aplicar finalidade compra/oferta/ingresso e horário de corte local de sessão."
+        }
+      ]
+    },
+    {
+      "id": "courtesy.public",
+      "name": "Emissão pública de ingresso gratuito",
+      "type": "USER_JOURNEY",
+      "actor": "customer",
+      "trigger": {
+        "type": "USER_ACTION",
+        "entrypoints": [
+          "http-zapi-webhook"
+        ]
+      },
+      "entrypoints": [
+        "http-zapi-webhook"
+      ],
+      "capabilities": [
+        "courtesy.public_issue"
+      ],
+      "status": "PARCIAL",
+      "goal": "Emitir ingresso gratuito público quando preço/regra permitem.",
+      "branches": {
+        "happy_path": "Emitir ingresso gratuito público quando preço/regra permitem.",
+        "alternative_paths": [
+          "Evento/preço invisível ou inelegível nega emissão.",
+          "RPC cria pedido pago e ticket sem pagamento externo."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "SUCCESS",
+        "FAILURE"
+      ],
+      "notes": [
+        "A emissão depende de elegibilidade, preço zero e limites; apresentação pública e RPC não formam cobertura integral de todos os ramos."
+      ],
+      "actors": [
+        "customer"
+      ],
+      "implementation_status": "PARCIAL",
+      "test_status": "PARTIAL",
+      "domains": [
+        "domain.courtesy"
+      ],
+      "modules": [
+        "ticket.free-issuance",
+        "messaging.router",
+        "courtesy.service"
+      ],
+      "tables": [
+        "tickets",
+        "orders",
+        "reservations",
+        "courtesy_section_limits"
+      ],
+      "database_functions": [
+        "issue_public_free_ticket_order"
+      ],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [
+        "test-031"
+      ],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/publicFreeTickets.ts",
+          "line": 219,
+          "end_line": 319,
+          "symbol": "issuePublicFreeTicketsForOrder",
+          "claim": "Validar reserva de valor zero e limites antes de emitir; apresentação oculta tipo free, podendo haver ofertas não-free de valor zero."
+        }
+      ]
+    },
+    {
+      "id": "combo.purchase",
+      "name": "Compra de combo pelo checkout",
+      "type": "USER_JOURNEY",
+      "actor": "customer",
+      "trigger": {
+        "type": "USER_ACTION",
+        "entrypoints": [
+          "page-combo-checkout",
+          "http-combo-pay",
+          "http-combo-status"
+        ]
+      },
+      "entrypoints": [
+        "page-combo-checkout",
+        "http-combo-pay",
+        "http-combo-status"
+      ],
+      "capabilities": [
+        "combo.checkout_view",
+        "combo.pay_pix",
+        "combo.status",
+        "analytics.track_click"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Abrir checkout de combo, iniciar Pix e consultar estado.",
+      "branches": {
+        "happy_path": "Abrir checkout de combo, iniciar Pix e consultar estado.",
+        "alternative_paths": [
+          "Token/pedido inválido ou expirado falha.",
+          "Pagamento fica pendente até confirmação externa; status pode reconciliar."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [
+          "Estados de espera/expiração permanecem explícitos nos terminais e transições."
+        ],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "WAITING_EXTERNAL",
+        "SUCCESS",
+        "FAILURE",
+        "EXPIRED"
+      ],
+      "notes": [],
+      "actors": [
+        "customer"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "PARTIAL",
+      "domains": [
+        "domain.combo-commerce-fulfillment",
+        "domain.analytics-reporting"
+      ],
+      "modules": [
+        "combo.offers",
+        "combo.checkout-ui-api",
+        "brand.shell-assets",
+        "integration.mercado-pago",
+        "payment.checkout"
+      ],
+      "tables": [
+        "combo_orders",
+        "combo_offers",
+        "customers",
+        "event_sessions",
+        "combo_payments",
+        "payments"
+      ],
+      "database_functions": [],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-mercado-pago"
+      ],
+      "tests": [
+        "test-031",
+        "test-018"
+      ],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 1016,
+          "end_line": 1067,
+          "symbol": "getPublicComboCheckoutOrder",
+          "claim": "Validar token/janela e mostrar produto, preço e formulário Pix."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 1110,
+          "end_line": 1267,
+          "symbol": "payComboCheckout",
+          "claim": "Solicitar Pix ao provedor e reutilizar tentativa conforme estado/idempotência."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 2010,
+          "end_line": 2041,
+          "symbol": "getComboCheckoutStatus",
+          "claim": "Consultar situação mediante token; não equivale à reconciliação de ingresso."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/checkout.ts",
+          "line": 926,
+          "end_line": 954,
+          "symbol": "trackTicketCheckoutClick",
+          "claim": "Persistir instante de abertura e contagem de cliques nos metadados do checkout de ingresso ou combo."
+        }
+      ]
+    },
+    {
+      "id": "combo.delivery_choice",
+      "name": "Escolha de entrega do combo por WhatsApp",
+      "type": "USER_JOURNEY",
+      "actor": "customer",
+      "trigger": {
+        "type": "USER_ACTION",
+        "entrypoints": [
+          "http-zapi-webhook"
+        ]
+      },
+      "entrypoints": [
+        "http-zapi-webhook"
+      ],
+      "capabilities": [
+        "combo.delivery_choose",
+        "table_map.reserve"
+      ],
+      "status": "PARCIAL",
+      "goal": "Registrar resposta de entrega após solicitação da cozinha.",
+      "branches": {
+        "happy_path": "Registrar resposta de entrega após solicitação da cozinha.",
+        "alternative_paths": [
+          "Resposta OK/1 usa reserva de mesa válida; outras respostas permanecem no contexto.",
+          "Ausência de reserva/estado esperado impede conclusão."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [
+          "Estados de espera/expiração permanecem explícitos nos terminais e transições."
+        ],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "CHOICE_RECORDED",
+        "WAITING_USER",
+        "FAILURE"
+      ],
+      "notes": [
+        "A conclusão depende do contexto awaiting_customer e de reserva de mesa válida; respostas diferentes de OK/1 permanecem aguardando."
+      ],
+      "actors": [
+        "customer"
+      ],
+      "implementation_status": "PARCIAL",
+      "test_status": "PARTIAL",
+      "domains": [
+        "domain.combo-commerce-fulfillment",
+        "domain.table-map"
+      ],
+      "modules": [
+        "combo.redemption",
+        "messaging.router",
+        "table-map.reservation",
+        "table-map.catalog-render"
+      ],
+      "tables": [
+        "combo_redemptions",
+        "official_table_map_reservations",
+        "combo_redemption_events",
+        "reservations",
+        "orders"
+      ],
+      "database_functions": [
+        "reserve_official_table_map_place"
+      ],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [
+        "test-036",
+        "test-026"
+      ],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/router.ts",
+          "line": 4006,
+          "end_line": 4072,
+          "symbol": "handleComboDeliveryConfirmation",
+          "claim": "OK/1 confirma escolha e local após revalidar compra e mesa; mantém ingresso de combo emitido."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/officialTableMapReservations.ts",
+          "line": 182,
+          "end_line": 220,
+          "symbol": "reserveOfficialTableMapPlace",
+          "claim": "Reservar lugar compatível com quantidade e sessão; entrada normal está desabilitada pela flag Rota5."
+        }
+      ]
+    },
+    {
+      "id": "admin.whatsapp_session",
+      "name": "Sessão administrativa via WhatsApp",
+      "type": "ADMIN_JOURNEY",
+      "actor": "admin",
+      "trigger": {
+        "type": "ADMIN_ACTION",
+        "entrypoints": [
+          "http-zapi-webhook"
+        ]
+      },
+      "entrypoints": [
+        "http-zapi-webhook"
+      ],
+      "capabilities": [
+        "messaging.navigate_admin",
+        "admin.login",
+        "admin.logout"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Autenticar e navegar comandos administrativos na conversa.",
+      "branches": {
+        "happy_path": "Autenticar e navegar comandos administrativos na conversa.",
+        "alternative_paths": [
+          "Senha/challenge inválido registra tentativa e pode bloquear.",
+          "Logout cancela estado administrativo pendente."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "AUTHENTICATED",
+        "LOCKED",
+        "LOGGED_OUT",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "admin"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "FAILING",
+      "domains": [
+        "domain.whatsapp-conversations",
+        "domain.admin-identity-access"
+      ],
+      "modules": [
+        "messaging.router",
+        "messaging.state",
+        "admin.auth",
+        "admin.login-ui-api"
+      ],
+      "tables": [
+        "conversations",
+        "admin_users",
+        "admin_login_challenges",
+        "admin_auth_attempts",
+        "admin_sessions"
+      ],
+      "database_functions": [],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [
+        "test-011",
+        "audit.admin-navigation-flow",
+        "test-001",
+        "audit.admin-login-lockout",
+        "audit.admin-tokenized-login"
+      ],
+      "failing_tests": [
+        "test-001"
+      ],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/adminNavigation.ts",
+          "line": 127,
+          "end_line": 201,
+          "symbol": "reconcileAdminNavigation",
+          "claim": "Preservar pilha administrativa e restaurar submenu anterior."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminLoginFlow.ts",
+          "line": 56,
+          "end_line": 155,
+          "symbol": "startAdminLogin",
+          "claim": "Emitir link temporário, validar segredo, consumir código e abrir sessão administrativa."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminAuth.ts",
+          "line": 1585,
+          "end_line": 1615,
+          "symbol": "revokeActiveAdminSessions",
+          "claim": "Revogar sessão ativa e cancelar autenticação pendente ao sair."
+        }
+      ]
+    },
+    {
+      "id": "admin.web_session",
+      "name": "Sessão administrativa web por link",
+      "type": "ADMIN_JOURNEY",
+      "actor": "admin",
+      "trigger": {
+        "type": "ADMIN_ACTION",
+        "entrypoints": [
+          "page-admin-login",
+          "http-admin-login",
+          "http-admin-open"
+        ]
+      },
+      "entrypoints": [
+        "page-admin-login",
+        "http-admin-login",
+        "http-admin-open"
+      ],
+      "capabilities": [
+        "admin.login",
+        "admin.web_session",
+        "admin.lockout"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Validar token/senha, consumir link e criar cookies administrativos.",
+      "branches": {
+        "happy_path": "Validar token/senha, consumir link e criar cookies administrativos.",
+        "alternative_paths": [
+          "Tentativas inválidas acumulam lockout.",
+          "Link válido cria sessão e CSRF; expirado/consumido falha."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "AUTHENTICATED",
+        "LOCKED",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "admin"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "PARTIAL",
+      "domains": [
+        "domain.admin-identity-access"
+      ],
+      "modules": [
+        "admin.auth",
+        "admin.login-ui-api",
+        "messaging.router"
+      ],
+      "tables": [
+        "admin_users",
+        "admin_login_challenges",
+        "admin_auth_attempts",
+        "admin_sessions"
+      ],
+      "database_functions": [],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [
+        "test-001",
+        "audit.admin-login-lockout",
+        "audit.admin-tokenized-login",
+        "test-016"
+      ],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminLoginFlow.ts",
+          "line": 56,
+          "end_line": 155,
+          "symbol": "startAdminLogin",
+          "claim": "Emitir link temporário, validar segredo, consumir código e abrir sessão administrativa."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminAuth.ts",
+          "line": 606,
+          "end_line": 661,
+          "symbol": "createAdminEventEditorDirectLink",
+          "claim": "Consumir link/challenge, gravar cookies de sessão/CSRF e abrir área autorizada."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminAuth.ts",
+          "line": 1039,
+          "end_line": 1096,
+          "symbol": "recordAdminAuthFailure",
+          "claim": "Persistir falhas e aplicar bloqueios temporários/administrativos na autenticação."
+        }
+      ]
+    },
+    {
+      "id": "admin.web_event_workspace",
+      "name": "Workspace web de eventos, combos e dashboards",
+      "type": "ADMIN_JOURNEY",
+      "actor": "admin",
+      "trigger": {
+        "type": "ADMIN_ACTION",
+        "entrypoints": [
+          "page-admin-events",
+          "http-admin-events",
+          "http-admin-event-id",
+          "http-admin-combos",
+          "http-admin-combo-id"
+        ]
+      },
+      "entrypoints": [
+        "page-admin-events",
+        "http-admin-events",
+        "http-admin-event-id",
+        "http-admin-combos",
+        "http-admin-combo-id"
+      ],
+      "capabilities": [
+        "admin.authorize",
+        "event.list",
+        "event.inspect",
+        "event.create",
+        "event.edit",
+        "event.publish",
+        "event.change_status",
+        "event.cancel",
+        "event.duplicate",
+        "combo.list",
+        "analytics.general_dashboard",
+        "analytics.event_dashboard",
+        "analytics.contacts"
+      ],
+      "status": "QUEBRADO",
+      "goal": "Operar catálogo administrativo pela página web.",
+      "branches": {
+        "happy_path": "Operar catálogo administrativo pela página web.",
+        "alternative_paths": [
+          "APIs validam sessão/CSRF e executam consultas/mutações.",
+          "A página importa CreateEventModal.tsx com JSX incompleto; o build/typecheck/lint não compilam o workspace atual.",
+          "Chamadas diretas às APIs permanecem estruturalmente existentes."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "API_SUCCESS",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "admin"
+      ],
+      "implementation_status": "QUEBRADO",
+      "test_status": "FAILING",
+      "domains": [
+        "domain.admin-identity-access",
+        "domain.event-administration",
+        "domain.combo-commerce-fulfillment",
+        "domain.analytics-reporting"
+      ],
+      "modules": [
+        "admin.auth",
+        "event-admin.api",
+        "combo.admin-ui",
+        "event-admin.service",
+        "event-admin.ui",
+        "combo.offers",
+        "analytics.admin-dashboard-ui",
+        "analytics.contacts"
+      ],
+      "tables": [
+        "admin_users",
+        "admin_sessions",
+        "events",
+        "combo_offers",
+        "event_sessions",
+        "venue_sections",
+        "ticket_prices",
+        "session_seats",
+        "venues",
+        "seats",
+        "combo_offer_scopes",
+        "combo_orders",
+        "whatsapp_messages",
+        "tickets",
+        "combo_redemptions",
+        "ticket_validation_events",
+        "customers",
+        "conversations",
+        "reservations",
+        "orders"
+      ],
+      "database_functions": [
+        "list_admin_events_fast",
+        "get_admin_event_editor_payload",
+        "get_admin_general_dashboard_summary"
+      ],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [
+        "test-010",
+        "test-016",
+        "audit.admin-profiles-permissions",
+        "audit.gate-phone-checkin",
+        "audit.system-closure",
+        "test-003",
+        "test-008",
+        "test-009",
+        "audit.admin-event-creation-flow",
+        "test-006",
+        "test-014",
+        "test-002",
+        "audit.admin-event-edit-duplicate",
+        "test-004",
+        "test-005",
+        "test-017",
+        "test-040"
+      ],
+      "failing_tests": [
+        "test-009",
+        "test-002",
+        "test-005",
+        "test-017",
+        "test-040"
+      ],
+      "evidence": [
+        {
+          "kind": "build_blocker",
+          "path": "src/app/admin/eventos/event-editor/CreateEventModal.tsx",
+          "line": 19,
+          "claim": "Incomplete JSX blocks the current page workspace from compiling."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminAuth.ts",
+          "line": 1139,
+          "end_line": 1192,
+          "symbol": "requireAdminPermission",
+          "claim": "Aplicar permissões, escopo de proprietário e CSRF nas mutações web."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminEvents.ts",
+          "line": 1046,
+          "end_line": 1309,
+          "symbol": "listAdminEvents",
+          "claim": "Consultar eventos por status/texto e escopo do administrador, incluindo modo rápido."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminEvents.ts",
+          "line": 1311,
+          "end_line": 1414,
+          "symbol": "getAdminEventDetails",
+          "claim": "Carregar configuração e inventário para edição."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminEvents.ts",
+          "line": 1504,
+          "end_line": 1666,
+          "symbol": "createAdminEvent",
+          "claim": "Criar evento e dados iniciais; formulário web atual tem erro de parse, caminho de serviço/WhatsApp existe."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminEvents.ts",
+          "line": 2189,
+          "end_line": 2207,
+          "symbol": "updateAdminEvent",
+          "claim": "Alterar título, artista, descrição, imagem e local sob autorização."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/router.ts",
+          "line": 7853,
+          "end_line": 9860,
+          "symbol": "handleAdminEventsFlow",
+          "claim": "Mudar estado para published; diálogo verifica inventário comprável, API aplica seu próprio contrato."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/router.ts",
+          "line": 7853,
+          "end_line": 9860,
+          "symbol": "handleAdminEventsFlow",
+          "claim": "Alterar estado operacional do evento sem apagar dados de venda."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/app/api/admin/events/[eventId]/route.ts",
+          "line": 959,
+          "end_line": 976,
+          "symbol": "DELETE",
+          "claim": "DELETE grava status cancelled; não faz exclusão física nem estorno."
+        }
+      ]
+    },
+    {
+      "id": "admin.whatsapp_event_management",
+      "name": "Gestão completa de evento pelo WhatsApp",
+      "type": "ADMIN_JOURNEY",
+      "actor": "admin",
+      "trigger": {
+        "type": "ADMIN_ACTION",
+        "entrypoints": [
+          "http-zapi-webhook"
+        ]
+      },
+      "entrypoints": [
+        "http-zapi-webhook"
+      ],
+      "capabilities": [
+        "admin.authorize",
+        "event.list",
+        "event.inspect",
+        "event.create",
+        "event.edit",
+        "event.publish",
+        "event.change_status",
+        "event.duplicate",
+        "event.session_create",
+        "event.session_edit",
+        "event.section_create",
+        "event.section_edit",
+        "event.capacity_set",
+        "event.seats_create",
+        "event.seats_block",
+        "event.price_create",
+        "event.price_edit"
+      ],
+      "status": "PARCIAL",
+      "goal": "Criar e manter evento, sessões, setores, assentos e preços por comandos administrativos.",
+      "branches": {
+        "happy_path": "Criar e manter evento, sessões, setores, assentos e preços por comandos administrativos.",
+        "alternative_paths": [
+          "Criação começa em draft e pode publicar.",
+          "Edição percorre estados conversacionais e valida cada entidade.",
+          "Preço tem evidência parcial e falhas intermediárias podem deixar draft/resíduos."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "SUCCESS",
+        "FAILURE"
+      ],
+      "notes": [
+        "A jornada cobre muitas entidades e estados conversacionais; preço tem evidência parcial e falhas intermediárias podem deixar draft ou resíduos."
+      ],
+      "actors": [
+        "admin"
+      ],
+      "implementation_status": "PARCIAL",
+      "test_status": "FAILING",
+      "domains": [
+        "domain.admin-identity-access",
+        "domain.event-administration"
+      ],
+      "modules": [
+        "admin.auth",
+        "event-admin.api",
+        "combo.admin-ui",
+        "event-admin.service",
+        "event-admin.ui",
+        "messaging.router"
+      ],
+      "tables": [
+        "admin_users",
+        "admin_sessions",
+        "events",
+        "combo_offers",
+        "event_sessions",
+        "venue_sections",
+        "ticket_prices",
+        "session_seats",
+        "venues",
+        "seats",
+        "reservations",
+        "tickets"
+      ],
+      "database_functions": [
+        "list_admin_events_fast",
+        "get_admin_event_editor_payload",
+        "update_admin_section_capacity"
+      ],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [
+        "test-010",
+        "test-016",
+        "audit.admin-profiles-permissions",
+        "audit.gate-phone-checkin",
+        "audit.system-closure",
+        "test-003",
+        "test-008",
+        "test-009",
+        "audit.admin-event-creation-flow",
+        "test-006",
+        "test-014",
+        "test-002",
+        "audit.admin-event-edit-duplicate",
+        "test-013",
+        "test-015"
+      ],
+      "failing_tests": [
+        "test-009",
+        "test-002",
+        "test-015"
+      ],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminAuth.ts",
+          "line": 1139,
+          "end_line": 1192,
+          "symbol": "requireAdminPermission",
+          "claim": "Aplicar permissões, escopo de proprietário e CSRF nas mutações web."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminEvents.ts",
+          "line": 1046,
+          "end_line": 1309,
+          "symbol": "listAdminEvents",
+          "claim": "Consultar eventos por status/texto e escopo do administrador, incluindo modo rápido."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminEvents.ts",
+          "line": 1311,
+          "end_line": 1414,
+          "symbol": "getAdminEventDetails",
+          "claim": "Carregar configuração e inventário para edição."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminEvents.ts",
+          "line": 1504,
+          "end_line": 1666,
+          "symbol": "createAdminEvent",
+          "claim": "Criar evento e dados iniciais; formulário web atual tem erro de parse, caminho de serviço/WhatsApp existe."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminEvents.ts",
+          "line": 2189,
+          "end_line": 2207,
+          "symbol": "updateAdminEvent",
+          "claim": "Alterar título, artista, descrição, imagem e local sob autorização."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/router.ts",
+          "line": 7853,
+          "end_line": 9860,
+          "symbol": "handleAdminEventsFlow",
+          "claim": "Mudar estado para published; diálogo verifica inventário comprável, API aplica seu próprio contrato."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/router.ts",
+          "line": 7853,
+          "end_line": 9860,
+          "symbol": "handleAdminEventsFlow",
+          "claim": "Alterar estado operacional do evento sem apagar dados de venda."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminEvents.ts",
+          "line": 1673,
+          "end_line": 1964,
+          "symbol": "duplicateAdminEvent",
+          "claim": "Copiar configuração para novo draft e inventário próprio; não copiar pedidos/ingressos."
+        }
+      ]
+    },
+    {
+      "id": "admin.combo_management",
+      "name": "Gestão de ofertas de combo",
+      "type": "ADMIN_JOURNEY",
+      "actor": "admin",
+      "trigger": {
+        "type": "ADMIN_ACTION",
+        "entrypoints": [
+          "http-zapi-webhook",
+          "http-admin-combos",
+          "http-admin-combo-id"
+        ]
+      },
+      "entrypoints": [
+        "http-zapi-webhook",
+        "http-admin-combos",
+        "http-admin-combo-id"
+      ],
+      "capabilities": [
+        "admin.authorize",
+        "combo.list",
+        "combo.create",
+        "combo.edit",
+        "combo.scope",
+        "combo.schedule",
+        "combo.activate",
+        "combo.duplicate",
+        "combo.delete"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Listar, criar, configurar, ativar, duplicar e excluir logicamente ofertas.",
+      "branches": {
+        "happy_path": "Listar, criar, configurar, ativar, duplicar e excluir logicamente ofertas.",
+        "alternative_paths": [
+          "Criação web inicia paused; ativação muda para active.",
+          "Escopo e agenda podem falhar validação; exclusão usa estado deleted.",
+          "WhatsApp e APIs são entradas alternativas."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "SUCCESS",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "admin"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "FAILING",
+      "domains": [
+        "domain.admin-identity-access",
+        "domain.combo-commerce-fulfillment"
+      ],
+      "modules": [
+        "admin.auth",
+        "event-admin.api",
+        "combo.admin-ui",
+        "combo.offers"
+      ],
+      "tables": [
+        "admin_users",
+        "admin_sessions",
+        "events",
+        "combo_offers",
+        "combo_offer_scopes",
+        "combo_orders",
+        "whatsapp_messages"
+      ],
+      "database_functions": [],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [
+        "test-010",
+        "test-016",
+        "audit.admin-profiles-permissions",
+        "audit.gate-phone-checkin",
+        "audit.system-closure",
+        "test-004",
+        "test-019",
+        "test-021"
+      ],
+      "failing_tests": [
+        "test-019"
+      ],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminAuth.ts",
+          "line": 1139,
+          "end_line": 1192,
+          "symbol": "requireAdminPermission",
+          "claim": "Aplicar permissões, escopo de proprietário e CSRF nas mutações web."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 482,
+          "end_line": 533,
+          "symbol": "listComboOffers",
+          "claim": "Consultar ofertas sob escopo administrativo com preço, estado e métricas."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 394,
+          "end_line": 471,
+          "symbol": "createComboOffer",
+          "claim": "Cadastrar produto, descrição, imagem, preço e configuração de oferta; web e WhatsApp possuem implementação distinta."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 547,
+          "end_line": 648,
+          "symbol": "updateComboOfferDetails",
+          "claim": "Alterar nome, descrição, imagem, preço original e preço cobrado."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 650,
+          "end_line": 691,
+          "symbol": "updateComboOfferScope",
+          "claim": "Configurar escopo por evento ou dias da semana."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 547,
+          "end_line": 648,
+          "symbol": "updateComboOfferDetails",
+          "claim": "Definir disparo após QR/horário personalizado e prioridade por evento."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 535,
+          "end_line": 545,
+          "symbol": "updateComboOfferStatus",
+          "claim": "Alterar active/paused para controlar elegibilidade da oferta."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 693,
+          "end_line": 760,
+          "symbol": "duplicateComboOffer",
+          "claim": "Copiar oferta/escopos para novo registro pausado com vínculo de origem."
+        }
+      ]
+    },
+    {
+      "id": "admin.courtesy_management",
+      "name": "Gestão de cortesias",
+      "type": "ADMIN_JOURNEY",
+      "actor": "admin",
+      "trigger": {
+        "type": "ADMIN_ACTION",
+        "entrypoints": [
+          "http-zapi-webhook",
+          "http-admin-event-id"
+        ]
+      },
+      "entrypoints": [
+        "http-zapi-webhook",
+        "http-admin-event-id"
+      ],
+      "capabilities": [
+        "admin.authorize",
+        "courtesy.issue",
+        "courtesy.list",
+        "courtesy.resend",
+        "courtesy.cancel",
+        "courtesy.section_limit"
+      ],
+      "status": "PARCIAL",
+      "goal": "Definir limite por setor e emitir, listar, reenviar ou cancelar cortesias.",
+      "branches": {
+        "happy_path": "Definir limite por setor e emitir, listar, reenviar ou cancelar cortesias.",
+        "alternative_paths": [
+          "Emissão usa RPC transacional e produz pedido/ticket pagos.",
+          "Cancelamento invalida ticket/cortesia; reenvio reutiliza entrega.",
+          "Limite por setor via workspace web é parcial."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "SUCCESS",
+        "FAILURE"
+      ],
+      "notes": [
+        "Emissão, cancelamento e reenvio estão ligados, mas o limite por setor via workspace web permanece parcial."
+      ],
+      "actors": [
+        "admin"
+      ],
+      "implementation_status": "PARCIAL",
+      "test_status": "PARTIAL",
+      "domains": [
+        "domain.admin-identity-access",
+        "domain.courtesy"
+      ],
+      "modules": [
+        "admin.auth",
+        "event-admin.api",
+        "combo.admin-ui",
+        "courtesy.service",
+        "messaging.router",
+        "ticket.qr",
+        "event-admin.ui"
+      ],
+      "tables": [
+        "admin_users",
+        "admin_sessions",
+        "events",
+        "combo_offers",
+        "courtesies",
+        "tickets",
+        "orders",
+        "reservations",
+        "session_seats",
+        "customers",
+        "courtesy_section_limits"
+      ],
+      "database_functions": [
+        "issue_admin_courtesy_order",
+        "issue_courtesy_order"
+      ],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [
+        "test-010",
+        "test-016",
+        "audit.admin-profiles-permissions",
+        "audit.gate-phone-checkin",
+        "audit.system-closure",
+        "audit.admin-courtesies",
+        "test-031"
+      ],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminAuth.ts",
+          "line": 1139,
+          "end_line": 1192,
+          "symbol": "requireAdminPermission",
+          "claim": "Aplicar permissões, escopo de proprietário e CSRF nas mutações web."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminCourtesies.ts",
+          "line": 738,
+          "end_line": 822,
+          "symbol": "issueAdminCourtesy",
+          "claim": "Validar limite/beneficiário, reservar lugares e emitir ingresso gratuito com identificação do emissor."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminCourtesies.ts",
+          "line": 847,
+          "end_line": 860,
+          "symbol": "listCourtesiesForEvent",
+          "claim": "Consultar cortesias emitidas e selecionar alvo para suporte."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminCourtesies.ts",
+          "line": 977,
+          "end_line": 991,
+          "symbol": "buildCourtesyDeliveryForCourtesyId",
+          "claim": "Recompor e enviar QR da cortesia selecionada pelo operador."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminCourtesies.ts",
+          "line": 997,
+          "end_line": 1097,
+          "symbol": "cancelCourtesyForEvent",
+          "claim": "Cancelar cortesia específica, por beneficiário ou lote do evento e liberar inventário aplicável."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminCourtesies.ts",
+          "line": 1162,
+          "end_line": 1181,
+          "symbol": "upsertCourtesySectionLimits",
+          "claim": "Persistir limites e labels por setor; aba visual está oculta por flag global."
+        }
+      ]
+    },
+    {
+      "id": "admin.user_management",
+      "name": "Gestão de administradores",
+      "type": "ADMIN_JOURNEY",
+      "actor": "admin",
+      "trigger": {
+        "type": "ADMIN_ACTION",
+        "entrypoints": [
+          "http-zapi-webhook"
+        ]
+      },
+      "entrypoints": [
+        "http-zapi-webhook"
+      ],
+      "capabilities": [
+        "admin.authorize",
+        "admin.users_list",
+        "admin.user_create",
+        "admin.role_change",
+        "admin.user_disable",
+        "admin.user_reactivate",
+        "admin.password_renew",
+        "admin.unlock"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Administrar usuários, perfis, ativação, senha e bloqueio.",
+      "branches": {
+        "happy_path": "Administrar usuários, perfis, ativação, senha e bloqueio.",
+        "alternative_paths": [
+          "Autorização por perfil precede mutações.",
+          "Usuário pode ser desativado/reativado; senha e lockout podem ser renovados."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "SUCCESS",
+        "FORBIDDEN",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "admin"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "PARTIAL",
+      "domains": [
+        "domain.admin-identity-access"
+      ],
+      "modules": [
+        "admin.auth",
+        "event-admin.api",
+        "combo.admin-ui",
+        "admin.users",
+        "messaging.router"
+      ],
+      "tables": [
+        "admin_users",
+        "admin_sessions",
+        "events",
+        "combo_offers",
+        "admin_auth_attempts"
+      ],
+      "database_functions": [],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [
+        "test-010",
+        "test-016",
+        "audit.admin-profiles-permissions",
+        "audit.gate-phone-checkin",
+        "audit.system-closure",
+        "audit.admin-users-flow",
+        "audit.admin-login-lockout"
+      ],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminAuth.ts",
+          "line": 1139,
+          "end_line": 1192,
+          "symbol": "requireAdminPermission",
+          "claim": "Aplicar permissões, escopo de proprietário e CSRF nas mutações web."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminUsers.ts",
+          "line": 88,
+          "end_line": 101,
+          "symbol": "listAdminUsers",
+          "claim": "Exibir usuários/perfis e tentativas bloqueadas para gestão."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminUsers.ts",
+          "line": 243,
+          "end_line": 300,
+          "symbol": "createAdminUser",
+          "claim": "Criar administrador por telefone com passphrase armazenada em hash."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminUsers.ts",
+          "line": 302,
+          "end_line": 347,
+          "symbol": "updateAdminRole",
+          "claim": "Mudar permissões preservando último root e revogando sessões."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminUsers.ts",
+          "line": 349,
+          "end_line": 386,
+          "symbol": "disableAdminUser",
+          "claim": "Desativar conta, preservar último root ativo e revogar sessões."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminUsers.ts",
+          "line": 388,
+          "end_line": 432,
+          "symbol": "reactivateAdminUser",
+          "claim": "Reativar registro administrativo existente."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminUsers.ts",
+          "line": 434,
+          "end_line": 467,
+          "symbol": "renewAdminPassphrase",
+          "claim": "Substituir hash e invalidar sessões do usuário."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminUsers.ts",
+          "line": 179,
+          "end_line": 202,
+          "symbol": "unlockAdminAuthForPhone",
+          "claim": "Remover bloqueio administrativo por telefone sob autorização."
+        }
+      ]
+    },
+    {
+      "id": "admin.reporting",
+      "name": "Consultas e relatórios administrativos por WhatsApp",
+      "type": "ADMIN_JOURNEY",
+      "actor": "admin",
+      "trigger": {
+        "type": "ADMIN_ACTION",
+        "entrypoints": [
+          "http-zapi-webhook"
+        ]
+      },
+      "entrypoints": [
+        "http-zapi-webhook"
+      ],
+      "capabilities": [
+        "admin.authorize",
+        "ticket.admin_lookup",
+        "analytics.sales",
+        "analytics.division",
+        "analytics.settle",
+        "analytics.general_report",
+        "analytics.section_sales",
+        "analytics.pending_orders",
+        "analytics.expired_reservations",
+        "analytics.gate_checkins",
+        "analytics.ticket_usage",
+        "analytics.courtesies"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Consultar pedidos/ingressos e gerar relatórios ou baixa de divisão.",
+      "branches": {
+        "happy_path": "Consultar pedidos/ingressos e gerar relatórios ou baixa de divisão.",
+        "alternative_paths": [
+          "Filtros escolhem relatório e evento/período.",
+          "Baixa depende do cálculo de divisão.",
+          "Sem dados ou permissão retorna terminal informativo/erro."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "SUCCESS",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "admin"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "PARTIAL",
+      "domains": [
+        "domain.admin-identity-access",
+        "domain.ticketing-delivery",
+        "domain.analytics-reporting"
+      ],
+      "modules": [
+        "admin.auth",
+        "event-admin.api",
+        "combo.admin-ui",
+        "admin.ticket-operations",
+        "messaging.router",
+        "analytics.reports"
+      ],
+      "tables": [
+        "admin_users",
+        "admin_sessions",
+        "events",
+        "combo_offers",
+        "tickets",
+        "reservations",
+        "orders",
+        "customers",
+        "payments",
+        "session_seats",
+        "ticket_prices",
+        "event_sessions",
+        "division_settlements",
+        "courtesies",
+        "ticket_validation_events"
+      ],
+      "database_functions": [],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [
+        "test-010",
+        "test-016",
+        "audit.admin-profiles-permissions",
+        "audit.gate-phone-checkin",
+        "audit.system-closure",
+        "audit.admin-orders-tickets",
+        "audit.admin-reports"
+      ],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminAuth.ts",
+          "line": 1139,
+          "end_line": 1192,
+          "symbol": "requireAdminPermission",
+          "claim": "Aplicar permissões, escopo de proprietário e CSRF nas mutações web."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminTickets.ts",
+          "line": 464,
+          "end_line": 487,
+          "symbol": "findAdminTicketsByPhone",
+          "claim": "Apresentar vendas, ingresso e pendências ao operador autorizado."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminReports.ts",
+          "line": 1259,
+          "end_line": 1511,
+          "symbol": "buildAdminReport",
+          "claim": "Selecionar eventos/período e consolidar vendas, capacidade, entradas e cortesias do relatório sales_event."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminReports.ts",
+          "line": 985,
+          "end_line": 1086,
+          "symbol": "buildAdminDivisionReport",
+          "claim": "Calcular valor recebido e divisão fixa registrada no relatório."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminReports.ts",
+          "line": 617,
+          "end_line": 652,
+          "symbol": "markDivisionSettlementPaid",
+          "claim": "Marcar período como pago com snapshot de valor e administrador; não transfere dinheiro."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminReports.ts",
+          "line": 916,
+          "end_line": 983,
+          "symbol": "buildAdminGeneralReport",
+          "claim": "Agregar receita, vendas e ocupação em relatório geral por período."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminReports.ts",
+          "line": 1259,
+          "end_line": 1511,
+          "symbol": "buildAdminReport",
+          "claim": "Opção sales_section agrega ingressos, valores, gratuidades e ocupação por setor."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminReports.ts",
+          "line": 1259,
+          "end_line": 1511,
+          "symbol": "buildAdminReport",
+          "claim": "Opção pending_payments lista reservas/pedidos aguardando pagamento no período."
+        }
+      ]
+    },
+    {
+      "id": "admin.operational_dashboard",
+      "name": "Dashboard operacional web",
+      "type": "ADMIN_JOURNEY",
+      "actor": "admin",
+      "trigger": {
+        "type": "ADMIN_ACTION",
+        "entrypoints": [
+          "page-admin-ops",
+          "http-admin-ops"
+        ]
+      },
+      "entrypoints": [
+        "page-admin-ops",
+        "http-admin-ops"
+      ],
+      "capabilities": [
+        "admin.web_session",
+        "admin.authorize",
+        "analytics.operational"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Carregar painel operacional autenticado.",
+      "branches": {
+        "happy_path": "Carregar painel operacional autenticado.",
+        "alternative_paths": [
+          "Página exige sessão; API agrega métricas por RPC.",
+          "Sessão inválida redireciona ou retorna 401/403."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "SUCCESS",
+        "UNAUTHORIZED",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "admin"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "PARTIAL",
+      "domains": [
+        "domain.admin-identity-access",
+        "domain.analytics-reporting"
+      ],
+      "modules": [
+        "admin.auth",
+        "admin.login-ui-api",
+        "event-admin.api",
+        "combo.admin-ui",
+        "analytics.operational-dashboard"
+      ],
+      "tables": [
+        "admin_users",
+        "admin_sessions",
+        "admin_login_challenges",
+        "events",
+        "combo_offers",
+        "whatsapp_messages",
+        "customers",
+        "reservations",
+        "orders",
+        "payments",
+        "combo_orders",
+        "tickets"
+      ],
+      "database_functions": [
+        "get_admin_intelligence_dashboard"
+      ],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [
+        "test-016",
+        "audit.admin-tokenized-login",
+        "test-010",
+        "audit.admin-profiles-permissions",
+        "audit.gate-phone-checkin",
+        "audit.system-closure",
+        "test-012"
+      ],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminAuth.ts",
+          "line": 606,
+          "end_line": 661,
+          "symbol": "createAdminEventEditorDirectLink",
+          "claim": "Consumir link/challenge, gravar cookies de sessão/CSRF e abrir área autorizada."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminAuth.ts",
+          "line": 1139,
+          "end_line": 1192,
+          "symbol": "requireAdminPermission",
+          "claim": "Aplicar permissões, escopo de proprietário e CSRF nas mutações web."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/app/api/admin/operational-dashboard/route.ts",
+          "line": 151,
+          "end_line": 214,
+          "symbol": "GET",
+          "claim": "Consultar RPC e renderizar indicadores, séries e alertas operacionais."
+        }
+      ]
+    },
+    {
+      "id": "gate.access_management",
+      "name": "Gestão de credenciais de portaria",
+      "type": "ADMIN_JOURNEY",
+      "actor": "admin",
+      "trigger": {
+        "type": "ADMIN_ACTION",
+        "entrypoints": [
+          "http-zapi-webhook"
+        ]
+      },
+      "entrypoints": [
+        "http-zapi-webhook"
+      ],
+      "capabilities": [
+        "admin.authorize",
+        "gate.access_create",
+        "gate.access_list",
+        "gate.access_pause",
+        "gate.fixed_create",
+        "gate.fixed_list",
+        "gate.fixed_revoke"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Criar, listar, pausar ou revogar credenciais de acesso à portaria.",
+      "branches": {
+        "happy_path": "Criar, listar, pausar ou revogar credenciais de acesso à portaria.",
+        "alternative_paths": [
+          "Acesso temporário pode ficar active, paused ou revoked.",
+          "Credencial fixa pode ficar active ou revoked.",
+          "Pausar/revogar credencial não revoga gate_sessions já emitidas."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "SUCCESS",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "admin"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "PARTIAL",
+      "domains": [
+        "domain.admin-identity-access",
+        "domain.gate-admission"
+      ],
+      "modules": [
+        "admin.auth",
+        "event-admin.api",
+        "combo.admin-ui",
+        "gate.access-session",
+        "messaging.router"
+      ],
+      "tables": [
+        "admin_users",
+        "admin_sessions",
+        "events",
+        "combo_offers",
+        "gate_accesses",
+        "event_sessions",
+        "fixed_gate_accesses"
+      ],
+      "database_functions": [],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [
+        "test-010",
+        "test-016",
+        "audit.admin-profiles-permissions",
+        "audit.gate-phone-checkin",
+        "audit.system-closure"
+      ],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminAuth.ts",
+          "line": 1139,
+          "end_line": 1192,
+          "symbol": "requireAdminPermission",
+          "claim": "Aplicar permissões, escopo de proprietário e CSRF nas mutações web."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/gateAccesses.ts",
+          "line": 72,
+          "end_line": 136,
+          "symbol": "createGateAccess",
+          "claim": "Cadastrar validador com telefone/senha e escopo de evento/sessão."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/gateAccesses.ts",
+          "line": 138,
+          "end_line": 168,
+          "symbol": "listGateAccesses",
+          "claim": "Consultar operadores e acessos existentes."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/gateAccesses.ts",
+          "line": 198,
+          "end_line": 224,
+          "symbol": "pauseGateAccess",
+          "claim": "Pausar autorização de acesso por evento; não revoga automaticamente sessões de leitor já emitidas."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/fixedGateAccesses.ts",
+          "line": 57,
+          "end_line": 98,
+          "symbol": "createFixedGateAccess",
+          "claim": "Cadastrar acesso por telefone/senha ligado ao administrador proprietário."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/fixedGateAccesses.ts",
+          "line": 100,
+          "end_line": 113,
+          "symbol": "listFixedGateAccesses",
+          "claim": "Exibir acessos fixos do proprietário."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/fixedGateAccesses.ts",
+          "line": 115,
+          "end_line": 136,
+          "symbol": "revokeFixedGateAccess",
+          "claim": "Revogar credencial fixa; não altera sessões de leitor já emitidas."
+        }
+      ]
+    },
+    {
+      "id": "gate.ticket_admission",
+      "name": "Consulta e entrada de ingresso na portaria",
+      "type": "ADMIN_JOURNEY",
+      "actor": "gate_operator",
+      "trigger": {
+        "type": "ADMIN_ACTION",
+        "entrypoints": [
+          "page-gate",
+          "http-gate-validate",
+          "http-gate-consult",
+          "http-gate-scan"
+        ]
+      },
+      "entrypoints": [
+        "page-gate",
+        "http-gate-validate",
+        "http-gate-consult",
+        "http-gate-scan"
+      ],
+      "capabilities": [
+        "gate.open",
+        "gate.consult",
+        "gate.admit"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Abrir leitor, consultar ingresso e consumi-lo na entrada.",
+      "branches": {
+        "happy_path": "Abrir leitor, consultar ingresso e consumi-lo na entrada.",
+        "alternative_paths": [
+          "Token/dispositivo inválido impede leitor.",
+          "Consult apenas lê; scan chama validate_ticket_entry.",
+          "Ticket issued no escopo passa a used; usado/cancelado/fora do evento é negado."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "SUCCESS",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "gate_operator"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "PARTIAL",
+      "domains": [
+        "domain.gate-admission"
+      ],
+      "modules": [
+        "gate.access-session",
+        "gate.ui-api",
+        "gate.validation"
+      ],
+      "tables": [
+        "gate_sessions",
+        "gate_accesses",
+        "fixed_gate_accesses",
+        "event_sessions",
+        "events",
+        "tickets",
+        "ticket_validation_events"
+      ],
+      "database_functions": [
+        "validate_ticket_entry"
+      ],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [
+        "audit.gate-phone-checkin",
+        "audit.gate-wrong-event"
+      ],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/gateSessions.ts",
+          "line": 127,
+          "end_line": 280,
+          "symbol": "createGateSession",
+          "claim": "Emitir link opaco, verificar sessão e carregar resumo do leitor no escopo autorizado."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/gateTicketConsultation.ts",
+          "line": 29,
+          "end_line": 93,
+          "symbol": "consultGateTicket",
+          "claim": "Consultar código/QR e situação do ingresso sem marcar usado."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/gateValidation.ts",
+          "line": 172,
+          "end_line": 211,
+          "symbol": "validateGateScan",
+          "claim": "Validar assinatura, evento, sessão e uso anterior; consumir ingresso atomicamente e registrar tentativa."
+        }
+      ]
+    },
+    {
+      "id": "kitchen.session_prepare",
+      "name": "Sessão da cozinha e preparo de combo",
+      "type": "ADMIN_JOURNEY",
+      "actor": "kitchen_operator",
+      "trigger": {
+        "type": "ADMIN_ACTION",
+        "entrypoints": [
+          "page-kitchen-access",
+          "page-kitchen-session",
+          "http-kitchen-open",
+          "http-kitchen-validate",
+          "http-kitchen-prepare"
+        ]
+      },
+      "entrypoints": [
+        "page-kitchen-access",
+        "page-kitchen-session",
+        "http-kitchen-open",
+        "http-kitchen-validate",
+        "http-kitchen-prepare"
+      ],
+      "capabilities": [
+        "combo.kitchen_open",
+        "combo.prepare"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Vincular dispositivo à sessão de cozinha, listar pedidos e registrar preparo.",
+      "branches": {
+        "happy_path": "Vincular dispositivo à sessão de cozinha, listar pedidos e registrar preparo.",
+        "alternative_paths": [
+          "Token/dispositivo inválido impede acesso.",
+          "Prepare registra metadata/evento e pode notificar cliente.",
+          "Validate retorna sessão/pedidos, sem consumir resgate."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "SUCCESS",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "kitchen_operator"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "PARTIAL",
+      "domains": [
+        "domain.combo-commerce-fulfillment"
+      ],
+      "modules": [
+        "combo.kitchen-reader-ui-api",
+        "gate.access-session",
+        "combo.redemption",
+        "combo.qr"
+      ],
+      "tables": [
+        "gate_sessions",
+        "combo_redemptions",
+        "combo_redemption_events",
+        "event_sessions",
+        "whatsapp_messages",
+        "conversations"
+      ],
+      "database_functions": [],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [
+        "test-022"
+      ],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/gateSessions.ts",
+          "line": 411,
+          "end_line": 486,
+          "symbol": "claimKitchenSessionDevice",
+          "claim": "Autenticar token de cozinha, vincular cookie do dispositivo e retornar pedidos/histórico."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "line": 641,
+          "end_line": 933,
+          "symbol": "startKitchenOrderPreparation",
+          "claim": "Mudar estado de cozinha, rotacionar token e notificar cliente sobre retirada."
+        }
+      ]
+    },
+    {
+      "id": "kitchen.combo_redemption",
+      "name": "Leitura e resgate de combo",
+      "type": "ADMIN_JOURNEY",
+      "actor": "kitchen_operator",
+      "trigger": {
+        "type": "ADMIN_ACTION",
+        "entrypoints": [
+          "page-offer-reader",
+          "http-kitchen-scan"
+        ]
+      },
+      "entrypoints": [
+        "page-offer-reader",
+        "http-kitchen-scan"
+      ],
+      "capabilities": [
+        "combo.delivery_prompt",
+        "combo.redeem"
+      ],
+      "status": "QUEBRADO",
+      "goal": "Validar QR e concluir consumo do combo preparado.",
+      "branches": {
+        "happy_path": "Validar QR e concluir consumo do combo preparado.",
+        "alternative_paths": [
+          "QR inválido/escopo incorreto é negado.",
+          "Caso paid + issued válido entra no ramo de escolha/mesa e retorna antes da RPC.",
+          "validate_combo_redemption em comboRedemptions.ts:1462 não é alcançada pelo caso válido analisado."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "WAITING_USER",
+        "DENIED",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "kitchen_operator"
+      ],
+      "implementation_status": "QUEBRADO",
+      "test_status": "PARTIAL",
+      "domains": [
+        "domain.combo-commerce-fulfillment"
+      ],
+      "modules": [
+        "combo.redemption",
+        "combo.kitchen-reader-ui-api"
+      ],
+      "tables": [
+        "combo_redemptions",
+        "official_table_map_reservations",
+        "conversations",
+        "whatsapp_messages",
+        "combo_redemption_events"
+      ],
+      "database_functions": [
+        "validate_combo_redemption"
+      ],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [
+        "test-036",
+        "audit.combo-redemption-security"
+      ],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "line": 935,
+          "end_line": 1513,
+          "symbol": "validateComboRedemptionScan",
+          "claim": "QR válido com mesa paga solicita escolha no WhatsApp sem consumir resgate; ingresso individual sem mesa é negado."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "line": 935,
+          "end_line": 1513,
+          "symbol": "validateComboRedemptionScan",
+          "claim": "Existe RPC de consumo, mas o ramo antecipado captura todo combo pago/emitido válido e impede chegar ao consumo pelo leitor atual."
+        }
+      ]
+    },
+    {
+      "id": "table_map.calibration",
+      "name": "Prévia e calibração do mapa oficial",
+      "type": "ADMIN_JOURNEY",
+      "actor": "admin",
+      "trigger": {
+        "type": "ADMIN_ACTION",
+        "entrypoints": [
+          "http-admin-map"
+        ]
+      },
+      "entrypoints": [
+        "http-admin-map"
+      ],
+      "capabilities": [
+        "admin.authorize",
+        "table_map.preview",
+        "table_map.calibrate"
+      ],
+      "status": "PARCIAL",
+      "goal": "Ler catálogo/coordenadas, renderizar prévia e persistir calibração.",
+      "branches": {
+        "happy_path": "Ler catálogo/coordenadas, renderizar prévia e persistir calibração.",
+        "alternative_paths": [
+          "GET renderiza/lê; POST valida e persiste coordenadas.",
+          "Assets/estado visual e execução browser não foram integralmente validados."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "SUCCESS",
+        "FAILURE"
+      ],
+      "notes": [
+        "GET e POST estão ligados ao render/persistência, mas assets, estado visual e execução em browser não foram integralmente validados."
+      ],
+      "actors": [
+        "admin"
+      ],
+      "implementation_status": "PARCIAL",
+      "test_status": "PARTIAL",
+      "domains": [
+        "domain.admin-identity-access",
+        "domain.table-map"
+      ],
+      "modules": [
+        "admin.auth",
+        "event-admin.api",
+        "combo.admin-ui",
+        "table-map.catalog-render",
+        "table-map.admin-ui-api"
+      ],
+      "tables": [
+        "admin_users",
+        "admin_sessions",
+        "events",
+        "combo_offers",
+        "official_table_map_places"
+      ],
+      "database_functions": [],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [
+        "test-010",
+        "test-016",
+        "audit.admin-profiles-permissions",
+        "audit.gate-phone-checkin",
+        "audit.system-closure",
+        "test-026"
+      ],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminAuth.ts",
+          "line": 1139,
+          "end_line": 1192,
+          "symbol": "requireAdminPermission",
+          "claim": "Aplicar permissões, escopo de proprietário e CSRF nas mutações web."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/tableMap/officialPlaceCoordinates.ts",
+          "line": 35,
+          "end_line": 70,
+          "symbol": "getOfficialTableMapPlaces",
+          "claim": "Ler coordenadas persistidas e renderizar preview pelo mesmo renderizador do WhatsApp."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/tableMap/persistOfficialPlaces.ts",
+          "line": 109,
+          "end_line": 173,
+          "symbol": "persistOfficialTableMapPlaces",
+          "claim": "Validar metadados fixos e persistir coordenadas; componente visual existe, aba está oculta."
+        }
+      ]
+    },
+    {
+      "id": "whatsapp.inbound_dispatch",
+      "name": "Recepção e despacho de mensagem WhatsApp",
+      "type": "SYSTEM_PROCESS",
+      "actor": "Z-API",
+      "trigger": {
+        "type": "WEBHOOK",
+        "entrypoints": [
+          "http-zapi-webhook"
+        ]
+      },
+      "entrypoints": [
+        "http-zapi-webhook"
+      ],
+      "capabilities": [
+        "platform.limit_requests",
+        "messaging.receive",
+        "customer.identify",
+        "messaging.respond",
+        "admin.authorize"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Receber webhook, persistir contexto, rotear intenção e enviar resposta.",
+      "branches": {
+        "happy_path": "Receber webhook, persistir contexto, rotear intenção e enviar resposta.",
+        "alternative_paths": [
+          "Assinatura/origem/rate limit inválidos são rejeitados.",
+          "Mensagem identifica cliente/conversa e chama router.",
+          "Resposta usa outbox e Z-API; erros são registrados."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "SUCCESS",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "Z-API"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "FAILING",
+      "domains": [
+        "domain.platform-runtime",
+        "domain.whatsapp-conversations",
+        "domain.customer-risk",
+        "domain.admin-identity-access"
+      ],
+      "modules": [
+        "platform.rate-limit",
+        "platform.edge-proxy",
+        "messaging.webhook",
+        "messaging.messages",
+        "messaging.customers",
+        "messaging.conversations",
+        "integration.zapi",
+        "messaging.public-dialog",
+        "admin.auth",
+        "event-admin.api",
+        "combo.admin-ui"
+      ],
+      "tables": [
+        "rate_limit_events",
+        "customers",
+        "conversations",
+        "whatsapp_messages",
+        "admin_users",
+        "admin_sessions",
+        "events",
+        "combo_offers"
+      ],
+      "database_functions": [
+        "consume_rate_limit"
+      ],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [
+        "audit.rate-limit",
+        "test-033",
+        "test-039",
+        "test-025",
+        "test-042",
+        "test-043",
+        "test-010",
+        "test-016",
+        "audit.admin-profiles-permissions",
+        "audit.gate-phone-checkin",
+        "audit.system-closure"
+      ],
+      "failing_tests": [
+        "test-025"
+      ],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/security/rateLimit.ts",
+          "line": 68,
+          "end_line": 142,
+          "symbol": "consumeRateLimit",
+          "claim": "Aplicar janela de requisições e responder 429 quando excedida."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/app/api/webhook/zapi/route.ts",
+          "line": 832,
+          "end_line": 1933,
+          "symbol": "POST",
+          "claim": "Autenticar webhook, ignorar grupo/eco, identificar cliente e persistir inbound com chave de mensagem."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/customers.ts",
+          "line": 40,
+          "end_line": 116,
+          "symbol": "upsertCustomerFromWhatsApp",
+          "claim": "Normalizar telefone e localizar ou criar identidade do comprador."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/app/api/webhook/zapi/route.ts",
+          "line": 704,
+          "end_line": 725,
+          "symbol": "sendOutboundMessage",
+          "claim": "Enviar respostas imediatas do router, separar imagem/texto e registrar resultado do provedor."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminAuth.ts",
+          "line": 1139,
+          "end_line": 1192,
+          "symbol": "requireAdminPermission",
+          "claim": "Aplicar permissões, escopo de proprietário e CSRF nas mutações web."
+        }
+      ]
+    },
+    {
+      "id": "ticket.payment_confirmation",
+      "name": "Confirmação e emissão pós-pagamento de ingresso",
+      "type": "SYSTEM_PROCESS",
+      "actor": "Mercado Pago",
+      "trigger": {
+        "type": "WEBHOOK",
+        "entrypoints": [
+          "http-mp-webhook",
+          "http-checkout-status"
+        ]
+      },
+      "entrypoints": [
+        "http-mp-webhook",
+        "http-checkout-status"
+      ],
+      "capabilities": [
+        "platform.limit_requests",
+        "payment.confirm",
+        "ticket.deliver",
+        "ticket.delivery_choice",
+        "messaging.protect_delivery",
+        "table_map.sync_status"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Reconciliar pagamento aprovado, marcar pedido/reserva e emitir/entregar tickets.",
+      "branches": {
+        "happy_path": "Reconciliar pagamento aprovado, marcar pedido/reserva e emitir/entregar tickets.",
+        "alternative_paths": [
+          "Webhook valida assinatura e idempotência por payment_events.",
+          "Consulta de status é caminho alternativo de reconciliação.",
+          "RPC confirm_paid_ticket_order converte pedido/reserva e emite tickets; entrega pode aguardar escolha."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": [
+          "Webhook e consulta de status são caminhos distintos de reconciliação quando catalogados."
+        ]
+      },
+      "terminals": [
+        "SUCCESS",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "Mercado Pago"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "PARTIAL",
+      "domains": [
+        "domain.platform-runtime",
+        "domain.orders-payments",
+        "domain.ticketing-delivery",
+        "domain.whatsapp-conversations",
+        "domain.table-map"
+      ],
+      "modules": [
+        "platform.rate-limit",
+        "platform.edge-proxy",
+        "payment.webhook",
+        "payment.checkout",
+        "integration.mercado-pago",
+        "ticket.delivery",
+        "ticket.service",
+        "ticket.qr",
+        "messaging.outbound-deliveries",
+        "messaging.router",
+        "combo.offers",
+        "table-map.reservation",
+        "reservation.service"
+      ],
+      "tables": [
+        "rate_limit_events",
+        "payment_events",
+        "payments",
+        "orders",
+        "reservations",
+        "tickets",
+        "session_seats",
+        "customers",
+        "conversations",
+        "whatsapp_messages",
+        "whatsapp_outbound_deliveries",
+        "official_table_map_reservations"
+      ],
+      "database_functions": [
+        "consume_rate_limit",
+        "confirm_paid_ticket_order",
+        "mark_buyer_ticket_qr_delivered",
+        "claim_whatsapp_outbound_delivery",
+        "sync_official_table_map_reservation_status"
+      ],
+      "database_triggers": [
+        "reservations_sync_official_table_map_status"
+      ],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi",
+        "integration-mercado-pago"
+      ],
+      "tests": [
+        "audit.rate-limit",
+        "audit.mercado-pago-security",
+        "test-027",
+        "test-028",
+        "test-036",
+        "test-037",
+        "audit.seatmap-qr-image",
+        "test-041"
+      ],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/security/rateLimit.ts",
+          "line": 68,
+          "end_line": 142,
+          "symbol": "consumeRateLimit",
+          "claim": "Aplicar janela de requisições e responder 429 quando excedida."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/app/api/webhook/payment/mercado-pago/route.ts",
+          "line": 218,
+          "end_line": 574,
+          "symbol": "POST",
+          "claim": "Autenticar notificação, consultar provedor e confirmar com validação de referência/valor e RPC idempotente."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/ticketDelivery.ts",
+          "line": 507,
+          "end_line": 1038,
+          "symbol": "deliverTicketsForOrder",
+          "claim": "Enviar resumo e imagem assinada; marcar primeiro QR somente após envio aceito."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/ticketDelivery.ts",
+          "line": 305,
+          "end_line": 505,
+          "symbol": "requestTicketDeliveryPreferenceForOrder",
+          "claim": "Em compra múltipla, oferecer entrega ao comprador ou contatos de participantes."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/whatsappOutboundDeliveries.ts",
+          "line": 42,
+          "end_line": 89,
+          "symbol": "getOrCreateWhatsAppOutboundDelivery",
+          "claim": "Reivindicar cada entrega por chave idempotente e persistir sent/failed; nova tentativa depende de novo consumidor."
+        },
+        {
+          "kind": "implementation",
+          "path": "supabase/migrations/20260722000800_create_official_table_map_reservations.sql",
+          "line": 1,
+          "end_line": 201,
+          "claim": "Implementação operacional/SQL lida; não executada."
+        }
+      ]
+    },
+    {
+      "id": "combo.payment_confirmation",
+      "name": "Confirmação e emissão pós-pagamento de combo",
+      "type": "SYSTEM_PROCESS",
+      "actor": "Mercado Pago",
+      "trigger": {
+        "type": "WEBHOOK",
+        "entrypoints": [
+          "http-mp-webhook"
+        ]
+      },
+      "entrypoints": [
+        "http-mp-webhook"
+      ],
+      "capabilities": [
+        "platform.limit_requests",
+        "combo.confirm",
+        "combo.deliver_qr",
+        "messaging.protect_delivery"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Confirmar pagamento de combo e entregar QR de resgate.",
+      "branches": {
+        "happy_path": "Confirmar pagamento de combo e entregar QR de resgate.",
+        "alternative_paths": [
+          "Webhook distingue pagamento de ingresso e combo.",
+          "Pagamento aprovado marca combo order/payment e cria redemption issued.",
+          "Entrega usa proteção idempotente; falha fica registrada."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": [
+          "Webhook e consulta de status são caminhos distintos de reconciliação quando catalogados."
+        ]
+      },
+      "terminals": [
+        "SUCCESS",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "Mercado Pago"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "PARTIAL",
+      "domains": [
+        "domain.platform-runtime",
+        "domain.combo-commerce-fulfillment",
+        "domain.whatsapp-conversations"
+      ],
+      "modules": [
+        "platform.rate-limit",
+        "platform.edge-proxy",
+        "combo.offers",
+        "payment.webhook",
+        "integration.mercado-pago",
+        "combo.qr",
+        "messaging.outbound-deliveries",
+        "ticket.delivery"
+      ],
+      "tables": [
+        "rate_limit_events",
+        "combo_orders",
+        "combo_payments",
+        "payment_events",
+        "combo_redemptions",
+        "whatsapp_messages",
+        "whatsapp_outbound_deliveries"
+      ],
+      "database_functions": [
+        "consume_rate_limit",
+        "claim_whatsapp_outbound_delivery"
+      ],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi",
+        "integration-mercado-pago"
+      ],
+      "tests": [
+        "audit.rate-limit",
+        "test-022",
+        "test-027",
+        "test-028",
+        "test-041"
+      ],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/security/rateLimit.ts",
+          "line": 68,
+          "end_line": 142,
+          "symbol": "consumeRateLimit",
+          "claim": "Aplicar janela de requisições e responder 429 quando excedida."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 1697,
+          "end_line": 1765,
+          "symbol": "confirmPaidComboOrder",
+          "claim": "Validar referência/valor/vínculo e persistir pedido pago e pagamento aprovado em operações separadas."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 1348,
+          "end_line": 1695,
+          "symbol": "deliverComboOrder",
+          "claim": "Criar credencial de resgate e enviar resumo/imagem com controle idempotente por entrega."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/whatsappOutboundDeliveries.ts",
+          "line": 42,
+          "end_line": 89,
+          "symbol": "getOrCreateWhatsAppOutboundDelivery",
+          "claim": "Reivindicar cada entrega por chave idempotente e persistir sent/failed; nova tentativa depende de novo consumidor."
+        }
+      ]
+    },
+    {
+      "id": "reservation.expiration",
+      "name": "Expiração, lembretes e cancelamento temporal",
+      "type": "SYSTEM_PROCESS",
+      "actor": "cron",
+      "trigger": {
+        "type": "CRON",
+        "entrypoints": [
+          "trigger-cron-expire",
+          "http-cron-expire"
+        ]
+      },
+      "entrypoints": [
+        "trigger-cron-expire",
+        "http-cron-expire"
+      ],
+      "capabilities": [
+        "reservation.expire",
+        "table_map.sync_status",
+        "background.notify_expiry",
+        "background.remind_interest",
+        "background.expire_admin"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Expirar reservas vencidas, liberar inventário e notificar.",
+      "branches": {
+        "happy_path": "Expirar reservas vencidas, liberar inventário e notificar.",
+        "alternative_paths": [
+          "Cron autenticado chama expire_reservations.",
+          "Reserva active vencida vira expired; pedido e assentos acompanham.",
+          "Lembretes e estados administrativos pendentes são tratados conforme janela."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "SUCCESS",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "cron"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "PARTIAL",
+      "domains": [
+        "domain.reservation-inventory",
+        "domain.table-map",
+        "domain.background-processing"
+      ],
+      "modules": [
+        "reservation.expiry",
+        "background.expire-cron",
+        "table-map.reservation",
+        "reservation.service",
+        "payment.webhook",
+        "messaging.messages",
+        "admin.auth"
+      ],
+      "tables": [
+        "reservations",
+        "orders",
+        "payments",
+        "session_seats",
+        "official_table_map_reservations",
+        "whatsapp_messages",
+        "conversations",
+        "admin_sessions",
+        "customers"
+      ],
+      "database_functions": [
+        "expire_reservations",
+        "sync_official_table_map_reservation_status"
+      ],
+      "database_triggers": [
+        "reservations_sync_official_table_map_status"
+      ],
+      "integrations": [
+        "integration-supabase",
+        "integration-vercel",
+        "integration-zapi"
+      ],
+      "tests": [
+        "audit.reservation-expiration-cancel",
+        "audit.admin-navigation-flow"
+      ],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/reservationExpiry.ts",
+          "line": 668,
+          "end_line": 740,
+          "symbol": "expireReservationsAndNotify",
+          "claim": "Executar expiração transacional pelo banco."
+        },
+        {
+          "kind": "implementation",
+          "path": "supabase/migrations/20260722000800_create_official_table_map_reservations.sql",
+          "line": 1,
+          "end_line": 201,
+          "claim": "Implementação operacional/SQL lida; não executada."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/reservationExpiry.ts",
+          "line": 173,
+          "end_line": 240,
+          "symbol": "notifyExpiredReservation",
+          "claim": "Revisitar reservas expiradas recentes, evitar aviso já enviado e limpar contexto."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/reservationExpiry.ts",
+          "line": 445,
+          "end_line": 464,
+          "symbol": "sendBuyerInterestReminders",
+          "claim": "Selecionar conversas interessadas sem compra gerada e enviar lembrete deduplicado."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/reservationExpiry.ts",
+          "line": 602,
+          "end_line": 657,
+          "symbol": "expireAdminSessionsAndNotify",
+          "claim": "Marcar sessões vencidas e restaurar contexto público após aviso."
+        }
+      ]
+    },
+    {
+      "id": "combo.offer_distribution",
+      "name": "Distribuição automática de oferta de combo",
+      "type": "SYSTEM_PROCESS",
+      "actor": "cron",
+      "trigger": {
+        "type": "CRON",
+        "entrypoints": [
+          "trigger-cron-expire",
+          "http-cron-expire"
+        ]
+      },
+      "entrypoints": [
+        "trigger-cron-expire",
+        "http-cron-expire"
+      ],
+      "capabilities": [
+        "combo.offer_send",
+        "combo.checkout_create",
+        "combo.expire"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Selecionar oferta agendada, criar checkout e enviar ao comprador elegível.",
+      "branches": {
+        "happy_path": "Selecionar oferta agendada, criar checkout e enviar ao comprador elegível.",
+        "alternative_paths": [
+          "Escopo, prioridade, janela e lock evitam duplicidade.",
+          "Pedido pending_payment e token são criados antes do envio.",
+          "Pedidos vencidos passam a expired."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "SUCCESS",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "cron"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "FAILING",
+      "domains": [
+        "domain.combo-commerce-fulfillment"
+      ],
+      "modules": [
+        "combo.offers",
+        "reservation.expiry",
+        "background.expire-cron",
+        "messaging.messages",
+        "combo.checkout-ui-api"
+      ],
+      "tables": [
+        "tickets",
+        "customers",
+        "combo_offers",
+        "combo_offer_scopes",
+        "combo_offer_event_locks",
+        "combo_orders",
+        "whatsapp_messages",
+        "event_sessions"
+      ],
+      "database_functions": [
+        "mark_buyer_ticket_qr_delivered",
+        "get_database_now"
+      ],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi",
+        "integration-vercel"
+      ],
+      "tests": [
+        "test-019",
+        "test-020",
+        "test-021",
+        "test-036"
+      ],
+      "failing_tests": [
+        "test-019"
+      ],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 2352,
+          "end_line": 2666,
+          "symbol": "sendScheduledComboOffers",
+          "claim": "Selecionar oferta elegível, respeitar atraso do QR, prioridade e dedupe; gerar pedido/link por destinatário."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 868,
+          "end_line": 1014,
+          "symbol": "createComboOrderForCheckout",
+          "claim": "Criar pedido associado a ingresso/pedido origem ou renovar checkout pendente/expirado elegível."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOffers.ts",
+          "line": 1767,
+          "end_line": 1793,
+          "symbol": "expireComboOrders",
+          "claim": "Marcar pedidos pendentes vencidos como expired."
+        }
+      ]
+    },
+    {
+      "id": "whatsapp.batch_processing",
+      "name": "Processamento de batches e fechamento de conversas",
+      "type": "SYSTEM_PROCESS",
+      "actor": "cron",
+      "trigger": {
+        "type": "CRON",
+        "entrypoints": [
+          "trigger-cron-batches",
+          "http-cron-batches"
+        ]
+      },
+      "entrypoints": [
+        "trigger-cron-batches",
+        "http-cron-batches"
+      ],
+      "capabilities": [
+        "background.cancel_batches",
+        "background.close_inactive"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Reivindicar batches de WhatsApp e finalizar conversas inativas.",
+      "branches": {
+        "happy_path": "Reivindicar batches de WhatsApp e finalizar conversas inativas.",
+        "alternative_paths": [
+          "Batch collecting pode ser claimed como processing.",
+          "No código atual, reply cancela batches; falha pode reagendar/coletar novamente.",
+          "Conversas open inativas passam a closed."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": [
+          "Falha pode reagendar processing para collecting."
+        ]
+      },
+      "terminals": [
+        "SUCCESS",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "cron"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "FAILING",
+      "domains": [
+        "domain.background-processing"
+      ],
+      "modules": [
+        "messaging.batches",
+        "background.batch-cron",
+        "messaging.finalizer",
+        "messaging.state"
+      ],
+      "tables": [
+        "whatsapp_message_batches",
+        "whatsapp_message_batch_messages",
+        "conversations",
+        "customers",
+        "whatsapp_messages"
+      ],
+      "database_functions": [
+        "claim_due_whatsapp_message_batches",
+        "finish_whatsapp_message_batch",
+        "reschedule_whatsapp_message_batch"
+      ],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-vercel",
+        "integration-zapi"
+      ],
+      "tests": [
+        "test-038",
+        "test-023"
+      ],
+      "failing_tests": [
+        "test-038"
+      ],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/app/api/cron/process-whatsapp-batches/route.ts",
+          "line": 109,
+          "end_line": 182,
+          "symbol": "processDueWhatsAppMessageBatches",
+          "claim": "Reclamar lotes e cancelar com customer_reply_pipeline_disabled; erros podem ser reagendados com limite."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/conversationFinalizer.ts",
+          "line": 205,
+          "end_line": 235,
+          "symbol": "finalizeInactiveWhatsAppConversations",
+          "claim": "Avisar encerramento e fechar/resetar conversa aberta inativa, com controle por mensagem finalizadora."
+        }
+      ]
+    },
+    {
+      "id": "event.auto_finish",
+      "name": "Finalização automática de evento observado",
+      "type": "SYSTEM_PROCESS",
+      "actor": "internal scheduler check",
+      "trigger": {
+        "type": "INTERNAL_EVENT",
+        "entrypoints": [
+          "http-zapi-webhook"
+        ]
+      },
+      "entrypoints": [
+        "http-zapi-webhook"
+      ],
+      "capabilities": [
+        "event.auto_finish"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Marcar evento concluído quando sessões já terminaram durante processamento conversacional.",
+      "branches": {
+        "happy_path": "Marcar evento concluído quando sessões já terminaram durante processamento conversacional.",
+        "alternative_paths": [
+          "A verificação interna roda no contexto do webhook.",
+          "Evento elegível muda para finished; demais permanecem inalterados."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "FINISHED",
+        "NO_CHANGE",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "internal scheduler check"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "UNCOVERED",
+      "domains": [
+        "domain.event-administration"
+      ],
+      "modules": [
+        "courtesy.service",
+        "event-admin.service"
+      ],
+      "tables": [
+        "events",
+        "event_sessions"
+      ],
+      "database_functions": [],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/adminCourtesies.ts",
+          "line": 309,
+          "end_line": 354,
+          "symbol": "finishPastPublishedEvents",
+          "claim": "Consulta de eventos para cortesias/portaria/relatórios pode persistir finished nos eventos publicados passados."
+        }
+      ]
+    },
+    {
+      "id": "gate.combo_release",
+      "name": "Liberação de preparo após entrada",
+      "type": "SYSTEM_PROCESS",
+      "actor": "database-backed gate scan",
+      "trigger": {
+        "type": "INTERNAL_EVENT",
+        "entrypoints": [
+          "http-gate-scan"
+        ]
+      },
+      "entrypoints": [
+        "http-gate-scan"
+      ],
+      "capabilities": [
+        "gate.admit",
+        "combo.kitchen_release"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Liberar combo associado depois da admissão válida do ingresso.",
+      "branches": {
+        "happy_path": "Liberar combo associado depois da admissão válida do ingresso.",
+        "alternative_paths": [
+          "Somente gate.admit allowed aciona a liberação.",
+          "Redemption elegível recebe estado de cozinha em metadata/eventos; falhas não desfazem entrada."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "RELEASED",
+        "NOT_APPLICABLE",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "database-backed gate scan"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "PARTIAL",
+      "domains": [
+        "domain.gate-admission",
+        "domain.combo-commerce-fulfillment"
+      ],
+      "modules": [
+        "gate.validation",
+        "gate.ui-api",
+        "gate.access-session",
+        "combo.redemption"
+      ],
+      "tables": [
+        "tickets",
+        "ticket_validation_events",
+        "gate_sessions",
+        "combo_redemptions",
+        "whatsapp_messages",
+        "conversations"
+      ],
+      "database_functions": [
+        "validate_ticket_entry"
+      ],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [
+        "audit.gate-wrong-event"
+      ],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/gateValidation.ts",
+          "line": 172,
+          "end_line": 211,
+          "symbol": "validateGateScan",
+          "claim": "Validar assinatura, evento, sessão e uso anterior; consumir ingresso atomicamente e registrar tentativa."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "line": 492,
+          "end_line": 639,
+          "symbol": "releaseComboOrdersForKitchenAfterGateEntry",
+          "claim": "Após entrada autorizada, tornar combos visíveis à cozinha e avisar comprador."
+        }
+      ]
+    },
+    {
+      "id": "event.program_import",
+      "name": "Importação operacional de programação",
+      "type": "OPERATIONAL_PROCESS",
+      "actor": "operational_script",
+      "trigger": {
+        "type": "SCRIPT",
+        "entrypoints": [
+          "script-import"
+        ]
+      },
+      "entrypoints": [
+        "script-import"
+      ],
+      "capabilities": [
+        "event.import_program"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Interpretar programacao.md e consultar ou aplicar catálogo/inventário.",
+      "branches": {
+        "happy_path": "Interpretar programacao.md e consultar ou aplicar catálogo/inventário.",
+        "alternative_paths": [
+          "Sem --apply opera em verificação/dry run.",
+          "Com --apply grava diretamente no Supabase.",
+          "Entradas inválidas ou ambiente ausente abortam."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "SUCCESS",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "operational_script"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "UNCOVERED",
+      "domains": [
+        "domain.event-administration"
+      ],
+      "modules": [
+        "event-admin.program-importer"
+      ],
+      "tables": [
+        "events",
+        "event_sessions",
+        "venues",
+        "venue_sections",
+        "ticket_prices",
+        "seats",
+        "session_seats"
+      ],
+      "database_functions": [],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "tests": [],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "scripts/import-programacao-events.mjs",
+          "line": 1,
+          "end_line": 514,
+          "claim": "Implementação operacional/SQL lida; não executada."
+        }
+      ]
+    },
+    {
+      "id": "blackhouse.maintenance",
+      "name": "Manutenção legada Black House",
+      "type": "OPERATIONAL_PROCESS",
+      "actor": "operational_script",
+      "trigger": {
+        "type": "SCRIPT",
+        "entrypoints": [
+          "script-bh-rename",
+          "script-bh-split",
+          "script-bh-update"
+        ]
+      },
+      "entrypoints": [
+        "script-bh-rename",
+        "script-bh-split",
+        "script-bh-update"
+      ],
+      "capabilities": [
+        "event.legacy_rename",
+        "event.legacy_split",
+        "event.legacy_update"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Executar renomeação, divisão e atualização de setores/eventos Black House.",
+      "branches": {
+        "happy_path": "Executar renomeação, divisão e atualização de setores/eventos Black House.",
+        "alternative_paths": [
+          "Cada script é uma entrada alternativa com mutação própria.",
+          "Validações/seletores podem encerrar sem mudança."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "APPLIED",
+        "NO_CHANGE",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "operational_script"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "UNCOVERED",
+      "domains": [
+        "domain.event-administration"
+      ],
+      "modules": [
+        "event-admin.black-house-maintenance"
+      ],
+      "tables": [
+        "venue_sections",
+        "ticket_prices",
+        "seats",
+        "session_seats",
+        "reservation_items",
+        "reservations"
+      ],
+      "database_functions": [],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase"
+      ],
+      "tests": [],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "scripts/rename-black-house-ticket-sections.mjs",
+          "line": 1,
+          "end_line": 183,
+          "claim": "Implementação operacional/SQL lida; não executada."
+        },
+        {
+          "kind": "implementation",
+          "path": "scripts/split-black-house-special-items.mjs",
+          "line": 1,
+          "end_line": 178,
+          "claim": "Implementação operacional/SQL lida; não executada."
+        },
+        {
+          "kind": "implementation",
+          "path": "scripts/update-black-house-sectors.mjs",
+          "line": 1,
+          "end_line": 343,
+          "claim": "Implementação operacional/SQL lida; não executada."
+        }
+      ]
+    },
+    {
+      "id": "codex.automation",
+      "name": "Pedido e execução operacional Codex",
+      "type": "OPERATIONAL_PROCESS",
+      "actor": "admin_and_local_operator",
+      "trigger": {
+        "type": "ADMIN_ACTION",
+        "entrypoints": [
+          "http-zapi-webhook",
+          "npm-codex-requests",
+          "script-codex-list",
+          "npm-codex-runner",
+          "script-codex-runner"
+        ]
+      },
+      "entrypoints": [
+        "http-zapi-webhook",
+        "npm-codex-requests",
+        "script-codex-list",
+        "npm-codex-runner",
+        "script-codex-runner"
+      ],
+      "capabilities": [
+        "automation.request",
+        "automation.issue",
+        "automation.list",
+        "automation.execute",
+        "automation.notify"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Registrar pedido aprovado, criar issue, listar, executar CLI local e notificar resultado.",
+      "branches": {
+        "happy_path": "Registrar pedido aprovado, criar issue, listar, executar CLI local e notificar resultado.",
+        "alternative_paths": [
+          "WhatsApp registra pedido e pode criar issue GitHub.",
+          "Listagem filtra pedidos aprovados por telefone.",
+          "Runner faz polling, executa Codex e pode enviar resumo por WhatsApp."
+        ],
+        "error_paths": [
+          "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "SUCCESS",
+        "FAILURE"
+      ],
+      "notes": [],
+      "actors": [
+        "admin_and_local_operator"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "UNCOVERED",
+      "domains": [
+        "domain.codex-automation"
+      ],
+      "modules": [
+        "automation.codex-requests",
+        "messaging.webhook",
+        "admin.auth",
+        "automation.github-issues",
+        "automation.local-runner"
+      ],
+      "tables": [
+        "whatsapp_messages",
+        "conversations"
+      ],
+      "database_functions": [],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi",
+        "integration-github",
+        "integration-codex-cli"
+      ],
+      "tests": [],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/codexRequests.ts",
+          "line": 30,
+          "end_line": 56,
+          "symbol": "parseCodexRequestCommand",
+          "claim": "Validar origem/segredo e persistir pedido aprovado com contexto de implantação."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/github/issues.ts",
+          "line": 35,
+          "end_line": 103,
+          "symbol": "createGitHubIssue",
+          "claim": "Publicar solicitação aprovada como issue quando integração está configurada."
+        },
+        {
+          "kind": "implementation",
+          "path": "scripts/list-codex-requests.mjs",
+          "line": 1,
+          "end_line": 117,
+          "claim": "Implementação operacional/SQL lida; não executada."
+        },
+        {
+          "kind": "implementation",
+          "path": "scripts/codex-local-runner.mjs",
+          "line": 1,
+          "end_line": 552,
+          "claim": "Implementação operacional/SQL lida; não executada."
+        },
+        {
+          "kind": "implementation",
+          "path": "scripts/codex-local-runner.mjs",
+          "line": 1,
+          "end_line": 552,
+          "claim": "Implementação operacional/SQL lida; não executada."
+        }
+      ]
+    },
+    {
+      "id": "platform.edge_request_protection",
+      "name": "Proteção de requisições na borda",
+      "type": "SYSTEM_PROCESS",
+      "actor": "edge_runtime",
+      "trigger": {
+        "type": "HTTP_REQUEST",
+        "entrypoints": [
+          "proxy"
+        ]
+      },
+      "entrypoints": [
+        "proxy"
+      ],
+      "capabilities": [
+        "platform.limit_requests"
+      ],
+      "status": "CONFIRMADO",
+      "goal": "Aplicar headers de segurança e limitar origens/operações antes do destino.",
+      "branches": {
+        "happy_path": "Requisição permitida segue ao destino com headers.",
+        "alternative_paths": [
+          "Matcher seleciona as páginas cobertas."
+        ],
+        "error_paths": [
+          "Limite excedido termina em 429."
+        ],
+        "timeout_expiration_paths": [],
+        "retry_reconciliation_paths": []
+      },
+      "terminals": [
+        "CONTINUE",
+        "RATE_LIMITED"
+      ],
+      "notes": [],
+      "actors": [
+        "edge_runtime"
+      ],
+      "implementation_status": "CONFIRMADO",
+      "test_status": "PARTIAL",
+      "domains": [
+        "domain.platform-runtime"
+      ],
+      "modules": [
+        "platform.rate-limit",
+        "platform.edge-proxy"
+      ],
+      "tables": [
+        "rate_limit_events"
+      ],
+      "database_functions": [
+        "consume_rate_limit"
+      ],
+      "database_triggers": [],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "tests": [
+        "audit.rate-limit"
+      ],
+      "failing_tests": [],
+      "evidence": [
+        {
+          "kind": "implementation",
+          "path": "src/lib/security/rateLimit.ts",
+          "line": 68,
+          "end_line": 142,
+          "symbol": "consumeRateLimit",
+          "claim": "Aplicar janela de requisições e responder 429 quando excedida."
+        },
+        {
+          "kind": "call_site",
+          "path": "src/app/api/admin/login/verify/route.ts",
+          "line": 44,
+          "symbol": "consumeRateLimit",
+          "claim": "Chamada executável; observar guardas e limitações nas notas."
+        }
+      ]
+    }
+  ],
+  "capability_coverage": [
+    {
+      "capability": "platform.limit_requests",
+      "flows": [
+        "whatsapp.inbound_dispatch",
+        "ticket.payment_confirmation",
+        "combo.payment_confirmation"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "brand.present_individual_offers",
+      "flows": [
+        "whatsapp.public_discovery"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "messaging.receive",
+      "flows": [
+        "whatsapp.inbound_dispatch"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "messaging.respond",
+      "flows": [
+        "whatsapp.inbound_dispatch"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "messaging.start",
+      "flows": [
+        "whatsapp.public_discovery"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "messaging.close",
+      "flows": [
+        "whatsapp.public_discovery"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "messaging.help",
+      "flows": [
+        "whatsapp.public_discovery"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "messaging.navigate_admin",
+      "flows": [
+        "admin.whatsapp_session"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "messaging.protect_delivery",
+      "flows": [
+        "ticket.delivery",
+        "ticket.payment_confirmation",
+        "combo.payment_confirmation"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "customer.identify",
+      "flows": [
+        "ticket.purchase",
+        "whatsapp.inbound_dispatch"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "customer.limit_reservations",
+      "flows": [
+        "ticket.purchase"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "customer.limit_checkout",
+      "flows": [
+        "ticket.checkout"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "catalog.search",
+      "flows": [
+        "whatsapp.public_discovery"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "catalog.list",
+      "flows": [
+        "whatsapp.public_discovery"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "catalog.details",
+      "flows": [
+        "whatsapp.public_discovery"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "catalog.offers",
+      "flows": [
+        "whatsapp.public_discovery",
+        "ticket.purchase"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "catalog.seat_map",
+      "flows": [
+        "whatsapp.public_discovery"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "catalog.enforce_visibility",
+      "flows": [
+        "ticket.purchase",
+        "ticket.view"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "event.list",
+      "flows": [
+        "admin.web_event_workspace",
+        "admin.whatsapp_event_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "event.inspect",
+      "flows": [
+        "admin.web_event_workspace",
+        "admin.whatsapp_event_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "event.create",
+      "flows": [
+        "admin.web_event_workspace",
+        "admin.whatsapp_event_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "event.edit",
+      "flows": [
+        "admin.web_event_workspace",
+        "admin.whatsapp_event_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "event.publish",
+      "flows": [
+        "admin.web_event_workspace",
+        "admin.whatsapp_event_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "event.change_status",
+      "flows": [
+        "admin.web_event_workspace",
+        "admin.whatsapp_event_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "event.cancel",
+      "flows": [
+        "admin.web_event_workspace"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "event.duplicate",
+      "flows": [
+        "admin.web_event_workspace",
+        "admin.whatsapp_event_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "event.session_create",
+      "flows": [
+        "admin.whatsapp_event_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "event.session_edit",
+      "flows": [
+        "admin.whatsapp_event_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "event.section_create",
+      "flows": [
+        "admin.whatsapp_event_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "event.section_edit",
+      "flows": [
+        "admin.whatsapp_event_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "event.capacity_set",
+      "flows": [
+        "admin.whatsapp_event_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "event.seats_create",
+      "flows": [
+        "admin.whatsapp_event_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "event.seats_block",
+      "flows": [
+        "admin.whatsapp_event_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "event.price_create",
+      "flows": [
+        "admin.whatsapp_event_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "event.price_edit",
+      "flows": [
+        "admin.whatsapp_event_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "event.auto_finish",
+      "flows": [
+        "event.auto_finish"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "event.import_program",
+      "flows": [
+        "event.program_import"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "event.legacy_rename",
+      "flows": [
+        "blackhouse.maintenance"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "event.legacy_split",
+      "flows": [
+        "blackhouse.maintenance"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "event.legacy_update",
+      "flows": [
+        "blackhouse.maintenance"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "reservation.cart",
+      "flows": [
+        "ticket.purchase"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "reservation.create",
+      "flows": [
+        "ticket.purchase"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "reservation.resume",
+      "flows": [
+        "ticket.purchase"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "reservation.cancel",
+      "flows": [
+        "ticket.purchase"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "reservation.expire",
+      "flows": [
+        "reservation.expiration"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "payment.checkout_create",
+      "flows": [
+        "ticket.purchase"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "payment.checkout_view",
+      "flows": [
+        "ticket.checkout"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "payment.pay_pix",
+      "flows": [
+        "ticket.checkout"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "payment.status",
+      "flows": [
+        "ticket.checkout"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "payment.confirm",
+      "flows": [
+        "ticket.payment_confirmation"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "ticket.deliver",
+      "flows": [
+        "ticket.delivery",
+        "ticket.payment_confirmation"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "ticket.delivery_choice",
+      "flows": [
+        "ticket.delivery",
+        "ticket.payment_confirmation"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "ticket.assign_participants",
+      "flows": [
+        "ticket.delivery"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "ticket.claim_participant",
+      "flows": [
+        "ticket.delivery"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "ticket.resend",
+      "flows": [
+        "ticket.delivery"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "ticket.view",
+      "flows": [
+        "ticket.view"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "ticket.admin_lookup",
+      "flows": [
+        "admin.reporting"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "ticket.validation_history",
+      "flows": [],
+      "classification": "STANDALONE",
+      "reason": "Implementação catalogada sem trigger/caller confirmado; não forma flow ativo."
+    },
+    {
+      "capability": "admin.login",
+      "flows": [
+        "admin.whatsapp_session",
+        "admin.web_session"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "admin.web_session",
+      "flows": [
+        "admin.web_session",
+        "admin.operational_dashboard"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "admin.logout",
+      "flows": [
+        "admin.whatsapp_session"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "admin.authorize",
+      "flows": [
+        "admin.web_event_workspace",
+        "admin.whatsapp_event_management",
+        "admin.combo_management",
+        "admin.courtesy_management",
+        "admin.user_management",
+        "admin.reporting",
+        "admin.operational_dashboard",
+        "gate.access_management",
+        "table_map.calibration",
+        "whatsapp.inbound_dispatch"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "admin.lockout",
+      "flows": [
+        "admin.web_session"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "admin.users_list",
+      "flows": [
+        "admin.user_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "admin.user_create",
+      "flows": [
+        "admin.user_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "admin.role_change",
+      "flows": [
+        "admin.user_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "admin.user_disable",
+      "flows": [
+        "admin.user_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "admin.user_reactivate",
+      "flows": [
+        "admin.user_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "admin.password_renew",
+      "flows": [
+        "admin.user_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "admin.unlock",
+      "flows": [
+        "admin.user_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "gate.access_create",
+      "flows": [
+        "gate.access_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "gate.access_list",
+      "flows": [
+        "gate.access_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "gate.access_pause",
+      "flows": [
+        "gate.access_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "gate.fixed_create",
+      "flows": [
+        "gate.access_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "gate.fixed_list",
+      "flows": [
+        "gate.access_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "gate.fixed_revoke",
+      "flows": [
+        "gate.access_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "gate.open",
+      "flows": [
+        "gate.ticket_admission"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "gate.consult",
+      "flows": [
+        "gate.ticket_admission"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "gate.admit",
+      "flows": [
+        "gate.ticket_admission",
+        "gate.combo_release"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "gate.session_revoke",
+      "flows": [],
+      "classification": "STANDALONE",
+      "reason": "Implementação catalogada sem trigger/caller confirmado; não forma flow ativo."
+    },
+    {
+      "capability": "courtesy.issue",
+      "flows": [
+        "admin.courtesy_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "courtesy.list",
+      "flows": [
+        "admin.courtesy_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "courtesy.resend",
+      "flows": [
+        "admin.courtesy_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "courtesy.cancel",
+      "flows": [
+        "admin.courtesy_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "courtesy.section_limit",
+      "flows": [
+        "admin.courtesy_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "courtesy.event_limit",
+      "flows": [],
+      "classification": "STANDALONE",
+      "reason": "Implementação catalogada sem trigger/caller confirmado; não forma flow ativo."
+    },
+    {
+      "capability": "courtesy.public_issue",
+      "flows": [
+        "courtesy.public"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "combo.list",
+      "flows": [
+        "admin.web_event_workspace",
+        "admin.combo_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "combo.create",
+      "flows": [
+        "admin.combo_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "combo.edit",
+      "flows": [
+        "admin.combo_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "combo.scope",
+      "flows": [
+        "admin.combo_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "combo.schedule",
+      "flows": [
+        "admin.combo_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "combo.activate",
+      "flows": [
+        "admin.combo_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "combo.duplicate",
+      "flows": [
+        "admin.combo_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "combo.delete",
+      "flows": [
+        "admin.combo_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "combo.offer_send",
+      "flows": [
+        "combo.offer_distribution"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "combo.checkout_create",
+      "flows": [
+        "combo.offer_distribution"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "combo.checkout_view",
+      "flows": [
+        "combo.purchase"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "combo.pay_pix",
+      "flows": [
+        "combo.purchase"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "combo.status",
+      "flows": [
+        "combo.purchase"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "combo.confirm",
+      "flows": [
+        "combo.payment_confirmation"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "combo.deliver_qr",
+      "flows": [
+        "combo.payment_confirmation"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "combo.expire",
+      "flows": [
+        "combo.offer_distribution"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "combo.kitchen_open",
+      "flows": [
+        "kitchen.session_prepare"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "combo.kitchen_release",
+      "flows": [
+        "gate.combo_release"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "combo.prepare",
+      "flows": [
+        "kitchen.session_prepare"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "combo.delivery_prompt",
+      "flows": [
+        "kitchen.combo_redemption"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "combo.delivery_choose",
+      "flows": [
+        "combo.delivery_choice"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "combo.redeem",
+      "flows": [
+        "kitchen.combo_redemption"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "table_map.preview",
+      "flows": [
+        "table_map.calibration"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "table_map.calibrate",
+      "flows": [
+        "table_map.calibration"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "table_map.reserve",
+      "flows": [
+        "ticket.purchase",
+        "combo.delivery_choice"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "table_map.sync_status",
+      "flows": [
+        "ticket.payment_confirmation",
+        "reservation.expiration"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "analytics.sales",
+      "flows": [
+        "admin.reporting"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "analytics.division",
+      "flows": [
+        "admin.reporting"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "analytics.settle",
+      "flows": [
+        "admin.reporting"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "analytics.general_dashboard",
+      "flows": [
+        "admin.web_event_workspace"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "analytics.event_dashboard",
+      "flows": [
+        "admin.web_event_workspace"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "analytics.contacts",
+      "flows": [
+        "admin.web_event_workspace"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "analytics.operational",
+      "flows": [
+        "admin.operational_dashboard"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "analytics.track_click",
+      "flows": [
+        "ticket.checkout",
+        "combo.purchase"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "background.notify_expiry",
+      "flows": [
+        "reservation.expiration"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "background.remind_interest",
+      "flows": [
+        "reservation.expiration"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "background.expire_admin",
+      "flows": [
+        "reservation.expiration"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "background.close_inactive",
+      "flows": [
+        "whatsapp.batch_processing"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "background.cancel_batches",
+      "flows": [
+        "whatsapp.batch_processing"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "automation.request",
+      "flows": [
+        "codex.automation"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "automation.issue",
+      "flows": [
+        "codex.automation"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "automation.list",
+      "flows": [
+        "codex.automation"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "automation.execute",
+      "flows": [
+        "codex.automation"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "automation.notify",
+      "flows": [
+        "codex.automation"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "payment.return_notice",
+      "flows": [
+        "ticket.checkout"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "analytics.general_report",
+      "flows": [
+        "admin.reporting"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "analytics.section_sales",
+      "flows": [
+        "admin.reporting"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "analytics.pending_orders",
+      "flows": [
+        "admin.reporting"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "analytics.expired_reservations",
+      "flows": [
+        "admin.reporting"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "analytics.gate_checkins",
+      "flows": [
+        "admin.reporting"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "analytics.ticket_usage",
+      "flows": [
+        "admin.reporting"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "analytics.courtesies",
+      "flows": [
+        "admin.reporting"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligada aos flows listados."
+    },
+    {
+      "capability": "gate.sessions_list",
+      "flows": [],
+      "classification": "STANDALONE",
+      "reason": "Implementação catalogada sem trigger/caller confirmado; não forma flow ativo."
+    }
+  ],
+  "entrypoint_coverage": [
+    {
+      "entrypoint": "http-admin-open",
+      "flows": [
+        "admin.web_session"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "http-admin-combos",
+      "flows": [
+        "admin.web_event_workspace",
+        "admin.combo_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "http-admin-combo-id",
+      "flows": [
+        "admin.web_event_workspace",
+        "admin.combo_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "http-admin-events",
+      "flows": [
+        "admin.web_event_workspace"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "http-admin-event-id",
+      "flows": [
+        "admin.web_event_workspace",
+        "admin.courtesy_management"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "http-admin-login",
+      "flows": [
+        "admin.web_session"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "http-admin-ops",
+      "flows": [
+        "admin.operational_dashboard"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "http-admin-map",
+      "flows": [
+        "table_map.calibration"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "http-checkout-mp",
+      "flows": [
+        "ticket.checkout"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "http-checkout-pay",
+      "flows": [
+        "ticket.checkout"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "http-checkout-status",
+      "flows": [
+        "ticket.checkout",
+        "ticket.payment_confirmation"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "http-combo-pay",
+      "flows": [
+        "combo.purchase"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "http-combo-status",
+      "flows": [
+        "combo.purchase"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "http-cron-expire",
+      "flows": [
+        "reservation.expiration",
+        "combo.offer_distribution"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "http-cron-batches",
+      "flows": [
+        "whatsapp.batch_processing"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "http-gate-consult",
+      "flows": [
+        "gate.ticket_admission"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "http-gate-scan",
+      "flows": [
+        "gate.ticket_admission",
+        "gate.combo_release"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "http-gate-validate",
+      "flows": [
+        "gate.ticket_admission"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "http-health",
+      "flows": [],
+      "classification": "INFRASTRUCTURE",
+      "reason": "Health check do processo, infraestrutura; não verifica compra ou integração fim a fim."
+    },
+    {
+      "entrypoint": "http-kitchen-open",
+      "flows": [
+        "kitchen.session_prepare"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "http-kitchen-prepare",
+      "flows": [
+        "kitchen.session_prepare"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "http-kitchen-scan",
+      "flows": [
+        "kitchen.combo_redemption"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "http-kitchen-validate",
+      "flows": [
+        "kitchen.session_prepare"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "http-mp-webhook",
+      "flows": [
+        "ticket.payment_confirmation",
+        "combo.payment_confirmation"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "http-zapi-webhook",
+      "flows": [
+        "whatsapp.public_discovery",
+        "ticket.purchase",
+        "ticket.delivery",
+        "courtesy.public",
+        "combo.delivery_choice",
+        "admin.whatsapp_session",
+        "admin.whatsapp_event_management",
+        "admin.combo_management",
+        "admin.courtesy_management",
+        "admin.user_management",
+        "admin.reporting",
+        "gate.access_management",
+        "whatsapp.inbound_dispatch",
+        "event.auto_finish",
+        "codex.automation"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "page-root",
+      "flows": [],
+      "classification": "INFRASTRUCTURE",
+      "reason": "Renderiza <main /> vazio; nenhum comportamento funcional do cliente."
+    },
+    {
+      "entrypoint": "page-admin-events",
+      "flows": [
+        "admin.web_event_workspace"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "page-admin-login",
+      "flows": [
+        "admin.web_session"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "page-admin-ops",
+      "flows": [
+        "admin.operational_dashboard"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "page-checkout",
+      "flows": [
+        "ticket.checkout"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "page-checkout-success",
+      "flows": [
+        "ticket.checkout"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "page-checkout-pending",
+      "flows": [
+        "ticket.checkout"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "page-checkout-failure",
+      "flows": [
+        "ticket.checkout"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "page-combo-checkout",
+      "flows": [
+        "combo.purchase"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "page-gate",
+      "flows": [
+        "gate.ticket_admission"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "page-kitchen-access",
+      "flows": [
+        "kitchen.session_prepare"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "page-kitchen-session",
+      "flows": [
+        "kitchen.session_prepare"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "page-offer-reader",
+      "flows": [
+        "kitchen.combo_redemption"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "page-ticket",
+      "flows": [
+        "ticket.view"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "proxy",
+      "flows": [
+        "platform.edge_request_protection"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado ao flow listado."
+    },
+    {
+      "entrypoint": "npm-dev",
+      "flows": [],
+      "classification": "INFRASTRUCTURE",
+      "reason": "Inicialização de servidor de desenvolvimento, toolchain."
+    },
+    {
+      "entrypoint": "npm-build",
+      "flows": [],
+      "classification": "INFRASTRUCTURE",
+      "reason": "Compilação/empacotamento, toolchain."
+    },
+    {
+      "entrypoint": "npm-test",
+      "flows": [],
+      "classification": "INFRASTRUCTURE",
+      "reason": "Execução do inventário de testes, toolchain."
+    },
+    {
+      "entrypoint": "npm-start",
+      "flows": [],
+      "classification": "INFRASTRUCTURE",
+      "reason": "Inicialização de servidor de produção, infraestrutura."
+    },
+    {
+      "entrypoint": "npm-codex-requests",
+      "flows": [
+        "codex.automation"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "npm-codex-runner",
+      "flows": [
+        "codex.automation"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "script-codex-runner",
+      "flows": [
+        "codex.automation"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "script-codex-list",
+      "flows": [
+        "codex.automation"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "script-import",
+      "flows": [
+        "event.program_import"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "script-bh-rename",
+      "flows": [
+        "blackhouse.maintenance"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "script-bh-split",
+      "flows": [
+        "blackhouse.maintenance"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "script-bh-update",
+      "flows": [
+        "blackhouse.maintenance"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "trigger-cron-expire",
+      "flows": [
+        "reservation.expiration",
+        "combo.offer_distribution"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "trigger-cron-batches",
+      "flows": [
+        "whatsapp.batch_processing"
+      ],
+      "classification": "FLOW",
+      "reason": "Ligado aos flows listados."
+    },
+    {
+      "entrypoint": "npm-lint",
+      "flows": [],
+      "classification": "INFRASTRUCTURE",
+      "reason": "Verificação estática ESLint, toolchain."
+    },
+    {
+      "entrypoint": "npm-typecheck",
+      "flows": [],
+      "classification": "INFRASTRUCTURE",
+      "reason": "Verificação TypeScript, toolchain."
+    }
+  ],
+  "standalone_capabilities": [
+    {
+      "capability": "ticket.validation_history",
+      "classification": "STANDALONE",
+      "reason": "Implementação catalogada sem trigger/caller confirmado; não forma flow ativo."
+    },
+    {
+      "capability": "gate.session_revoke",
+      "classification": "STANDALONE",
+      "reason": "Implementação catalogada sem trigger/caller confirmado; não forma flow ativo."
+    },
+    {
+      "capability": "courtesy.event_limit",
+      "classification": "STANDALONE",
+      "reason": "Implementação catalogada sem trigger/caller confirmado; não forma flow ativo."
+    },
+    {
+      "capability": "gate.sessions_list",
+      "classification": "STANDALONE",
+      "reason": "Implementação catalogada sem trigger/caller confirmado; não forma flow ativo."
+    }
+  ],
+  "late_capability_discoveries": [],
+  "granularity_audit": {
+    "too_large": [],
+    "too_small": [],
+    "duplicates": [],
+    "missing": [],
+    "status": "PASS"
+  },
+  "validation": {
+    "status": "PASS",
+    "checks": [
+      {
+        "name": "unique_flow_ids",
+        "status": "PASS",
+        "detail": 34
+      },
+      {
+        "name": "unique_step_ids",
+        "status": "PASS",
+        "detail": 169
+      },
+      {
+        "name": "unique_transition_ids",
+        "status": "PASS",
+        "detail": 66
+      },
+      {
+        "name": "unique_relation_ids",
+        "status": "PASS",
+        "detail": 21
+      },
+      {
+        "name": "capability_references",
+        "status": "PASS",
+        "detail": true
+      },
+      {
+        "name": "architecture_references",
+        "status": "PASS",
+        "detail": true
+      },
+      {
+        "name": "functional_entrypoint_coverage",
+        "status": "PASS",
+        "detail": 0
+      },
+      {
+        "name": "capability_classification",
+        "status": "PASS",
+        "detail": 0
+      },
+      {
+        "name": "late_capability_discoveries",
+        "status": "PASS",
+        "detail": 0
+      },
+      {
+        "name": "granularity_audit",
+        "status": "PASS",
+        "detail": "34 outcomes; branches retained inside objectives; no helper-only flow."
+      }
+    ],
+    "notes": [
+      "Static AS-IS reconstruction from local source; no external services or production were called.",
+      "CONFIRMADO means structurally connected locally, not production-validated.",
+      "Test status is separate from implementation status."
+    ],
+    "source_integrity": {
+      "created_documents": [
+        "docs/system/flows.md",
+        "docs/system/flow-matrix.md",
+        "docs/system/state-transitions.md",
+        "docs/system/broken-flows.md",
+        "docs/system/flow-test-coverage.md"
+      ],
+      "created_machine_readable": [
+        "system-knowledge/flows.json",
+        "system-knowledge/flow-steps.json",
+        "system-knowledge/state-transitions.json",
+        "system-knowledge/flow-relations.json"
+      ],
+      "previous_documents_corrected": [
+        "docs/system/README.md"
+      ],
+      "previous_machine_readable_corrected": [],
+      "previous_metrics_changed": [],
+      "functional_changes": [],
+      "temporary_artifacts": [],
+      "external_actions": []
+    },
+    "stage4_integrity_gate": true,
+    "corrected_transition_records": [
+      "state.001",
+      "state.002",
+      "state.009",
+      "state.010",
+      "state.015",
+      "state.027",
+      "state.028",
+      "state.034",
+      "state.035",
+      "state.036",
+      "state.042",
+      "state.051",
+      "state.053",
+      "state.055",
+      "state.056",
+      "state.057",
+      "state.061",
+      "state.063"
+    ],
+    "corrected_relation_records": [
+      "flowrel.001",
+      "flowrel.002",
+      "flowrel.003",
+      "flowrel.004",
+      "flowrel.005",
+      "flowrel.006",
+      "flowrel.007",
+      "flowrel.008",
+      "flowrel.009",
+      "flowrel.010",
+      "flowrel.011",
+      "flowrel.012",
+      "flowrel.013",
+      "flowrel.014",
+      "flowrel.015",
+      "flowrel.016",
+      "flowrel.017",
+      "flowrel.018",
+      "flowrel.019",
+      "flowrel.020",
+      "flowrel.021"
+    ],
+    "integrity_gate": {
+      "status": "PASS",
+      "temporary_generator": {
+        "path": ".tmp/flow-catalog-stage4.cjs",
+        "existed_at_gate": false,
+        "disposition": "ALREADY_REMOVED"
+      },
+      "working_tree": {
+        "baseline_files": 34,
+        "functional_changes_created_by_stage4": 0,
+        "preexisting_functional_changes": [
+          "src/lib/tickets/messages.ts"
+        ]
+      },
+      "cross_references": "PASS",
+      "secrets_in_baseline_artifacts": 0
+    }
+  },
+  "bottom_up_audit": {
+    "modules": {
+      "canonical": 66,
+      "in_flows": 62,
+      "infrastructure": [
+        "platform.env",
+        "platform.supabase-client",
+        "platform.logging",
+        "platform.http"
+      ],
+      "status": "PASS"
+    },
+    "database": {
+      "tables": {
+        "canonical": 44,
+        "in_flows": 42,
+        "not_in_flows": [
+          "courtesy_limits",
+          "seat_map_renders"
+        ],
+        "disposition": {
+          "courtesy_limits": "Standalone orphan capability courtesy.event_limit.",
+          "seat_map_renders": "No confirmed functional consumer; retained as database artifact."
+        }
+      },
+      "functions": {
+        "canonical": 33,
+        "in_flows": 26,
+        "technical_components": [
+          {
+            "name": "set_updated_at",
+            "reason": "Auxiliar de timestamps; 32 triggers de manutenção, sem capability própria."
+          },
+          {
+            "name": "normalize_event_search_text",
+            "reason": "Normalização auxiliar da busca ranqueada, coberta por catalog.search."
+          },
+          {
+            "name": "append_whatsapp_message_batch",
+            "reason": "Persistência/agregação técnica de mensagens; appendInboundMessageToBatch sem consumidor atual. Não demonstra resposta por lotes."
+          },
+          {
+            "name": "enforce_one_active_reservation_per_customer",
+            "reason": "Função trigger declarada, sem CREATE TRIGGER correspondente encontrado. Não promovida a capability; reserva exclusiva existe pelas funções de lock chamadas pelas RPCs."
+          },
+          {
+            "name": "lock_and_validate_courtesy_limits",
+            "reason": "Auxiliar transacional de limites dentro da emissão de cortesia."
+          },
+          {
+            "name": "lock_customer_active_reservation_slot",
+            "reason": "Auxiliar de exclusão mútua por cliente nas RPCs de reserva."
+          },
+          {
+            "name": "lock_validate_and_record_reservation_buyer_risk",
+            "reason": "Auxiliar transacional de risco/limites chamado por reserve_seats."
+          }
+        ]
+      },
+      "triggers": {
+        "canonical": 33,
+        "in_flows": 1,
+        "infrastructure": [
+          "customers_set_updated_at",
+          "conversations_set_updated_at",
+          "venues_set_updated_at",
+          "venue_sections_set_updated_at",
+          "seats_set_updated_at",
+          "events_set_updated_at",
+          "event_sessions_set_updated_at",
+          "session_seats_set_updated_at",
+          "ticket_prices_set_updated_at",
+          "reservations_set_updated_at",
+          "orders_set_updated_at",
+          "payments_set_updated_at",
+          "tickets_set_updated_at",
+          "seat_map_renders_set_updated_at",
+          "set_gate_sessions_updated_at",
+          "set_admin_users_updated_at",
+          "courtesy_limits_set_updated_at",
+          "courtesies_set_updated_at",
+          "set_gate_accesses_updated_at",
+          "set_admin_auth_attempts_updated_at",
+          "set_rate_limit_events_updated_at",
+          "set_admin_login_challenges_updated_at",
+          "set_division_settlements_updated_at",
+          "set_combo_offers_updated_at",
+          "set_combo_orders_updated_at",
+          "set_combo_payments_updated_at",
+          "set_combo_redemptions_updated_at",
+          "courtesy_section_limits_set_updated_at",
+          "set_fixed_gate_accesses_updated_at",
+          "set_whatsapp_message_batches_updated_at",
+          "official_table_map_reservations_set_updated_at",
+          "set_combo_offer_event_locks_updated_at"
+        ],
+        "reason": "32 updated_at maintenance triggers use set_updated_at; functional reservation sync is represented."
+      },
+      "status": "PASS"
+    },
+    "second_pass": {
+      "sources": [
+        "entrypoints",
+        "capabilities",
+        "modules",
+        "tests",
+        "SQL",
+        "routes",
+        "services",
+        "cron",
+        "webhooks",
+        "scripts"
+      ],
+      "missing_flows": [],
+      "late_capabilities": [],
+      "status": "PASS"
+    }
+  }
+}

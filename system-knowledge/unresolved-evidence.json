@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-12",
+  "stage": 7,
+  "count": 10,
+  "status": "EXPLICITLY_PRESERVED",
+  "records": [
+    {
+      "id": "unresolved.remote-postgres-internals",
+      "category": "DATA",
+      "question": "Corpos SQL, constraints, índices, triggers, RLS, policies e grants efetivos do PostgreSQL remoto",
+      "status": "NOT_VALIDATED",
+      "currentEvidence": "A OpenAPI confirma tabelas/colunas e rotas RPC, mas não expõe esses internos.",
+      "neededEvidence": "Acesso read-only ao catálogo PostgreSQL remoto.",
+      "lastReviewedAt": "2026-09-12"
+    },
+    {
+      "id": "unresolved.remote-migration-history",
+      "category": "DATA",
+      "question": "Histórico e ordem efetivamente aplicados das 77 migrations no ambiente remoto",
+      "status": "NOT_VALIDATED",
+      "currentEvidence": "O repositório prova somente as migrations locais.",
+      "neededEvidence": "Histórico de migrations do projeto remoto.",
+      "lastReviewedAt": "2026-09-12"
+    },
+    {
+      "id": "unresolved.supabase-auth-state",
+      "category": "INFRASTRUCTURE",
+      "question": "Configuração efetiva do Supabase Auth",
+      "status": "NOT_VALIDATED",
+      "currentEvidence": "Nenhuma consulta segura disponível confirmou providers, redirects ou políticas.",
+      "neededEvidence": "Leitura administrativa da configuração Auth.",
+      "lastReviewedAt": "2026-09-12"
+    },
+    {
+      "id": "unresolved.webhook-registration",
+      "category": "INTEGRATIONS",
+      "question": "Registro remoto dos webhooks Z-API e Mercado Pago",
+      "status": "NOT_VALIDATED",
+      "currentEvidence": "Handlers locais existem; registro no provedor não foi observado.",
+      "neededEvidence": "Leitura das configurações dos dois provedores.",
+      "lastReviewedAt": "2026-09-12"
+    },
+    {
+      "id": "unresolved.webhook-delivery-history",
+      "category": "RUNTIME",
+      "question": "Histórico recente de entrega, retries e falhas dos webhooks",
+      "status": "NOT_VALIDATED",
+      "currentEvidence": "Não foram disparadas mensagens nem pagamentos e não há histórico read-only consolidado.",
+      "neededEvidence": "Logs/histórico dos provedores e da aplicação.",
+      "lastReviewedAt": "2026-09-12"
+    },
+    {
+      "id": "unresolved.cron-execution-history",
+      "category": "RUNTIME",
+      "question": "Execução efetiva recente dos dois crons",
+      "status": "NOT_VALIDATED",
+      "currentEvidence": "vercel.json e configuração remota confirmam schedules, não execuções.",
+      "neededEvidence": "Histórico read-only de invocações dos crons.",
+      "lastReviewedAt": "2026-09-12"
+    },
+    {
+      "id": "unresolved.published-source-commit",
+      "category": "INFRASTRUCTURE",
+      "question": "Commit/source SHA efetivamente publicado nos deployments observados",
+      "status": "NOT_VALIDATED",
+      "currentEvidence": "A inspeção identifica deployments/projetos, sem provar equivalência ao HEAD.",
+      "neededEvidence": "Metadado imutável de source commit do deployment.",
+      "lastReviewedAt": "2026-09-12"
+    },
+    {
+      "id": "unresolved.vercel-error-root-cause",
+      "category": "INFRASTRUCTURE",
+      "question": "Causa do deployment mais recente do projeto rota5 em ERROR",
+      "status": "NOT_VALIDATED",
+      "currentEvidence": "A listagem confirma ERROR; logs acessíveis não forneceram causa conclusiva.",
+      "neededEvidence": "Build/runtime logs completos desse deployment.",
+      "lastReviewedAt": "2026-09-12"
+    },
+    {
+      "id": "unresolved.anon-row-visibility",
+      "category": "SECURITY",
+      "question": "Visibilidade real de linhas via chave anon",
+      "status": "NOT_VALIDATED",
+      "currentEvidence": "A requisição segura confirmou superfície HTTP, sem enumerar dados ou políticas.",
+      "neededEvidence": "Auditoria autorizada de políticas e consultas anon controladas.",
+      "lastReviewedAt": "2026-09-12"
+    },
+    {
+      "id": "unresolved.external-dynamic-consumers",
+      "category": "REPOSITORY",
+      "question": "Consumidores externos/dinâmicos de exports e assets classificados como órfãos/legado",
+      "status": "NOT_VALIDATED",
+      "currentEvidence": "Busca no repositório não prova ausência de consumo externo.",
+      "neededEvidence": "Telemetria, referências externas ou inventário de consumidores.",
+      "lastReviewedAt": "2026-09-12"
+    }
+  ]
+}

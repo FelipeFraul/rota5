@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-12",
+  "stage": "6/8",
+  "sourceCommit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+  "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
+  "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
+  "status": "PASS",
+  "total": 44,
+  "by_type": {
+    "BUG": 3,
+    "BROKEN_FLOW": 1,
+    "DATA_INTEGRITY": 2,
+    "CONCURRENCY": 2,
+    "IDEMPOTENCY": 1,
+    "SECURITY": 2,
+    "AUTHORIZATION": 1,
+    "INTEGRATION": 1,
+    "INFRASTRUCTURE": 1,
+    "OBSERVABILITY": 2,
+    "TEST_GAP": 7,
+    "ARCHITECTURE": 1,
+    "COUPLING": 2,
+    "DUPLICATION": 1,
+    "DEAD_CODE": 1,
+    "ORPHAN": 5,
+    "LEGACY": 2,
+    "CONFIGURATION_DRIFT": 3,
+    "MAINTAINABILITY": 2,
+    "PERFORMANCE": 1,
+    "OPERATIONAL": 2,
+    "UNKNOWN": 1
+  },
+  "by_severity": {
+    "CRITICAL": 0,
+    "HIGH": 10,
+    "MEDIUM": 23,
+    "LOW": 9,
+    "INFO": 2
+  },
+  "by_priority": {
+    "P0": 3,
+    "P1": 11,
+    "P2": 19,
+    "P3": 9,
+    "P4": 2
+  },
+  "by_status": {
+    "ACTIVE": 32,
+    "POTENTIAL": 7,
+    "LEGACY": 0,
+    "NOT_VALIDATED": 5
+  },
+  "high_critical": [
+    "bug.create-event-invalid-jsx",
+    "bug.combo-redemption-unreachable-consume",
+    "legacy.active-brand-contamination",
+    "risk.gate-credential-revocation-does-not-revoke-session",
+    "risk.admin-event-multistep-partial-state",
+    "risk.vercel-project-identity-drift",
+    "risk.latest-rota5-deployment-error",
+    "gap.default-test-suite-failing",
+    "gap.critical-capability-and-flow-coverage",
+    "gap.test-runner-depends-on-untracked-loader"
+  ],
+  "p0_p1": [
+    "bug.create-event-invalid-jsx",
+    "bug.combo-redemption-unreachable-consume",
+    "bug.event-duplicate-artist-leak",
+    "bug.user-visible-text-corruption",
+    "legacy.active-brand-contamination",
+    "risk.gate-credential-revocation-does-not-revoke-session",
+    "risk.admin-event-multistep-partial-state",
+    "risk.vercel-project-identity-drift",
+    "risk.latest-rota5-deployment-error",
+    "gap.default-test-suite-failing",
+    "gap.critical-capability-and-flow-coverage",
+    "gap.test-runner-depends-on-untracked-loader",
+    "risk.payment-confirmed-before-external-delivery",
+    "gap.partial-flows-lack-end-to-end-proof"
+  ],
+  "coverage": {
+    "domains": 17,
+    "modules": 66,
+    "entrypoints": 56,
+    "capabilities": 140,
+    "flows": 34,
+    "flow_steps": 169,
+    "state_transitions": 66,
+    "tables": 44,
+    "sql_functions": 33,
+    "triggers": 33,
+    "integrations": 6,
+    "webhooks": 2,
+    "crons": 2,
+    "environment_variables": 44,
+    "configuration_drifts": 4,
+    "catalogued_tests": 43
+  },
+  "validation": {
+    "npm_test": {
+      "cases": 210,
+      "passed": 203,
+      "failed": 7,
+      "status": "FAIL"
+    },
+    "typecheck": {
+      "status": "FAIL",
+      "diagnostics": 5,
+      "root_cause": "CreateEventModal.tsx:19 parse error"
+    },
+    "lint": {
+      "status": "FAIL",
+      "errors": 1,
+      "warnings": 24
+    },
+    "adversarial_pass": {
+      "false_positives_removed": 3,
+      "duplicates_removed": 4,
+      "notes": [
+        "Logout pending e mensagem de batch são expectativas textuais incompatíveis com a mensagem atual, não defeitos funcionais provados.",
+        "Negrito ausente em NOVO foi mantido como divergência de contrato, não bug autônomo.",
+        "Pagamento/status e wrappers/adapters foram reconhecidos como duplicação intencional."
+      ]
+    }
+  }
+}

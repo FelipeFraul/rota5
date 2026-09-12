@@ -1,0 +1,259 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-12T04:24:28.619Z",
+  "stage": 8,
+  "id": "rota5-self-reading-v1",
+  "baseline_id": "rota5-baseline-v1",
+  "bootstrap_files": [
+    "system-knowledge/baseline-manifest.json",
+    "system-knowledge/index.json",
+    "system-knowledge/self-reading.json",
+    "docs/system/AI-READ-ME.md"
+  ],
+  "reading_order": [
+    "baseline-manifest.json",
+    "index.json",
+    "self-reading.json",
+    "route-specific catalogs",
+    "evidence paths"
+  ],
+  "canonical_sources": [
+    "system-knowledge/architecture.json",
+    "system-knowledge/domains.json",
+    "system-knowledge/modules.json",
+    "system-knowledge/dependencies.json",
+    "system-knowledge/entrypoints.json",
+    "system-knowledge/capabilities.json",
+    "system-knowledge/capability-relations.json",
+    "system-knowledge/flows.json",
+    "system-knowledge/flow-steps.json",
+    "system-knowledge/flow-relations.json",
+    "system-knowledge/state-transitions.json",
+    "system-knowledge/data-model.json",
+    "system-knowledge/database-objects.json",
+    "system-knowledge/database-relations.json",
+    "system-knowledge/integrations.json",
+    "system-knowledge/integration-runtime.json",
+    "system-knowledge/infrastructure.json",
+    "system-knowledge/environment.json",
+    "system-knowledge/webhooks.json",
+    "system-knowledge/cron.json",
+    "system-knowledge/runtime-validation.json",
+    "system-knowledge/tests.json",
+    "system-knowledge/findings.json",
+    "system-knowledge/finding-relations.json",
+    "system-knowledge/risk-summary.json",
+    "system-knowledge/health.json",
+    "system-knowledge/cross-audit.json",
+    "system-knowledge/contradictions.json",
+    "system-knowledge/unresolved-evidence.json",
+    "system-knowledge/completeness.json",
+    "system-knowledge/coverage.json"
+  ],
+  "source_precedence": [
+    {
+      "rank": 1,
+      "source": "Observed behavior/runtime with evidence"
+    },
+    {
+      "rank": 2,
+      "source": "Current code, migrations and configuration"
+    },
+    {
+      "rank": 3,
+      "source": "Validated machine-readable catalogs"
+    },
+    {
+      "rank": 4,
+      "source": "Markdown documentation"
+    },
+    {
+      "rank": 5,
+      "source": "Historical documentation"
+    },
+    {
+      "rank": 6,
+      "source": "Inference"
+    }
+  ],
+  "query_routes": {
+    "ARCHITECTURE": {
+      "catalogs": [
+        "architecture.json",
+        "domains.json",
+        "modules.json",
+        "dependencies.json"
+      ],
+      "method": "Localize domain/module e siga dependencies."
+    },
+    "CAPABILITY": {
+      "catalogs": [
+        "capabilities.json",
+        "capability-relations.json",
+        "entrypoints.json"
+      ],
+      "method": "Busque o ID canônico e confirme evidence, status e execution_chain."
+    },
+    "FLOW": {
+      "catalogs": [
+        "flows.json",
+        "flow-steps.json",
+        "flow-relations.json",
+        "state-transitions.json"
+      ],
+      "method": "Parta do flow, percorra steps, branches, terminais e transitions."
+    },
+    "MODULE": {
+      "catalogs": [
+        "modules.json",
+        "dependencies.json",
+        "capabilities.json"
+      ],
+      "method": "Resolva path, domain, dependências e capabilities consumidoras."
+    },
+    "DATA": {
+      "catalogs": [
+        "data-model.json",
+        "database-objects.json",
+        "database-relations.json",
+        "state-transitions.json"
+      ],
+      "method": "Separe LOCAL_DECLARED, REMOTE_SCHEMA, RUNTIME_OBSERVED e NOT_VALIDATED."
+    },
+    "INTEGRATION": {
+      "catalogs": [
+        "integrations.json",
+        "integration-runtime.json",
+        "environment.json",
+        "webhooks.json",
+        "cron.json"
+      ],
+      "method": "Revise autenticação, retry, idempotência, env, runtime e limites."
+    },
+    "INFRASTRUCTURE": {
+      "catalogs": [
+        "infrastructure.json",
+        "configuration-drift.json",
+        "runtime-validation.json",
+        "source-fingerprint.json"
+      ],
+      "method": "Compare declarado, remoto e observado; registre DRIFT."
+    },
+    "TEST": {
+      "catalogs": [
+        "tests.json",
+        "test-gaps.json",
+        "risk-summary.json"
+      ],
+      "method": "Diferencie suíte padrão, testes fora da suíte, source-contract e testes reais."
+    },
+    "RISK": {
+      "catalogs": [
+        "findings.json",
+        "finding-relations.json",
+        "risk-summary.json",
+        "health.json"
+      ],
+      "method": "Use finding ID, evidência, severidade, prioridade, status e relações."
+    },
+    "IMPACT_ANALYSIS": {
+      "catalogs": [
+        "modules.json",
+        "dependencies.json",
+        "capabilities.json",
+        "capability-relations.json",
+        "flows.json",
+        "flow-steps.json",
+        "data-model.json",
+        "database-objects.json",
+        "database-relations.json",
+        "integrations.json",
+        "tests.json",
+        "findings.json"
+      ],
+      "traversal": [
+        "X",
+        "module",
+        "dependencies",
+        "capabilities",
+        "flows",
+        "tables/functions",
+        "integrations",
+        "tests",
+        "findings"
+      ],
+      "method": "Não replique o grafo; atravesse os IDs e relações dos catálogos indicados."
+    },
+    "UNKNOWN": {
+      "catalogs": [
+        "unresolved-evidence.json",
+        "unknowns.md",
+        "contradictions.json"
+      ],
+      "method": "Preserve NOT_VALIDATED até surgir evidência superior."
+    },
+    "PRODUCT_HEALTH": {
+      "catalogs": [
+        "health.json",
+        "risk-summary.json",
+        "findings.json",
+        "flows.json",
+        "runtime-validation.json"
+      ],
+      "method": "Não confunda integridade da baseline com saúde do produto."
+    }
+  },
+  "validation_rules": [
+    "Read evidence before changing code.",
+    "Machine IDs and counts must resolve.",
+    "NOT_VALIDATED is not BROKEN.",
+    "Local migrations do not prove remote application.",
+    "Runtime observations require dated evidence.",
+    "Run the baseline validator after documentation changes."
+  ],
+  "update_rules": [
+    "Identify affected capabilities, flows, modules, data, integrations, tests and findings.",
+    "Update code and tests.",
+    "Update affected machine-readable catalogs.",
+    "Update flow/state catalogs when journeys or lifecycles change.",
+    "Preserve finding IDs and record resolution evidence.",
+    "Update Markdown projections.",
+    "Bump baseline version by governance rules.",
+    "Regenerate source fingerprint and integrity hashes last."
+  ],
+  "bootstrap_answers": {
+    "system": "Rota5 is a Next.js and PostgreSQL/Supabase platform centered on WhatsApp ticket discovery and sales, Pix payments through Mercado Pago, ticket delivery, gate admission, courtesy/combo operations, admin workflows and reporting.",
+    "ticket_sale": "whatsapp.public_discovery leads to ticket.purchase and ticket.checkout; Mercado Pago creates Pix, the signed payment webhook reconciles payment, then ticket.payment_confirmation and ticket.delivery issue and send tickets through Z-API.",
+    "payment_implementation": [
+      "src/app/api/checkout/mercado-pago/route.ts",
+      "src/app/api/checkout/mercado-pago/pay/route.ts",
+      "src/app/api/webhook/payment/mercado-pago/route.ts",
+      "src/lib/mercado-pago/client.ts",
+      "src/lib/mercado-pago/webhook.ts",
+      "orders-payments catalogs and SQL functions in database-objects.json"
+    ],
+    "broken_flows": [
+      "admin.web_event_workspace",
+      "kitchen.combo_redemption"
+    ],
+    "router_change_review": [
+      "modules.json: messaging.router",
+      "dependencies.json",
+      "capabilities.json and capability-relations.json",
+      "flows.json and flow-steps.json",
+      "data-model/database-relations if access changes",
+      "integrations.json",
+      "tests.json",
+      "findings.json"
+    ],
+    "remote_database_not_validated": "Remote function bodies, constraints, indexes, triggers, RLS, policies, grants and migration history; Supabase Auth configuration also remains NOT_VALIDATED.",
+    "infrastructure_state": "Product health is BROKEN. Both observed health endpoints answered 200, but declared domain/project identity drifts between site and rota5, the latest rota5 deployment is ERROR, the published commit is NOT_VALIDATED, storage expectations drift, and the local runtime environment is incomplete.",
+    "p0_findings": [
+      "bug.create-event-invalid-jsx",
+      "bug.combo-redemption-unreachable-consume",
+      "risk.vercel-project-identity-drift"
+    ],
+    "add_capability": "Assign canonical ID, domain, type, description, modules, entrypoints, data/integrations, flow placement, tests and evidence; update capability and related flow/data/test catalogs, validate, then version the baseline.",
+    "after_change": "Follow CHANGE-PROTOCOL.md and update every affected JSON plus its Markdown projection; regenerate fingerprint and baseline-integrity.json and run the validator."
+  }
+}

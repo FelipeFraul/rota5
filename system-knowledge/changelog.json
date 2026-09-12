@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-12T04:24:28.619Z",
+  "stage": 8,
+  "count": 1,
+  "records": [
+    {
+      "version": "1.0.0",
+      "type": "BASELINE_FREEZE",
+      "status": "FROZEN",
+      "date": "2026-09-12T04:24:28.619Z",
+      "source_commit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+      "working_tree": "DIRTY: baseline artifacts plus preexisting src/lib/tickets/messages.ts change",
+      "canonical_counts": {
+        "domains": 17,
+        "modules": 66,
+        "entrypoints": 56,
+        "capabilities": 140,
+        "flows": 34,
+        "flow_steps": 169,
+        "state_transitions": 66,
+        "tables": 44,
+        "stateful_tables": 22,
+        "stateful_entities": 23,
+        "migrations": 77,
+        "sql_functions": 33,
+        "triggers": 33,
+        "data_relations": 2223,
+        "integrations": 6,
+        "webhooks": 2,
+        "crons": 2,
+        "environment_variables": 44,
+        "tests": 43,
+        "findings": 44
+      },
+      "product_health": "BROKEN",
+      "p0_findings": [
+        "bug.create-event-invalid-jsx",
+        "bug.combo-redemption-unreachable-consume",
+        "risk.vercel-project-identity-drift"
+      ],
+      "unresolved_evidence_count": 10
+    }
+  ]
+}

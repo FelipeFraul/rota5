@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-09-11",
+  "stage": 5,
+  "count": 2,
+  "remoteConfirmed": 2,
+  "records": [
+    {
+      "id": "cron.expire-reservations",
+      "endpoint": "/api/cron/expire-reservations",
+      "schedule": "* * * * *",
+      "authentication": "Bearer CRON_SECRET",
+      "handler": "src/app/api/cron/expire-reservations/route.ts",
+      "capabilities": [
+        "reservation.expire",
+        "background.notify_expiry"
+      ],
+      "flows": [
+        "reservation.expiration"
+      ],
+      "tables": [
+        "reservations",
+        "orders",
+        "session_seats"
+      ],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "logs": "logger estruturado no handler/serviços",
+      "local_status": "LOCAL_DECLARED",
+      "remote_status": "REMOTE_CONFIG",
+      "last_observable_state": "Configuração presente no deployment; execução não disparada nesta auditoria",
+      "evidence": [
+        "vercel.json",
+        "Vercel deployment build configuration"
+      ]
+    },
+    {
+      "id": "cron.process-whatsapp-batches",
+      "endpoint": "/api/cron/process-whatsapp-batches",
+      "schedule": "* * * * *",
+      "authentication": "Bearer CRON_SECRET",
+      "handler": "src/app/api/cron/process-whatsapp-batches/route.ts",
+      "capabilities": [
+        "messaging.respond",
+        "background.close_inactive",
+        "background.cancel_batches"
+      ],
+      "flows": [
+        "whatsapp.batch_processing"
+      ],
+      "tables": [
+        "whatsapp_message_batches",
+        "whatsapp_message_batch_messages",
+        "whatsapp_messages",
+        "conversations"
+      ],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "logs": "logger estruturado com resultados de claim/processamento",
+      "local_status": "LOCAL_DECLARED",
+      "remote_status": "REMOTE_CONFIG",
+      "last_observable_state": "Configuração presente no deployment; execução não disparada nesta auditoria",
+      "evidence": [
+        "vercel.json",
+        "Vercel deployment build configuration"
+      ]
+    }
+  ]
+}
