@@ -107,6 +107,22 @@ if (index) {
 const integrity = catalogs['baseline-integrity'];
 if (integrity) {
   if (!integrity.exclusions?.some(item=>item.path==='system-knowledge/baseline-integrity.json')) add('INTEGRITY_SELF_EXCLUSION_MISSING','baseline-integrity.json');
+  const listFilesRecursively = (dir) => fs.readdirSync(dir,{withFileTypes:true}).flatMap(entry => {
+    const absolute=path.join(dir,entry.name);
+    return entry.isDirectory() ? listFilesRecursively(absolute) : [absolute];
+  });
+  const expectedIntegrityPaths = [
+    ...listFilesRecursively(docsDir).map(file=>path.relative(root,file).replaceAll('\\','/')),
+    ...jsonFiles.filter(name=>name!=='baseline-integrity.json').map(name=>`system-knowledge/${name}`),
+    '.tools/baseline/validate-baseline.mjs'
+  ].sort();
+  const recordedIntegrityPaths = (integrity.records||[]).map(record=>record.path);
+  const recordedIntegrityPathSet = new Set(recordedIntegrityPaths);
+  const duplicateIntegrityPaths = [...new Set(recordedIntegrityPaths.filter((value,index)=>recordedIntegrityPaths.indexOf(value)!==index))];
+  for (const value of duplicateIntegrityPaths) add('INTEGRITY_DUPLICATE_PATH',value);
+  for (const value of expectedIntegrityPaths) if (!recordedIntegrityPathSet.has(value)) add('INTEGRITY_EXPECTED_PATH_MISSING',value);
+  const expectedIntegrityPathSet = new Set(expectedIntegrityPaths);
+  for (const value of recordedIntegrityPaths) if (!expectedIntegrityPathSet.has(value)) add('INTEGRITY_UNEXPECTED_PATH',value);
   for (const record of integrity.records || []) {
     const absolute=path.join(root,record.path);
     if (!fs.existsSync(absolute)) { add('INTEGRITY_PATH_MISSING',record.path); continue; }
@@ -136,7 +152,13 @@ if (fingerprint) {
 const manifest = catalogs['baseline-manifest'];
 if (manifest?.baseline_id!=='rota5-baseline-v1'||!/^\d+\.\d+\.\d+$/.test(manifest?.version||'')||manifest?.status!=='FROZEN') add('MANIFEST_IDENTITY_INVALID','baseline-manifest.json');
 if (!manifest?.source_state?.base_commit || manifest.source_state.source_tree_fingerprint!==fingerprint?.source_tree_fingerprint || manifest.source_state.baseline_commit!=='SELF_NOT_RECORDED') add('MANIFEST_SOURCE_STATE_INVALID','baseline-manifest.json');
-if (!manifest?.source_state?.functional_changes_since_base?.some(change=>change.path==='src/app/admin/eventos/event-editor/CreateEventModal.tsx')) add('MANIFEST_FUNCTIONAL_CHANGE_MISSING','baseline-manifest.json');
+const functionalChanges = manifest?.source_state?.functional_changes_since_base;
+if (!Array.isArray(functionalChanges) || functionalChanges.length === 0) add('MANIFEST_FUNCTIONAL_CHANGE_MISSING','baseline-manifest.json');
+for (const change of functionalChanges || []) {
+  const absolute = path.join(root, change.path || '');
+  if (!change.path || !fs.existsSync(absolute)) add('MANIFEST_FUNCTIONAL_CHANGE_PATH_INVALID',change.path || '(missing path)');
+  else if (!change.sha256 || sha256(fs.readFileSync(absolute)) !== change.sha256) add('MANIFEST_FUNCTIONAL_CHANGE_HASH_INVALID',change.path);
+}
 if (manifest?.git_observation_at_generation?.validity_role!=='INFORMATIONAL_ONLY') add('MANIFEST_TRANSIENT_STATE_ROLE_INVALID','baseline-manifest.json');
 if (!catalogs['self-reading']?.query_routes?.IMPACT_ANALYSIS) add('SELF_READING_ROUTE_MISSING','IMPACT_ANALYSIS');
 

@@ -114,7 +114,7 @@ Fonte canônica: [capabilities.json](../../system-knowledge/capabilities.json). 
 | combo.prepare | domain.combo-commerce-fulfillment | ADMIN | CONFIRMADA | PARTIAL | STRUCTURALLY_REACHABLE | COMMON |
 | combo.delivery_prompt | domain.combo-commerce-fulfillment | ADMIN | PARCIAL | PARTIAL | STRUCTURALLY_REACHABLE | COMMON |
 | combo.delivery_choose | domain.combo-commerce-fulfillment | USER_FACING | PARCIAL | PARTIAL | STRUCTURALLY_REACHABLE | COMMON |
-| combo.redeem | domain.combo-commerce-fulfillment | ADMIN | QUEBRADA | UNKNOWN | STRUCTURALLY_REACHABLE | COMMON |
+| combo.redeem | domain.combo-commerce-fulfillment | ADMIN | PARCIAL | PARTIAL | STRUCTURALLY_REACHABLE | COMMON |
 | table_map.preview | domain.table-map | ADMIN | CONFIRMADA | PARTIAL | STRUCTURALLY_REACHABLE | COMMON |
 | table_map.calibrate | domain.table-map | ADMIN | PARCIAL | PARTIAL | CONDITIONAL_OR_HIDDEN | COMMON |
 | table_map.reserve | domain.table-map | USER_FACING | PARCIAL | PARTIAL | CONDITIONAL_OR_HIDDEN | COMMON |

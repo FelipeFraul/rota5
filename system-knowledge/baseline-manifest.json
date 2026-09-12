@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T13:36:12.110Z",
-  "stage": 8,
+  "generatedAt": "2026-09-12T14:12:39.549Z",
+  "stage": "stabilization/p0-2",
   "baseline_id": "rota5-baseline-v1",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "status": "FROZEN",
-  "frozen_at": "2026-09-12T13:36:12.110Z",
+  "frozen_at": "2026-09-12T14:12:39.549Z",
   "source_state": {
-    "base_commit": "7c00adb7db018786494b7b2b5124df3df69284ff",
-    "source_tree_fingerprint": "5320ec9da181b58066acb0c4c86c91542866d6831095cc2442070c229085173f",
+    "base_commit": "121b7a8a4870f5933bd0cf0d45f12a8d71132424",
+    "source_tree_fingerprint": "28973ed142a2e6ee1f22108ef5affdd69efded898f83d69c702b6804d7e038f5",
     "source_tree_file_count": 344,
     "functional_changes_since_base": [
       {
-        "path": "src/app/admin/eventos/event-editor/CreateEventModal.tsx",
-        "change": "Remove one extra JSX closing div.",
-        "finding": "bug.create-event-invalid-jsx",
-        "sha256": "51b4f2e30be18fe1109d29f7e8c26703707c379c70ac71cc705e90b994a64ea8"
+        "path": "src/lib/tickets/services/comboRedemptions.ts",
+        "change": "Restrict the delivery-choice early return to unconfirmed choices so confirmed prepared redemptions reach validate_combo_redemption.",
+        "finding": "bug.combo-redemption-unreachable-consume",
+        "sha256": "9f691e7ce7d66f9373b71abf18db0be687ef7bec85fe7dad45043b3b00d669cf"
       }
     ],
     "generated_from_working_tree": true,
@@ -23,11 +23,9 @@
     "baseline_commit_policy": "The Git commit containing this baseline is intentionally not embedded in its own content to avoid self-reference."
   },
   "git_observation_at_generation": {
-    "observed_at": "2026-09-12T13:36:12.110Z",
+    "observed_at": "2026-09-12T14:12:39.549Z",
     "branch": "production",
-    "head": "7c00adb7db018786494b7b2b5124df3df69284ff",
-    "origin_production": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
-    "head_matches_origin": false,
+    "head": "121b7a8a4870f5933bd0cf0d45f12a8d71132424",
     "working_tree_clean": false,
     "validity_role": "INFORMATIONAL_ONLY",
     "note": "Historical observation made while generating the freeze; future working-tree state is not a baseline validity requirement."
@@ -39,14 +37,14 @@
   },
   "product_health": {
     "status": "BROKEN",
-    "reason": "2 active P0, 9 active HIGH, 1 broken flow, 8 partial flows, npm test failing and infrastructure drift; typecheck, lint and build now pass.",
+    "reason": "1 active P0, 8 active HIGH, 0 broken flows, 9 partial flows, npm test failing and infrastructure drift; typecheck, lint and build pass.",
     "findings": 44,
-    "active_p0": 2,
-    "active_high": 9,
+    "active_p0": 1,
+    "active_high": 8,
     "critical": 0,
-    "resolved": 1,
-    "broken_flows": 1,
-    "partial_flows": 8
+    "resolved": 2,
+    "broken_flows": 0,
+    "partial_flows": 9
   },
   "confidence": "HIGH",
   "canonical_counts": {
@@ -79,11 +77,9 @@
   "unresolved_evidence_count": 10,
   "contradictions_pending": 0,
   "p0_findings": [
-    "bug.combo-redemption-unreachable-consume",
     "risk.vercel-project-identity-drift"
   ],
   "high_findings": [
-    "bug.combo-redemption-unreachable-consume",
     "legacy.active-brand-contamination",
     "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.admin-event-multistep-partial-state",
@@ -247,11 +243,12 @@
     "self_exclusion": "baseline-integrity.json is excluded to avoid circularity."
   },
   "notes": [
-    "Baseline 1.1.0 records the resolved JSX P0 over base commit 7c00adb7db018786494b7b2b5124df3df69284ff and identifies the final functional source state by fingerprint.",
+    "Baseline 1.2.0 records the resolved combo redemption P0 over base commit 121b7a8a4870f5933bd0cf0d45f12a8d71132424 and identifies the final functional source state by fingerprint.",
     "FROZEN validity depends on source_state and validated artifacts, not on the current Git working-tree state.",
     "NOT_VALIDATED does not mean BROKEN."
   ],
   "resolved_findings": [
-    "bug.create-event-invalid-jsx"
+    "bug.create-event-invalid-jsx",
+    "bug.combo-redemption-unreachable-consume"
   ]
 }

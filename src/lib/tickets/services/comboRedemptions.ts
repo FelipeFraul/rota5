@@ -1037,7 +1037,8 @@ export async function validateComboRedemptionScan(input: {
     scannedOrder?.status === "paid" &&
     scannedRedemption.status === "issued" &&
     !wrongEvent &&
-    !wrongSession
+    !wrongSession &&
+    typeof scannedRedemption.raw_metadata?.delivery_choice_confirmed_at !== "string"
   ) {
     const existingMetadata = scannedRedemption.raw_metadata ?? {};
     const customer = firstJoin(scannedRedemption.customers);

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-11",
-  "stage": 4,
+  "generatedAt": "2026-09-12T14:12:39.549Z",
+  "stage": "stabilization/p0-2",
   "count": 66,
   "records": [
     {
@@ -1067,7 +1067,7 @@
       "capability": "combo.redeem",
       "flow": "kitchen.combo_redemption",
       "trigger": "ADMIN_ACTION",
-      "implementation": "consume via RPC; blocked in current reader",
+      "implementation": "consume via validate_combo_redemption after confirmed delivery choice and completed preparation",
       "evidence": [
         {
           "kind": "implementation",
@@ -1075,10 +1075,10 @@
           "line": 935,
           "end_line": 1513,
           "symbol": "validateComboRedemptionScan",
-          "claim": "Existe RPC de consumo, mas o ramo antecipado captura todo combo pago/emitido válido e impede chegar ao consumo pelo leitor atual."
+          "claim": "O caminho local alcança a RPC, cuja definição local bloqueia a linha e realiza issued→used atomicamente."
         }
       ],
-      "status": "BLOCKED_IN_CURRENT_READER"
+      "status": "OBSERVED"
     },
     {
       "id": "state.053",

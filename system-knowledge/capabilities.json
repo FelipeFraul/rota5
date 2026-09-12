@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12",
-  "stage": "3/8",
+  "generatedAt": "2026-09-12T14:12:39.549Z",
+  "stage": "stabilization/p0-2",
   "id": "capability-catalog.v1",
   "canonical": true,
   "status": "PASS",
   "confidence": "MEDIA",
-  "sourceCommit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+  "sourceCommit": "121b7a8a4870f5933bd0cf0d45f12a8d71132424",
   "sourceScope": "Working tree local, incluindo alteração preexistente em src/lib/tickets/messages.ts; não equivale ao commit puro nem ao deploy.",
   "count": 140,
   "methodology": {
@@ -49,21 +49,21 @@
     },
     "by_status": {
       "CONFIRMADA": 126,
-      "PARCIAL": 9,
-      "QUEBRADA": 1,
+      "PARCIAL": 10,
+      "QUEBRADA": 0,
       "ÓRFÃ": 4,
       "NÃO_TESTADA": 0,
       "DESCONHECIDA": 0
     },
     "by_test_status": {
-      "UNKNOWN": 49,
+      "UNKNOWN": 48,
       "UNCOVERED": 37,
-      "PARTIAL": 32,
+      "PARTIAL": 33,
       "FAILING": 14,
       "COVERED": 8
     },
     "orphans": 4,
-    "broken": 1,
+    "broken": 0,
     "not_tested_status": 0,
     "without_entrypoint": 4,
     "with_test": 103,
@@ -13112,9 +13112,10 @@
         "validate_combo_redemption"
       ],
       "tests": [
+        "test-036",
         "audit.combo-redemption-security"
       ],
-      "description": "Existe RPC de consumo, mas o ramo antecipado captura todo combo pago/emitido válido e impede chegar ao consumo pelo leitor atual.",
+      "description": "O leitor encaminha resgates issued com escolha confirmada à RPC atômica validate_combo_redemption; a equivalência do banco remoto não foi validada.",
       "evidence": [
         {
           "kind": "implementation",
@@ -13122,7 +13123,7 @@
           "line": 935,
           "end_line": 1513,
           "symbol": "validateComboRedemptionScan",
-          "claim": "Existe RPC de consumo, mas o ramo antecipado captura todo combo pago/emitido válido e impede chegar ao consumo pelo leitor atual."
+          "claim": "O ramo de escolha retorna apenas enquanto delivery_choice_confirmed_at está ausente; após confirmação, o caso válido alcança validate_combo_redemption."
         },
         {
           "kind": "call_site",
@@ -13153,10 +13154,10 @@
           "claim": "Leitor de oferta/combo."
         }
       ],
-      "status": "QUEBRADA",
-      "implementation_status": "QUEBRADA",
+      "status": "PARCIAL",
+      "implementation_status": "PARCIAL",
       "failing_tests": [],
-      "test_status": "UNKNOWN",
+      "test_status": "PARTIAL",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -13164,7 +13165,7 @@
       ],
       "database_triggers": [],
       "notes": [
-        "QUEBRADA no caminho atual do leitor: o predicado paid + issued + escopo válido em comboRedemptions.ts:1035–1041 sempre retorna antes de :1231, inclusive após delivery_choice_confirmed_at (:1079). A RPC de consumo só é chamada em :1462. Os ramos de recuperação de preparo posteriores repetem esse predicado e ficam encobertos. A RPC pode operar isoladamente; não equivale ao leitor funcionando. Nenhum teste remoto foi executado."
+        "PARCIAL: testes locais cobrem consumo único, replay, QR inválido, escopo incorreto e escolha ainda pendente. A RPC local usa bloqueio de linha e transição issued→used; nenhum teste mutante remoto foi executado e risk.combo-metadata-read-modify-write-race permanece ativo."
       ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
@@ -13188,10 +13189,10 @@
             "integration-supabase"
           ]
         },
-        "result": "Existe RPC de consumo, mas o ramo antecipado captura todo combo pago/emitido válido e impede chegar ao consumo pelo leitor atual.",
-        "validation": "STATIC_SOURCE",
+        "result": "O leitor encaminha resgates issued com escolha confirmada à RPC atômica validate_combo_redemption; a equivalência do banco remoto não foi validada.",
+        "validation": "LOCAL_BEHAVIOR_TEST",
         "limitations": [
-          "QUEBRADA no caminho atual do leitor: o predicado paid + issued + escopo válido em comboRedemptions.ts:1035–1041 sempre retorna antes de :1231, inclusive após delivery_choice_confirmed_at (:1079). A RPC de consumo só é chamada em :1462. Os ramos de recuperação de preparo posteriores repetem esse predicado e ficam encobertos. A RPC pode operar isoladamente; não equivale ao leitor funcionando. Nenhum teste remoto foi executado."
+          "PARCIAL: testes locais cobrem consumo único, replay, QR inválido, escopo incorreto e escolha ainda pendente. A RPC local usa bloqueio de linha e transição issued→used; nenhum teste mutante remoto foi executado e risk.combo-metadata-read-modify-write-race permanece ativo."
         ]
       },
       "dependencies": [

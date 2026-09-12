@@ -38,7 +38,7 @@ Evidência: [src/lib/tickets/services/gateSessions.ts:510](../../src/lib/tickets
 
 ## Uma capability quebrada
 
-QUEBRADA no caminho atual do leitor: o predicado paid + issued + escopo válido em comboRedemptions.ts:1035–1041 sempre retorna antes de :1231, inclusive após delivery_choice_confirmed_at (:1079). A RPC de consumo só é chamada em :1462. Os ramos de recuperação de preparo posteriores repetem esse predicado e ficam encobertos. A RPC pode operar isoladamente; não equivale ao leitor funcionando. Nenhum teste remoto foi executado.
+PARCIAL: o caminho local alcança a RPC após escolha confirmada e preparo; nenhum teste mutante remoto foi executado.
 
 O predicado que permite consumir um combo válido exige `paid`, `issued` e escopo correto. O primeiro ramo com esse predicado retorna uma solicitação de escolha, uma confirmação de escolha já feita ou uma recusa por falta de mesa/telefone. Assim, os ramos posteriores de preparo e a RPC de consumo ficam inacessíveis para esse mesmo caso válido. Não se concluiu que a RPC isolada esteja quebrada; o bloqueio pertence ao leitor atual.
 

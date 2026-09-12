@@ -15,7 +15,7 @@ A maior parte dos testes lê arquivos como texto e verifica contratos com regex/
 
 ## Resultado observado do comando padrão
 
-`npm test` foi reexecutado na Etapa 7 em 12/09/2026 e executou 210 casos: **203 passaram e 7 falharam**. O snapshot de 11/09/2026 (204/210) permanece histórico em `tests.json.defaultSuite.previousSnapshot`.
+`npm test` foi reexecutado na Etapa 7 em 12/09/2026 e executou 214 casos: **207 passaram e as mesmas 7 falharam**. O snapshot de 11/09/2026 (204/210) permanece histórico em `tests.json.defaultSuite.previousSnapshot`.
 
 | Arquivo padrão | Objeto protegido | Resultado em 11/09/2026 |
 | --- | --- | --- |
@@ -130,6 +130,6 @@ Limitação comum: várias ferramentas usam Supabase real/service role, criam da
 | `npm run typecheck` | PASS | 0 diagnósticos após a correção mínima |
 | `npm run lint` | PASS | 0 erros; 24 warnings preexistentes |
 | `npm run build` | PASS | compilação concluída; warning NFT/Turbopack preexistente no mapa |
-| `npm test` | FAIL | 203/210 passaram; 7 falharam |
+| `npm test` | FAIL | 207/214 passaram; as mesmas 7 falharam |
 
 O lint sinalizou ainda imports, funções e variáveis sem uso, uso de `<img>` e uma dependência desnecessária de hook. Esses sinais foram inventariados como possíveis lacunas/legado; nenhum foi alterado.

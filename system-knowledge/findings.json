@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12",
-  "stage": "stabilization/p0-1",
-  "sourceCommit": "7c00adb7db018786494b7b2b5124df3df69284ff",
+  "generatedAt": "2026-09-12T14:12:39.549Z",
+  "stage": "stabilization/p0-2",
+  "sourceCommit": "121b7a8a4870f5933bd0cf0d45f12a8d71132424",
   "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
   "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
   "count": 44,
@@ -106,7 +106,7 @@
       "type": "BROKEN_FLOW",
       "severity": "HIGH",
       "priority": "P0",
-      "status": "ACTIVE",
+      "status": "RESOLVED",
       "confidence": "CONFIRMED",
       "description": "Todos os ramos observados de paid + issued + escopo válido retornam antes da chamada validate_combo_redemption; a transição issued→used não ocorre pelo fluxo analisado.",
       "evidence": [
@@ -157,7 +157,34 @@
       "blast_radius": "DOMAIN",
       "workaround": "Não há conclusão equivalente comprovada no mesmo fluxo.",
       "direction": "Reconectar o caminho válido à transição atômica existente.",
-      "priority_justification": "P0 porque o fluxo operacional de consumo está comprovadamente quebrado e afeta controle de entrega."
+      "priority_justification": "P0 porque o fluxo operacional de consumo está comprovadamente quebrado e afeta controle de entrega.",
+      "resolution": {
+        "date": "2026-09-12",
+        "base_commit": "121b7a8a4870f5933bd0cf0d45f12a8d71132424",
+        "change": "Restrict the early delivery-choice branch to redemptions without delivery_choice_confirmed_at, allowing confirmed and prepared redemptions to reach validate_combo_redemption.",
+        "evidence": [
+          {
+            "path": "src/lib/tickets/services/comboRedemptions.ts",
+            "claim": "Minimal guard change."
+          },
+          {
+            "path": "scripts/test-ticket-delivery-distribution.mjs",
+            "claim": "Five focused local behavior tests pass."
+          }
+        ],
+        "gates": {
+          "focused_tests": "PASS_5_OF_5",
+          "typecheck": "PASS",
+          "lint": "PASS_WITH_24_PREEXISTING_WARNINGS",
+          "npm_test": "FAIL_UNCHANGED_207_OF_214",
+          "build": "PASS_WITH_PREEXISTING_WARNING",
+          "remote_mutating_tests": "NOT_EXECUTED"
+        },
+        "limitations": [
+          "Remote database equivalence was not validated.",
+          "risk.combo-metadata-read-modify-write-race remains active."
+        ]
+      }
     },
     {
       "id": "bug.event-duplicate-artist-leak",

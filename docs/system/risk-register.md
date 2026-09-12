@@ -11,7 +11,7 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 | ID | Tipo | Severidade | Prioridade | Status | Confiança | Título |
 |---|---|---|---|---|---|---|
 | bug.create-event-invalid-jsx | BUG | HIGH | P0 | RESOLVED | CONFIRMED | JSX inválido impede compilar o workspace web de eventos |
-| bug.combo-redemption-unreachable-consume | BROKEN_FLOW | HIGH | P0 | ACTIVE | CONFIRMED | Caso válido de combo não alcança a RPC que consome o resgate |
+| bug.combo-redemption-unreachable-consume | BROKEN_FLOW | HIGH | P0 | RESOLVED | CONFIRMED | Caso válido de combo não alcança a RPC que consome o resgate |
 | bug.event-duplicate-artist-leak | BUG | MEDIUM | P1 | ACTIVE | CONFIRMED | Duplicação de evento preserva artista do evento de origem |
 | bug.user-visible-text-corruption | BUG | MEDIUM | P1 | ACTIVE | CONFIRMED | Textos ativos contêm mojibake e substituições por interrogação |
 | legacy.active-brand-contamination | LEGACY | HIGH | P1 | ACTIVE | CONFIRMED | Superfícies Rota5 exibem referências e assets Black House/RockBar |
@@ -76,7 +76,7 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 
 - Tipo / severidade / prioridade: **BROKEN_FLOW / HIGH / P0**
 - Status / confiança: **ACTIVE / CONFIRMED**
-- Problema: Todos os ramos observados de paid + issued + escopo válido retornam antes da chamada validate_combo_redemption; a transição issued→used não ocorre pelo fluxo analisado.
+- Problema: O retorno antecipado abrangia também escolhas já confirmadas e foi restringido ao estado sem delivery_choice_confirmed_at; o caso confirmado e pronto agora alcança validate_combo_redemption.
 - Evidência: `src/lib/tickets/services/comboRedemptions.ts`:935 — Início da validação do scan.; `src/lib/tickets/services/comboRedemptions.ts`:1462 — RPC de consumo aparece depois dos retornos dos casos válidos.; `system-knowledge/flows.json` — kitchen.combo_redemption está QUEBRADO.
 - Impacto: A cozinha pode validar ou orientar entrega sem concluir atomicamente o consumo, permitindo reapresentação e divergência de estado.
 - Escopo: domains domain.combo-commerce-fulfillment; capabilities combo.redeem, combo.delivery_prompt; flows kitchen.combo_redemption.

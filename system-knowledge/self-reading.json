@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T13:36:12.110Z",
-  "stage": 8,
+  "generatedAt": "2026-09-12T14:12:39.549Z",
+  "stage": "stabilization/p0-2",
   "id": "rota5-self-reading-v1",
   "baseline_id": "rota5-baseline-v1",
   "bootstrap_files": [
@@ -232,9 +232,7 @@
       "src/lib/mercado-pago/webhook.ts",
       "orders-payments catalogs and SQL functions in database-objects.json"
     ],
-    "broken_flows": [
-      "kitchen.combo_redemption"
-    ],
+    "broken_flows": [],
     "router_change_review": [
       "modules.json: messaging.router",
       "dependencies.json",
@@ -248,7 +246,6 @@
     "remote_database_not_validated": "Remote function bodies, constraints, indexes, triggers, RLS, policies, grants and migration history; Supabase Auth configuration also remains NOT_VALIDATED.",
     "infrastructure_state": "Product health is BROKEN. Both observed health endpoints answered 200, but declared domain/project identity drifts between site and rota5, the latest rota5 deployment is ERROR, the published commit is NOT_VALIDATED, storage expectations drift, and the local runtime environment is incomplete.",
     "p0_findings": [
-      "bug.combo-redemption-unreachable-consume",
       "risk.vercel-project-identity-drift"
     ],
     "add_capability": "Assign canonical ID, domain, type, description, modules, entrypoints, data/integrations, flow placement, tests and evidence; update capability and related flow/data/test catalogs, validate, then version the baseline.",

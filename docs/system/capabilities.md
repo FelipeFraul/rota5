@@ -87,7 +87,7 @@ As referências de entrada e implementação apontam para código executável; a
 
 ## Achados que alteram a leitura funcional
 
-- **Consumo de combo bloqueado:** o leitor retorna para todo combo pago/emitido válido em `comboRedemptions.ts:1035–1231`. Mesmo após escolha confirmada, retorna em `:1079`; a RPC em `:1462` não é alcançada para concluir esse caso. `combo.redeem` é `QUEBRADA`, apesar de existir SQL funcional isolado.
+- **Consumo de combo reconectado:** a guarda do leitor retorna apenas antes de `delivery_choice_confirmed_at`; resgates confirmados e prontos alcançam `validate_combo_redemption`. `combo.redeem` é `PARCIAL` porque a equivalência remota não foi validada.
 - **Venda individual versus mesa:** ofertas programadas incluem ingressos individuais e participantes; a escolha de entrega exige mesa paga do mesmo cliente. A seleção normal de mesa está desabilitada globalmente. Não se presume que comprar combo implique conseguir consumi-lo.
 - **Revogação de acesso não revoga sessão:** `pauseGateAccess` e `revokeFixedGateAccess` só alteram suas credenciais. `validateGateSessionToken` consulta a sessão/evento, sem revalidar a credencial de origem. Revogação por ID de sessão existe como serviço órfão.
 - **Automação além da expiração:** o cron de reservas também lembra interesse sem compra, expira sessões administrativas e dispara ofertas de combo. A consulta administrativa de eventos pode marcar eventos/sessões passados como finished.
@@ -1492,16 +1492,16 @@ OK/1 confirma escolha e local após revalidar compra e mesa; mantém ingresso de
 
 #### combo.redeem — Concluir resgate de combo e marcar entrega
 
-Existe RPC de consumo, mas o ramo antecipado captura todo combo pago/emitido válido e impede chegar ao consumo pelo leitor atual.
+O leitor encaminha resgates confirmados e prontos à RPC atômica validate_combo_redemption; a equivalência remota não foi validada.
 
 - **Tipo / status / teste / marca:** ADMIN / QUEBRADA / UNKNOWN / COMMON.
 - **Entradas:** `http-kitchen-scan`, `page-offer-reader`. Disponibilidade: STRUCTURALLY_REACHABLE.
 - **Módulos:** `combo.redemption`, `combo.kitchen-reader-ui-api`.
-- **Cadeia mínima:** http-kitchen-scan / page-offer-reader → validateComboRedemptionScan → combo_redemptions, combo_redemption_events, validate_combo_redemption → Existe RPC de consumo, mas o ramo antecipado captura todo combo pago/emitido válido e impede chegar ao consumo pelo leitor atual.
+- **Cadeia mínima:** http-kitchen-scan / page-offer-reader → validateComboRedemptionScan → combo_redemptions, combo_redemption_events, validate_combo_redemption → O leitor encaminha resgates confirmados e prontos à RPC atômica validate_combo_redemption; a equivalência remota não foi validada.
 - **Testes:** `audit.combo-redemption-security`.
 - **Requer / dependentes:** `combo.prepare` / —.
 - **Evidência:** [src/lib/tickets/services/comboRedemptions.ts:935](../../src/lib/tickets/services/comboRedemptions.ts#L935); [supabase/migrations/20260629000300_require_combo_preparation_before_redemption.sql:1](../../supabase/migrations/20260629000300_require_combo_preparation_before_redemption.sql#L1). Demais call sites e entradas no JSON canônico.
-- **Limitações/notas:** QUEBRADA no caminho atual do leitor: o predicado paid + issued + escopo válido em comboRedemptions.ts:1035–1041 sempre retorna antes de :1231, inclusive após delivery_choice_confirmed_at (:1079). A RPC de consumo só é chamada em :1462. Os ramos de recuperação de preparo posteriores repetem esse predicado e ficam encobertos. A RPC pode operar isoladamente; não equivale ao leitor funcionando. Nenhum teste remoto foi executado.
+- **Limitações/notas:** PARCIAL: cinco testes comportamentais locais cobrem consumo, replay, entrada inválida, escopo incorreto e escolha pendente. Nenhum teste mutante remoto foi executado.
 
 ### domain.table-map — Mapa oficial e lugares
 

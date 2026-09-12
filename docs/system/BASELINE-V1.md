@@ -1,6 +1,6 @@
 # Rota5 Baseline V1
 
-**Identity:** `rota5-baseline-v1`, version **1.1.0**, status **FROZEN**, frozen at 2026-09-12T13:36:12.110Z. Its permanent source state starts from base commit `7c00adb7db018786494b7b2b5124df3df69284ff`, includes the minimal fix in `src/app/admin/eventos/event-editor/CreateEventModal.tsx`, and is identified by source tree fingerprint `5320ec9da181b58066acb0c4c86c91542866d6831095cc2442070c229085173f`. The Git commit containing the baseline is `SELF_NOT_RECORDED` to avoid self-reference. Git state observed during generation is historical and does not determine future validity. `messages.ts` is part of the base commit and was not changed by this stabilization.
+**Identity:** `rota5-baseline-v1`, version **1.2.0**, status **FROZEN**, frozen at 2026-09-12T14:12:39.549Z. Its permanent source state starts from base commit `121b7a8a4870f5933bd0cf0d45f12a8d71132424`, includes the minimal fix in `src/lib/tickets/services/comboRedemptions.ts`, and is identified by source tree fingerprint `28973ed142a2e6ee1f22108ef5affdd69efded898f83d69c702b6804d7e038f5`. The Git commit containing the baseline is `SELF_NOT_RECORDED` to avoid self-reference.
 
 Rota5 is a Next.js application backed by Supabase/PostgreSQL. It centers on WhatsApp discovery and ticket sales, Mercado Pago Pix checkout and webhooks, ticket delivery, gate admission, courtesies, combos/kitchen operations, event administration and reporting. The architecture contains 17 domains, 66 modules and 56 entrypoints. Its catalog contains 140 capabilities and 34 flows with 169 steps and 66 transitions.
 
@@ -11,8 +11,8 @@ The data baseline reconstructs 44 tables, 77 migrations, 33 local SQL functions,
 **BROKEN.** Baseline integrity is PASS, but product health is not healthy.
 
 - Findings: 44; active P0: 2; active HIGH: 9; CRITICAL: 0; resolved: 1.
-- Broken flows: 1 (`kitchen.combo_redemption`); partial flows: 8, including `admin.web_event_workspace`.
-- `npm test`: FAIL, 203/210 passed and 7 failed.
+- Broken flows: 0; partial flows: 9, including `kitchen.combo_redemption` and `admin.web_event_workspace`.
+- `npm test`: FAIL, 207/214 passed and the same 7 preexisting cases failed.
 - `npm run typecheck`: PASS, 0 diagnostics.
 - `npm run lint`: PASS, 0 errors and 24 preexisting warnings.
 - `npm run build`: PASS with the preexisting NFT/Turbopack warning.

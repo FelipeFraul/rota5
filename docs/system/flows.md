@@ -561,25 +561,25 @@ A descoberta foi executada entrypoint-first sobre 56 entradas, capability-first 
 
 ## `kitchen.combo_redemption` — Leitura e resgate de combo
 
-- **Tipo/status:** ADMIN_JOURNEY / QUEBRADO
+- **Tipo/status:** ADMIN_JOURNEY / PARCIAL
 - **Ator/trigger:** kitchen_operator / ADMIN_ACTION
 - **Entradas:** `page-offer-reader`, `http-kitchen-scan`
 - **Objetivo/happy path:** Validar QR e concluir consumo do combo preparado.
 - **Capabilities:** `combo.delivery_prompt`, `combo.redeem`
-- **Terminais:** `WAITING_USER`, `DENIED`, `FAILURE`
+- **Terminais:** `SUCCESS`, `ALREADY_USED`, `WAITING_USER`, `DENIED`, `FAILURE`
 - **Teste:** PARTIAL; `test-036`, `audit.combo-redemption-security`
 - **Dados:** `combo_redemptions`, `official_table_map_reservations`, `conversations`, `whatsapp_messages`, `combo_redemption_events`; funções `validate_combo_redemption`; integrações `integration-supabase`, `integration-zapi`
 
 **Sequência comprovada**
 
 1. QR válido com mesa paga solicita escolha no WhatsApp sem consumir resgate; ingresso individual sem mesa é negado. (`combo.delivery_prompt`)
-2. Existe RPC de consumo, mas o ramo antecipado captura todo combo pago/emitido válido e impede chegar ao consumo pelo leitor atual. (`combo.redeem`)
+2. Após escolha confirmada e preparo concluído, validar e consumir atomicamente pela RPC validate_combo_redemption. (`combo.redeem`)
 
 **Branches e erros**
 
 - QR inválido/escopo incorreto é negado.
 - Caso paid + issued válido entra no ramo de escolha/mesa e retorna antes da RPC.
-- validate_combo_redemption em comboRedemptions.ts:1462 não é alcançada pelo caso válido analisado.
+- Resgates confirmados e prontos alcançam validate_combo_redemption; equivalência remota permanece não validada.
 - Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso.
 
 ## `table_map.calibration` — Prévia e calibração do mapa oficial

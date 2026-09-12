@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T13:36:12.110Z",
-  "stage": 8,
+  "generatedAt": "2026-09-12T14:12:39.549Z",
+  "stage": "stabilization/p0-2",
   "id": "rota5-machine-catalog-index",
   "baseline_id": "rota5-baseline-v1",
   "count": 43,
@@ -47,7 +47,7 @@
       ],
       "generated_by_stage": 8,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T13:36:12.110Z"
+      "last_validated_at": "2026-09-12T14:12:39.549Z"
     },
     {
       "id": "catalog.baseline-v1",
@@ -69,7 +69,7 @@
       ],
       "generated_by_stage": 8,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T13:36:12.110Z"
+      "last_validated_at": "2026-09-12T14:12:39.549Z"
     },
     {
       "id": "catalog.capabilities",
@@ -81,7 +81,7 @@
       "depends_on": [],
       "generated_by_stage": 3,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T13:36:12.110Z"
+      "last_validated_at": "2026-09-12T14:12:39.549Z"
     },
     {
       "id": "catalog.capability-relations",
@@ -301,7 +301,7 @@
       ],
       "generated_by_stage": 6,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T13:36:12.110Z"
+      "last_validated_at": "2026-09-12T14:12:39.549Z"
     },
     {
       "id": "catalog.flow-relations",
@@ -344,7 +344,7 @@
       ],
       "generated_by_stage": 4,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T13:36:12.110Z"
+      "last_validated_at": "2026-09-12T14:12:39.549Z"
     },
     {
       "id": "catalog.health",
@@ -530,7 +530,7 @@
       "depends_on": [],
       "generated_by_stage": 1,
       "status": "FROZEN",
-      "last_validated_at": "2026-09-12T13:36:12.110Z"
+      "last_validated_at": "2026-09-12T14:12:39.549Z"
     },
     {
       "id": "catalog.unresolved-evidence",

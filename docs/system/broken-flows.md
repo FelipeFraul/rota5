@@ -2,16 +2,18 @@
 
 ## Flows quebrados
 
-### Reclassificado após estabilização
+Nenhum flow permanece classificado como QUEBRADO.
+
+### Reclassificados após estabilização
 
 `admin.web_event_workspace` passou de QUEBRADO para PARCIAL: o JSX foi corrigido e typecheck/lint/build passam. Permanecem criação multi-entidade parcial e testes source-contract falhos independentes.
 
-### `kitchen.combo_redemption`
+### `kitchen.combo_redemption` — agora PARCIAL
 
 - **Objetivo:** consumir resgate de combo preparado.
-- **Quebra:** `validateComboRedemptionScan`, em `comboRedemptions.ts:1035–1231`, retorna para todo caso paid + issued no escopo antes de `validate_combo_redemption` em :1462.
-- **Capability:** `combo.redeem` (QUEBRADA).
-- **Consequência:** resposta allowed/solicitação de entrega pode ocorrer sem transição issued → used.
+- **Correção:** a guarda retorna somente sem `delivery_choice_confirmed_at`; resgates confirmados e prontos alcançam `validate_combo_redemption`.
+- **Capability:** `combo.redeem` (PARCIAL).
+- **Limite:** testes locais cobrem a transição e replay; a equivalência remota não foi validada.
 - **Evidência:** `src/lib/tickets/services/comboRedemptions.ts:935`, `src/app/api/kitchen/session/scan/route.ts:67` e migration da RPC.
 
 ## Flows parciais

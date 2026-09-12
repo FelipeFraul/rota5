@@ -22,7 +22,7 @@
 | `gate.access_management` | ADMIN_JOURNEY | admin | ADMIN_ACTION | `admin.authorize`<br>`gate.access_create`<br>`gate.access_list`<br>`gate.access_pause`<br>`gate.fixed_create`<br>`gate.fixed_list`<br>`gate.fixed_revoke` | CONFIRMADO | PARTIAL | SUCCESS, FAILURE |
 | `gate.ticket_admission` | ADMIN_JOURNEY | gate_operator | ADMIN_ACTION | `gate.open`<br>`gate.consult`<br>`gate.admit` | CONFIRMADO | PARTIAL | SUCCESS, FAILURE |
 | `kitchen.session_prepare` | ADMIN_JOURNEY | kitchen_operator | ADMIN_ACTION | `combo.kitchen_open`<br>`combo.prepare` | CONFIRMADO | PARTIAL | SUCCESS, FAILURE |
-| `kitchen.combo_redemption` | ADMIN_JOURNEY | kitchen_operator | ADMIN_ACTION | `combo.delivery_prompt`<br>`combo.redeem` | QUEBRADO | PARTIAL | WAITING_USER, DENIED, FAILURE |
+| `kitchen.combo_redemption` | ADMIN_JOURNEY | kitchen_operator | ADMIN_ACTION | `combo.delivery_prompt`<br>`combo.redeem` | PARCIAL | PARTIAL | SUCCESS, ALREADY_USED, WAITING_USER, DENIED, FAILURE |
 | `table_map.calibration` | ADMIN_JOURNEY | admin | ADMIN_ACTION | `admin.authorize`<br>`table_map.preview`<br>`table_map.calibrate` | PARCIAL | PARTIAL | SUCCESS, FAILURE |
 | `whatsapp.inbound_dispatch` | SYSTEM_PROCESS | Z-API | WEBHOOK | `platform.limit_requests`<br>`messaging.receive`<br>`customer.identify`<br>`messaging.respond`<br>`admin.authorize` | CONFIRMADO | FAILING | SUCCESS, FAILURE |
 | `ticket.payment_confirmation` | SYSTEM_PROCESS | Mercado Pago | WEBHOOK | `platform.limit_requests`<br>`payment.confirm`<br>`ticket.deliver`<br>`ticket.delivery_choice`<br>`messaging.protect_delivery`<br>`table_map.sync_status` | CONFIRMADO | PARTIAL | SUCCESS, FAILURE |

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-12",
-  "stage": 4,
+  "generatedAt": "2026-09-12T14:12:39.549Z",
+  "stage": "stabilization/p0-2",
   "id": "rota5.flow-catalog.v1",
   "canonical": true,
   "count": 34,
@@ -14,9 +14,9 @@
       "OPERATIONAL_PROCESS": 3
     },
     "by_status": {
-      "PARCIAL": 8,
+      "PARCIAL": 9,
       "CONFIRMADO": 25,
-      "QUEBRADO": 1
+      "QUEBRADO": 0
     },
     "steps": 169,
     "state_transitions": 66,
@@ -2795,14 +2795,14 @@
         "combo.delivery_prompt",
         "combo.redeem"
       ],
-      "status": "QUEBRADO",
+      "status": "PARCIAL",
       "goal": "Validar QR e concluir consumo do combo preparado.",
       "branches": {
         "happy_path": "Validar QR e concluir consumo do combo preparado.",
         "alternative_paths": [
-          "QR inválido/escopo incorreto é negado.",
-          "Caso paid + issued válido entra no ramo de escolha/mesa e retorna antes da RPC.",
-          "validate_combo_redemption em comboRedemptions.ts:1462 não é alcançada pelo caso válido analisado."
+          "QR inválido ou escopo incorreto é negado sem chamar a RPC.",
+          "Enquanto a escolha de entrega não foi confirmada, o fluxo solicita a escolha e preserva status issued.",
+          "Após escolha confirmada, preparo pendente retorna awaiting_preparation; resgate pronto alcança validate_combo_redemption."
         ],
         "error_paths": [
           "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
@@ -2811,15 +2811,19 @@
         "retry_reconciliation_paths": []
       },
       "terminals": [
+        "SUCCESS",
+        "ALREADY_USED",
         "WAITING_USER",
         "DENIED",
         "FAILURE"
       ],
-      "notes": [],
+      "notes": [
+        "PARCIAL: caminho local de consumo e replay coberto por testes comportamentais; aplicação e comportamento da RPC no banco remoto não foram validados."
+      ],
       "actors": [
         "kitchen_operator"
       ],
-      "implementation_status": "QUEBRADO",
+      "implementation_status": "PARCIAL",
       "test_status": "PARTIAL",
       "domains": [
         "domain.combo-commerce-fulfillment"
@@ -2863,7 +2867,7 @@
           "line": 935,
           "end_line": 1513,
           "symbol": "validateComboRedemptionScan",
-          "claim": "Existe RPC de consumo, mas o ramo antecipado captura todo combo pago/emitido válido e impede chegar ao consumo pelo leitor atual."
+          "claim": "A guarda de escolha limita o retorno antecipado a delivery_choice_confirmed_at ausente, permitindo que resgates confirmados e prontos alcancem validate_combo_redemption."
         }
       ]
     },

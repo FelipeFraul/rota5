@@ -20,8 +20,8 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 ### bug.combo-redemption-unreachable-consume — Caso válido de combo não alcança a RPC que consome o resgate
 
 - Tipo / severidade / prioridade: **BROKEN_FLOW / HIGH / P0**
-- Status / confiança: **ACTIVE / CONFIRMED**
-- Problema: Todos os ramos observados de paid + issued + escopo válido retornam antes da chamada validate_combo_redemption; a transição issued→used não ocorre pelo fluxo analisado.
+- Status / confiança: **RESOLVED / CONFIRMED**
+- Problema: O retorno antecipado abrangia também escolhas já confirmadas e foi restringido ao estado sem delivery_choice_confirmed_at; o caso confirmado e pronto agora alcança validate_combo_redemption.
 - Evidência: `src/lib/tickets/services/comboRedemptions.ts`:935 — Início da validação do scan.; `src/lib/tickets/services/comboRedemptions.ts`:1462 — RPC de consumo aparece depois dos retornos dos casos válidos.; `system-knowledge/flows.json` — kitchen.combo_redemption está QUEBRADO.
 - Impacto: A cozinha pode validar ou orientar entrega sem concluir atomicamente o consumo, permitindo reapresentação e divergência de estado.
 - Escopo: domains domain.combo-commerce-fulfillment; capabilities combo.redeem, combo.delivery_prompt; flows kitchen.combo_redemption.
@@ -58,4 +58,4 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 
 ## Revalidação dos flows
 
-Um flow QUEBRADO permanece: **kitchen.combo_redemption**. `admin.web_event_workspace` foi reclassificado para PARCIAL após a resolução do parse; agora há oito flows PARCIAIS: whatsapp.public_discovery, ticket.purchase, courtesy.public, combo.delivery_choice, admin.whatsapp_event_management, admin.courtesy_management, table_map.calibration e admin.web_event_workspace.
+Nenhum flow permanece QUEBRADO. Há nove flows PARCIAIS: whatsapp.public_discovery, ticket.purchase, courtesy.public, combo.delivery_choice, admin.whatsapp_event_management, admin.courtesy_management, table_map.calibration, admin.web_event_workspace e kitchen.combo_redemption.

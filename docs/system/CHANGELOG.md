@@ -1,5 +1,13 @@
 # Baseline changelog
 
+## BASELINE V1.2.0 — P0-2 RESOLVED
+
+- Resolved `bug.combo-redemption-unreachable-consume` with a minimal guard change in `src/lib/tickets/services/comboRedemptions.ts`.
+- `combo.redeem`: QUEBRADA → PARCIAL; `kitchen.combo_redemption`: QUEBRADO → PARCIAL.
+- Five focused local behavior tests pass; no remote mutating test was executed.
+- Gates: typecheck PASS; lint PASS with 24 preexisting warnings; npm test 207/214 with the same 7 preexisting failures; build PASS with the existing warning.
+- Baseline remains FROZEN; source base commit `121b7a8a4870f5933bd0cf0d45f12a8d71132424`; baseline commit SELF_NOT_RECORDED.
+
 ## BASELINE V1.1.0 — P0-1 RESOLVED
 
 - Date: 2026-09-12T13:36:12.110Z

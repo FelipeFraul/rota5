@@ -286,7 +286,7 @@ Capabilities classificadas FAILING por estes casos: `analytics.contacts`.
 | combo.prepare | PARTIAL | test-022 | — |
 | combo.delivery_prompt | PARTIAL | test-036 | — |
 | combo.delivery_choose | PARTIAL | test-036 | — |
-| combo.redeem | UNKNOWN | audit.combo-redemption-security | — |
+| combo.redeem | PARTIAL | test-036, audit.combo-redemption-security | — |
 | table_map.preview | PARTIAL | test-026 | — |
 | table_map.calibrate | PARTIAL | test-026 | — |
 | table_map.reserve | PARTIAL | test-026 | — |
@@ -333,4 +333,4 @@ Capabilities classificadas FAILING por estes casos: `analytics.contacts`.
 | FAILING | 14 |
 | COVERED | 8 |
 
-`combo.redeem` tem auditoria de RPC real não executada, mas nenhuma proteção de ponta a ponta suficiente para detectar o retorno antecipado do leitor. A quebra foi identificada no código. Não se criaram testes nesta etapa.
+`combo.redeem` possui cinco testes comportamentais locais no test-036; a auditoria real da RPC não foi executada.

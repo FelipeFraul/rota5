@@ -6,7 +6,7 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 
 - Tipo / severidade / prioridade: **TEST_GAP / HIGH / P1**
 - Status / confiança: **ACTIVE / CONFIRMED**
-- Problema: npm test executou 210 casos: 203 passaram e 7 falharam em seis arquivos; a suíte não oferece sinal verde de regressão.
+- Problema: npm test executou 214 casos: 207 passaram e as mesmas 7 falharam em seis arquivos; a suíte não oferece sinal verde de regressão.
 - Evidência: `package.json` — npm test contém 15 arquivos.; `scripts/test-admin-auth-pending-cancel.mjs`:32 — Expectativa de logout falha.; `scripts/test-admin-event-artist-name-leak.mjs`:143 — Duplicação falha.; `scripts/test-public-help-flow.mjs`:420 — Dois casos falham.; `scripts/test-whatsapp-batch-compat.mjs`:82 — Contrato textual falha.
 - Impacto: Mudanças futuras não conseguem distinguir regressões novas de falhas preexistentes sem triagem manual.
 - Escopo: domains domain.platform-runtime; capabilities —; flows —.
@@ -95,7 +95,7 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 
 ## Execução atual
 
-- npm test: 210 casos, 203 PASS, 7 FAIL.
+- npm test: 214 casos, 207 PASS, 7 FAIL.
 - typecheck: PASS, zero diagnósticos após a resolução de bug.create-event-invalid-jsx.
 - lint: PASS, zero erros e os mesmos 24 warnings preexistentes.
 - Suíte padrão: 15 arquivos.

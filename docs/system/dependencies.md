@@ -79,7 +79,7 @@ As relações mais centrais entre domínios são:
 | /api/admin/events/* | event-admin.api → event-admin.service | catálogo, inventário, vendas, tickets e RPCs administrativas |
 | /admin/eventos | event-admin.ui | APIs administrativas de eventos |
 | /api/gate/* e /gate/session/[token] | gate.ui-api → gate.validation | tickets, validações e validate_ticket_entry |
-| /api/kitchen/*, /kitchen/* e /offer-reader/session/[token] | combo.kitchen-reader-ui-api → combo.redemption | PARCIALMENTE CONFIRMADO: a RPC validate_combo_redemption existe, mas o leitor retorna antes do consumo para combo pago/emitido válido; capability combo.redeem QUEBRADA |
+| /api/kitchen/*, /kitchen/* e /offer-reader/session/[token] | combo.kitchen-reader-ui-api → combo.redemption | PARCIALMENTE CONFIRMADO: o leitor local alcança validate_combo_redemption após escolha confirmada e preparo; capability combo.redeem PARCIAL, sem prova mutante remota |
 | /api/cron/expire-reservations | background.expire-cron → reservation.expiry | expire_reservations, conversas e Z-API |
 | /api/cron/process-whatsapp-batches | background.batch-cron → batches/finalizer | tabelas e RPCs de batch |
 | scripts/import-programacao-events.mjs | event-admin.program-importer | admin_users e catálogo/inventário; Supabase |

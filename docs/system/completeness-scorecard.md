@@ -9,7 +9,7 @@
 | DATA | MEDIUM_CONFIDENCE | 44 tabelas e OpenAPI remoto coincidem; 77 migrations e definições finais locais foram recontadas. | Catálogo PostgreSQL remoto read-only. |
 | INTEGRATIONS | MEDIUM_CONFIDENCE | As 6 integrações e suas dependências foram reencontradas; superfícies seguras responderam. | Configuração e logs read-only dos provedores. |
 | INFRASTRUCTURE | MEDIUM_CONFIDENCE | Projetos, aliases, healthchecks, crons e drift site × rota5 foram revalidados. | Metadados e logs completos do deployment. |
-| TESTS | MEDIUM_CONFIDENCE | 43 arquivos foram recontados e a suíte padrão foi reexecutada: 203/210. | Ambiente isolado para a suíte ampliada e testes reais. |
+| TESTS | MEDIUM_CONFIDENCE | 43 arquivos foram recontados e a suíte padrão foi reexecutada: 207/214. | Ambiente isolado para a suíte ampliada e testes reais. |
 | RISKS | HIGH_CONFIDENCE | 44 findings foram confrontados com evidência; 3 P0 e todos os 10 HIGH permaneceram calibrados; nenhum CRITICAL foi provado. | Evidência remota dos itens NOT_VALIDATED. |
 | RUNTIME | MEDIUM_CONFIDENCE | 15 checks foram revisados; distribuição canônica permanece 12 PASS, 2 PARTIAL e 1 FAIL. | Observação read-only adicional ou ambiente isolado. |
 

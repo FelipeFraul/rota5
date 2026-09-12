@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-11",
-  "stage": 4,
+  "generatedAt": "2026-09-12T14:12:39.549Z",
+  "stage": "stabilization/p0-2",
   "count": 169,
   "flow_catalog": "rota5.flow-catalog.v1",
   "records": [
@@ -6287,11 +6287,11 @@
       "id": "kitchen.combo_redemption.step_02",
       "flow": "kitchen.combo_redemption",
       "order": 2,
-      "description": "Existe RPC de consumo, mas o ramo antecipado captura todo combo pago/emitido válido e impede chegar ao consumo pelo leitor atual.",
+      "description": "Após escolha confirmada e preparo concluído, validar e consumir atomicamente o resgate pela RPC validate_combo_redemption.",
       "actor": "kitchen_operator",
       "capability": "combo.redeem",
-      "action": "Existe RPC de consumo, mas o ramo antecipado captura todo combo pago/emitido válido e impede chegar ao consumo pelo leitor atual.",
-      "output": "Existe RPC de consumo, mas o ramo antecipado captura todo combo pago/emitido válido e impede chegar ao consumo pelo leitor atual.",
+      "action": "Após escolha confirmada e preparo concluído, validar e consumir atomicamente o resgate pela RPC validate_combo_redemption.",
+      "output": "Após escolha confirmada e preparo concluído, validar e consumir atomicamente o resgate pela RPC validate_combo_redemption.",
       "evidence": [
         {
           "kind": "implementation",
@@ -6299,7 +6299,7 @@
           "line": 935,
           "end_line": 1513,
           "symbol": "validateComboRedemptionScan",
-          "claim": "Existe RPC de consumo, mas o ramo antecipado captura todo combo pago/emitido válido e impede chegar ao consumo pelo leitor atual."
+          "claim": "A guarda corrigida permite que resgates confirmados e prontos alcancem a RPC de consumo."
         },
         {
           "kind": "call_site",
@@ -6317,7 +6317,8 @@
         }
       ],
       "possible_next_steps": [
-        "WAITING_USER",
+        "SUCCESS",
+        "ALREADY_USED",
         "DENIED",
         "FAILURE"
       ],

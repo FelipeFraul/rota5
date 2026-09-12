@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
+import { createHash, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import ts from "typescript";
 import { buildInitialConversationState } from "../src/lib/tickets/conversationState.ts";
 import {
   routeTicketMessage,
@@ -55,6 +57,147 @@ const comboRedemptionsSource = readFileSync(
   new URL("../src/lib/tickets/services/comboRedemptions.ts", import.meta.url),
   "utf8",
 );
+let comboRedemptionModulePromise;
+
+async function loadComboRedemptionModule() {
+  if (!comboRedemptionModulePromise) {
+    const source = comboRedemptionsSource
+      .replace(/^import "server-only";\r?\n/m, "")
+      .replace(/^import[\s\S]*?from "(?:crypto|@\/[^\"]+)";\r?\n/gm, "");
+    globalThis.__comboRedemptionScanMocks = {
+      createHash,
+      randomBytes,
+      getSupabaseAdmin: () => globalThis.__comboRedemptionScanScenario.supabase,
+      validateGateSessionToken: (...args) =>
+        globalThis.__comboRedemptionScanScenario.validateGateSessionToken(...args),
+      getOrCreateOpenConversation: async () => ({ ok: true, conversation: { id: "conversation-1" } }),
+      updateConversationAfterMessage: async () => ({ ok: true }),
+      saveWhatsAppMessage: async () => ({ ok: true }),
+      buildWhatsAppOutboundMetadata: (value) => value,
+      sendZapiImage: async () => ({ ok: true, providerMessageId: "image-1" }),
+      sendZapiText: async () => ({ ok: true, providerMessageId: "text-1" }),
+      generateComboQrImage: async () => Buffer.from("qr"),
+      formatComboDescription: () => "",
+      getOfficialTableMapPlace: () => ({ type: "table" }),
+      isPublicEventVisible: () => true,
+    };
+    const prelude = `const { createHash, randomBytes, getSupabaseAdmin, validateGateSessionToken, getOrCreateOpenConversation, updateConversationAfterMessage, saveWhatsAppMessage, buildWhatsAppOutboundMetadata, sendZapiImage, sendZapiText, generateComboQrImage, formatComboDescription, getOfficialTableMapPlace, isPublicEventVisible } = globalThis.__comboRedemptionScanMocks;\n`;
+    const transpiled = ts.transpileModule(prelude + source, {
+      compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 },
+    }).outputText;
+    comboRedemptionModulePromise = import(
+      `data:text/javascript;base64,${Buffer.from(transpiled).toString("base64")}`
+    );
+  }
+  return comboRedemptionModulePromise;
+}
+
+function createComboRedemptionScanScenario(overrides = {}) {
+  const token = "valid_combo_token_1234567890";
+  const row = {
+    id: "11111111-1111-4111-8111-111111111111",
+    combo_order_id: "combo-order-1",
+    customer_id: "customer-1",
+    event_id: "event-1",
+    session_id: "session-1",
+    redemption_code: "COMBO-001",
+    offer_name: "Combo teste",
+    quantity: 1,
+    status: "issued",
+    used_at: null,
+    qr_token_hash: createHash("sha256").update(token).digest("hex"),
+    raw_metadata: {
+      delivery_choice_confirmed_at: "2026-09-12T10:00:00.000Z",
+      delivery_choice: "table",
+      delivery_place_label: "mesa 1",
+      kitchen_status: "preparing",
+      ready_notified_at: "2026-09-12T10:05:00.000Z",
+    },
+    customers: { id: "customer-1", whatsapp_phone: "5515999999999" },
+    events: { title: "Evento" },
+    combo_orders: { id: "combo-order-1", status: "paid", source_order_id: "source-order-1", combo_offers: { description: "" } },
+    ...overrides.row,
+  };
+  const state = { row, reservation: overrides.reservation ?? { place_code: "01", status: "paid" }, rpcCalls: [], consumptionCount: 0, events: [], updates: [] };
+
+  class Query {
+    constructor(table) { this.table = table; this.operation = "select"; this.filters = []; }
+    select(columns) { this.columns = columns; return this; }
+    update(value) { this.operation = "update"; this.value = value; return this; }
+    insert(value) { this.operation = "insert"; this.value = value; return this; }
+    eq(column, value) { this.filters.push([column, value]); return this; }
+    matches(target) { return this.filters.every(([column, value]) => target?.[column] === value); }
+    execute() {
+      if (this.operation === "insert") {
+        state.events.push(...(Array.isArray(this.value) ? this.value : [this.value]));
+        return { data: null, error: null };
+      }
+      if (this.operation === "update") {
+        if (this.table === "combo_redemptions" && this.matches(state.row)) {
+          Object.assign(state.row, this.value);
+          state.updates.push(this.value);
+        }
+        return { data: null, error: null };
+      }
+      if (this.table === "official_table_map_reservations") return { data: state.reservation, error: null };
+      if (this.table === "combo_redemptions") {
+        const data = this.matches(state.row)
+          ? this.columns === "raw_metadata" ? { raw_metadata: state.row.raw_metadata } : state.row
+          : null;
+        return { data, error: null };
+      }
+      return { data: null, error: null };
+    }
+    maybeSingle() { return Promise.resolve(this.execute()); }
+    then(resolve, reject) { return Promise.resolve(this.execute()).then(resolve, reject); }
+  }
+
+  const supabase = {
+    from: (table) => new Query(table),
+    rpc: async (name, args) => {
+      assert.equal(name, "validate_combo_redemption");
+      state.rpcCalls.push(args);
+      let result;
+      if (args.p_redemption_id !== state.row.id || args.p_qr_token_hash !== state.row.qr_token_hash) {
+        result = { allowed: false, result: "not_found", message: "not found", redemption: null };
+      } else if (args.p_event_id && args.p_event_id !== state.row.event_id) {
+        result = { allowed: false, result: "wrong_event", message: "wrong event" };
+      } else if (args.p_session_id && args.p_session_id !== state.row.session_id) {
+        result = { allowed: false, result: "wrong_session", message: "wrong session" };
+      } else if (state.row.status === "used") {
+        result = { allowed: false, result: "already_used", message: "already used" };
+      } else if (state.row.status === "cancelled") {
+        result = { allowed: false, result: "cancelled", message: "cancelled" };
+      } else if (state.row.raw_metadata?.kitchen_status !== "preparing" || typeof state.row.raw_metadata?.ready_notified_at !== "string") {
+        result = { allowed: false, result: "awaiting_preparation", message: "awaiting preparation" };
+      } else {
+        state.consumptionCount += 1;
+        state.row.status = "used";
+        state.row.used_at = "2026-09-12T10:10:00.000Z";
+        result = { allowed: true, result: "allowed", message: "allowed", redemption: { redemptionId: state.row.id, status: "used", usedAt: state.row.used_at } };
+      }
+      state.events.push({ result: result.result, source: "rpc" });
+      return { data: result, error: null };
+    },
+  };
+
+  return {
+    state,
+    supabase,
+    comboToken: `combo:${row.id}:${token}`,
+    validateGateSessionToken: async () => overrides.kitchenSession ?? ({
+      valid: true,
+      gateSession: { id: "kitchen-session-1", gateLabel: "Bar", validatorIdentifier: "operator-1", eventId: overrides.eventId ?? "event-1", sessionId: overrides.sessionId ?? "session-1" },
+    }),
+  };
+}
+
+async function scanCombo(scenario, comboToken = scenario.comboToken) {
+  globalThis.__comboRedemptionScanScenario = scenario;
+  const { validateComboRedemptionScan } = await loadComboRedemptionModule();
+  return validateComboRedemptionScan({ kitchenSessionToken: "kitchen-token", comboToken, deviceToken: "device-token" });
+}
+
 const ticketsConfigSource = readFileSync(
   new URL("../src/lib/tickets/config.ts", import.meta.url),
   "utf8",
@@ -909,24 +1052,58 @@ test("respostas OK e 1 revalidam compra e reserva e nao concluem entrega", () =>
   assert.match(comboRedemptionsSource, /delivery_choice_status:\s*input\.choice === "waiter" \? "waiter_requested" : "table_requested"/);
 });
 
-test("QR vermelho repetido apos OK ou 1 nao reabre entrega nem cria evento operacional", () => {
-  const guardIndex = comboRedemptionsSource.indexOf(
-    'typeof existingMetadata.delivery_choice_confirmed_at === "string"',
-  );
-  const awaitingIndex = comboRedemptionsSource.indexOf(
-    'delivery_choice_status: "awaiting_customer"',
-  );
-  const promptStateIndex = comboRedemptionsSource.indexOf(
-    'state: "combo_delivery_confirming"',
-  );
-  const operationalEventIndex = comboRedemptionsSource.indexOf(
-    'reason: "delivery_choice_requested"',
-  );
+test("combo redemption valid prepared scan consumes exactly once and replay is rejected", async () => {
+  const scenario = createComboRedemptionScanScenario();
+  const first = await scanCombo(scenario);
+  const replay = await scanCombo(scenario);
+  assert.equal(first.allowed, true);
+  assert.equal(first.redemption?.status, "used");
+  assert.equal(replay.allowed, false);
+  assert.equal(replay.result, "already_used");
+  assert.equal(scenario.state.consumptionCount, 1);
+  assert.equal(scenario.state.rpcCalls.length, 2);
+  assert.equal(scenario.state.row.raw_metadata.kitchen_status, "delivered");
+});
 
-  assert.notEqual(guardIndex, -1);
-  assert.ok(guardIndex < awaitingIndex);
-  assert.ok(guardIndex < promptStateIndex);
-  assert.ok(guardIndex < operationalEventIndex);
-  assert.match(comboRedemptionsSource, /A forma de entrega desse combo ja foi escolhida/);
-  assert.match(comboRedemptionsSource, /Mantenha o QR Code vermelho aberto para apresentar na entrega/);
+test("combo redemption already used never produces another consumption", async () => {
+  const scenario = createComboRedemptionScanScenario({ row: { status: "used" } });
+  const result = await scanCombo(scenario);
+  assert.equal(result.result, "already_used");
+  assert.equal(scenario.state.consumptionCount, 0);
+  assert.equal(scenario.state.rpcCalls.length, 1);
+});
+
+test("combo redemption malformed QR does not reach consumption", async () => {
+  const scenario = createComboRedemptionScanScenario();
+  const result = await scanCombo(scenario, "invalid-qr");
+  assert.equal(result.result, "not_found");
+  assert.equal(scenario.state.rpcCalls.length, 0);
+  assert.equal(scenario.state.consumptionCount, 0);
+});
+
+test("combo redemption wrong scope is denied without consumption", async () => {
+  const scenario = createComboRedemptionScanScenario({ eventId: "event-2" });
+  const result = await scanCombo(scenario);
+  assert.equal(result.result, "wrong_event");
+  assert.equal(scenario.state.rpcCalls.length, 1);
+  assert.equal(scenario.state.consumptionCount, 0);
+});
+
+test("combo redemption delivery and preparation branches preserve their prerequisites", async () => {
+  const choosing = createComboRedemptionScanScenario({
+    row: { raw_metadata: { delivery_choice_requested_at: "2026-09-12T09:55:00.000Z", kitchen_status: "preparing", ready_notified_at: "2026-09-12T10:05:00.000Z" } },
+  });
+  const choosingResult = await scanCombo(choosing);
+  assert.equal(choosingResult.allowed, true);
+  assert.equal(choosing.state.rpcCalls.length, 0);
+  assert.equal(choosing.state.row.status, "issued");
+
+  const awaiting = createComboRedemptionScanScenario({
+    row: { raw_metadata: { delivery_choice_confirmed_at: "2026-09-12T10:00:00.000Z", kitchen_status: "pending" } },
+  });
+  const awaitingResult = await scanCombo(awaiting);
+  assert.equal(awaitingResult.result, "awaiting_preparation");
+  assert.equal(awaiting.state.rpcCalls.length, 0);
+  assert.equal(awaiting.state.consumptionCount, 0);
+  assert.equal(awaiting.state.row.status, "issued");
 });

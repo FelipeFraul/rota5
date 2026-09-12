@@ -55,7 +55,7 @@ Os módulos canônicos, seus caminhos e relações estão em [modules.md](module
 | Checkout de combo | combo.checkout-ui-api → combo.offers | Mercado Pago; webhook; QR e envio por Z-API |
 | Administração de evento | event-admin.ui → event-admin.api → event-admin.service | Supabase; parte das APIs também acessa tabelas/RPCs diretamente |
 | Portaria | gate.ui-api → gate.access-session → gate.validation | validate_ticket_entry e tabelas de gate/ticket |
-| Leitor de oferta/combo | combo.kitchen-reader-ui-api → gate.access-session → combo.redemption | PARCIALMENTE CONFIRMADO: validate_combo_redemption existe, mas não é alcançada para combo pago/emitido válido no leitor; combo.redeem QUEBRADA (comboRedemptions.ts:1035–1231, 1462) |
+| Leitor de oferta/combo | combo.kitchen-reader-ui-api → gate.access-session → combo.redemption | PARCIALMENTE CONFIRMADO: o leitor local alcança validate_combo_redemption após escolha confirmada e preparo; combo.redeem PARCIAL, sem prova mutante remota |
 | Importação de programação | event-admin.program-importer | lê programacao.md; com --apply grava catálogo/inventário diretamente no Supabase |
 | Cron de expiração | background.expire-cron → reservation.expiry | expire_reservations e Z-API |
 | Cron de batches | background.batch-cron → messaging.finalizer/messaging.batches | Tabelas e RPCs de batches; execução publicada não validada |

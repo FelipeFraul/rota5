@@ -104,7 +104,7 @@ A configuração versionada é CONFIRMADA. A ativação efetiva das agendas no p
 2. **Compra:** conversa ou página → reserva/pedido → endpoint Pix → Mercado Pago → webhook assinado → confirmação SQL → entrega de QR.
 3. **Admin web:** link/challenge → cookies assinados → APIs administrativas → serviços/RPCs → Supabase.
 4. **Portaria:** token de sessão → câmera/QR → endpoint scan → `validate_ticket_entry`; consult consulta o ingresso e validate valida sessão/resumo, sem consumir ingresso.
-5. **Cozinha/oferta:** dispositivo/sessão → leitor de oferta → endpoint scan → `validateComboRedemptionScan`; o ramo paid + issued + escopo válido retorna em `comboRedemptions.ts:1035–1231` antes da RPC `validate_combo_redemption` (:1462). Arquitetura PARCIALMENTE CONFIRMADA; capability `combo.redeem` QUEBRADA. O endpoint validate valida sessão/pedidos, sem consumir combo.
+5. **Cozinha/oferta:** dispositivo/sessão → leitor de oferta → endpoint scan → `validateComboRedemptionScan`; a guarda de escolha retorna apenas quando `delivery_choice_confirmed_at` está ausente; após confirmação e preparo o caso válido alcança `validate_combo_redemption`. Arquitetura PARCIALMENTE CONFIRMADA; capability `combo.redeem` PARCIAL. O endpoint validate valida sessão/pedidos, sem consumir combo.
 6. **Manutenção:** Vercel cron → expiração de reservas ou lote WhatsApp.
 
 As ligações estáticas acima não comprovam conclusão funcional. O bloqueio local do resgate está identificado na cadeia de cozinha/oferta; a execução ponta a ponta em serviços externos permanece PARCIALMENTE CONFIRMADA ou NÃO VALIDADA conforme [unknowns.md](unknowns.md).

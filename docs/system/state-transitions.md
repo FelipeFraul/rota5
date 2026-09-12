@@ -55,7 +55,7 @@ Foram catalogadas **66 transições** suportadas pelo código/migrations. Campo 
 | `state.049` | `combo_payment` | inserção | pending | `combo.pay_pix` | `combo.purchase` | HTTP_REQUEST | create Pix; OBSERVED |
 | `state.050` | `combo_payment` | pending | approved | `combo.confirm` | `combo.payment_confirmation` | WEBHOOK | approve combo payment; OBSERVED |
 | `state.051` | `combo_redemption` | inserção | issued | `combo.confirm` | `combo.payment_confirmation` | WEBHOOK | issue redemption QR; OBSERVED |
-| `state.052` | `combo_redemption` | issued | used | `combo.redeem` | `kitchen.combo_redemption` | ADMIN_ACTION | consume via RPC; blocked in current reader; BLOCKED_IN_CURRENT_READER |
+| `state.052` | `combo_redemption` | issued | used | `combo.redeem` | `kitchen.combo_redemption` | ADMIN_ACTION | consume via validate_combo_redemption after confirmed delivery choice and completed preparation; OBSERVED |
 | `state.053` | `combo_offer` | inserção | paused | `combo.create` | `admin.combo_management` | ADMIN_ACTION | create web offer initially paused; OBSERVED |
 | `state.054` | `whatsapp_message_batch` | collecting | processing | `background.cancel_batches` | `whatsapp.batch_processing` | CRON | claim due batch; OBSERVED |
 | `state.055` | `whatsapp_message_batch` | processing | failed | `background.cancel_batches` | `whatsapp.batch_processing` | CRON | fail batch after retry limit; OBSERVED |
