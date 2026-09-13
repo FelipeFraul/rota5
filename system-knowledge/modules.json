@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T16:27:50.380Z",
+  "generatedAt": "2026-09-13T23:22:29.421Z",
   "count": 66,
   "records": [
     {
@@ -335,7 +335,10 @@
         "export ROTA5_PRESENTATION_TABLE_MAP_ENABLED",
         "export ROTA5_PRESENTATION_COURTESY_ENABLED"
       ],
-      "notes": "Dois flags são duplicados no EventEditorModal."
+      "notes": [
+        "Dois flags são duplicados no EventEditorModal.",
+        "Scoped active-brand remediation validated on d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8; module status is unchanged."
+      ]
     },
     {
       "id": "brand.shell-assets",
@@ -558,7 +561,10 @@
         "export isPublicInitialHelpCommand",
         "export buildAllEventsOutboundMessages"
       ],
-      "notes": "Testes atuais detectam corrupção textual."
+      "notes": [
+        "Testes atuais detectam corrupção textual.",
+        "Scoped active-brand remediation validated on d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8; module status is unchanged."
+      ]
     },
     {
       "id": "messaging.customers",
@@ -1359,6 +1365,9 @@
         "export createCheckoutForReservation",
         "export getPublicCheckoutOrder",
         "export trackTicketCheckoutClick"
+      ],
+      "notes": [
+        "Scoped active-brand remediation validated on d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8; module status is unchanged."
       ]
     },
     {
@@ -2783,5 +2792,5 @@
       ]
     }
   ],
-  "stage": "stabilization/high-1-source-freeze"
+  "stage": "stabilization/legacy-brand-baseline-2.1.0"
 }

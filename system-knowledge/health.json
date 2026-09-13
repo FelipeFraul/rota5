@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T22:04:00.708Z",
-  "stage": "stabilization/high-1-gate-semantics-baseline-2.0.1",
-  "sourceCommit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
-  "scope": "Baseline 1.3.1 taxonomy correction after Git/Vercel identity resolution; no deployment of the current HEAD.",
+  "generatedAt": "2026-09-13T23:22:29.421Z",
+  "stage": "stabilization/legacy-brand-baseline-2.1.0",
+  "sourceCommit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+  "scope": "Baseline 2.1.0 after scoped active-brand remediation and runtime validation.",
   "method": "Análise estática, cinco testes comportamentais focados com fronteira Supabase simulada e gates locais canônicos; testes mutantes remotos não executados.",
   "vocabulary": [
     "HEALTHY",
@@ -16,7 +16,7 @@
   "system": {
     "id": "system.rota5",
     "health": "BROKEN",
-    "reason": "No active P0 remains. 4 ACTIVE HIGH, 1 POTENTIAL HIGH and 5 open HIGH remain after HIGH #1 resolution; the same seven default-test failures remain.",
+    "reason": "No active P0 remains. 3 ACTIVE HIGH, 1 POTENTIAL HIGH and 4 open HIGH remain after the scoped brand finding resolution; the same seven default-test failures remain.",
     "finding_counts_by_severity": {
       "CRITICAL": 0,
       "HIGH": 10,
@@ -26,11 +26,11 @@
     },
     "active_findings": {
       "P0": 0,
-      "HIGH": 4,
+      "HIGH": 3,
       "CRITICAL": 0,
-      "RESOLVED": 5,
+      "RESOLVED": 6,
       "POTENTIAL_HIGH": 1,
-      "OPEN_HIGH": 5
+      "OPEN_HIGH": 4
     }
   },
   "domains": [
@@ -38,7 +38,6 @@
       "id": "domain.platform-runtime",
       "health": "DEGRADED",
       "findings": [
-        "legacy.active-brand-contamination",
         "risk.rate-limit-fails-open",
         "risk.remote-database-controls-unvalidated",
         "risk.published-commit-unvalidated",
@@ -57,7 +56,6 @@
       "id": "domain.brand-presentation",
       "health": "DEGRADED",
       "findings": [
-        "legacy.active-brand-contamination",
         "dead.brand-logo-component",
         "legacy.table-map-presentation-disabled"
       ]
@@ -67,7 +65,6 @@
       "health": "DEGRADED",
       "findings": [
         "bug.user-visible-text-corruption",
-        "legacy.active-brand-contamination",
         "risk.github-issue-create-replay",
         "risk.remote-webhook-registration-unvalidated",
         "gap.critical-flow-correlation",
@@ -121,7 +118,6 @@
       "health": "DEGRADED",
       "findings": [
         "bug.user-visible-text-corruption",
-        "legacy.active-brand-contamination",
         "risk.remote-database-controls-unvalidated",
         "risk.remote-webhook-registration-unvalidated",
         "gap.critical-flow-correlation",
@@ -244,9 +240,7 @@
       "id": "brand.present_individual_offers",
       "health": "HEALTHY",
       "canonical_status": "CONFIRMADA",
-      "findings": [
-        "legacy.active-brand-contamination"
-      ]
+      "findings": []
     },
     {
       "id": "messaging.receive",
@@ -286,8 +280,7 @@
       "health": "DEGRADED",
       "canonical_status": "PARCIAL",
       "findings": [
-        "bug.user-visible-text-corruption",
-        "legacy.active-brand-contamination"
+        "bug.user-visible-text-corruption"
       ]
     },
     {
@@ -547,8 +540,7 @@
       "health": "HEALTHY",
       "canonical_status": "CONFIRMADA",
       "findings": [
-        "bug.user-visible-text-corruption",
-        "legacy.active-brand-contamination"
+        "bug.user-visible-text-corruption"
       ]
     },
     {
@@ -1104,9 +1096,7 @@
       "id": "payment.return_notice",
       "health": "HEALTHY",
       "canonical_status": "CONFIRMADA",
-      "findings": [
-        "legacy.active-brand-contamination"
-      ]
+      "findings": []
     },
     {
       "id": "analytics.general_report",
@@ -1166,7 +1156,6 @@
       "canonical_status": "PARCIAL",
       "findings": [
         "bug.user-visible-text-corruption",
-        "legacy.active-brand-contamination",
         "debt.router-responsibility-concentration",
         "risk.whatsapp-conversation-context-race",
         "gap.partial-flows-lack-end-to-end-proof"
@@ -1177,7 +1166,6 @@
       "health": "DEGRADED",
       "canonical_status": "PARCIAL",
       "findings": [
-        "legacy.active-brand-contamination",
         "debt.router-responsibility-concentration",
         "legacy.table-map-presentation-disabled",
         "debt.payment-reconciliation-duplication-is-intentional",
@@ -1469,7 +1457,6 @@
       "health": "DEGRADED",
       "reason": "Validação remota parcial na Etapa 5.",
       "findings": [
-        "legacy.active-brand-contamination",
         "risk.remote-webhook-registration-unvalidated",
         "risk.local-runtime-env-incomplete",
         "gap.critical-flow-correlation",
@@ -1483,7 +1470,6 @@
       "health": "DEGRADED",
       "reason": "Validação remota parcial na Etapa 5.",
       "findings": [
-        "legacy.active-brand-contamination",
         "risk.published-commit-unvalidated",
         "risk.local-runtime-env-incomplete"
       ]
@@ -1541,6 +1527,7 @@
   "resolved_findings": [
     "bug.create-event-invalid-jsx",
     "bug.combo-redemption-unreachable-consume",
+    "legacy.active-brand-contamination",
     "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.vercel-project-identity-drift",
     "risk.latest-rota5-deployment-error"
@@ -1548,7 +1535,7 @@
   "infrastructure_health": "DEGRADED",
   "high_1": {
     "source_implementation": "IMPLEMENTED_AND_VALIDATED",
-    "canonical_repository_source_commit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
+    "canonical_repository_source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
     "production_rollout": "COMPLETE",
     "strategy": "EXPAND_DEPLOY_CONTRACT",
     "phase_0": "PASS",
@@ -1559,18 +1546,18 @@
     "expand_applied_at": "2026-09-13T14:20:15.059853Z",
     "dual_mode": "ENDED",
     "new_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
-    "production_runtime_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+    "production_runtime_app_artifact": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
     "new_app_pushed": true,
     "new_app_deployed": true,
     "new_app": "PRODUCTION_CUTOVER_COMPLETE",
     "new_app_state": "PRODUCTION_CUTOVER_COMPLETE",
-    "production_deployment": "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+    "production_deployment": "dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo",
     "production_status": "READY",
     "new_app_cutover_at": "2026-09-13T16:19:42.340Z",
     "old_app_serving_after_cutover": false,
     "new_app_serving": true,
     "rollback_performed": false,
-    "app_runtime_source_changed_since_cacbc430": false,
+    "app_runtime_source_changed_since_cacbc430": true,
     "contract": "APPLIED_AND_VALIDATED",
     "contract_remote": "APPLIED_AND_VALIDATED",
     "contract_artifact": "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql",
@@ -1679,5 +1666,11 @@
     "relevant_log_errors": 0,
     "resolution": "COMPLETE",
     "finding_status": "RESOLVED"
+  },
+  "legacy_brand_resolution": {
+    "status": "RESOLVED",
+    "scope": "DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES",
+    "source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+    "production_deployment": "dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo"
   }
 }

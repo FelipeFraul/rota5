@@ -1,3 +1,7 @@
+# Baseline 2.1.0 scoped active-brand flow projection
+
+The finding is RESOLVED for the documented active surfaces. `ticket.purchase` and `whatsapp.public_discovery` retain PARCIAL status because their independent flow evidence did not change.
+
 # Baseline 2.0.1 HIGH #1 flow runtime state
 
 `gate.access_management`, `gate.ticket_admission` and `kitchen.combo_redemption` retain their conservative catalog statuses, while the HIGH #1 authorization behavior is validated on FINAL_DB. Gates A-I and strict ticket/combo runtime passed.

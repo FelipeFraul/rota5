@@ -1,5 +1,16 @@
 # Baseline changelog
 
+## BASELINE V2.1.0 - SCOPED ACTIVE-BRAND RESOLUTION
+
+- **MINOR_COMPATIBLE_FUNCTIONAL_CHANGE** on source `d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8`, fingerprint `b18a51cba6668b4ea37854f4e722181961cf9afac13d8f02638672a75c18426e`, 356 functional files and 79 migrations.
+- Removed the documented active RockBar/Black House branding from checkout notices, five public-help responses, scoped router prompts, CSS/background assets, static CORS and the unused environment-schema entry.
+- Preview `dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW` and Production `dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo` are READY on the exact source commit; scoped runtime checks passed and relevant Production log errors are zero.
+- `legacy.active-brand-contamination` moved from ACTIVE to RESOLVED for `DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES`. Historical strings outside that audited scope are not covered by the resolution assertion.
+- ACTIVE HIGH=3, POTENTIAL HIGH=1, OPEN HIGH=4 and RESOLVED=6. Product health remains BROKEN and infrastructure health DEGRADED.
+- Typecheck, lint and build passed; focused tests are 114/116 with two unrelated preexisting failures; the default suite remains 207/214 with the same seven failures; new regressions=0.
+- Supabase and Ticketeira were unchanged; Git auto-deploy remains DISABLED.
+
+
 ## BASELINE V2.0.1 — GATE F-I SEMANTIC CORRECTION
 
 - PATCH_DOCUMENTATION_SEMANTIC_CORRECTION only; no functional, runtime or remote change.

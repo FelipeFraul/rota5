@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T19:08:55.803Z",
+  "generatedAt": "2026-09-13T23:22:29.421Z",
   "count": 51,
   "defaultSuite": {
     "command": "npm test",
@@ -17,7 +17,7 @@
       "test-public-help-flow.mjs",
       "test-whatsapp-batch-compat.mjs"
     ],
-    "evidence": "Reexecuted before the HIGH #1 functional commit on 2026-09-12; same seven historical failures.",
+    "evidence": "Reexecuted for scoped active-brand remediation on 2026-09-13; 207/214 with the same seven historical failures.",
     "previousSnapshot": {
       "date": "2026-09-11",
       "observedCases": 210,
@@ -1305,7 +1305,7 @@
     "safeLocalExecution": true,
     "note": "stage3Validation permanece histórico e não foi reinterpretado."
   },
-  "stage": "stabilization/high-1-final-baseline-2.0.0",
+  "stage": "stabilization/legacy-brand-baseline-2.1.0",
   "high_1_validation": {
     "focused_new_app": {
       "passed": 96,
@@ -1340,5 +1340,27 @@
       "relevant_log_errors": 0
     },
     "remote_mutating_tests": "EXECUTED_ONLY_IN_CONTROLLED_GATES_WITH_CLEANUP_PASS"
+  },
+  "legacy_brand_scoped_validation": {
+    "status": "PASS",
+    "typecheck": "PASS",
+    "lint": {
+      "status": "PASS",
+      "errors": 0,
+      "warnings": 23
+    },
+    "build": "PASS",
+    "focused": {
+      "cases": 116,
+      "passed": 114,
+      "failed_preexisting_unrelated": 2
+    },
+    "default_suite": {
+      "cases": 214,
+      "passed": 207,
+      "failed_preexisting": 7
+    },
+    "new_regressions": 0,
+    "source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8"
   }
 }

@@ -11,6 +11,7 @@ This document orders current findings; it does not introduce features or patches
 Nenhum finding P0 ativo.
 
 ## RESOLVED
+- `legacy.active-brand-contamination` - scoped active surfaces passed Preview and Production validation on `d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8`; historical strings outside the audited scope are not covered.
 - `risk.gate-credential-revocation-does-not-revoke-session` — EXPAND/CONTRACT complete; gates A-I and strict runtime passed.
 - `bug.create-event-invalid-jsx` — JSX corrigido; typecheck, lint e build passam.
 - `bug.combo-redemption-unreachable-consume` — caminho atômico restaurado localmente; equivalência remota continua não validada.
@@ -20,7 +21,6 @@ Nenhum finding P0 ativo.
 ## P1 — ACTIVE AND POTENTIAL STABILIZATION
 - `bug.event-duplicate-artist-leak` — Duplicação de evento preserva artista do evento de origem
 - `bug.user-visible-text-corruption` — Textos ativos contêm mojibake e substituições por interrogação
-- `legacy.active-brand-contamination` — Superfícies Rota5 exibem referências e assets Black House/RockBar
 - `risk.admin-event-multistep-partial-state` (POTENTIAL) — Criação de evento e catálogo inicial cruza entidades sem transação única
 - `gap.default-test-suite-failing` — Suíte padrão está vermelha com sete casos falhos
 - `gap.critical-capability-and-flow-coverage` — Capabilities e flows relevantes não têm teste direto

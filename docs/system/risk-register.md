@@ -1,5 +1,8 @@
 # Baseline 2.0.1 HIGH #1 final state
 
+Baseline 2.1.0: `legacy.active-brand-contamination` is RESOLVED for `DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES` on source `d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8`. ACTIVE HIGH=3, POTENTIAL HIGH=1, OPEN HIGH=4, RESOLVED=6. Product health remains BROKEN.
+
+
 `risk.gate-credential-revocation-does-not-revoke-session` is `RESOLVED/HIGH/P1`. EXPAND and CONTRACT are APPLIED_AND_VALIDATED, gates A-I passed, and strict post-CONTRACT runtime passed. Product health remains BROKEN and infrastructure health DEGRADED due independent findings.
 
 # Risk register
@@ -18,7 +21,7 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 | bug.combo-redemption-unreachable-consume | BROKEN_FLOW | HIGH | P0 | RESOLVED | CONFIRMED | Caso válido de combo não alcança a RPC que consome o resgate |
 | bug.event-duplicate-artist-leak | BUG | MEDIUM | P1 | ACTIVE | CONFIRMED | Duplicação de evento preserva artista do evento de origem |
 | bug.user-visible-text-corruption | BUG | MEDIUM | P1 | ACTIVE | CONFIRMED | Textos ativos contêm mojibake e substituições por interrogação |
-| legacy.active-brand-contamination | LEGACY | HIGH | P1 | ACTIVE | CONFIRMED | Superfícies Rota5 exibem referências e assets Black House/RockBar |
+| legacy.active-brand-contamination | LEGACY | HIGH | P1 | RESOLVED | CONFIRMED | Scoped active-brand surfaces corrected and runtime-validated |
 | risk.gate-credential-revocation-does-not-revoke-session | AUTHORIZATION | HIGH | P1 | RESOLVED | CONFIRMED | Source attribution and strict credential/session authorization completed |
 | risk.admin-event-multistep-partial-state | DATA_INTEGRITY | HIGH | P1 | POTENTIAL | HIGH | Criação de evento e catálogo inicial cruza entidades sem transação única |
 | risk.combo-metadata-read-modify-write-race | CONCURRENCY | MEDIUM | P2 | POTENTIAL | HIGH | Atualizações concorrentes podem sobrescrever metadados do combo |
@@ -115,19 +118,15 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 - Direção: Normalizar os arquivos fonte e ampliar a verificação para corrupção por substituição e bytes reinterpretados.
 - Justificativa da prioridade: P1 porque o defeito é visível em jornadas públicas e administrativas e já quebra testes.
 
-### legacy.active-brand-contamination — Superfícies Rota5 exibem referências e assets Black House/RockBar
+### legacy.active-brand-contamination - Scoped active surfaces resolved
 
-- Tipo / severidade / prioridade: **LEGACY / HIGH / P1**
-- Status / confiança: **ACTIVE / CONFIRMED**
-- Problema: Checkout, ajuda e logs de pagamento usam Black House; CSS de checkout usa rockbar.webp/rockbar_mb.webp; domínio canônico declarado também é Black House.
-- Evidência: `src/app/checkout/pending/page.tsx`:8 — Mensagem de pagamento cita Black House.; `src/app/checkout/success/page.tsx`:8 — Mensagem de confirmação cita Black House.; `src/app/globals.css`:174 — Checkout usa rockbar.webp.; `next.config.ts`:3 — Origin de produção aponta para domínio Black House.
-- Impacto: A marca, confiança de pagamento e identidade visual podem ser incorretas para compradores Rota5, além de aumentar o risco de operar o projeto errado.
-- Escopo: domains domain.brand-presentation, domain.orders-payments, domain.whatsapp-conversations, domain.platform-runtime; capabilities brand.present_individual_offers, payment.checkout_view, payment.return_notice, messaging.help; flows ticket.purchase, whatsapp.public_discovery.
-- Blast radius: **MULTI_DOMAIN**
-- Workaround: Nenhum seletor de marca/tenant foi encontrado.
-- Direção: Definir a identidade canônica antes de classificar cada referência como compartilhada ou legado removível.
-- Justificativa da prioridade: P1 porque referências legadas estão ativas em pagamento e comunicação ao cliente.
-
+- Type / severity / priority: **LEGACY / HIGH / P1**
+- Status / confidence: **RESOLVED / CONFIRMED**
+- Original problem and evidence: active checkout, public-help, router, CSS/background, CORS and environment-schema surfaces contained RockBar/Black House identity.
+- Resolution: all active surfaces documented and revalidated for the finding were corrected in source `d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8`.
+- Runtime evidence: Preview `dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW` and Production `dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo` passed with zero scoped legacy terms, zero broken background references, no legacy CORS and zero relevant Production log errors.
+- Scope limitation: resolution is `DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES`; it does not assert that historical brand strings are absent from the entire repository.
+- Product impact: this HIGH finding is closed, while independent findings keep product health BROKEN and infrastructure health DEGRADED.
 ### risk.gate-credential-revocation-does-not-revoke-session — Credential revocation and attributed session authorization
 
 - Type / severity / priority: **AUTHORIZATION / HIGH / P1**

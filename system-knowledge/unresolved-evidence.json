@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T19:08:55.803Z",
-  "stage": "stabilization/high-1-final-baseline-2.0.0",
+  "generatedAt": "2026-09-13T23:22:29.421Z",
+  "stage": "stabilization/legacy-brand-baseline-2.1.0",
   "count": 10,
   "status": "EXPLICITLY_PRESERVED_WITH_RESOLVED_HISTORY",
   "records": [
@@ -64,7 +64,7 @@
       "category": "INFRASTRUCTURE",
       "question": "Commit/source SHA efetivamente publicado nos deployments observados",
       "status": "RESOLVED",
-      "currentEvidence": "Production deployment dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT was proven to serve immutable runtime artifact cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8; repository-only CONTRACT migration/test changes do not alter src/**.",
+      "currentEvidence": "Production deployment dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo was proven to serve exact source commit d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8.",
       "neededEvidence": "NONE_FOR_CURRENT_STATE",
       "lastReviewedAt": "2026-09-13"
     },
@@ -73,7 +73,7 @@
       "category": "INFRASTRUCTURE",
       "question": "Historical root cause of the superseded ERROR deployment",
       "status": "RESOLVED",
-      "currentEvidence": "The current latest Production deployment dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT is READY and serves canonical aliases; the prior failed deployment no longer defines current health.",
+      "currentEvidence": "The current latest Production deployment dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo is READY and serves canonical aliases; the prior failed deployment remains historical.",
       "neededEvidence": "NONE_FOR_CURRENT_STATE",
       "lastReviewedAt": "2026-09-13"
     },

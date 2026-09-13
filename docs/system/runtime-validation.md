@@ -1,6 +1,6 @@
-# Baseline 2.0.1 HIGH #1 runtime evidence
+# Baseline 2.1.0 scoped active-brand runtime evidence
 
-Gates A-I passed: F strict ticket, G strict combo, H temporary credential revocation and I fixed credential revocation. Post-CONTRACT runtime proved strict ticket/combo, temporary/fixed revoke, admin_direct, legacy rejection, source-null rejection, source immutability and fixture cleanup. Unrelated changes and relevant Production log errors were zero. Production remains `dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT`.
+Preview `dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW` and Production `dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo` are READY on exact source `d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8`. Checkout pending/success, five public-help topics, scoped router points, CSS/assets and static CORS passed; relevant Production log errors are zero.
 
 # Runtime validation — Etapa 5
 
@@ -16,7 +16,7 @@ Todas as verificações foram GET, HEAD, metadata ou logs em modo leitura. O cat
 | `runtime.vercel-project` | Vercel linked project | REMOTE_CONFIG | PASS | `rota5` (`prj_dl7tt8fZbw88ZQV0GhklY0akEwbf`) ligado a `FelipeFraul/rota5`; Production Branch `production`. |
 | `runtime.vercel-env` | Vercel environment names | REMOTE_CONFIG | PASS | 24 nomes observados; valores não lidos nem persistidos. |
 | `runtime.vercel-declared-domain` | Historical Ticketeira classification | REMOTE_CONFIG | PASS | `site` e `FelipeFraul/ticketeira` são infraestrutura da Ticketeira, não da cadeia operacional do Rota5. |
-| `runtime.vercel-linked-deployment` | Vercel linked production deployment | REMOTE_CONFIG | PASS | Deployment Production `dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT` READY atende os aliases canônicos e passou os probes de runtime. |
+| `runtime.vercel-linked-deployment` | Vercel linked production deployment | REMOTE_CONFIG | PASS | Deployment Production `dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo` READY atende os aliases canônicos e executa o source exato `d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8`. |
 | `runtime.health-declared` | Health declared domain | RUNTIME_OBSERVED | PASS | GET /api/health retornou HTTP 200 e status ok. |
 | `runtime.health-linked` | Health linked alias | RUNTIME_OBSERVED | PASS | GET /api/health retornou HTTP 200 e status ok. |
 | `runtime.github-repository` | GitHub repository metadata | REMOTE_CONFIG | PASS | Repositório privado `FelipeFraul/rota5`; branch operacional `production`. |
@@ -24,7 +24,7 @@ Todas as verificações foram GET, HEAD, metadata ou logs em modo leitura. O cat
 | `runtime.codex-version` | Codex CLI version | RUNTIME_OBSERVED | PASS | codex-cli 0.147.0 observado localmente. |
 | `runtime.vercel-logs` | Vercel runtime logs | RUNTIME_OBSERVED | PARTIAL | 50 registros na janela consultada, com 1 entrada de erro; conteúdo sensível não persistido. |
 
-O commit publicado é `NOT_VALIDATED`: o HEAD atual e `origin/production` coincidem, mas nenhum release desse HEAD foi realizado. Identidade correta não implica código publicado.
+O source funcional atual foi validado no deployment Production `dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo`. O finding independente de published-commit mantém seu lifecycle anterior nesta tarefa, conforme a regra de não alterar outros findings.
 
 ## Revalidação dos resultados fora de PASS
 

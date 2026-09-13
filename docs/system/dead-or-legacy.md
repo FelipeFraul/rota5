@@ -2,19 +2,14 @@
 
 Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb8442f95493de3ca4ec4d4c997b e o working tree descrito no machine-readable. Esta etapa registra fatos e riscos; não aplica correções.
 
-### legacy.active-brand-contamination — Superfícies Rota5 exibem referências e assets Black House/RockBar
+### legacy.active-brand-contamination - Scoped active surfaces resolved
 
-- Tipo / severidade / prioridade: **LEGACY / HIGH / P1**
-- Status / confiança: **ACTIVE / CONFIRMED**
-- Problema: Checkout, ajuda e logs de pagamento usam Black House; CSS de checkout usa rockbar.webp/rockbar_mb.webp; domínio canônico declarado também é Black House.
-- Evidência: `src/app/checkout/pending/page.tsx`:8 — Mensagem de pagamento cita Black House.; `src/app/checkout/success/page.tsx`:8 — Mensagem de confirmação cita Black House.; `src/app/globals.css`:174 — Checkout usa rockbar.webp.; `next.config.ts`:3 — Origin de produção aponta para domínio Black House.
-- Impacto: A marca, confiança de pagamento e identidade visual podem ser incorretas para compradores Rota5, além de aumentar o risco de operar o projeto errado.
-- Escopo: domains domain.brand-presentation, domain.orders-payments, domain.whatsapp-conversations, domain.platform-runtime; capabilities brand.present_individual_offers, payment.checkout_view, payment.return_notice, messaging.help; flows ticket.purchase, whatsapp.public_discovery.
-- Blast radius: **MULTI_DOMAIN**
-- Workaround: Nenhum seletor de marca/tenant foi encontrado.
-- Direção: Definir a identidade canônica antes de classificar cada referência como compartilhada ou legado removível.
-- Justificativa da prioridade: P1 porque referências legadas estão ativas em pagamento e comunicação ao cliente.
-
+- Type / severity / priority: **LEGACY / HIGH / P1**
+- Status / confidence: **RESOLVED / CONFIRMED**
+- Resolution: checkout pending/success, five public-help responses, the resend fallback and three additional audited router prompts, the dead greeting block, active CSS background references, static CORS and the unused environment-schema entry were corrected.
+- Runtime proof: Preview `dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW` and Production `dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo` are READY on exact source `d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8`; scoped legacy terms, CSS RockBar references, broken backgrounds and legacy CORS are zero; both Rota5 assets return HTTP 200; relevant Production log errors are zero.
+- Historical evidence preserved: the original finding recorded active checkout copy, public help, router copy, CSS references and Black House CORS before remediation.
+- Scope limitation: resolution covers `DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES`. It is not a repository-wide assertion that historical brand strings do not exist elsewhere.
 ### dead.brand-logo-component — BrandLogo.tsx não possui consumidor encontrado
 
 - Tipo / severidade / prioridade: **DEAD_CODE / LOW / P3**
@@ -115,5 +110,5 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 | seat_map_renders | EXTERNAL_USAGE_UNKNOWN | Sem consumidor local; remoto externo não excluído |
 | assets sem referência | EXTERNAL_USAGE_UNKNOWN | Podem ser consumidos por CSS, URL ou operação externa |
 | scripts Black House | ACTIVE_SHARED/BLACKHOUSE_LEGACY pendente | Scripts operacionais explícitos, não dead code |
-| rockbar.webp / rockbar_mb.webp | ROCKBAR_LEGACY ativo | CSS do checkout referencia os assets |
+| rockbar.webp / rockbar_mb.webp | RESOLVED historical evidence | Active CSS now references valid rota5.webp / rota5_mb.webp assets |
 | flags de mesa/cortesia | UNKNOWN/LEGACY | Implementação presente e apresentação Rota5 desativada |

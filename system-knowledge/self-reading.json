@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T19:08:55.803Z",
-  "stage": "stabilization/high-1-final-baseline-2.0.0",
+  "generatedAt": "2026-09-13T23:22:29.421Z",
+  "stage": "stabilization/legacy-brand-baseline-2.1.0",
   "id": "rota5-self-reading-v1",
   "baseline_id": "rota5-baseline-v1",
   "bootstrap_files": [
@@ -245,11 +245,12 @@
       "findings.json"
     ],
     "remote_database_not_validated": "HIGH #1 migration history, FINAL_DB constraints/functions/triggers and runtime behavior were validated. Other remote PostgreSQL internals, RLS, policies, grants and Supabase Auth configuration remain NOT_VALIDATED.",
-    "infrastructure_state": "Git/Vercel identity and manual release path are correct. Production deployment dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT serves runtime artifact cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8; the repository source is bd0012f3a3277b2b6d1a97390ba7c3cc460a9165; Git auto-deploy is disabled. Infrastructure remains DEGRADED due independent findings.",
+    "infrastructure_state": "Git/Vercel identity and manual release path are correct. Production deployment dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo serves exact source commit d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8; Git auto-deploy is disabled. Infrastructure remains DEGRADED due independent findings.",
     "p0_findings": [],
     "add_capability": "Assign canonical ID, domain, type, description, modules, entrypoints, data/integrations, flow placement, tests and evidence; update capability and related flow/data/test catalogs, validate, then version the baseline.",
     "after_change": "Follow CHANGE-PROTOCOL.md and update every affected JSON plus its Markdown projection; regenerate fingerprint and baseline-integrity.json and run the validator.",
-    "product_health_update": "No P0 is active. 4 ACTIVE HIGH, 1 POTENTIAL HIGH and 5 open HIGH remain. HIGH #1 is RESOLVED; product health remains BROKEN.",
-    "high_1": "RESOLVED: EXPAND and CONTRACT are APPLIED_AND_VALIDATED, gates A-I passed, authorization is strict-only and source attribution is non-null and immutable."
+    "product_health_update": "No P0 is active. 3 ACTIVE HIGH, 1 POTENTIAL HIGH and 4 open HIGH remain. The scoped active-brand finding is RESOLVED; product health remains BROKEN.",
+    "high_1": "RESOLVED: EXPAND and CONTRACT are APPLIED_AND_VALIDATED, gates A-I passed, authorization is strict-only and source attribution is non-null and immutable.",
+    "legacy_brand": "RESOLVED for DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES on Preview dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW and Production dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo; this is not a repository-wide assertion about historical strings."
   }
 }

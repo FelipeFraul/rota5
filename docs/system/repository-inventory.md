@@ -131,7 +131,7 @@ A segunda passagem encontrou referências de código ou ferramentas para 43 tabe
 | `fonts/BebasNeue-Regular.ttf`, `fonts/Handjet-Regular.ttf` | CSS/geração de QR | CONFIRMADO |
 | `arte_combo_rota5.webp`, `dj.png`, `singer.png`, `logo_rota5.png`, `logo_rota5.webp` | nenhum consumidor textual encontrado | ÓRFÃO estático |
 | `ticket_blackhouse.psd` | nenhum consumidor de runtime encontrado; arquivo-fonte editável | POSSÍVEL LEGADO |
-| `/rockbar.webp`, `/rockbar_mb.webp` | referenciados por `globals.css`, ausentes de `public/` | POSSÍVEL LEGADO / referência sem implementação |
+| `/rota5.webp`, `/rota5_mb.webp` | referenced by `globals.css`, present in `public/`, HTTP 200 in Preview and Production | ACTIVE ROTA5 ASSETS |
 
 ## Scripts e ferramentas
 

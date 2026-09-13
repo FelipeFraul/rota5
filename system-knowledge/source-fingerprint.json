@@ -1,25 +1,25 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T22:04:00.708Z",
-  "stage": "stabilization/high-1-gate-semantics-baseline-2.0.1",
-  "base_commit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
+  "generatedAt": "2026-09-13T23:22:29.421Z",
+  "stage": "stabilization/legacy-brand-baseline-2.1.0",
+  "base_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
   "functional_changes_since_base": [],
   "baseline_commit": "SELF_NOT_RECORDED",
   "git_observation_at_generation": {
-    "observed_at": "2026-09-13T22:04:00.708Z",
+    "observed_at": "2026-09-13T23:22:29.421Z",
     "branch": "production",
-    "head": "f20c60242af855c802dee6fd0f93a9848d0e2720",
+    "head": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
     "working_tree_clean": false,
     "validity_role": "INFORMATIONAL_ONLY",
-    "note": "Only Baseline 2.0.1 semantic-correction artifacts were being generated; functional source identity is unchanged."
+    "note": "Only Baseline 2.1.0 knowledge artifacts are being generated; the functional source is the already committed and deployed pure commit."
   },
   "package_lock_sha256": "a8b041c08ae27909dd319ba888c0e34494598b6889f10f92e28129ac5a55ee95",
   "migrations_aggregate_hash": "4c196e3220366238e42bf9a3a283a8089969c7fd77e0b2e5d19a0948c14d229a",
   "migrations_count": 79,
-  "source_tree_fingerprint": "c70f133b075bc479e713d052fb0001c5e95ce35c140892bd5e5b6a121e05a53f",
+  "source_tree_fingerprint": "b18a51cba6668b4ea37854f4e722181961cf9afac13d8f02638672a75c18426e",
   "source_tree_file_count": 356,
   "source_tree_strategy": "Run git ls-files -z; normalize paths to forward slashes; exclude docs/system/**, system-knowledge/**, .tools/baseline/** and any path segment beginning with .stage; sort remaining paths lexicographically; SHA-256 each tracked file in its canonical Git representation (index blob for staged/clean content, current working-tree bytes for an unstaged functional change); concatenate path + NUL + sha256 + LF; SHA-256 the UTF-8 concatenation. Reconstruct commits from their raw Git blob bytes with the same path and aggregation rules.",
-  "freeze_timestamp": "2026-09-13T22:04:00.708Z",
+  "freeze_timestamp": "2026-09-13T23:22:29.421Z",
   "secrets_included": false,
   "source_tree_strategy_version": 3,
   "source_tree_exclusions": [

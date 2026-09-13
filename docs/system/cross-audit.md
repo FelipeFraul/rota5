@@ -14,7 +14,7 @@
 - 36/36 JSONs parseiam; zero IDs duplicados relevantes e zero referências quebradas.
 - 17 domains, 66 modules, 56 entrypoints, 140 capabilities, 34 flows, 169 steps e 66 transitions foram revalidados.
 - 44 tabelas, 77 migrations, 33 funções SQL, 33 triggers e 2.223 relações foram recontadas.
-- 6 integrações, 2 webhooks, 2 crons, 44 env vars, 43 testes e 44 findings permanecem catalogados.
+- 6 integrações, 2 webhooks, 2 crons, 43 env vars, 43 testes e 44 findings permanecem catalogados.
 - Cobertura sem classificação: zero; capability funcional sem classificação: zero; entrypoint funcional sem classificação: zero; flow sem status: zero.
 
 ## Testes e runtime
@@ -35,7 +35,7 @@ Os três P0 permanecem:
 
 ## Segunda passagem independente
 
-Uma reconstrução sem consultar `docs/system` ou `system-knowledge` recontou App Router, scripts NPM/operacionais, migrations, providers, env vars e superfícies de runtime. A comparação não encontrou nova área central, entrypoint, capability, integração ou finding ausente. Marcas Rota5/RockBar/Black House continuam classificadas no catálogo de legado, sem nova contaminação funcional provada.
+Uma reconstrução sem consultar `docs/system` ou `system-knowledge` recontou App Router, scripts NPM/operacionais, migrations, providers, env vars e superfícies de runtime. A comparação não encontrou nova área central, entrypoint, capability, integração ou finding ausente. The documented active-brand surfaces are RESOLVED after scoped Preview and Production proof; historical strings outside that scope remain historical evidence.
 
 ## Integridade
 

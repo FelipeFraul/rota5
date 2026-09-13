@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T19:08:55.803Z",
-  "stage": "stabilization/high-1-final-baseline-2.0.0",
-  "sourceCommit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
+  "generatedAt": "2026-09-13T23:22:29.421Z",
+  "stage": "stabilization/legacy-brand-baseline-2.1.0",
+  "sourceCommit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
   "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
   "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
   "count": 11,
@@ -61,24 +61,34 @@
     {
       "id": "legacy.rockbar-assets",
       "classification": "ROCKBAR_LEGACY",
-      "status": "ACTIVE",
+      "status": "RESOLVED",
       "paths": [
         "public/rockbar.webp",
         "public/rockbar_mb.webp",
         "src/app/globals.css"
       ],
-      "finding": "legacy.active-brand-contamination"
+      "finding": "legacy.active-brand-contamination",
+      "resolution": {
+        "source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+        "scope": "DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES",
+        "note": "Resolution is scoped to the active surfaces documented and revalidated for this finding; it is not a repository-wide assertion that historical brand strings do not exist elsewhere."
+      }
     },
     {
       "id": "legacy.blackhouse-copy",
       "classification": "BLACKHOUSE_LEGACY",
-      "status": "ACTIVE",
+      "status": "RESOLVED",
       "paths": [
         "src/app/checkout/pending/page.tsx",
         "src/app/checkout/success/page.tsx",
         "src/lib/tickets/services/publicHelp.ts"
       ],
-      "finding": "legacy.active-brand-contamination"
+      "finding": "legacy.active-brand-contamination",
+      "resolution": {
+        "source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+        "scope": "DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES",
+        "note": "Resolution is scoped to the active surfaces documented and revalidated for this finding; it is not a repository-wide assertion that historical brand strings do not exist elsewhere."
+      }
     },
     {
       "id": "legacy.blackhouse-maintenance-scripts",

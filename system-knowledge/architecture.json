@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T19:08:55.803Z",
+  "generatedAt": "2026-09-13T23:22:29.421Z",
   "id": "architecture.as-is.v1",
   "name": "Arquitetura as-is do Rota5",
   "type": "architecture-baseline",
@@ -13,7 +13,7 @@
     "vercel.json",
     "grafo estático de 428 imports"
   ],
-  "sourceCommit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
+  "sourceCommit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
   "topology": {
     "style": "Aplicação Next.js única com App Router, route handlers server-side, serviços TypeScript com acesso direto ao Supabase e regras transacionais adicionais em RPCs PostgreSQL.",
     "deploymentUnit": "Um projeto Next.js conforme package.json/next.config.ts/vercel.json.",
@@ -491,7 +491,6 @@
       "public/ticket_sistema.webp"
     ],
     "rockbar": [
-      "ROCK_BAR_OFFICIAL_WHATSAPP_PHONE",
       "mensagens/fallbacks no router e QR",
       "referências CSS a assets ausentes"
     ],
@@ -585,5 +584,6 @@
     "hotspot.table-map-boundary",
     "hotspot.batch-disabled",
     "hotspot.admin-reports"
-  ]
+  ],
+  "stage": "stabilization/legacy-brand-baseline-2.1.0"
 }

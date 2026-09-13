@@ -1,5 +1,8 @@
 # Environment variables — Etapa 5
 
+Baseline 2.1.0 catalogs 43 active environment variables. `ROCK_BAR_OFFICIAL_WHATSAPP_PHONE` was removed from the active schema because it had no consumer; this note preserves the historical transition.
+
+
 Foram catalogados 44 nomes. Presença remota foi confirmada para 24; valores nunca foram persistidos. `UNKNOWN` significa que o target remoto não confirmou o nome ou não foi consultável, não ausência comprovada.
 
 | Nome | Obrigatoriedade | Categoria | Ambiente | Secret | Local | Remoto | Consumidores/evidência |
@@ -32,7 +35,6 @@ Foram catalogados 44 nomes. Presença remota foi confirmada para 24; valores nun
 | `NODE_ENV` | optional | application | server | NO | NO | UNKNOWN | src\app\admin\eventos\abrir\[token]\route.ts, src\app\api\admin\login\verify\route.ts, src\app\api\kitchen\session\open\route.ts, src\lib\tickets\tableMap\persistOfficialPlaces.ts, src\proxy.ts |
 | `PATH` | optional | application | local | NO | YES | UNKNOWN | .tools\audit_admin_reports.mjs |
 | `PAYMENT_PROVIDER` | required | payment | server | NO | NO | YES | src/lib/env.ts, .env.example |
-| `ROCK_BAR_OFFICIAL_WHATSAPP_PHONE` | optional | messaging | server | NO | NO | UNKNOWN | src/lib/env.ts |
 | `SEAT_MAP_STORAGE_BUCKET` | required | application | server | NO | NO | YES | src/lib/env.ts, .env.example |
 | `SUPABASE_ACCESS_TOKEN` | optional | database | server | YES | NO | YES | docs/SUPABASE_SETUP.md |
 | `SUPABASE_ANON_KEY` | required | database | server | YES | YES | YES | scripts\test-combo-offer-priority-real.mjs, src/lib/env.ts, .env.example |

@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T22:04:00.708Z",
-  "stage": "stabilization/high-1-gate-semantics-baseline-2.0.1",
+  "generatedAt": "2026-09-13T23:22:29.421Z",
+  "stage": "stabilization/legacy-brand-baseline-2.1.0",
   "baseline_id": "rota5-baseline-v1",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "status": "FROZEN",
-  "frozen_at": "2026-09-13T22:04:00.708Z",
+  "frozen_at": "2026-09-13T23:22:29.421Z",
   "source_state": {
-    "base_commit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
-    "source_tree_fingerprint": "c70f133b075bc479e713d052fb0001c5e95ce35c140892bd5e5b6a121e05a53f",
+    "base_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+    "source_tree_fingerprint": "b18a51cba6668b4ea37854f4e722181961cf9afac13d8f02638672a75c18426e",
     "source_tree_file_count": 356,
     "functional_changes_since_base": [],
     "generated_from_working_tree": false,
@@ -16,12 +16,12 @@
     "baseline_commit_policy": "The Git commit containing this baseline is intentionally not embedded in its own content to avoid self-reference."
   },
   "git_observation_at_generation": {
-    "observed_at": "2026-09-13T22:04:00.708Z",
+    "observed_at": "2026-09-13T23:22:29.421Z",
     "branch": "production",
-    "head": "f20c60242af855c802dee6fd0f93a9848d0e2720",
+    "head": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
     "working_tree_clean": false,
     "validity_role": "INFORMATIONAL_ONLY",
-    "note": "Only Baseline 2.0.1 semantic-correction artifacts were being generated; functional source identity is unchanged."
+    "note": "Only Baseline 2.1.0 knowledge artifacts are being generated; the functional source is the already committed and deployed pure commit."
   },
   "baseline_integrity": {
     "status": "PASS",
@@ -30,16 +30,16 @@
   },
   "product_health": {
     "status": "BROKEN",
-    "reason": "0 active P0, 4 active HIGH, 1 potential HIGH, 5 open HIGH, 0 broken flows, 9 partial flows and the same seven default-suite failures; infrastructure remains DEGRADED due independent findings.",
+    "reason": "0 active P0, 3 active HIGH, 1 potential HIGH, 4 open HIGH, 0 broken flows, 9 partial flows and the same seven default-suite failures; infrastructure remains DEGRADED due independent findings.",
     "findings": 44,
     "active_p0": 0,
-    "active_high": 4,
+    "active_high": 3,
     "critical": 0,
-    "resolved": 5,
+    "resolved": 6,
     "broken_flows": 0,
     "partial_flows": 9,
     "potential_high": 1,
-    "open_high": 5
+    "open_high": 4
   },
   "confidence": "HIGH",
   "canonical_counts": {
@@ -60,7 +60,7 @@
     "integrations": 6,
     "webhooks": 2,
     "crons": 2,
-    "environment_variables": 44,
+    "environment_variables": 43,
     "tests": 51,
     "findings": 44
   },
@@ -73,7 +73,6 @@
   "contradictions_pending": 0,
   "p0_findings": [],
   "high_findings": [
-    "legacy.active-brand-contamination",
     "risk.admin-event-multistep-partial-state",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
@@ -233,23 +232,23 @@
     "self_exclusion": "baseline-integrity.json is excluded to avoid circularity."
   },
   "notes": [
-    "Baseline 2.0.1 preserves pure functional source commit bd0012f3a3277b2b6d1a97390ba7c3cc460a9165, fingerprint c70f133b075bc479e713d052fb0001c5e95ce35c140892bd5e5b6a121e05a53f, across 356 files.",
-    "PATCH_DOCUMENTATION_SEMANTIC_CORRECTION: Gate F=strict ticket, G=strict combo, H=temporary credential revocation and I=fixed credential revocation.",
-    "No functional, runtime, remote, lifecycle or gate-result change occurred; Baseline 2.0.0 remains historical.",
-    "MAJOR: the final database/auth contract is strict-only and OLD_APP is intentionally incompatible with FINAL_DB.",
-    "Production continues to serve runtime app artifact cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8 through dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT; src/** did not change since that artifact and no new deployment was needed.",
+    "Baseline 2.1.0 freezes pure functional source commit d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8, fingerprint b18a51cba6668b4ea37854f4e722181961cf9afac13d8f02638672a75c18426e, across 356 files.",
+    "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE: active user-visible branding, runtime configuration and the local environment schema were corrected without architectural or contract incompatibility.",
+    "Finding legacy.active-brand-contamination is RESOLVED for DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES; historical strings outside the documented and reaudited active surfaces are not part of this assertion.",
+    "Preview dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW and Production dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo are READY on the exact source commit; scoped branding checks passed and relevant Production log errors are zero.",
+    "Supabase and Ticketeira were unchanged. Git auto-deploy remains DISABLED.",
     "EXPAND and CONTRACT are APPLIED_AND_VALIDATED; CONTRACT 20260913000100_gate_credential_session_revocation_contract applied at 2026-09-13T18:11:18.773635Z with SHA-256 bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525.",
     "HIGH #1 is RESOLVED after gates A-I and the post-CONTRACT runtime audit passed. Other findings keep product health BROKEN and infrastructure health DEGRADED."
   ],
   "resolved_findings": [
     "bug.create-event-invalid-jsx",
     "bug.combo-redemption-unreachable-consume",
+    "legacy.active-brand-contamination",
     "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.vercel-project-identity-drift",
     "risk.latest-rota5-deployment-error"
   ],
   "active_high_findings": [
-    "legacy.active-brand-contamination",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
     "gap.test-runner-depends-on-untracked-loader"
@@ -258,7 +257,6 @@
     "risk.admin-event-multistep-partial-state"
   ],
   "open_high_findings": [
-    "legacy.active-brand-contamination",
     "risk.admin-event-multistep-partial-state",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
@@ -266,7 +264,7 @@
   ],
   "high_1_rollout_state": {
     "source_implementation": "IMPLEMENTED_AND_VALIDATED",
-    "canonical_repository_source_commit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
+    "canonical_repository_source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
     "production_rollout": "COMPLETE",
     "strategy": "EXPAND_DEPLOY_CONTRACT",
     "phase_0": "PASS",
@@ -277,18 +275,18 @@
     "expand_applied_at": "2026-09-13T14:20:15.059853Z",
     "dual_mode": "ENDED",
     "new_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
-    "production_runtime_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+    "production_runtime_app_artifact": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
     "new_app_pushed": true,
     "new_app_deployed": true,
     "new_app": "PRODUCTION_CUTOVER_COMPLETE",
     "new_app_state": "PRODUCTION_CUTOVER_COMPLETE",
-    "production_deployment": "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+    "production_deployment": "dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo",
     "production_status": "READY",
     "new_app_cutover_at": "2026-09-13T16:19:42.340Z",
     "old_app_serving_after_cutover": false,
     "new_app_serving": true,
     "rollback_performed": false,
-    "app_runtime_source_changed_since_cacbc430": false,
+    "app_runtime_source_changed_since_cacbc430": true,
     "contract": "APPLIED_AND_VALIDATED",
     "contract_remote": "APPLIED_AND_VALIDATED",
     "contract_artifact": "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql",
@@ -397,5 +395,39 @@
     "relevant_log_errors": 0,
     "resolution": "COMPLETE",
     "finding_status": "RESOLVED"
+  },
+  "legacy_brand_resolution": {
+    "resolved_at": "2026-09-13T23:22:29.421Z",
+    "resolution_scope": "DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES",
+    "source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+    "preview_deployment": "dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW",
+    "preview_status": "READY",
+    "preview_source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+    "production_deployment": "dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo",
+    "production_status": "READY",
+    "production_source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+    "summary": [
+      "Removed legacy Black House copy from checkout pending and success.",
+      "Corrected the five documented contaminated public-help responses.",
+      "Corrected the Rock Bar resend fallback and the three additional audited router prompts.",
+      "Removed the dead Rock Bar greeting block.",
+      "Replaced active CSS rockbar.webp and rockbar_mb.webp references with valid Rota5 assets.",
+      "Removed the Black House static CORS configuration.",
+      "Removed the unused ROCK_BAR_OFFICIAL_WHATSAPP_PHONE environment schema entry.",
+      "Preview and Production scoped validation passed with zero relevant Production log errors."
+    ],
+    "runtime_proof": {
+      "checkout_pending_legacy_terms": 0,
+      "checkout_success_legacy_terms": 0,
+      "public_help_legacy_terms": 0,
+      "router_scoped_legacy_terms": 0,
+      "css_rockbar_references": 0,
+      "broken_background_references": 0,
+      "legacy_blackhouse_cors": false,
+      "rota5_webp_http": 200,
+      "rota5_mb_webp_http": 200,
+      "relevant_production_log_errors": 0
+    },
+    "limitation": "Resolution is scoped to the active surfaces documented and revalidated for this finding; it is not a repository-wide assertion that historical brand strings do not exist elsewhere."
   }
 }

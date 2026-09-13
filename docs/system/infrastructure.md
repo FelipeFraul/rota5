@@ -1,6 +1,6 @@
-# Baseline 2.0.1 rollout infrastructure
+# Baseline 2.1.0 scoped active-brand infrastructure
 
-Git auto-deploy remains disabled. Production deployment `dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT` is READY and serves runtime artifact `cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8`; repository source `bd0012f3a3277b2b6d1a97390ba7c3cc460a9165` adds migration/tests without changing `src/**`. CONTRACT runtime passed with zero relevant log errors and no new application deployment. Infrastructure remains DEGRADED due independent findings.
+Git auto-deploy remains disabled. Production deployment `dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo` is READY and serves exact source `d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8`; corresponding Preview `dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW` is READY. Scoped branding runtime checks and relevant-log audit passed. Supabase and Ticketeira were unchanged. Infrastructure remains DEGRADED due independent findings.
 
 # Infrastructure AS-IS — Etapa 5
 
@@ -10,7 +10,7 @@ A aplicação é Next.js 16.2.6. A cadeia operacional canônica é GitHub `Felip
 
 - **local:** `.env` e `.env.example`; configuração incompleta para o schema central de `getEnv()`.
 - **preview:** target e URLs de preview existem na Vercel; banco e modo de integrações dependem de env e seus valores não foram lidos.
-- **production:** variáveis e deployments existem no projeto Vercel `rota5`. O HEAD atual não foi publicado e o auto-deploy Git permanece desabilitado.
+- **production:** variáveis e deployments existem no projeto Vercel `rota5`. O source funcional atual está publicado como `dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo` e o auto-deploy Git permanece desabilitado.
 
 ## Configuração funcional
 

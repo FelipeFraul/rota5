@@ -1,3 +1,7 @@
+# Baseline 2.1.0 scoped active-brand module projection
+
+`brand.presentation`, `payment.checkout` and `messaging.public-dialog` reflect the corrected active surfaces on source `d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8`; module statuses remain unchanged.
+
 # Modules arquiteturais
 
 Foram identificados **66 modules principais**. Um module pode representar um arquivo central ou um pequeno grupo coeso; arquivos triviais não foram promovidos individualmente. `calledBy` e `calls` registram ligações arquiteturais confirmadas pelo código, enquanto tabelas e integrações são mantidas em campos próprios.

@@ -92,7 +92,7 @@ Valores não foram registrados. O quadro lista somente nomes e referências vers
 
 ### Validadas centralmente por `src/lib/env.ts`
 
-`APP_BASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ZAPI_INSTANCE_ID`, `ZAPI_INSTANCE_TOKEN`, `ZAPI_CLIENT_TOKEN`, `ZAPI_BASE_URL`, `ZAPI_WEBHOOK_SECRET`, `ROCK_BAR_OFFICIAL_WHATSAPP_PHONE` (opcional), `CHECKOUT_INTERNAL_SECRET`, `PAYMENT_PROVIDER`, `MERCADO_PAGO_ACCESS_TOKEN`, `MERCADO_PAGO_WEBHOOK_SECRET`, `MERCADO_PAGO_API_BASE_URL` (opcional), `NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY`, `ADMIN_SESSION_TTL_MINUTES` (opcional), `TICKET_RESERVATION_TTL_MINUTES`, `TICKET_QR_SECRET`, `SEAT_MAP_STORAGE_BUCKET`, `GATE_ADMIN_SECRET`, `GATE_SESSION_SECRET`, `GATE_SESSION_TTL_MINUTES`.
+`APP_BASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ZAPI_INSTANCE_ID`, `ZAPI_INSTANCE_TOKEN`, `ZAPI_CLIENT_TOKEN`, `ZAPI_BASE_URL`, `ZAPI_WEBHOOK_SECRET`, `CHECKOUT_INTERNAL_SECRET`, `PAYMENT_PROVIDER`, `MERCADO_PAGO_ACCESS_TOKEN`, `MERCADO_PAGO_WEBHOOK_SECRET`, `MERCADO_PAGO_API_BASE_URL` (opcional), `NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY`, `ADMIN_SESSION_TTL_MINUTES` (opcional), `TICKET_RESERVATION_TTL_MINUTES`, `TICKET_QR_SECRET`, `SEAT_MAP_STORAGE_BUCKET`, `GATE_ADMIN_SECRET`, `GATE_SESSION_SECRET`, `GATE_SESSION_TTL_MINUTES`.
 
 ### Lidas diretamente fora do schema central
 
@@ -113,7 +113,7 @@ Valores não foram registrados. O quadro lista somente nomes e referências vers
 
 ### Diferenças de `.env.example`
 
-- Presente no schema mas ausente do exemplo: `ROCK_BAR_OFFICIAL_WHATSAPP_PHONE`; os demais nomes do schema central estão listados.
+- The unused historical brand-specific WhatsApp variable was removed from the active environment schema; the remaining central schema names are listed.
 - Usadas diretamente e ausentes do exemplo: `ADMIN_WEB_SESSION_TTL_MINUTES`, `COMBO_OFFER_DELAY_MINUTES`, `CODEX_CLI_PATH`, `CODEX_RUNNER_POLL_SECONDS`, `CODEX_WHATSAPP_PHONE`, `GITHUB_REPOSITORY`, `DATABASE_URL` e `FULL_INTENT_AUDIT`.
 - Presentes no exemplo fora do schema central: `CRON_SECRET`, `CONVERSATION_INACTIVITY_TTL_MINUTES`, `CODEX_WHATSAPP_PHONES`, `GITHUB_ISSUES_REPOSITORY`, `GITHUB_ISSUES_TOKEN`.
 - `SEAT_MAP_STORAGE_BUCKET` é exigida pelo schema e repetida nas ferramentas, mas não foi encontrada chamada a Supabase Storage no código versionado.

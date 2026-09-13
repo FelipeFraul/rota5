@@ -1,5 +1,8 @@
 # Baseline 2.0.1 HIGH #1 test and runtime inventory
 
+Baseline 2.1.0 scoped branding evidence: typecheck PASS; lint PASS with 0 errors and 23 warnings; build PASS; focused 114/116 with two unrelated preexisting failures; default suite 207/214 with the same seven failures; new regressions 0.
+
+
 The canonical inventory remains 51 test files. NEW_APP focused validation passed 96/96; final CONTRACT source/packaging tests passed 15/15; PostgreSQL 16 rollout matrix and ticket/combo race suites passed. Post-CONTRACT remote gates passed with cleanup. The default suite remains 207/214 with the same seven historical failures.
 
 # Inventário de testes e auditorias
@@ -132,7 +135,7 @@ Limitação comum: várias ferramentas usam Supabase real/service role, criam da
 | Comando | Resultado | Evidência principal |
 | --- | --- | --- |
 | `npm run typecheck` | PASS | 0 diagnósticos após a correção mínima |
-| `npm run lint` | PASS | 0 erros; 24 warnings preexistentes |
+| `npm run lint` | PASS | 0 erros; 23 warnings |
 | `npm run build` | PASS | compilação concluída; warning NFT/Turbopack preexistente no mapa |
 | `npm test` | FAIL | 207/214 passaram; as mesmas 7 falharam |
 

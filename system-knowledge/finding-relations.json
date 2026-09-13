@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T19:08:55.803Z",
-  "stage": "stabilization/high-1-final-baseline-2.0.0",
-  "sourceCommit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
+  "generatedAt": "2026-09-13T23:22:29.421Z",
+  "stage": "stabilization/legacy-brand-baseline-2.1.0",
+  "sourceCommit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
   "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
   "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
   "count": 8,
@@ -24,7 +24,7 @@
       "from": "risk.vercel-project-identity-drift",
       "type": "AMPLIFIES",
       "to": "legacy.active-brand-contamination",
-      "evidence": "Domínio Black House e projeto rota5 aparecem na mesma configuração operacional."
+      "evidence": "Historical relation preserved: Vercel identity drift amplified the active-brand contamination before both findings were resolved."
     },
     {
       "from": "gap.critical-flow-correlation",
@@ -76,6 +76,12 @@
       "status": "RESOLVED",
       "resolved_at": "2026-09-13T18:11:18.773635Z",
       "reason": "All rollout gates passed and FINAL_DB strict-only runtime proof completed."
+    },
+    {
+      "finding": "legacy.active-brand-contamination",
+      "status": "RESOLVED",
+      "resolved_at": "2026-09-13T23:22:29.421Z",
+      "reason": "Scoped active surfaces passed Preview and Production runtime validation on d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8."
     }
   ],
   "high_1_rollout_dependency": {

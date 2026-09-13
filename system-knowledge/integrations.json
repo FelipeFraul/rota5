@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-11",
+  "generatedAt": "2026-09-13T23:22:29.421Z",
   "count": 6,
   "records": [
     {
@@ -223,7 +223,6 @@
       "ZAPI_CLIENT_TOKEN",
       "ZAPI_BASE_URL",
       "ZAPI_WEBHOOK_SECRET",
-      "ROCK_BAR_OFFICIAL_WHATSAPP_PHONE",
       "CHECKOUT_INTERNAL_SECRET",
       "PAYMENT_PROVIDER",
       "MERCADO_PAGO_ACCESS_TOKEN",
@@ -268,5 +267,6 @@
   "stage5Correction": {
     "reason": "Evidência read-only externa tornou notas anteriores factualmente incompletas.",
     "metricsChanged": false
-  }
+  },
+  "stage": "stabilization/legacy-brand-baseline-2.1.0"
 }

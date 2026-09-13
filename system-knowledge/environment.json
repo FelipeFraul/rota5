@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-12T15:29:26.315Z",
-  "stage": "stabilization/p0-3",
-  "count": 44,
+  "generatedAt": "2026-09-13T23:22:29.421Z",
+  "stage": "stabilization/legacy-brand-baseline-2.1.0",
+  "count": 43,
   "remotePresenceValidated": 24,
   "records": [
     {
@@ -514,23 +514,6 @@
       "classification": "REFERENCED"
     },
     {
-      "id": "env.rock_bar_official_whatsapp_phone",
-      "name": "ROCK_BAR_OFFICIAL_WHATSAPP_PHONE",
-      "required": false,
-      "consumers": [
-        "src/lib/env.ts"
-      ],
-      "category": "messaging",
-      "expected_environment": "server",
-      "secret": false,
-      "presence_local": "NO",
-      "presence_remote": "UNKNOWN",
-      "purpose": "Configurar rock bar official whatsapp phone.",
-      "evidence_source_local": "LOCAL_DECLARED",
-      "evidence_source_remote": "NOT_VALIDATED",
-      "classification": "REFERENCED"
-    },
-    {
       "id": "env.seat_map_storage_bucket",
       "name": "SEAT_MAP_STORAGE_BUCKET",
       "required": true,
@@ -838,6 +821,10 @@
       "vercel_project": "rota5",
       "git_auto_deploy": "DISABLED",
       "current_head_deployed": false
-    }
+    },
+    "removed_unused_variables": [
+      "ROCK_BAR_OFFICIAL_WHATSAPP_PHONE"
+    ],
+    "source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8"
   }
 }

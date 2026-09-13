@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T22:04:00.708Z",
-  "stage": "stabilization/high-1-gate-semantics-baseline-2.0.1",
-  "sourceCommit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
-  "scope": "Baseline 1.3.1 após a correção semântica da taxonomia de findings; nenhum deployment realizado.",
+  "generatedAt": "2026-09-13T23:22:29.421Z",
+  "stage": "stabilization/legacy-brand-baseline-2.1.0",
+  "sourceCommit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+  "scope": "Baseline 2.1.0 with scoped active-brand remediation resolved from immutable source and runtime evidence.",
   "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
   "status": "PASS",
   "total": 44,
@@ -46,11 +46,11 @@
     "P4": 2
   },
   "by_status": {
-    "ACTIVE": 27,
+    "ACTIVE": 26,
     "POTENTIAL": 7,
     "OPEN": 0,
     "MITIGATED": 0,
-    "RESOLVED": 5,
+    "RESOLVED": 6,
     "ACCEPTED": 0,
     "NOT_VALIDATED": 5
   },
@@ -96,7 +96,7 @@
     "integrations": 6,
     "webhooks": 2,
     "crons": 2,
-    "environment_variables": 44,
+    "environment_variables": 43,
     "configuration_drifts": 4,
     "catalogued_tests": 43
   },
@@ -115,8 +115,8 @@
     "lint": {
       "status": "PASS",
       "errors": 0,
-      "warnings": 24,
-      "change_from_baseline": "UNCHANGED"
+      "warnings": 23,
+      "change_from_baseline": "NO_NEW_WARNINGS"
     },
     "adversarial_pass": {
       "false_positives_removed": 3,
@@ -139,7 +139,7 @@
     },
     "high_1": {
       "source_implementation": "IMPLEMENTED_AND_VALIDATED",
-      "canonical_repository_source_commit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
+      "canonical_repository_source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
       "production_rollout": "COMPLETE",
       "strategy": "EXPAND_DEPLOY_CONTRACT",
       "phase_0": "PASS",
@@ -150,18 +150,18 @@
       "expand_applied_at": "2026-09-13T14:20:15.059853Z",
       "dual_mode": "ENDED",
       "new_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
-      "production_runtime_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+      "production_runtime_app_artifact": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
       "new_app_pushed": true,
       "new_app_deployed": true,
       "new_app": "PRODUCTION_CUTOVER_COMPLETE",
       "new_app_state": "PRODUCTION_CUTOVER_COMPLETE",
-      "production_deployment": "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+      "production_deployment": "dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo",
       "production_status": "READY",
       "new_app_cutover_at": "2026-09-13T16:19:42.340Z",
       "old_app_serving_after_cutover": false,
       "new_app_serving": true,
       "rollback_performed": false,
-      "app_runtime_source_changed_since_cacbc430": false,
+      "app_runtime_source_changed_since_cacbc430": true,
       "contract": "APPLIED_AND_VALIDATED",
       "contract_remote": "APPLIED_AND_VALIDATED",
       "contract_artifact": "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql",
@@ -270,10 +270,16 @@
       "relevant_log_errors": 0,
       "resolution": "COMPLETE",
       "finding_status": "RESOLVED"
+    },
+    "legacy_brand_scoped": {
+      "focused_cases": 116,
+      "passed": 114,
+      "failed_preexisting_unrelated": 2,
+      "new_regressions": 0,
+      "status": "PASS"
     }
   },
   "active_high_critical": [
-    "legacy.active-brand-contamination",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
     "gap.test-runner-depends-on-untracked-loader"
@@ -281,7 +287,6 @@
   "active_p0_p1": [
     "bug.event-duplicate-artist-leak",
     "bug.user-visible-text-corruption",
-    "legacy.active-brand-contamination",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
     "gap.test-runner-depends-on-untracked-loader",
@@ -290,17 +295,17 @@
   "resolved": [
     "bug.create-event-invalid-jsx",
     "bug.combo-redemption-unreachable-consume",
+    "legacy.active-brand-contamination",
     "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.vercel-project-identity-drift",
     "risk.latest-rota5-deployment-error"
   ],
   "infrastructure_identity": "CORRECT",
-  "current_head_deployed": false,
+  "current_head_deployed": true,
   "potential_high_critical": [
     "risk.admin-event-multistep-partial-state"
   ],
   "open_high_critical": [
-    "legacy.active-brand-contamination",
     "risk.admin-event-multistep-partial-state",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
@@ -313,7 +318,6 @@
   "open_p0_p1": [
     "bug.event-duplicate-artist-leak",
     "bug.user-visible-text-corruption",
-    "legacy.active-brand-contamination",
     "risk.admin-event-multistep-partial-state",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
@@ -330,7 +334,7 @@
   },
   "high_1": {
     "source_implementation": "IMPLEMENTED_AND_VALIDATED",
-    "canonical_repository_source_commit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
+    "canonical_repository_source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
     "production_rollout": "COMPLETE",
     "strategy": "EXPAND_DEPLOY_CONTRACT",
     "phase_0": "PASS",
@@ -341,18 +345,18 @@
     "expand_applied_at": "2026-09-13T14:20:15.059853Z",
     "dual_mode": "ENDED",
     "new_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
-    "production_runtime_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+    "production_runtime_app_artifact": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
     "new_app_pushed": true,
     "new_app_deployed": true,
     "new_app": "PRODUCTION_CUTOVER_COMPLETE",
     "new_app_state": "PRODUCTION_CUTOVER_COMPLETE",
-    "production_deployment": "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+    "production_deployment": "dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo",
     "production_status": "READY",
     "new_app_cutover_at": "2026-09-13T16:19:42.340Z",
     "old_app_serving_after_cutover": false,
     "new_app_serving": true,
     "rollback_performed": false,
-    "app_runtime_source_changed_since_cacbc430": false,
+    "app_runtime_source_changed_since_cacbc430": true,
     "contract": "APPLIED_AND_VALIDATED",
     "contract_remote": "APPLIED_AND_VALIDATED",
     "contract_artifact": "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql",
@@ -461,5 +465,39 @@
     "relevant_log_errors": 0,
     "resolution": "COMPLETE",
     "finding_status": "RESOLVED"
+  },
+  "legacy_brand_resolution": {
+    "resolved_at": "2026-09-13T23:22:29.421Z",
+    "resolution_scope": "DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES",
+    "source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+    "preview_deployment": "dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW",
+    "preview_status": "READY",
+    "preview_source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+    "production_deployment": "dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo",
+    "production_status": "READY",
+    "production_source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+    "summary": [
+      "Removed legacy Black House copy from checkout pending and success.",
+      "Corrected the five documented contaminated public-help responses.",
+      "Corrected the Rock Bar resend fallback and the three additional audited router prompts.",
+      "Removed the dead Rock Bar greeting block.",
+      "Replaced active CSS rockbar.webp and rockbar_mb.webp references with valid Rota5 assets.",
+      "Removed the Black House static CORS configuration.",
+      "Removed the unused ROCK_BAR_OFFICIAL_WHATSAPP_PHONE environment schema entry.",
+      "Preview and Production scoped validation passed with zero relevant Production log errors."
+    ],
+    "runtime_proof": {
+      "checkout_pending_legacy_terms": 0,
+      "checkout_success_legacy_terms": 0,
+      "public_help_legacy_terms": 0,
+      "router_scoped_legacy_terms": 0,
+      "css_rockbar_references": 0,
+      "broken_background_references": 0,
+      "legacy_blackhouse_cors": false,
+      "rota5_webp_http": 200,
+      "rota5_mb_webp_http": 200,
+      "relevant_production_log_errors": 0
+    },
+    "limitation": "Resolution is scoped to the active surfaces documented and revalidated for this finding; it is not a repository-wide assertion that historical brand strings do not exist elsewhere."
   }
 }

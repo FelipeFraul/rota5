@@ -1,3 +1,7 @@
+# Baseline 2.1.0 scoped active-brand capability projection
+
+The finding is RESOLVED for the documented active surfaces. `brand.present_individual_offers`, `payment.checkout_view`, `payment.return_notice` and `messaging.help` retain their independent functional statuses; only their active-risk projection changed.
+
 # Baseline 2.0.1 HIGH #1 capability runtime state
 
 The affected gate and combo capabilities are validated against FINAL_DB. Credential pause/revoke invalidates attributed sessions; ticket and combo authorization are strict-only. HIGH #1 is RESOLVED after gates A-I and post-CONTRACT runtime passed.

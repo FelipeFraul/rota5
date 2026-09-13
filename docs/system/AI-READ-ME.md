@@ -1,5 +1,8 @@
 # Rota5 — AI READ ME
 
+Current canonical state: Baseline **2.1.0**, functional source `d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8`. The scoped active-brand finding is RESOLVED; product health remains BROKEN and infrastructure health DEGRADED.
+
+
 1. Read `system-knowledge/baseline-manifest.json`.
 2. Read `system-knowledge/index.json`.
 3. Classify the question as architecture, capability, flow, module, data, integration, infrastructure, test, risk, impact, unknown or product health.

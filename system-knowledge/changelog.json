@@ -1,9 +1,50 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T22:04:00.708Z",
-  "stage": "stabilization/high-1-gate-semantics-baseline-2.0.1",
-  "count": 10,
+  "generatedAt": "2026-09-13T23:22:29.421Z",
+  "stage": "stabilization/legacy-brand-baseline-2.1.0",
+  "count": 11,
   "records": [
+    {
+      "version": "2.1.0",
+      "date": "2026-09-13",
+      "type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+      "source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+      "source_fingerprint": "b18a51cba6668b4ea37854f4e722181961cf9afac13d8f02638672a75c18426e",
+      "source_file_count": 356,
+      "migration_count": 79,
+      "changes": [
+        "Removed scoped active RockBar/Black House branding from documented checkout, public-help, router, CSS, CORS and unused environment-schema surfaces.",
+        "Deployed and validated Preview dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW and Production dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo from the exact source commit.",
+        "Changed legacy.active-brand-contamination from ACTIVE to RESOLVED with an explicit scoped limitation.",
+        "Supabase and Ticketeira were unchanged; no new regression was introduced."
+      ],
+      "finding_transition": {
+        "id": "legacy.active-brand-contamination",
+        "from": "ACTIVE",
+        "to": "RESOLVED",
+        "scope": "DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES"
+      },
+      "validation": {
+        "typecheck": "PASS",
+        "lint": "PASS_0_ERRORS_23_WARNINGS",
+        "build": "PASS",
+        "focused": "114/116_TWO_PREEXISTING_UNRELATED",
+        "npm_test": "207/214_SAME_7_PREEXISTING",
+        "new_regressions": 0
+      },
+      "metrics": {
+        "active_high": 3,
+        "potential_high": 1,
+        "open_high": 4,
+        "resolved": 6
+      },
+      "remote_changes": {
+        "production_deployment": "dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo",
+        "supabase": "UNCHANGED",
+        "ticketeira": "UNTOUCHED",
+        "git_auto_deploy": "DISABLED"
+      }
+    },
     {
       "version": "2.0.1",
       "type": "PATCH_DOCUMENTATION_SEMANTIC_CORRECTION",

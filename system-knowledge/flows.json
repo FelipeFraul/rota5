@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-13T16:27:50.380Z",
-  "stage": "stabilization/high-1-source-freeze",
+  "generatedAt": "2026-09-13T23:22:29.421Z",
+  "stage": "stabilization/legacy-brand-baseline-2.1.0",
   "id": "rota5.flow-catalog.v1",
   "canonical": true,
   "count": 34,
@@ -114,7 +114,8 @@
         "FAILURE"
       ],
       "notes": [
-        "Ajuda está PARCIAL e possui teste falhando; comandos são validados no router, não por documentação histórica."
+        "Ajuda está PARCIAL e possui teste falhando; comandos são validados no router, não por documentação histórica.",
+        "Scoped active-brand remediation passed Preview and Production; whatsapp.public_discovery remains PARCIAL based on its independent evidence."
       ],
       "actors": [
         "customer"
@@ -285,7 +286,8 @@
         "FAILURE"
       ],
       "notes": [
-        "O mapa oficial é um branch parcial; a reserva comum permanece estruturalmente presente e falhas intermediárias podem exigir retomada ou cancelamento."
+        "O mapa oficial é um branch parcial; a reserva comum permanece estruturalmente presente e falhas intermediárias podem exigir retomada ou cancelamento.",
+        "Scoped active-brand remediation passed Preview and Production; ticket.purchase remains PARCIAL based on its independent evidence."
       ],
       "actors": [
         "customer"

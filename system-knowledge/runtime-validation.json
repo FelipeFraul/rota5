@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-13T22:04:00.708Z",
-  "stage": "stabilization/high-1-gate-semantics-baseline-2.0.1",
-  "count": 21,
+  "generatedAt": "2026-09-13T23:22:29.421Z",
+  "stage": "stabilization/legacy-brand-baseline-2.1.0",
+  "count": 22,
   "ok": 19,
   "records": [
     {
@@ -124,13 +124,14 @@
       "method": "CLI_READ",
       "evidence_source": "REMOTE_CONFIG",
       "status": "PASS",
-      "result": "Latest Production deployment dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT is READY, serves the canonical aliases and passed immediate runtime checks.",
+      "result": "Latest Production deployment dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo is READY, serves the canonical aliases and runs exact source commit d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8.",
       "side_effect_free": true,
       "expected": "Identificar deployment mais recente e deployment servido.",
       "evidence": [
-        "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+        "dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo",
+        "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
         "Vercel linked Production deployment",
-        "Production runtime probes"
+        "Scoped branding runtime probes"
       ]
     },
     {
@@ -306,18 +307,36 @@
         "CONTRACT_SHA256 bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525",
         "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT"
       ]
+    },
+    {
+      "id": "runtime.legacy-brand-scoped-production",
+      "target": "Scoped active-brand surfaces in Preview and Production",
+      "method": "CONTROLLED_PREVIEW_AND_PRODUCTION_DEPLOYMENT_WITH_READ_ONLY_RUNTIME_CHECKS",
+      "evidence_source": "RUNTIME_OBSERVED",
+      "status": "PASS",
+      "result": "Checkout pending/success, five public-help topics, scoped router points, CSS/assets and static CORS passed with zero legacy terms or broken assets; Production relevant log errors=0.",
+      "side_effect_free": false,
+      "expected": "All documented active surfaces supporting the legacy brand finding are clean on the exact source commit.",
+      "evidence": [
+        "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+        "dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW",
+        "dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo",
+        "rota5.webp HTTP 200",
+        "rota5_mb.webp HTTP 200"
+      ]
     }
   ],
   "prohibited_actions_performed": false,
   "identity_reaudit": {
     "status": "PASS",
     "git_auto_deploy": "DISABLED",
-    "current_head_deployed": false,
-    "deployment_performed": false
+    "current_head_deployed": true,
+    "deployment_performed": true,
+    "deployment_performed_during_baseline_update": false
   },
   "high_1_rollout": {
     "source_implementation": "IMPLEMENTED_AND_VALIDATED",
-    "canonical_repository_source_commit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
+    "canonical_repository_source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
     "production_rollout": "COMPLETE",
     "strategy": "EXPAND_DEPLOY_CONTRACT",
     "phase_0": "PASS",
@@ -328,18 +347,18 @@
     "expand_applied_at": "2026-09-13T14:20:15.059853Z",
     "dual_mode": "ENDED",
     "new_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
-    "production_runtime_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+    "production_runtime_app_artifact": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
     "new_app_pushed": true,
     "new_app_deployed": true,
     "new_app": "PRODUCTION_CUTOVER_COMPLETE",
     "new_app_state": "PRODUCTION_CUTOVER_COMPLETE",
-    "production_deployment": "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+    "production_deployment": "dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo",
     "production_status": "READY",
     "new_app_cutover_at": "2026-09-13T16:19:42.340Z",
     "old_app_serving_after_cutover": false,
     "new_app_serving": true,
     "rollback_performed": false,
-    "app_runtime_source_changed_since_cacbc430": false,
+    "app_runtime_source_changed_since_cacbc430": true,
     "contract": "APPLIED_AND_VALIDATED",
     "contract_remote": "APPLIED_AND_VALIDATED",
     "contract_artifact": "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql",
@@ -448,5 +467,39 @@
     "relevant_log_errors": 0,
     "resolution": "COMPLETE",
     "finding_status": "RESOLVED"
+  },
+  "legacy_brand_resolution": {
+    "resolved_at": "2026-09-13T23:22:29.421Z",
+    "resolution_scope": "DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES",
+    "source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+    "preview_deployment": "dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW",
+    "preview_status": "READY",
+    "preview_source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+    "production_deployment": "dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo",
+    "production_status": "READY",
+    "production_source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+    "summary": [
+      "Removed legacy Black House copy from checkout pending and success.",
+      "Corrected the five documented contaminated public-help responses.",
+      "Corrected the Rock Bar resend fallback and the three additional audited router prompts.",
+      "Removed the dead Rock Bar greeting block.",
+      "Replaced active CSS rockbar.webp and rockbar_mb.webp references with valid Rota5 assets.",
+      "Removed the Black House static CORS configuration.",
+      "Removed the unused ROCK_BAR_OFFICIAL_WHATSAPP_PHONE environment schema entry.",
+      "Preview and Production scoped validation passed with zero relevant Production log errors."
+    ],
+    "runtime_proof": {
+      "checkout_pending_legacy_terms": 0,
+      "checkout_success_legacy_terms": 0,
+      "public_help_legacy_terms": 0,
+      "router_scoped_legacy_terms": 0,
+      "css_rockbar_references": 0,
+      "broken_background_references": 0,
+      "legacy_blackhouse_cors": false,
+      "rota5_webp_http": 200,
+      "rota5_mb_webp_http": 200,
+      "relevant_production_log_errors": 0
+    },
+    "limitation": "Resolution is scoped to the active surfaces documented and revalidated for this finding; it is not a repository-wide assertion that historical brand strings do not exist elsewhere."
   }
 }
