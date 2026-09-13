@@ -1,6 +1,6 @@
-# Baseline 1.4.1 HIGH #1 runtime evidence
+# Baseline 2.0.0 HIGH #1 runtime evidence
 
-Local/disposable evidence remains PASS. Remote EXPAND was applied at `2026-09-13T14:20:15.059853Z`; exact NEW_APP artifact `cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8` completed Production cutover as `dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT` at `2026-09-13T16:19:42.340Z`. Health/public/admin/EXPAND probes passed, relevant log errors were zero, monitored counts did not change and rollback was not performed.
+Gates A-I passed. Post-CONTRACT runtime proved strict ticket/combo, temporary/fixed revoke, admin_direct, legacy rejection, source-null rejection, source immutability and fixture cleanup. Unrelated changes and relevant Production log errors were zero. Production remains `dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT`.
 
 # Runtime validation — Etapa 5
 

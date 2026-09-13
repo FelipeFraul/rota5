@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T16:54:57.825Z",
-  "stage": "stabilization/high-1-source-freeze",
+  "generatedAt": "2026-09-13T19:08:55.803Z",
+  "stage": "stabilization/high-1-final-baseline-2.0.0",
   "id": "rota5-self-reading-v1",
   "baseline_id": "rota5-baseline-v1",
   "bootstrap_files": [
@@ -201,7 +201,7 @@
         "runtime-validation.json"
       ],
       "method": "Não confunda integridade da baseline com saúde do produto.",
-      "product_health_update": "HIGH #1 source is implemented; EXPAND and exact NEW_APP Production cutover passed. It remains ACTIVE until gates C-I, CONTRACT and runtime audit complete. Product health remains BROKEN."
+      "product_health_update": "HIGH #1 is RESOLVED after EXPAND, NEW_APP, gates A-I, CONTRACT and strict runtime passed. Product health remains BROKEN because independent findings remain open."
     }
   },
   "validation_rules": [
@@ -244,11 +244,12 @@
       "tests.json",
       "findings.json"
     ],
-    "remote_database_not_validated": "Remote function bodies, constraints, indexes, triggers, RLS, policies, grants and migration history; Supabase Auth configuration also remains NOT_VALIDATED.",
-    "infrastructure_state": "Infrastructure identity and manual release path are correct. The latest Production deployment is READY and the exact NEW_APP commit is present on origin/production; Git auto-deploy is disabled. Infrastructure remains DEGRADED due independent findings.",
+    "remote_database_not_validated": "HIGH #1 migration history, FINAL_DB constraints/functions/triggers and runtime behavior were validated. Other remote PostgreSQL internals, RLS, policies, grants and Supabase Auth configuration remain NOT_VALIDATED.",
+    "infrastructure_state": "Git/Vercel identity and manual release path are correct. Production deployment dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT serves runtime artifact cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8; the repository source is bd0012f3a3277b2b6d1a97390ba7c3cc460a9165; Git auto-deploy is disabled. Infrastructure remains DEGRADED due independent findings.",
     "p0_findings": [],
     "add_capability": "Assign canonical ID, domain, type, description, modules, entrypoints, data/integrations, flow placement, tests and evidence; update capability and related flow/data/test catalogs, validate, then version the baseline.",
     "after_change": "Follow CHANGE-PROTOCOL.md and update every affected JSON plus its Markdown projection; regenerate fingerprint and baseline-integrity.json and run the validator.",
-    "product_health_update": "No P0 is active. 5 ACTIVE HIGH, 1 POTENTIAL HIGH and 6 open HIGH remain; HIGH #1 is in post-cutover gate observation."
+    "product_health_update": "No P0 is active. 4 ACTIVE HIGH, 1 POTENTIAL HIGH and 5 open HIGH remain. HIGH #1 is RESOLVED; product health remains BROKEN.",
+    "high_1": "RESOLVED: EXPAND and CONTRACT are APPLIED_AND_VALIDATED, gates A-I passed, authorization is strict-only and source attribution is non-null and immutable."
   }
 }

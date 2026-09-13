@@ -1,13 +1,13 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-13T16:27:50.380Z",
-  "stage": "stabilization/high-1-source-freeze",
-  "sourceCommit": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+  "generatedAt": "2026-09-13T19:08:55.803Z",
+  "stage": "stabilization/high-1-final-baseline-2.0.0",
+  "sourceCommit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
   "counts": {
     "tables": 44,
-    "migrations": 78,
-    "functions": 38,
-    "triggers": 35,
+    "migrations": 79,
+    "functions": 39,
+    "triggers": 36,
     "indexes": 157,
     "rls_enabled": 44,
     "policies": 0,
@@ -1485,7 +1485,8 @@
       "evidence_source": "LOCAL_DECLARED",
       "evidence": [
         "supabase/migrations/20260629000300_require_combo_preparation_before_redemption.sql",
-        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
+        "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql"
       ],
       "table_operations": [
         {
@@ -1503,7 +1504,7 @@
         }
       ],
       "remote_status": "APPLIED_AND_VALIDATED",
-      "remote_evidence": "EXPAND_REMOTE_RUNTIME_VALIDATED"
+      "remote_evidence": "POST_CONTRACT_RUNTIME_VALIDATED"
     },
     {
       "id": "function.validate_ticket_entry",
@@ -1521,7 +1522,8 @@
       "evidence_source": "LOCAL_DECLARED",
       "evidence": [
         "supabase/migrations/20260722000400_fully_qualify_hardened_function_references.sql",
-        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
+        "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql"
       ],
       "table_operations": [
         {
@@ -1569,7 +1571,7 @@
         }
       ],
       "remote_status": "APPLIED_AND_VALIDATED",
-      "remote_evidence": "EXPAND_REMOTE_RUNTIME_VALIDATED"
+      "remote_evidence": "POST_CONTRACT_RUNTIME_VALIDATED"
     },
     {
       "id": "function.gate_session_source_rollout_status",
@@ -1628,7 +1630,8 @@
       ],
       "evidence_source": "LOCAL_DECLARED",
       "evidence": [
-        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
+        "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql"
       ],
       "table_operations": [
         {
@@ -1663,7 +1666,7 @@
         }
       ],
       "remote_status": "APPLIED_AND_VALIDATED",
-      "remote_evidence": "EXPAND_REMOTE_RUNTIME_VALIDATED"
+      "remote_evidence": "POST_CONTRACT_RUNTIME_VALIDATED"
     },
     {
       "id": "function.pause_gate_access_and_revoke_sessions",
@@ -1675,7 +1678,8 @@
       ],
       "evidence_source": "LOCAL_DECLARED",
       "evidence": [
-        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
+        "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql"
       ],
       "table_operations": [
         {
@@ -1693,7 +1697,7 @@
         }
       ],
       "remote_status": "APPLIED_AND_VALIDATED",
-      "remote_evidence": "EXPAND_REMOTE_RUNTIME_VALIDATED"
+      "remote_evidence": "POST_CONTRACT_RUNTIME_VALIDATED"
     },
     {
       "id": "function.revoke_fixed_gate_access_and_revoke_sessions",
@@ -1705,7 +1709,8 @@
       ],
       "evidence_source": "LOCAL_DECLARED",
       "evidence": [
-        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
+        "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql"
       ],
       "table_operations": [
         {
@@ -1723,7 +1728,22 @@
         }
       ],
       "remote_status": "APPLIED_AND_VALIDATED",
-      "remote_evidence": "EXPAND_REMOTE_RUNTIME_VALIDATED"
+      "remote_evidence": "POST_CONTRACT_RUNTIME_VALIDATED"
+    },
+    {
+      "id": "function.prevent_gate_session_source_change",
+      "name": "prevent_gate_session_source_change",
+      "domain": "domain.gate-admission",
+      "tables": [
+        "gate_sessions"
+      ],
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql"
+      ],
+      "table_operations": [],
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "remote_evidence": "POST_CONTRACT_RUNTIME_VALIDATED"
     }
   ],
   "triggers": [
@@ -2080,6 +2100,18 @@
       ],
       "remote_status": "APPLIED_AND_VALIDATED",
       "remote_evidence": "EXPAND_REMOTE_RUNTIME_VALIDATED"
+    },
+    {
+      "id": "trigger.prevent_gate_session_source_change",
+      "name": "prevent_gate_session_source_change",
+      "table": "table.gate_sessions",
+      "function": "function.prevent_gate_session_source_change",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql"
+      ],
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "remote_evidence": "POST_CONTRACT_RUNTIME_VALIDATED"
     }
   ],
   "indexes": [
@@ -5983,6 +6015,38 @@
       "remote_status": "APPLIED_AND_VALIDATED",
       "evidence_source": "REMOTE_MIGRATION_HISTORY_AND_RUNTIME",
       "applied_at": "2026-09-13T14:20:15.059853Z"
+    },
+    {
+      "id": "migration.20260913000100_gate_credential_session_revocation_contract",
+      "timestamp": "20260913000100",
+      "name": "20260913000100_gate_credential_session_revocation_contract.sql",
+      "path": "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql",
+      "purpose": "Finalize strict-only credential/session authorization, classify historical source-null rows and enforce immutable non-null source attribution",
+      "creates": [
+        "function:prevent_gate_session_source_change",
+        "trigger:prevent_gate_session_source_change"
+      ],
+      "alters": [
+        "table:gate_sessions",
+        "function:lock_authorized_gate_session",
+        "function:pause_gate_access_and_revoke_sessions",
+        "function:revoke_fixed_gate_access_and_revoke_sessions",
+        "function:validate_ticket_entry",
+        "function:validate_combo_redemption"
+      ],
+      "drops": [],
+      "depends_on": "migration.20260912000100_gate_credential_session_revocation_expand",
+      "reversal": "OLD_APP_ROLLBACK_UNSAFE_AFTER_CONTRACT",
+      "functional_impact": [
+        "gate_sessions",
+        "validate_ticket_entry",
+        "validate_combo_redemption"
+      ],
+      "status_local": "LOCAL_DECLARED",
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "evidence_source": "REMOTE_MIGRATION_HISTORY_AND_RUNTIME",
+      "applied_at": "2026-09-13T18:11:18.773635Z",
+      "sha256": "bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525"
     }
   ],
   "extensions": [
@@ -6015,7 +6079,7 @@
       "show_trgm",
       "unaccent"
     ],
-    "migrations": "NOT_VALIDATED",
+    "migrations": "VALIDATED",
     "triggers": "NOT_VALIDATED",
     "rls": "NOT_VALIDATED",
     "policies": "NOT_VALIDATED",
@@ -6052,10 +6116,26 @@
       "validate_combo_redemption",
       "validate_ticket_entry"
     ],
-    "function_equivalence": "NOT_VALIDATED"
+    "function_equivalence": "NOT_VALIDATED",
+    "migration_history": {
+      "status": "VALIDATED",
+      "latest": "20260913000100_gate_credential_session_revocation_contract",
+      "expand_count": 1,
+      "contract_count": 1,
+      "pending": 0
+    },
+    "high_1_contract": {
+      "status": "APPLIED_AND_VALIDATED",
+      "applied_at": "2026-09-13T18:11:18.773635Z",
+      "sha256": "bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525",
+      "source_kind_nullable": false,
+      "source_null_total": 0,
+      "ticket_auth": "STRICT_ONLY",
+      "combo_auth": "STRICT_ONLY"
+    }
   },
   "migration_analysis": {
-    "ordering": "Ordem lexicográfica dos 77 nomes timestampados.",
+    "ordering": "Ordem lexicográfica dos 79 nomes timestampados.",
     "duplicate_timestamps": [],
     "tables_created_then_removed": [],
     "columns_renamed": [],
@@ -6188,16 +6268,116 @@
     "duplicate_migrations": [],
     "apparently_abandoned_objects": [],
     "conclusion": "Remoções encontradas são de overloads e índices substituídos. Não foram encontrados DROP TABLE, DROP COLUMN, RENAME COLUMN, timestamps duplicados ou policies. Nenhum objeto final foi classificado como abandonado apenas pela sequência DDL.",
-    "evidence_source": "LOCAL_DECLARED"
+    "evidence_source": "LOCAL_DECLARED",
+    "contract_boundary": {
+      "old_app_final_db_compatibility": "INCOMPATIBLE_BY_DESIGN",
+      "old_app_rollback_safe": false
+    }
   },
   "rollout": {
+    "source_implementation": "IMPLEMENTED_AND_VALIDATED",
+    "canonical_repository_source_commit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
+    "production_rollout": "COMPLETE",
     "strategy": "EXPAND_DEPLOY_CONTRACT",
-    "active_migration": "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
-    "contract_draft": "supabase/rollout/gate_credential_session_revocation_contract.sql",
-    "contract_counted_as_active_migration": false,
-    "remote_expand": "APPLIED_AND_VALIDATED",
-    "remote_contract": "NOT_APPLIED",
+    "phase_0": "PASS",
+    "release_path": "HEALTHY",
+    "expand": "APPLIED_AND_VALIDATED",
+    "expand_remote": "APPLIED_AND_VALIDATED",
+    "expand_migration": "20260912000100_gate_credential_session_revocation_expand",
     "expand_applied_at": "2026-09-13T14:20:15.059853Z",
-    "dual_mode": "ACTIVE"
+    "dual_mode": "ENDED",
+    "new_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+    "production_runtime_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+    "new_app_pushed": true,
+    "new_app_deployed": true,
+    "new_app": "PRODUCTION_CUTOVER_COMPLETE",
+    "new_app_state": "PRODUCTION_CUTOVER_COMPLETE",
+    "production_deployment": "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+    "production_status": "READY",
+    "new_app_cutover_at": "2026-09-13T16:19:42.340Z",
+    "old_app_serving_after_cutover": false,
+    "new_app_serving": true,
+    "rollback_performed": false,
+    "app_runtime_source_changed_since_cacbc430": false,
+    "contract": "APPLIED_AND_VALIDATED",
+    "contract_remote": "APPLIED_AND_VALIDATED",
+    "contract_artifact": "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql",
+    "contract_migration": "20260913000100_gate_credential_session_revocation_contract",
+    "contract_applied_at": "2026-09-13T18:11:18.773635Z",
+    "contract_sha256": "bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525",
+    "contract_allowed": false,
+    "contract_completed": true,
+    "all_gates_a_i": "PASS",
+    "gates": {
+      "A": {
+        "status": "PASS",
+        "evidence": "Exact NEW_APP Production deployment is READY and its immutable artifact identity is proven."
+      },
+      "B": {
+        "status": "PASS",
+        "evidence": "OLD_APP stopped serving Production at NEW_APP_CUTOVER_AT."
+      },
+      "C": {
+        "status": "PASS",
+        "evidence": "The controlled post-cutover window completed with strict runtime calls and no observed legacy compatibility calls."
+      },
+      "D": {
+        "status": "PASS",
+        "evidence": "No source-null session was active and unexpired before CONTRACT."
+      },
+      "E": {
+        "status": "PASS",
+        "evidence": "Post-cutover session attribution and source-link consistency passed, including positive runtime evidence."
+      },
+      "F": {
+        "status": "PASS",
+        "evidence": "Temporary credential pause revoked its attributed gate session and the revoked session was rejected."
+      },
+      "G": {
+        "status": "PASS",
+        "evidence": "Fixed credential revocation revoked its attributed gate session and the revoked session was rejected."
+      },
+      "H": {
+        "status": "PASS",
+        "evidence": "Strict ticket validation passed and the legacy ticket authorization path was rejected."
+      },
+      "I": {
+        "status": "PASS",
+        "evidence": "Strict combo validation, source-null rejection, source immutability and fixture cleanup passed."
+      }
+    },
+    "ticket_auth": "STRICT_ONLY",
+    "combo_auth": "STRICT_ONLY",
+    "source_kind": "NOT_NULL",
+    "source_attribution": "IMMUTABLE",
+    "historical_source_null_before_contract": 1,
+    "historical_source_null_after_contract": 0,
+    "historical_record_handling": "legacy_unattributed",
+    "historical_record_preserved": true,
+    "old_app_final_db_compatibility": "INCOMPATIBLE_BY_DESIGN",
+    "old_app_rollback_safe": false,
+    "runtime_proof": {
+      "health": "PASS",
+      "public_page": "PASS",
+      "admin_auth": "PASS",
+      "expand_probe": "PASS",
+      "post_contract_runtime": "PASS",
+      "strict_ticket": "PASS",
+      "strict_combo": "PASS",
+      "temporary_revoke": "PASS",
+      "fixed_revoke": "PASS",
+      "admin_direct": "PASS",
+      "legacy_ticket_rejected": "PASS",
+      "legacy_combo_rejected": "PASS",
+      "source_null_rejected": "PASS",
+      "source_mutation_rejected": "PASS",
+      "fixture_cleanup": "PASS",
+      "unrelated_changes": 0,
+      "relevant_log_errors": 0
+    },
+    "post_contract_runtime": "PASS",
+    "relevant_log_errors": 0,
+    "resolution": "COMPLETE",
+    "finding_status": "RESOLVED"
   }
 }

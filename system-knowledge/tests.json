@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "generatedAt": "2026-09-13T19:08:55.803Z",
   "count": 51,
   "defaultSuite": {
     "command": "npm test",
@@ -1305,16 +1305,40 @@
     "safeLocalExecution": true,
     "note": "stage3Validation permanece histórico e não foi reinterpretado."
   },
-  "stage": "stabilization/high-1-source-freeze",
+  "stage": "stabilization/high-1-final-baseline-2.0.0",
   "high_1_validation": {
-    "focused": {
+    "focused_new_app": {
       "passed": 96,
       "cases": 96,
+      "status": "PASS"
+    },
+    "contract_source_and_packaging": {
+      "passed": 15,
+      "cases": 15,
       "status": "PASS"
     },
     "rollout_matrix": "PASS",
     "ticket_race": "2/2 PASS",
     "combo_race": "2/2 PASS",
-    "remote_mutating_tests": "NOT_EXECUTED"
+    "post_contract_runtime": {
+      "health": "PASS",
+      "public_page": "PASS",
+      "admin_auth": "PASS",
+      "expand_probe": "PASS",
+      "post_contract_runtime": "PASS",
+      "strict_ticket": "PASS",
+      "strict_combo": "PASS",
+      "temporary_revoke": "PASS",
+      "fixed_revoke": "PASS",
+      "admin_direct": "PASS",
+      "legacy_ticket_rejected": "PASS",
+      "legacy_combo_rejected": "PASS",
+      "source_null_rejected": "PASS",
+      "source_mutation_rejected": "PASS",
+      "fixture_cleanup": "PASS",
+      "unrelated_changes": 0,
+      "relevant_log_errors": 0
+    },
+    "remote_mutating_tests": "EXECUTED_ONLY_IN_CONTROLLED_GATES_WITH_CLEANUP_PASS"
   }
 }

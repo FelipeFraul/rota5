@@ -1,6 +1,6 @@
-# Baseline 1.4.1 rollout infrastructure
+# Baseline 2.0.0 rollout infrastructure
 
-Git auto-deploy remains disabled. Exact HIGH #1 NEW_APP artifact `cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8` serves Production through `dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT` since `2026-09-13T16:19:42.340Z`; the prior deployment no longer serves the Production aliases. Immediate smokes and the EXPAND probe passed without rollback. Infrastructure health remains DEGRADED because other findings remain open.
+Git auto-deploy remains disabled. Production deployment `dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT` is READY and serves runtime artifact `cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8`; repository source `bd0012f3a3277b2b6d1a97390ba7c3cc460a9165` adds migration/tests without changing `src/**`. CONTRACT runtime passed with zero relevant log errors and no new application deployment. Infrastructure remains DEGRADED due independent findings.
 
 # Infrastructure AS-IS — Etapa 5
 

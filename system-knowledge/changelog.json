@@ -1,9 +1,94 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T16:54:57.825Z",
-  "stage": "stabilization/high-1-source-freeze",
-  "count": 8,
+  "generatedAt": "2026-09-13T19:08:55.803Z",
+  "stage": "stabilization/high-1-final-baseline-2.0.0",
+  "count": 9,
   "records": [
+    {
+      "version": "2.0.0",
+      "type": "MAJOR_CONTRACTUAL_BACKWARD_INCOMPATIBILITY",
+      "status": "FROZEN",
+      "date": "2026-09-13T19:08:55.803Z",
+      "source_commit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
+      "functional_source_changed": true,
+      "functional_fingerprint": "c70f133b075bc479e713d052fb0001c5e95ce35c140892bd5e5b6a121e05a53f",
+      "functional_file_count": 356,
+      "change": "Finalized HIGH #1 with CONTRACT in the active migration queue, strict-only FINAL_DB authorization and explicit OLD_APP incompatibility.",
+      "finding": "risk.gate-credential-revocation-does-not-revoke-session",
+      "previous_status": "ACTIVE",
+      "finding_status": "RESOLVED",
+      "remote": {
+        "expand": "APPLIED_AND_VALIDATED",
+        "contract": "APPLIED_AND_VALIDATED",
+        "contract_migration": "20260913000100_gate_credential_session_revocation_contract",
+        "contract_applied_at": "2026-09-13T18:11:18.773635Z",
+        "contract_sha256": "bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525",
+        "pending_migrations": 0
+      },
+      "gates": {
+        "A": {
+          "status": "PASS",
+          "evidence": "Exact NEW_APP Production deployment is READY and its immutable artifact identity is proven."
+        },
+        "B": {
+          "status": "PASS",
+          "evidence": "OLD_APP stopped serving Production at NEW_APP_CUTOVER_AT."
+        },
+        "C": {
+          "status": "PASS",
+          "evidence": "The controlled post-cutover window completed with strict runtime calls and no observed legacy compatibility calls."
+        },
+        "D": {
+          "status": "PASS",
+          "evidence": "No source-null session was active and unexpired before CONTRACT."
+        },
+        "E": {
+          "status": "PASS",
+          "evidence": "Post-cutover session attribution and source-link consistency passed, including positive runtime evidence."
+        },
+        "F": {
+          "status": "PASS",
+          "evidence": "Temporary credential pause revoked its attributed gate session and the revoked session was rejected."
+        },
+        "G": {
+          "status": "PASS",
+          "evidence": "Fixed credential revocation revoked its attributed gate session and the revoked session was rejected."
+        },
+        "H": {
+          "status": "PASS",
+          "evidence": "Strict ticket validation passed and the legacy ticket authorization path was rejected."
+        },
+        "I": {
+          "status": "PASS",
+          "evidence": "Strict combo validation, source-null rejection, source immutability and fixture cleanup passed."
+        }
+      },
+      "production": {
+        "deployment": "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+        "runtime_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+        "status": "READY",
+        "post_contract_runtime": "PASS",
+        "relevant_log_errors": 0,
+        "new_deployment_required": false
+      },
+      "final_contract": {
+        "dual_mode": "ENDED",
+        "ticket_auth": "STRICT_ONLY",
+        "combo_auth": "STRICT_ONLY",
+        "source_kind": "NOT_NULL",
+        "source_attribution": "IMMUTABLE",
+        "old_app_compatibility": "INCOMPATIBLE_BY_DESIGN",
+        "old_app_rollback_safe": false
+      },
+      "metrics": {
+        "active_high": 4,
+        "potential_high": 1,
+        "open_high": 5,
+        "resolved": 5
+      },
+      "product_health": "BROKEN",
+      "infrastructure_health": "DEGRADED"
+    },
     {
       "version": "1.4.1",
       "type": "DOCUMENTATION_RUNTIME_STATE_PATCH",

@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T16:27:50.380Z",
-  "stage": "stabilization/high-1-source-freeze",
+  "generatedAt": "2026-09-13T19:08:55.803Z",
+  "stage": "stabilization/high-1-final-baseline-2.0.0",
   "id": "capability-catalog.v1",
   "canonical": true,
   "status": "PASS",
   "confidence": "MEDIA",
-  "sourceCommit": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+  "sourceCommit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
   "sourceScope": "Working tree local, incluindo alteração preexistente em src/lib/tickets/messages.ts; não equivale ao commit puro nem ao deploy.",
   "count": 140,
   "methodology": {
@@ -9157,7 +9157,7 @@
       ],
       "notes": [
         "Lacuna: sessões já emitidas continuam regidas pelo próprio status/TTL; pauseGateAccess só atualiza gate_accesses. Evidência: gateSessions.ts:282–409.",
-        "HIGH #1 source, remote EXPAND and NEW_APP Production runtime are validated; CONTRACT and remaining post-cutover gates are pending."
+        "HIGH #1 FINAL_DB is validated: EXPAND/CONTRACT and gates A-I passed; strict-only runtime passed and the finding is RESOLVED."
       ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
@@ -9418,7 +9418,7 @@
       ],
       "notes": [
         "Lacuna: revokeFixedGateAccess não altera gate_sessions. Validação de sessão não consulta fixed_gate_accesses.",
-        "HIGH #1 source, remote EXPAND and NEW_APP Production runtime are validated; CONTRACT and remaining post-cutover gates are pending."
+        "HIGH #1 FINAL_DB is validated: EXPAND/CONTRACT and gates A-I passed; strict-only runtime passed and the finding is RESOLVED."
       ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
@@ -9638,7 +9638,7 @@
       ],
       "database_triggers": [],
       "notes": [
-        "HIGH #1 source, remote EXPAND and NEW_APP Production runtime are validated; CONTRACT and remaining post-cutover gates are pending."
+        "HIGH #1 FINAL_DB is validated: EXPAND/CONTRACT and gates A-I passed; strict-only runtime passed and the finding is RESOLVED."
       ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
@@ -9748,7 +9748,7 @@
       ],
       "database_triggers": [],
       "notes": [
-        "HIGH #1 source, remote EXPAND and NEW_APP Production runtime are validated; CONTRACT and remaining post-cutover gates are pending."
+        "HIGH #1 FINAL_DB is validated: EXPAND/CONTRACT and gates A-I passed; strict-only runtime passed and the finding is RESOLVED."
       ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
@@ -9898,7 +9898,7 @@
       ],
       "database_triggers": [],
       "notes": [
-        "HIGH #1 source, remote EXPAND and NEW_APP Production runtime are validated; CONTRACT and remaining post-cutover gates are pending."
+        "HIGH #1 FINAL_DB is validated: EXPAND/CONTRACT and gates A-I passed; strict-only runtime passed and the finding is RESOLVED."
       ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
@@ -9978,7 +9978,7 @@
       "database_triggers": [],
       "notes": [
         "ÓRFÃ: nenhuma chamada a revokeGateSession localizada em src/scripts/.tools. Pausar gate_accesses ou revogar fixed_gate_accesses só altera esses registros; validateGateSessionToken não consulta o acesso de origem. Não se presume invalidação automática de links já emitidos.",
-        "HIGH #1 source, remote EXPAND and NEW_APP Production runtime are validated; CONTRACT and remaining post-cutover gates are pending."
+        "HIGH #1 FINAL_DB is validated: EXPAND/CONTRACT and gates A-I passed; strict-only runtime passed and the finding is RESOLVED."
       ],
       "entrypoint_status": "NONE_CONFIRMED",
       "execution_chain": {
@@ -12705,7 +12705,7 @@
       ],
       "database_triggers": [],
       "notes": [
-        "HIGH #1 source, remote EXPAND and NEW_APP Production runtime are validated; CONTRACT and remaining post-cutover gates are pending."
+        "HIGH #1 FINAL_DB is validated: EXPAND/CONTRACT and gates A-I passed; strict-only runtime passed and the finding is RESOLVED."
       ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
@@ -12933,7 +12933,7 @@
       ],
       "database_triggers": [],
       "notes": [
-        "HIGH #1 source, remote EXPAND and NEW_APP Production runtime are validated; CONTRACT and remaining post-cutover gates are pending."
+        "HIGH #1 FINAL_DB is validated: EXPAND/CONTRACT and gates A-I passed; strict-only runtime passed and the finding is RESOLVED."
       ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
@@ -13265,7 +13265,7 @@
       "database_triggers": [],
       "notes": [
         "PARCIAL: testes locais cobrem consumo único, replay, QR inválido, escopo incorreto e escolha ainda pendente. A RPC local usa bloqueio de linha e transição issued→used; nenhum teste mutante remoto foi executado e risk.combo-metadata-read-modify-write-race permanece ativo.",
-        "HIGH #1 source, remote EXPAND and NEW_APP Production runtime are validated; CONTRACT and remaining post-cutover gates are pending."
+        "HIGH #1 FINAL_DB is validated: EXPAND/CONTRACT and gates A-I passed; strict-only runtime passed and the finding is RESOLVED."
       ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {

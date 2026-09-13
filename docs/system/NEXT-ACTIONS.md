@@ -1,10 +1,8 @@
 # Next actions from existing findings
 
-## CONTROLLED HIGH #1 ROLLOUT
+## HIGH #1 RESOLVED
 
-EXPAND and the exact NEW_APP Production cutover are complete. The immediate action is the controlled post-cutover observation: close Gate C only after its `legacy_compat` window, formally confirm Gates D/E using `EXPAND_APPLIED_AT` and `NEW_APP_CUTOVER_AT`, then execute Gates F-I. CONTRACT is prohibited until all A-I gates pass and remains a draft outside the migration queue. Git auto-deploy remains disabled.
-
-# Next actions from existing findings
+EXPAND and CONTRACT are APPLIED_AND_VALIDATED, gates A-I passed and authorization is strict-only. OLD_APP rollback is not safe after FINAL_DB. Git auto-deploy remains disabled.
 
 This document orders current findings; it does not introduce features or patches.
 
@@ -13,6 +11,7 @@ This document orders current findings; it does not introduce features or patches
 Nenhum finding P0 ativo.
 
 ## RESOLVED
+- `risk.gate-credential-revocation-does-not-revoke-session` — EXPAND/CONTRACT complete; gates A-I and strict runtime passed.
 - `bug.create-event-invalid-jsx` — JSX corrigido; typecheck, lint e build passam.
 - `bug.combo-redemption-unreachable-consume` — caminho atômico restaurado localmente; equivalência remota continua não validada.
 - `risk.vercel-project-identity-drift` — cadeia canônica separada como `FelipeFraul/rota5` `production` → Vercel `rota5`; nenhum deployment realizado.
@@ -22,7 +21,6 @@ Nenhum finding P0 ativo.
 - `bug.event-duplicate-artist-leak` — Duplicação de evento preserva artista do evento de origem
 - `bug.user-visible-text-corruption` — Textos ativos contêm mojibake e substituições por interrogação
 - `legacy.active-brand-contamination` — Superfícies Rota5 exibem referências e assets Black House/RockBar
-- `risk.gate-credential-revocation-does-not-revoke-session` — Pausa/revogação da credencial não invalida sessões de leitor já emitidas
 - `risk.admin-event-multistep-partial-state` (POTENTIAL) — Criação de evento e catálogo inicial cruza entidades sem transação única
 - `gap.default-test-suite-failing` — Suíte padrão está vermelha com sete casos falhos
 - `gap.critical-capability-and-flow-coverage` — Capabilities e flows relevantes não têm teste direto

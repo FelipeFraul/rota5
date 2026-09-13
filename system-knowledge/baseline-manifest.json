@@ -1,27 +1,27 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T16:54:57.825Z",
-  "stage": "stabilization/high-1-source-freeze",
+  "generatedAt": "2026-09-13T19:08:55.803Z",
+  "stage": "stabilization/high-1-final-baseline-2.0.0",
   "baseline_id": "rota5-baseline-v1",
-  "version": "1.4.1",
+  "version": "2.0.0",
   "status": "FROZEN",
-  "frozen_at": "2026-09-12T16:41:28.048Z",
+  "frozen_at": "2026-09-13T19:08:55.803Z",
   "source_state": {
-    "base_commit": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
-    "source_tree_fingerprint": "6643a2c539caab8942ebe3953dc75963446d27dbb653e166a3310fe2c4e2fc4b",
-    "source_tree_file_count": 355,
+    "base_commit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
+    "source_tree_fingerprint": "c70f133b075bc479e713d052fb0001c5e95ce35c140892bd5e5b6a121e05a53f",
+    "source_tree_file_count": 356,
     "functional_changes_since_base": [],
     "generated_from_working_tree": false,
     "baseline_commit": "SELF_NOT_RECORDED",
     "baseline_commit_policy": "The Git commit containing this baseline is intentionally not embedded in its own content to avoid self-reference."
   },
   "git_observation_at_generation": {
-    "observed_at": "2026-09-13T16:27:50.380Z",
+    "observed_at": "2026-09-13T19:08:55.803Z",
     "branch": "production",
-    "head": "8aa4690ffb6367c45c9045494a5949bc62af2a2a",
+    "head": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
     "working_tree_clean": false,
     "validity_role": "INFORMATIONAL_ONLY",
-    "note": "Only Baseline 1.4.1 documentation artifacts were dirty; functional source exactly matches source_state.base_commit."
+    "note": "Only Baseline 2.0.0 knowledge/tooling artifacts were being generated; functional source is the pure base commit."
   },
   "baseline_integrity": {
     "status": "PASS",
@@ -30,16 +30,16 @@
   },
   "product_health": {
     "status": "BROKEN",
-    "reason": "0 active P0, 5 active HIGH, 1 potential HIGH, 6 open HIGH, 0 broken flows, 9 partial flows and npm test failing; infrastructure health remains DEGRADED due independent open findings.",
+    "reason": "0 active P0, 4 active HIGH, 1 potential HIGH, 5 open HIGH, 0 broken flows, 9 partial flows and the same seven default-suite failures; infrastructure remains DEGRADED due independent findings.",
     "findings": 44,
     "active_p0": 0,
-    "active_high": 5,
+    "active_high": 4,
     "critical": 0,
-    "resolved": 4,
+    "resolved": 5,
     "broken_flows": 0,
     "partial_flows": 9,
     "potential_high": 1,
-    "open_high": 6
+    "open_high": 5
   },
   "confidence": "HIGH",
   "canonical_counts": {
@@ -53,10 +53,10 @@
     "tables": 44,
     "stateful_tables": 22,
     "stateful_entities": 23,
-    "migrations": 78,
-    "sql_functions": 38,
-    "triggers": 35,
-    "data_relations": 2255,
+    "migrations": 79,
+    "sql_functions": 39,
+    "triggers": 36,
+    "data_relations": 2257,
     "integrations": 6,
     "webhooks": 2,
     "crons": 2,
@@ -69,12 +69,11 @@
     "machine_readable_json": 43,
     "total": 95
   },
-  "unresolved_evidence_count": 9,
+  "unresolved_evidence_count": 7,
   "contradictions_pending": 0,
   "p0_findings": [],
   "high_findings": [
     "legacy.active-brand-contamination",
-    "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.admin-event-multistep-partial-state",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
@@ -234,23 +233,21 @@
     "self_exclusion": "baseline-integrity.json is excluded to avoid circularity."
   },
   "notes": [
-    "Baseline 1.4.1 preserves HIGH #1 functional source at cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8.",
-    "EXPAND was applied and validated at 2026-09-13T14:20:15.059853Z; NEW_APP completed Production cutover at 2026-09-13T16:19:42.340Z. CONTRACT remains NOT_APPLIED and dual-mode remains active.",
-    "The HIGH #1 finding remains ACTIVE until post-cutover gates A-I, CONTRACT and the post-fix runtime audit complete.",
-    "active_* is literal ACTIVE; potential_* is literal POTENTIAL; open_* is the explicit set ACTIVE, POTENTIAL, OPEN and MITIGATED; release gates use ACTIVE, OPEN and MITIGATED at applicable severity.",
-    "Production serves the exact Git-pushed NEW_APP artifact while git.deploymentEnabled=false remains intentional.",
-    "FROZEN validity depends on source_state and validated artifacts, not on the current Git working-tree state.",
-    "NOT_VALIDATED is neither confirmed nor operationally open; ACCEPTED is closed for operational metrics after documented authorization."
+    "Baseline 2.0.0 freezes pure functional source commit bd0012f3a3277b2b6d1a97390ba7c3cc460a9165, fingerprint c70f133b075bc479e713d052fb0001c5e95ce35c140892bd5e5b6a121e05a53f, across 356 files.",
+    "MAJOR: the final database/auth contract is strict-only and OLD_APP is intentionally incompatible with FINAL_DB.",
+    "Production continues to serve runtime app artifact cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8 through dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT; src/** did not change since that artifact and no new deployment was needed.",
+    "EXPAND and CONTRACT are APPLIED_AND_VALIDATED; CONTRACT 20260913000100_gate_credential_session_revocation_contract applied at 2026-09-13T18:11:18.773635Z with SHA-256 bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525.",
+    "HIGH #1 is RESOLVED after gates A-I and the post-CONTRACT runtime audit passed. Other findings keep product health BROKEN and infrastructure health DEGRADED."
   ],
   "resolved_findings": [
     "bug.create-event-invalid-jsx",
     "bug.combo-redemption-unreachable-consume",
+    "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.vercel-project-identity-drift",
     "risk.latest-rota5-deployment-error"
   ],
   "active_high_findings": [
     "legacy.active-brand-contamination",
-    "risk.gate-credential-revocation-does-not-revoke-session",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
     "gap.test-runner-depends-on-untracked-loader"
@@ -260,85 +257,115 @@
   ],
   "open_high_findings": [
     "legacy.active-brand-contamination",
-    "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.admin-event-multistep-partial-state",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
     "gap.test-runner-depends-on-untracked-loader"
   ],
   "high_1_rollout_state": {
-    "source_implementation": "IMPLEMENTED",
-    "production_rollout": "POST_CUTOVER_GATES_PENDING",
+    "source_implementation": "IMPLEMENTED_AND_VALIDATED",
+    "canonical_repository_source_commit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
+    "production_rollout": "COMPLETE",
     "strategy": "EXPAND_DEPLOY_CONTRACT",
     "phase_0": "PASS",
     "release_path": "HEALTHY",
     "expand": "APPLIED_AND_VALIDATED",
+    "expand_remote": "APPLIED_AND_VALIDATED",
     "expand_migration": "20260912000100_gate_credential_session_revocation_expand",
     "expand_applied_at": "2026-09-13T14:20:15.059853Z",
-    "dual_mode": "ACTIVE",
+    "dual_mode": "ENDED",
     "new_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+    "production_runtime_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
     "new_app_pushed": true,
     "new_app_deployed": true,
+    "new_app": "PRODUCTION_CUTOVER_COMPLETE",
     "new_app_state": "PRODUCTION_CUTOVER_COMPLETE",
     "production_deployment": "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
-    "old_production_deployment": "dpl_4fUuUVNXgCfYgTiJjvdLuDdxXSA9",
+    "production_status": "READY",
     "new_app_cutover_at": "2026-09-13T16:19:42.340Z",
     "old_app_serving_after_cutover": false,
     "new_app_serving": true,
     "rollback_performed": false,
+    "app_runtime_source_changed_since_cacbc430": false,
+    "contract": "APPLIED_AND_VALIDATED",
+    "contract_remote": "APPLIED_AND_VALIDATED",
+    "contract_artifact": "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql",
+    "contract_migration": "20260913000100_gate_credential_session_revocation_contract",
+    "contract_applied_at": "2026-09-13T18:11:18.773635Z",
+    "contract_sha256": "bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525",
+    "contract_allowed": false,
+    "contract_completed": true,
+    "all_gates_a_i": "PASS",
+    "gates": {
+      "A": {
+        "status": "PASS",
+        "evidence": "Exact NEW_APP Production deployment is READY and its immutable artifact identity is proven."
+      },
+      "B": {
+        "status": "PASS",
+        "evidence": "OLD_APP stopped serving Production at NEW_APP_CUTOVER_AT."
+      },
+      "C": {
+        "status": "PASS",
+        "evidence": "The controlled post-cutover window completed with strict runtime calls and no observed legacy compatibility calls."
+      },
+      "D": {
+        "status": "PASS",
+        "evidence": "No source-null session was active and unexpired before CONTRACT."
+      },
+      "E": {
+        "status": "PASS",
+        "evidence": "Post-cutover session attribution and source-link consistency passed, including positive runtime evidence."
+      },
+      "F": {
+        "status": "PASS",
+        "evidence": "Temporary credential pause revoked its attributed gate session and the revoked session was rejected."
+      },
+      "G": {
+        "status": "PASS",
+        "evidence": "Fixed credential revocation revoked its attributed gate session and the revoked session was rejected."
+      },
+      "H": {
+        "status": "PASS",
+        "evidence": "Strict ticket validation passed and the legacy ticket authorization path was rejected."
+      },
+      "I": {
+        "status": "PASS",
+        "evidence": "Strict combo validation, source-null rejection, source immutability and fixture cleanup passed."
+      }
+    },
+    "ticket_auth": "STRICT_ONLY",
+    "combo_auth": "STRICT_ONLY",
+    "source_kind": "NOT_NULL",
+    "source_attribution": "IMMUTABLE",
+    "historical_source_null_before_contract": 1,
+    "historical_source_null_after_contract": 0,
+    "historical_record_handling": "legacy_unattributed",
+    "historical_record_preserved": true,
+    "old_app_final_db_compatibility": "INCOMPATIBLE_BY_DESIGN",
+    "old_app_rollback_safe": false,
     "runtime_proof": {
       "health": "PASS",
       "public_page": "PASS",
       "admin_auth": "PASS",
       "expand_probe": "PASS",
+      "post_contract_runtime": "PASS",
+      "strict_ticket": "PASS",
+      "strict_combo": "PASS",
+      "temporary_revoke": "PASS",
+      "fixed_revoke": "PASS",
+      "admin_direct": "PASS",
+      "legacy_ticket_rejected": "PASS",
+      "legacy_combo_rejected": "PASS",
+      "source_null_rejected": "PASS",
+      "source_mutation_rejected": "PASS",
+      "fixture_cleanup": "PASS",
+      "unrelated_changes": 0,
       "relevant_log_errors": 0
     },
-    "operational_counts": {
-      "gate_sessions_total": 1,
-      "source_null_total": 1,
-      "source_null_unexpired": 0,
-      "transition_legacy_created_after_expand": 0,
-      "gate_accesses_active": 0,
-      "fixed_gate_accesses_active": 0
-    },
-    "gates": {
-      "A": {
-        "status": "PASS",
-        "evidence": "NEW_APP Production deployment healthy and exact artifact identity proven."
-      },
-      "B": {
-        "status": "PASS",
-        "evidence": "OLD_APP no longer serves Production after NEW_APP_CUTOVER_AT."
-      },
-      "C": {
-        "status": "PENDING",
-        "evidence": "legacy_compat observation window remains open."
-      },
-      "D": {
-        "status": "PENDING_FORMAL_CONFIRMATION",
-        "evidence": "source_null_unexpired is currently 0; closure requires the post-cutover audit."
-      },
-      "E": {
-        "status": "PENDING_FORMAL_CONFIRMATION",
-        "evidence": "Sessions created after NEW_APP_CUTOVER_AT still require formal attribution audit."
-      },
-      "F": {
-        "status": "PENDING"
-      },
-      "G": {
-        "status": "PENDING"
-      },
-      "H": {
-        "status": "PENDING"
-      },
-      "I": {
-        "status": "PENDING"
-      }
-    },
-    "contract": "NOT_APPLIED",
-    "contract_artifact": "DRAFT_ONLY",
-    "contract_allowed": false,
-    "resolution": "PENDING_POST_CUTOVER_GATES_A_TO_I",
-    "finding_status": "ACTIVE"
+    "post_contract_runtime": "PASS",
+    "relevant_log_errors": 0,
+    "resolution": "COMPLETE",
+    "finding_status": "RESOLVED"
   }
 }

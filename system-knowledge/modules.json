@@ -2220,7 +2220,7 @@
         "export startKitchenOrderPreparation",
         "src/lib/tickets/services/comboRedemptions.ts:1035-1231;1462"
       ],
-      "notes": "HIGH #1 source uses credential -> session -> combo lock ordering; disposable PostgreSQL passed. Remote EXPAND and NEW_APP Production cutover passed; remaining gates and CONTRACT are pending.",
+      "notes": "HIGH #1 uses credential -> session -> combo lock ordering; PostgreSQL and remote FINAL_DB runtime passed. EXPAND/CONTRACT and gates A-I are complete.",
       "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
       "high_1_runtime_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },

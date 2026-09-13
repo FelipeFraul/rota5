@@ -86,6 +86,6 @@ Foram catalogadas **66 transições** suportadas pelo código/migrations. Campo 
 ## Gate de integridade
 
 Quatro registros sem caminho executável no runtime atual foram substituídos por ramos observados dos mesmos lifecycles. Entidades, capabilities, verbos e evidências inexatas também foram reconciliados com o código-fonte. O total reproduzível permanece em **66**.
-# Baseline 1.4.1 HIGH #1 transitions
+# Baseline 2.0.0 HIGH #1 transitions
 
-EXPAND adds two explicit `gate_session` transitions from `active` to `revoked`: one triggered by `gate.access_pause` and one by `gate.fixed_revoke`. Both passed disposable PostgreSQL validation and are deployed with the exact NEW_APP Production artifact; final finding resolution still requires gates C-I and CONTRACT.
+The canonical catalog contains 68 transitions. `state.067` and `state.068` are OBSERVED on FINAL_DB: temporary pause and fixed revoke invalidated linked sessions, and subsequent use was rejected. Gates A-I and CONTRACT passed.

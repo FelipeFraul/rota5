@@ -1,5 +1,13 @@
 # Baseline changelog
 
+## BASELINE V2.0.0 — HIGH #1 FINAL CONTRACT
+
+- Froze source commit `bd0012f3a3277b2b6d1a97390ba7c3cc460a9165`, fingerprint `c70f133b075bc479e713d052fb0001c5e95ce35c140892bd5e5b6a121e05a53f` and 356 functional files.
+- MAJOR: FINAL_DB is strict-only and intentionally incompatible with OLD_APP.
+- EXPAND and CONTRACT are APPLIED_AND_VALIDATED; CONTRACT `20260913000100_gate_credential_session_revocation_contract` applied at `2026-09-13T18:11:18.773635Z` with SHA-256 `bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525`.
+- Gates A-I and post-CONTRACT runtime passed. HIGH #1 moved explicitly from ACTIVE to RESOLVED; active HIGH=4, potential HIGH=1, open HIGH=5, resolved=5.
+- Production remains READY at `dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT`, serving runtime artifact `cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8`; no new deployment was required. Product health remains BROKEN and infrastructure health remains DEGRADED.
+
 ## BASELINE V1.4.1 — HIGH #1 EXPAND AND NEW_APP PRODUCTION CUTOVER
 
 - Preserved functional source commit `cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8`, fingerprint `6643a2c539caab8942ebe3953dc75963446d27dbb653e166a3310fe2c4e2fc4b` and 355 functional files.

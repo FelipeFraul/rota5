@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-13T16:27:50.380Z",
-  "stage": "stabilization/high-1-source-freeze",
+  "generatedAt": "2026-09-13T19:08:55.803Z",
+  "stage": "stabilization/high-1-final-baseline-2.0.0",
   "count": 68,
   "records": [
     {
@@ -1384,11 +1384,16 @@
           "line": 60,
           "symbol": "revoke_linked_gate_sessions_on_credential_change",
           "claim": "EXPAND source revokes active sessions attributed to a paused temporary credential."
+        },
+        {
+          "kind": "runtime",
+          "path": "system-knowledge/runtime-validation.json",
+          "claim": "Credential revocation and attributed-session rejection passed against FINAL_DB."
         }
       ],
-      "status": "LOCAL_DECLARED",
-      "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "runtime_validation_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
+      "status": "OBSERVED",
+      "source_implementation_status": "IMPLEMENTED_AND_VALIDATED",
+      "runtime_validation_status": "POST_CONTRACT_RUNTIME_PASS"
     },
     {
       "id": "state.068",
@@ -1406,11 +1411,16 @@
           "line": 60,
           "symbol": "revoke_linked_gate_sessions_on_credential_change",
           "claim": "EXPAND source revokes active sessions attributed to a revoked fixed credential."
+        },
+        {
+          "kind": "runtime",
+          "path": "system-knowledge/runtime-validation.json",
+          "claim": "Credential revocation and attributed-session rejection passed against FINAL_DB."
         }
       ],
-      "status": "LOCAL_DECLARED",
-      "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "runtime_validation_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
+      "status": "OBSERVED",
+      "source_implementation_status": "IMPLEMENTED_AND_VALIDATED",
+      "runtime_validation_status": "POST_CONTRACT_RUNTIME_PASS"
     }
   ],
   "entities": [
@@ -1442,7 +1452,8 @@
     "Null/omitted from_state means insertion; no unstored prior state is invented.",
     "A pipe in a state denotes multiple explicitly allowed source/target states, not an intermediate state.",
     "state.052 is implemented in SQL but blocked in the current reader path.",
-    "Gate Etapa 4: quatro transições sem caminho executável foram substituídas por ramos observados dos mesmos lifecycles; evidências e entidades inexatas foram corrigidas."
+    "Gate Etapa 4: quatro transições sem caminho executável foram substituídas por ramos observados dos mesmos lifecycles; evidências e entidades inexatas foram corrigidas.",
+    "Baseline 2.0.0: state.067/state.068 are observed remotely; FINAL_DB requires immutable source attribution and strict-only authorization."
   ],
   "validation": {
     "status": "PASS",

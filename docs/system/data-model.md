@@ -1,6 +1,6 @@
-# Baseline 1.4.1 HIGH #1 data-model runtime state
+# Baseline 2.0.0 HIGH #1 final data model
 
-The remote EXPAND schema now contains nullable `source_kind`, `source_gate_access_id` and `source_fixed_gate_access_id` on `gate_sessions`, plus the related constraints, FKs and indexes. Source and remote schema match in dual-mode; CONTRACT has not made attribution mandatory.
+FINAL_DB requires `gate_sessions.source_kind`, permits `legacy_unattributed`, `admin_direct`, `temporary_gate_access` and `fixed_gate_access`, enforces matching source links, and rejects source mutation. Historical source-null count changed from 1 to 0 through preserved `legacy_unattributed` classification.
 
 # Data model AS-IS — Etapa 5
 

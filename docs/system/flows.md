@@ -1,6 +1,6 @@
-# Baseline 1.4.1 HIGH #1 flow runtime state
+# Baseline 2.0.0 HIGH #1 flow runtime state
 
-`gate.access_management`, `gate.ticket_admission` and `kitchen.combo_redemption` now record validated EXPAND and exact NEW_APP Production runtime evidence. No flow is promoted to fully corrected before gates C-I, CONTRACT and the post-fix audit.
+`gate.access_management`, `gate.ticket_admission` and `kitchen.combo_redemption` retain their conservative catalog statuses, while the HIGH #1 authorization behavior is validated on FINAL_DB. Gates A-I and strict ticket/combo runtime passed.
 
 # Flow Catalog — Etapa 4
 

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-13T16:27:50.380Z",
-  "stage": "stabilization/high-1-source-freeze",
+  "generatedAt": "2026-09-13T19:08:55.803Z",
+  "stage": "stabilization/high-1-final-baseline-2.0.0",
   "count": 44,
   "evidence_policy": [
     "LOCAL_DECLARED",
@@ -7968,7 +7968,7 @@
         {
           "name": "source_kind",
           "type": "text",
-          "nullable": true,
+          "nullable": false,
           "default": null
         },
         {
@@ -8101,9 +8101,14 @@
           "name": "source_kind",
           "type": "string",
           "format": "text",
-          "nullable": true,
+          "nullable": false,
           "default": null,
-          "enum": []
+          "enum": [
+            "legacy_unattributed",
+            "admin_direct",
+            "temporary_gate_access",
+            "fixed_gate_access"
+          ]
         },
         {
           "name": "source_gate_access_id",
@@ -8220,12 +8225,12 @@
         {
           "name": "gate_sessions_source_kind_check",
           "type": "CHECK",
-          "definition": "source_kind is null or source_kind in ('admin_direct','temporary_gate_access','fixed_gate_access')"
+          "definition": "source_kind in ('legacy_unattributed','admin_direct','temporary_gate_access','fixed_gate_access')"
         },
         {
           "name": "gate_sessions_source_reference_check",
           "type": "CHECK",
-          "definition": "source kind and exactly matching source reference, nullable only during EXPAND"
+          "definition": "temporary source requires only source_gate_access_id; fixed source requires only source_fixed_gate_access_id; legacy_unattributed/admin_direct require neither"
         }
       ],
       "indexes": [
@@ -8290,6 +8295,11 @@
           "name": "set_gate_sessions_updated_at",
           "function": "set_updated_at",
           "evidence": "supabase/migrations/20260522000600_create_gate_sessions.sql"
+        },
+        {
+          "name": "prevent_gate_session_source_change",
+          "function": "prevent_gate_session_source_change",
+          "evidence": "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql"
         }
       ],
       "functions": [
@@ -8298,7 +8308,8 @@
         "function.revoke_linked_gate_sessions_on_credential_change",
         "function.lock_authorized_gate_session",
         "function.pause_gate_access_and_revoke_sessions",
-        "function.revoke_fixed_gate_access_and_revoke_sessions"
+        "function.revoke_fixed_gate_access_and_revoke_sessions",
+        "function.prevent_gate_session_source_change"
       ],
       "modules": [
         "gate.access-session"
@@ -8319,15 +8330,16 @@
         "state.041"
       ],
       "status_local": "LOCAL_DECLARED",
-      "status_remote": "REMOTE_SCHEMA_EXPAND",
-      "consistency": "MATCH_DUAL_MODE",
+      "status_remote": "REMOTE_SCHEMA_FINAL_CONTRACT",
+      "consistency": "MATCH_FINAL_CONTRACT",
       "evidence": [
         "supabase/migrations/20260522000600_create_gate_sessions.sql",
         {
           "source": "Supabase PostgREST OpenAPI",
           "type": "REMOTE_SCHEMA"
         },
-        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
+        "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql"
       ],
       "lifecycle": {
         "explicit": true,
@@ -8382,18 +8394,20 @@
               }
             ],
             "impossible_or_unused_transitions": "NOT_VALIDATED",
-            "consistency": "MATCH_DUAL_MODE",
-            "evidence_source": "REMOTE_EXPAND_VALIDATED"
+            "consistency": "MATCH_FINAL_CONTRACT",
+            "evidence_source": "REMOTE_CONTRACT_AND_RUNTIME_VALIDATED"
           }
         ],
-        "consistency": "MATCH_DUAL_MODE"
+        "consistency": "MATCH_FINAL_CONTRACT"
       },
       "rollout_state": {
-        "source_definition": "EXPAND_IMPLEMENTED",
+        "source_definition": "FINAL_CONTRACT_IMPLEMENTED",
         "remote_database": "APPLIED_AND_VALIDATED",
         "expand_applied_at": "2026-09-13T14:20:15.059853Z",
-        "dual_mode": "ACTIVE",
-        "contract": "DRAFT_ONLY_NOT_APPLIED"
+        "contract_applied_at": "2026-09-13T18:11:18.773635Z",
+        "dual_mode": "ENDED",
+        "source_kind": "NOT_NULL",
+        "source_attribution": "IMMUTABLE"
       }
     },
     {
@@ -15279,7 +15293,13 @@
     "status": "PASS",
     "local_remote_table_names": "MATCH",
     "local_remote_column_names": "MATCH",
-    "state_transition_references": true
+    "state_transition_references": true,
+    "high_1_contract": {
+      "status": "PASS",
+      "remote_schema": "MATCH_FINAL_CONTRACT",
+      "source_null_total": 0,
+      "historical_record_handling": "legacy_unattributed"
+    }
   },
   "lifecycleSummary": {
     "statefulTables": 22,
@@ -15288,6 +15308,112 @@
     "unmappedTransitions": [],
     "issues": [],
     "schemaConsistency": "MATCH",
-    "correction": "Gate Etapa 5: mapeamento por aliases explícitos substituiu singularização simples; 17 foi corrigido para 22 tabelas."
+    "correction": "Gate Etapa 5: mapeamento por aliases explícitos substituiu singularização simples; 17 foi corrigido para 22 tabelas.",
+    "high_1": {
+      "source_implementation": "IMPLEMENTED_AND_VALIDATED",
+      "canonical_repository_source_commit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
+      "production_rollout": "COMPLETE",
+      "strategy": "EXPAND_DEPLOY_CONTRACT",
+      "phase_0": "PASS",
+      "release_path": "HEALTHY",
+      "expand": "APPLIED_AND_VALIDATED",
+      "expand_remote": "APPLIED_AND_VALIDATED",
+      "expand_migration": "20260912000100_gate_credential_session_revocation_expand",
+      "expand_applied_at": "2026-09-13T14:20:15.059853Z",
+      "dual_mode": "ENDED",
+      "new_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+      "production_runtime_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+      "new_app_pushed": true,
+      "new_app_deployed": true,
+      "new_app": "PRODUCTION_CUTOVER_COMPLETE",
+      "new_app_state": "PRODUCTION_CUTOVER_COMPLETE",
+      "production_deployment": "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+      "production_status": "READY",
+      "new_app_cutover_at": "2026-09-13T16:19:42.340Z",
+      "old_app_serving_after_cutover": false,
+      "new_app_serving": true,
+      "rollback_performed": false,
+      "app_runtime_source_changed_since_cacbc430": false,
+      "contract": "APPLIED_AND_VALIDATED",
+      "contract_remote": "APPLIED_AND_VALIDATED",
+      "contract_artifact": "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql",
+      "contract_migration": "20260913000100_gate_credential_session_revocation_contract",
+      "contract_applied_at": "2026-09-13T18:11:18.773635Z",
+      "contract_sha256": "bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525",
+      "contract_allowed": false,
+      "contract_completed": true,
+      "all_gates_a_i": "PASS",
+      "gates": {
+        "A": {
+          "status": "PASS",
+          "evidence": "Exact NEW_APP Production deployment is READY and its immutable artifact identity is proven."
+        },
+        "B": {
+          "status": "PASS",
+          "evidence": "OLD_APP stopped serving Production at NEW_APP_CUTOVER_AT."
+        },
+        "C": {
+          "status": "PASS",
+          "evidence": "The controlled post-cutover window completed with strict runtime calls and no observed legacy compatibility calls."
+        },
+        "D": {
+          "status": "PASS",
+          "evidence": "No source-null session was active and unexpired before CONTRACT."
+        },
+        "E": {
+          "status": "PASS",
+          "evidence": "Post-cutover session attribution and source-link consistency passed, including positive runtime evidence."
+        },
+        "F": {
+          "status": "PASS",
+          "evidence": "Temporary credential pause revoked its attributed gate session and the revoked session was rejected."
+        },
+        "G": {
+          "status": "PASS",
+          "evidence": "Fixed credential revocation revoked its attributed gate session and the revoked session was rejected."
+        },
+        "H": {
+          "status": "PASS",
+          "evidence": "Strict ticket validation passed and the legacy ticket authorization path was rejected."
+        },
+        "I": {
+          "status": "PASS",
+          "evidence": "Strict combo validation, source-null rejection, source immutability and fixture cleanup passed."
+        }
+      },
+      "ticket_auth": "STRICT_ONLY",
+      "combo_auth": "STRICT_ONLY",
+      "source_kind": "NOT_NULL",
+      "source_attribution": "IMMUTABLE",
+      "historical_source_null_before_contract": 1,
+      "historical_source_null_after_contract": 0,
+      "historical_record_handling": "legacy_unattributed",
+      "historical_record_preserved": true,
+      "old_app_final_db_compatibility": "INCOMPATIBLE_BY_DESIGN",
+      "old_app_rollback_safe": false,
+      "runtime_proof": {
+        "health": "PASS",
+        "public_page": "PASS",
+        "admin_auth": "PASS",
+        "expand_probe": "PASS",
+        "post_contract_runtime": "PASS",
+        "strict_ticket": "PASS",
+        "strict_combo": "PASS",
+        "temporary_revoke": "PASS",
+        "fixed_revoke": "PASS",
+        "admin_direct": "PASS",
+        "legacy_ticket_rejected": "PASS",
+        "legacy_combo_rejected": "PASS",
+        "source_null_rejected": "PASS",
+        "source_mutation_rejected": "PASS",
+        "fixture_cleanup": "PASS",
+        "unrelated_changes": 0,
+        "relevant_log_errors": 0
+      },
+      "post_contract_runtime": "PASS",
+      "relevant_log_errors": 0,
+      "resolution": "COMPLETE",
+      "finding_status": "RESOLVED"
+    }
   }
 }

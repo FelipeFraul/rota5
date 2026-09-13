@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T16:54:57.825Z",
-  "stage": "stabilization/high-1-source-freeze",
-  "sourceCommit": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+  "generatedAt": "2026-09-13T19:08:55.803Z",
+  "stage": "stabilization/high-1-final-baseline-2.0.0",
+  "sourceCommit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
   "scope": "Baseline 1.3.1 taxonomy correction after Git/Vercel identity resolution; no deployment of the current HEAD.",
   "method": "Análise estática, cinco testes comportamentais focados com fronteira Supabase simulada e gates locais canônicos; testes mutantes remotos não executados.",
   "vocabulary": [
@@ -16,7 +16,7 @@
   "system": {
     "id": "system.rota5",
     "health": "BROKEN",
-    "reason": "No active P0 remains. 5 ACTIVE HIGH, 1 POTENTIAL HIGH and 6 open HIGH remain; HIGH #1 remains ACTIVE pending gates C-I and CONTRACT. The deployment-error finding is RESOLVED; the same seven default-test failures remain.",
+    "reason": "No active P0 remains. 4 ACTIVE HIGH, 1 POTENTIAL HIGH and 5 open HIGH remain after HIGH #1 resolution; the same seven default-test failures remain.",
     "finding_counts_by_severity": {
       "CRITICAL": 0,
       "HIGH": 10,
@@ -26,11 +26,11 @@
     },
     "active_findings": {
       "P0": 0,
-      "HIGH": 5,
+      "HIGH": 4,
       "CRITICAL": 0,
-      "RESOLVED": 4,
+      "RESOLVED": 5,
       "POTENTIAL_HIGH": 1,
-      "OPEN_HIGH": 6
+      "OPEN_HIGH": 5
     }
   },
   "domains": [
@@ -151,7 +151,6 @@
       "id": "domain.admin-identity-access",
       "health": "DEGRADED",
       "findings": [
-        "risk.gate-credential-revocation-does-not-revoke-session",
         "risk.service-role-application-authorization-boundary"
       ]
     },
@@ -159,7 +158,6 @@
       "id": "domain.gate-admission",
       "health": "DEGRADED",
       "findings": [
-        "risk.gate-credential-revocation-does-not-revoke-session",
         "debt.router-responsibility-concentration",
         "gap.critical-capability-and-flow-coverage",
         "orphan.gate-session-revoke",
@@ -183,7 +181,6 @@
       "findings": [
         "bug.combo-redemption-unreachable-consume",
         "bug.user-visible-text-corruption",
-        "risk.gate-credential-revocation-does-not-revoke-session",
         "risk.combo-metadata-read-modify-write-race",
         "gap.critical-flow-correlation",
         "debt.router-responsibility-concentration",
@@ -716,9 +713,7 @@
       "id": "gate.access_pause",
       "health": "HEALTHY",
       "canonical_status": "CONFIRMADA",
-      "findings": [
-        "risk.gate-credential-revocation-does-not-revoke-session"
-      ]
+      "findings": []
     },
     {
       "id": "gate.fixed_create",
@@ -739,7 +734,6 @@
       "health": "HEALTHY",
       "canonical_status": "CONFIRMADA",
       "findings": [
-        "risk.gate-credential-revocation-does-not-revoke-session",
         "gap.critical-capability-and-flow-coverage"
       ]
     },
@@ -920,8 +914,7 @@
       "health": "HEALTHY",
       "canonical_status": "CONFIRMADA",
       "findings": [
-        "bug.user-visible-text-corruption",
-        "risk.gate-credential-revocation-does-not-revoke-session"
+        "bug.user-visible-text-corruption"
       ]
     },
     {
@@ -1330,7 +1323,6 @@
       "canonical_status": "PARCIAL",
       "findings": [
         "bug.user-visible-text-corruption",
-        "risk.gate-credential-revocation-does-not-revoke-session",
         "risk.combo-metadata-read-modify-write-race",
         "gap.client-errors-not-persisted"
       ]
@@ -1549,53 +1541,115 @@
   "resolved_findings": [
     "bug.create-event-invalid-jsx",
     "bug.combo-redemption-unreachable-consume",
+    "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.vercel-project-identity-drift",
     "risk.latest-rota5-deployment-error"
   ],
   "infrastructure_health": "DEGRADED",
   "high_1": {
-    "finding_status": "ACTIVE",
-    "source_implementation": "IMPLEMENTED",
-    "production_rollout": "POST_CUTOVER_GATES_PENDING",
+    "source_implementation": "IMPLEMENTED_AND_VALIDATED",
+    "canonical_repository_source_commit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
+    "production_rollout": "COMPLETE",
+    "strategy": "EXPAND_DEPLOY_CONTRACT",
+    "phase_0": "PASS",
+    "release_path": "HEALTHY",
+    "expand": "APPLIED_AND_VALIDATED",
     "expand_remote": "APPLIED_AND_VALIDATED",
+    "expand_migration": "20260912000100_gate_credential_session_revocation_expand",
     "expand_applied_at": "2026-09-13T14:20:15.059853Z",
+    "dual_mode": "ENDED",
+    "new_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+    "production_runtime_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+    "new_app_pushed": true,
+    "new_app_deployed": true,
     "new_app": "PRODUCTION_CUTOVER_COMPLETE",
+    "new_app_state": "PRODUCTION_CUTOVER_COMPLETE",
     "production_deployment": "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+    "production_status": "READY",
     "new_app_cutover_at": "2026-09-13T16:19:42.340Z",
+    "old_app_serving_after_cutover": false,
+    "new_app_serving": true,
+    "rollback_performed": false,
+    "app_runtime_source_changed_since_cacbc430": false,
+    "contract": "APPLIED_AND_VALIDATED",
+    "contract_remote": "APPLIED_AND_VALIDATED",
+    "contract_artifact": "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql",
+    "contract_migration": "20260913000100_gate_credential_session_revocation_contract",
+    "contract_applied_at": "2026-09-13T18:11:18.773635Z",
+    "contract_sha256": "bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525",
+    "contract_allowed": false,
+    "contract_completed": true,
+    "all_gates_a_i": "PASS",
     "gates": {
       "A": {
         "status": "PASS",
-        "evidence": "NEW_APP Production deployment healthy and exact artifact identity proven."
+        "evidence": "Exact NEW_APP Production deployment is READY and its immutable artifact identity is proven."
       },
       "B": {
         "status": "PASS",
-        "evidence": "OLD_APP no longer serves Production after NEW_APP_CUTOVER_AT."
+        "evidence": "OLD_APP stopped serving Production at NEW_APP_CUTOVER_AT."
       },
       "C": {
-        "status": "PENDING",
-        "evidence": "legacy_compat observation window remains open."
+        "status": "PASS",
+        "evidence": "The controlled post-cutover window completed with strict runtime calls and no observed legacy compatibility calls."
       },
       "D": {
-        "status": "PENDING_FORMAL_CONFIRMATION",
-        "evidence": "source_null_unexpired is currently 0; closure requires the post-cutover audit."
+        "status": "PASS",
+        "evidence": "No source-null session was active and unexpired before CONTRACT."
       },
       "E": {
-        "status": "PENDING_FORMAL_CONFIRMATION",
-        "evidence": "Sessions created after NEW_APP_CUTOVER_AT still require formal attribution audit."
+        "status": "PASS",
+        "evidence": "Post-cutover session attribution and source-link consistency passed, including positive runtime evidence."
       },
       "F": {
-        "status": "PENDING"
+        "status": "PASS",
+        "evidence": "Temporary credential pause revoked its attributed gate session and the revoked session was rejected."
       },
       "G": {
-        "status": "PENDING"
+        "status": "PASS",
+        "evidence": "Fixed credential revocation revoked its attributed gate session and the revoked session was rejected."
       },
       "H": {
-        "status": "PENDING"
+        "status": "PASS",
+        "evidence": "Strict ticket validation passed and the legacy ticket authorization path was rejected."
       },
       "I": {
-        "status": "PENDING"
+        "status": "PASS",
+        "evidence": "Strict combo validation, source-null rejection, source immutability and fixture cleanup passed."
       }
     },
-    "contract_remote": "NOT_APPLIED"
+    "ticket_auth": "STRICT_ONLY",
+    "combo_auth": "STRICT_ONLY",
+    "source_kind": "NOT_NULL",
+    "source_attribution": "IMMUTABLE",
+    "historical_source_null_before_contract": 1,
+    "historical_source_null_after_contract": 0,
+    "historical_record_handling": "legacy_unattributed",
+    "historical_record_preserved": true,
+    "old_app_final_db_compatibility": "INCOMPATIBLE_BY_DESIGN",
+    "old_app_rollback_safe": false,
+    "runtime_proof": {
+      "health": "PASS",
+      "public_page": "PASS",
+      "admin_auth": "PASS",
+      "expand_probe": "PASS",
+      "post_contract_runtime": "PASS",
+      "strict_ticket": "PASS",
+      "strict_combo": "PASS",
+      "temporary_revoke": "PASS",
+      "fixed_revoke": "PASS",
+      "admin_direct": "PASS",
+      "legacy_ticket_rejected": "PASS",
+      "legacy_combo_rejected": "PASS",
+      "source_null_rejected": "PASS",
+      "source_mutation_rejected": "PASS",
+      "fixture_cleanup": "PASS",
+      "unrelated_changes": 0,
+      "relevant_log_errors": 0
+    },
+    "post_contract_runtime": "PASS",
+    "relevant_log_errors": 0,
+    "resolution": "COMPLETE",
+    "finding_status": "RESOLVED"
   }
 }

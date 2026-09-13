@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T14:12:39.549Z",
+  "generatedAt": "2026-09-13T19:08:55.803Z",
   "id": "architecture.as-is.v1",
   "name": "Arquitetura as-is do Rota5",
   "type": "architecture-baseline",
@@ -13,7 +13,7 @@
     "vercel.json",
     "grafo estático de 428 imports"
   ],
-  "sourceCommit": "121b7a8a4870f5933bd0cf0d45f12a8d71132424",
+  "sourceCommit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
   "topology": {
     "style": "Aplicação Next.js única com App Router, route handlers server-side, serviços TypeScript com acesso direto ao Supabase e regras transacionais adicionais em RPCs PostgreSQL.",
     "deploymentUnit": "Um projeto Next.js conforme package.json/next.config.ts/vercel.json.",

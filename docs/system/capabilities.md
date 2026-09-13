@@ -1,6 +1,6 @@
-# Baseline 1.4.1 HIGH #1 capability runtime state
+# Baseline 2.0.0 HIGH #1 capability runtime state
 
-The source implementations for `gate.access_pause`, `gate.fixed_revoke`, `gate.open`, `gate.consult`, `gate.admit`, `gate.session_revoke`, `combo.kitchen_open`, `combo.prepare` and `combo.redeem` are validated against the remote EXPAND schema and the exact NEW_APP Production artifact. Capability status remains conservative until gates C-I, CONTRACT and the post-fix audit complete.
+The affected gate and combo capabilities are validated against FINAL_DB. Credential pause/revoke invalidates attributed sessions; ticket and combo authorization are strict-only. HIGH #1 is RESOLVED after gates A-I and post-CONTRACT runtime passed.
 
 # Catálogo de capabilities — BASELINE V1, Etapa 3
 

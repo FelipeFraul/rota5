@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T16:54:57.825Z",
-  "stage": "stabilization/high-1-source-freeze",
-  "sourceCommit": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+  "generatedAt": "2026-09-13T19:08:55.803Z",
+  "stage": "stabilization/high-1-final-baseline-2.0.0",
+  "sourceCommit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
   "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
   "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
   "count": 44,
@@ -377,9 +377,9 @@
       "type": "AUTHORIZATION",
       "severity": "HIGH",
       "priority": "P1",
-      "status": "ACTIVE",
+      "status": "RESOLVED",
       "confidence": "CONFIRMED",
-      "description": "pauseGateAccess e revokeFixedGateAccess alteram somente as tabelas de credenciais. validateGateSessionToken autoriza consultando gate_sessions e não consulta a credencial originadora.",
+      "description": "Credential-derived gate sessions are attributed to their source; pause/revoke invalidates linked sessions transactionally, and FINAL_DB authorizes ticket/combo mutations only through a currently authorized attributed session.",
       "evidence": [
         {
           "path": "src/lib/tickets/services/gateAccesses.ts",
@@ -415,6 +415,11 @@
           "path": "scripts/test-gate-credential-revocation-postgres.mjs",
           "line": 1,
           "claim": "Ticket race 2/2 and combo race 2/2 passed."
+        },
+        {
+          "path": "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql",
+          "line": 1,
+          "claim": "CONTRACT 20260913000100_gate_credential_session_revocation_contract is APPLIED_AND_VALIDATED since 2026-09-13T18:11:18.773635Z; SHA-256 bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525."
         }
       ],
       "impact": "Um operador removido pode continuar usando um link já emitido até expiração, inclusive para portaria ou cozinha.",
@@ -446,68 +451,267 @@
         "gate_sessions"
       ],
       "blast_radius": "MULTI_DOMAIN",
-      "workaround": "EXPAND and exact NEW_APP are live in dual-mode; CONTRACT remains prohibited while post-cutover gates are pending.",
-      "direction": "Complete post-cutover gates C-I, apply CONTRACT only after A-I PASS, then complete the post-fix runtime audit; keep ACTIVE until remote proof is complete.",
+      "workaround": "NONE_REQUIRED",
+      "direction": "Monitor the strict-only production contract; OLD_APP rollback is intentionally unsupported after CONTRACT.",
       "priority_justification": "P1 porque mantém autorização operacional após revogação explícita.",
-      "source_implementation": "IMPLEMENTED",
-      "production_rollout": "POST_CUTOVER_GATES_PENDING",
+      "source_implementation": "IMPLEMENTED_AND_VALIDATED",
+      "production_rollout": "COMPLETE",
       "rollout_state": {
+        "source_implementation": "IMPLEMENTED_AND_VALIDATED",
+        "canonical_repository_source_commit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
+        "production_rollout": "COMPLETE",
         "strategy": "EXPAND_DEPLOY_CONTRACT",
         "phase_0": "PASS",
         "release_path": "HEALTHY",
         "expand": "APPLIED_AND_VALIDATED",
+        "expand_remote": "APPLIED_AND_VALIDATED",
+        "expand_migration": "20260912000100_gate_credential_session_revocation_expand",
         "expand_applied_at": "2026-09-13T14:20:15.059853Z",
-        "dual_mode": "ACTIVE",
+        "dual_mode": "ENDED",
         "new_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+        "production_runtime_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
         "new_app_pushed": true,
         "new_app_deployed": true,
         "new_app": "PRODUCTION_CUTOVER_COMPLETE",
+        "new_app_state": "PRODUCTION_CUTOVER_COMPLETE",
         "production_deployment": "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+        "production_status": "READY",
         "new_app_cutover_at": "2026-09-13T16:19:42.340Z",
+        "old_app_serving_after_cutover": false,
+        "new_app_serving": true,
+        "rollback_performed": false,
+        "app_runtime_source_changed_since_cacbc430": false,
+        "contract": "APPLIED_AND_VALIDATED",
+        "contract_remote": "APPLIED_AND_VALIDATED",
+        "contract_artifact": "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql",
+        "contract_migration": "20260913000100_gate_credential_session_revocation_contract",
+        "contract_applied_at": "2026-09-13T18:11:18.773635Z",
+        "contract_sha256": "bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525",
+        "contract_allowed": false,
+        "contract_completed": true,
+        "all_gates_a_i": "PASS",
         "gates": {
           "A": {
             "status": "PASS",
-            "evidence": "NEW_APP Production deployment healthy and exact artifact identity proven."
+            "evidence": "Exact NEW_APP Production deployment is READY and its immutable artifact identity is proven."
           },
           "B": {
             "status": "PASS",
-            "evidence": "OLD_APP no longer serves Production after NEW_APP_CUTOVER_AT."
+            "evidence": "OLD_APP stopped serving Production at NEW_APP_CUTOVER_AT."
           },
           "C": {
-            "status": "PENDING",
-            "evidence": "legacy_compat observation window remains open."
+            "status": "PASS",
+            "evidence": "The controlled post-cutover window completed with strict runtime calls and no observed legacy compatibility calls."
           },
           "D": {
-            "status": "PENDING_FORMAL_CONFIRMATION",
-            "evidence": "source_null_unexpired is currently 0; closure requires the post-cutover audit."
+            "status": "PASS",
+            "evidence": "No source-null session was active and unexpired before CONTRACT."
           },
           "E": {
-            "status": "PENDING_FORMAL_CONFIRMATION",
-            "evidence": "Sessions created after NEW_APP_CUTOVER_AT still require formal attribution audit."
+            "status": "PASS",
+            "evidence": "Post-cutover session attribution and source-link consistency passed, including positive runtime evidence."
           },
           "F": {
-            "status": "PENDING"
+            "status": "PASS",
+            "evidence": "Temporary credential pause revoked its attributed gate session and the revoked session was rejected."
           },
           "G": {
-            "status": "PENDING"
+            "status": "PASS",
+            "evidence": "Fixed credential revocation revoked its attributed gate session and the revoked session was rejected."
           },
           "H": {
-            "status": "PENDING"
+            "status": "PASS",
+            "evidence": "Strict ticket validation passed and the legacy ticket authorization path was rejected."
           },
           "I": {
-            "status": "PENDING"
+            "status": "PASS",
+            "evidence": "Strict combo validation, source-null rejection, source immutability and fixture cleanup passed."
           }
         },
-        "contract": "NOT_APPLIED",
-        "contract_artifact": "DRAFT_ONLY",
-        "contract_allowed": false
+        "ticket_auth": "STRICT_ONLY",
+        "combo_auth": "STRICT_ONLY",
+        "source_kind": "NOT_NULL",
+        "source_attribution": "IMMUTABLE",
+        "historical_source_null_before_contract": 1,
+        "historical_source_null_after_contract": 0,
+        "historical_record_handling": "legacy_unattributed",
+        "historical_record_preserved": true,
+        "old_app_final_db_compatibility": "INCOMPATIBLE_BY_DESIGN",
+        "old_app_rollback_safe": false,
+        "runtime_proof": {
+          "health": "PASS",
+          "public_page": "PASS",
+          "admin_auth": "PASS",
+          "expand_probe": "PASS",
+          "post_contract_runtime": "PASS",
+          "strict_ticket": "PASS",
+          "strict_combo": "PASS",
+          "temporary_revoke": "PASS",
+          "fixed_revoke": "PASS",
+          "admin_direct": "PASS",
+          "legacy_ticket_rejected": "PASS",
+          "legacy_combo_rejected": "PASS",
+          "source_null_rejected": "PASS",
+          "source_mutation_rejected": "PASS",
+          "fixture_cleanup": "PASS",
+          "unrelated_changes": 0,
+          "relevant_log_errors": 0
+        },
+        "post_contract_runtime": "PASS",
+        "relevant_log_errors": 0,
+        "resolution": "COMPLETE",
+        "finding_status": "RESOLVED"
       },
       "resolution_requirements": [
-        "Complete rollout gates C-I",
-        "Apply CONTRACT only after gates A-I pass",
-        "Complete post-fix runtime audit"
+        "EXPAND applied and validated",
+        "NEW_APP Production cutover complete",
+        "Gates A-I passed",
+        "CONTRACT applied and validated",
+        "Post-CONTRACT strict runtime audit passed"
       ],
-      "resolution": "PENDING_POST_CUTOVER_GATES_A_TO_I"
+      "resolution": {
+        "date": "2026-09-13",
+        "resolved_at": "2026-09-13T18:11:18.773635Z",
+        "base_commit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
+        "change": "Completed EXPAND -> NEW_APP -> CONTRACT. Credential source attribution is required and immutable, pause/revoke invalidates attributed sessions, and ticket/combo authorization is strict-only.",
+        "evidence": [
+          {
+            "path": "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
+            "claim": "EXPAND introduced source attribution and atomic authorization objects."
+          },
+          {
+            "path": "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql",
+            "sha256": "bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525",
+            "claim": "CONTRACT made source attribution mandatory and immutable and removed legacy ticket/combo authorization."
+          },
+          {
+            "path": "scripts/test-gate-credential-revocation-rollout-postgres.mjs",
+            "claim": "Disposable PostgreSQL 16 matrix proved NEW_APP + FINAL_DB and expected OLD_APP incompatibility."
+          },
+          {
+            "path": "system-knowledge/runtime-validation.json",
+            "claim": "Gates A-I and the post-CONTRACT strict runtime audit passed; production relevant log errors remained zero."
+          }
+        ],
+        "rollout": {
+          "source_implementation": "IMPLEMENTED_AND_VALIDATED",
+          "canonical_repository_source_commit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
+          "production_rollout": "COMPLETE",
+          "strategy": "EXPAND_DEPLOY_CONTRACT",
+          "phase_0": "PASS",
+          "release_path": "HEALTHY",
+          "expand": "APPLIED_AND_VALIDATED",
+          "expand_remote": "APPLIED_AND_VALIDATED",
+          "expand_migration": "20260912000100_gate_credential_session_revocation_expand",
+          "expand_applied_at": "2026-09-13T14:20:15.059853Z",
+          "dual_mode": "ENDED",
+          "new_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+          "production_runtime_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+          "new_app_pushed": true,
+          "new_app_deployed": true,
+          "new_app": "PRODUCTION_CUTOVER_COMPLETE",
+          "new_app_state": "PRODUCTION_CUTOVER_COMPLETE",
+          "production_deployment": "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+          "production_status": "READY",
+          "new_app_cutover_at": "2026-09-13T16:19:42.340Z",
+          "old_app_serving_after_cutover": false,
+          "new_app_serving": true,
+          "rollback_performed": false,
+          "app_runtime_source_changed_since_cacbc430": false,
+          "contract": "APPLIED_AND_VALIDATED",
+          "contract_remote": "APPLIED_AND_VALIDATED",
+          "contract_artifact": "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql",
+          "contract_migration": "20260913000100_gate_credential_session_revocation_contract",
+          "contract_applied_at": "2026-09-13T18:11:18.773635Z",
+          "contract_sha256": "bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525",
+          "contract_allowed": false,
+          "contract_completed": true,
+          "all_gates_a_i": "PASS",
+          "gates": {
+            "A": {
+              "status": "PASS",
+              "evidence": "Exact NEW_APP Production deployment is READY and its immutable artifact identity is proven."
+            },
+            "B": {
+              "status": "PASS",
+              "evidence": "OLD_APP stopped serving Production at NEW_APP_CUTOVER_AT."
+            },
+            "C": {
+              "status": "PASS",
+              "evidence": "The controlled post-cutover window completed with strict runtime calls and no observed legacy compatibility calls."
+            },
+            "D": {
+              "status": "PASS",
+              "evidence": "No source-null session was active and unexpired before CONTRACT."
+            },
+            "E": {
+              "status": "PASS",
+              "evidence": "Post-cutover session attribution and source-link consistency passed, including positive runtime evidence."
+            },
+            "F": {
+              "status": "PASS",
+              "evidence": "Temporary credential pause revoked its attributed gate session and the revoked session was rejected."
+            },
+            "G": {
+              "status": "PASS",
+              "evidence": "Fixed credential revocation revoked its attributed gate session and the revoked session was rejected."
+            },
+            "H": {
+              "status": "PASS",
+              "evidence": "Strict ticket validation passed and the legacy ticket authorization path was rejected."
+            },
+            "I": {
+              "status": "PASS",
+              "evidence": "Strict combo validation, source-null rejection, source immutability and fixture cleanup passed."
+            }
+          },
+          "ticket_auth": "STRICT_ONLY",
+          "combo_auth": "STRICT_ONLY",
+          "source_kind": "NOT_NULL",
+          "source_attribution": "IMMUTABLE",
+          "historical_source_null_before_contract": 1,
+          "historical_source_null_after_contract": 0,
+          "historical_record_handling": "legacy_unattributed",
+          "historical_record_preserved": true,
+          "old_app_final_db_compatibility": "INCOMPATIBLE_BY_DESIGN",
+          "old_app_rollback_safe": false,
+          "runtime_proof": {
+            "health": "PASS",
+            "public_page": "PASS",
+            "admin_auth": "PASS",
+            "expand_probe": "PASS",
+            "post_contract_runtime": "PASS",
+            "strict_ticket": "PASS",
+            "strict_combo": "PASS",
+            "temporary_revoke": "PASS",
+            "fixed_revoke": "PASS",
+            "admin_direct": "PASS",
+            "legacy_ticket_rejected": "PASS",
+            "legacy_combo_rejected": "PASS",
+            "source_null_rejected": "PASS",
+            "source_mutation_rejected": "PASS",
+            "fixture_cleanup": "PASS",
+            "unrelated_changes": 0,
+            "relevant_log_errors": 0
+          },
+          "post_contract_runtime": "PASS",
+          "relevant_log_errors": 0,
+          "resolution": "COMPLETE",
+          "finding_status": "RESOLVED"
+        },
+        "proving_tests": [
+          "strict ticket PASS",
+          "strict combo PASS",
+          "temporary credential revocation PASS",
+          "fixed credential revocation PASS",
+          "legacy ticket rejected",
+          "legacy combo rejected",
+          "source-null rejected",
+          "source attribution mutation rejected",
+          "fixture cleanup PASS"
+        ],
+        "lifecycle_policy": "ID, HIGH severity, P1 priority and historical evidence are preserved; ACTIVE migrated explicitly to RESOLVED after full remote rollout and runtime proof."
+      }
     },
     {
       "id": "risk.admin-event-multistep-partial-state",

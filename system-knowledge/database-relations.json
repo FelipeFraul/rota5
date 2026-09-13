@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-13T16:27:50.380Z",
-  "stage": "stabilization/high-1-source-freeze",
-  "count": 2255,
+  "generatedAt": "2026-09-13T19:08:55.803Z",
+  "stage": "stabilization/high-1-final-baseline-2.0.0",
+  "count": 2257,
   "types": [
     "MODULE_ACCESSES_TABLE",
     "CAPABILITY_ACCESSES_TABLE",
@@ -33847,15 +33847,45 @@
         "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
       ],
       "id": "datarel.2255"
+    },
+    {
+      "from": "table.gate_sessions",
+      "type": "TABLE_TRIGGERS_FUNCTION",
+      "to": "function.prevent_gate_session_source_change",
+      "operation": "TRIGGERED",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql"
+      ],
+      "id": "datarel.2256"
+    },
+    {
+      "from": "trigger.prevent_gate_session_source_change",
+      "type": "TRIGGER_CALLS_FUNCTION",
+      "to": "function.prevent_gate_session_source_change",
+      "operation": "TRIGGERED",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql"
+      ],
+      "id": "datarel.2257"
     }
   ],
   "validation": {
     "status": "PASS",
     "references_resolved": true,
     "operations_inferred_only_with_static_evidence": true,
-    "non_not_inferred_relations": 2072,
+    "non_not_inferred_relations": 2074,
     "non_not_inferred_without_evidence": 0,
     "derived_operations_are_labeled": true,
-    "high_1_rollout": "EXPAND APPLIED_AND_VALIDATED; NEW_APP Production cutover complete; dual-mode active; CONTRACT NOT_APPLIED."
+    "high_1_rollout": "EXPAND and CONTRACT APPLIED_AND_VALIDATED; FINAL_DB strict-only; dual-mode ended; source attribution non-null and immutable."
   }
 }

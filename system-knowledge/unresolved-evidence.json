@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T16:54:57.825Z",
-  "stage": 7,
+  "generatedAt": "2026-09-13T19:08:55.803Z",
+  "stage": "stabilization/high-1-final-baseline-2.0.0",
   "count": 10,
-  "status": "EXPLICITLY_PRESERVED",
+  "status": "EXPLICITLY_PRESERVED_WITH_RESOLVED_HISTORY",
   "records": [
     {
       "id": "unresolved.remote-postgres-internals",
@@ -18,10 +18,10 @@
       "id": "unresolved.remote-migration-history",
       "category": "DATA",
       "question": "Histórico e ordem efetivamente aplicados das 77 migrations no ambiente remoto",
-      "status": "NOT_VALIDATED",
-      "currentEvidence": "O repositório prova somente as migrations locais.",
-      "neededEvidence": "Histórico de migrations do projeto remoto.",
-      "lastReviewedAt": "2026-09-12"
+      "status": "RESOLVED",
+      "currentEvidence": "Remote history was read directly: 79 migrations registered through 20260913000100_gate_credential_session_revocation_contract; EXPAND count=1, CONTRACT count=1, pending=0.",
+      "neededEvidence": "NONE_FOR_CURRENT_STATE",
+      "lastReviewedAt": "2026-09-13"
     },
     {
       "id": "unresolved.supabase-auth-state",
@@ -63,10 +63,10 @@
       "id": "unresolved.published-source-commit",
       "category": "INFRASTRUCTURE",
       "question": "Commit/source SHA efetivamente publicado nos deployments observados",
-      "status": "NOT_VALIDATED",
-      "currentEvidence": "A inspeção identifica deployments/projetos, sem provar equivalência ao HEAD.",
-      "neededEvidence": "Metadado imutável de source commit do deployment.",
-      "lastReviewedAt": "2026-09-12"
+      "status": "RESOLVED",
+      "currentEvidence": "Production deployment dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT was proven to serve immutable runtime artifact cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8; repository-only CONTRACT migration/test changes do not alter src/**.",
+      "neededEvidence": "NONE_FOR_CURRENT_STATE",
+      "lastReviewedAt": "2026-09-13"
     },
     {
       "id": "unresolved.vercel-error-root-cause",

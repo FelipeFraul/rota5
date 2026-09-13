@@ -203,6 +203,6 @@ O grafo aproximado de runtime, após excluir imports explicitamente de tipo, con
 ## Entrypoints autocontidos ou de toolchain
 
 A segunda passagem deixou cinco entrypoints sem aresta para module de produto por evidência explícita: page-root renderiza apenas um main vazio; npm-dev, npm-build e npm-start terminam no runtime Next.js; npm-test termina no runner dos testes inventariados na Etapa 1. Eles permanecem como nós de entrada, sem destino interno inventado.
-# Baseline 1.4.0 HIGH #1 dependency order
+# Baseline 2.0.0 HIGH #1 final dependency order
 
 Protected mutations and revocation share the source lock order: credential, then `gate_sessions`, then ticket or combo. The affected modules are `gate.access-session`, `gate.validation`, `combo.redemption` and `messaging.router`. This dependency chain is locally validated and not yet deployed.

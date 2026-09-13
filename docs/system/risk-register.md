@@ -1,6 +1,6 @@
-# Baseline 1.4.1 HIGH #1 state
+# Baseline 2.0.0 HIGH #1 final state
 
-`risk.gate-credential-revocation-does-not-revoke-session` remains `ACTIVE/HIGH/P1`. Implementation is complete, EXPAND is `APPLIED_AND_VALIDATED`, and exact NEW_APP Production cutover is complete. Gates A/B passed; C-I remain pending or pending formal confirmation. CONTRACT is `NOT_APPLIED`; resolution remains `PENDING_POST_CUTOVER_GATES_A_TO_I`.
+`risk.gate-credential-revocation-does-not-revoke-session` is `RESOLVED/HIGH/P1`. EXPAND and CONTRACT are APPLIED_AND_VALIDATED, gates A-I passed, and strict post-CONTRACT runtime passed. Product health remains BROKEN and infrastructure health DEGRADED due independent findings.
 
 # Risk register
 
@@ -19,7 +19,7 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 | bug.event-duplicate-artist-leak | BUG | MEDIUM | P1 | ACTIVE | CONFIRMED | Duplicação de evento preserva artista do evento de origem |
 | bug.user-visible-text-corruption | BUG | MEDIUM | P1 | ACTIVE | CONFIRMED | Textos ativos contêm mojibake e substituições por interrogação |
 | legacy.active-brand-contamination | LEGACY | HIGH | P1 | ACTIVE | CONFIRMED | Superfícies Rota5 exibem referências e assets Black House/RockBar |
-| risk.gate-credential-revocation-does-not-revoke-session | AUTHORIZATION | HIGH | P1 | ACTIVE | CONFIRMED | Pausa/revogação da credencial não invalida sessões de leitor já emitidas |
+| risk.gate-credential-revocation-does-not-revoke-session | AUTHORIZATION | HIGH | P1 | RESOLVED | CONFIRMED | Source attribution and strict credential/session authorization completed |
 | risk.admin-event-multistep-partial-state | DATA_INTEGRITY | HIGH | P1 | POTENTIAL | HIGH | Criação de evento e catálogo inicial cruza entidades sem transação única |
 | risk.combo-metadata-read-modify-write-race | CONCURRENCY | MEDIUM | P2 | POTENTIAL | HIGH | Atualizações concorrentes podem sobrescrever metadados do combo |
 | risk.github-issue-create-replay | IDEMPOTENCY | MEDIUM | P2 | POTENTIAL | HIGH | Criação de issue não possui chave de idempotência |
@@ -128,18 +128,15 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 - Direção: Definir a identidade canônica antes de classificar cada referência como compartilhada ou legado removível.
 - Justificativa da prioridade: P1 porque referências legadas estão ativas em pagamento e comunicação ao cliente.
 
-### risk.gate-credential-revocation-does-not-revoke-session — Pausa/revogação da credencial não invalida sessões de leitor já emitidas
+### risk.gate-credential-revocation-does-not-revoke-session — Credential revocation and attributed session authorization
 
-- Tipo / severidade / prioridade: **AUTHORIZATION / HIGH / P1**
-- Status / confiança: **ACTIVE / CONFIRMED**
-- Problema: pauseGateAccess e revokeFixedGateAccess alteram somente as tabelas de credenciais. validateGateSessionToken autoriza consultando gate_sessions e não consulta a credencial originadora.
-- Evidência: `src/lib/tickets/services/gateAccesses.ts`:126 — Pausa apenas gate_accesses.; `src/lib/tickets/services/fixedGateAccesses.ts`:84 — Revoga apenas fixed_gate_accesses.; `src/lib/tickets/services/gateSessions.ts`:282 — Validação consulta token/status/expiração da sessão.
-- Impacto: Um operador removido pode continuar usando um link já emitido até expiração, inclusive para portaria ou cozinha.
-- Escopo: domains domain.gate-admission, domain.combo-commerce-fulfillment, domain.admin-identity-access; capabilities gate.access_pause, gate.fixed_revoke, gate.admit, combo.kitchen_open; flows gate.ticket_admission, kitchen.combo_redemption.
-- Blast radius: **MULTI_DOMAIN**
-- Workaround: Revogar diretamente gate_sessions existe como função órfã, sem entrypoint catalogado.
-- Direção: Vincular e invalidar sessões derivadas ao revogar a credencial fonte.
-- Justificativa da prioridade: P1 porque mantém autorização operacional após revogação explícita.
+- Type / severity / priority: **AUTHORIZATION / HIGH / P1**
+- Status / confidence: **RESOLVED / CONFIRMED**
+- Resolution: EXPAND and CONTRACT are APPLIED_AND_VALIDATED; gates A-I and post-CONTRACT runtime passed.
+- Final contract: strict ticket/combo authorization, non-null immutable source attribution and atomic credential/session revocation.
+- Historical record: one source-null row was preserved as `legacy_unattributed`; source-null changed from 1 to 0.
+- Compatibility boundary: OLD_APP + FINAL_DB is `INCOMPATIBLE_BY_DESIGN`; OLD_APP rollback is unsafe.
+- Evidence: `system-knowledge/findings.json`, `system-knowledge/runtime-validation.json` and the active CONTRACT migration.
 
 ### risk.admin-event-multistep-partial-state — Criação de evento e catálogo inicial cruza entidades sem transação única
 
