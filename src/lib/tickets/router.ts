@@ -12825,6 +12825,7 @@ export async function routeTicketMessage({
         gateLabel: "Cozinha",
         replaceActiveSessions: true,
         ttlMinutes: 8 * 60,
+        source: { kind: "admin_direct" },
       });
 
       return {
@@ -13431,6 +13432,7 @@ export async function routeTicketMessage({
           gateLabel: "Check-in",
           eventId: selectedEvent.eventId,
           replaceActiveSessions: true,
+          source: { kind: "admin_direct" },
         });
         return {
           reply: gateSessionResult.ok
@@ -14733,6 +14735,7 @@ export async function routeTicketMessage({
             eventId,
             replaceActiveSessions: true,
             ttlMinutes: kitchenMode ? 8 * 60 : undefined,
+            source: { kind: "admin_direct" },
           });
 
           return {

@@ -70,6 +70,10 @@ async function loadComboRedemptionModule() {
       getSupabaseAdmin: () => globalThis.__comboRedemptionScanScenario.supabase,
       validateGateSessionToken: (...args) =>
         globalThis.__comboRedemptionScanScenario.validateGateSessionToken(...args),
+      hashGateSessionToken: (token) =>
+        createHash("sha256").update(token).digest("hex"),
+      hashKitchenDeviceToken: (token) =>
+        createHash("sha256").update(`kitchen-device:${token}`).digest("hex"),
       getOrCreateOpenConversation: async () => ({ ok: true, conversation: { id: "conversation-1" } }),
       updateConversationAfterMessage: async () => ({ ok: true }),
       saveWhatsAppMessage: async () => ({ ok: true }),
@@ -81,7 +85,7 @@ async function loadComboRedemptionModule() {
       getOfficialTableMapPlace: () => ({ type: "table" }),
       isPublicEventVisible: () => true,
     };
-    const prelude = `const { createHash, randomBytes, getSupabaseAdmin, validateGateSessionToken, getOrCreateOpenConversation, updateConversationAfterMessage, saveWhatsAppMessage, buildWhatsAppOutboundMetadata, sendZapiImage, sendZapiText, generateComboQrImage, formatComboDescription, getOfficialTableMapPlace, isPublicEventVisible } = globalThis.__comboRedemptionScanMocks;\n`;
+    const prelude = `const { createHash, randomBytes, getSupabaseAdmin, validateGateSessionToken, hashGateSessionToken, hashKitchenDeviceToken, getOrCreateOpenConversation, updateConversationAfterMessage, saveWhatsAppMessage, buildWhatsAppOutboundMetadata, sendZapiImage, sendZapiText, generateComboQrImage, formatComboDescription, getOfficialTableMapPlace, isPublicEventVisible } = globalThis.__comboRedemptionScanMocks;\n`;
     const transpiled = ts.transpileModule(prelude + source, {
       compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 },
     }).outputText;

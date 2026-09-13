@@ -201,26 +201,15 @@ export async function pauseGateAccess(input: {
   revokedByAdminUserId?: string | null;
 }) {
   const supabase = getSupabaseAdmin();
-  let query = supabase
-    .from("gate_accesses")
-    .update({
-      status: "paused",
-      revoked_by_admin_user_id: input.revokedByAdminUserId ?? null,
-    })
-    .eq("id", input.accessId)
-    .in("status", ["active", "paused"]);
-
-  if (input.eventId) {
-    query = query.eq("event_id", input.eventId);
-  }
-
-  const { data, error } = await query
-    .select("id")
-    .maybeSingle<{ id: string }>();
+  const { data, error } = await supabase.rpc("pause_gate_access_and_revoke_sessions", {
+    p_access_id: input.accessId,
+    p_event_id: input.eventId ?? null,
+    p_revoked_by_admin_user_id: input.revokedByAdminUserId ?? null,
+  });
 
   if (error) return { ok: false as const, error };
 
-  return { ok: true as const, paused: Boolean(data) };
+  return { ok: true as const, paused: Boolean(data && (data as { paused?: boolean }).paused) };
 }
 
 export async function createGateSessionForGateAccess(input: {
@@ -280,6 +269,7 @@ export async function createGateSessionForGateAccess(input: {
     sessionId: data.session_id,
     replaceActiveSessions: true,
     ttlMinutes: purpose === "kitchen" ? 8 * 60 : undefined,
+    source: { kind: "temporary_gate_access", gateAccessId: data.id },
   });
 
   if (!gateSessionResult.ok) {

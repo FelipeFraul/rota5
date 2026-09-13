@@ -4,6 +4,7 @@ import { logError } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { releaseComboOrdersForKitchenAfterGateEntry } from "@/lib/tickets/services/comboRedemptions";
 import { validateGateSessionToken } from "@/lib/tickets/services/gateSessions";
+import { hashGateSessionToken } from "@/lib/tickets/services/gateTokens";
 import { verifySignedTicketToken } from "@/lib/tickets/services/tickets";
 
 export type GateScanResult = {
@@ -98,6 +99,7 @@ async function validateTicketEntry(input: {
     p_validator_identifier: gateSession.gateSession.validatorIdentifier,
     p_metadata: {
       source: input.source,
+      gate_session_token_hash: hashGateSessionToken(input.gateSessionToken),
     },
   });
 

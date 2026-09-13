@@ -29,12 +29,20 @@ export type GateSession = {
   token_hash: string;
   device_binding_hash?: string | null;
   reader_device_binding_hash?: string | null;
+  source_kind: "legacy_unattributed" | "admin_direct" | "temporary_gate_access" | "fixed_gate_access" | null;
+  source_gate_access_id: string | null;
+  source_fixed_gate_access_id: string | null;
   status: "active" | "revoked" | "expired";
   expires_at: string;
   created_by_admin_phone: string;
   created_at: string;
   updated_at: string;
 };
+
+export type GateSessionSource =
+  | { kind: "admin_direct" }
+  | { kind: "temporary_gate_access"; gateAccessId: string }
+  | { kind: "fixed_gate_access"; fixedGateAccessId: string };
 
 export type AdminGateSessionListItem = {
   id: string;
@@ -133,6 +141,7 @@ export async function createGateSession(input: {
   sessionId?: string | null;
   ttlMinutes?: number;
   replaceActiveSessions?: boolean;
+  source: GateSessionSource;
 }): Promise<CreateGateSessionResult> {
   const env = getEnv();
   const validatorPhone = normalizeGatePhone(input.validatorPhone);
@@ -257,9 +266,18 @@ export async function createGateSession(input: {
       status: "active",
       expires_at: expiresAt,
       created_by_admin_phone: createdByAdminPhone,
+      source_kind: input.source.kind,
+      source_gate_access_id:
+        input.source.kind === "temporary_gate_access"
+          ? input.source.gateAccessId
+          : null,
+      source_fixed_gate_access_id:
+        input.source.kind === "fixed_gate_access"
+          ? input.source.fixedGateAccessId
+          : null,
     })
     .select(
-      "id, event_id, session_id, gate_label, validator_phone, validator_name, token_hash, status, expires_at, created_by_admin_phone, created_at, updated_at",
+      "id, event_id, session_id, gate_label, validator_phone, validator_name, token_hash, status, expires_at, created_by_admin_phone, source_kind, source_gate_access_id, source_fixed_gate_access_id, created_at, updated_at",
     )
     .single<GateSession>();
 
@@ -298,13 +316,13 @@ export async function validateGateSessionToken(
   const { data, error } = await supabase
     .from("gate_sessions")
     .select(
-      "id, event_id, session_id, gate_label, validator_phone, status, expires_at, token_hash, device_binding_hash, reader_device_binding_hash, events(title, status), event_sessions(starts_at, status, event_id)",
+      "id, event_id, session_id, gate_label, validator_phone, status, expires_at, token_hash, device_binding_hash, reader_device_binding_hash, source_kind, source_gate_access_id, source_fixed_gate_access_id, events(title, status), event_sessions(starts_at, status, event_id)",
     )
     .eq("token_hash", tokenHash)
     .maybeSingle<
       Pick<
         GateSession,
-        "id" | "event_id" | "session_id" | "gate_label" | "validator_phone" | "status" | "expires_at" | "token_hash" | "device_binding_hash" | "reader_device_binding_hash"
+        "id" | "event_id" | "session_id" | "gate_label" | "validator_phone" | "status" | "expires_at" | "token_hash" | "device_binding_hash" | "reader_device_binding_hash" | "source_kind" | "source_gate_access_id" | "source_fixed_gate_access_id"
       > & {
         events: { title: string; status: string } | { title: string; status: string }[] | null;
         event_sessions:
@@ -340,6 +358,36 @@ export async function validateGateSessionToken(
       valid: false,
       reason: "expired",
     };
+  }
+
+  // This is defensive read/UX validation only. Protected mutations repeat the
+  // authorization under PostgreSQL row locks in their own transaction.
+  if (data.source_kind === "legacy_unattributed") {
+    return { valid: false, reason: "inactive" };
+  }
+
+  if (data.source_kind === "temporary_gate_access") {
+    if (!data.source_gate_access_id || data.source_fixed_gate_access_id) {
+      return { valid: false, reason: "inactive" };
+    }
+    const { data: access } = await supabase
+      .from("gate_accesses")
+      .select("status")
+      .eq("id", data.source_gate_access_id)
+      .maybeSingle<{ status: string }>();
+    if (!access || access.status !== "active") return { valid: false, reason: "revoked" };
+  } else if (data.source_kind === "fixed_gate_access") {
+    if (!data.source_fixed_gate_access_id || data.source_gate_access_id) {
+      return { valid: false, reason: "inactive" };
+    }
+    const { data: access } = await supabase
+      .from("fixed_gate_accesses")
+      .select("status")
+      .eq("id", data.source_fixed_gate_access_id)
+      .maybeSingle<{ status: string }>();
+    if (!access || access.status !== "active") return { valid: false, reason: "revoked" };
+  } else if (data.source_kind !== "admin_direct") {
+    return { valid: false, reason: "inactive" };
   }
 
   const linkedEvent = Array.isArray(data.events) ? data.events[0] ?? null : data.events;
@@ -584,10 +632,11 @@ export async function createGateSessionForRegisteredValidator(validatorPhoneInpu
   const { data, error } = await supabase
     .from("gate_sessions")
     .select(
-      "id, event_id, session_id, gate_label, validator_phone, validator_name, token_hash, status, expires_at, created_by_admin_phone, created_at, updated_at",
+      "id, event_id, session_id, gate_label, validator_phone, validator_name, token_hash, status, expires_at, created_by_admin_phone, source_kind, source_gate_access_id, source_fixed_gate_access_id, created_at, updated_at",
     )
     .in("validator_phone", getGatePhoneLookupVariants(validatorPhone))
     .eq("status", "active")
+    .in("source_kind", ["admin_direct", "temporary_gate_access", "fixed_gate_access"])
     .gt("expires_at", new Date().toISOString())
     .order("created_at", { ascending: false })
     .limit(1)
@@ -614,7 +663,7 @@ export async function createGateSessionForRegisteredValidator(validatorPhoneInpu
     })
     .eq("id", data.id)
     .select(
-      "id, event_id, session_id, gate_label, validator_phone, validator_name, token_hash, status, expires_at, created_by_admin_phone, created_at, updated_at",
+      "id, event_id, session_id, gate_label, validator_phone, validator_name, token_hash, status, expires_at, created_by_admin_phone, source_kind, source_gate_access_id, source_fixed_gate_access_id, created_at, updated_at",
     )
     .single<GateSession>();
 

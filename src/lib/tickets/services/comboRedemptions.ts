@@ -4,6 +4,10 @@ import { createHash, randomBytes } from "crypto";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { validateGateSessionToken } from "@/lib/tickets/services/gateSessions";
 import {
+  hashGateSessionToken,
+  hashKitchenDeviceToken,
+} from "@/lib/tickets/services/gateTokens";
+import {
   getOrCreateOpenConversation,
   updateConversationAfterMessage,
 } from "@/lib/tickets/services/conversations";
@@ -1470,6 +1474,10 @@ export async function validateComboRedemptionScan(input: {
     p_session_id: kitchenSession.gateSession.sessionId,
     p_metadata: {
       source: "kitchen_scan",
+      gate_session_token_hash: hashGateSessionToken(input.kitchenSessionToken),
+      kitchen_device_binding_hash: input.deviceToken
+        ? hashKitchenDeviceToken(input.deviceToken)
+        : null,
     },
   });
 

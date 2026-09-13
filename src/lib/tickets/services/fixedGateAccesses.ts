@@ -118,21 +118,14 @@ export async function revokeFixedGateAccess(input: {
   revokedByAdminUserId: string;
 }) {
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("fixed_gate_accesses")
-    .update({
-      status: "revoked",
-      revoked_at: new Date().toISOString(),
-      revoked_by_admin_user_id: input.revokedByAdminUserId,
-    })
-    .eq("id", input.accessId)
-    .eq("owner_admin_user_id", input.ownerAdminUserId)
-    .eq("status", "active")
-    .select("id")
-    .maybeSingle<{ id: string }>();
+  const { data, error } = await supabase.rpc("revoke_fixed_gate_access_and_revoke_sessions", {
+    p_access_id: input.accessId,
+    p_owner_admin_user_id: input.ownerAdminUserId,
+    p_revoked_by_admin_user_id: input.revokedByAdminUserId,
+  });
 
   if (error) return { ok: false as const, error };
-  return { ok: true as const, revoked: Boolean(data) };
+  return { ok: true as const, revoked: Boolean(data && (data as { revoked?: boolean }).revoked) };
 }
 
 export async function findActiveFixedGateAccessForPhone(phoneInput: string) {
@@ -233,6 +226,7 @@ export async function createGateSessionForFixedAccess(input: {
     gateLabel: "Portaria fixa",
     eventId: event.id,
     replaceActiveSessions: true,
+    source: { kind: "fixed_gate_access", fixedGateAccessId: access.id },
   });
 
   if (!sessionResult.ok) {
