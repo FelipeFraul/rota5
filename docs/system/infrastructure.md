@@ -1,4 +1,4 @@
-# Baseline 2.0.0 rollout infrastructure
+# Baseline 2.0.1 rollout infrastructure
 
 Git auto-deploy remains disabled. Production deployment `dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT` is READY and serves runtime artifact `cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8`; repository source `bd0012f3a3277b2b6d1a97390ba7c3cc460a9165` adds migration/tests without changing `src/**`. CONTRACT runtime passed with zero relevant log errors and no new application deployment. Infrastructure remains DEGRADED due independent findings.
 

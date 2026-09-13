@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-13T19:08:55.803Z",
-  "stage": "stabilization/high-1-final-baseline-2.0.0",
+  "generatedAt": "2026-09-13T22:04:00.708Z",
+  "stage": "stabilization/high-1-gate-semantics-baseline-2.0.1",
   "count": 44,
   "evidence_policy": [
     "LOCAL_DECLARED",
@@ -15366,19 +15366,47 @@
         },
         "F": {
           "status": "PASS",
-          "evidence": "Temporary credential pause revoked its attributed gate session and the revoked session was rejected."
+          "meaning": "STRICT_TICKET_VALIDATION",
+          "evidence": "Ticket validation allowed the controlled ticket with authorization_mode=strict and no legacy fallback.",
+          "checks": [
+            "ticket_allowed",
+            "authorization_mode=strict",
+            "legacy_fallback=NAO"
+          ]
         },
         "G": {
           "status": "PASS",
-          "evidence": "Fixed credential revocation revoked its attributed gate session and the revoked session was rejected."
+          "meaning": "STRICT_COMBO_VALIDATION",
+          "evidence": "Combo validation allowed the controlled redemption with authorization_mode=strict and no legacy fallback.",
+          "checks": [
+            "combo_allowed",
+            "authorization_mode=strict",
+            "legacy_fallback=NAO"
+          ]
         },
         "H": {
           "status": "PASS",
-          "evidence": "Strict ticket validation passed and the legacy ticket authorization path was rejected."
+          "meaning": "TEMPORARY_CREDENTIAL_REVOCATION",
+          "evidence": "An active temporary gate_access was paused through pause_gate_access_and_revoke_sessions; its linked session was revoked and the unrelated session remained unchanged.",
+          "checks": [
+            "temporary_gate_access_active",
+            "pause_gate_access_and_revoke_sessions",
+            "gate_access=paused",
+            "linked_session=revoked",
+            "unrelated_session=unchanged"
+          ]
         },
         "I": {
           "status": "PASS",
-          "evidence": "Strict combo validation, source-null rejection, source immutability and fixture cleanup passed."
+          "meaning": "FIXED_CREDENTIAL_REVOCATION",
+          "evidence": "An active fixed_gate_access was revoked through revoke_fixed_gate_access_and_revoke_sessions; its linked session was revoked and the unrelated session remained unchanged.",
+          "checks": [
+            "fixed_gate_access_active",
+            "revoke_fixed_gate_access_and_revoke_sessions",
+            "fixed_gate_access=revoked",
+            "linked_session=revoked",
+            "unrelated_session=unchanged"
+          ]
         }
       },
       "ticket_auth": "STRICT_ONLY",

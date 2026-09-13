@@ -1,4 +1,4 @@
-# Baseline 2.0.0 HIGH #1 final data model
+# Baseline 2.0.1 HIGH #1 final data model
 
 FINAL_DB requires `gate_sessions.source_kind`, permits `legacy_unattributed`, `admin_direct`, `temporary_gate_access` and `fixed_gate_access`, enforces matching source links, and rejects source mutation. Historical source-null count changed from 1 to 0 through preserved `legacy_unattributed` classification.
 

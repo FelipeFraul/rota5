@@ -1,4 +1,4 @@
-# Baseline 2.0.0 HIGH #1 final database runtime
+# Baseline 2.0.1 HIGH #1 final database runtime
 
 EXPAND and CONTRACT are APPLIED_AND_VALIDATED. Remote history ends at `20260913000100_gate_credential_session_revocation_contract` with no pending migration. FINAL_DB is strict-only; `source_kind` is NOT NULL and immutable. OLD_APP is incompatible by design and is not a safe rollback target.
 

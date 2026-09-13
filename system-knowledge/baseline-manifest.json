@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T19:08:55.803Z",
-  "stage": "stabilization/high-1-final-baseline-2.0.0",
+  "generatedAt": "2026-09-13T22:04:00.708Z",
+  "stage": "stabilization/high-1-gate-semantics-baseline-2.0.1",
   "baseline_id": "rota5-baseline-v1",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "status": "FROZEN",
-  "frozen_at": "2026-09-13T19:08:55.803Z",
+  "frozen_at": "2026-09-13T22:04:00.708Z",
   "source_state": {
     "base_commit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
     "source_tree_fingerprint": "c70f133b075bc479e713d052fb0001c5e95ce35c140892bd5e5b6a121e05a53f",
@@ -16,12 +16,12 @@
     "baseline_commit_policy": "The Git commit containing this baseline is intentionally not embedded in its own content to avoid self-reference."
   },
   "git_observation_at_generation": {
-    "observed_at": "2026-09-13T19:08:55.803Z",
+    "observed_at": "2026-09-13T22:04:00.708Z",
     "branch": "production",
-    "head": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
+    "head": "f20c60242af855c802dee6fd0f93a9848d0e2720",
     "working_tree_clean": false,
     "validity_role": "INFORMATIONAL_ONLY",
-    "note": "Only Baseline 2.0.0 knowledge/tooling artifacts were being generated; functional source is the pure base commit."
+    "note": "Only Baseline 2.0.1 semantic-correction artifacts were being generated; functional source identity is unchanged."
   },
   "baseline_integrity": {
     "status": "PASS",
@@ -233,7 +233,9 @@
     "self_exclusion": "baseline-integrity.json is excluded to avoid circularity."
   },
   "notes": [
-    "Baseline 2.0.0 freezes pure functional source commit bd0012f3a3277b2b6d1a97390ba7c3cc460a9165, fingerprint c70f133b075bc479e713d052fb0001c5e95ce35c140892bd5e5b6a121e05a53f, across 356 files.",
+    "Baseline 2.0.1 preserves pure functional source commit bd0012f3a3277b2b6d1a97390ba7c3cc460a9165, fingerprint c70f133b075bc479e713d052fb0001c5e95ce35c140892bd5e5b6a121e05a53f, across 356 files.",
+    "PATCH_DOCUMENTATION_SEMANTIC_CORRECTION: Gate F=strict ticket, G=strict combo, H=temporary credential revocation and I=fixed credential revocation.",
+    "No functional, runtime, remote, lifecycle or gate-result change occurred; Baseline 2.0.0 remains historical.",
     "MAJOR: the final database/auth contract is strict-only and OLD_APP is intentionally incompatible with FINAL_DB.",
     "Production continues to serve runtime app artifact cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8 through dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT; src/** did not change since that artifact and no new deployment was needed.",
     "EXPAND and CONTRACT are APPLIED_AND_VALIDATED; CONTRACT 20260913000100_gate_credential_session_revocation_contract applied at 2026-09-13T18:11:18.773635Z with SHA-256 bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525.",
@@ -319,19 +321,47 @@
       },
       "F": {
         "status": "PASS",
-        "evidence": "Temporary credential pause revoked its attributed gate session and the revoked session was rejected."
+        "meaning": "STRICT_TICKET_VALIDATION",
+        "evidence": "Ticket validation allowed the controlled ticket with authorization_mode=strict and no legacy fallback.",
+        "checks": [
+          "ticket_allowed",
+          "authorization_mode=strict",
+          "legacy_fallback=NAO"
+        ]
       },
       "G": {
         "status": "PASS",
-        "evidence": "Fixed credential revocation revoked its attributed gate session and the revoked session was rejected."
+        "meaning": "STRICT_COMBO_VALIDATION",
+        "evidence": "Combo validation allowed the controlled redemption with authorization_mode=strict and no legacy fallback.",
+        "checks": [
+          "combo_allowed",
+          "authorization_mode=strict",
+          "legacy_fallback=NAO"
+        ]
       },
       "H": {
         "status": "PASS",
-        "evidence": "Strict ticket validation passed and the legacy ticket authorization path was rejected."
+        "meaning": "TEMPORARY_CREDENTIAL_REVOCATION",
+        "evidence": "An active temporary gate_access was paused through pause_gate_access_and_revoke_sessions; its linked session was revoked and the unrelated session remained unchanged.",
+        "checks": [
+          "temporary_gate_access_active",
+          "pause_gate_access_and_revoke_sessions",
+          "gate_access=paused",
+          "linked_session=revoked",
+          "unrelated_session=unchanged"
+        ]
       },
       "I": {
         "status": "PASS",
-        "evidence": "Strict combo validation, source-null rejection, source immutability and fixture cleanup passed."
+        "meaning": "FIXED_CREDENTIAL_REVOCATION",
+        "evidence": "An active fixed_gate_access was revoked through revoke_fixed_gate_access_and_revoke_sessions; its linked session was revoked and the unrelated session remained unchanged.",
+        "checks": [
+          "fixed_gate_access_active",
+          "revoke_fixed_gate_access_and_revoke_sessions",
+          "fixed_gate_access=revoked",
+          "linked_session=revoked",
+          "unrelated_session=unchanged"
+        ]
       }
     },
     "ticket_auth": "STRICT_ONLY",

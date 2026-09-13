@@ -1,5 +1,12 @@
 # Baseline changelog
 
+## BASELINE V2.0.1 — GATE F-I SEMANTIC CORRECTION
+
+- PATCH_DOCUMENTATION_SEMANTIC_CORRECTION only; no functional, runtime or remote change.
+- Corrected the canonical mapping to F=strict ticket validation, G=strict combo validation, H=temporary credential revocation and I=fixed credential revocation.
+- All gates remain PASS and HIGH #1 remains RESOLVED. Metrics, product/infrastructure health and functional source identity are unchanged.
+- Baseline 2.0.0 is preserved below as historical evidence.
+
 ## BASELINE V2.0.0 — HIGH #1 FINAL CONTRACT
 
 - Froze source commit `bd0012f3a3277b2b6d1a97390ba7c3cc460a9165`, fingerprint `c70f133b075bc479e713d052fb0001c5e95ce35c140892bd5e5b6a121e05a53f` and 356 functional files.

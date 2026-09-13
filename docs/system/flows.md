@@ -1,4 +1,4 @@
-# Baseline 2.0.0 HIGH #1 flow runtime state
+# Baseline 2.0.1 HIGH #1 flow runtime state
 
 `gate.access_management`, `gate.ticket_admission` and `kitchen.combo_redemption` retain their conservative catalog statuses, while the HIGH #1 authorization behavior is validated on FINAL_DB. Gates A-I and strict ticket/combo runtime passed.
 

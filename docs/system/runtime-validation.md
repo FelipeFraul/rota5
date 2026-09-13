@@ -1,6 +1,6 @@
-# Baseline 2.0.0 HIGH #1 runtime evidence
+# Baseline 2.0.1 HIGH #1 runtime evidence
 
-Gates A-I passed. Post-CONTRACT runtime proved strict ticket/combo, temporary/fixed revoke, admin_direct, legacy rejection, source-null rejection, source immutability and fixture cleanup. Unrelated changes and relevant Production log errors were zero. Production remains `dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT`.
+Gates A-I passed: F strict ticket, G strict combo, H temporary credential revocation and I fixed credential revocation. Post-CONTRACT runtime proved strict ticket/combo, temporary/fixed revoke, admin_direct, legacy rejection, source-null rejection, source immutability and fixture cleanup. Unrelated changes and relevant Production log errors were zero. Production remains `dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT`.
 
 # Runtime validation — Etapa 5
 

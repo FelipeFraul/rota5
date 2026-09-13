@@ -1,4 +1,4 @@
-# Baseline 2.0.0 HIGH #1 final state
+# Baseline 2.0.1 HIGH #1 final state
 
 `risk.gate-credential-revocation-does-not-revoke-session` is `RESOLVED/HIGH/P1`. EXPAND and CONTRACT are APPLIED_AND_VALIDATED, gates A-I passed, and strict post-CONTRACT runtime passed. Product health remains BROKEN and infrastructure health DEGRADED due independent findings.
 

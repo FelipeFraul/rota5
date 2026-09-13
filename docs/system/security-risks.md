@@ -4,7 +4,7 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 
 ### risk.gate-credential-revocation-does-not-revoke-session — Pausa/revogação da credencial não invalida sessões de leitor já emitidas
 
-- Current Baseline 2.0.0 status: **RESOLVED / HIGH / P1**. EXPAND and CONTRACT are applied and validated; gates A-I, strict runtime, credential revocation, legacy rejection, source-null rejection and source immutability passed. Historical Stage 6 evidence is preserved in findings.json.
+- Current Baseline 2.0.1 status: **RESOLVED / HIGH / P1**. EXPAND and CONTRACT are applied and validated; gates A-I, strict runtime, credential revocation, legacy rejection, source-null rejection and source immutability passed. Historical Stage 6 evidence is preserved in findings.json.
 
 ### risk.rate-limit-fails-open — Falha do rate limiter libera a requisição
 

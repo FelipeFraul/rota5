@@ -1,4 +1,4 @@
-# Baseline 2.0.0 HIGH #1 capability runtime state
+# Baseline 2.0.1 HIGH #1 capability runtime state
 
 The affected gate and combo capabilities are validated against FINAL_DB. Credential pause/revoke invalidates attributed sessions; ticket and combo authorization are strict-only. HIGH #1 is RESOLVED after gates A-I and post-CONTRACT runtime passed.
 
