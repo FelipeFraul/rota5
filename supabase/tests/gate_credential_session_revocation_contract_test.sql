@@ -40,6 +40,14 @@ do $$ begin
       values ('60000000-0000-4000-8000-000000000099','Check-in','5515000000099','missing-source','active',now()+interval '1 hour','5515000000000');
     raise exception 'new_session_without_source_was_accepted';
   exception when not_null_violation then null; end;
+  begin
+    update public.gate_sessions
+       set source_kind = 'legacy_unattributed'
+     where id = '60000000-0000-4000-8000-000000000003';
+    raise exception 'gate_session_source_was_mutable';
+  exception when others then
+    if sqlerrm <> 'gate_session_source_immutable' then raise; end if;
+  end;
 end $$;
 
 select public.lock_authorized_gate_session('60000000-0000-4000-8000-000000000001','gate','temp-token-hash');

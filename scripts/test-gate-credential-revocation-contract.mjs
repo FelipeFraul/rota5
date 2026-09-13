@@ -6,8 +6,12 @@ const expandMigrationPath = new URL(
   "../supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
   import.meta.url,
 );
-const contractMigrationPath = new URL(
+const contractDraftPath = new URL(
   "../supabase/rollout/gate_credential_session_revocation_contract.sql",
+  import.meta.url,
+);
+const contractMigrationPath = new URL(
+  "../supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql",
   import.meta.url,
 );
 const gateSessionsPath = new URL("../src/lib/tickets/services/gateSessions.ts", import.meta.url);
@@ -18,8 +22,9 @@ const gateValidationPath = new URL("../src/lib/tickets/services/gateValidation.t
 const comboRedemptionsPath = new URL("../src/lib/tickets/services/comboRedemptions.ts", import.meta.url);
 
 async function sources() {
-  const [expand, contract, sessions, temporary, fixed, router, gateValidation, combo] = await Promise.all([
+  const [expand, contractDraft, contract, sessions, temporary, fixed, router, gateValidation, combo] = await Promise.all([
     readFile(expandMigrationPath, "utf8"),
+    readFile(contractDraftPath, "utf8"),
     readFile(contractMigrationPath, "utf8"),
     readFile(gateSessionsPath, "utf8"),
     readFile(gateAccessesPath, "utf8"),
@@ -28,8 +33,16 @@ async function sources() {
     readFile(gateValidationPath, "utf8"),
     readFile(comboRedemptionsPath, "utf8"),
   ]);
-  return { expand, contract, migration: `${expand}\n${contract}`, sessions, temporary, fixed, router, gateValidation, combo };
+  return { expand, contractDraft, contract, migration: `${expand}\n${contract}`, sessions, temporary, fixed, router, gateValidation, combo };
 }
+
+test("materialized CONTRACT preserves the audited SQL body", async () => {
+  const { contractDraft, contract } = await sources();
+  const bodyStart = "alter table public.gate_sessions";
+  assert.equal(contract.slice(contract.indexOf(bodyStart)), contractDraft.slice(contractDraft.indexOf(bodyStart)));
+  assert.match(contract, /^-- Materialized HIGH #1 CONTRACT migration\./);
+  assert.doesNotMatch(contract, /^-- DRAFT - DO NOT APPLY DIRECTLY\./);
+});
 
 test("temporary credentials are linked and revoked through one database operation", async () => {
   const { migration, temporary } = await sources();
@@ -77,7 +90,7 @@ test("expand is dual-mode, observable, and never falls back after strict input",
 
 test("contract removes legacy compatibility and enforces final source invariants", async () => {
   const { contract } = await sources();
-  assert.match(contract, /^-- DRAFT - DO NOT APPLY DIRECTLY\./);
+  assert.match(contract, /^-- Materialized HIGH #1 CONTRACT migration\./);
   assert.doesNotMatch(contract, /v_authorization_mode := 'legacy_compat'/);
   assert.match(contract, /alter column source_kind set not null/);
   assert.match(contract, /set status = 'revoked'[\s\S]*source_kind is null/);

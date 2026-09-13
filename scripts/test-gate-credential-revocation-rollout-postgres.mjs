@@ -96,7 +96,7 @@ try {
   await psqlFile("expand_db", "supabase/tests/gate_credential_session_revocation_expand_test.sql");
 
   await psqlFile("contract_db", "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql");
-  await psqlFile("contract_db", "supabase/rollout/gate_credential_session_revocation_contract.sql");
+  await psqlFile("contract_db", "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql");
   await psqlFile("contract_db", "supabase/tests/gate_credential_session_revocation_contract_test.sql");
   await proveContractRejectsOldApp();
 
