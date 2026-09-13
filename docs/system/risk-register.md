@@ -1,6 +1,6 @@
-# Baseline 1.4.0 HIGH #1 state
+# Baseline 1.4.1 HIGH #1 state
 
-`risk.gate-credential-revocation-does-not-revoke-session` remains `ACTIVE/HIGH/P1`. The root cause is confirmed and the source patch passed local and disposable PostgreSQL validation. Production rollout has not started: remote EXPAND is not applied, NEW_APP is not deployed and CONTRACT is not applied. Resolution requires EXPAND -> NEW_APP -> gates A-I -> CONTRACT -> post-fix runtime audit.
+`risk.gate-credential-revocation-does-not-revoke-session` remains `ACTIVE/HIGH/P1`. Implementation is complete, EXPAND is `APPLIED_AND_VALIDATED`, and exact NEW_APP Production cutover is complete. Gates A/B passed; C-I remain pending or pending formal confirmation. CONTRACT is `NOT_APPLIED`; resolution remains `PENDING_POST_CUTOVER_GATES_A_TO_I`.
 
 # Risk register
 
@@ -27,7 +27,7 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 | risk.remote-database-controls-unvalidated | UNKNOWN | MEDIUM | P2 | NOT_VALIDATED | CONFIRMED | Controles remotos de banco além do schema visível não foram validados |
 | risk.remote-webhook-registration-unvalidated | INTEGRATION | MEDIUM | P2 | NOT_VALIDATED | HIGH | Registro remoto dos dois webhooks não foi confirmado |
 | risk.vercel-project-identity-drift | CONFIGURATION_DRIFT | HIGH | P0 | RESOLVED | CONFIRMED | Identidade Git/Vercel do Rota5 separada da Ticketeira |
-| risk.latest-rota5-deployment-error | INFRASTRUCTURE | HIGH | P1 | ACTIVE | CONFIRMED | Deployment mais recente do projeto rota5 está em ERROR |
+| risk.latest-rota5-deployment-error | INFRASTRUCTURE | HIGH | P1 | RESOLVED | CONFIRMED | Deployment ERROR histórico foi substituído pelo Production READY atual |
 | risk.published-commit-unvalidated | OPERATIONAL | MEDIUM | P2 | NOT_VALIDATED | CONFIRMED | Commit publicado não pode ser reconciliado com o HEAD auditado |
 | risk.local-runtime-env-incomplete | CONFIGURATION_DRIFT | MEDIUM | P2 | ACTIVE | CONFIRMED | Ambiente local não contém todas as variáveis exigidas |
 | debt.seat-map-storage-contract-drift | CONFIGURATION_DRIFT | LOW | P3 | ACTIVE | CONFIRMED | Variável de bucket existe sem consumidor nem bucket remoto |
@@ -228,18 +228,18 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 - Histórico preservado: Vercel `site` e GitHub `FelipeFraul/ticketeira` pertencem à Ticketeira e explicam a confusão anterior, sem integrar a cadeia operacional atual do Rota5.
 - Estado de release: nenhum deployment novo; o HEAD atual não está publicado.
 
-### risk.latest-rota5-deployment-error — Deployment mais recente do projeto rota5 está em ERROR
+### risk.latest-rota5-deployment-error — Deployment ERROR histórico substituído pelo Production READY atual
 
 - Tipo / severidade / prioridade: **INFRASTRUCTURE / HIGH / P1**
-- Status / confiança: **ACTIVE / CONFIRMED**
-- Problema: A inspeção remota encontrou o deployment mais recente de rota5 em ERROR, enquanto rota5-khaki permanece apontando para um deployment anterior READY.
-- Evidência: `system-knowledge/runtime-validation.json` — runtime.vercel-linked-deployment = FAIL.; `system-knowledge/infrastructure.json` — Registra ready_deployment e latest_deployment_state ERROR.
-- Impacto: Mudanças recentes não chegam ao alias produtivo e uma promoção/redeploy sem diagnóstico pode causar indisponibilidade.
+- Status / confiança: **RESOLVED / CONFIRMED**
+- Condição histórica: a inspeção anterior encontrou o deployment mais recente de `rota5` em ERROR enquanto o alias servia um deployment READY anterior.
+- Evidência de resolução: `dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT` está READY, atende os aliases canônicos e passou health, página pública, admin auth e probe EXPAND, com zero erros relevantes nos logs e sem rollback.
+- Impacto atual: a condição que definia o finding não existe; published-commit parity e outros riscos continuam separados.
 - Escopo: domains domain.platform-runtime; capabilities —; flows —.
 - Blast radius: **EXTERNAL**
-- Workaround: O alias rota5-khaki observado continua saudável em deployment anterior.
-- Direção: Diagnosticar o build do deployment falho depois da baseline.
-- Justificativa da prioridade: P1 porque a produção observada está acessível, mas a linha de entrega mais recente falhou.
+- Workaround: Não necessário para este finding resolvido.
+- Direção: Preservar a evidência histórica; tratar riscos restantes pelos respectivos IDs.
+- Justificativa da prioridade histórica: P1 porque a produção permanecia acessível durante a falha da linha de entrega mais recente.
 
 ### risk.published-commit-unvalidated — Commit publicado não pode ser reconciliado com o HEAD auditado
 

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "generatedAt": "2026-09-13T16:27:50.380Z",
   "count": 66,
   "records": [
     {
@@ -486,7 +486,7 @@
       ],
       "notes": "Combina routing, regra de negócio, formatação e orquestração em 19.367 linhas.",
       "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "high_1_runtime_status": "NOT_DEPLOYED"
+      "high_1_runtime_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
     {
       "id": "messaging.state",
@@ -1915,7 +1915,7 @@
         "export claimKitchenSessionDevice"
       ],
       "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "high_1_runtime_status": "NOT_DEPLOYED"
+      "high_1_runtime_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
     {
       "id": "gate.validation",
@@ -1964,7 +1964,7 @@
         "export consultGateTicket"
       ],
       "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "high_1_runtime_status": "NOT_DEPLOYED"
+      "high_1_runtime_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
     {
       "id": "gate.ui-api",
@@ -2220,9 +2220,9 @@
         "export startKitchenOrderPreparation",
         "src/lib/tickets/services/comboRedemptions.ts:1035-1231;1462"
       ],
-      "notes": "HIGH #1 source uses credential -> session -> combo lock ordering; disposable PostgreSQL passed. Remote EXPAND and NEW_APP deployment are pending.",
+      "notes": "HIGH #1 source uses credential -> session -> combo lock ordering; disposable PostgreSQL passed. Remote EXPAND and NEW_APP Production cutover passed; remaining gates and CONTRACT are pending.",
       "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "high_1_runtime_status": "NOT_DEPLOYED"
+      "high_1_runtime_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
     {
       "id": "combo.qr",

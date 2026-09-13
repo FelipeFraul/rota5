@@ -61,6 +61,6 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 | Supabase | RPCs protegem operações críticas; app depende de service role | OpenAPI parcial; internals remotos NOT_VALIDATED |
 | Z-API | deliveries/batches persistem retry e idempotency key | instância conectada; webhook/entrega real NOT_VALIDATED |
 | Mercado Pago | assinatura e RPC idempotente; entrega é eventual | conta validada; webhook/pagamento real NOT_VALIDATED |
-| Vercel | alias anterior saudável, deployment mais recente ERROR | projeto/drift confirmados; logs PARTIAL |
+| Vercel | deployment Production mais recente READY nos aliases canônicos | projeto/identidade e runtime confirmados; logs completos continuam PARTIAL |
 | GitHub | POST de issue sem chave idempotente | repositório validado; criação real não executada |
 | Codex CLI | processo local com estado de solicitação | versão validada; execução depende da máquina |

@@ -25,13 +25,13 @@ Os 15 checks de runtime permanecem em 12 PASS, 2 PARTIAL e 1 FAIL. Foram usados 
 
 ## Findings, P0 e busca adversarial
 
-Os 44 findings foram revalidados; nenhum foi removido, adicionado ou reclassificado. Todos os 10 HIGH possuem evidência concreta. A busca por CRITICAL em pagamento, duplicação de ticket, autorização, service role, perda de dados, corrida de reserva, replay, spoofing e produção errada não provou impacto CRITICAL adicional.
+Este trecho preserva o snapshot histórico da Etapa 8. Na auditoria original, os 44 findings foram revalidados sem remoção ou adição, e todos os 10 HIGH possuíam evidência concreta. A auditoria semântica 1.4.1 reclassificou somente `risk.latest-rota5-deployment-error` de ACTIVE para RESOLVED após nova evidência remota.
 
 Os três P0 permanecem:
 
 - `bug.create-event-invalid-jsx`: não foi possível rebaixar porque bloqueia typecheck/lint e o workspace administrativo principal.
 - `bug.combo-redemption-unreachable-consume`: o caminho válido ainda retorna antes da RPC de consumo, impedindo o terminal esperado.
-- `risk.vercel-project-identity-drift`: o domínio declarado pertence a `site`, o checkout está ligado a `rota5` e o deployment mais recente de `rota5` aparece em ERROR.
+- `risk.vercel-project-identity-drift`: historicamente, o domínio declarado pertencia a `site`, o checkout estava ligado a `rota5` e o deployment observado de `rota5` aparecia em ERROR. A identidade e o deployment atual foram revalidados em baselines posteriores.
 
 ## Segunda passagem independente
 
@@ -39,7 +39,7 @@ Uma reconstrução sem consultar `docs/system` ou `system-knowledge` recontou Ap
 
 ## Integridade
 
-Foram corrigidas duas contradições documentais: gate duplicado da Etapa 5 no README e snapshot desatualizado da suíte padrão. Há dez grupos de evidência remota ainda NOT_VALIDATED, todos explicitados em `unresolved-evidence.md`. A varredura final não encontrou BOM, U+FFFD, corrupção dos próprios artefatos nem valores de segredo. Nenhuma mudança funcional ou remota foi realizada.
+Foram corrigidas duas contradições documentais: gate duplicado da Etapa 5 no README e snapshot desatualizado da suíte padrão. No snapshot histórico havia dez grupos de evidência remota NOT_VALIDATED; a projeção corrente em `unresolved-evidence.md` mantém nove após a resolução da condição de deployment ERROR. A varredura final não encontrou BOM, U+FFFD, corrupção dos próprios artefatos nem valores de segredo. Nenhuma mudança funcional ou remota foi realizada.
 
 ## Reauditoria de estabilização P0.3
 

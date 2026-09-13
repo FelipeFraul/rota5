@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "generatedAt": "2026-09-13T16:54:57.825Z",
   "stage": "stabilization/high-1-source-freeze",
-  "count": 17,
+  "count": 20,
   "ok": 12,
   "records": [
     {
@@ -123,13 +123,14 @@
       "target": "Vercel linked production deployment",
       "method": "CLI_READ",
       "evidence_source": "REMOTE_CONFIG",
-      "status": "FAIL",
-      "result": "Nenhum deployment novo foi criado. O deployment mais recente permanece ERROR e o HEAD 9302cbd não está publicado.",
+      "status": "PASS",
+      "result": "Latest Production deployment dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT is READY, serves the canonical aliases and passed immediate runtime checks.",
       "side_effect_free": true,
       "expected": "Identificar deployment mais recente e deployment servido.",
       "evidence": [
-        "REMOTE_CONFIG",
-        "Vercel linked production deployment"
+        "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+        "Vercel linked Production deployment",
+        "Production runtime probes"
       ]
     },
     {
@@ -243,6 +244,52 @@
         "Vercel deployment dpl_G3XH9HCd3URhc8TKBW9v44urS4Jb",
         "git.deploymentEnabled=false"
       ]
+    },
+    {
+      "id": "runtime.high-1-expand-remote",
+      "target": "Supabase EXPAND schema",
+      "method": "REMOTE_MIGRATION_AND_READ_ONLY_RUNTIME_PROOF",
+      "evidence_source": "RUNTIME_OBSERVED",
+      "status": "PASS",
+      "result": "Migration 20260912000100 is remote latest; EXPAND applied at 2026-09-13T14:20:15.059853Z; source fields remain nullable and dual-mode is active.",
+      "side_effect_free": false,
+      "expected": "EXPAND applied without CONTRACT and compatible with OLD_APP and NEW_APP.",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
+        "Remote migration history",
+        "PostgREST schema probe"
+      ]
+    },
+    {
+      "id": "runtime.high-1-new-app-production",
+      "target": "Vercel Production NEW_APP",
+      "method": "CONTROLLED_PRODUCTION_DEPLOYMENT_AND_READ_ONLY_SMOKE",
+      "evidence_source": "RUNTIME_OBSERVED",
+      "status": "PASS",
+      "result": "Exact artifact cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8 deployed as dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT; health/public/admin/EXPAND probe passed; relevant log errors 0; rollback not performed.",
+      "side_effect_free": false,
+      "expected": "Production cutover succeeds without CONTRACT or validation-data mutation.",
+      "evidence": [
+        "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+        "NEW_APP_CUTOVER_AT 2026-09-13T16:19:42.340Z",
+        "GET /api/health",
+        "GET /gate/session/rota5-expand-readonly-probe-20260913"
+      ]
+    },
+    {
+      "id": "runtime.high-1-post-cutover-counts",
+      "target": "HIGH #1 rollout counters",
+      "method": "REMOTE_READ_ONLY",
+      "evidence_source": "RUNTIME_OBSERVED",
+      "status": "PASS",
+      "result": "gate_sessions_total=1; source_null_total=1; source_null_unexpired=0; transition_legacy_created_after_expand=0; gate_accesses_active=0; fixed_gate_accesses_active=0.",
+      "side_effect_free": true,
+      "expected": "Immediate validation does not mutate monitored rows; formal gates D/E remain pending.",
+      "evidence": [
+        "gate_session_source_rollout_status",
+        "EXPAND_APPLIED_AT 2026-09-13T14:20:15.059853Z",
+        "NEW_APP_CUTOVER_AT 2026-09-13T16:19:42.340Z"
+      ]
     }
   ],
   "prohibited_actions_performed": false,
@@ -253,8 +300,46 @@
     "deployment_performed": false
   },
   "high_1_rollout": {
-    "expand_remote": "NOT_APPLIED",
-    "new_app_deployed": false,
+    "expand_remote": "APPLIED_AND_VALIDATED",
+    "expand_applied_at": "2026-09-13T14:20:15.059853Z",
+    "new_app_deployed": true,
+    "new_app_state": "PRODUCTION_CUTOVER_COMPLETE",
+    "production_deployment": "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+    "new_app_cutover_at": "2026-09-13T16:19:42.340Z",
+    "gates": {
+      "A": {
+        "status": "PASS",
+        "evidence": "NEW_APP Production deployment healthy and exact artifact identity proven."
+      },
+      "B": {
+        "status": "PASS",
+        "evidence": "OLD_APP no longer serves Production after NEW_APP_CUTOVER_AT."
+      },
+      "C": {
+        "status": "PENDING",
+        "evidence": "legacy_compat observation window remains open."
+      },
+      "D": {
+        "status": "PENDING_FORMAL_CONFIRMATION",
+        "evidence": "source_null_unexpired is currently 0; closure requires the post-cutover audit."
+      },
+      "E": {
+        "status": "PENDING_FORMAL_CONFIRMATION",
+        "evidence": "Sessions created after NEW_APP_CUTOVER_AT still require formal attribution audit."
+      },
+      "F": {
+        "status": "PENDING"
+      },
+      "G": {
+        "status": "PENDING"
+      },
+      "H": {
+        "status": "PENDING"
+      },
+      "I": {
+        "status": "PENDING"
+      }
+    },
     "contract_remote": "NOT_APPLIED"
   }
 }

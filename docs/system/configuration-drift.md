@@ -5,7 +5,7 @@
 | ID | Resultado | Severidade | Local | Remoto | Impacto |
 | --- | --- | --- | --- | --- | --- |
 | `drift.vercel-project-domain` | MATCH / RESOLVED | CRITICAL (histórico) | origin `FelipeFraul/rota5`, branch `production`, projeto local `rota5` | Vercel `rota5` ligado ao mesmo repo/branch | Identidade correta; HEAD ainda não publicado. |
-| `drift.vercel-latest-deployment` | DRIFT | CRITICAL | baseline HEAD em origin/production | deployment mais recente do projeto rota5 em ERROR; anterior READY atende o alias | O último deploy não é o que atende produção e o commit servido não pôde ser provado. |
+| `drift.vercel-latest-deployment` | MATCH | CRITICAL (histórico) | artifact funcional `cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8` | deployment Production `dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT` READY atende os aliases canônicos | Identidade do artifact, deployment e aliases comprovada; o finding de deployment ERROR foi resolvido. |
 | `drift.local-environment` | DRIFT | HIGH | arquivo .env não contém todos os campos obrigatórios de src/lib/env.ts | 24 nomes presentes na Vercel | Inicialização local que chama getEnv() pode falhar até completar a configuração. |
 | `drift.supabase-storage-bucket` | DRIFT | LOW | variável obrigatória e presente remotamente; nenhum uso .storage encontrado | listBuckets retornou zero buckets | Configuração sem recurso remoto correspondente; hoje sem consumidor funcional encontrado. |
 
@@ -26,7 +26,7 @@
 
 ## Segunda passagem
 
-A reauditoria separou as identidades: `FelipeFraul/rota5` e Vercel `rota5` formam a cadeia operacional do Rota5; `site` e `FelipeFraul/ticketeira` pertencem à Ticketeira e permanecem apenas como evidência histórica. O deployment mais recente de `rota5` continua em ERROR e o HEAD atual não foi publicado.
+A reauditoria separou as identidades: `FelipeFraul/rota5` e Vercel `rota5` formam a cadeia operacional do Rota5; `site` e `FelipeFraul/ticketeira` pertencem à Ticketeira e permanecem apenas como evidência histórica. O deployment Production mais recente de `rota5` está READY, atende os aliases canônicos e executa o artifact funcional esperado.
 
 ## Revalidação do storage
 

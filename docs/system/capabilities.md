@@ -1,6 +1,6 @@
-# Baseline 1.4.0 HIGH #1 capability re-audit
+# Baseline 1.4.1 HIGH #1 capability runtime state
 
-The source implementations for `gate.access_pause`, `gate.fixed_revoke`, `gate.open`, `gate.consult`, `gate.admit`, `gate.session_revoke`, `combo.kitchen_open`, `combo.prepare` and `combo.redeem` are locally validated against the EXPAND design. Runtime validation remains pending because EXPAND and NEW_APP are not deployed. Production-facing status remains conservative.
+The source implementations for `gate.access_pause`, `gate.fixed_revoke`, `gate.open`, `gate.consult`, `gate.admit`, `gate.session_revoke`, `combo.kitchen_open`, `combo.prepare` and `combo.redeem` are validated against the remote EXPAND schema and the exact NEW_APP Production artifact. Capability status remains conservative until gates C-I, CONTRACT and the post-fix audit complete.
 
 # Catálogo de capabilities — BASELINE V1, Etapa 3
 

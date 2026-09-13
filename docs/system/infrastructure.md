@@ -1,6 +1,6 @@
-# Baseline 1.4.0 rollout infrastructure
+# Baseline 1.4.1 rollout infrastructure
 
-Phase 0 proved the manual Vercel release path with a READY OLD_APP preview. Git auto-deploy remains disabled. The HIGH #1 NEW_APP artifact is local commit `cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8`; it has not been pushed or deployed. Infrastructure health remains DEGRADED.
+Git auto-deploy remains disabled. Exact HIGH #1 NEW_APP artifact `cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8` serves Production through `dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT` since `2026-09-13T16:19:42.340Z`; the prior deployment no longer serves the Production aliases. Immediate smokes and the EXPAND probe passed without rollback. Infrastructure health remains DEGRADED because other findings remain open.
 
 # Infrastructure AS-IS — Etapa 5
 

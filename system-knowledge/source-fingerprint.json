@@ -1,18 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "generatedAt": "2026-09-13T16:27:50.380Z",
   "stage": "stabilization/high-1-source-freeze",
   "base_commit": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
   "functional_changes_since_base": [],
   "baseline_commit": "SELF_NOT_RECORDED",
   "git_observation_at_generation": {
-    "observed_at": "2026-09-13T03:06:00.129Z",
+    "observed_at": "2026-09-13T16:27:50.380Z",
     "branch": "production",
-    "head": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+    "head": "8aa4690ffb6367c45c9045494a5949bc62af2a2a",
     "working_tree_clean": false,
     "validity_role": "INFORMATIONAL_ONLY",
-    "source_state_is_pure_commit": true,
-    "note": "Baseline artifact edits are excluded; the functional source equals the base commit."
+    "note": "Baseline artifact edits are excluded; functional source remains the pure base commit."
   },
   "package_lock_sha256": "a8b041c08ae27909dd319ba888c0e34494598b6889f10f92e28129ac5a55ee95",
   "migrations_aggregate_hash": "f1cd41d75a31f82e3e3897a344b0ef6eed25f222adda5f8ae5eeb5b91205b30b",
@@ -20,7 +19,7 @@
   "source_tree_fingerprint": "6643a2c539caab8942ebe3953dc75963446d27dbb653e166a3310fe2c4e2fc4b",
   "source_tree_file_count": 355,
   "source_tree_strategy": "Run git ls-files -z; normalize paths to forward slashes; exclude docs/system/**, system-knowledge/**, .tools/baseline/** and any path segment beginning with .stage; sort remaining paths lexicographically; SHA-256 each tracked file in its canonical Git representation (index blob for staged/clean content, current working-tree bytes for an unstaged functional change); concatenate path + NUL + sha256 + LF; SHA-256 the UTF-8 concatenation. Reconstruct commits from their raw Git blob bytes with the same path and aggregation rules.",
-  "freeze_timestamp": "2026-09-13T03:06:00.129Z",
+  "freeze_timestamp": "2026-09-13T16:27:50.380Z",
   "secrets_included": false,
   "source_tree_strategy_version": 3,
   "source_tree_exclusions": [

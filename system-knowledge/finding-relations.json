@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "generatedAt": "2026-09-13T16:27:50.380Z",
   "stage": "stabilization/high-1-source-freeze",
   "sourceCommit": "7c00adb7db018786494b7b2b5124df3df69284ff",
   "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
@@ -36,7 +36,7 @@
       "from": "orphan.gate-session-revoke",
       "type": "AMPLIFIES",
       "to": "risk.gate-credential-revocation-does-not-revoke-session",
-      "evidence": "The source now links credential revocation to attributed sessions, but the finding remains ACTIVE until remote EXPAND, NEW_APP, CONTRACT and runtime proof complete."
+      "evidence": "EXPAND and the exact NEW_APP Production artifact are validated; the finding remains ACTIVE until gates C-I, CONTRACT and post-fix runtime proof complete."
     },
     {
       "from": "debt.router-responsibility-concentration",
@@ -75,11 +75,15 @@
   "high_1_rollout_dependency": {
     "finding": "risk.gate-credential-revocation-does-not-revoke-session",
     "requires": [
-      "EXPAND_REMOTE",
-      "NEW_APP_DEPLOY",
-      "GATES_A_I",
+      "GATES_C_I",
       "CONTRACT_REMOTE",
       "POST_FIX_RUNTIME_AUDIT"
+    ],
+    "completed": [
+      "EXPAND_REMOTE",
+      "NEW_APP_DEPLOY",
+      "GATE_A",
+      "GATE_B"
     ]
   }
 }

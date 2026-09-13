@@ -11,18 +11,18 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 - Histórico preservado: Vercel `site` e GitHub `FelipeFraul/ticketeira` pertencem à Ticketeira e explicam a confusão anterior, sem integrar a cadeia operacional atual do Rota5.
 - Estado de release: nenhum deployment novo; o HEAD atual não está publicado.
 
-### risk.latest-rota5-deployment-error — Deployment mais recente do projeto rota5 está em ERROR
+### risk.latest-rota5-deployment-error — Deployment ERROR histórico substituído pelo Production READY atual
 
 - Tipo / severidade / prioridade: **INFRASTRUCTURE / HIGH / P1**
-- Status / confiança: **ACTIVE / CONFIRMED**
-- Problema: A inspeção remota encontrou o deployment mais recente de rota5 em ERROR, enquanto rota5-khaki permanece apontando para um deployment anterior READY.
-- Evidência: `system-knowledge/runtime-validation.json` — runtime.vercel-linked-deployment = FAIL.; `system-knowledge/infrastructure.json` — Registra ready_deployment e latest_deployment_state ERROR.
-- Impacto: Mudanças recentes não chegam ao alias produtivo e uma promoção/redeploy sem diagnóstico pode causar indisponibilidade.
+- Status / confiança: **RESOLVED / CONFIRMED**
+- Condição histórica: a inspeção anterior encontrou o deployment mais recente de `rota5` em ERROR enquanto o alias servia um deployment READY anterior.
+- Evidência de resolução: `dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT` está READY, atende os aliases canônicos e passou health, página pública, admin auth e probe EXPAND, com zero erros relevantes nos logs e sem rollback.
+- Impacto atual: a condição que definia o finding não existe; published-commit parity e outros riscos continuam separados.
 - Escopo: domains domain.platform-runtime; capabilities —; flows —.
 - Blast radius: **EXTERNAL**
-- Workaround: O alias rota5-khaki observado continua saudável em deployment anterior.
-- Direção: Diagnosticar o build do deployment falho depois da baseline.
-- Justificativa da prioridade: P1 porque a produção observada está acessível, mas a linha de entrega mais recente falhou.
+- Workaround: Não necessário para este finding resolvido.
+- Direção: Preservar a evidência histórica; tratar riscos restantes pelos respectivos IDs.
+- Justificativa da prioridade histórica: P1 porque a produção permanecia acessível durante a falha da linha de entrega mais recente.
 
 ### risk.published-commit-unvalidated — Commit publicado não pode ser reconciliado com o HEAD auditado
 
@@ -78,4 +78,4 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 
 ## Estado remoto observado
 
-Os aliases consultados responderam 200. O domínio declarado pertence a **site**, o workspace está ligado a **rota5**, o alias rota5-khaki usa um deployment READY anterior e o deployment mais recente está ERROR. O SHA publicado continua NOT_VALIDATED. Nenhuma configuração remota foi alterada.
+Os aliases consultados responderam 200. O domínio declarado pertence a **site**, o workspace está ligado a **rota5** e o deployment Production mais recente de `rota5` está READY e atende os aliases canônicos. A paridade do baseline HEAD publicado continua tratada separadamente como NOT_VALIDATED. Nenhuma configuração remota foi alterada nesta auditoria semântica.

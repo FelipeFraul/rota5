@@ -11,7 +11,6 @@ Source: `system-knowledge/unresolved-evidence.json`. All records were revalidate
 | `unresolved.webhook-delivery-history` | RUNTIME | Histórico recente de entrega, retries e falhas dos webhooks |
 | `unresolved.cron-execution-history` | RUNTIME | Execução efetiva recente dos dois crons |
 | `unresolved.published-source-commit` | INFRASTRUCTURE | Commit/source SHA efetivamente publicado nos deployments observados |
-| `unresolved.vercel-error-root-cause` | INFRASTRUCTURE | Causa do deployment mais recente do projeto rota5 em ERROR |
 | `unresolved.anon-row-visibility` | SECURITY | Visibilidade real de linhas via chave anon |
 | `unresolved.external-dynamic-consumers` | REPOSITORY | Consumidores externos/dinâmicos de exports e assets classificados como órfãos/legado |
 

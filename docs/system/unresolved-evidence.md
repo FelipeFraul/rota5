@@ -1,6 +1,6 @@
 # Evidências ainda não validáveis — Etapa 7
 
-Os dez grupos abaixo foram revisitados. Continuam sem evidência suficiente; nenhum permaneceu NOT_VALIDATED por esquecimento.
+Os nove grupos abaixo foram revisitados. Continuam sem evidência suficiente; nenhum permaneceu NOT_VALIDATED por esquecimento. A antiga lacuna sobre o deployment em ERROR foi encerrada pelo deployment Production READY atual.
 
 | Área | Evidência pendente |
 | --- | --- |
@@ -11,7 +11,6 @@ Os dez grupos abaixo foram revisitados. Continuam sem evidência suficiente; nen
 | RUNTIME | Histórico recente de entrega, retries e falhas dos webhooks |
 | RUNTIME | Execução efetiva recente dos dois crons |
 | INFRASTRUCTURE | Commit/source SHA efetivamente publicado nos deployments observados |
-| INFRASTRUCTURE | Causa do deployment mais recente do projeto rota5 em ERROR |
 | SECURITY | Visibilidade real de linhas via chave anon |
 | REPOSITORY | Consumidores externos/dinâmicos de exports e assets classificados como órfãos/legado |
 

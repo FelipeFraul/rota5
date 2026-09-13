@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "generatedAt": "2026-09-13T16:27:50.380Z",
   "stage": "stabilization/high-1-source-freeze",
   "id": "rota5.flow-catalog.v1",
   "canonical": true,
@@ -2473,7 +2473,7 @@
         "FAILURE"
       ],
       "notes": [
-        "Production status remains conservative: HIGH #1 passed locally on PostgreSQL 16, but EXPAND and NEW_APP are not deployed remotely."
+        "HIGH #1 EXPAND and NEW_APP Production runtime passed; flow classification remains conservative until gates A-I and CONTRACT complete."
       ],
       "actors": [
         "admin"
@@ -2578,7 +2578,7 @@
         }
       ],
       "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "runtime_validation_status": "NOT_DEPLOYED"
+      "runtime_validation_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
     {
       "id": "gate.ticket_admission",
@@ -2625,7 +2625,7 @@
         "FAILURE"
       ],
       "notes": [
-        "Production status remains conservative: HIGH #1 passed locally on PostgreSQL 16, but EXPAND and NEW_APP are not deployed remotely."
+        "HIGH #1 EXPAND and NEW_APP Production runtime passed; flow classification remains conservative until gates A-I and CONTRACT complete."
       ],
       "actors": [
         "gate_operator"
@@ -2693,7 +2693,7 @@
         }
       ],
       "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "runtime_validation_status": "NOT_DEPLOYED"
+      "runtime_validation_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
     {
       "id": "kitchen.session_prepare",
@@ -2836,7 +2836,7 @@
       ],
       "notes": [
         "PARCIAL: caminho local de consumo e replay coberto por testes comportamentais; aplicação e comportamento da RPC no banco remoto não foram validados.",
-        "Production status remains conservative: HIGH #1 passed locally on PostgreSQL 16, but EXPAND and NEW_APP are not deployed remotely."
+        "HIGH #1 EXPAND and NEW_APP Production runtime passed; flow classification remains conservative until gates A-I and CONTRACT complete."
       ],
       "actors": [
         "kitchen_operator"
@@ -2893,7 +2893,7 @@
         }
       ],
       "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "runtime_validation_status": "NOT_DEPLOYED"
+      "runtime_validation_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
     {
       "id": "table_map.calibration",

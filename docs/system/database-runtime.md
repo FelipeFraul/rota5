@@ -1,8 +1,8 @@
-# Baseline 1.4.0 HIGH #1 database source state
+# Baseline 1.4.1 HIGH #1 database runtime state
 
-The source contains one new active migration, `20260912000100_gate_credential_session_revocation_expand.sql`. It adds nullable source attribution to `gate_sessions`, rollout observability, transactional pause/revoke RPCs, a shared authorization helper, credential status triggers, and atomic authorization in ticket/combo mutations. These objects are `DEFINED_IN_SOURCE` and `NOT_APPLIED` in the remote database.
+Migration `20260912000100_gate_credential_session_revocation_expand.sql` is the remote latest migration and is `APPLIED_AND_VALIDATED` since `2026-09-13T14:20:15.059853Z`. It adds nullable source attribution to `gate_sessions`, rollout observability, transactional pause/revoke RPCs, a shared authorization helper, credential status triggers, and atomic authorization in ticket/combo mutations. Dual-mode remains active and OLD_APP remained compatible during EXPAND.
 
-`supabase/rollout/gate_credential_session_revocation_contract.sql` is `DRAFT_ONLY`. It is outside the active Supabase migration queue and is not part of remote migration history.
+`supabase/rollout/gate_credential_session_revocation_contract.sql` is `DRAFT_ONLY / NOT_APPLIED`. It is outside the active Supabase migration queue and is prohibited until rollout gates A-I pass.
 
 # Database runtime — Etapa 5
 

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "generatedAt": "2026-09-13T16:27:50.380Z",
   "stage": "stabilization/high-1-source-freeze",
   "id": "capability-catalog.v1",
   "canonical": true,
@@ -9157,7 +9157,7 @@
       ],
       "notes": [
         "Lacuna: sessões já emitidas continuam regidas pelo próprio status/TTL; pauseGateAccess só atualiza gate_accesses. Evidência: gateSessions.ts:282–409.",
-        "HIGH #1 local source and PostgreSQL 16 validation passed; remote EXPAND and NEW_APP deploy have not started, so the production classification is unchanged."
+        "HIGH #1 source, remote EXPAND and NEW_APP Production runtime are validated; CONTRACT and remaining post-cutover gates are pending."
       ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
@@ -9192,7 +9192,7 @@
       "dependencies": [],
       "dependent_capabilities": [],
       "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "runtime_validation_status": "NOT_DEPLOYED"
+      "runtime_validation_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
     {
       "id": "gate.fixed_create",
@@ -9418,7 +9418,7 @@
       ],
       "notes": [
         "Lacuna: revokeFixedGateAccess não altera gate_sessions. Validação de sessão não consulta fixed_gate_accesses.",
-        "HIGH #1 local source and PostgreSQL 16 validation passed; remote EXPAND and NEW_APP deploy have not started, so the production classification is unchanged."
+        "HIGH #1 source, remote EXPAND and NEW_APP Production runtime are validated; CONTRACT and remaining post-cutover gates are pending."
       ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
@@ -9453,7 +9453,7 @@
       "dependencies": [],
       "dependent_capabilities": [],
       "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "runtime_validation_status": "NOT_DEPLOYED"
+      "runtime_validation_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
     {
       "id": "gate.open",
@@ -9638,7 +9638,7 @@
       ],
       "database_triggers": [],
       "notes": [
-        "HIGH #1 local source and PostgreSQL 16 validation passed; remote EXPAND and NEW_APP deploy have not started, so the production classification is unchanged."
+        "HIGH #1 source, remote EXPAND and NEW_APP Production runtime are validated; CONTRACT and remaining post-cutover gates are pending."
       ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
@@ -9677,7 +9677,7 @@
       "dependencies": [],
       "dependent_capabilities": [],
       "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "runtime_validation_status": "NOT_DEPLOYED"
+      "runtime_validation_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
     {
       "id": "gate.consult",
@@ -9748,7 +9748,7 @@
       ],
       "database_triggers": [],
       "notes": [
-        "HIGH #1 local source and PostgreSQL 16 validation passed; remote EXPAND and NEW_APP deploy have not started, so the production classification is unchanged."
+        "HIGH #1 source, remote EXPAND and NEW_APP Production runtime are validated; CONTRACT and remaining post-cutover gates are pending."
       ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
@@ -9780,7 +9780,7 @@
       "dependencies": [],
       "dependent_capabilities": [],
       "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "runtime_validation_status": "NOT_DEPLOYED"
+      "runtime_validation_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
     {
       "id": "gate.admit",
@@ -9898,7 +9898,7 @@
       ],
       "database_triggers": [],
       "notes": [
-        "HIGH #1 local source and PostgreSQL 16 validation passed; remote EXPAND and NEW_APP deploy have not started, so the production classification is unchanged."
+        "HIGH #1 source, remote EXPAND and NEW_APP Production runtime are validated; CONTRACT and remaining post-cutover gates are pending."
       ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
@@ -9935,7 +9935,7 @@
         "combo.kitchen_release"
       ],
       "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "runtime_validation_status": "NOT_DEPLOYED"
+      "runtime_validation_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
     {
       "id": "gate.session_revoke",
@@ -9978,7 +9978,7 @@
       "database_triggers": [],
       "notes": [
         "ÓRFÃ: nenhuma chamada a revokeGateSession localizada em src/scripts/.tools. Pausar gate_accesses ou revogar fixed_gate_accesses só altera esses registros; validateGateSessionToken não consulta o acesso de origem. Não se presume invalidação automática de links já emitidos.",
-        "HIGH #1 local source and PostgreSQL 16 validation passed; remote EXPAND and NEW_APP deploy have not started, so the production classification is unchanged."
+        "HIGH #1 source, remote EXPAND and NEW_APP Production runtime are validated; CONTRACT and remaining post-cutover gates are pending."
       ],
       "entrypoint_status": "NONE_CONFIRMED",
       "execution_chain": {
@@ -10005,7 +10005,7 @@
       "dependencies": [],
       "dependent_capabilities": [],
       "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "runtime_validation_status": "NOT_DEPLOYED"
+      "runtime_validation_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
     {
       "id": "courtesy.issue",
@@ -12705,7 +12705,7 @@
       ],
       "database_triggers": [],
       "notes": [
-        "HIGH #1 local source and PostgreSQL 16 validation passed; remote EXPAND and NEW_APP deploy have not started, so the production classification is unchanged."
+        "HIGH #1 source, remote EXPAND and NEW_APP Production runtime are validated; CONTRACT and remaining post-cutover gates are pending."
       ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
@@ -12748,7 +12748,7 @@
         "combo.delivery_prompt"
       ],
       "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "runtime_validation_status": "NOT_DEPLOYED"
+      "runtime_validation_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
     {
       "id": "combo.kitchen_release",
@@ -12933,7 +12933,7 @@
       ],
       "database_triggers": [],
       "notes": [
-        "HIGH #1 local source and PostgreSQL 16 validation passed; remote EXPAND and NEW_APP deploy have not started, so the production classification is unchanged."
+        "HIGH #1 source, remote EXPAND and NEW_APP Production runtime are validated; CONTRACT and remaining post-cutover gates are pending."
       ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
@@ -12970,7 +12970,7 @@
         "combo.redeem"
       ],
       "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "runtime_validation_status": "NOT_DEPLOYED"
+      "runtime_validation_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
     {
       "id": "combo.delivery_prompt",
@@ -13265,7 +13265,7 @@
       "database_triggers": [],
       "notes": [
         "PARCIAL: testes locais cobrem consumo único, replay, QR inválido, escopo incorreto e escolha ainda pendente. A RPC local usa bloqueio de linha e transição issued→used; nenhum teste mutante remoto foi executado e risk.combo-metadata-read-modify-write-race permanece ativo.",
-        "HIGH #1 local source and PostgreSQL 16 validation passed; remote EXPAND and NEW_APP deploy have not started, so the production classification is unchanged."
+        "HIGH #1 source, remote EXPAND and NEW_APP Production runtime are validated; CONTRACT and remaining post-cutover gates are pending."
       ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
@@ -13301,7 +13301,7 @@
       ],
       "dependent_capabilities": [],
       "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "runtime_validation_status": "NOT_DEPLOYED"
+      "runtime_validation_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
     {
       "id": "table_map.preview",

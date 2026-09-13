@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "generatedAt": "2026-09-13T16:54:57.825Z",
   "stage": "stabilization/high-1-source-freeze",
   "sourceCommit": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
   "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
@@ -399,7 +399,7 @@
         {
           "path": "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
           "line": 1,
-          "claim": "EXPAND defines source attribution, transactional revocation, authorization helper and compatibility instrumentation; remote status NOT_APPLIED."
+          "claim": "EXPAND source attribution and authorization objects are APPLIED_AND_VALIDATED remotely since 2026-09-13T14:20:15.059853Z."
         },
         {
           "path": "supabase/rollout/gate_credential_session_revocation_contract.sql",
@@ -446,29 +446,68 @@
         "gate_sessions"
       ],
       "blast_radius": "MULTI_DOMAIN",
-      "workaround": "Source patch is implemented locally; production remains on OLD_APP/OLD_DB until controlled EXPAND -> DEPLOY -> CONTRACT rollout.",
-      "direction": "Complete controlled EXPAND -> NEW_APP -> gates A-I -> CONTRACT -> runtime audit; keep ACTIVE until remote proof is complete.",
+      "workaround": "EXPAND and exact NEW_APP are live in dual-mode; CONTRACT remains prohibited while post-cutover gates are pending.",
+      "direction": "Complete post-cutover gates C-I, apply CONTRACT only after A-I PASS, then complete the post-fix runtime audit; keep ACTIVE until remote proof is complete.",
       "priority_justification": "P1 porque mantém autorização operacional após revogação explícita.",
-      "source_implementation": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "production_rollout": "NOT_STARTED",
+      "source_implementation": "IMPLEMENTED",
+      "production_rollout": "POST_CUTOVER_GATES_PENDING",
       "rollout_state": {
         "strategy": "EXPAND_DEPLOY_CONTRACT",
         "phase_0": "PASS",
         "release_path": "HEALTHY",
-        "expand": "READY_LOCALLY_NOT_APPLIED",
+        "expand": "APPLIED_AND_VALIDATED",
+        "expand_applied_at": "2026-09-13T14:20:15.059853Z",
+        "dual_mode": "ACTIVE",
         "new_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
-        "new_app_pushed": false,
-        "new_app_deployed": false,
-        "contract": "DRAFT_ONLY",
-        "remote_expand_allowed": false
+        "new_app_pushed": true,
+        "new_app_deployed": true,
+        "new_app": "PRODUCTION_CUTOVER_COMPLETE",
+        "production_deployment": "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+        "new_app_cutover_at": "2026-09-13T16:19:42.340Z",
+        "gates": {
+          "A": {
+            "status": "PASS",
+            "evidence": "NEW_APP Production deployment healthy and exact artifact identity proven."
+          },
+          "B": {
+            "status": "PASS",
+            "evidence": "OLD_APP no longer serves Production after NEW_APP_CUTOVER_AT."
+          },
+          "C": {
+            "status": "PENDING",
+            "evidence": "legacy_compat observation window remains open."
+          },
+          "D": {
+            "status": "PENDING_FORMAL_CONFIRMATION",
+            "evidence": "source_null_unexpired is currently 0; closure requires the post-cutover audit."
+          },
+          "E": {
+            "status": "PENDING_FORMAL_CONFIRMATION",
+            "evidence": "Sessions created after NEW_APP_CUTOVER_AT still require formal attribution audit."
+          },
+          "F": {
+            "status": "PENDING"
+          },
+          "G": {
+            "status": "PENDING"
+          },
+          "H": {
+            "status": "PENDING"
+          },
+          "I": {
+            "status": "PENDING"
+          }
+        },
+        "contract": "NOT_APPLIED",
+        "contract_artifact": "DRAFT_ONLY",
+        "contract_allowed": false
       },
       "resolution_requirements": [
-        "Apply EXPAND remotely",
-        "Deploy NEW_APP with artifact identity preserved",
-        "Pass rollout gates A-I",
-        "Apply CONTRACT only after compatibility gates",
+        "Complete rollout gates C-I",
+        "Apply CONTRACT only after gates A-I pass",
         "Complete post-fix runtime audit"
-      ]
+      ],
+      "resolution": "PENDING_POST_CUTOVER_GATES_A_TO_I"
     },
     {
       "id": "risk.admin-event-multistep-partial-state",
@@ -841,24 +880,32 @@
     },
     {
       "id": "risk.latest-rota5-deployment-error",
-      "title": "Deployment mais recente do projeto rota5 está em ERROR",
+      "title": "Deployment ERROR histórico substituído pelo Production READY atual",
       "type": "INFRASTRUCTURE",
       "severity": "HIGH",
       "priority": "P1",
-      "status": "ACTIVE",
+      "status": "RESOLVED",
       "confidence": "CONFIRMED",
-      "description": "A inspeção remota encontrou o deployment mais recente de rota5 em ERROR, enquanto rota5-khaki permanece apontando para um deployment anterior READY.",
+      "description": "A inspeção anterior encontrou o deployment mais recente de rota5 em ERROR enquanto o alias servia um deployment READY anterior; essa condição foi encerrada pelo cutover controlado do deployment Production READY atual.",
       "evidence": [
         {
           "path": "system-knowledge/runtime-validation.json",
-          "claim": "runtime.vercel-linked-deployment = FAIL."
+          "claim": "Historical evidence at Baseline 1.4.0: runtime.vercel-linked-deployment = FAIL."
         },
         {
           "path": "system-knowledge/infrastructure.json",
-          "claim": "Registra ready_deployment e latest_deployment_state ERROR."
+          "claim": "Historical evidence at Baseline 1.4.0 recorded the prior ready_deployment and latest_deployment_state ERROR."
+        },
+        {
+          "path": "system-knowledge/runtime-validation.json",
+          "claim": "runtime.high-1-new-app-production proves dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT READY with health, public, admin-auth and EXPAND probes PASS and zero relevant log errors."
+        },
+        {
+          "path": "system-knowledge/configuration-drift.json",
+          "claim": "drift.vercel-latest-deployment is MATCH after the controlled cutover."
         }
       ],
-      "impact": "Mudanças recentes não chegam ao alias produtivo e uma promoção/redeploy sem diagnóstico pode causar indisponibilidade.",
+      "impact": "Impacto histórico: mudanças recentes não chegavam ao alias produtivo enquanto o deployment mais recente permanecia em ERROR.",
       "domains": [
         "domain.platform-runtime"
       ],
@@ -869,9 +916,38 @@
         "integration-vercel"
       ],
       "blast_radius": "EXTERNAL",
-      "workaround": "O alias rota5-khaki observado continua saudável em deployment anterior.",
-      "direction": "Diagnosticar o build do deployment falho depois da baseline.",
-      "priority_justification": "P1 porque a produção observada está acessível, mas a linha de entrega mais recente falhou."
+      "workaround": "Não necessário; o deployment Production mais recente está READY e serve os aliases canônicos.",
+      "direction": "Preservar a evidência histórica do deployment ERROR; tratar published-commit parity e demais riscos em findings separados.",
+      "priority_justification": "Prioridade histórica P1: a produção permanecia acessível, mas a linha de entrega mais recente havia falhado.",
+      "historical_status_at_baseline_v1_4_0": "ACTIVE",
+      "resolution": {
+        "date": "2026-09-13",
+        "base_commit": "f877519ec367fa95632e9f302862ba78f4f98b18",
+        "change": "Deployment Production dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT reached READY and became the canonical alias target at 2026-09-13T16:19:42.340Z.",
+        "evidence": [
+          {
+            "path": "system-knowledge/infrastructure.json",
+            "claim": "ready_deployment and latest_deployment_state identify dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT as READY."
+          },
+          {
+            "path": "system-knowledge/runtime-validation.json",
+            "claim": "Production health/public/admin-auth/EXPAND probes passed; relevant production log errors=0; rollback=false."
+          },
+          {
+            "path": "system-knowledge/configuration-drift.json",
+            "claim": "drift.vercel-latest-deployment result/status are MATCH."
+          }
+        ],
+        "related_change": {
+          "type": "CONTROLLED_PRODUCTION_CUTOVER",
+          "artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+          "deployment": "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+          "cutover_at": "2026-09-13T16:19:42.340Z"
+        },
+        "proving_test": "Production GET /api/health=200, public page=200, admin page=307, admin API=401, EXPAND probe=200/not_found.",
+        "lifecycle_policy": "ID, severity, priority and historical evidence preserved; ACTIVE migrated explicitly to RESOLVED because the defining current deployment ERROR condition no longer exists."
+      },
+      "current_impact": "The latest Production deployment is READY, serves the canonical aliases and passed immediate runtime validation. Other infrastructure findings remain independent."
     },
     {
       "id": "risk.published-commit-unvalidated",

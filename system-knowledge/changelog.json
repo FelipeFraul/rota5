@@ -1,9 +1,86 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "generatedAt": "2026-09-13T16:54:57.825Z",
   "stage": "stabilization/high-1-source-freeze",
-  "count": 7,
+  "count": 8,
   "records": [
+    {
+      "version": "1.4.1",
+      "type": "DOCUMENTATION_RUNTIME_STATE_PATCH",
+      "status": "FROZEN",
+      "date": "2026-09-13T16:27:50.380Z",
+      "source_commit": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+      "functional_source_changed": false,
+      "functional_fingerprint": "6643a2c539caab8942ebe3953dc75963446d27dbb653e166a3310fe2c4e2fc4b",
+      "functional_file_count": 355,
+      "finding": "risk.gate-credential-revocation-does-not-revoke-session",
+      "finding_status": "ACTIVE",
+      "source_implementation": "IMPLEMENTED",
+      "production_rollout": "POST_CUTOVER_GATES_PENDING",
+      "change": "Recorded remote EXPAND application and validated exact NEW_APP Production cutover without changing functional source or applying CONTRACT.",
+      "remote": {
+        "expand": "APPLIED_AND_VALIDATED",
+        "expand_applied_at": "2026-09-13T14:20:15.059853Z",
+        "new_app": "PRODUCTION_CUTOVER_COMPLETE",
+        "production_deployment": "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+        "new_app_cutover_at": "2026-09-13T16:19:42.340Z",
+        "contract": "NOT_APPLIED"
+      },
+      "gates": {
+        "A": {
+          "status": "PASS",
+          "evidence": "NEW_APP Production deployment healthy and exact artifact identity proven."
+        },
+        "B": {
+          "status": "PASS",
+          "evidence": "OLD_APP no longer serves Production after NEW_APP_CUTOVER_AT."
+        },
+        "C": {
+          "status": "PENDING",
+          "evidence": "legacy_compat observation window remains open."
+        },
+        "D": {
+          "status": "PENDING_FORMAL_CONFIRMATION",
+          "evidence": "source_null_unexpired is currently 0; closure requires the post-cutover audit."
+        },
+        "E": {
+          "status": "PENDING_FORMAL_CONFIRMATION",
+          "evidence": "Sessions created after NEW_APP_CUTOVER_AT still require formal attribution audit."
+        },
+        "F": {
+          "status": "PENDING"
+        },
+        "G": {
+          "status": "PENDING"
+        },
+        "H": {
+          "status": "PENDING"
+        },
+        "I": {
+          "status": "PENDING"
+        }
+      },
+      "operational_counts": {
+        "gate_sessions_total": 1,
+        "source_null_total": 1,
+        "source_null_unexpired": 0,
+        "transition_legacy_created_after_expand": 0,
+        "gate_accesses_active": 0,
+        "fixed_gate_accesses_active": 0
+      },
+      "product_health": "BROKEN",
+      "infrastructure_health": "DEGRADED",
+      "deployment_during_baseline_update": false,
+      "semantic_audit": {
+        "new_app_pushed": true,
+        "git_proof": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8 is an ancestor of origin/production",
+        "finding_resolved": "risk.latest-rota5-deployment-error",
+        "resolution_reason": "The latest Production deployment is READY, serves canonical aliases and passed immediate runtime validation.",
+        "active_high_before": 6,
+        "active_high_after": 5,
+        "resolved_high_after": 4
+      }
+    },
     {
       "version": "1.4.0",
       "type": "COMPATIBLE_FUNCTIONAL_SOURCE_FREEZE",

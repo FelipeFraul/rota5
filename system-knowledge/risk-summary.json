@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "generatedAt": "2026-09-13T16:54:57.825Z",
   "stage": "stabilization/high-1-source-freeze",
   "sourceCommit": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
   "scope": "Baseline 1.3.1 após a correção semântica da taxonomia de findings; nenhum deployment realizado.",
@@ -46,10 +46,10 @@
     "P4": 2
   },
   "by_status": {
-    "ACTIVE": 29,
+    "ACTIVE": 28,
     "POTENTIAL": 7,
     "NOT_VALIDATED": 5,
-    "RESOLVED": 3,
+    "RESOLVED": 4,
     "OPEN": 0,
     "MITIGATED": 0,
     "ACCEPTED": 0
@@ -146,13 +146,50 @@
       "ticket_race": "2/2 PASS",
       "combo_race": "2/2 PASS",
       "rollout_matrix": "PASS",
-      "production_rollout": "NOT_STARTED"
+      "production_rollout": "POST_CUTOVER_GATES_PENDING",
+      "expand_remote": "APPLIED_AND_VALIDATED",
+      "new_app": "PRODUCTION_CUTOVER_COMPLETE",
+      "production_deployment": "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+      "gates": {
+        "A": {
+          "status": "PASS",
+          "evidence": "NEW_APP Production deployment healthy and exact artifact identity proven."
+        },
+        "B": {
+          "status": "PASS",
+          "evidence": "OLD_APP no longer serves Production after NEW_APP_CUTOVER_AT."
+        },
+        "C": {
+          "status": "PENDING",
+          "evidence": "legacy_compat observation window remains open."
+        },
+        "D": {
+          "status": "PENDING_FORMAL_CONFIRMATION",
+          "evidence": "source_null_unexpired is currently 0; closure requires the post-cutover audit."
+        },
+        "E": {
+          "status": "PENDING_FORMAL_CONFIRMATION",
+          "evidence": "Sessions created after NEW_APP_CUTOVER_AT still require formal attribution audit."
+        },
+        "F": {
+          "status": "PENDING"
+        },
+        "G": {
+          "status": "PENDING"
+        },
+        "H": {
+          "status": "PENDING"
+        },
+        "I": {
+          "status": "PENDING"
+        }
+      },
+      "contract_remote": "NOT_APPLIED"
     }
   },
   "active_high_critical": [
     "legacy.active-brand-contamination",
     "risk.gate-credential-revocation-does-not-revoke-session",
-    "risk.latest-rota5-deployment-error",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
     "gap.test-runner-depends-on-untracked-loader"
@@ -162,7 +199,6 @@
     "bug.user-visible-text-corruption",
     "legacy.active-brand-contamination",
     "risk.gate-credential-revocation-does-not-revoke-session",
-    "risk.latest-rota5-deployment-error",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
     "gap.test-runner-depends-on-untracked-loader",
@@ -171,7 +207,8 @@
   "resolved": [
     "bug.create-event-invalid-jsx",
     "bug.combo-redemption-unreachable-consume",
-    "risk.vercel-project-identity-drift"
+    "risk.vercel-project-identity-drift",
+    "risk.latest-rota5-deployment-error"
   ],
   "infrastructure_identity": "CORRECT",
   "current_head_deployed": false,
@@ -182,7 +219,6 @@
     "legacy.active-brand-contamination",
     "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.admin-event-multistep-partial-state",
-    "risk.latest-rota5-deployment-error",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
     "gap.test-runner-depends-on-untracked-loader"
@@ -197,7 +233,6 @@
     "legacy.active-brand-contamination",
     "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.admin-event-multistep-partial-state",
-    "risk.latest-rota5-deployment-error",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
     "gap.test-runner-depends-on-untracked-loader",

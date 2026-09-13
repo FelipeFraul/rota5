@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "generatedAt": "2026-09-13T16:54:57.825Z",
   "stage": "stabilization/high-1-source-freeze",
   "baseline_id": "rota5-baseline-v1",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "status": "FROZEN",
   "frozen_at": "2026-09-12T16:41:28.048Z",
   "source_state": {
@@ -16,12 +16,12 @@
     "baseline_commit_policy": "The Git commit containing this baseline is intentionally not embedded in its own content to avoid self-reference."
   },
   "git_observation_at_generation": {
-    "observed_at": "2026-09-13T03:06:00.129Z",
+    "observed_at": "2026-09-13T16:27:50.380Z",
     "branch": "production",
-    "head": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+    "head": "8aa4690ffb6367c45c9045494a5949bc62af2a2a",
     "working_tree_clean": false,
     "validity_role": "INFORMATIONAL_ONLY",
-    "note": "Baseline artifact edits are excluded; the functional source state exactly matches base_commit."
+    "note": "Only Baseline 1.4.1 documentation artifacts were dirty; functional source exactly matches source_state.base_commit."
   },
   "baseline_integrity": {
     "status": "PASS",
@@ -30,16 +30,16 @@
   },
   "product_health": {
     "status": "BROKEN",
-    "reason": "0 active P0, 6 active HIGH, 1 potential HIGH, 7 open HIGH, 0 broken flows, 9 partial flows and npm test failing; infrastructure identity is correct while infrastructure health remains DEGRADED.",
+    "reason": "0 active P0, 5 active HIGH, 1 potential HIGH, 6 open HIGH, 0 broken flows, 9 partial flows and npm test failing; infrastructure health remains DEGRADED due independent open findings.",
     "findings": 44,
     "active_p0": 0,
-    "active_high": 6,
+    "active_high": 5,
     "critical": 0,
-    "resolved": 3,
+    "resolved": 4,
     "broken_flows": 0,
     "partial_flows": 9,
     "potential_high": 1,
-    "open_high": 7
+    "open_high": 6
   },
   "confidence": "HIGH",
   "canonical_counts": {
@@ -69,14 +69,13 @@
     "machine_readable_json": 43,
     "total": 95
   },
-  "unresolved_evidence_count": 10,
+  "unresolved_evidence_count": 9,
   "contradictions_pending": 0,
   "p0_findings": [],
   "high_findings": [
     "legacy.active-brand-contamination",
     "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.admin-event-multistep-partial-state",
-    "risk.latest-rota5-deployment-error",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
     "gap.test-runner-depends-on-untracked-loader"
@@ -235,23 +234,23 @@
     "self_exclusion": "baseline-integrity.json is excluded to avoid circularity."
   },
   "notes": [
-    "Baseline 1.4.0 freezes HIGH #1 functional source at cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8.",
-    "Source implementation is locally validated; production rollout has not started. EXPAND and CONTRACT are not applied remotely; NEW_APP is not deployed.",
-    "The HIGH #1 finding remains ACTIVE until EXPAND -> NEW_APP -> gates A-I -> CONTRACT -> post-fix runtime audit completes.",
+    "Baseline 1.4.1 preserves HIGH #1 functional source at cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8.",
+    "EXPAND was applied and validated at 2026-09-13T14:20:15.059853Z; NEW_APP completed Production cutover at 2026-09-13T16:19:42.340Z. CONTRACT remains NOT_APPLIED and dual-mode remains active.",
+    "The HIGH #1 finding remains ACTIVE until post-cutover gates A-I, CONTRACT and the post-fix runtime audit complete.",
     "active_* is literal ACTIVE; potential_* is literal POTENTIAL; open_* is the explicit set ACTIVE, POTENTIAL, OPEN and MITIGATED; release gates use ACTIVE, OPEN and MITIGATED at applicable severity.",
-    "The current HEAD has not been deployed; git.deploymentEnabled=false remains intentional.",
+    "Production serves the exact Git-pushed NEW_APP artifact while git.deploymentEnabled=false remains intentional.",
     "FROZEN validity depends on source_state and validated artifacts, not on the current Git working-tree state.",
     "NOT_VALIDATED is neither confirmed nor operationally open; ACCEPTED is closed for operational metrics after documented authorization."
   ],
   "resolved_findings": [
     "bug.create-event-invalid-jsx",
     "bug.combo-redemption-unreachable-consume",
-    "risk.vercel-project-identity-drift"
+    "risk.vercel-project-identity-drift",
+    "risk.latest-rota5-deployment-error"
   ],
   "active_high_findings": [
     "legacy.active-brand-contamination",
     "risk.gate-credential-revocation-does-not-revoke-session",
-    "risk.latest-rota5-deployment-error",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
     "gap.test-runner-depends-on-untracked-loader"
@@ -263,23 +262,83 @@
     "legacy.active-brand-contamination",
     "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.admin-event-multistep-partial-state",
-    "risk.latest-rota5-deployment-error",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
     "gap.test-runner-depends-on-untracked-loader"
   ],
   "high_1_rollout_state": {
-    "source_implementation": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-    "production_rollout": "NOT_STARTED",
+    "source_implementation": "IMPLEMENTED",
+    "production_rollout": "POST_CUTOVER_GATES_PENDING",
     "strategy": "EXPAND_DEPLOY_CONTRACT",
     "phase_0": "PASS",
     "release_path": "HEALTHY",
-    "expand": "READY_LOCALLY_NOT_APPLIED",
+    "expand": "APPLIED_AND_VALIDATED",
+    "expand_migration": "20260912000100_gate_credential_session_revocation_expand",
+    "expand_applied_at": "2026-09-13T14:20:15.059853Z",
+    "dual_mode": "ACTIVE",
     "new_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
-    "new_app_pushed": false,
-    "new_app_deployed": false,
-    "contract": "DRAFT_ONLY",
-    "remote_expand_allowed": false,
+    "new_app_pushed": true,
+    "new_app_deployed": true,
+    "new_app_state": "PRODUCTION_CUTOVER_COMPLETE",
+    "production_deployment": "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+    "old_production_deployment": "dpl_4fUuUVNXgCfYgTiJjvdLuDdxXSA9",
+    "new_app_cutover_at": "2026-09-13T16:19:42.340Z",
+    "old_app_serving_after_cutover": false,
+    "new_app_serving": true,
+    "rollback_performed": false,
+    "runtime_proof": {
+      "health": "PASS",
+      "public_page": "PASS",
+      "admin_auth": "PASS",
+      "expand_probe": "PASS",
+      "relevant_log_errors": 0
+    },
+    "operational_counts": {
+      "gate_sessions_total": 1,
+      "source_null_total": 1,
+      "source_null_unexpired": 0,
+      "transition_legacy_created_after_expand": 0,
+      "gate_accesses_active": 0,
+      "fixed_gate_accesses_active": 0
+    },
+    "gates": {
+      "A": {
+        "status": "PASS",
+        "evidence": "NEW_APP Production deployment healthy and exact artifact identity proven."
+      },
+      "B": {
+        "status": "PASS",
+        "evidence": "OLD_APP no longer serves Production after NEW_APP_CUTOVER_AT."
+      },
+      "C": {
+        "status": "PENDING",
+        "evidence": "legacy_compat observation window remains open."
+      },
+      "D": {
+        "status": "PENDING_FORMAL_CONFIRMATION",
+        "evidence": "source_null_unexpired is currently 0; closure requires the post-cutover audit."
+      },
+      "E": {
+        "status": "PENDING_FORMAL_CONFIRMATION",
+        "evidence": "Sessions created after NEW_APP_CUTOVER_AT still require formal attribution audit."
+      },
+      "F": {
+        "status": "PENDING"
+      },
+      "G": {
+        "status": "PENDING"
+      },
+      "H": {
+        "status": "PENDING"
+      },
+      "I": {
+        "status": "PENDING"
+      }
+    },
+    "contract": "NOT_APPLIED",
+    "contract_artifact": "DRAFT_ONLY",
+    "contract_allowed": false,
+    "resolution": "PENDING_POST_CUTOVER_GATES_A_TO_I",
     "finding_status": "ACTIVE"
   }
 }

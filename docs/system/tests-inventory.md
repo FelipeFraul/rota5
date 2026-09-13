@@ -1,4 +1,4 @@
-# Baseline 1.4.0 HIGH #1 test inventory
+# Baseline 1.4.1 HIGH #1 test and runtime inventory
 
 The canonical inventory now contains 51 test files. HIGH #1 adds contract, migration-packaging, disposable PostgreSQL integration, rollout-matrix, EXPAND/CONTRACT SQL, isolated fixture and rollout-gate coverage. Focused validation passed 96/96; ticket and combo races passed 2/2 each. The default suite remains 207/214 with the same seven historical failures.
 

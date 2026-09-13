@@ -1,10 +1,10 @@
-# Baseline 1.4.0 HIGH #1 runtime evidence
+# Baseline 1.4.1 HIGH #1 runtime evidence
 
-Local/disposable evidence passed: focused 96/96, PostgreSQL 16 matrix, ticket race 2/2 and combo race 2/2. Phase 0 manual Vercel release-path proof passed. Production rollout remains NOT_STARTED; no remote migration or NEW_APP deployment occurred.
+Local/disposable evidence remains PASS. Remote EXPAND was applied at `2026-09-13T14:20:15.059853Z`; exact NEW_APP artifact `cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8` completed Production cutover as `dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT` at `2026-09-13T16:19:42.340Z`. Health/public/admin/EXPAND probes passed, relevant log errors were zero, monitored counts did not change and rollback was not performed.
 
 # Runtime validation — Etapa 5
 
-Todas as verificações foram GET, HEAD, metadata ou logs em modo leitura. Total: 15; PASS: 12; PARTIAL: 2; FAIL: 1.
+Todas as verificações foram GET, HEAD, metadata ou logs em modo leitura. O catálogo atual registra 20 checks: PASS 18; PARTIAL 2; FAIL 0.
 
 | ID | Alvo | Evidência | Status | Resultado |
 | --- | --- | --- | --- | --- |
@@ -16,7 +16,7 @@ Todas as verificações foram GET, HEAD, metadata ou logs em modo leitura. Total
 | `runtime.vercel-project` | Vercel linked project | REMOTE_CONFIG | PASS | `rota5` (`prj_dl7tt8fZbw88ZQV0GhklY0akEwbf`) ligado a `FelipeFraul/rota5`; Production Branch `production`. |
 | `runtime.vercel-env` | Vercel environment names | REMOTE_CONFIG | PASS | 24 nomes observados; valores não lidos nem persistidos. |
 | `runtime.vercel-declared-domain` | Historical Ticketeira classification | REMOTE_CONFIG | PASS | `site` e `FelipeFraul/ticketeira` são infraestrutura da Ticketeira, não da cadeia operacional do Rota5. |
-| `runtime.vercel-linked-deployment` | Vercel linked production deployment | REMOTE_CONFIG | FAIL | Nenhum deployment novo; o mais recente permanece ERROR e o HEAD atual não está publicado. |
+| `runtime.vercel-linked-deployment` | Vercel linked production deployment | REMOTE_CONFIG | PASS | Deployment Production `dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT` READY atende os aliases canônicos e passou os probes de runtime. |
 | `runtime.health-declared` | Health declared domain | RUNTIME_OBSERVED | PASS | GET /api/health retornou HTTP 200 e status ok. |
 | `runtime.health-linked` | Health linked alias | RUNTIME_OBSERVED | PASS | GET /api/health retornou HTTP 200 e status ok. |
 | `runtime.github-repository` | GitHub repository metadata | REMOTE_CONFIG | PASS | Repositório privado `FelipeFraul/rota5`; branch operacional `production`. |
@@ -28,4 +28,4 @@ O commit publicado é `NOT_VALIDATED`: o HEAD atual e `origin/production` coinci
 
 ## Revalidação dos resultados fora de PASS
 
-Os três resultados fora de PASS são runtime.supabase-anon-head (PARTIAL, pois HEAD não prova visibilidade de linhas), runtime.vercel-linked-deployment (FAIL, pois o deployment mais recente está em ERROR) e runtime.vercel-logs (PARTIAL, pois a amostra contém um erro e não constitui trilha completa). O catálogo JSON registra método, expectativa, ausência de efeito colateral e evidência de cada check.
+Os dois resultados fora de PASS são `runtime.supabase-anon-head` (PARTIAL, pois HEAD não prova visibilidade de linhas) e `runtime.vercel-logs` (PARTIAL, pois a amostra histórica não constitui trilha completa). `runtime.vercel-linked-deployment` foi revalidado como PASS após o cutover controlado. O catálogo JSON registra método, expectativa, ausência de efeito colateral e evidência de cada check.

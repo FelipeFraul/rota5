@@ -31,4 +31,4 @@ Não houve pentest, carga destrutiva, pagamento, WhatsApp, cron, mutação de ba
 
 ## Estado da Baseline 1.3.1
 
-A identidade de infraestrutura foi corrigida e não há P0 ativo. Permanecem 6 HIGH ACTIVE, 1 HIGH POTENTIAL e 7 HIGH abertos, além de 0 flows quebrados, 9 flows parciais e as mesmas 7 falhas de `npm test`; por isso PRODUCT_HEALTH continua BROKEN. INFRASTRUCTURE_HEALTH é DEGRADED, pois o último deployment permanece ERROR e o HEAD atual não foi publicado.
+A identidade de infraestrutura foi corrigida e não há P0 ativo. Permanecem 5 HIGH ACTIVE, 1 HIGH POTENTIAL e 6 HIGH abertos, além de 0 flows quebrados, 9 flows parciais e as mesmas 7 falhas de `npm test`; por isso PRODUCT_HEALTH continua BROKEN. O deployment Production mais recente está READY e o finding específico foi resolvido, mas INFRASTRUCTURE_HEALTH permanece DEGRADED devido aos demais findings de infraestrutura ainda abertos.

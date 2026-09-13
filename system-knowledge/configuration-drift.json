@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-12T15:29:26.315Z",
+  "generatedAt": "2026-09-13T16:54:57.825Z",
   "stage": "stabilization/p0-3",
   "count": 4,
   "critical": 1,
@@ -41,22 +41,23 @@
       "id": "drift.vercel-latest-deployment",
       "object": "latest production deployment of linked project",
       "local": "baseline HEAD em origin/production",
-      "remote": "deployment mais recente do projeto rota5 em ERROR; anterior READY atende o alias",
-      "runtime": "health do alias responde 200",
-      "result": "DRIFT",
+      "remote": "latest Production deployment dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT is READY and serves the canonical aliases",
+      "runtime": "health, public page, admin auth and EXPAND probe passed",
+      "result": "MATCH",
       "severity": "CRITICAL",
-      "impact": "O último deploy não é o que atende produção e o commit servido não pôde ser provado.",
+      "impact": "Current deployment identity and alias attachment match the controlled NEW_APP cutover; the deployment-error finding is RESOLVED.",
       "evidence_source": [
         "REMOTE_CONFIG",
         "RUNTIME_OBSERVED"
       ],
       "expected": "Deployment de produção mais recente READY e associado ao alias público.",
-      "observed": "dpl_9VYjvCcu63MmUsDchK9Tx3WEnjVa é o mais recente e está ERROR; dpl_4fUuUVNXgCfYgTiJjvdLuDdxXSA9 está READY e serve rota5-khaki.vercel.app.",
+      "observed": "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT is READY and serves rota5-khaki.vercel.app with exact source artifact identity proven.",
       "evidence": [
-        "Vercel ls rota5",
-        "Vercel inspect dos dois deployments"
+        "Vercel deployment list",
+        "Vercel inspect dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+        "Production runtime probes"
       ],
-      "status": "DRIFT"
+      "status": "MATCH"
     },
     {
       "id": "drift.local-environment",
@@ -179,11 +180,10 @@
   "second_pass": {
     "external_not_revealed_by_repository": [
       "O domínio declarado está associado ao projeto Vercel site, enquanto o repositório está ligado a rota5.",
-      "O deployment mais recente de rota5 está em ERROR; um deployment anterior atende o alias.",
+      "O deployment Production mais recente de rota5 está READY, serve os aliases canônicos e possui identidade do artefato provada.",
       "A instância Z-API está conectada e a credencial Mercado Pago responde."
     ],
     "locally_declared_not_proven_externally": [
-      "Commit efetivamente servido",
       "Migrations aplicadas",
       "Constraints, indexes, triggers, RLS, policies e grants remotos",
       "Registro remoto dos dois webhooks",

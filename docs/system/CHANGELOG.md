@@ -1,5 +1,14 @@
 # Baseline changelog
 
+## BASELINE V1.4.1 — HIGH #1 EXPAND AND NEW_APP PRODUCTION CUTOVER
+
+- Preserved functional source commit `cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8`, fingerprint `6643a2c539caab8942ebe3953dc75963446d27dbb653e166a3310fe2c4e2fc4b` and 355 functional files.
+- EXPAND migration `20260912000100_gate_credential_session_revocation_expand` is `APPLIED_AND_VALIDATED` since `2026-09-13T14:20:15.059853Z`; source attribution remains nullable in dual-mode.
+- Exact NEW_APP artifact completed Production cutover as `dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT` at `2026-09-13T16:19:42.340Z`. Health, public page, admin auth and EXPAND runtime probe passed with zero relevant log errors; rollback was not performed.
+- Semantic audit proved `cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8` is an ancestor of `origin/production`, so `new_app_pushed=true`. It also resolved only `risk.latest-rota5-deployment-error`: the current Production deployment is READY and serves the canonical aliases. Derived HIGH metrics are now ACTIVE 5, POTENTIAL 1, OPEN 6 and RESOLVED 4.
+- Gates A/B are PASS; C and F-I are PENDING; D/E are PENDING_FORMAL_CONFIRMATION. CONTRACT remains `DRAFT_ONLY / NOT_APPLIED` and prohibited until A-I pass.
+- HIGH #1 remains `ACTIVE/HIGH/P1`; product health remains BROKEN and infrastructure health remains DEGRADED.
+
 ## BASELINE V1.4.0 — HIGH #1 SOURCE IMPLEMENTED, ROLLOUT NOT STARTED
 
 - Froze functional source commit `cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8` with credential source attribution, transactional credential/session revocation and atomic ticket/combo authorization.

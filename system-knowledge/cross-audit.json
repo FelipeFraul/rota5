@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "generatedAt": "2026-09-13T16:54:57.825Z",
   "stage": "stabilization/high-1-source-freeze",
   "status": "PASS",
   "sourceCommit": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
@@ -105,7 +105,12 @@
     "lint": "PASS_0_ERRORS_24_PREEXISTING_WARNINGS",
     "high_1_focused": "PASS_96_OF_96",
     "npm_test": "FAIL_207_OF_214_SAME_7",
-    "build": "PASS_WITH_PREEXISTING_WARNING"
+    "build": "PASS_WITH_PREEXISTING_WARNING",
+    "active_high": 5,
+    "potential_high": 1,
+    "open_high": 6,
+    "resolved": 4,
+    "latest_production_deployment": "PASS_READY"
   },
   "findings": {
     "total": 44,
@@ -157,7 +162,7 @@
     "corrected": 2,
     "pending": 0
   },
-  "unresolvedEvidenceCount": 10,
+  "unresolvedEvidenceCount": 9,
   "encoding": {
     "bom": 0,
     "replacementCharacter": 0,
@@ -182,10 +187,47 @@
     "note": "Historical Stage 7 evidence remains preserved under findings.p0."
   },
   "high_1_source_reaudit": {
-    "source_implementation": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-    "production_rollout": "NOT_STARTED",
-    "expand_remote": "NOT_APPLIED",
-    "new_app_deployed": false,
+    "source_implementation": "IMPLEMENTED",
+    "production_rollout": "POST_CUTOVER_GATES_PENDING",
+    "expand_remote": "APPLIED_AND_VALIDATED",
+    "expand_applied_at": "2026-09-13T14:20:15.059853Z",
+    "new_app_deployed": true,
+    "production_deployment": "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+    "new_app_cutover_at": "2026-09-13T16:19:42.340Z",
+    "gates": {
+      "A": {
+        "status": "PASS",
+        "evidence": "NEW_APP Production deployment healthy and exact artifact identity proven."
+      },
+      "B": {
+        "status": "PASS",
+        "evidence": "OLD_APP no longer serves Production after NEW_APP_CUTOVER_AT."
+      },
+      "C": {
+        "status": "PENDING",
+        "evidence": "legacy_compat observation window remains open."
+      },
+      "D": {
+        "status": "PENDING_FORMAL_CONFIRMATION",
+        "evidence": "source_null_unexpired is currently 0; closure requires the post-cutover audit."
+      },
+      "E": {
+        "status": "PENDING_FORMAL_CONFIRMATION",
+        "evidence": "Sessions created after NEW_APP_CUTOVER_AT still require formal attribution audit."
+      },
+      "F": {
+        "status": "PENDING"
+      },
+      "G": {
+        "status": "PENDING"
+      },
+      "H": {
+        "status": "PENDING"
+      },
+      "I": {
+        "status": "PENDING"
+      }
+    },
     "contract_remote": "NOT_APPLIED",
     "finding_status": "ACTIVE"
   }

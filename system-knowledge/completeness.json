@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12",
+  "generatedAt": "2026-09-13T16:54:57.825Z",
   "stage": 7,
   "globalConfidence": "HIGH",
   "count": 10,
@@ -50,9 +50,9 @@
     {
       "area": "INFRASTRUCTURE",
       "status": "MEDIUM_CONFIDENCE",
-      "justification": "Projetos, aliases, healthchecks, crons e drift site × rota5 foram revalidados.",
-      "missingEvidence": "Commit publicado e causa do deployment ERROR.",
-      "higherConfidenceRequires": "Metadados e logs completos do deployment."
+      "justification": "Projects, aliases, healthchecks, crons, exact Production artifact and the current READY deployment were revalidated.",
+      "missingEvidence": "Published baseline HEAD parity and other independent infrastructure controls.",
+      "higherConfidenceRequires": "Resolve the remaining published-commit and infrastructure findings independently."
     },
     {
       "area": "TESTS",
@@ -64,14 +64,14 @@
     {
       "area": "RISKS",
       "status": "HIGH_CONFIDENCE",
-      "justification": "44 findings foram confrontados com evidência; 3 P0 e todos os 10 HIGH permaneceram calibrados; nenhum CRITICAL foi provado.",
+      "justification": "44 findings foram confrontados com evidência; 4 estão RESOLVED, 5 HIGH estão ACTIVE, 1 HIGH está POTENTIAL e 6 HIGH estão operacionalmente abertos; nenhum CRITICAL foi provado.",
       "missingEvidence": "Riscos dependentes de estado remoto não exposto.",
       "higherConfidenceRequires": "Evidência remota dos itens NOT_VALIDATED."
     },
     {
       "area": "RUNTIME",
       "status": "MEDIUM_CONFIDENCE",
-      "justification": "15 checks foram revisados; distribuição canônica permanece 12 PASS, 2 PARTIAL e 1 FAIL.",
+      "justification": "20 checks foram revisados; a distribuição canônica atual é 18 PASS, 2 PARTIAL e 0 FAIL.",
       "missingEvidence": "Execuções mutáveis, cron/webhook history e logs completos.",
       "higherConfidenceRequires": "Observação read-only adicional ou ambiente isolado."
     }

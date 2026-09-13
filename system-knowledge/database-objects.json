@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "generatedAt": "2026-09-13T16:27:50.380Z",
   "stage": "stabilization/high-1-source-freeze",
   "sourceCommit": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
   "counts": {
@@ -1502,7 +1502,8 @@
           ]
         }
       ],
-      "remote_status": "SOURCE_NEW_REMOTE_OLD"
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "remote_evidence": "EXPAND_REMOTE_RUNTIME_VALIDATED"
     },
     {
       "id": "function.validate_ticket_entry",
@@ -1567,7 +1568,8 @@
           ]
         }
       ],
-      "remote_status": "SOURCE_NEW_REMOTE_OLD"
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "remote_evidence": "EXPAND_REMOTE_RUNTIME_VALIDATED"
     },
     {
       "id": "function.gate_session_source_rollout_status",
@@ -1588,7 +1590,8 @@
           ]
         }
       ],
-      "remote_status": "NOT_APPLIED"
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "remote_evidence": "EXPAND_REMOTE_RUNTIME_VALIDATED"
     },
     {
       "id": "function.revoke_linked_gate_sessions_on_credential_change",
@@ -1609,7 +1612,8 @@
           ]
         }
       ],
-      "remote_status": "NOT_APPLIED"
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "remote_evidence": "EXPAND_REMOTE_RUNTIME_VALIDATED"
     },
     {
       "id": "function.lock_authorized_gate_session",
@@ -1658,7 +1662,8 @@
           ]
         }
       ],
-      "remote_status": "NOT_APPLIED"
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "remote_evidence": "EXPAND_REMOTE_RUNTIME_VALIDATED"
     },
     {
       "id": "function.pause_gate_access_and_revoke_sessions",
@@ -1687,7 +1692,8 @@
           ]
         }
       ],
-      "remote_status": "NOT_APPLIED"
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "remote_evidence": "EXPAND_REMOTE_RUNTIME_VALIDATED"
     },
     {
       "id": "function.revoke_fixed_gate_access_and_revoke_sessions",
@@ -1716,7 +1722,8 @@
           ]
         }
       ],
-      "remote_status": "NOT_APPLIED"
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "remote_evidence": "EXPAND_REMOTE_RUNTIME_VALIDATED"
     }
   ],
   "triggers": [
@@ -2059,7 +2066,8 @@
       "evidence": [
         "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
       ],
-      "remote_status": "NOT_APPLIED"
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "remote_evidence": "EXPAND_REMOTE_RUNTIME_VALIDATED"
     },
     {
       "id": "trigger.revoke_linked_sessions_on_fixed_access_change",
@@ -2070,7 +2078,8 @@
       "evidence": [
         "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
       ],
-      "remote_status": "NOT_APPLIED"
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "remote_evidence": "EXPAND_REMOTE_RUNTIME_VALIDATED"
     }
   ],
   "indexes": [
@@ -5971,8 +5980,9 @@
         "validate_combo_redemption"
       ],
       "status_local": "LOCAL_DECLARED",
-      "remote_status": "NOT_APPLIED",
-      "evidence_source": "LOCAL_DECLARED"
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "evidence_source": "REMOTE_MIGRATION_HISTORY_AND_RUNTIME",
+      "applied_at": "2026-09-13T14:20:15.059853Z"
     }
   ],
   "extensions": [
@@ -6185,7 +6195,9 @@
     "active_migration": "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
     "contract_draft": "supabase/rollout/gate_credential_session_revocation_contract.sql",
     "contract_counted_as_active_migration": false,
-    "remote_expand": "NOT_APPLIED",
-    "remote_contract": "NOT_APPLIED"
+    "remote_expand": "APPLIED_AND_VALIDATED",
+    "remote_contract": "NOT_APPLIED",
+    "expand_applied_at": "2026-09-13T14:20:15.059853Z",
+    "dual_mode": "ACTIVE"
   }
 }

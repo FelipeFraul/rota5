@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "generatedAt": "2026-09-13T16:54:57.825Z",
   "stage": "stabilization/high-1-source-freeze",
   "sourceCommit": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
   "application": {
@@ -59,16 +59,18 @@
     },
     "linked_project_production": {
       "alias": "rota5-khaki.vercel.app",
-      "ready_deployment": "dpl_4fUuUVNXgCfYgTiJjvdLuDdxXSA9",
-      "latest_deployment_state": "ERROR",
+      "ready_deployment": "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+      "latest_deployment_state": "READY",
       "evidence_source": "REMOTE_CONFIG",
-      "current_head": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+      "current_head": "8aa4690ffb6367c45c9045494a5949bc62af2a2a",
       "current_head_deployed": false,
-      "new_deployment_during_separation": false
+      "new_deployment_during_separation": false,
+      "production_source_commit": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+      "production_cutover_at": "2026-09-13T16:19:42.340Z"
     },
     "published_commit": {
       "status": "NOT_VALIDATED",
-      "reason": "HIGH #1 NEW_APP artifact exists locally but has not been pushed or deployed."
+      "reason": "Production serves the exact NEW_APP artifact through a controlled CLI deployment; published-commit parity remains an independent finding."
     },
     "crons": 2,
     "environment_variable_names": 24,
@@ -211,11 +213,52 @@
     "strategy": "EXPAND_DEPLOY_CONTRACT",
     "phase_0": "PASS",
     "release_path": "HEALTHY",
-    "expand": "READY_LOCALLY_NOT_APPLIED",
+    "expand": "APPLIED_AND_VALIDATED",
+    "expand_applied_at": "2026-09-13T14:20:15.059853Z",
+    "dual_mode": "ACTIVE",
     "new_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
-    "new_app_pushed": false,
-    "new_app_deployed": false,
-    "contract": "DRAFT_ONLY",
+    "new_app_pushed": true,
+    "new_app_deployed": true,
+    "new_app": "PRODUCTION_CUTOVER_COMPLETE",
+    "production_deployment": "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+    "new_app_cutover_at": "2026-09-13T16:19:42.340Z",
+    "old_production_deployment": "dpl_4fUuUVNXgCfYgTiJjvdLuDdxXSA9",
+    "old_app_serving_after_cutover": false,
+    "gates": {
+      "A": {
+        "status": "PASS",
+        "evidence": "NEW_APP Production deployment healthy and exact artifact identity proven."
+      },
+      "B": {
+        "status": "PASS",
+        "evidence": "OLD_APP no longer serves Production after NEW_APP_CUTOVER_AT."
+      },
+      "C": {
+        "status": "PENDING",
+        "evidence": "legacy_compat observation window remains open."
+      },
+      "D": {
+        "status": "PENDING_FORMAL_CONFIRMATION",
+        "evidence": "source_null_unexpired is currently 0; closure requires the post-cutover audit."
+      },
+      "E": {
+        "status": "PENDING_FORMAL_CONFIRMATION",
+        "evidence": "Sessions created after NEW_APP_CUTOVER_AT still require formal attribution audit."
+      },
+      "F": {
+        "status": "PENDING"
+      },
+      "G": {
+        "status": "PENDING"
+      },
+      "H": {
+        "status": "PENDING"
+      },
+      "I": {
+        "status": "PENDING"
+      }
+    },
+    "contract": "NOT_APPLIED",
     "git_auto_deploy": "DISABLED"
   }
 }

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "generatedAt": "2026-09-13T16:54:57.825Z",
   "stage": "stabilization/high-1-source-freeze",
   "sourceCommit": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
   "scope": "Baseline 1.3.1 taxonomy correction after Git/Vercel identity resolution; no deployment of the current HEAD.",
@@ -16,7 +16,7 @@
   "system": {
     "id": "system.rota5",
     "health": "BROKEN",
-    "reason": "No active P0 remains. Six ACTIVE HIGH, one POTENTIAL HIGH and seven open HIGH remain; HIGH #1 is locally implemented but production rollout has not started. The same seven default-test failures remain.",
+    "reason": "No active P0 remains. 5 ACTIVE HIGH, 1 POTENTIAL HIGH and 6 open HIGH remain; HIGH #1 remains ACTIVE pending gates C-I and CONTRACT. The deployment-error finding is RESOLVED; the same seven default-test failures remain.",
     "finding_counts_by_severity": {
       "CRITICAL": 0,
       "HIGH": 10,
@@ -26,11 +26,11 @@
     },
     "active_findings": {
       "P0": 0,
-      "HIGH": 6,
+      "HIGH": 5,
       "CRITICAL": 0,
-      "RESOLVED": 3,
+      "RESOLVED": 4,
       "POTENTIAL_HIGH": 1,
-      "OPEN_HIGH": 7
+      "OPEN_HIGH": 6
     }
   },
   "domains": [
@@ -41,7 +41,6 @@
         "legacy.active-brand-contamination",
         "risk.rate-limit-fails-open",
         "risk.remote-database-controls-unvalidated",
-        "risk.latest-rota5-deployment-error",
         "risk.published-commit-unvalidated",
         "risk.local-runtime-env-incomplete",
         "debt.seat-map-storage-contract-drift",
@@ -1493,7 +1492,6 @@
       "reason": "Validação remota parcial na Etapa 5.",
       "findings": [
         "legacy.active-brand-contamination",
-        "risk.latest-rota5-deployment-error",
         "risk.published-commit-unvalidated",
         "risk.local-runtime-env-incomplete"
       ]
@@ -1523,10 +1521,9 @@
       "id": "infrastructure.vercel-linkage",
       "health": "DEGRADED",
       "findings": [
-        "risk.latest-rota5-deployment-error",
         "risk.published-commit-unvalidated"
       ],
-      "reason": "Identity and Phase 0 manual release path are correct; HIGH #1 NEW_APP is not deployed and controlled rollout remains pending."
+      "reason": "Identity and manual release path are correct; the latest Production deployment is READY. Infrastructure remains DEGRADED due published-commit parity and other independent findings."
     },
     {
       "id": "infrastructure.environment",
@@ -1546,20 +1543,59 @@
     {
       "id": "infrastructure.runtime-health",
       "health": "HEALTHY",
-      "reason": "Aliases observados responderam 200; um deployment mais recente permanece ERROR."
+      "reason": "Production aliases serve the exact NEW_APP deployment and immediate health/runtime probes passed; overall infrastructure health remains constrained by other findings."
     }
   ],
   "resolved_findings": [
     "bug.create-event-invalid-jsx",
     "bug.combo-redemption-unreachable-consume",
-    "risk.vercel-project-identity-drift"
+    "risk.vercel-project-identity-drift",
+    "risk.latest-rota5-deployment-error"
   ],
   "infrastructure_health": "DEGRADED",
   "high_1": {
     "finding_status": "ACTIVE",
-    "source_implementation": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-    "production_rollout": "NOT_STARTED",
-    "expand_remote": "NOT_APPLIED",
+    "source_implementation": "IMPLEMENTED",
+    "production_rollout": "POST_CUTOVER_GATES_PENDING",
+    "expand_remote": "APPLIED_AND_VALIDATED",
+    "expand_applied_at": "2026-09-13T14:20:15.059853Z",
+    "new_app": "PRODUCTION_CUTOVER_COMPLETE",
+    "production_deployment": "dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT",
+    "new_app_cutover_at": "2026-09-13T16:19:42.340Z",
+    "gates": {
+      "A": {
+        "status": "PASS",
+        "evidence": "NEW_APP Production deployment healthy and exact artifact identity proven."
+      },
+      "B": {
+        "status": "PASS",
+        "evidence": "OLD_APP no longer serves Production after NEW_APP_CUTOVER_AT."
+      },
+      "C": {
+        "status": "PENDING",
+        "evidence": "legacy_compat observation window remains open."
+      },
+      "D": {
+        "status": "PENDING_FORMAL_CONFIRMATION",
+        "evidence": "source_null_unexpired is currently 0; closure requires the post-cutover audit."
+      },
+      "E": {
+        "status": "PENDING_FORMAL_CONFIRMATION",
+        "evidence": "Sessions created after NEW_APP_CUTOVER_AT still require formal attribution audit."
+      },
+      "F": {
+        "status": "PENDING"
+      },
+      "G": {
+        "status": "PENDING"
+      },
+      "H": {
+        "status": "PENDING"
+      },
+      "I": {
+        "status": "PENDING"
+      }
+    },
     "contract_remote": "NOT_APPLIED"
   }
 }

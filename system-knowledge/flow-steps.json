@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "generatedAt": "2026-09-13T16:27:50.380Z",
   "stage": "stabilization/high-1-source-freeze",
   "count": 169,
   "flow_catalog": "rota5.flow-catalog.v1",
@@ -5840,7 +5840,7 @@
       "state_before": "active",
       "state_after": "paused",
       "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "high_1_runtime_status": "NOT_DEPLOYED"
+      "high_1_runtime_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
     {
       "id": "gate.access_management.step_05",
@@ -5984,7 +5984,7 @@
       "state_before": "active",
       "state_after": "revoked",
       "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "high_1_runtime_status": "NOT_DEPLOYED"
+      "high_1_runtime_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
     {
       "id": "gate.ticket_admission.step_01",
@@ -6037,7 +6037,7 @@
       ],
       "state_after": "active",
       "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "high_1_runtime_status": "NOT_DEPLOYED"
+      "high_1_runtime_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
     {
       "id": "gate.ticket_admission.step_02",
@@ -6086,7 +6086,7 @@
         "integration-supabase"
       ],
       "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "high_1_runtime_status": "NOT_DEPLOYED"
+      "high_1_runtime_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
     {
       "id": "gate.ticket_admission.step_03",
@@ -6142,7 +6142,7 @@
       "state_before": "issued",
       "state_after": "used",
       "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "high_1_runtime_status": "NOT_DEPLOYED"
+      "high_1_runtime_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
     {
       "id": "kitchen.session_prepare.step_01",
@@ -6347,7 +6347,7 @@
       "state_before": "issued",
       "state_after": "used",
       "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "high_1_runtime_status": "NOT_DEPLOYED"
+      "high_1_runtime_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
     {
       "id": "table_map.calibration.step_01",

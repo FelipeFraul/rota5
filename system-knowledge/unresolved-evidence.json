@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12",
+  "generatedAt": "2026-09-13T16:54:57.825Z",
   "stage": 7,
   "count": 10,
   "status": "EXPLICITLY_PRESERVED",
@@ -71,11 +71,11 @@
     {
       "id": "unresolved.vercel-error-root-cause",
       "category": "INFRASTRUCTURE",
-      "question": "Causa do deployment mais recente do projeto rota5 em ERROR",
-      "status": "NOT_VALIDATED",
-      "currentEvidence": "A listagem confirma ERROR; logs acessíveis não forneceram causa conclusiva.",
-      "neededEvidence": "Build/runtime logs completos desse deployment.",
-      "lastReviewedAt": "2026-09-12"
+      "question": "Historical root cause of the superseded ERROR deployment",
+      "status": "RESOLVED",
+      "currentEvidence": "The current latest Production deployment dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT is READY and serves canonical aliases; the prior failed deployment no longer defines current health.",
+      "neededEvidence": "NONE_FOR_CURRENT_STATE",
+      "lastReviewedAt": "2026-09-13"
     },
     {
       "id": "unresolved.anon-row-visibility",

@@ -1,6 +1,6 @@
-# Baseline 1.4.0 HIGH #1 data-model delta
+# Baseline 1.4.1 HIGH #1 data-model runtime state
 
-The local EXPAND definition adds `source_kind`, `source_gate_access_id` and `source_fixed_gate_access_id` to `gate_sessions`, plus constraints, FKs and indexes. Remote schema remains pre-EXPAND, so the catalog records local/remote DRIFT rather than claiming deployment.
+The remote EXPAND schema now contains nullable `source_kind`, `source_gate_access_id` and `source_fixed_gate_access_id` on `gate_sessions`, plus the related constraints, FKs and indexes. Source and remote schema match in dual-mode; CONTRACT has not made attribution mandatory.
 
 # Data model AS-IS — Etapa 5
 
