@@ -1,5 +1,11 @@
 # Next actions from existing findings
 
+## CONTROLLED HIGH #1 ROLLOUT
+
+The immediate action is to publish the local NEW_APP commit `cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8` together with Baseline 1.4.0 to GitHub while `git.deploymentEnabled=false` remains in force. Then audit and preserve artifact identity. Remote EXPAND may only be considered after that publication/control step. CONTRACT is not the immediate next action and remains a draft.
+
+# Next actions from existing findings
+
 This document orders current findings; it does not introduce features or patches.
 
 ## P0 — BEFORE EVOLUTION

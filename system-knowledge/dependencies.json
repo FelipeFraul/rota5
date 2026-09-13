@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-11",
+  "generatedAt": "2026-09-13T03:06:00.129Z",
   "counts": {
     "total": 817,
     "direct": 615,
@@ -11122,5 +11122,27 @@
       "src/lib/tickets/tableMap/officialPlaceCoordinates.ts",
       "src/lib/tickets/tableMap/persistOfficialPlaces.ts"
     ]
+  },
+  "stage": "stabilization/high-1-source-freeze",
+  "high_1_source_relationships": {
+    "lock_order": [
+      "credential",
+      "gate_session",
+      "ticket_or_combo"
+    ],
+    "modules": [
+      "gate.access-session",
+      "gate.validation",
+      "combo.redemption",
+      "messaging.router"
+    ],
+    "database_functions": [
+      "lock_authorized_gate_session",
+      "pause_gate_access_and_revoke_sessions",
+      "revoke_fixed_gate_access_and_revoke_sessions",
+      "validate_ticket_entry",
+      "validate_combo_redemption"
+    ],
+    "runtime_status": "NOT_DEPLOYED"
   }
 }

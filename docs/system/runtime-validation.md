@@ -1,3 +1,7 @@
+# Baseline 1.4.0 HIGH #1 runtime evidence
+
+Local/disposable evidence passed: focused 96/96, PostgreSQL 16 matrix, ticket race 2/2 and combo race 2/2. Phase 0 manual Vercel release-path proof passed. Production rollout remains NOT_STARTED; no remote migration or NEW_APP deployment occurred.
+
 # Runtime validation — Etapa 5
 
 Todas as verificações foram GET, HEAD, metadata ou logs em modo leitura. Total: 15; PASS: 12; PARTIAL: 2; FAIL: 1.

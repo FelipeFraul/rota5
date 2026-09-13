@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-12T15:29:26.315Z",
-  "stage": "stabilization/p0-3",
-  "count": 15,
+  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "stage": "stabilization/high-1-source-freeze",
+  "count": 17,
   "ok": 12,
   "records": [
     {
@@ -215,6 +215,34 @@
         "RUNTIME_OBSERVED",
         "Vercel runtime logs"
       ]
+    },
+    {
+      "id": "runtime.high-1-local-postgres",
+      "target": "HIGH #1 source artifact",
+      "method": "DISPOSABLE_POSTGRES_16_AND_NODE_TESTS",
+      "evidence_source": "RUNTIME_OBSERVED",
+      "status": "PASS",
+      "result": "96/96 focused; rollout matrix PASS; ticket race 2/2; combo race 2/2.",
+      "side_effect_free": true,
+      "expected": "Local proof only; does not assert remote deployment.",
+      "evidence": [
+        "scripts/test-gate-credential-revocation-rollout-postgres.mjs",
+        "scripts/test-gate-credential-revocation-postgres.mjs"
+      ]
+    },
+    {
+      "id": "runtime.high-1-phase-0-vercel",
+      "target": "Vercel manual release path for OLD_APP",
+      "method": "REMOTE_READ_AND_CONTROLLED_PREVIEW",
+      "evidence_source": "RUNTIME_OBSERVED",
+      "status": "PASS",
+      "result": "Phase 0 preview READY and release path healthy; NEW_APP was not deployed.",
+      "side_effect_free": false,
+      "expected": "Prove release path without starting HIGH #1 production rollout.",
+      "evidence": [
+        "Vercel deployment dpl_G3XH9HCd3URhc8TKBW9v44urS4Jb",
+        "git.deploymentEnabled=false"
+      ]
     }
   ],
   "prohibited_actions_performed": false,
@@ -223,5 +251,10 @@
     "git_auto_deploy": "DISABLED",
     "current_head_deployed": false,
     "deployment_performed": false
+  },
+  "high_1_rollout": {
+    "expand_remote": "NOT_APPLIED",
+    "new_app_deployed": false,
+    "contract_remote": "NOT_APPLIED"
   }
 }

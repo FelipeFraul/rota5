@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-11",
-  "stage": "3/8",
-  "count": 36,
+  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "stage": "stabilization/high-1-source-freeze",
+  "count": 38,
   "capability_catalog": "system-knowledge/capabilities.json",
   "direction_convention": "REQUIRES: origem depende do destino; TRIGGERS: origem aciona destino sob condição; EXTENDS: origem estende destino; ALTERNATIVE_TO: alternativa funcional. dependencies contém somente alvos REQUIRES, dependent_capabilities é o inverso.",
   "records": [
@@ -542,6 +542,34 @@
         }
       ],
       "validation": "STATIC_SOURCE"
+    },
+    {
+      "id": "caprel.037",
+      "from": "gate.access_pause",
+      "type": "TRIGGERS",
+      "to": "gate.session_revoke",
+      "condition": "EXPAND source transaction and credential trigger revoke attributed active sessions.",
+      "evidence": [
+        {
+          "path": "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
+          "line": 60
+        }
+      ],
+      "validation": "LOCAL_POSTGRES16"
+    },
+    {
+      "id": "caprel.038",
+      "from": "gate.fixed_revoke",
+      "type": "TRIGGERS",
+      "to": "gate.session_revoke",
+      "condition": "EXPAND source transaction and credential trigger revoke attributed active sessions.",
+      "evidence": [
+        {
+          "path": "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
+          "line": 60
+        }
+      ],
+      "validation": "LOCAL_POSTGRES16"
     }
   ],
   "notes": "Relações locais entre capacidades, com condições; não constitui flows.json nem catálogo de fluxos."

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T16:41:28.048Z",
-  "stage": "stabilization/taxonomy-correction",
+  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "stage": "stabilization/high-1-source-freeze",
   "id": "rota5-self-reading-v1",
   "baseline_id": "rota5-baseline-v1",
   "bootstrap_files": [
@@ -201,7 +201,7 @@
         "runtime-validation.json"
       ],
       "method": "Não confunda integridade da baseline com saúde do produto.",
-      "product_health_update": "Three P0 findings are RESOLVED and no P0 remains ACTIVE. Product health remains BROKEN because six HIGH findings are ACTIVE, one HIGH finding is POTENTIAL, seven HIGH findings remain open, seven preexisting npm-test failures and other unresolved risks remain."
+      "product_health_update": "HIGH #1 source is implemented and locally validated but remains ACTIVE until remote EXPAND, NEW_APP deployment, gates A-I, CONTRACT and runtime audit. Product health remains BROKEN."
     }
   },
   "validation_rules": [
@@ -245,10 +245,10 @@
       "findings.json"
     ],
     "remote_database_not_validated": "Remote function bodies, constraints, indexes, triggers, RLS, policies, grants and migration history; Supabase Auth configuration also remains NOT_VALIDATED.",
-    "infrastructure_state": "Infrastructure identity is CORRECT: origin FelipeFraul/rota5, production tracks origin/production, and Vercel rota5 tracks the same repository and branch. Git auto-deploy is disabled and the current HEAD is not deployed. Infrastructure health remains DEGRADED because the latest deployment is ERROR, the published commit is not validated, storage drifts and the local runtime environment is incomplete.",
+    "infrastructure_state": "Infrastructure identity and Phase 0 release path are correct. Git auto-deploy is disabled; HIGH #1 NEW_APP is not deployed; EXPAND and CONTRACT are not applied. Infrastructure remains DEGRADED.",
     "p0_findings": [],
     "add_capability": "Assign canonical ID, domain, type, description, modules, entrypoints, data/integrations, flow placement, tests and evidence; update capability and related flow/data/test catalogs, validate, then version the baseline.",
     "after_change": "Follow CHANGE-PROTOCOL.md and update every affected JSON plus its Markdown projection; regenerate fingerprint and baseline-integrity.json and run the validator.",
-    "product_health_update": "Three P0 findings are RESOLVED and no P0 remains active. Product health remains BROKEN because seven HIGH findings, seven preexisting npm-test failures and other unresolved risks remain."
+    "product_health_update": "No P0 is active. Six ACTIVE HIGH, one POTENTIAL HIGH and seven open HIGH remain; HIGH #1 production rollout has not started."
   }
 }

@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12",
-  "stage": 7,
+  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "stage": "stabilization/high-1-source-freeze",
   "status": "PASS",
-  "sourceCommit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+  "sourceCommit": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
   "question": "Podemos confiar na BASELINE V1 como representação do Rota5 atual?",
   "answer": "SIM, dentro dos limites UNKNOWN/NOT_VALIDATED explicitamente preservados.",
   "frozenScope": {
@@ -101,17 +101,11 @@
       "failed": 7,
       "failingFiles": 6
     },
-    "typecheck": {
-      "status": "FAIL",
-      "diagnostics": 5,
-      "rootCause": "CreateEventModal.tsx:19"
-    },
-    "lint": {
-      "status": "FAIL",
-      "errors": 1,
-      "warnings": 24,
-      "scope": "product files; rerun after temporary audit generators were removed"
-    }
+    "typecheck": "PASS",
+    "lint": "PASS_0_ERRORS_24_PREEXISTING_WARNINGS",
+    "high_1_focused": "PASS_96_OF_96",
+    "npm_test": "FAIL_207_OF_214_SAME_7",
+    "build": "PASS_WITH_PREEXISTING_WARNING"
   },
   "findings": {
     "total": 44,
@@ -186,5 +180,13 @@
     "infrastructure_identity": "CORRECT",
     "current_head_deployed": false,
     "note": "Historical Stage 7 evidence remains preserved under findings.p0."
+  },
+  "high_1_source_reaudit": {
+    "source_implementation": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+    "production_rollout": "NOT_STARTED",
+    "expand_remote": "NOT_APPLIED",
+    "new_app_deployed": false,
+    "contract_remote": "NOT_APPLIED",
+    "finding_status": "ACTIVE"
   }
 }

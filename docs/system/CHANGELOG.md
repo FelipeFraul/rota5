@@ -1,5 +1,16 @@
 # Baseline changelog
 
+## BASELINE V1.4.0 — HIGH #1 SOURCE IMPLEMENTED, ROLLOUT NOT STARTED
+
+- Froze functional source commit `cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8` with credential source attribution, transactional credential/session revocation and atomic ticket/combo authorization.
+- Added one executable EXPAND migration. The CONTRACT SQL remains a protected draft outside `supabase/migrations/**`.
+- Rollout strategy is EXPAND -> DEPLOY -> gates A-I -> CONTRACT -> post-fix runtime audit.
+- Local proof passed: focused 96/96, PostgreSQL 16 matrix, ticket race 2/2, combo race 2/2 and Phase 0 release-path validation.
+- The finding remains `ACTIVE/HIGH/P1`: EXPAND is not applied remotely, NEW_APP is not deployed and CONTRACT is not applied.
+- Default gates remain typecheck PASS, lint PASS with 24 preexisting warnings, npm test 207/214 with the same seven historical failures, and build PASS with the existing warning.
+
+# Baseline changelog
+
 ## BASELINE V1.3.1 — FINDING TAXONOMY CORRECTED
 
 - Corrected derived finding metrics without changing product code or any finding status.

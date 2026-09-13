@@ -1,27 +1,27 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T22:16:13.706Z",
-  "stage": "stabilization/validator-hardening",
+  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "stage": "stabilization/high-1-source-freeze",
   "baseline_id": "rota5-baseline-v1",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "status": "FROZEN",
   "frozen_at": "2026-09-12T16:41:28.048Z",
   "source_state": {
-    "base_commit": "9302cbd46aec802fef371e9c948e7d558c3dfc2a",
-    "source_tree_fingerprint": "04906786b32fb4b3cb48f51e25e25b80bcb581899a4465c2f206591d6da7697e",
-    "source_tree_file_count": 344,
+    "base_commit": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+    "source_tree_fingerprint": "6643a2c539caab8942ebe3953dc75963446d27dbb653e166a3310fe2c4e2fc4b",
+    "source_tree_file_count": 355,
     "functional_changes_since_base": [],
     "generated_from_working_tree": false,
     "baseline_commit": "SELF_NOT_RECORDED",
     "baseline_commit_policy": "The Git commit containing this baseline is intentionally not embedded in its own content to avoid self-reference."
   },
   "git_observation_at_generation": {
-    "observed_at": "2026-09-12T15:29:26.315Z",
+    "observed_at": "2026-09-13T03:06:00.129Z",
     "branch": "production",
-    "head": "9302cbd46aec802fef371e9c948e7d558c3dfc2a",
+    "head": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
     "working_tree_clean": false,
     "validity_role": "INFORMATIONAL_ONLY",
-    "note": "Baseline artifact edits are excluded from the source fingerprint; the functional source state exactly matches base_commit."
+    "note": "Baseline artifact edits are excluded; the functional source state exactly matches base_commit."
   },
   "baseline_integrity": {
     "status": "PASS",
@@ -49,19 +49,19 @@
     "capabilities": 140,
     "flows": 34,
     "flow_steps": 169,
-    "state_transitions": 66,
+    "state_transitions": 68,
     "tables": 44,
     "stateful_tables": 22,
     "stateful_entities": 23,
-    "migrations": 77,
-    "sql_functions": 33,
-    "triggers": 33,
-    "data_relations": 2223,
+    "migrations": 78,
+    "sql_functions": 38,
+    "triggers": 35,
+    "data_relations": 2255,
     "integrations": 6,
     "webhooks": 2,
     "crons": 2,
     "environment_variables": 44,
-    "tests": 43,
+    "tests": 51,
     "findings": 44
   },
   "artifact_counts": {
@@ -235,7 +235,9 @@
     "self_exclusion": "baseline-integrity.json is excluded to avoid circularity."
   },
   "notes": [
-    "Baseline 1.3.1 reconciles the complete finding lifecycle over the pure functional base commit 9302cbd46aec802fef371e9c948e7d558c3dfc2a.",
+    "Baseline 1.4.0 freezes HIGH #1 functional source at cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8.",
+    "Source implementation is locally validated; production rollout has not started. EXPAND and CONTRACT are not applied remotely; NEW_APP is not deployed.",
+    "The HIGH #1 finding remains ACTIVE until EXPAND -> NEW_APP -> gates A-I -> CONTRACT -> post-fix runtime audit completes.",
     "active_* is literal ACTIVE; potential_* is literal POTENTIAL; open_* is the explicit set ACTIVE, POTENTIAL, OPEN and MITIGATED; release gates use ACTIVE, OPEN and MITIGATED at applicable severity.",
     "The current HEAD has not been deployed; git.deploymentEnabled=false remains intentional.",
     "FROZEN validity depends on source_state and validated artifacts, not on the current Git working-tree state.",
@@ -265,5 +267,19 @@
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
     "gap.test-runner-depends-on-untracked-loader"
-  ]
+  ],
+  "high_1_rollout_state": {
+    "source_implementation": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+    "production_rollout": "NOT_STARTED",
+    "strategy": "EXPAND_DEPLOY_CONTRACT",
+    "phase_0": "PASS",
+    "release_path": "HEALTHY",
+    "expand": "READY_LOCALLY_NOT_APPLIED",
+    "new_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+    "new_app_pushed": false,
+    "new_app_deployed": false,
+    "contract": "DRAFT_ONLY",
+    "remote_expand_allowed": false,
+    "finding_status": "ACTIVE"
+  }
 }

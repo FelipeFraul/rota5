@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-12T14:12:39.549Z",
-  "stage": "stabilization/p0-2",
+  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "stage": "stabilization/high-1-source-freeze",
   "count": 169,
   "flow_catalog": "rota5.flow-catalog.v1",
   "records": [
@@ -5838,7 +5838,9 @@
         "integration-zapi"
       ],
       "state_before": "active",
-      "state_after": "paused"
+      "state_after": "paused",
+      "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "high_1_runtime_status": "NOT_DEPLOYED"
     },
     {
       "id": "gate.access_management.step_05",
@@ -5980,7 +5982,9 @@
         "integration-zapi"
       ],
       "state_before": "active",
-      "state_after": "revoked"
+      "state_after": "revoked",
+      "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "high_1_runtime_status": "NOT_DEPLOYED"
     },
     {
       "id": "gate.ticket_admission.step_01",
@@ -6031,7 +6035,9 @@
         "integration-supabase",
         "integration-zapi"
       ],
-      "state_after": "active"
+      "state_after": "active",
+      "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "high_1_runtime_status": "NOT_DEPLOYED"
     },
     {
       "id": "gate.ticket_admission.step_02",
@@ -6078,7 +6084,9 @@
       ],
       "integrations": [
         "integration-supabase"
-      ]
+      ],
+      "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "high_1_runtime_status": "NOT_DEPLOYED"
     },
     {
       "id": "gate.ticket_admission.step_03",
@@ -6132,7 +6140,9 @@
         "integration-supabase"
       ],
       "state_before": "issued",
-      "state_after": "used"
+      "state_after": "used",
+      "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "high_1_runtime_status": "NOT_DEPLOYED"
     },
     {
       "id": "kitchen.session_prepare.step_01",
@@ -6335,7 +6345,9 @@
         "integration-supabase"
       ],
       "state_before": "issued",
-      "state_after": "used"
+      "state_after": "used",
+      "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "high_1_runtime_status": "NOT_DEPLOYED"
     },
     {
       "id": "table_map.calibration.step_01",

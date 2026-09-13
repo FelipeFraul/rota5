@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T14:12:39.549Z",
-  "count": 43,
+  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "count": 51,
   "defaultSuite": {
     "command": "npm test",
     "fileCount": 15,
-    "observedCases": 210,
+    "observedCases": 214,
     "passed": 207,
     "failed": 7,
     "status": "FAIL",
@@ -17,7 +17,7 @@
       "test-public-help-flow.mjs",
       "test-whatsapp-batch-compat.mjs"
     ],
-    "evidence": "Execução local reproduzida na Etapa 6 e na auditoria cruzada da Etapa 7 em 2026-09-12.",
+    "evidence": "Reexecuted before the HIGH #1 functional commit on 2026-09-12; same seven historical failures.",
     "previousSnapshot": {
       "date": "2026-09-11",
       "observedCases": 210,
@@ -28,7 +28,7 @@
     "cases": 214,
     "change": "SEVEN_PREEXISTING_FAILURES_UNCHANGED"
   },
-  "nonDefaultTestFileCount": 28,
+  "nonDefaultTestFileCount": 36,
   "auditScriptCount": 3,
   "auditToolCount": 21,
   "records": [
@@ -816,6 +816,158 @@
       ],
       "notes": "Confirma texto/estrutura e não prova integração ou browser.",
       "stage3ObservedResult": "PASS"
+    },
+    {
+      "id": "test-044",
+      "name": "test-gate-credential-revocation-contract.mjs",
+      "type": "source-contract+sql-contract",
+      "path": "scripts/test-gate-credential-revocation-contract.mjs",
+      "purpose": "EXPAND/CONTRACT and authorization source contracts",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "arquivo scripts/test-gate-credential-revocation-contract.mjs",
+        "HIGH #1 local validation on disposable PostgreSQL 16"
+      ],
+      "dependencies": [
+        "node",
+        "postgres:16-alpine"
+      ],
+      "lastObservedResult": "PASS_10_OF_10",
+      "notes": "Local/disposable evidence only; remote Supabase rollout was not started.",
+      "stage3ObservedResult": "NOT_APPLICABLE"
+    },
+    {
+      "id": "test-045",
+      "name": "test-gate-credential-revocation-migration-packaging.mjs",
+      "type": "migration-packaging",
+      "path": "scripts/test-gate-credential-revocation-migration-packaging.mjs",
+      "purpose": "One active EXPAND migration and protected CONTRACT draft",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "arquivo scripts/test-gate-credential-revocation-migration-packaging.mjs",
+        "HIGH #1 local validation on disposable PostgreSQL 16"
+      ],
+      "dependencies": [
+        "node",
+        "postgres:16-alpine"
+      ],
+      "lastObservedResult": "PASS_3_OF_3",
+      "notes": "Local/disposable evidence only; remote Supabase rollout was not started.",
+      "stage3ObservedResult": "NOT_APPLICABLE"
+    },
+    {
+      "id": "test-046",
+      "name": "test-gate-credential-revocation-postgres.mjs",
+      "type": "postgres-integration+race",
+      "path": "scripts/test-gate-credential-revocation-postgres.mjs",
+      "purpose": "Disposable PostgreSQL credential/session revocation races",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "arquivo scripts/test-gate-credential-revocation-postgres.mjs",
+        "HIGH #1 local validation on disposable PostgreSQL 16"
+      ],
+      "dependencies": [
+        "node",
+        "postgres:16-alpine"
+      ],
+      "lastObservedResult": "PASS_TICKET_2_OF_2_COMBO_2_OF_2",
+      "notes": "Local/disposable evidence only; remote Supabase rollout was not started.",
+      "stage3ObservedResult": "NOT_APPLICABLE"
+    },
+    {
+      "id": "test-047",
+      "name": "test-gate-credential-revocation-rollout-postgres.mjs",
+      "type": "postgres-rollout-matrix",
+      "path": "scripts/test-gate-credential-revocation-rollout-postgres.mjs",
+      "purpose": "OLD/NEW app compatibility across OLD/EXPAND/CONTRACT schema",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "arquivo scripts/test-gate-credential-revocation-rollout-postgres.mjs",
+        "HIGH #1 local validation on disposable PostgreSQL 16"
+      ],
+      "dependencies": [
+        "node",
+        "postgres:16-alpine"
+      ],
+      "lastObservedResult": "PASS",
+      "notes": "Local/disposable evidence only; remote Supabase rollout was not started.",
+      "stage3ObservedResult": "NOT_APPLICABLE"
+    },
+    {
+      "id": "test-048",
+      "name": "gate_credential_session_revocation_expand_test.sql",
+      "type": "postgres-sql",
+      "path": "supabase/tests/gate_credential_session_revocation_expand_test.sql",
+      "purpose": "EXPAND behavior and compatibility assertions",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "arquivo supabase/tests/gate_credential_session_revocation_expand_test.sql",
+        "HIGH #1 local validation on disposable PostgreSQL 16"
+      ],
+      "dependencies": [
+        "node",
+        "postgres:16-alpine"
+      ],
+      "lastObservedResult": "PASS_DISPOSABLE_POSTGRES16",
+      "notes": "Local/disposable evidence only; remote Supabase rollout was not started.",
+      "stage3ObservedResult": "NOT_APPLICABLE"
+    },
+    {
+      "id": "test-049",
+      "name": "gate_credential_session_revocation_contract_test.sql",
+      "type": "postgres-sql",
+      "path": "supabase/tests/gate_credential_session_revocation_contract_test.sql",
+      "purpose": "CONTRACT behavior and final invariants",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "arquivo supabase/tests/gate_credential_session_revocation_contract_test.sql",
+        "HIGH #1 local validation on disposable PostgreSQL 16"
+      ],
+      "dependencies": [
+        "node",
+        "postgres:16-alpine"
+      ],
+      "lastObservedResult": "PASS_DISPOSABLE_POSTGRES16",
+      "notes": "Local/disposable evidence only; remote Supabase rollout was not started.",
+      "stage3ObservedResult": "NOT_APPLICABLE"
+    },
+    {
+      "id": "test-050",
+      "name": "gate_credential_session_revocation_fixture.sql",
+      "type": "postgres-fixture",
+      "path": "supabase/tests/gate_credential_session_revocation_fixture.sql",
+      "purpose": "Deterministic isolated credential/session fixture",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "arquivo supabase/tests/gate_credential_session_revocation_fixture.sql",
+        "HIGH #1 local validation on disposable PostgreSQL 16"
+      ],
+      "dependencies": [
+        "node",
+        "postgres:16-alpine"
+      ],
+      "lastObservedResult": "PASS_DISPOSABLE_POSTGRES16",
+      "notes": "Local/disposable evidence only; remote Supabase rollout was not started.",
+      "stage3ObservedResult": "NOT_APPLICABLE"
+    },
+    {
+      "id": "test-051",
+      "name": "gate_credential_session_revocation_rollout_gates.sql",
+      "type": "postgres-rollout-gates",
+      "path": "supabase/tests/gate_credential_session_revocation_rollout_gates.sql",
+      "purpose": "Query-testable rollout gates A-I",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "arquivo supabase/tests/gate_credential_session_revocation_rollout_gates.sql",
+        "HIGH #1 local validation on disposable PostgreSQL 16"
+      ],
+      "dependencies": [
+        "node",
+        "postgres:16-alpine"
+      ],
+      "lastObservedResult": "PASS_DISPOSABLE_POSTGRES16",
+      "notes": "Local/disposable evidence only; remote Supabase rollout was not started.",
+      "stage3ObservedResult": "NOT_APPLICABLE"
     }
   ],
   "stage3Validation": {
@@ -1152,5 +1304,17 @@
     },
     "safeLocalExecution": true,
     "note": "stage3Validation permanece histórico e não foi reinterpretado."
+  },
+  "stage": "stabilization/high-1-source-freeze",
+  "high_1_validation": {
+    "focused": {
+      "passed": 96,
+      "cases": 96,
+      "status": "PASS"
+    },
+    "rollout_matrix": "PASS",
+    "ticket_race": "2/2 PASS",
+    "combo_race": "2/2 PASS",
+    "remote_mutating_tests": "NOT_EXECUTED"
   }
 }

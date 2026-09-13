@@ -1,17 +1,17 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-11",
-  "stage": 5,
-  "sourceCommit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "stage": "stabilization/high-1-source-freeze",
+  "sourceCommit": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
   "counts": {
     "tables": 44,
-    "migrations": 77,
-    "functions": 33,
-    "triggers": 33,
-    "indexes": 155,
+    "migrations": 78,
+    "functions": 38,
+    "triggers": 35,
+    "indexes": 157,
     "rls_enabled": 44,
     "policies": 0,
-    "function_table_accesses": 149
+    "function_table_accesses": 160
   },
   "tables": [
     "table.admin_auth_attempts",
@@ -1484,7 +1484,8 @@
       ],
       "evidence_source": "LOCAL_DECLARED",
       "evidence": [
-        "supabase/migrations/20260629000300_require_combo_preparation_before_redemption.sql"
+        "supabase/migrations/20260629000300_require_combo_preparation_before_redemption.sql",
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
       ],
       "table_operations": [
         {
@@ -1500,7 +1501,8 @@
             "UPDATE"
           ]
         }
-      ]
+      ],
+      "remote_status": "SOURCE_NEW_REMOTE_OLD"
     },
     {
       "id": "function.validate_ticket_entry",
@@ -1517,7 +1519,8 @@
       ],
       "evidence_source": "LOCAL_DECLARED",
       "evidence": [
-        "supabase/migrations/20260722000400_fully_qualify_hardened_function_references.sql"
+        "supabase/migrations/20260722000400_fully_qualify_hardened_function_references.sql",
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
       ],
       "table_operations": [
         {
@@ -1563,7 +1566,157 @@
             "READ"
           ]
         }
-      ]
+      ],
+      "remote_status": "SOURCE_NEW_REMOTE_OLD"
+    },
+    {
+      "id": "function.gate_session_source_rollout_status",
+      "name": "gate_session_source_rollout_status",
+      "domain": "domain.gate-admission",
+      "tables": [
+        "gate_sessions"
+      ],
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "gate_sessions",
+          "operations": [
+            "READ"
+          ]
+        }
+      ],
+      "remote_status": "NOT_APPLIED"
+    },
+    {
+      "id": "function.revoke_linked_gate_sessions_on_credential_change",
+      "name": "revoke_linked_gate_sessions_on_credential_change",
+      "domain": "domain.gate-admission",
+      "tables": [
+        "gate_sessions"
+      ],
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "gate_sessions",
+          "operations": [
+            "UPDATE"
+          ]
+        }
+      ],
+      "remote_status": "NOT_APPLIED"
+    },
+    {
+      "id": "function.lock_authorized_gate_session",
+      "name": "lock_authorized_gate_session",
+      "domain": "domain.gate-admission",
+      "tables": [
+        "gate_sessions",
+        "gate_accesses",
+        "fixed_gate_accesses",
+        "events",
+        "event_sessions"
+      ],
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "gate_sessions",
+          "operations": [
+            "READ"
+          ]
+        },
+        {
+          "table": "gate_accesses",
+          "operations": [
+            "READ"
+          ]
+        },
+        {
+          "table": "fixed_gate_accesses",
+          "operations": [
+            "READ"
+          ]
+        },
+        {
+          "table": "events",
+          "operations": [
+            "READ"
+          ]
+        },
+        {
+          "table": "event_sessions",
+          "operations": [
+            "READ"
+          ]
+        }
+      ],
+      "remote_status": "NOT_APPLIED"
+    },
+    {
+      "id": "function.pause_gate_access_and_revoke_sessions",
+      "name": "pause_gate_access_and_revoke_sessions",
+      "domain": "domain.gate-admission",
+      "tables": [
+        "gate_accesses",
+        "gate_sessions"
+      ],
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "gate_accesses",
+          "operations": [
+            "READ",
+            "UPDATE"
+          ]
+        },
+        {
+          "table": "gate_sessions",
+          "operations": [
+            "READ"
+          ]
+        }
+      ],
+      "remote_status": "NOT_APPLIED"
+    },
+    {
+      "id": "function.revoke_fixed_gate_access_and_revoke_sessions",
+      "name": "revoke_fixed_gate_access_and_revoke_sessions",
+      "domain": "domain.gate-admission",
+      "tables": [
+        "fixed_gate_accesses",
+        "gate_sessions"
+      ],
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "fixed_gate_accesses",
+          "operations": [
+            "READ",
+            "UPDATE"
+          ]
+        },
+        {
+          "table": "gate_sessions",
+          "operations": [
+            "READ"
+          ]
+        }
+      ],
+      "remote_status": "NOT_APPLIED"
     }
   ],
   "triggers": [
@@ -1896,6 +2049,28 @@
       "evidence": [
         "supabase/migrations/20260718000200_create_whatsapp_message_batches.sql"
       ]
+    },
+    {
+      "id": "trigger.revoke_linked_sessions_on_gate_access_change",
+      "name": "revoke_linked_sessions_on_gate_access_change",
+      "table": "table.gate_accesses",
+      "function": "function.revoke_linked_gate_sessions_on_credential_change",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "remote_status": "NOT_APPLIED"
+    },
+    {
+      "id": "trigger.revoke_linked_sessions_on_fixed_access_change",
+      "name": "revoke_linked_sessions_on_fixed_access_change",
+      "table": "table.fixed_gate_accesses",
+      "function": "function.revoke_linked_gate_sessions_on_credential_change",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "remote_status": "NOT_APPLIED"
     }
   ],
   "indexes": [
@@ -5762,6 +5937,42 @@
       "status_local": "LOCAL_DECLARED",
       "remote_status": "NOT_VALIDATED",
       "evidence_source": "LOCAL_DECLARED"
+    },
+    {
+      "id": "migration.20260912000100_gate_credential_session_revocation_expand",
+      "timestamp": "20260912000100",
+      "name": "20260912000100_gate_credential_session_revocation_expand.sql",
+      "path": "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
+      "purpose": "EXPAND source attribution and transactional credential/session authorization while preserving OLD_APP compatibility",
+      "creates": [
+        "column:gate_sessions.source_kind",
+        "column:gate_sessions.source_gate_access_id",
+        "column:gate_sessions.source_fixed_gate_access_id",
+        "function:gate_session_source_rollout_status",
+        "function:revoke_linked_gate_sessions_on_credential_change",
+        "function:lock_authorized_gate_session",
+        "function:pause_gate_access_and_revoke_sessions",
+        "function:revoke_fixed_gate_access_and_revoke_sessions",
+        "trigger:revoke_linked_sessions_on_gate_access_change",
+        "trigger:revoke_linked_sessions_on_fixed_access_change"
+      ],
+      "alters": [
+        "function:validate_ticket_entry",
+        "function:validate_combo_redemption"
+      ],
+      "drops": [],
+      "depends_on": "migration.20260805000200_create_get_database_now_rpc",
+      "reversal": "CONTRACT_DRAFT_SEPARATE_MANUAL_ROLLOUT",
+      "functional_impact": [
+        "gate_sessions",
+        "gate_accesses",
+        "fixed_gate_accesses",
+        "validate_ticket_entry",
+        "validate_combo_redemption"
+      ],
+      "status_local": "LOCAL_DECLARED",
+      "remote_status": "NOT_APPLIED",
+      "evidence_source": "LOCAL_DECLARED"
     }
   ],
   "extensions": [
@@ -5968,5 +6179,13 @@
     "apparently_abandoned_objects": [],
     "conclusion": "Remoções encontradas são de overloads e índices substituídos. Não foram encontrados DROP TABLE, DROP COLUMN, RENAME COLUMN, timestamps duplicados ou policies. Nenhum objeto final foi classificado como abandonado apenas pela sequência DDL.",
     "evidence_source": "LOCAL_DECLARED"
+  },
+  "rollout": {
+    "strategy": "EXPAND_DEPLOY_CONTRACT",
+    "active_migration": "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
+    "contract_draft": "supabase/rollout/gate_credential_session_revocation_contract.sql",
+    "contract_counted_as_active_migration": false,
+    "remote_expand": "NOT_APPLIED",
+    "remote_contract": "NOT_APPLIED"
   }
 }

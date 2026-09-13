@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-12T14:12:39.549Z",
-  "stage": "stabilization/p0-2",
+  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "stage": "stabilization/high-1-source-freeze",
   "count": 44,
   "evidence_policy": [
     "LOCAL_DECLARED",
@@ -7964,6 +7964,24 @@
           "type": "text",
           "nullable": true,
           "default": null
+        },
+        {
+          "name": "source_kind",
+          "type": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "source_gate_access_id",
+          "type": "uuid",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "source_fixed_gate_access_id",
+          "type": "uuid",
+          "nullable": true,
+          "default": null
         }
       ],
       "remote_columns": [
@@ -8111,6 +8129,30 @@
             "id"
           ],
           "definition": "session_id uuid references public.event_sessions(id)"
+        },
+        {
+          "name": "gate_sessions_source_gate_access_id_fkey",
+          "type": "FOREIGN_KEY",
+          "columns": [
+            "source_gate_access_id"
+          ],
+          "references_table": "gate_accesses",
+          "references_columns": [
+            "id"
+          ],
+          "definition": "source_gate_access_id uuid references public.gate_accesses(id)"
+        },
+        {
+          "name": "gate_sessions_source_fixed_gate_access_id_fkey",
+          "type": "FOREIGN_KEY",
+          "columns": [
+            "source_fixed_gate_access_id"
+          ],
+          "references_table": "fixed_gate_accesses",
+          "references_columns": [
+            "id"
+          ],
+          "definition": "source_fixed_gate_access_id uuid references public.fixed_gate_accesses(id)"
         }
       ],
       "unique_constraints": [
@@ -8150,6 +8192,16 @@
           "name": "gate_sessions_expires_after_created_check",
           "type": "CHECK",
           "definition": "check (expires_at > created_at)"
+        },
+        {
+          "name": "gate_sessions_source_kind_check",
+          "type": "CHECK",
+          "definition": "source_kind is null or source_kind in ('admin_direct','temporary_gate_access','fixed_gate_access')"
+        },
+        {
+          "name": "gate_sessions_source_reference_check",
+          "type": "CHECK",
+          "definition": "source kind and exactly matching source reference, nullable only during EXPAND"
         }
       ],
       "indexes": [
@@ -8182,6 +8234,18 @@
           "unique": false,
           "definition": "(event_id)",
           "evidence": "supabase/migrations/20260522000600_create_gate_sessions.sql"
+        },
+        {
+          "name": "gate_sessions_source_gate_access_id_idx",
+          "unique": false,
+          "definition": "(source_gate_access_id) where source_gate_access_id is not null",
+          "evidence": "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+        },
+        {
+          "name": "gate_sessions_source_fixed_gate_access_id_idx",
+          "unique": false,
+          "definition": "(source_fixed_gate_access_id) where source_fixed_gate_access_id is not null",
+          "evidence": "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
         }
       ],
       "rls": {
@@ -8205,7 +8269,12 @@
         }
       ],
       "functions": [
-        "function.validate_ticket_entry"
+        "function.validate_ticket_entry",
+        "function.gate_session_source_rollout_status",
+        "function.revoke_linked_gate_sessions_on_credential_change",
+        "function.lock_authorized_gate_session",
+        "function.pause_gate_access_and_revoke_sessions",
+        "function.revoke_fixed_gate_access_and_revoke_sessions"
       ],
       "modules": [
         "gate.access-session"
@@ -8226,14 +8295,15 @@
         "state.041"
       ],
       "status_local": "LOCAL_DECLARED",
-      "status_remote": "REMOTE_SCHEMA",
-      "consistency": "MATCH",
+      "status_remote": "REMOTE_SCHEMA_PRE_EXPAND",
+      "consistency": "DRIFT",
       "evidence": [
         "supabase/migrations/20260522000600_create_gate_sessions.sql",
         {
           "source": "Supabase PostgREST OpenAPI",
           "type": "REMOTE_SCHEMA"
-        }
+        },
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
       ],
       "lifecycle": {
         "explicit": true,
@@ -8269,14 +8339,35 @@
                 "capability": "gate.open",
                 "flow": "gate.ticket_admission",
                 "status": "OBSERVED"
+              },
+              {
+                "id": "state.067",
+                "from": "active",
+                "to": "revoked",
+                "capability": "gate.access_pause",
+                "flow": "gate.access_management",
+                "status": "LOCAL_DECLARED"
+              },
+              {
+                "id": "state.068",
+                "from": "active",
+                "to": "revoked",
+                "capability": "gate.fixed_revoke",
+                "flow": "gate.access_management",
+                "status": "LOCAL_DECLARED"
               }
             ],
             "impossible_or_unused_transitions": "NOT_VALIDATED",
-            "consistency": "MATCH",
-            "evidence_source": "LOCAL_DECLARED"
+            "consistency": "LOCAL_AHEAD_OF_REMOTE",
+            "evidence_source": "LOCAL_DECLARED_REMOTE_NOT_APPLIED"
           }
         ],
-        "consistency": "MATCH"
+        "consistency": "LOCAL_AHEAD_OF_REMOTE"
+      },
+      "rollout_state": {
+        "source_definition": "EXPAND_READY_LOCALLY",
+        "remote_database": "NOT_APPLIED",
+        "contract": "DRAFT_ONLY"
       }
     },
     {

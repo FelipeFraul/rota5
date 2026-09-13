@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-11",
-  "stage": 5,
-  "count": 2223,
+  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "stage": "stabilization/high-1-source-freeze",
+  "count": 2255,
   "types": [
     "MODULE_ACCESSES_TABLE",
     "CAPABILITY_ACCESSES_TABLE",
@@ -33367,6 +33367,486 @@
       "operation_evidence": [
         "system-knowledge/flows.json"
       ]
+    },
+    {
+      "from": "function.gate_session_source_rollout_status",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.gate_sessions",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2224"
+    },
+    {
+      "from": "table.gate_sessions",
+      "type": "TABLE_USED_BY_FUNCTION",
+      "to": "function.gate_session_source_rollout_status",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2225"
+    },
+    {
+      "from": "function.revoke_linked_gate_sessions_on_credential_change",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.gate_sessions",
+      "operation": "UPDATE",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2226"
+    },
+    {
+      "from": "table.gate_sessions",
+      "type": "TABLE_USED_BY_FUNCTION",
+      "to": "function.revoke_linked_gate_sessions_on_credential_change",
+      "operation": "UPDATE",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2227"
+    },
+    {
+      "from": "function.lock_authorized_gate_session",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.gate_sessions",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2228"
+    },
+    {
+      "from": "table.gate_sessions",
+      "type": "TABLE_USED_BY_FUNCTION",
+      "to": "function.lock_authorized_gate_session",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2229"
+    },
+    {
+      "from": "function.lock_authorized_gate_session",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.gate_accesses",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2230"
+    },
+    {
+      "from": "table.gate_accesses",
+      "type": "TABLE_USED_BY_FUNCTION",
+      "to": "function.lock_authorized_gate_session",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2231"
+    },
+    {
+      "from": "function.lock_authorized_gate_session",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.fixed_gate_accesses",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2232"
+    },
+    {
+      "from": "table.fixed_gate_accesses",
+      "type": "TABLE_USED_BY_FUNCTION",
+      "to": "function.lock_authorized_gate_session",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2233"
+    },
+    {
+      "from": "function.lock_authorized_gate_session",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.events",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2234"
+    },
+    {
+      "from": "table.events",
+      "type": "TABLE_USED_BY_FUNCTION",
+      "to": "function.lock_authorized_gate_session",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2235"
+    },
+    {
+      "from": "function.lock_authorized_gate_session",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.event_sessions",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2236"
+    },
+    {
+      "from": "table.event_sessions",
+      "type": "TABLE_USED_BY_FUNCTION",
+      "to": "function.lock_authorized_gate_session",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2237"
+    },
+    {
+      "from": "function.pause_gate_access_and_revoke_sessions",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.gate_accesses",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2238"
+    },
+    {
+      "from": "table.gate_accesses",
+      "type": "TABLE_USED_BY_FUNCTION",
+      "to": "function.pause_gate_access_and_revoke_sessions",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2239"
+    },
+    {
+      "from": "function.pause_gate_access_and_revoke_sessions",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.gate_accesses",
+      "operation": "UPDATE",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2240"
+    },
+    {
+      "from": "table.gate_accesses",
+      "type": "TABLE_USED_BY_FUNCTION",
+      "to": "function.pause_gate_access_and_revoke_sessions",
+      "operation": "UPDATE",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2241"
+    },
+    {
+      "from": "function.pause_gate_access_and_revoke_sessions",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.gate_sessions",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2242"
+    },
+    {
+      "from": "table.gate_sessions",
+      "type": "TABLE_USED_BY_FUNCTION",
+      "to": "function.pause_gate_access_and_revoke_sessions",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2243"
+    },
+    {
+      "from": "function.revoke_fixed_gate_access_and_revoke_sessions",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.fixed_gate_accesses",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2244"
+    },
+    {
+      "from": "table.fixed_gate_accesses",
+      "type": "TABLE_USED_BY_FUNCTION",
+      "to": "function.revoke_fixed_gate_access_and_revoke_sessions",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2245"
+    },
+    {
+      "from": "function.revoke_fixed_gate_access_and_revoke_sessions",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.fixed_gate_accesses",
+      "operation": "UPDATE",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2246"
+    },
+    {
+      "from": "table.fixed_gate_accesses",
+      "type": "TABLE_USED_BY_FUNCTION",
+      "to": "function.revoke_fixed_gate_access_and_revoke_sessions",
+      "operation": "UPDATE",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2247"
+    },
+    {
+      "from": "function.revoke_fixed_gate_access_and_revoke_sessions",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.gate_sessions",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2248"
+    },
+    {
+      "from": "table.gate_sessions",
+      "type": "TABLE_USED_BY_FUNCTION",
+      "to": "function.revoke_fixed_gate_access_and_revoke_sessions",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2249"
+    },
+    {
+      "from": "table.gate_accesses",
+      "type": "TABLE_TRIGGERS_FUNCTION",
+      "to": "function.revoke_linked_gate_sessions_on_credential_change",
+      "operation": "TRIGGERED",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2250"
+    },
+    {
+      "from": "trigger.revoke_linked_sessions_on_gate_access_change",
+      "type": "TRIGGER_CALLS_FUNCTION",
+      "to": "function.revoke_linked_gate_sessions_on_credential_change",
+      "operation": "TRIGGERED",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2251"
+    },
+    {
+      "from": "table.fixed_gate_accesses",
+      "type": "TABLE_TRIGGERS_FUNCTION",
+      "to": "function.revoke_linked_gate_sessions_on_credential_change",
+      "operation": "TRIGGERED",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2252"
+    },
+    {
+      "from": "trigger.revoke_linked_sessions_on_fixed_access_change",
+      "type": "TRIGGER_CALLS_FUNCTION",
+      "to": "function.revoke_linked_gate_sessions_on_credential_change",
+      "operation": "TRIGGERED",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2253"
+    },
+    {
+      "from": "table.gate_sessions",
+      "type": "TABLE_REFERENCES_TABLE",
+      "to": "table.gate_accesses",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2254"
+    },
+    {
+      "from": "table.gate_sessions",
+      "type": "TABLE_REFERENCES_TABLE",
+      "to": "table.fixed_gate_accesses",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "id": "datarel.2255"
     }
   ],
   "validation": {
@@ -33375,6 +33855,7 @@
     "operations_inferred_only_with_static_evidence": true,
     "non_not_inferred_relations": 2072,
     "non_not_inferred_without_evidence": 0,
-    "derived_operations_are_labeled": true
+    "derived_operations_are_labeled": true,
+    "high_1_rollout": "LOCAL_DECLARED relationships; remote database remains pre-EXPAND."
   }
 }

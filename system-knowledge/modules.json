@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12",
+  "generatedAt": "2026-09-13T03:06:00.129Z",
   "count": 66,
   "records": [
     {
@@ -473,7 +473,10 @@
       "tests": [
         "test-public-initial-flow.mjs",
         "test-admin-auth-pending-cancel.mjs",
-        "test-ticket-delivery-distribution.mjs"
+        "test-ticket-delivery-distribution.mjs",
+        "test-gate-credential-revocation-contract.mjs",
+        "test-gate-credential-revocation-postgres.mjs",
+        "test-gate-credential-revocation-rollout-postgres.mjs"
       ],
       "evidence": [
         "src/lib/tickets/router.ts",
@@ -481,7 +484,9 @@
         "export shouldProcessImmediately",
         "export resolveIncomingMessageIntent"
       ],
-      "notes": "Combina routing, regra de negócio, formatação e orquestração em 19.367 linhas."
+      "notes": "Combina routing, regra de negócio, formatação e orquestração em 19.367 linhas.",
+      "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "high_1_runtime_status": "NOT_DEPLOYED"
     },
     {
       "id": "messaging.state",
@@ -1898,13 +1903,19 @@
       "sideEffects": [
         "insere/atualiza acessos e sessões"
       ],
-      "tests": [],
+      "tests": [
+        "test-gate-credential-revocation-contract.mjs",
+        "test-gate-credential-revocation-postgres.mjs",
+        "test-gate-credential-revocation-rollout-postgres.mjs"
+      ],
       "evidence": [
         "src/lib/tickets/services/gateTokens.ts; src/lib/tickets/services/gateSessions.ts; src/lib/tickets/services/gateAccesses.ts; src/lib/tickets/services/fixedGateAccesses.ts; src/lib/tickets/services/gateAccessAuth.ts",
         "export createGateSession",
         "export validateGateSessionToken",
         "export claimKitchenSessionDevice"
-      ]
+      ],
+      "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "high_1_runtime_status": "NOT_DEPLOYED"
     },
     {
       "id": "gate.validation",
@@ -1941,14 +1952,19 @@
         "chama validate_ticket_entry e registra evento"
       ],
       "tests": [
-        "test-public-event-visibility-policy.mjs"
+        "test-public-event-visibility-policy.mjs",
+        "test-gate-credential-revocation-contract.mjs",
+        "test-gate-credential-revocation-postgres.mjs",
+        "test-gate-credential-revocation-rollout-postgres.mjs"
       ],
       "evidence": [
         "src/lib/tickets/services/gateValidation.ts; src/lib/tickets/services/gateTicketConsultation.ts",
         "export validateGateScan",
         "export validateGateTicketCode",
         "export consultGateTicket"
-      ]
+      ],
+      "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "high_1_runtime_status": "NOT_DEPLOYED"
     },
     {
       "id": "gate.ui-api",
@@ -2153,7 +2169,7 @@
       "type": "module",
       "domain": "domain.combo-commerce-fulfillment",
       "path": "src/lib/tickets/services/comboRedemptions.ts",
-      "responsibility": "Validar sessão/QR, liberar após entrada, preparar e solicitar escolha de entrega; consumo final está bloqueado no leitor atual.",
+      "responsibility": "Validate session/QR, release after admission, prepare, request delivery choice and redeem through atomic database authorization.",
       "status": "PARCIALMENTE CONFIRMADO",
       "exports": [
         "validateKitchenSessionToken",
@@ -2192,7 +2208,10 @@
         "RPC de validação; updates; envia mensagens/QR"
       ],
       "tests": [
-        "audit_combo_redemption_security.mjs"
+        "audit_combo_redemption_security.mjs",
+        "test-gate-credential-revocation-contract.mjs",
+        "test-gate-credential-revocation-postgres.mjs",
+        "test-gate-credential-revocation-rollout-postgres.mjs"
       ],
       "evidence": [
         "src/lib/tickets/services/comboRedemptions.ts",
@@ -2201,7 +2220,9 @@
         "export startKitchenOrderPreparation",
         "src/lib/tickets/services/comboRedemptions.ts:1035-1231;1462"
       ],
-      "notes": "Correção Etapa 3: comboRedemptions.ts:1035–1231 retorna para todo combo válido paid/issued antes da RPC validate_combo_redemption em :1462. A RPC isolada não confirma conclusão de entrega pelo leitor."
+      "notes": "HIGH #1 source uses credential -> session -> combo lock ordering; disposable PostgreSQL passed. Remote EXPAND and NEW_APP deployment are pending.",
+      "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "high_1_runtime_status": "NOT_DEPLOYED"
     },
     {
       "id": "combo.qr",
@@ -2761,5 +2782,6 @@
         "export programas CLI"
       ]
     }
-  ]
+  ],
+  "stage": "stabilization/high-1-source-freeze"
 }

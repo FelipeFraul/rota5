@@ -1,3 +1,7 @@
+# Baseline 1.4.0 HIGH #1 capability re-audit
+
+The source implementations for `gate.access_pause`, `gate.fixed_revoke`, `gate.open`, `gate.consult`, `gate.admit`, `gate.session_revoke`, `combo.kitchen_open`, `combo.prepare` and `combo.redeem` are locally validated against the EXPAND design. Runtime validation remains pending because EXPAND and NEW_APP are not deployed. Production-facing status remains conservative.
+
 # Catálogo de capabilities — BASELINE V1, Etapa 3
 
 Catálogo canônico: [capabilities.json](../../system-knowledge/capabilities.json). Relações: [capability-relations.json](../../system-knowledge/capability-relations.json). Data: 11/09/2026. Fonte: working tree baseado em `a141c6004421fb8442f95493de3ca4ec4d4c997b`, incluindo a alteração preexistente em `src/lib/tickets/messages.ts`.

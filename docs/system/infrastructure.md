@@ -1,3 +1,7 @@
+# Baseline 1.4.0 rollout infrastructure
+
+Phase 0 proved the manual Vercel release path with a READY OLD_APP preview. Git auto-deploy remains disabled. The HIGH #1 NEW_APP artifact is local commit `cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8`; it has not been pushed or deployed. Infrastructure health remains DEGRADED.
+
 # Infrastructure AS-IS — Etapa 5
 
 A aplicação é Next.js 16.2.6. A cadeia operacional canônica é GitHub `FelipeFraul/rota5`, branch `production`, ligada ao projeto Vercel `rota5` (`prj_dl7tt8fZbw88ZQV0GhklY0akEwbf`). O projeto Vercel `site` e o GitHub `FelipeFraul/ticketeira` pertencem à Ticketeira e são apenas evidência histórica da causa do finding resolvido.

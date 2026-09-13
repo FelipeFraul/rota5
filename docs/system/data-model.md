@@ -1,3 +1,7 @@
+# Baseline 1.4.0 HIGH #1 data-model delta
+
+The local EXPAND definition adds `source_kind`, `source_gate_access_id` and `source_fixed_gate_access_id` to `gate_sessions`, plus constraints, FKs and indexes. Remote schema remains pre-EXPAND, so the catalog records local/remote DRIFT rather than claiming deployment.
+
 # Data model AS-IS — Etapa 5
 
 Referência: commit `a141c6004421fb8442f95493de3ca4ec4d4c997b`. O schema local resultante foi reconstruído em ordem sobre 77 migrations; não é uma cópia de um único arquivo histórico. O PostgREST remoto confirmou as 44 tabelas e os nomes de suas colunas. Constraints, índices, triggers, RLS, policies e grants remotos não são expostos por essa superfície e permanecem `NOT_VALIDATED`.

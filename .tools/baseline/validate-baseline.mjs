@@ -107,11 +107,11 @@ for (const x of getRecords('capability-relations')) { checkRefs(x.id,'from',[x.f
 for (const x of getRecords('flow-relations')) { checkRefs(x.id,'from',[x.from],sets.flow); checkRefs(x.id,'to',[x.to],sets.flow); }
 for (const x of getRecords('finding-relations')) { checkRefs(`${x.from}->${x.to}`,'from',[x.from],sets.finding); checkRefs(`${x.from}->${x.to}`,'to',[x.to],sets.finding); }
 
-const expected = {domains:17,modules:66,entrypoints:56,capabilities:140,flows:34,'flow-steps':169,'state-transitions':66,'data-model':44,'database-relations':2223,integrations:6,webhooks:2,cron:2,environment:44,tests:43,findings:44};
+const expected = {domains:17,modules:66,entrypoints:56,capabilities:140,flows:34,'flow-steps':169,'state-transitions':68,'data-model':44,'database-relations':2255,integrations:6,webhooks:2,cron:2,environment:44,tests:51,findings:44};
 for (const [name, count] of Object.entries(expected)) if (getRecords(name).length !== count) add('CANONICAL_COUNT_MISMATCH', `${name}: expected ${count}, got ${getRecords(name).length}`);
-if ((objects.migrations||[]).length !== 77) add('CANONICAL_COUNT_MISMATCH','migrations');
-if ((objects.functions||[]).length !== 33) add('CANONICAL_COUNT_MISMATCH','sql functions');
-if ((objects.triggers||[]).length !== 33) add('CANONICAL_COUNT_MISMATCH','triggers');
+if ((objects.migrations||[]).length !== 78) add('CANONICAL_COUNT_MISMATCH','migrations');
+if ((objects.functions||[]).length !== 38) add('CANONICAL_COUNT_MISMATCH','sql functions');
+if ((objects.triggers||[]).length !== 35) add('CANONICAL_COUNT_MISMATCH','triggers');
 if ((catalogs.capabilities?.metrics?.by_status?.DESCONHECIDA || 0) !== 0) add('UNCLASSIFIED_CAPABILITY','capabilities.metrics.by_status.DESCONHECIDA');
 if ((catalogs.flows?.metrics?.capabilities_unclassified || 0) !== 0) add('UNCLASSIFIED_CAPABILITY','flows.metrics.capabilities_unclassified');
 if ((catalogs.flows?.metrics?.functional_entrypoints_unclassified || 0) !== 0) add('UNCLASSIFIED_ENTRYPOINT','flows.metrics.functional_entrypoints_unclassified');

@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-12T14:12:39.549Z",
-  "stage": "stabilization/p0-2",
-  "count": 66,
+  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "stage": "stabilization/high-1-source-freeze",
+  "count": 68,
   "records": [
     {
       "id": "state.001",
@@ -1367,6 +1367,50 @@
         }
       ],
       "status": "OBSERVED"
+    },
+    {
+      "id": "state.067",
+      "entity": "gate_session",
+      "from_state": "active",
+      "to_state": "revoked",
+      "capability": "gate.access_pause",
+      "flow": "gate.access_management",
+      "trigger": "CREDENTIAL_STATUS_CHANGE",
+      "implementation": "pause temporary credential and revoke attributed sessions",
+      "evidence": [
+        {
+          "kind": "database_definition",
+          "path": "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
+          "line": 60,
+          "symbol": "revoke_linked_gate_sessions_on_credential_change",
+          "claim": "EXPAND source revokes active sessions attributed to a paused temporary credential."
+        }
+      ],
+      "status": "LOCAL_DECLARED",
+      "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "runtime_validation_status": "NOT_DEPLOYED"
+    },
+    {
+      "id": "state.068",
+      "entity": "gate_session",
+      "from_state": "active",
+      "to_state": "revoked",
+      "capability": "gate.fixed_revoke",
+      "flow": "gate.access_management",
+      "trigger": "CREDENTIAL_STATUS_CHANGE",
+      "implementation": "revoke fixed credential and attributed sessions",
+      "evidence": [
+        {
+          "kind": "database_definition",
+          "path": "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
+          "line": 60,
+          "symbol": "revoke_linked_gate_sessions_on_credential_change",
+          "claim": "EXPAND source revokes active sessions attributed to a revoked fixed credential."
+        }
+      ],
+      "status": "LOCAL_DECLARED",
+      "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "runtime_validation_status": "NOT_DEPLOYED"
     }
   ],
   "entities": [

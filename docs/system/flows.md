@@ -1,3 +1,7 @@
+# Baseline 1.4.0 HIGH #1 flow re-audit
+
+`gate.access_management`, `gate.ticket_admission` and `kitchen.combo_redemption` now record `IMPLEMENTED_AND_LOCALLY_VALIDATED` source evidence and `NOT_DEPLOYED` runtime evidence. No production flow is promoted to fully corrected before remote rollout and post-fix audit.
+
 # Flow Catalog — Etapa 4
 
 **Baseline AS-IS:** 11/09/2026. **Flows:** 34. **Passos:** 169. **Transições de estado:** 66.

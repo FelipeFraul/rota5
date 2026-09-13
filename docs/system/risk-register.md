@@ -1,3 +1,7 @@
+# Baseline 1.4.0 HIGH #1 state
+
+`risk.gate-credential-revocation-does-not-revoke-session` remains `ACTIVE/HIGH/P1`. The root cause is confirmed and the source patch passed local and disposable PostgreSQL validation. Production rollout has not started: remote EXPAND is not applied, NEW_APP is not deployed and CONTRACT is not applied. Resolution requires EXPAND -> NEW_APP -> gates A-I -> CONTRACT -> post-fix runtime audit.
+
 # Risk register
 
 Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb8442f95493de3ca4ec4d4c997b e o working tree descrito no machine-readable. Esta etapa registra fatos e riscos; não aplica correções.

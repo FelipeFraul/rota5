@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T14:12:39.549Z",
-  "stage": "stabilization/p0-2",
+  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "stage": "stabilization/high-1-source-freeze",
   "id": "capability-catalog.v1",
   "canonical": true,
   "status": "PASS",
   "confidence": "MEDIA",
-  "sourceCommit": "121b7a8a4870f5933bd0cf0d45f12a8d71132424",
+  "sourceCommit": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
   "sourceScope": "Working tree local, incluindo alteração preexistente em src/lib/tickets/messages.ts; não equivale ao commit puro nem ao deploy.",
   "count": 140,
   "methodology": {
@@ -66,8 +66,8 @@
     "broken": 0,
     "not_tested_status": 0,
     "without_entrypoint": 4,
-    "with_test": 103,
-    "without_test": 37,
+    "with_test": 107,
+    "without_test": 33,
     "with_failing_test": 14,
     "with_external_integration": 139,
     "with_external_integration_except_database": 114,
@@ -9105,13 +9105,19 @@
         "messaging.router"
       ],
       "database_tables": [
-        "gate_accesses"
+        "gate_accesses",
+        "gate_sessions"
       ],
-      "database_functions": [],
+      "database_functions": [
+        "pause_gate_access_and_revoke_sessions"
+      ],
       "tests": [
-        "audit.gate-phone-checkin"
+        "audit.gate-phone-checkin",
+        "test-044",
+        "test-046",
+        "test-047"
       ],
-      "description": "Pausar autorização de acesso por evento; não revoga automaticamente sessões de leitor já emitidas.",
+      "description": "Pause temporary gate access and revoke its attributed sessions transactionally.",
       "evidence": [
         {
           "kind": "implementation",
@@ -9146,9 +9152,12 @@
         "integration-supabase",
         "integration-zapi"
       ],
-      "database_triggers": [],
+      "database_triggers": [
+        "revoke_linked_sessions_on_gate_access_change"
+      ],
       "notes": [
-        "Lacuna: sessões já emitidas continuam regidas pelo próprio status/TTL; pauseGateAccess só atualiza gate_accesses. Evidência: gateSessions.ts:282–409."
+        "Lacuna: sessões já emitidas continuam regidas pelo próprio status/TTL; pauseGateAccess só atualiza gate_accesses. Evidência: gateSessions.ts:282–409.",
+        "HIGH #1 local source and PostgreSQL 16 validation passed; remote EXPAND and NEW_APP deploy have not started, so the production classification is unchanged."
       ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
@@ -9160,23 +9169,30 @@
         ],
         "data": {
           "tables": [
-            "gate_accesses"
+            "gate_accesses",
+            "gate_sessions"
           ],
-          "functions": [],
-          "triggers": [],
+          "functions": [
+            "pause_gate_access_and_revoke_sessions"
+          ],
+          "triggers": [
+            "revoke_linked_sessions_on_gate_access_change"
+          ],
           "integrations": [
             "integration-supabase",
             "integration-zapi"
           ]
         },
-        "result": "Pausar autorização de acesso por evento; não revoga automaticamente sessões de leitor já emitidas.",
+        "result": "Pause temporary gate access and revoke its attributed sessions transactionally.",
         "validation": "STATIC_SOURCE",
         "limitations": [
           "Lacuna: sessões já emitidas continuam regidas pelo próprio status/TTL; pauseGateAccess só atualiza gate_accesses. Evidência: gateSessions.ts:282–409."
         ]
       },
       "dependencies": [],
-      "dependent_capabilities": []
+      "dependent_capabilities": [],
+      "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "runtime_validation_status": "NOT_DEPLOYED"
     },
     {
       "id": "gate.fixed_create",
@@ -9351,11 +9367,18 @@
         "messaging.router"
       ],
       "database_tables": [
-        "fixed_gate_accesses"
+        "fixed_gate_accesses",
+        "gate_sessions"
       ],
-      "database_functions": [],
-      "tests": [],
-      "description": "Revogar credencial fixa; não altera sessões de leitor já emitidas.",
+      "database_functions": [
+        "revoke_fixed_gate_access_and_revoke_sessions"
+      ],
+      "tests": [
+        "test-044",
+        "test-046",
+        "test-047"
+      ],
+      "description": "Revoke fixed gate access and its attributed sessions transactionally.",
       "evidence": [
         {
           "kind": "implementation",
@@ -9390,9 +9413,12 @@
         "integration-supabase",
         "integration-zapi"
       ],
-      "database_triggers": [],
+      "database_triggers": [
+        "revoke_linked_sessions_on_fixed_access_change"
+      ],
       "notes": [
-        "Lacuna: revokeFixedGateAccess não altera gate_sessions. Validação de sessão não consulta fixed_gate_accesses."
+        "Lacuna: revokeFixedGateAccess não altera gate_sessions. Validação de sessão não consulta fixed_gate_accesses.",
+        "HIGH #1 local source and PostgreSQL 16 validation passed; remote EXPAND and NEW_APP deploy have not started, so the production classification is unchanged."
       ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
@@ -9404,23 +9430,30 @@
         ],
         "data": {
           "tables": [
-            "fixed_gate_accesses"
+            "fixed_gate_accesses",
+            "gate_sessions"
           ],
-          "functions": [],
-          "triggers": [],
+          "functions": [
+            "revoke_fixed_gate_access_and_revoke_sessions"
+          ],
+          "triggers": [
+            "revoke_linked_sessions_on_fixed_access_change"
+          ],
           "integrations": [
             "integration-supabase",
             "integration-zapi"
           ]
         },
-        "result": "Revogar credencial fixa; não altera sessões de leitor já emitidas.",
+        "result": "Revoke fixed gate access and its attributed sessions transactionally.",
         "validation": "STATIC_SOURCE",
         "limitations": [
           "Lacuna: revokeFixedGateAccess não altera gate_sessions. Validação de sessão não consulta fixed_gate_accesses."
         ]
       },
       "dependencies": [],
-      "dependent_capabilities": []
+      "dependent_capabilities": [],
+      "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "runtime_validation_status": "NOT_DEPLOYED"
     },
     {
       "id": "gate.open",
@@ -9443,10 +9476,15 @@
         "event_sessions",
         "events"
       ],
-      "database_functions": [],
+      "database_functions": [
+        "lock_authorized_gate_session"
+      ],
       "tests": [
         "audit.gate-phone-checkin",
-        "audit.gate-wrong-event"
+        "audit.gate-wrong-event",
+        "test-044",
+        "test-046",
+        "test-047"
       ],
       "description": "Emitir link opaco, verificar sessão e carregar resumo do leitor no escopo autorizado.",
       "evidence": [
@@ -9599,7 +9637,9 @@
         "integration-zapi"
       ],
       "database_triggers": [],
-      "notes": [],
+      "notes": [
+        "HIGH #1 local source and PostgreSQL 16 validation passed; remote EXPAND and NEW_APP deploy have not started, so the production classification is unchanged."
+      ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
         "entrypoints": [
@@ -9621,7 +9661,9 @@
             "event_sessions",
             "events"
           ],
-          "functions": [],
+          "functions": [
+            "lock_authorized_gate_session"
+          ],
           "triggers": [],
           "integrations": [
             "integration-supabase",
@@ -9633,7 +9675,9 @@
         "limitations": []
       },
       "dependencies": [],
-      "dependent_capabilities": []
+      "dependent_capabilities": [],
+      "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "runtime_validation_status": "NOT_DEPLOYED"
     },
     {
       "id": "gate.consult",
@@ -9653,8 +9697,14 @@
         "event_sessions",
         "events"
       ],
-      "database_functions": [],
-      "tests": [],
+      "database_functions": [
+        "lock_authorized_gate_session"
+      ],
+      "tests": [
+        "test-044",
+        "test-046",
+        "test-047"
+      ],
       "description": "Consultar código/QR e situação do ingresso sem marcar usado.",
       "evidence": [
         {
@@ -9697,7 +9747,9 @@
         "integration-supabase"
       ],
       "database_triggers": [],
-      "notes": [],
+      "notes": [
+        "HIGH #1 local source and PostgreSQL 16 validation passed; remote EXPAND and NEW_APP deploy have not started, so the production classification is unchanged."
+      ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
         "entrypoints": [
@@ -9713,7 +9765,9 @@
             "event_sessions",
             "events"
           ],
-          "functions": [],
+          "functions": [
+            "lock_authorized_gate_session"
+          ],
           "triggers": [],
           "integrations": [
             "integration-supabase"
@@ -9724,7 +9778,9 @@
         "limitations": []
       },
       "dependencies": [],
-      "dependent_capabilities": []
+      "dependent_capabilities": [],
+      "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "runtime_validation_status": "NOT_DEPLOYED"
     },
     {
       "id": "gate.admit",
@@ -9746,10 +9802,14 @@
         "gate_sessions"
       ],
       "database_functions": [
-        "validate_ticket_entry"
+        "validate_ticket_entry",
+        "lock_authorized_gate_session"
       ],
       "tests": [
-        "audit.gate-wrong-event"
+        "audit.gate-wrong-event",
+        "test-044",
+        "test-046",
+        "test-047"
       ],
       "description": "Validar assinatura, evento, sessão e uso anterior; consumir ingresso atomicamente e registrar tentativa.",
       "evidence": [
@@ -9837,7 +9897,9 @@
         "integration-supabase"
       ],
       "database_triggers": [],
-      "notes": [],
+      "notes": [
+        "HIGH #1 local source and PostgreSQL 16 validation passed; remote EXPAND and NEW_APP deploy have not started, so the production classification is unchanged."
+      ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
         "entrypoints": [
@@ -9856,7 +9918,8 @@
             "gate_sessions"
           ],
           "functions": [
-            "validate_ticket_entry"
+            "validate_ticket_entry",
+            "lock_authorized_gate_session"
           ],
           "triggers": [],
           "integrations": [
@@ -9870,7 +9933,9 @@
       "dependencies": [],
       "dependent_capabilities": [
         "combo.kitchen_release"
-      ]
+      ],
+      "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "runtime_validation_status": "NOT_DEPLOYED"
     },
     {
       "id": "gate.session_revoke",
@@ -9885,7 +9950,11 @@
         "gate_sessions"
       ],
       "database_functions": [],
-      "tests": [],
+      "tests": [
+        "test-044",
+        "test-046",
+        "test-047"
+      ],
       "description": "Implementação de revogação direta por ID sem consumidor atual; revogação por acesso é outro caminho funcional.",
       "evidence": [
         {
@@ -9908,7 +9977,8 @@
       ],
       "database_triggers": [],
       "notes": [
-        "ÓRFÃ: nenhuma chamada a revokeGateSession localizada em src/scripts/.tools. Pausar gate_accesses ou revogar fixed_gate_accesses só altera esses registros; validateGateSessionToken não consulta o acesso de origem. Não se presume invalidação automática de links já emitidos."
+        "ÓRFÃ: nenhuma chamada a revokeGateSession localizada em src/scripts/.tools. Pausar gate_accesses ou revogar fixed_gate_accesses só altera esses registros; validateGateSessionToken não consulta o acesso de origem. Não se presume invalidação automática de links já emitidos.",
+        "HIGH #1 local source and PostgreSQL 16 validation passed; remote EXPAND and NEW_APP deploy have not started, so the production classification is unchanged."
       ],
       "entrypoint_status": "NONE_CONFIRMED",
       "execution_chain": {
@@ -9933,7 +10003,9 @@
         ]
       },
       "dependencies": [],
-      "dependent_capabilities": []
+      "dependent_capabilities": [],
+      "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "runtime_validation_status": "NOT_DEPLOYED"
     },
     {
       "id": "courtesy.issue",
@@ -12516,8 +12588,14 @@
         "combo_redemption_events",
         "event_sessions"
       ],
-      "database_functions": [],
-      "tests": [],
+      "database_functions": [
+        "lock_authorized_gate_session"
+      ],
+      "tests": [
+        "test-044",
+        "test-046",
+        "test-047"
+      ],
       "description": "Autenticar token de cozinha, vincular cookie do dispositivo e retornar pedidos/histórico.",
       "evidence": [
         {
@@ -12626,7 +12704,9 @@
         "integration-zapi"
       ],
       "database_triggers": [],
-      "notes": [],
+      "notes": [
+        "HIGH #1 local source and PostgreSQL 16 validation passed; remote EXPAND and NEW_APP deploy have not started, so the production classification is unchanged."
+      ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
         "entrypoints": [
@@ -12649,7 +12729,9 @@
             "combo_redemption_events",
             "event_sessions"
           ],
-          "functions": [],
+          "functions": [
+            "lock_authorized_gate_session"
+          ],
           "triggers": [],
           "integrations": [
             "integration-supabase",
@@ -12664,7 +12746,9 @@
       "dependent_capabilities": [
         "combo.prepare",
         "combo.delivery_prompt"
-      ]
+      ],
+      "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "runtime_validation_status": "NOT_DEPLOYED"
     },
     {
       "id": "combo.kitchen_release",
@@ -12796,9 +12880,14 @@
         "whatsapp_messages",
         "conversations"
       ],
-      "database_functions": [],
+      "database_functions": [
+        "lock_authorized_gate_session"
+      ],
       "tests": [
-        "test-022"
+        "test-022",
+        "test-044",
+        "test-046",
+        "test-047"
       ],
       "description": "Mudar estado de cozinha, rotacionar token e notificar cliente sobre retirada.",
       "evidence": [
@@ -12843,7 +12932,9 @@
         "integration-zapi"
       ],
       "database_triggers": [],
-      "notes": [],
+      "notes": [
+        "HIGH #1 local source and PostgreSQL 16 validation passed; remote EXPAND and NEW_APP deploy have not started, so the production classification is unchanged."
+      ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
         "entrypoints": [
@@ -12859,7 +12950,9 @@
             "whatsapp_messages",
             "conversations"
           ],
-          "functions": [],
+          "functions": [
+            "lock_authorized_gate_session"
+          ],
           "triggers": [],
           "integrations": [
             "integration-supabase",
@@ -12875,7 +12968,9 @@
       ],
       "dependent_capabilities": [
         "combo.redeem"
-      ]
+      ],
+      "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "runtime_validation_status": "NOT_DEPLOYED"
     },
     {
       "id": "combo.delivery_prompt",
@@ -13109,11 +13204,15 @@
         "combo_redemption_events"
       ],
       "database_functions": [
-        "validate_combo_redemption"
+        "validate_combo_redemption",
+        "lock_authorized_gate_session"
       ],
       "tests": [
         "test-036",
-        "audit.combo-redemption-security"
+        "audit.combo-redemption-security",
+        "test-044",
+        "test-046",
+        "test-047"
       ],
       "description": "O leitor encaminha resgates issued com escolha confirmada à RPC atômica validate_combo_redemption; a equivalência do banco remoto não foi validada.",
       "evidence": [
@@ -13165,7 +13264,8 @@
       ],
       "database_triggers": [],
       "notes": [
-        "PARCIAL: testes locais cobrem consumo único, replay, QR inválido, escopo incorreto e escolha ainda pendente. A RPC local usa bloqueio de linha e transição issued→used; nenhum teste mutante remoto foi executado e risk.combo-metadata-read-modify-write-race permanece ativo."
+        "PARCIAL: testes locais cobrem consumo único, replay, QR inválido, escopo incorreto e escolha ainda pendente. A RPC local usa bloqueio de linha e transição issued→used; nenhum teste mutante remoto foi executado e risk.combo-metadata-read-modify-write-race permanece ativo.",
+        "HIGH #1 local source and PostgreSQL 16 validation passed; remote EXPAND and NEW_APP deploy have not started, so the production classification is unchanged."
       ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {
@@ -13182,7 +13282,8 @@
             "combo_redemption_events"
           ],
           "functions": [
-            "validate_combo_redemption"
+            "validate_combo_redemption",
+            "lock_authorized_gate_session"
           ],
           "triggers": [],
           "integrations": [
@@ -13198,7 +13299,9 @@
       "dependencies": [
         "combo.prepare"
       ],
-      "dependent_capabilities": []
+      "dependent_capabilities": [],
+      "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "runtime_validation_status": "NOT_DEPLOYED"
     },
     {
       "id": "table_map.preview",
@@ -17455,6 +17558,110 @@
       "architecture_test_id": null,
       "execution_status": "NOT_RUN",
       "reason_not_run": "Inspecionado estaticamente; auditoria pode criar fixtures, chamar serviços externos ou modificar o ambiente."
+    },
+    {
+      "id": "test-044",
+      "architecture_test_id": "test-044",
+      "name": "test-gate-credential-revocation-contract.mjs",
+      "path": "scripts/test-gate-credential-revocation-contract.mjs",
+      "kind": "source-contract+sql-contract",
+      "execution_status": "PASS",
+      "run": {
+        "exitCode": 0,
+        "failures": []
+      },
+      "scope": "LOCAL_OR_DISPOSABLE_ONLY"
+    },
+    {
+      "id": "test-045",
+      "architecture_test_id": "test-045",
+      "name": "test-gate-credential-revocation-migration-packaging.mjs",
+      "path": "scripts/test-gate-credential-revocation-migration-packaging.mjs",
+      "kind": "migration-packaging",
+      "execution_status": "PASS",
+      "run": {
+        "exitCode": 0,
+        "failures": []
+      },
+      "scope": "LOCAL_OR_DISPOSABLE_ONLY"
+    },
+    {
+      "id": "test-046",
+      "architecture_test_id": "test-046",
+      "name": "test-gate-credential-revocation-postgres.mjs",
+      "path": "scripts/test-gate-credential-revocation-postgres.mjs",
+      "kind": "postgres-integration+race",
+      "execution_status": "PASS",
+      "run": {
+        "exitCode": 0,
+        "failures": []
+      },
+      "scope": "LOCAL_OR_DISPOSABLE_ONLY"
+    },
+    {
+      "id": "test-047",
+      "architecture_test_id": "test-047",
+      "name": "test-gate-credential-revocation-rollout-postgres.mjs",
+      "path": "scripts/test-gate-credential-revocation-rollout-postgres.mjs",
+      "kind": "postgres-rollout-matrix",
+      "execution_status": "PASS",
+      "run": {
+        "exitCode": 0,
+        "failures": []
+      },
+      "scope": "LOCAL_OR_DISPOSABLE_ONLY"
+    },
+    {
+      "id": "test-048",
+      "architecture_test_id": "test-048",
+      "name": "gate_credential_session_revocation_expand_test.sql",
+      "path": "supabase/tests/gate_credential_session_revocation_expand_test.sql",
+      "kind": "postgres-sql",
+      "execution_status": "PASS",
+      "run": {
+        "exitCode": 0,
+        "failures": []
+      },
+      "scope": "LOCAL_OR_DISPOSABLE_ONLY"
+    },
+    {
+      "id": "test-049",
+      "architecture_test_id": "test-049",
+      "name": "gate_credential_session_revocation_contract_test.sql",
+      "path": "supabase/tests/gate_credential_session_revocation_contract_test.sql",
+      "kind": "postgres-sql",
+      "execution_status": "PASS",
+      "run": {
+        "exitCode": 0,
+        "failures": []
+      },
+      "scope": "LOCAL_OR_DISPOSABLE_ONLY"
+    },
+    {
+      "id": "test-050",
+      "architecture_test_id": "test-050",
+      "name": "gate_credential_session_revocation_fixture.sql",
+      "path": "supabase/tests/gate_credential_session_revocation_fixture.sql",
+      "kind": "postgres-fixture",
+      "execution_status": "PASS",
+      "run": {
+        "exitCode": 0,
+        "failures": []
+      },
+      "scope": "LOCAL_OR_DISPOSABLE_ONLY"
+    },
+    {
+      "id": "test-051",
+      "architecture_test_id": "test-051",
+      "name": "gate_credential_session_revocation_rollout_gates.sql",
+      "path": "supabase/tests/gate_credential_session_revocation_rollout_gates.sql",
+      "kind": "postgres-rollout-gates",
+      "execution_status": "PASS",
+      "run": {
+        "exitCode": 0,
+        "failures": []
+      },
+      "scope": "LOCAL_OR_DISPOSABLE_ONLY"
     }
   ],
   "coverage_audit": {
@@ -21253,7 +21460,7 @@
       {
         "name": "unique_test_ids",
         "status": "PASS",
-        "detail": 67
+        "detail": 75
       },
       {
         "name": "required_fields_and_count_fields",
@@ -21293,17 +21500,17 @@
       {
         "name": "test_and_audit_files_reconciled",
         "status": "PASS",
-        "detail": 67
+        "detail": 75
       },
       {
         "name": "sql_function_names_reconciled",
         "status": "PASS",
-        "detail": 33
+        "detail": 38
       },
       {
         "name": "triggers_reconciled",
         "status": "PASS",
-        "detail": 33
+        "detail": 35
       },
       {
         "name": "metrics_recomputed",

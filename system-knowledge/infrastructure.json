@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-12T15:29:26.315Z",
-  "stage": "stabilization/p0-3",
-  "sourceCommit": "9302cbd46aec802fef371e9c948e7d558c3dfc2a",
+  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "stage": "stabilization/high-1-source-freeze",
+  "sourceCommit": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
   "application": {
     "framework": "Next.js 16.2.6",
     "runtime": "Node.js 24.x no projeto Vercel",
@@ -62,13 +62,13 @@
       "ready_deployment": "dpl_4fUuUVNXgCfYgTiJjvdLuDdxXSA9",
       "latest_deployment_state": "ERROR",
       "evidence_source": "REMOTE_CONFIG",
-      "current_head": "9302cbd46aec802fef371e9c948e7d558c3dfc2a",
+      "current_head": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
       "current_head_deployed": false,
       "new_deployment_during_separation": false
     },
     "published_commit": {
       "status": "NOT_VALIDATED",
-      "reason": "Nenhum release do HEAD atual foi realizado; o deployment servido continua anterior à separação."
+      "reason": "HIGH #1 NEW_APP artifact exists locally but has not been pushed or deployed."
     },
     "crons": 2,
     "environment_variable_names": 24,
@@ -206,5 +206,16 @@
     "finding": "risk.vercel-project-identity-drift",
     "current_head_deployed_to_production": false,
     "remote_changes_during_baseline_update": "NONE"
+  },
+  "high_1_rollout": {
+    "strategy": "EXPAND_DEPLOY_CONTRACT",
+    "phase_0": "PASS",
+    "release_path": "HEALTHY",
+    "expand": "READY_LOCALLY_NOT_APPLIED",
+    "new_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+    "new_app_pushed": false,
+    "new_app_deployed": false,
+    "contract": "DRAFT_ONLY",
+    "git_auto_deploy": "DISABLED"
   }
 }

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T22:16:13.706Z",
-  "stage": "stabilization/validator-hardening",
-  "sourceCommit": "121b7a8a4870f5933bd0cf0d45f12a8d71132424",
+  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "stage": "stabilization/high-1-source-freeze",
+  "sourceCommit": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
   "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
   "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
   "count": 44,
@@ -395,6 +395,26 @@
           "path": "src/lib/tickets/services/gateSessions.ts",
           "line": 282,
           "claim": "Validação consulta token/status/expiração da sessão."
+        },
+        {
+          "path": "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
+          "line": 1,
+          "claim": "EXPAND defines source attribution, transactional revocation, authorization helper and compatibility instrumentation; remote status NOT_APPLIED."
+        },
+        {
+          "path": "supabase/rollout/gate_credential_session_revocation_contract.sql",
+          "line": 1,
+          "claim": "CONTRACT is a protected rollout draft outside active migrations."
+        },
+        {
+          "path": "scripts/test-gate-credential-revocation-rollout-postgres.mjs",
+          "line": 1,
+          "claim": "Disposable PostgreSQL 16 rollout matrix passed."
+        },
+        {
+          "path": "scripts/test-gate-credential-revocation-postgres.mjs",
+          "line": 1,
+          "claim": "Ticket race 2/2 and combo race 2/2 passed."
         }
       ],
       "impact": "Um operador removido pode continuar usando um link já emitido até expiração, inclusive para portaria ou cozinha.",
@@ -426,9 +446,29 @@
         "gate_sessions"
       ],
       "blast_radius": "MULTI_DOMAIN",
-      "workaround": "Revogar diretamente gate_sessions existe como função órfã, sem entrypoint catalogado.",
-      "direction": "Vincular e invalidar sessões derivadas ao revogar a credencial fonte.",
-      "priority_justification": "P1 porque mantém autorização operacional após revogação explícita."
+      "workaround": "Source patch is implemented locally; production remains on OLD_APP/OLD_DB until controlled EXPAND -> DEPLOY -> CONTRACT rollout.",
+      "direction": "Complete controlled EXPAND -> NEW_APP -> gates A-I -> CONTRACT -> runtime audit; keep ACTIVE until remote proof is complete.",
+      "priority_justification": "P1 porque mantém autorização operacional após revogação explícita.",
+      "source_implementation": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "production_rollout": "NOT_STARTED",
+      "rollout_state": {
+        "strategy": "EXPAND_DEPLOY_CONTRACT",
+        "phase_0": "PASS",
+        "release_path": "HEALTHY",
+        "expand": "READY_LOCALLY_NOT_APPLIED",
+        "new_app_artifact": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+        "new_app_pushed": false,
+        "new_app_deployed": false,
+        "contract": "DRAFT_ONLY",
+        "remote_expand_allowed": false
+      },
+      "resolution_requirements": [
+        "Apply EXPAND remotely",
+        "Deploy NEW_APP with artifact identity preserved",
+        "Pass rollout gates A-I",
+        "Apply CONTRACT only after compatibility gates",
+        "Complete post-fix runtime audit"
+      ]
     },
     {
       "id": "risk.admin-event-multistep-partial-state",

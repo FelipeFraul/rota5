@@ -1,3 +1,7 @@
+# Baseline 1.4.0 HIGH #1 test inventory
+
+The canonical inventory now contains 51 test files. HIGH #1 adds contract, migration-packaging, disposable PostgreSQL integration, rollout-matrix, EXPAND/CONTRACT SQL, isolated fixture and rollout-gate coverage. Focused validation passed 96/96; ticket and combo races passed 2/2 each. The default suite remains 207/214 with the same seven historical failures.
+
 # Inventário de testes e auditorias
 
 **Atualização da Etapa 3 (11/09/2026):** 39 arquivos executados isoladamente: 296 casos, 276 aprovados e 20 falhas em 12 arquivos. Os resultados históricos da suíte padrão abaixo são preservados e não representam esta nova execução. Três testes reais e o teste de mapa que grava artefatos não foram executados. Evidências e associação às capabilities: [capability-test-coverage.md](capability-test-coverage.md) e `tests.json.stage3Validation`.

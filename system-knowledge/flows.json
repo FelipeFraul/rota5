@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-12T14:12:39.549Z",
-  "stage": "stabilization/p0-2",
+  "generatedAt": "2026-09-13T03:06:00.129Z",
+  "stage": "stabilization/high-1-source-freeze",
   "id": "rota5.flow-catalog.v1",
   "canonical": true,
   "count": 34,
@@ -19,7 +19,7 @@
       "QUEBRADO": 0
     },
     "steps": 169,
-    "state_transitions": 66,
+    "state_transitions": 68,
     "with_test": 30,
     "without_test": 4,
     "with_failing_test": 8,
@@ -2472,7 +2472,9 @@
         "SUCCESS",
         "FAILURE"
       ],
-      "notes": [],
+      "notes": [
+        "Production status remains conservative: HIGH #1 passed locally on PostgreSQL 16, but EXPAND and NEW_APP are not deployed remotely."
+      ],
       "actors": [
         "admin"
       ],
@@ -2498,7 +2500,9 @@
         "event_sessions",
         "fixed_gate_accesses"
       ],
-      "database_functions": [],
+      "database_functions": [
+        "lock_authorized_gate_session"
+      ],
       "database_triggers": [],
       "integrations": [
         "integration-supabase",
@@ -2509,7 +2513,10 @@
         "test-016",
         "audit.admin-profiles-permissions",
         "audit.gate-phone-checkin",
-        "audit.system-closure"
+        "audit.system-closure",
+        "test-044",
+        "test-046",
+        "test-047"
       ],
       "failing_tests": [],
       "evidence": [
@@ -2569,7 +2576,9 @@
           "symbol": "revokeFixedGateAccess",
           "claim": "Revogar credencial fixa; não altera sessões de leitor já emitidas."
         }
-      ]
+      ],
+      "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "runtime_validation_status": "NOT_DEPLOYED"
     },
     {
       "id": "gate.ticket_admission",
@@ -2615,7 +2624,9 @@
         "SUCCESS",
         "FAILURE"
       ],
-      "notes": [],
+      "notes": [
+        "Production status remains conservative: HIGH #1 passed locally on PostgreSQL 16, but EXPAND and NEW_APP are not deployed remotely."
+      ],
       "actors": [
         "gate_operator"
       ],
@@ -2639,7 +2650,8 @@
         "ticket_validation_events"
       ],
       "database_functions": [
-        "validate_ticket_entry"
+        "validate_ticket_entry",
+        "lock_authorized_gate_session"
       ],
       "database_triggers": [],
       "integrations": [
@@ -2648,7 +2660,10 @@
       ],
       "tests": [
         "audit.gate-phone-checkin",
-        "audit.gate-wrong-event"
+        "audit.gate-wrong-event",
+        "test-044",
+        "test-046",
+        "test-047"
       ],
       "failing_tests": [],
       "evidence": [
@@ -2676,7 +2691,9 @@
           "symbol": "validateGateScan",
           "claim": "Validar assinatura, evento, sessão e uso anterior; consumir ingresso atomicamente e registrar tentativa."
         }
-      ]
+      ],
+      "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "runtime_validation_status": "NOT_DEPLOYED"
     },
     {
       "id": "kitchen.session_prepare",
@@ -2818,7 +2835,8 @@
         "FAILURE"
       ],
       "notes": [
-        "PARCIAL: caminho local de consumo e replay coberto por testes comportamentais; aplicação e comportamento da RPC no banco remoto não foram validados."
+        "PARCIAL: caminho local de consumo e replay coberto por testes comportamentais; aplicação e comportamento da RPC no banco remoto não foram validados.",
+        "Production status remains conservative: HIGH #1 passed locally on PostgreSQL 16, but EXPAND and NEW_APP are not deployed remotely."
       ],
       "actors": [
         "kitchen_operator"
@@ -2840,7 +2858,8 @@
         "combo_redemption_events"
       ],
       "database_functions": [
-        "validate_combo_redemption"
+        "validate_combo_redemption",
+        "lock_authorized_gate_session"
       ],
       "database_triggers": [],
       "integrations": [
@@ -2849,7 +2868,10 @@
       ],
       "tests": [
         "test-036",
-        "audit.combo-redemption-security"
+        "audit.combo-redemption-security",
+        "test-044",
+        "test-046",
+        "test-047"
       ],
       "failing_tests": [],
       "evidence": [
@@ -2869,7 +2891,9 @@
           "symbol": "validateComboRedemptionScan",
           "claim": "A guarda de escolha limita o retorno antecipado a delivery_choice_confirmed_at ausente, permitindo que resgates confirmados e prontos alcancem validate_combo_redemption."
         }
-      ]
+      ],
+      "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
+      "runtime_validation_status": "NOT_DEPLOYED"
     },
     {
       "id": "table_map.calibration",
@@ -5927,7 +5951,7 @@
       {
         "name": "unique_transition_ids",
         "status": "PASS",
-        "detail": 66
+        "detail": 68
       },
       {
         "name": "unique_relation_ids",
