@@ -5,7 +5,7 @@ export default function CheckoutPendingPage() {
     <InformationPage
       eyebrow="Pagamento"
       title="Pagamento pendente"
-      description="Estamos aguardando a confirmação da Black House."
+      description="Estamos aguardando a confirmação do pagamento."
     />
   );
 }

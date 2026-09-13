@@ -5,7 +5,7 @@ export default function CheckoutSuccessPage() {
     <InformationPage
       eyebrow="Pagamento"
       title="Retorno do pagamento recebido"
-      description="A confirmação final será feita após validação da Black House. O ingresso será liberado somente depois do pagamento aprovado."
+      description="A confirmação final será feita após a validação do pagamento. O ingresso será liberado somente depois da aprovação."
     />
   );
 }

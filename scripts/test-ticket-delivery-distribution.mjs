@@ -29,10 +29,6 @@ const ticketDeliverySource = readFileSync(
   new URL("../src/lib/tickets/services/ticketDelivery.ts", import.meta.url),
   "utf8",
 );
-const envSource = readFileSync(
-  new URL("../src/lib/env.ts", import.meta.url),
-  "utf8",
-);
 const outboundDeliveriesSource = readFileSync(
   new URL("../src/lib/tickets/services/whatsappOutboundDeliveries.ts", import.meta.url),
   "utf8",
@@ -607,16 +603,13 @@ test("mensagem final usa texto de encaminhamento com evento e telefone Rota5", (
   assert.doesNotMatch(routerSource, /para nosso telefone/);
 });
 
-test("mensagem final nao usa nome telefone ou configuracao da Black House ou Rock Bar", () => {
+test("mensagem final usa somente a identidade Rota5", () => {
   const forwardingBlock =
     routerSource.match(/function formatParticipantForwardingMessage[\s\S]*?function formatParticipantContactsConfirmation/)?.[0] ?? "";
 
-  assert.doesNotMatch(forwardingBlock, /Black House|Rock Bar Pub|BLACK_HOUSE/i);
   assert.match(forwardingBlock, /15 99642-6671/);
   assert.match(forwardingBlock, /Rota5/);
-  assert.match(routerSource, /equipe do Rock Bar/);
-  assert.doesNotMatch(routerSource, /equipe da Black House/);
-  assert.doesNotMatch(routerSource, /Bem-vindo\(a\) à Black House/);
+  assert.match(routerSource, /equipe Rota5/);
 });
 
 test("falha do QR do comprador bloqueia mensagens finais e sucesso libera em ordem", () => {
@@ -642,11 +635,10 @@ test("mensagens finais preservam retry sem duplicacao por dependerem do mesmo QR
 });
 
 test("mensagem final nao depende de env para acompanhar QR do comprador", () => {
-  assert.doesNotMatch(routerSource, /getRockBarOfficialWhatsAppPhone|formatWhatsAppPhoneForDisplay/);
+  assert.doesNotMatch(routerSource, /formatWhatsAppPhoneForDisplay/);
   assert.doesNotMatch(routerSource, /Participant forwarding instructions without configured official WhatsApp phone/);
   assert.match(routerSource, /\*15 99642-6671\*/);
   assert.match(routerSource, /const participantForwardingMessages = participantForwardingMessage[\s\S]*body:\s*participantForwardingMessage/);
-  assert.doesNotMatch(routerSource, /throw new Error\("ROCK_BAR_OFFICIAL_WHATSAPP_PHONE/);
 });
 
 test("mensagens finais possuem chaves idempotentes proprias e duraveis", () => {
@@ -738,7 +730,7 @@ test("Meu ingresso do participante prioriza nome do proprio WhatsApp", () => {
 
 test("Meu ingresso com 2 ou mais ingressos mostra menu e nao envia QR imediatamente", () => {
   assert.match(routerSource, /function formatParticipantTicketSelectionPrompt/);
-  assert.match(routerSource, /\*INGRESSO ROCKBAR\*/);
+  assert.match(routerSource, /\*INGRESSO ROTA5\*/);
   assert.match(routerSource, /Qual ingresso voc/);
   assert.match(routerSource, /groupParticipantTicketDeliveries\(deliveries\)/);
   assert.match(routerSource, /`> Digite \$\{index \+ 1\} para/);

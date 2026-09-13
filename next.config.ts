@@ -1,6 +1,5 @@
 import type { NextConfig } from "next";
 
-const productionOrigin = "https://blackhouseclubedecomedia.vercel.app";
 const permissionsPolicy = [
   "accelerometer=()",
   "autoplay=()",
@@ -46,15 +45,6 @@ const nextConfig: NextConfig = {
           {
             key: "X-Frame-Options",
             value: "DENY",
-          },
-        ],
-      },
-      {
-        source: "/_next/static/:path*",
-        headers: [
-          {
-            key: "Access-Control-Allow-Origin",
-            value: productionOrigin,
           },
         ],
       },

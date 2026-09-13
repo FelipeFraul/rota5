@@ -23,7 +23,7 @@ const HELP_TOPICS: PublicHelpTopic[] = [
     question: "Como procurar um evento?",
     keywords: ["buscar", "procurar", "pesquisar", "evento", "show", "agenda"],
     answer:
-      "Digite o nome do artista, cidade, local ou data. Exemplos: `Valio`, `Sorocaba`, `Black House`, `amanhã` ou `8 de agosto`.",
+      "Digite o nome do artista, cidade, local ou data. Exemplos: `Valio`, `Sorocaba`, `amanhã` ou `8 de agosto`.",
   },
   {
     id: "nao-encontrei-evento",
@@ -254,7 +254,7 @@ const HELP_TOPICS: PublicHelpTopic[] = [
     question: "Por que pede CPF e e-mail no pagamento?",
     keywords: ["cpf", "email", "e-mail", "pagamento", "pix"],
     answer:
-      "O checkout usa CPF e e-mail para a Black House processar a tentativa de pagamento por Pix e validar a compra quando necessário.",
+      "O checkout usa CPF e e-mail para processar a tentativa de pagamento por Pix e validar a compra quando necessário.",
   },
   {
     id: "pagamento-aprovado",
@@ -268,7 +268,7 @@ const HELP_TOPICS: PublicHelpTopic[] = [
     question: "Meu pagamento está pendente. O que faço?",
     keywords: ["pagamento", "pendente", "aguardando", "pix", "demora", "confirmacao"],
     answer:
-      "Aguarde a confirmação da Black House. No Pix, a confirmação pode levar alguns instantes após pagar no banco. Se a reserva expirar antes da aprovação, faça uma nova compra.",
+      "Aguarde a confirmação do pagamento. No Pix, a confirmação pode levar alguns instantes após pagar no banco. Se a reserva expirar antes da aprovação, faça uma nova compra.",
   },
   {
     id: "link-pagamento-indispon?vel",
@@ -359,7 +359,7 @@ const HELP_TOPICS: PublicHelpTopic[] = [
     question: "E se o evento for cancelado ou encerrado?",
     keywords: ["evento", "cancelado", "encerrado", "fechado", "status", "vendas"],
     answer:
-      "Eventos cancelados, encerrados ou sem sessão disponível não aparecem para compra. Se uma compra já foi feita, acompanhe a comunicação oficial da Black House.",
+      "Eventos cancelados, encerrados ou sem sessão disponível não aparecem para compra. Se uma compra já foi feita, acompanhe a comunicação da organização do evento.",
   },
   {
     id: "vendas-fechadas",
@@ -420,9 +420,9 @@ const HELP_TOPICS: PublicHelpTopic[] = [
   {
     id: "falar-equipe",
     question: "Como falar com a equipe?",
-    keywords: ["falar", "equipe", "atendente", "suporte", "black", "house"],
+    keywords: ["falar", "equipe", "atendente", "suporte", "contato", "atendimento"],
     answer:
-      "Se a dúvida não for resolvida pela ajuda, procure a equipe da Black House pelos canais oficiais ou no local do evento.",
+      "Se a dúvida não for resolvida pela ajuda, procure a equipe Rota5 neste atendimento ou a organização do evento.",
   },
 ];
 

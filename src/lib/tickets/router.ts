@@ -3832,7 +3832,7 @@ function formatParticipantTicketSelectionPrompt(
   const groups = groupParticipantTicketDeliveries(deliveries);
 
   return [
-    "*INGRESSO ROCKBAR*",
+    "*INGRESSO ROTA5*",
     "",
     "Qual ingresso você quer receber?",
     "",
@@ -4582,7 +4582,7 @@ async function handlePaidTicketResendSelection({
   if (!group) {
     return {
       reply:
-        "Não encontrei mais esse ingresso disponível para reenvio. Confira com a equipe do Rock Bar.",
+        "Não encontrei mais esse ingresso disponível para reenvio. Confira com a equipe Rota5.",
       nextContext: resetBuyerReservationContext(baseContext),
     };
   }
@@ -7490,7 +7490,7 @@ function formatMoneyFromCents(cents: number) {
 }
 
 function buildAdminOfferNamePrompt() {
-  return "*ADICIONAR OFERTA*\n\nDigite o nome da oferta:\nBLACK HOUSE COMBO";
+  return "*ADICIONAR OFERTA*\n\nDigite o nome da oferta:\nROTA5 COMBO";
 }
 
 function buildAdminOfferImagePrompt() {
@@ -16875,7 +16875,7 @@ export async function routeTicketMessage({
 
         const prompt =
           field === "name"
-            ? "Digite o novo nome da oferta:\nBLACK HOUSE COMBO"
+            ? "Digite o novo nome da oferta:\nROTA5 COMBO"
             : field === "description"
               ? "Digite a nova descricao:"
               : field === "price"
@@ -18030,22 +18030,6 @@ export async function routeTicketMessage({
           returnState: baseContext.state,
         },
       },
-    };
-  }
-
-  if (
-    false &&
-    incomingIntent.classification === "greeting" &&
-    previousState.state !== "reservation_created" &&
-    previousState.state !== "payment_pending"
-  ) {
-    return {
-      reply: [
-        "Olá! Bem-vindo(a) ao Rock Bar.",
-        "",
-        LOW_CONFIDENCE_PUBLIC_PROMPT,
-      ].join("\n"),
-      nextContext: baseContext,
     };
   }
 

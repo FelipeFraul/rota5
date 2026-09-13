@@ -436,13 +436,13 @@ test("busca por topico retorna resultados e preserva publicHelp e step", () => {
         option: 2,
         id: "pagamento-pendente",
         question: "Meu pagamento está pendente. O que faço?",
-        answer: "Aguarde a confirmação da Black House. No Pix, a confirmação pode levar alguns instantes após pagar no banco. Se a reserva expirar antes da aprovação, faça uma nova compra.",
+        answer: "Aguarde a confirmação do pagamento. No Pix, a confirmação pode levar alguns instantes após pagar no banco. Se a reserva expirar antes da aprovação, faça uma nova compra.",
       },
       {
         option: 3,
         id: "cpf-email",
         question: "Por que pede CPF e e-mail no pagamento?",
-        answer: "O checkout usa CPF e e-mail para a Black House processar a tentativa de pagamento por Pix e validar a compra quando necessário.",
+        answer: "O checkout usa CPF e e-mail para processar a tentativa de pagamento por Pix e validar a compra quando necessário.",
       },
       {
         option: 4,
