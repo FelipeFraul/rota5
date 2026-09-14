@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "test": "node --experimental-loader=./scripts/test-support/typescript-alias-loader.mjs --test scripts/test-whatsapp-batch-compat.mjs scripts/test-conversation-inactivity.mjs scripts/test-public-initial-flow.mjs scripts/test-public-all-events-formatting.mjs scripts/test-public-help-flow.mjs scripts/test-public-event-visibility-policy.mjs scripts/test-public-availability-classification.mjs scripts/test-admin-auth-pending-cancel.mjs scripts/test-admin-event-artist-name-leak.mjs scripts/test-ticket-delivery-distribution.mjs scripts/test-combo-offer-qr-delivery-policy.mjs scripts/test-combo-qr-image-template.mjs scripts/test-message-mojibake.mjs scripts/test-admin-operational-dashboard.mjs scripts/test-official-table-map.mjs scripts/test-event-lifecycle-critical.mjs scripts/test-fixed-gate-access-lifecycle.mjs scripts/test-checkout-status-and-combo-confirmation.mjs scripts/test-combo-critical-lifecycle.mjs scripts/test-courtesy-section-limits.mjs scripts/test-codex-automation-contract.mjs scripts/test-reservation-side-effects.mjs",
+    "test:integration:postgres": "node --test scripts/test-table-map-sync-postgres.mjs",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

@@ -1,61 +1,6 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import test from "node:test";
 import { loadProductionModule, MemorySupabase } from "./test-support/production-module-harness.mjs";
-
-function docker(args, options = {}) {
-  return execFileSync("docker", args, {
-    encoding: "utf8",
-    stdio: [Object.hasOwn(options, "input") ? "pipe" : "ignore", "pipe", "pipe"],
-    ...options,
-  }).trim();
-}
-
-test("table_map.sync_status executes the production trigger in disposable PostgreSQL", async () => {
-  const container = `rota5-table-map-test-${process.pid}`;
-  docker(["run", "--rm", "--detach", "--name", container, "--env", "POSTGRES_PASSWORD=rota5-test", "postgres:16"]);
-  try {
-    for (let attempt = 0; attempt < 30; attempt += 1) {
-      try {
-        docker(["exec", container, "pg_isready", "-U", "postgres"]);
-        break;
-      } catch {
-        if (attempt === 29) throw new Error("PostgreSQL disposable did not become ready");
-        await new Promise((resolveWait) => setTimeout(resolveWait, 250));
-      }
-    }
-
-    const migration = readFileSync("supabase/migrations/20260722000800_create_official_table_map_reservations.sql", "utf8");
-    const triggerStart = migration.indexOf("create or replace function public.sync_official_table_map_reservation_status()");
-    assert.ok(triggerStart >= 0, "production trigger definition must exist");
-    const triggerSql = migration.slice(triggerStart);
-    const setup = `
-      create role anon; create role authenticated; create role service_role;
-      create table public.reservations (id uuid primary key, status text not null);
-      create table public.official_table_map_reservations (
-        reservation_id uuid primary key references public.reservations(id),
-        status text not null,
-        updated_at timestamptz not null default now()
-      );
-      insert into public.reservations values ('11111111-1111-4111-8111-111111111111', 'active');
-      insert into public.official_table_map_reservations values ('11111111-1111-4111-8111-111111111111', 'active', now());
-    `;
-    docker(["exec", "-i", container, "psql", "-v", "ON_ERROR_STOP=1", "-U", "postgres"], { input: setup + triggerSql });
-
-    const readStatus = () => docker(["exec", container, "psql", "-At", "-U", "postgres", "-c", "select status from public.official_table_map_reservations;"]);
-    docker(["exec", container, "psql", "-v", "ON_ERROR_STOP=1", "-U", "postgres", "-c", "update public.reservations set status='paid' where id='11111111-1111-4111-8111-111111111111';"]);
-    assert.equal(readStatus(), "paid");
-    docker(["exec", container, "psql", "-v", "ON_ERROR_STOP=1", "-U", "postgres", "-c", "update public.reservations set status='active' where id='11111111-1111-4111-8111-111111111111';"]);
-    assert.equal(readStatus(), "paid");
-    docker(["exec", container, "psql", "-v", "ON_ERROR_STOP=1", "-U", "postgres", "-c", "update public.reservations set status='active' where id='11111111-1111-4111-8111-111111111111';"]);
-    assert.equal(readStatus(), "paid");
-    docker(["exec", container, "psql", "-v", "ON_ERROR_STOP=1", "-U", "postgres", "-c", "update public.reservations set status='cancelled' where id='11111111-1111-4111-8111-111111111111';"]);
-    assert.equal(readStatus(), "cancelled");
-  } finally {
-    try { docker(["rm", "--force", container]); } catch {}
-  }
-});
 
 test("background.remind_interest selects eligible buyers, persists metadata and deduplicates retries", async () => {
   const now = Date.now();
