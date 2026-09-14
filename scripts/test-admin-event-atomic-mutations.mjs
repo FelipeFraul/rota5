@@ -193,14 +193,43 @@ test("admin web PATCH no longer invokes the independent mutation chain", () => {
   assert.match(patchBody, /x-idempotency-key/);
 });
 
-test("browser callers retain one operation id for retry and mint new duplication intents", () => {
+test("CREATE and UPDATE browser callers retain one operation id for retry", () => {
   const create = readFileSync("src/app/admin/eventos/event-editor/CreateEventModal.tsx", "utf8");
   const update = readFileSync("src/app/admin/eventos/event-editor/EventEditorModal.tsx", "utf8");
-  const list = readFileSync("src/app/admin/eventos/AdminEventsEditor.tsx", "utf8");
   assert.match(create, /useRef\(crypto\.randomUUID\(\)\)/);
   assert.match(update, /operationId\.current = crypto\.randomUUID\(\)/);
-  assert.match(list, /const operationId = crypto\.randomUUID\(\)/);
-  assert.match(create + update + list, /x-idempotency-key/);
+  assert.match(create + update, /x-idempotency-key/);
+});
+
+test("DUPLICATE operation lifecycle preserves transport retries and separates new intentions", async () => {
+  const ids = ["operation-A", "operation-B"];
+  const { createDuplicateOperationIdStore, runDuplicateOperation } = await loadProductionModule(
+    "src/app/admin/eventos/duplicateOperationId.ts",
+  );
+  const store = createDuplicateOperationIdStore(() => ids.shift());
+  const attempts = [];
+
+  await assert.rejects(
+    runDuplicateOperation(store, "event-1", async (operationId) => {
+      attempts.push(operationId);
+      throw new TypeError("network unavailable");
+    }),
+    /network unavailable/,
+    "NETWORK_FAILURE",
+  );
+  const retryResult = await runDuplicateOperation(store, "event-1", async (operationId) => {
+    attempts.push(operationId);
+    return { ok: true, eventId: "copy-1" };
+  });
+  const secondResult = await runDuplicateOperation(store, "event-1", async (operationId) => {
+    attempts.push(operationId);
+    return { ok: true, eventId: "copy-2" };
+  });
+
+  assert.deepEqual(attempts, ["operation-A", "operation-A", "operation-B"]);
+  assert.equal(retryResult.eventId, "copy-1", "SUCCESS");
+  assert.equal(secondResult.eventId, "copy-2", "SECOND_INTENTIONAL_DUPLICATION");
+  assert.notEqual(attempts[1], attempts[2], "operation B must differ from operation A");
 });
 
 test("WhatsApp retains operation ids across CREATE and DUPLICATE retries", () => {

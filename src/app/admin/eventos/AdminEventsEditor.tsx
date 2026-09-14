@@ -5,6 +5,11 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AdminEventGrid, { type AdminEventCardItem } from "./components/AdminEventGrid";
 import AdminEventsToolbar from "./components/AdminEventsToolbar";
+import {
+  createDuplicateOperationIdStore,
+  runDuplicateOperation,
+  type DuplicateOperationIdStore,
+} from "./duplicateOperationId";
 
 const AdminComboOffersSection = dynamic(() => import("./combo-editor/AdminComboOffersSection"), {
   loading: () => null,
@@ -363,6 +368,8 @@ function getCsrfToken() {
 }
 
 export function AdminEventsEditor() {
+  const duplicateOperationIds = useRef<DuplicateOperationIdStore | null>(null);
+  duplicateOperationIds.current ??= createDuplicateOperationIdStore();
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [viewFilter, setViewFilter] = useState<AdminViewFilter>("tickets");
   const [appliedSearch, setAppliedSearch] = useState("");
@@ -494,18 +501,24 @@ export function AdminEventsEditor() {
 
     setDuplicatingEventId(eventId);
     setMessage(null);
-    const operationId = crypto.randomUUID();
 
     try {
-      const response = await fetch(`/api/admin/events/${eventId}`, {
-        method: "POST",
-        credentials: "same-origin",
-        headers: {
-          "x-admin-csrf": decodeURIComponent(getCsrfToken()),
-          "x-idempotency-key": operationId,
+      const { response, data } = await runDuplicateOperation(
+        duplicateOperationIds.current!,
+        eventId,
+        async (operationId) => {
+          const response = await fetch(`/api/admin/events/${eventId}`, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+              "x-admin-csrf": decodeURIComponent(getCsrfToken()),
+              "x-idempotency-key": operationId,
+            },
+          });
+          const data = await response.json() as { ok?: boolean; eventId?: string; event?: EventDetails; message?: string };
+          return { response, data };
         },
-      });
-      const data = await response.json() as { ok?: boolean; eventId?: string; event?: EventDetails; message?: string };
+      );
 
       if (!response.ok || !data.ok) {
         setMessage(data.message ?? "Não foi possível duplicar o evento.");
@@ -658,4 +671,3 @@ export function AdminEventsEditor() {
     </>
   );
 }
-
