@@ -392,9 +392,9 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
       first_result := public.update_admin_event_location(
         '60000000-0000-4000-8000-000000000001', event_id, 'LOCATION B', 'Itu', 'SP'
       );
-      if (select venue_id from public.events where id = event_id) is distinct from venue_b
-        or (select city from public.events where id = event_id) <> 'Itu'
-        or exists (select 1 from public.event_sessions where event_id = location_audit.event_id and venue_id is distinct from venue_b)
+      if (select e.venue_id from public.events e where e.id = location_audit.event_id) is distinct from venue_b
+        or (select e.city from public.events e where e.id = location_audit.event_id) <> 'Itu'
+        or exists (select 1 from public.event_sessions es where es.event_id = location_audit.event_id and es.venue_id is distinct from venue_b)
       then raise exception 'SAFE_EMPTY_EVENT_REASSIGNMENT failed'; end if;
 
       retry_result := public.update_admin_event_location(
@@ -419,8 +419,8 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
       exception when check_violation then null;
       end;
       if (select count(*) from public.venues) <> before_venue_count
-        or (select venue_id from public.events where id = event_id) is distinct from venue_b
-        or exists (select 1 from public.event_sessions where event_id = location_audit.event_id and venue_id is distinct from venue_b)
+        or (select e.venue_id from public.events e where e.id = location_audit.event_id) is distinct from venue_b
+        or exists (select 1 from public.event_sessions es where es.event_id = location_audit.event_id and es.venue_id is distinct from venue_b)
       then raise exception 'LOCATION_FORCED_FAILURE rollback/orphan failed'; end if;
 
       for relation_kind in select unnest(array['ticket_price','session_seat','reservation','ticket','courtesy']) loop
@@ -454,8 +454,8 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
         exception when raise_exception then
           if sqlerrm <> 'admin_event_location_requires_remap' then raise; end if;
         end;
-        if (select venue_id from public.events where id = location_audit.event_id) is distinct from venue_a
-          or (select venue_id from public.event_sessions where id = session_one) is distinct from venue_a
+        if (select e.venue_id from public.events e where e.id = location_audit.event_id) is distinct from venue_a
+          or (select es.venue_id from public.event_sessions es where es.id = session_one) is distinct from venue_a
         then raise exception 'LOCATION_USAGE_BLOCK mutated %', relation_kind; end if;
         if relation_kind = 'ticket_price' and not exists (
           select 1 from public.ticket_prices tp
@@ -484,8 +484,8 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
         'prices', '[]'::jsonb, 'courtesy_limits', '[]'::jsonb
       );
       perform public.update_admin_event_catalog('60000000-0000-4000-8000-000000000020', event_id, payload);
-      if (select venue_id from public.event_sessions where id = session_one) is distinct from venue_a
-        or (select venue_id from public.event_sessions where id = session_two) is distinct from venue_b
+      if (select es.venue_id from public.event_sessions es where es.id = session_one) is distinct from venue_a
+        or (select es.venue_id from public.event_sessions es where es.id = session_two) is distinct from venue_b
       then raise exception 'MULTI_VENUE_SAVE_PRESERVE failed'; end if;
       begin
         perform public.update_admin_event_location(
@@ -503,8 +503,8 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
       perform public.update_admin_event_location(
         '60000000-0000-4000-8000-000000000022', event_id, 'LOCATION A', 'Itu', 'SP'
       );
-      if (select city from public.events where id = location_audit.event_id) <> 'Itu'
-        or exists (select 1 from public.event_sessions where event_id = location_audit.event_id and venue_id is distinct from (select venue_id from public.events where id = location_audit.event_id))
+      if (select e.city from public.events e where e.id = location_audit.event_id) <> 'Itu'
+        or exists (select 1 from public.event_sessions es where es.event_id = location_audit.event_id and es.venue_id is distinct from (select e.venue_id from public.events e where e.id = location_audit.event_id))
       then raise exception 'CITY_ONLY_CHANGE failed'; end if;
 
       insert into public.events(title, artist_name, city, state, venue_id)
@@ -514,7 +514,7 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
       perform public.update_admin_event_location(
         '60000000-0000-4000-8000-000000000023', event_id, 'LOCATION A', 'Sorocaba', 'RJ'
       );
-      if (select state from public.events where id = location_audit.event_id) <> 'RJ'
+      if (select e.state from public.events e where e.id = location_audit.event_id) <> 'RJ'
       then raise exception 'STATE_ONLY_CHANGE failed'; end if;
 
       raise notice 'SAFE_EMPTY_EVENT_REASSIGNMENT PASS';
