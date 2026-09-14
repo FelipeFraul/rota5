@@ -201,9 +201,13 @@ test("CREATE and UPDATE browser callers retain one operation id for retry", () =
   assert.match(create + update, /x-idempotency-key/);
 });
 
-test("DUPLICATE operation lifecycle preserves transport retries and separates new intentions", async () => {
+test("DUPLICATE operation lifecycle preserves network and ambiguous HTTP retries", async () => {
   const ids = ["operation-A", "operation-B"];
-  const { createDuplicateOperationIdStore, runDuplicateOperation } = await loadProductionModule(
+  const {
+    createDuplicateOperationIdStore,
+    runDuplicateOperation,
+    shouldConcludeDuplicateOperation,
+  } = await loadProductionModule(
     "src/app/admin/eventos/duplicateOperationId.ts",
   );
   const store = createDuplicateOperationIdStore(() => ids.shift());
@@ -219,17 +223,79 @@ test("DUPLICATE operation lifecycle preserves transport retries and separates ne
   );
   const retryResult = await runDuplicateOperation(store, "event-1", async (operationId) => {
     attempts.push(operationId);
-    return { ok: true, eventId: "copy-1" };
+    return {
+      value: { status: 500 },
+      conclude: shouldConcludeDuplicateOperation(500, false),
+    };
+  });
+  const unavailableResult = await runDuplicateOperation(store, "event-1", async (operationId) => {
+    attempts.push(operationId);
+    return {
+      value: { status: 503 },
+      conclude: shouldConcludeDuplicateOperation(503, false),
+    };
+  });
+  const successResult = await runDuplicateOperation(store, "event-1", async (operationId) => {
+    attempts.push(operationId);
+    return {
+      value: { status: 200, eventId: "copy-1" },
+      conclude: shouldConcludeDuplicateOperation(200, true),
+    };
   });
   const secondResult = await runDuplicateOperation(store, "event-1", async (operationId) => {
     attempts.push(operationId);
-    return { ok: true, eventId: "copy-2" };
+    return {
+      value: { status: 200, eventId: "copy-2" },
+      conclude: shouldConcludeDuplicateOperation(200, true),
+    };
   });
 
-  assert.deepEqual(attempts, ["operation-A", "operation-A", "operation-B"]);
-  assert.equal(retryResult.eventId, "copy-1", "SUCCESS");
+  assert.deepEqual(attempts, ["operation-A", "operation-A", "operation-A", "operation-A", "operation-B"]);
+  assert.equal(retryResult.status, 500, "HTTP_500");
+  assert.equal(unavailableResult.status, 503, "HTTP_503");
+  assert.equal(successResult.eventId, "copy-1", "CONCLUSIVE_SUCCESS");
   assert.equal(secondResult.eventId, "copy-2", "SECOND_INTENTIONAL_DUPLICATION");
-  assert.notEqual(attempts[1], attempts[2], "operation B must differ from operation A");
+  assert.notEqual(attempts[3], attempts[4], "operation B must differ from operation A");
+});
+
+test("DUPLICATE operation lifecycle concludes proven pre-mutation 4xx", async () => {
+  const ids = ["operation-A", "operation-B"];
+  const {
+    createDuplicateOperationIdStore,
+    runDuplicateOperation,
+    shouldConcludeDuplicateOperation,
+  } = await loadProductionModule(
+    "src/app/admin/eventos/duplicateOperationId.ts",
+  );
+  const store = createDuplicateOperationIdStore(() => ids.shift());
+  const attempts = [];
+
+  assert.deepEqual(
+    [400, 401, 403, 404].map((status) => shouldConcludeDuplicateOperation(status, false)),
+    [true, true, true, true],
+  );
+  assert.deepEqual(
+    [409, 500, 502, 503, 504].map((status) => shouldConcludeDuplicateOperation(status, false)),
+    [false, false, false, false, false],
+  );
+
+  const forbidden = await runDuplicateOperation(store, "event-1", async (operationId) => {
+    attempts.push(operationId);
+    return {
+      value: { status: 403 },
+      conclude: shouldConcludeDuplicateOperation(403, false),
+    };
+  });
+  await runDuplicateOperation(store, "event-1", async (operationId) => {
+    attempts.push(operationId);
+    return {
+      value: { status: 200 },
+      conclude: shouldConcludeDuplicateOperation(200, true),
+    };
+  });
+
+  assert.equal(forbidden.status, 403, "CONCLUSIVE_PRE_MUTATION_4XX");
+  assert.deepEqual(attempts, ["operation-A", "operation-B"]);
 });
 
 test("WhatsApp retains operation ids across CREATE and DUPLICATE retries", () => {

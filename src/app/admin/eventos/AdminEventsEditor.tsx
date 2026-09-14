@@ -8,6 +8,7 @@ import AdminEventsToolbar from "./components/AdminEventsToolbar";
 import {
   createDuplicateOperationIdStore,
   runDuplicateOperation,
+  shouldConcludeDuplicateOperation,
   type DuplicateOperationIdStore,
 } from "./duplicateOperationId";
 
@@ -516,7 +517,10 @@ export function AdminEventsEditor() {
             },
           });
           const data = await response.json() as { ok?: boolean; eventId?: string; event?: EventDetails; message?: string };
-          return { response, data };
+          return {
+            value: { response, data },
+            conclude: shouldConcludeDuplicateOperation(response.status, data.ok === true),
+          };
         },
       );
 
