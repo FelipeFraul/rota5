@@ -2010,6 +2010,29 @@ export async function updateAdminEventCatalog(input: {
   return { ok: true as const, eventId: input.eventId };
 }
 
+export async function updateAdminEventVenue(input: {
+  operationId: string;
+  eventId: string;
+  venueName: string;
+  city: string;
+  state: string;
+}) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.rpc("update_admin_event_venue", {
+    p_operation_id: input.operationId,
+    p_event_id: input.eventId,
+    p_venue_name: input.venueName.trim(),
+    p_city: input.city.trim(),
+    p_state: input.state.trim().toUpperCase(),
+  });
+
+  if (error || !data) {
+    return { ok: false as const, error: error ?? new Error("event_venue_not_updated") };
+  }
+
+  return data as { ok: true; eventId: string; venueId: string };
+}
+
 export async function createAdminSession(input: {
   eventId: string;
   venueId: string | null;

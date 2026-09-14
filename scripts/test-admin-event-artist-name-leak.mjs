@@ -89,7 +89,7 @@ function resetCreateEventDraftFromField(draft, field) {
 }
 
 test("novo evento inicia com draft limpo somente no campo title", () => {
-  assert.match(router, /draft:\s*\{\s*field:\s*"title"\s*\}/);
+  assert.match(router, /draft:\s*ensureAdminEventOperationId\(\{\s*field:\s*"title"\s*\}\)/);
 });
 
 test("voltar para titulo remove artistName e campos textuais posteriores", () => {

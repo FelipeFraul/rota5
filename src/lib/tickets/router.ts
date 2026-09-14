@@ -1,6 +1,5 @@
 import "server-only";
 
-import { randomUUID } from "node:crypto";
 import { getEnv } from "@/lib/env";
 import { logError, logWarn } from "@/lib/logger";
 import {
@@ -129,7 +128,6 @@ import {
 import {
   createAdminEvent,
   duplicateAdminEvent,
-  findOrCreateVenue,
   getAdminEventDetails,
   isEventStatus,
   isTicketType,
@@ -138,10 +136,16 @@ import {
   normalizeSlug,
   parseBrazilianDateTime,
   updateAdminEvent,
+  updateAdminEventVenue,
   type AdminEventDetails,
   type AdminEventStatus,
   type AdminTicketType,
 } from "@/lib/tickets/services/adminEvents";
+import {
+  ensureAdminEventOperationId,
+  renewAdminEventOperationId,
+  runAdminEventOperationIntent,
+} from "@/lib/tickets/adminEventOperationIntent";
 import {
   createAdminPrice,
   listAdminPrices,
@@ -7899,7 +7903,7 @@ async function handleAdminEventsFlow({
       return {
         reply: renderCreateEventPrompt("title"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_create_collecting", {
-          draft: { field: "title" },
+          draft: ensureAdminEventOperationId({ field: "title" }),
         }),
       };
     }
@@ -8064,7 +8068,7 @@ async function handleAdminEventsFlow({
         reply: renderAdminEventDuplicateConfirmReply(details.event),
         nextContext: withAdminEventsContext(baseContext, "admin_event_duplicate_confirm", {
           selectedEventId: eventId,
-          draft: { operationId: randomUUID() },
+          draft: ensureAdminEventOperationId({}),
         }),
       };
     }
@@ -8124,21 +8128,27 @@ async function handleAdminEventsFlow({
     );
     if (!freshAuth.ok) return freshAuth.response;
 
-    const duplicateResult = await duplicateAdminEvent({
-      eventId,
-      createdByAdminUserId: freshAuth.scope.adminUserId,
-      createdByAdminPhone: freshAuth.scope.adminPhone,
-      operationId: typeof adminEvents.draft?.operationId === "string"
-        ? adminEvents.draft.operationId
-        : randomUUID(),
-    });
+    const duplicateDraft = ensureAdminEventOperationId(adminEvents.draft ?? {});
+    const duplicateAttempt = await runAdminEventOperationIntent(
+      duplicateDraft,
+      (operationId) => duplicateAdminEvent({
+        eventId,
+        createdByAdminUserId: freshAuth.scope.adminUserId,
+        createdByAdminPhone: freshAuth.scope.adminPhone,
+        operationId,
+      }),
+    );
 
-    if (!duplicateResult.ok) {
+    if (duplicateAttempt.status !== "success") {
       return {
-        reply: "Não consegui duplicar esse evento agora.",
-        nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
+        reply: "Não consegui duplicar esse evento agora. Envie CONFIRMAR para tentar novamente ou CANCELAR para abandonar.",
+        nextContext: withAdminEventsContext(baseContext, "admin_event_duplicate_confirm", {
+          ...adminEvents,
+          draft: duplicateDraft,
+        }),
       };
     }
+    const duplicateResult = duplicateAttempt.result;
 
     const duplicatedDetails = await getScopedAdminEventDetails(
       duplicateResult.eventId,
@@ -8219,8 +8229,7 @@ async function handleAdminEventsFlow({
   }
 
   if (baseContext.state === "admin_event_create_collecting") {
-    const draft = { ...(adminEvents.draft ?? {}) };
-    if (typeof draft.operationId !== "string") draft.operationId = randomUUID();
+    const draft = ensureAdminEventOperationId({ ...(adminEvents.draft ?? {}) });
     const field = String(draft.field ?? "title");
 
     if (isAbortText(text)) {
@@ -9115,9 +9124,15 @@ async function handleAdminEventsFlow({
 
   if (baseContext.state === "admin_event_create_status") {
     if (isBackText(text)) {
+      const draft = adminEvents.draft?.pendingStatus
+        ? renewAdminEventOperationId(adminEvents.draft)
+        : adminEvents.draft ?? {};
       return {
-        reply: renderCreateEventSummary(adminEvents.draft ?? {}),
-        nextContext: withAdminEventsContext(baseContext, "admin_event_create_confirm", adminEvents),
+        reply: renderCreateEventSummary(draft),
+        nextContext: withAdminEventsContext(baseContext, "admin_event_create_confirm", {
+          ...adminEvents,
+          draft,
+        }),
       };
     }
 
@@ -9128,14 +9143,20 @@ async function handleAdminEventsFlow({
       };
     }
 
-    const draft = adminEvents.draft ?? {};
-    const status = text.trim() === "2" ? "published" : text.trim() === "1" ? "draft" : null;
+    let draft = adminEvents.draft ?? {};
+    const pendingStatus = draft.pendingStatus;
+    const status = isConfirmText(text) && (pendingStatus === "draft" || pendingStatus === "published")
+      ? pendingStatus
+      : text.trim() === "2" ? "published" : text.trim() === "1" ? "draft" : null;
 
     if (!status) {
       return {
         reply: renderCreateEventPrompt("status"),
         nextContext: withAdminEventsContext(baseContext, "admin_event_create_status", adminEvents),
       };
+    }
+    if (pendingStatus && status !== pendingStatus) {
+      draft = renewAdminEventOperationId(draft);
     }
 
     const title = String(draft.title ?? "").trim();
@@ -9189,29 +9210,37 @@ async function handleAdminEventsFlow({
     );
     if (!freshAuth.ok) return freshAuth.response;
 
-    const result = await createAdminEvent({
-      title,
-      artistName,
-      artistIcon,
-      city,
-      state,
-      venueName,
-      imageUrl,
-      description,
-      sessionsStartsAt,
-      status,
-      initialSections,
-      createdByAdminUserId: freshAuth.scope.adminUserId,
-      createdByAdminPhone: freshAuth.scope.adminPhone,
-      operationId: typeof draft.operationId === "string" ? draft.operationId : undefined,
-    });
+    const createDraft = ensureAdminEventOperationId({ ...draft, pendingStatus: status });
+    const createAttempt = await runAdminEventOperationIntent(
+      createDraft,
+      (operationId) => createAdminEvent({
+        title,
+        artistName,
+        artistIcon,
+        city,
+        state,
+        venueName,
+        imageUrl,
+        description,
+        sessionsStartsAt,
+        status,
+        initialSections,
+        createdByAdminUserId: freshAuth.scope.adminUserId,
+        createdByAdminPhone: freshAuth.scope.adminPhone,
+        operationId,
+      }),
+    );
 
-    if (!result.ok) {
+    if (createAttempt.status !== "success") {
       return {
-        reply: "Não consegui criar o evento agora. Verifique os dados e tente novamente.",
-        nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
+        reply: "Não consegui criar o evento agora. Envie CONFIRMAR para tentar novamente ou CANCELAR para abandonar.",
+        nextContext: withAdminEventsContext(baseContext, "admin_event_create_status", {
+          ...adminEvents,
+          draft: createDraft,
+        }),
       };
     }
+    const result = createAttempt.result;
 
     return {
       reply: [
@@ -9380,7 +9409,7 @@ async function handleAdminEventsFlow({
           nextContext: withAdminEventsContext(baseContext, "admin_event_edit_collecting", adminEvents),
         };
       }
-      value = { field, venueName: text.trim() };
+      value = ensureAdminEventOperationId({ field, venueName: text.trim() });
     } else if (field === "status") {
       const status = normalizeAdminText(text);
       if (!isEventStatus(status)) {
@@ -9542,22 +9571,37 @@ async function handleAdminEventsFlow({
         );
         if (!freshAuth.ok) return freshAuth.response;
 
-        const venue = await findOrCreateVenue({
-          name: venueName,
-          city: details.event.city,
-          state: details.event.state,
-        });
+        const venueAttempt = await runAdminEventOperationIntent(
+          draft,
+          (operationId) => updateAdminEventVenue({
+            operationId,
+            eventId,
+            venueName,
+            city: details.event.city,
+            state: details.event.state,
+          }),
+        );
 
-        if (!venue.ok) {
+        if (venueAttempt.status !== "success") {
           return {
-            reply: "Não consegui preparar esse local agora.",
-            nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
-              selectedEventId: eventId,
+            reply: "Não consegui alterar esse local agora. Envie CONFIRMAR para tentar novamente ou CANCELAR para abandonar.",
+            nextContext: withAdminEventsContext(baseContext, "admin_event_edit_confirm", {
+              ...adminEvents,
+              draft,
             }),
           };
         }
-
-        values = { venue_id: venue.venueId };
+        const updatedDetails = await getScopedAdminEventDetails(eventId, scope);
+        return {
+          reply: renderAdminEventPublishSelectReply(
+            updatedDetails.ok ? updatedDetails.event.title : undefined,
+          ),
+          nextContext: withAdminEventsContext(
+            baseContext,
+            "admin_event_edit_publish_select",
+            { selectedEventId: eventId },
+          ),
+        };
       }
     } else if (field === "status") {
       const status = String(draft.status ?? "");
@@ -13302,6 +13346,7 @@ export async function routeTicketMessage({
           reply: renderAdminEventDuplicateConfirmReply(details.event),
           nextContext: withAdminEventsContext(baseContext, "admin_event_duplicate_confirm", {
             selectedEventId: selectedEvent.eventId,
+            draft: ensureAdminEventOperationId({}),
           }),
         };
       }

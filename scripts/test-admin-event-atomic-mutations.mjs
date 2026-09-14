@@ -44,6 +44,22 @@ function atomicRpcHarness(initialTables = {}) {
       completed.set(args.p_operation_id, { serialized, result });
       return { data: result, error: null };
     },
+    update_admin_event_venue: (args) => {
+      const serialized = JSON.stringify({
+        eventId: args.p_event_id,
+        venueName: args.p_venue_name,
+        city: args.p_city,
+        state: args.p_state,
+      });
+      const prior = completed.get(args.p_operation_id);
+      if (prior && prior.serialized !== serialized) {
+        return { data: null, error: new Error("admin_event_operation_payload_mismatch") };
+      }
+      if (prior) return { data: prior.result, error: null };
+      const result = { ok: true, eventId: args.p_event_id, venueId: `venue-${++sequence}` };
+      completed.set(args.p_operation_id, { serialized, result });
+      return { data: result, error: null };
+    },
   });
   return db;
 }
@@ -168,6 +184,30 @@ test("UPDATE uses one atomic and idempotent aggregate RPC", async () => {
   assert.deepEqual(db.calls.map((call) => call.operation), ["update_admin_event_catalog", "update_admin_event_catalog"]);
 });
 
+test("WhatsApp venue edit uses one atomic and idempotent RPC", async () => {
+  const db = atomicRpcHarness();
+  const service = await loadService(db);
+  const input = {
+    operationId: "50000000-0000-4000-8000-000000000001",
+    eventId: "event-a",
+    venueName: "Novo Local",
+    city: "Sorocaba",
+    state: "sp",
+  };
+  const first = await service.updateAdminEventVenue(input);
+  const retry = await service.updateAdminEventVenue(input);
+  const mismatch = await service.updateAdminEventVenue({ ...input, venueName: "Outro Local" });
+
+  assert.equal(first.ok, true);
+  assert.deepEqual(retry, first);
+  assert.equal(mismatch.ok, false);
+  assert.deepEqual(db.calls.map((call) => call.operation), [
+    "update_admin_event_venue",
+    "update_admin_event_venue",
+    "update_admin_event_venue",
+  ]);
+});
+
 test("a duplicated event remains independently editable", async () => {
   const db = atomicRpcHarness({
     events: [{ id: "source", title: "Original", artist_name: "X", artist_icon: "X", description: null, city: "S", state: "SP", image_url: null, venue_id: "v", status: "published", venues: { name: "Casa" } }],
@@ -193,12 +233,40 @@ test("admin web PATCH no longer invokes the independent mutation chain", () => {
   assert.match(patchBody, /x-idempotency-key/);
 });
 
-test("CREATE and UPDATE browser callers retain one operation id for retry", () => {
-  const create = readFileSync("src/app/admin/eventos/event-editor/CreateEventModal.tsx", "utf8");
+test("CREATE web recovers after network/body failures and reuses the attempt id", async () => {
+  const ids = ["operation-A", "operation-B", "operation-C"];
+  const { createEventSubmissionController } = await loadProductionModule(
+    "src/app/admin/eventos/event-editor/createEventSubmission.ts",
+  );
+  const attempt = createEventSubmissionController(() => ids.shift());
+  const usedIds = [];
+  let settled = 0;
+
+  await assert.rejects(attempt.run(async (operationId) => {
+    usedIds.push(operationId);
+    throw new TypeError("network unavailable");
+  }, () => { settled += 1; }), /network unavailable/);
+  await assert.rejects(attempt.run(async (operationId) => {
+    usedIds.push(operationId);
+    throw new SyntaxError("response body interrupted");
+  }, () => { settled += 1; }), /response body interrupted/);
+  const success = await attempt.run(async (operationId) => {
+    usedIds.push(operationId);
+    return { ok: true, eventId: "event-1" };
+  }, () => { settled += 1; });
+  const nextIntent = createEventSubmissionController(() => ids.shift());
+
+  assert.deepEqual(usedIds, ["operation-A", "operation-A", "operation-A"]);
+  assert.equal(settled, 3, "saving must settle after every request outcome");
+  assert.equal(success.eventId, "event-1");
+  assert.equal(nextIntent.operationId, "operation-B");
+  assert.notEqual(nextIntent.operationId, attempt.operationId);
+});
+
+test("UPDATE browser caller retains one operation id for retry", () => {
   const update = readFileSync("src/app/admin/eventos/event-editor/EventEditorModal.tsx", "utf8");
-  assert.match(create, /useRef\(crypto\.randomUUID\(\)\)/);
   assert.match(update, /operationId\.current = crypto\.randomUUID\(\)/);
-  assert.match(create + update, /x-idempotency-key/);
+  assert.match(update, /x-idempotency-key/);
 });
 
 test("DUPLICATE operation lifecycle preserves network and ambiguous HTTP retries", async () => {
@@ -298,9 +366,49 @@ test("DUPLICATE operation lifecycle concludes proven pre-mutation 4xx", async ()
   assert.deepEqual(attempts, ["operation-A", "operation-B"]);
 });
 
-test("WhatsApp retains operation ids across CREATE and DUPLICATE retries", () => {
+test("WhatsApp CREATE and DUPLICATE retry the same intention id and new intentions mint another", async () => {
+  const ids = ["operation-A", "operation-B", "operation-C"];
+  const {
+    ensureAdminEventOperationId,
+    renewAdminEventOperationId,
+    runAdminEventOperationIntent,
+  } = await loadProductionModule(
+    "src/lib/tickets/adminEventOperationIntent.ts",
+    { randomUUID: () => ids.shift() },
+  );
+  const draft = ensureAdminEventOperationId({ title: "Event" });
+  const usedIds = [];
+
+  const failed = await runAdminEventOperationIntent(draft, async (operationId) => {
+    usedIds.push(operationId);
+    return { ok: false };
+  });
+  const networkFailed = await runAdminEventOperationIntent(failed.draft, async (operationId) => {
+    usedIds.push(operationId);
+    throw new TypeError("network unavailable");
+  });
+  const succeeded = await runAdminEventOperationIntent(networkFailed.draft, async (operationId) => {
+    usedIds.push(operationId);
+    return { ok: true, eventId: "event-1" };
+  });
+  const nextDraft = ensureAdminEventOperationId({ title: "Event" });
+  const editedDraft = renewAdminEventOperationId({ ...draft, pendingStatus: "draft", title: "Edited" });
+
+  assert.equal(failed.status, "retry");
+  assert.equal(networkFailed.status, "retry");
+  assert.equal(succeeded.status, "success");
+  assert.deepEqual(usedIds, ["operation-A", "operation-A", "operation-A"]);
+  assert.equal(nextDraft.operationId, "operation-B");
+  assert.equal(editedDraft.operationId, "operation-C");
+  assert.equal(editedDraft.pendingStatus, undefined);
+});
+
+test("WhatsApp wires every CREATE/DUPLICATE entrypoint before mutation and venue uses one RPC", () => {
   const router = readFileSync("src/lib/tickets/router.ts", "utf8");
-  assert.match(router, /if \(typeof draft\.operationId !== "string"\) draft\.operationId = randomUUID\(\)/);
-  assert.match(router, /draft: \{ operationId: randomUUID\(\) \}/);
-  assert.match(router, /operationId: typeof adminEvents\.draft\?\.operationId === "string"/);
+  assert.doesNotMatch(router, /operationId:\s*typeof adminEvents\.draft\?\.operationId[\s\S]{0,120}randomUUID\(\)/);
+  assert.doesNotMatch(router, /findOrCreateVenue\(/);
+  assert.match(router, /draft: ensureAdminEventOperationId\(\{\}\)/g);
+  assert.match(router, /runAdminEventOperationIntent\([\s\S]*duplicateAdminEvent\(/);
+  assert.match(router, /runAdminEventOperationIntent\([\s\S]*createAdminEvent\(/);
+  assert.match(router, /updateAdminEventVenue\(\{/);
 });

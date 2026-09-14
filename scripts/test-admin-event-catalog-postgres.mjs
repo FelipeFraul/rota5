@@ -21,6 +21,7 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
 
   const capacityRpc = readFileSync("supabase/migrations/20260803000100_create_update_admin_section_capacity_rpc.sql", "utf8");
   const mutationRpcs = readFileSync("supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql", "utf8");
+  const venueRpc = readFileSync("supabase/migrations/20260914000200_create_update_admin_event_venue_rpc.sql", "utf8");
 
   const output = psql(`
     begin;
@@ -85,9 +86,21 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
 
     ${capacityRpc}
     ${mutationRpcs}
+    ${venueRpc}
 
     alter table public.ticket_prices add constraint audit_create_failure check (label <> 'FAIL_CREATE');
     alter table public.courtesy_section_limits add constraint audit_update_failure check (label <> 'FAIL_UPDATE');
+    create function public.audit_reject_forced_venue_update() returns trigger language plpgsql as $fn$
+    begin
+      if exists (select 1 from public.venues where id = new.venue_id and name = 'FAIL VENUE') then
+        raise check_violation using message = 'forced venue update failure';
+      end if;
+      return new;
+    end
+    $fn$;
+    create trigger audit_reject_forced_venue_update
+      before update of venue_id on public.events
+      for each row execute function public.audit_reject_forced_venue_update();
 
     do $audit$
     declare
@@ -110,6 +123,10 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
       update_session_id uuid;
       update_section_id uuid;
       update_price_id uuid;
+      venue_existing_id uuid;
+      venue_before_failure_id uuid;
+      venue_result jsonb;
+      venue_retry jsonb;
       before_source jsonb;
     begin
       create_payload := jsonb_build_object(
@@ -265,6 +282,60 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
         or exists (select 1 from public.admin_event_operations where operation_id = '30000000-0000-4000-8000-000000000002')
       then raise exception 'UPDATE_PUBLISHED_EVENT_FAILURE rollback failed'; end if;
 
+      insert into public.venues (name, city, state)
+      values ('EXISTING VENUE', 'Sorocaba', 'SP') returning id into venue_existing_id;
+      venue_result := public.update_admin_event_venue(
+        '50000000-0000-4000-8000-000000000001', update_event_id,
+        'EXISTING VENUE', 'Sorocaba', 'SP'
+      );
+      venue_retry := public.update_admin_event_venue(
+        '50000000-0000-4000-8000-000000000001', update_event_id,
+        'EXISTING VENUE', 'Sorocaba', 'SP'
+      );
+      if (select venue_id from public.events where id = update_event_id) is distinct from venue_existing_id
+        or venue_retry is distinct from venue_result
+      then raise exception 'VENUE_UPDATE_EXISTING_OR_RETRY failed'; end if;
+
+      begin
+        perform public.update_admin_event_venue(
+          '50000000-0000-4000-8000-000000000001', update_event_id,
+          'DIFFERENT VENUE', 'Sorocaba', 'SP'
+        );
+        raise exception 'VENUE_UPDATE payload mismatch did not fail';
+      exception
+        when raise_exception then
+          if sqlerrm <> 'admin_event_operation_payload_mismatch' then raise; end if;
+      end;
+
+      venue_result := public.update_admin_event_venue(
+        '50000000-0000-4000-8000-000000000002', update_event_id,
+        'CREATED VENUE', 'Sorocaba', 'SP'
+      );
+      if (select count(*) from public.venues where name = 'CREATED VENUE') <> 1
+        or (select venue_id from public.events where id = update_event_id) is distinct from (venue_result->>'venueId')::uuid
+      then raise exception 'VENUE_UPDATE_CREATE failed'; end if;
+
+      venue_result := public.update_admin_event_venue(
+        '50000000-0000-4000-8000-000000000003', update_event_id,
+        'SECOND INTENT VENUE', 'Sorocaba', 'SP'
+      );
+      if (select venue_id from public.events where id = update_event_id) is distinct from (venue_result->>'venueId')::uuid
+      then raise exception 'VENUE_UPDATE_NEW_INTENT failed'; end if;
+
+      select venue_id into venue_before_failure_id from public.events where id = update_event_id;
+      begin
+        perform public.update_admin_event_venue(
+          '50000000-0000-4000-8000-000000000004', update_event_id,
+          'FAIL VENUE', 'Sorocaba', 'SP'
+        );
+        raise exception 'VENUE_UPDATE_FORCED_FAILURE did not fail';
+      exception when check_violation then null;
+      end;
+      if (select venue_id from public.events where id = update_event_id) is distinct from venue_before_failure_id
+        or exists (select 1 from public.venues where name = 'FAIL VENUE')
+        or exists (select 1 from public.admin_event_operations where operation_id = '50000000-0000-4000-8000-000000000004')
+      then raise exception 'VENUE_UPDATE_FORCED_FAILURE rollback failed'; end if;
+
       raise notice 'CREATE_SUCCESS PASS';
       raise notice 'CREATE_FAILURE_ROLLBACK PASS';
       raise notice 'CREATE_RETRY_IDEMPOTENT PASS';
@@ -281,6 +352,12 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
       raise notice 'UPDATE_FAILURE_ROLLBACK PASS';
       raise notice 'UPDATE_RETRY_IDEMPOTENT PASS';
       raise notice 'UPDATE_PUBLISHED_EVENT_FAILURE PASS';
+      raise notice 'VENUE_UPDATE_EXISTING PASS';
+      raise notice 'VENUE_UPDATE_CREATE PASS';
+      raise notice 'VENUE_UPDATE_FORCED_FAILURE PASS';
+      raise notice 'VENUE_UPDATE_RETRY PASS';
+      raise notice 'VENUE_UPDATE_PAYLOAD_MISMATCH PASS';
+      raise notice 'VENUE_UPDATE_NEW_INTENT PASS';
     end
     $audit$;
 
@@ -291,7 +368,8 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
           from pg_proc p, lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
           where p.oid in (
             'public.create_admin_event_catalog(uuid,text,jsonb)'::regprocedure,
-            'public.update_admin_event_catalog(uuid,uuid,jsonb)'::regprocedure
+            'public.update_admin_event_catalog(uuid,uuid,jsonb)'::regprocedure,
+            'public.update_admin_event_venue(uuid,uuid,text,text,text)'::regprocedure
           ) and acl.grantee = 0 and acl.privilege_type = 'EXECUTE'
         )
         or has_function_privilege('anon', 'public.create_admin_event_catalog(uuid,text,jsonb)', 'EXECUTE')
@@ -301,9 +379,14 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
         or has_function_privilege('anon', 'public.update_admin_event_catalog(uuid,uuid,jsonb)', 'EXECUTE')
         or has_function_privilege('authenticated', 'public.update_admin_event_catalog(uuid,uuid,jsonb)', 'EXECUTE')
         or not has_function_privilege('service_role', 'public.update_admin_event_catalog(uuid,uuid,jsonb)', 'EXECUTE')
+        or has_function_privilege('public', 'public.update_admin_event_venue(uuid,uuid,text,text,text)', 'EXECUTE')
+        or has_function_privilege('anon', 'public.update_admin_event_venue(uuid,uuid,text,text,text)', 'EXECUTE')
+        or has_function_privilege('authenticated', 'public.update_admin_event_venue(uuid,uuid,text,text,text)', 'EXECUTE')
+        or not has_function_privilege('service_role', 'public.update_admin_event_venue(uuid,uuid,text,text,text)', 'EXECUTE')
       then raise exception 'RPC privilege contract failed'; end if;
       if (select array_to_string(proconfig, ',') from pg_proc where oid = 'public.create_admin_event_catalog(uuid,text,jsonb)'::regprocedure) is distinct from 'search_path=pg_catalog, public'
         or (select array_to_string(proconfig, ',') from pg_proc where oid = 'public.update_admin_event_catalog(uuid,uuid,jsonb)'::regprocedure) is distinct from 'search_path=pg_catalog, public'
+        or (select array_to_string(proconfig, ',') from pg_proc where oid = 'public.update_admin_event_venue(uuid,uuid,text,text,text)'::regprocedure) is distinct from 'search_path=pg_catalog, public'
       then raise exception 'RPC search_path contract failed'; end if;
       if has_table_privilege('anon', 'public.admin_event_operations', 'SELECT,INSERT,UPDATE,DELETE')
         or has_table_privilege('authenticated', 'public.admin_event_operations', 'SELECT,INSERT,UPDATE,DELETE')
