@@ -23,6 +23,7 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
   const mutationRpcs = readFileSync("supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql", "utf8");
   const venueRpc = readFileSync("supabase/migrations/20260914000200_create_update_admin_event_venue_rpc.sql", "utf8");
   const locationConsistency = readFileSync("supabase/migrations/20260914000300_enforce_admin_event_location_consistency.sql", "utf8");
+  const retireLegacyVenueRpc = readFileSync("supabase/migrations/20260914000400_retire_legacy_admin_event_venue_rpc.sql", "utf8");
 
   const output = psql(`
     begin;
@@ -532,6 +533,8 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
     end
     $location_audit$;
 
+    ${retireLegacyVenueRpc}
+
     do $privileges$
     begin
       if exists (
@@ -540,8 +543,7 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
           where p.oid in (
             'public.create_admin_event_catalog(uuid,text,jsonb)'::regprocedure,
             'public.update_admin_event_catalog(uuid,uuid,jsonb)'::regprocedure,
-            'public.update_admin_event_venue(uuid,uuid,text,text,text)'::regprocedure
-            , 'public.update_admin_event_location(uuid,uuid,text,text,text)'::regprocedure
+            'public.update_admin_event_location(uuid,uuid,text,text,text)'::regprocedure
           ) and acl.grantee = 0 and acl.privilege_type = 'EXECUTE'
         )
         or has_function_privilege('anon', 'public.create_admin_event_catalog(uuid,text,jsonb)', 'EXECUTE')
@@ -551,10 +553,6 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
         or has_function_privilege('anon', 'public.update_admin_event_catalog(uuid,uuid,jsonb)', 'EXECUTE')
         or has_function_privilege('authenticated', 'public.update_admin_event_catalog(uuid,uuid,jsonb)', 'EXECUTE')
         or not has_function_privilege('service_role', 'public.update_admin_event_catalog(uuid,uuid,jsonb)', 'EXECUTE')
-        or has_function_privilege('public', 'public.update_admin_event_venue(uuid,uuid,text,text,text)', 'EXECUTE')
-        or has_function_privilege('anon', 'public.update_admin_event_venue(uuid,uuid,text,text,text)', 'EXECUTE')
-        or has_function_privilege('authenticated', 'public.update_admin_event_venue(uuid,uuid,text,text,text)', 'EXECUTE')
-        or not has_function_privilege('service_role', 'public.update_admin_event_venue(uuid,uuid,text,text,text)', 'EXECUTE')
         or has_function_privilege('public', 'public.update_admin_event_location(uuid,uuid,text,text,text)', 'EXECUTE')
         or has_function_privilege('anon', 'public.update_admin_event_location(uuid,uuid,text,text,text)', 'EXECUTE')
         or has_function_privilege('authenticated', 'public.update_admin_event_location(uuid,uuid,text,text,text)', 'EXECUTE')
@@ -564,7 +562,6 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
       then raise exception 'RPC privilege contract failed'; end if;
       if (select array_to_string(proconfig, ',') from pg_proc where oid = 'public.create_admin_event_catalog(uuid,text,jsonb)'::regprocedure) is distinct from 'search_path=pg_catalog, public'
         or (select array_to_string(proconfig, ',') from pg_proc where oid = 'public.update_admin_event_catalog(uuid,uuid,jsonb)'::regprocedure) is distinct from 'search_path=pg_catalog, public'
-        or (select array_to_string(proconfig, ',') from pg_proc where oid = 'public.update_admin_event_venue(uuid,uuid,text,text,text)'::regprocedure) is distinct from 'search_path=pg_catalog, public'
         or (select array_to_string(proconfig, ',') from pg_proc where oid = 'public.update_admin_event_location(uuid,uuid,text,text,text)'::regprocedure) is distinct from 'search_path=pg_catalog, public'
       then raise exception 'RPC search_path contract failed'; end if;
       if not (select prosecdef from pg_proc where oid = 'public.update_admin_event_catalog(uuid,uuid,jsonb)'::regprocedure)
@@ -576,6 +573,10 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
             and pg_get_constraintdef(oid) like '%location_update%'
         )
       then raise exception 'RPC security or operation compatibility contract failed'; end if;
+      if to_regprocedure('public.update_admin_event_venue(uuid,uuid,text,text,text)') is not null
+      then raise exception 'OLD_VENUE_RPC_RUNTIME_EXECUTABLE'; end if;
+      raise notice 'OLD_VENUE_RPC_RUNTIME_EXECUTABLE NAO';
+      raise notice 'NEW_LOCATION_RPC_EXISTS SIM';
       if has_table_privilege('anon', 'public.admin_event_operations', 'SELECT,INSERT,UPDATE,DELETE')
         or has_table_privilege('authenticated', 'public.admin_event_operations', 'SELECT,INSERT,UPDATE,DELETE')
         or not has_table_privilege('service_role', 'public.admin_event_operations', 'SELECT,INSERT,UPDATE')
