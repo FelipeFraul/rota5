@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T17:13:55.692Z",
-  "stage": "2.4.2",
+  "generatedAt": "2026-09-14T17:29:04.216Z",
+  "stage": "2.4.3",
   "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
-  "scope": "Current health projection by system, domain and infrastructure for Baseline 2.4.2, with resolved history separated from operational risk.",
+  "scope": "Current health projection by system, domain and infrastructure for Baseline 2.4.3, with resolved history separated from operational risk.",
   "method": "Health is derived from canonical finding scopes and taxonomy. BROKEN requires a current release blocker; DEGRADED requires current operational or validation-queue risk; resolved findings are historical only.",
   "vocabulary": [
     "HEALTHY",
@@ -82,7 +82,13 @@
       "gap.remote-database-behavior-tests",
       "orphan.seat-map-renders-table"
     ],
-    "release_blockers": []
+    "release_blockers": [],
+    "current_findings_count": 28,
+    "current_aggregation_invariants": {
+      "FINDINGS_TOTAL_MATCH": "SIM",
+      "BY_SEVERITY_SUM_MATCH": "SIM",
+      "UNKNOWN_OR_UNCOUNTED_FINDINGS": 0
+    }
   },
   "domains": [
     {
@@ -1980,10 +1986,12 @@
     "ticketeira": "UNTOUCHED"
   },
   "semantic_consistency": {
-    "baseline": "2.4.2",
+    "baseline": "2.4.3",
+    "status": "PASS",
     "current_semantic_contradictions": 0,
     "current_stale_projections": 0,
     "resolved_findings_with_active_top_level_claims": 0,
-    "current_release_blockers": 0
+    "current_release_blockers": 0,
+    "aggregation_invariants_required": true
   }
 }

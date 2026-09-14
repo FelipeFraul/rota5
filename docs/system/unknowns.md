@@ -6,7 +6,7 @@ Esta lista contém **18 registros**. Ela evita transformar ausência de evidênc
 | --- | --- | --- | --- | --- |
 | U-001 | NÃO VALIDADO | Commit efetivamente publicado | `HEAD` e `origin/production` estavam em `a141c60`; o repositório contém configuração Vercel | último deploy, commit servido e alias/domínio atuais |
 | U-002 | NÃO VALIDADO | Projeto Supabase remoto desta baseline | existem `.env*` ignorados e migrations locais | project-ref vinculado, conta, região e ambiente correto |
-| U-003 | NÃO VALIDADO | Estado das 77 migrations no remoto | arquivos SQL locais e documentos históricos | migrations aplicadas, divergências local-only/remote-only e schema drift |
+| U-003 | NÃO VALIDADO | Estado das 79 migrations no remoto | arquivos SQL locais e documentos históricos | migrations aplicadas, divergências local-only/remote-only e schema drift |
 | U-004 | NÃO VALIDADO | RLS, grants e funções efetivos | migrations habilitam RLS/revogam papéis públicos; nenhuma `CREATE POLICY` local | catálogo remoto, owners, grants, políticas adicionadas fora do Git |
 | U-005 | NÃO VALIDADO | Consistência das variáveis por ambiente | schema e `.env.example` divergem em alguns nomes | presença/valor em Development, Preview e Production; nenhuma credencial foi registrada |
 | U-006 | NÃO VALIDADO | Configuração dos webhooks Z-API e Mercado Pago | duas rotas POST e validação de segredo/assinatura estão no código | URLs cadastradas, segredo correspondente, retries e entrega reais |

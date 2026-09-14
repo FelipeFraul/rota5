@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T17:13:55.692Z",
-  "stage": "2.4.2",
+  "generatedAt": "2026-09-14T17:29:04.216Z",
+  "stage": "2.4.3",
   "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
-  "scope": "Current canonical finding lifecycle and evidence projection for Baseline 2.4.2; historical claims remain nested under explicitly historical fields.",
+  "scope": "Current canonical finding lifecycle and evidence projection for Baseline 2.4.3; historical claims remain nested under explicitly historical fields.",
   "method": "Reconciled machine-readable current state against taxonomy, source, current behavioral catalogs and Baseline 2.4.1 resolution evidence; no lifecycle changed.",
   "count": 44,
   "records": [

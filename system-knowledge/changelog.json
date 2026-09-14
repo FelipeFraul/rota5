@@ -1,9 +1,34 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T17:13:55.692Z",
-  "stage": "2.4.2",
-  "count": 16,
+  "generatedAt": "2026-09-14T17:29:04.216Z",
+  "stage": "2.4.3",
+  "count": 17,
   "records": [
+    {
+      "version": "2.4.3",
+      "date": "2026-09-14T17:29:04.216Z",
+      "reason": "PATCH_DOCUMENTARY_CORRECTION",
+      "summary": "Completed finding aggregations with the derived P0-P4 vocabulary and made aggregation invariants mandatory for semantic PASS.",
+      "finding_count": 44,
+      "by_priority": {
+        "P0": 3,
+        "P1": 10,
+        "P2": 20,
+        "P3": 9,
+        "P4": 2
+      },
+      "aggregation_invariants": {
+        "FINDINGS_TOTAL_MATCH": "SIM",
+        "BY_TYPE_SUM_MATCH": "SIM",
+        "BY_SEVERITY_SUM_MATCH": "SIM",
+        "BY_PRIORITY_SUM_MATCH": "SIM",
+        "BY_STATUS_SUM_MATCH": "SIM",
+        "UNKNOWN_OR_UNCOUNTED_FINDINGS": 0,
+        "RELEASE_BLOCKER_COUNT": 0
+      },
+      "runtime_change": false,
+      "deployment": false
+    },
     {
       "version": "2.4.2",
       "date": "2026-09-14T17:13:55.692Z",

@@ -12,7 +12,7 @@ Baseline: 11/09/2026, commit-base `a141c6004421fb8442f95493de3ca4ec4d4c997b`.
 | `public/` | 15 | CONFIRMADO | imagens, fontes, `robots.txt` e PSD |
 | `scripts/` | 66 | CONFIRMADO | 51 testes catalogados; auditorias e scripts operacionais podem compartilhar classificação |
 | `src/` | 157 | CONFIRMADO | 113 módulos `.ts` e 45 `.tsx` no repositório total |
-| `supabase/` | 77 | CONFIRMADO | 77 migrations SQL |
+| `supabase/` | 79 | CONFIRMADO | 79 migrations SQL |
 | **Total inicial** | **344** | CONFIRMADO | antes da documentação desta etapa |
 
 Arquivos ignorados como `.env`, `.env.local`, `.next/`, `.tmp/`, `.vercel/` e `node_modules/` foram considerados apenas como presença ambiental. Seus conteúdos não compõem o inventário versionado e segredos não foram lidos para esta documentação.
@@ -111,7 +111,7 @@ Foram encontrados 77 arquivos SQL versionados. A ordem nominal vai de `202605220
 ### Objetos criados nas migrations
 
 - **44 tabelas**: `admin_auth_attempts`, `admin_login_challenges`, `admin_sessions`, `admin_users`, `buyer_risk_events`, `combo_offer_event_locks`, `combo_offer_scopes`, `combo_offers`, `combo_orders`, `combo_payments`, `combo_redemption_events`, `combo_redemptions`, `conversations`, `courtesies`, `courtesy_limits`, `courtesy_section_limits`, `customers`, `division_settlements`, `event_aliases`, `event_sessions`, `events`, `fixed_gate_accesses`, `gate_accesses`, `gate_sessions`, `official_table_map_places`, `official_table_map_reservations`, `orders`, `payment_events`, `payments`, `rate_limit_events`, `reservation_items`, `reservations`, `seat_map_renders`, `seats`, `session_seats`, `ticket_prices`, `ticket_validation_events`, `tickets`, `venue_sections`, `venues`, `whatsapp_message_batch_messages`, `whatsapp_message_batches`, `whatsapp_messages`, `whatsapp_outbound_deliveries`.
-- **33 nomes de função SQL** foram encontrados, incluindo RPCs de reserva, pagamento, cortesia, validação, busca, rate limit, batches e consultas administrativas. Algumas são redefinidas por migrations posteriores.
+- **39 nomes de função SQL** foram encontrados, incluindo RPCs de reserva, pagamento, cortesia, validação, busca, rate limit, batches e consultas administrativas. Algumas são redefinidas por migrations posteriores.
 - **33 nomes de trigger** foram encontrados, principalmente atualização de `updated_at`, além da sincronização de reserva do mapa oficial.
 - **0 views/materialized views** foram encontradas.
 - **0 declarações `CREATE POLICY`** foram encontradas.

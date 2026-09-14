@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T17:13:55.692Z",
-  "stage": "2.4.2",
+  "generatedAt": "2026-09-14T17:29:04.216Z",
+  "stage": "2.4.3",
   "globalConfidence": "HIGH",
   "count": 10,
   "records": [
@@ -36,7 +36,7 @@
     {
       "area": "DATA",
       "status": "MEDIUM_CONFIDENCE",
-      "justification": "44 tabelas e OpenAPI remoto coincidem; 77 migrations e definições finais locais foram recontadas.",
+      "justification": "44 tabelas e OpenAPI remoto coincidem; 79 migrations e definições finais locais foram recontadas.",
       "missingEvidence": "Internos PostgreSQL e histórico remoto.",
       "higherConfidenceRequires": "Catálogo PostgreSQL remoto read-only."
     },
@@ -64,7 +64,7 @@
     {
       "area": "RISKS",
       "status": "HIGH_CONFIDENCE",
-      "justification": "44 findings foram confrontados com evidência; 4 estão RESOLVED, 5 HIGH estão ACTIVE, 1 HIGH está POTENTIAL e 6 HIGH estão operacionalmente abertos; nenhum CRITICAL foi provado.",
+      "justification": "44 findings counted completely by type, severity, priority and status; priority vocabulary P0, P1, P2, P3, P4; 0 release blockers.",
       "missingEvidence": "Riscos dependentes de estado remoto não exposto.",
       "higherConfidenceRequires": "Evidência remota dos itens NOT_VALIDATED."
     },

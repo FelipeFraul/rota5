@@ -253,6 +253,51 @@ const statusGroupCount = (status) => findings.filter(finding => finding.status==
 if (riskSummary?.by_status) for (const status of canonicalFindingStatuses) {
   if (riskSummary.by_status[status] !== statusGroupCount(status)) add('DERIVED_FINDING_STATUS_COUNT_MISMATCH',`risk-summary.by_status.${status}`);
 }
+const findingAggregationFields = [
+  ['type','by_type'],
+  ['severity','by_severity'],
+  ['priority','by_priority'],
+  ['status','by_status']
+];
+const findingFieldIsPresent = (value) => value !== undefined && value !== null && value !== '';
+for (const finding of findings) for (const [field] of findingAggregationFields) {
+  if (!findingFieldIsPresent(finding[field])) add('FINDING_AGGREGATION_FIELD_MISSING',`${finding.id}.${field}`);
+}
+const checkCompleteAggregation = (owner, aggregation, field, records) => {
+  if (!aggregation || typeof aggregation !== 'object' || Array.isArray(aggregation)) {
+    add('FINDING_AGGREGATION_MISSING',owner);
+    return;
+  }
+  const vocabulary = [...new Set(records.map(record => record[field]).filter(findingFieldIsPresent))]
+    .sort((left,right) => String(left).localeCompare(String(right),undefined,{numeric:true}));
+  for (const value of vocabulary) {
+    const expectedCount = records.filter(record => record[field]===value).length;
+    if (aggregation[value] !== expectedCount) add('FINDING_AGGREGATION_VALUE_MISMATCH',`${owner}.${value}: ${aggregation[value]} != ${expectedCount}`);
+  }
+  const sum = Object.values(aggregation).reduce((total,value) => total + (Number.isFinite(value) ? value : 0),0);
+  if (sum !== records.length) add('FINDING_AGGREGATION_SUM_MISMATCH',`${owner}: ${sum} != ${records.length}`);
+};
+if (riskSummary?.total !== findings.length) add('FINDINGS_TOTAL_MISMATCH',`risk-summary.total: ${riskSummary?.total} != ${findings.length}`);
+for (const [field,aggregation] of findingAggregationFields) checkCompleteAggregation(`risk-summary.${aggregation}`,riskSummary?.[aggregation],field,findings);
+checkCompleteAggregation('baseline-v1.findings_by_severity',catalogs['baseline-v1']?.findings_by_severity,'severity',findings);
+checkCompleteAggregation('baseline-v1.findings_by_priority',catalogs['baseline-v1']?.findings_by_priority,'priority',findings);
+if (manifest?.product_health?.findings !== findings.length) add('FINDINGS_TOTAL_MISMATCH',`baseline-manifest.product_health.findings: ${manifest?.product_health?.findings} != ${findings.length}`);
+const currentOperationalFindings = findings.filter(finding => hasTaxonomyFlag(finding,'operational_open'));
+checkCompleteAggregation('health.system.finding_counts_by_severity',catalogs.health?.system?.finding_counts_by_severity,'severity',currentOperationalFindings);
+if (!sameIds(catalogs.health?.system?.current_findings,currentOperationalFindings.map(finding=>finding.id))) add('DERIVED_FINDING_LIST_MISMATCH','health.system.current_findings');
+const expectedAggregationInvariants = {
+  FINDINGS_TOTAL_MATCH:'SIM',
+  BY_TYPE_SUM_MATCH:'SIM',
+  BY_SEVERITY_SUM_MATCH:'SIM',
+  BY_PRIORITY_SUM_MATCH:'SIM',
+  BY_STATUS_SUM_MATCH:'SIM',
+  UNKNOWN_OR_UNCOUNTED_FINDINGS:0,
+  RELEASE_BLOCKER_COUNT:derivedGroups.release_blocking.length
+};
+for (const owner of [riskSummary?.aggregation_invariants,catalogs['cross-audit']?.aggregation_invariants]) {
+  for (const [key,value] of Object.entries(expectedAggregationInvariants)) if (owner?.[key] !== value) add('AGGREGATION_INVARIANT_MISMATCH',`${key}: ${owner?.[key]} != ${value}`);
+}
+if (catalogs['cross-audit']?.semantic_consistency?.status !== 'PASS') add('SEMANTIC_AUDIT_NOT_PASS','cross-audit.semantic_consistency.status');
 const healthFindingCounts = catalogs.health?.system?.active_findings;
 if (healthFindingCounts) {
   checkDerivedCount('health.system.active_findings.P0',healthFindingCounts.P0,'active_p0');

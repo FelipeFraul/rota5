@@ -28,7 +28,7 @@ Esta baseline conta **6 integrações de serviço**. Bibliotecas de renderizaç�
 - Estado: **PARCIALMENTE CONFIRMADO**.
 - Cliente: `src/lib/supabase/admin.ts`, usando `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY`.
 - Chamadores: serviços em `src/lib/tickets/services/**`, rotas API, scripts e `.tools/`.
-- Banco versionado: 77 migrations em `supabase/migrations/`, 44 tabelas e 33 nomes de função SQL.
+- Banco versionado: 79 migrations em `supabase/migrations/`, 44 tabelas e 39 nomes de função SQL.
 - Segurança versionada: RLS, revogações de `public`/`anon`/`authenticated` e grants a `service_role`.
 - `SUPABASE_ANON_KEY` é exigida por `src/lib/env.ts`, mas na varredura foi consumida diretamente apenas por auditorias/testes de negação. O runtime principal encontrado usa o cliente service role.
 - Não validado: projeto remoto vinculado nesta execução, migrations aplicadas, catálogo real, policies/grants efetivos, dados, backups e buckets.

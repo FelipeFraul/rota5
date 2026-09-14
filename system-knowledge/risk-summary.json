@@ -1,35 +1,35 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T17:13:55.692Z",
-  "stage": "2.4.2",
+  "generatedAt": "2026-09-14T17:29:04.216Z",
+  "stage": "2.4.3",
   "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
-  "scope": "Current risk, coverage, validation and release-blocker projection for Baseline 2.4.2.",
+  "scope": "Current risk, coverage, validation and release-blocker projection for Baseline 2.4.3.",
   "method": "All current metrics are derived from canonical catalogs and finding_status_taxonomy; historical snapshots remain only in version-labelled fields.",
   "status": "PASS",
   "total": 44,
   "by_type": {
-    "BUG": 3,
-    "BROKEN_FLOW": 1,
-    "LEGACY": 2,
-    "AUTHORIZATION": 1,
-    "DATA_INTEGRITY": 2,
-    "CONCURRENCY": 2,
-    "IDEMPOTENCY": 1,
-    "SECURITY": 2,
-    "UNKNOWN": 1,
-    "INTEGRATION": 1,
-    "CONFIGURATION_DRIFT": 3,
-    "INFRASTRUCTURE": 1,
-    "OPERATIONAL": 2,
-    "OBSERVABILITY": 2,
     "ARCHITECTURE": 1,
+    "AUTHORIZATION": 1,
+    "BROKEN_FLOW": 1,
+    "BUG": 3,
+    "CONCURRENCY": 2,
+    "CONFIGURATION_DRIFT": 3,
     "COUPLING": 2,
-    "TEST_GAP": 7,
+    "DATA_INTEGRITY": 2,
     "DEAD_CODE": 1,
-    "ORPHAN": 5,
-    "MAINTAINABILITY": 2,
     "DUPLICATION": 1,
-    "PERFORMANCE": 1
+    "IDEMPOTENCY": 1,
+    "INFRASTRUCTURE": 1,
+    "INTEGRATION": 1,
+    "LEGACY": 2,
+    "MAINTAINABILITY": 2,
+    "OBSERVABILITY": 2,
+    "OPERATIONAL": 2,
+    "ORPHAN": 5,
+    "PERFORMANCE": 1,
+    "SECURITY": 2,
+    "TEST_GAP": 7,
+    "UNKNOWN": 1
   },
   "by_severity": {
     "CRITICAL": 0,
@@ -42,7 +42,8 @@
     "P0": 3,
     "P1": 10,
     "P2": 20,
-    "P3": 9
+    "P3": 9,
+    "P4": 2
   },
   "by_status": {
     "ACTIVE": 21,
@@ -318,7 +319,7 @@
     "open": "status in {ACTIVE, POTENTIAL, OPEN, MITIGATED}",
     "release_blocking": "status in {ACTIVE, OPEN, MITIGATED} at applicable severity",
     "closed_for_operational_metrics": "status in {RESOLVED, ACCEPTED, NOT_VALIDATED}",
-    "current_projection": "Derived at Baseline 2.4.2 generation time from canonical catalogs and lifecycle taxonomy.",
+    "current_projection": "Derived at Baseline 2.4.3 generation time from canonical catalogs and lifecycle taxonomy.",
     "release_blocker_rule": "operational_open + status.release_blocking + P0/P1 or CRITICAL/HIGH",
     "historical_snapshots": "Only fields whose names explicitly contain a baseline version or historical marker are historical."
   },
@@ -659,5 +660,32 @@
     "current_stale_projections": 0,
     "resolved_findings_with_active_top_level_claims": 0,
     "default_node_suite": "236/236 PASS"
+  },
+  "priority_vocabulary": {
+    "source": "DERIVED_FROM_FINDING_RECORDS",
+    "order": "DETERMINISTIC_NATURAL_ASCENDING",
+    "values": [
+      "P0",
+      "P1",
+      "P2",
+      "P3",
+      "P4"
+    ]
+  },
+  "aggregation_invariants": {
+    "FINDINGS_TOTAL_MATCH": "SIM",
+    "BY_TYPE_SUM_MATCH": "SIM",
+    "BY_SEVERITY_SUM_MATCH": "SIM",
+    "BY_PRIORITY_SUM_MATCH": "SIM",
+    "BY_STATUS_SUM_MATCH": "SIM",
+    "UNKNOWN_OR_UNCOUNTED_FINDINGS": 0,
+    "RELEASE_BLOCKER_COUNT": 0
+  },
+  "semantic_consistency": {
+    "baseline": "2.4.3",
+    "status": "PASS",
+    "current_semantic_contradictions": 0,
+    "current_stale_projections": 0,
+    "aggregation_invariants_required": true
   }
 }

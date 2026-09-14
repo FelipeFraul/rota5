@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T17:13:55.692Z",
-  "stage": "2.4.2",
+  "generatedAt": "2026-09-14T17:29:04.216Z",
+  "stage": "2.4.3",
   "status": "PASS",
   "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
   "question": "Podemos confiar na BASELINE V1 como representação do Rota5 atual?",
@@ -441,16 +441,22 @@
     "ticketeira": "UNTOUCHED"
   },
   "semantic_consistency": {
-    "baseline": "2.4.2",
+    "baseline": "2.4.3",
     "status": "PASS",
-    "method": "Explicit deterministic checks over current finding fields, canonical catalogue counts, taxonomy-derived health/release blockers, metadata and current prose projections.",
-    "stale_current_projections_before": 109,
-    "stale_current_projections_after": 0,
-    "contradictory_finding_records_before": 2,
-    "contradictory_finding_records_after": 0,
+    "method": "Semantic PASS requires complete taxonomy-derived finding aggregations, zero missing aggregation fields, zero current contradictions and zero stale current projections.",
     "current_semantic_contradictions": 0,
     "current_stale_projections": 0,
     "resolved_findings_with_active_top_level_claims": 0,
-    "current_release_blockers": 0
+    "current_release_blockers": 0,
+    "aggregation_invariants_required": true
+  },
+  "aggregation_invariants": {
+    "FINDINGS_TOTAL_MATCH": "SIM",
+    "BY_TYPE_SUM_MATCH": "SIM",
+    "BY_SEVERITY_SUM_MATCH": "SIM",
+    "BY_PRIORITY_SUM_MATCH": "SIM",
+    "BY_STATUS_SUM_MATCH": "SIM",
+    "UNKNOWN_OR_UNCOUNTED_FINDINGS": 0,
+    "RELEASE_BLOCKER_COUNT": 0
   }
 }

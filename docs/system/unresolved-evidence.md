@@ -5,7 +5,7 @@ Os nove grupos abaixo foram revisitados. Continuam sem evidência suficiente; ne
 | Área | Evidência pendente |
 | --- | --- |
 | DATA | Corpos SQL, constraints, índices, triggers, RLS, policies e grants efetivos do PostgreSQL remoto |
-| DATA | Histórico e ordem efetivamente aplicados das 77 migrations no ambiente remoto |
+| DATA | Histórico e ordem efetivamente aplicados das 79 migrations no ambiente remoto |
 | INFRASTRUCTURE | Configuração efetiva do Supabase Auth |
 | INTEGRATIONS | Registro remoto dos webhooks Z-API e Mercado Pago |
 | RUNTIME | Histórico recente de entrega, retries e falhas dos webhooks |

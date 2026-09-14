@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T17:13:55.692Z",
+  "generatedAt": "2026-09-14T17:29:04.216Z",
   "baseline": {
     "stage": "1/8",
     "name": "Reconhecimento total do sistema",
@@ -163,7 +163,7 @@
       "purpose": "Definir schema, índices, constraints, RLS, grants, triggers e RPCs.",
       "status": "PARCIALMENTE CONFIRMADO",
       "evidence": [
-        "77 migrations SQL",
+        "79 migrations SQL",
         "44 CREATE TABLE",
         "33 nomes de função",
         "33 nomes de trigger"
@@ -435,7 +435,7 @@
       "failed": 7
     }
   },
-  "stage": "2.4.2",
+  "stage": "2.4.3",
   "test_runner_reproducibility": {
     "finding": "gap.test-runner-depends-on-untracked-loader",
     "status": "RESOLVED",

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T17:13:55.692Z",
+  "generatedAt": "2026-09-14T17:29:04.216Z",
   "count": 6,
   "records": [
     {
@@ -12,7 +12,7 @@
       "status": "PARCIALMENTE CONFIRMADO",
       "evidence": [
         "@supabase/supabase-js em package.json",
-        "77 migrations em supabase/migrations",
+        "79 migrations em supabase/migrations",
         "chamadas .from() e .rpc() em services/routes",
         "Etapa 5: system-knowledge/integration-runtime.json"
       ],
@@ -268,5 +268,5 @@
     "reason": "Evidência read-only externa tornou notas anteriores factualmente incompletas.",
     "metricsChanged": false
   },
-  "stage": "2.4.2"
+  "stage": "2.4.3"
 }
