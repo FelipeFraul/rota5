@@ -41,11 +41,11 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 - Tipo / severidade / prioridade: **BUG / MEDIUM / P1**
 - Status / confiança: **RESOLVED / CONFIRMED**
 - Problema histórico preservado; o comportamento descrito não se reproduz no source atual.
-- Evidência histórica: as linhas e falhas registradas no baseline original são preservadas como causa anterior, não como estado atual. Evidência atual: correção funcional presente; testes direcionados e suíte 236/236 PASS.
+- Evidência histórica: as linhas e falhas registradas no baseline original são preservadas como causa anterior, não como estado atual. Evidência atual: correção funcional presente; testes direcionados e suíte 257/257 PASS.
 - Impacto: Um rascunho duplicado pode exibir ou persistir artista incoerente com o título, exigindo correção manual.
 - Escopo: domains domain.event-administration; capabilities event.duplicate; flows admin.whatsapp_event_management, admin.web_event_workspace.
 - Blast radius: **DOMAIN**
-- Resolução: correção funcional já presente e prova direta incluída na suíte 236/236; lifecycle reconciliado em 2.4.1.
+- Resolução: correção funcional já presente e prova direta incluída na suíte 257/257; lifecycle reconciliado em 2.4.1.
 - Limitação: a resolução cobre o defeito específico e as superfícies revalidadas; não encerra riscos diferentes de fluxo administrativo nem garante ausência absoluta de corrupção textual futura.
 - Justificativa da prioridade: P1 por produzir dado administrativo incorreto em uma ação ativa, com workaround manual.
 
@@ -54,11 +54,11 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 - Tipo / severidade / prioridade: **BUG / MEDIUM / P1**
 - Status / confiança: **RESOLVED / CONFIRMED**
 - Problema histórico preservado; o comportamento descrito não se reproduz no source atual.
-- Evidência histórica: as linhas e falhas registradas no baseline original são preservadas como causa anterior, não como estado atual. Evidência atual: correção funcional presente; testes direcionados e suíte 236/236 PASS.
+- Evidência histórica: as linhas e falhas registradas no baseline original são preservadas como causa anterior, não como estado atual. Evidência atual: correção funcional presente; testes direcionados e suíte 257/257 PASS.
 - Impacto: Usuários e administradores recebem texto corrompido; IDs/keywords corrompidos também alteram resultados e contratos de busca.
 - Escopo: domains domain.whatsapp-conversations, domain.analytics-reporting, domain.orders-payments, domain.combo-commerce-fulfillment; capabilities messaging.respond, messaging.help, payment.checkout_view, combo.kitchen_open, analytics.general_dashboard, analytics.event_dashboard; flows whatsapp.public_discovery, admin.web_event_workspace, kitchen.combo_redemption.
 - Blast radius: **MULTI_DOMAIN**
-- Resolução: correção funcional já presente e prova direta incluída na suíte 236/236; lifecycle reconciliado em 2.4.1.
+- Resolução: correção funcional já presente e prova direta incluída na suíte 257/257; lifecycle reconciliado em 2.4.1.
 - Limitação: a resolução cobre o defeito específico e as superfícies revalidadas; não encerra riscos diferentes de fluxo administrativo nem garante ausência absoluta de corrupção textual futura.
 - Justificativa da prioridade: P1 porque o defeito é visível em jornadas públicas e administrativas e já quebra testes.
 

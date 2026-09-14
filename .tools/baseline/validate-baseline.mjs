@@ -412,6 +412,11 @@ for (const change of functionalChanges || []) {
   else if (!change.sha256 || sha256(fs.readFileSync(absolute)) !== change.sha256) add('MANIFEST_FUNCTIONAL_CHANGE_HASH_INVALID',change.path);
 }
 if (manifest?.git_observation_at_generation?.validity_role!=='INFORMATIONAL_ONLY') add('MANIFEST_TRANSIENT_STATE_ROLE_INVALID','baseline-manifest.json');
+if (manifest?.status==='FROZEN' && manifest?.git_observation_at_generation?.validity_role==='INFORMATIONAL_ONLY') {
+  const observedHead = manifest.git_observation_at_generation.head;
+  const canonicalBase = manifest.source_state?.base_commit;
+  if (!observedHead || observedHead !== canonicalBase) add('MANIFEST_GIT_OBSERVATION_SOURCE_MISMATCH',`${observedHead || '(missing)'} != ${canonicalBase || '(missing)'}`);
+}
 if (!catalogs['self-reading']?.query_routes?.IMPACT_ANALYSIS) add('SELF_READING_ROUTE_MISSING','IMPACT_ANALYSIS');
 
 const stabilizationHistory = catalogs['stabilization-history'];

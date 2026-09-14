@@ -1,4 +1,4 @@
-> **Current Baseline 2.5.0 (2026-09-14):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on repository source `e931d66d03a620d5e26588c8f6c8714c62ef5d1d` (fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`, 379 files, 83 migrations). Atomicity and admin location consistency are **RESOLVED**. Findings: 45 total, 13 RESOLVED, 21 ACTIVE, 6 POTENTIAL, 5 NOT_VALIDATED; release blockers: 0. PRODUCT_HEALTH and INFRASTRUCTURE_HEALTH: **DEGRADED**. Quality: 257/257 Node, 2/2 PostgreSQL 16, Quality Gate 34898804387 PASS. Production `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` runs application source `148b8200a44f4eeb49e004af45060a302bac9f20`; later migration/test-only commits create expected non-runtime drift. No deployment or remote mutation occurred during this freeze.
+> **Current Baseline 2.5.1 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on unchanged repository source `e931d66d03a620d5e26588c8f6c8714c62ef5d1d` (fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`, 379 files, 83 migrations). Atomicity and admin location consistency remain **RESOLVED**. Findings and health are unchanged: 45 total, 13 RESOLVED, 21 ACTIVE, 6 POTENTIAL, 5 NOT_VALIDATED, 0 release blockers; PRODUCT_HEALTH and INFRASTRUCTURE_HEALTH are **DEGRADED**. Quality remains 257/257 Node, 2/2 PostgreSQL 16 and Quality Gate 34898804387 PASS. Production `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` remains on application source `148b8200a44f4eeb49e004af45060a302bac9f20`; no runtime, database, deployment or functional change occurred.
 
 # Baseline 2.0.1 HIGH #1 final state
 
@@ -42,7 +42,7 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 | gap.critical-flow-correlation | OBSERVABILITY | MEDIUM | P2 | ACTIVE | CONFIRMED | Fluxos críticos não têm correlação ponta a ponta |
 | debt.router-responsibility-concentration | ARCHITECTURE | MEDIUM | P2 | ACTIVE | CONFIRMED | Roteador conversacional concentra coordenação de muitos domínios |
 | debt.zapi-webhook-responsibility-coupling | COUPLING | MEDIUM | P2 | ACTIVE | CONFIRMED | Handler Z-API acopla transporte, deduplicação, automação e entrega |
-| gap.default-test-suite-failing | TEST_GAP | HIGH | P1 | RESOLVED | CONFIRMED | RESOLVED — current default suite passes 236/236 |
+| gap.default-test-suite-failing | TEST_GAP | HIGH | P1 | RESOLVED | CONFIRMED | RESOLVED — current default suite passes 257/257 |
 | gap.critical-capability-and-flow-coverage | TEST_GAP | HIGH | P1 | RESOLVED | CONFIRMED | RESOLVED — 21/21 MUST and 2/2 high-risk flows covered |
 | gap.real-integration-tests-outside-default | TEST_GAP | MEDIUM | P2 | ACTIVE | CONFIRMED | Testes reais e de integração ficam fora da suíte padrão |
 | gap.source-contract-assertion-bias | TEST_GAP | MEDIUM | P2 | ACTIVE | CONFIRMED | Parte relevante dos testes valida texto-fonte e regex de implementação |
@@ -102,11 +102,11 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 - Tipo / severidade / prioridade: **BUG / MEDIUM / P1**
 - Status / confiança: **RESOLVED / CONFIRMED**
 - Problema histórico preservado; o comportamento descrito não se reproduz no source atual.
-- Evidência histórica: as linhas e falhas registradas no baseline original são preservadas como causa anterior, não como estado atual. Evidência atual: correção funcional presente; testes direcionados e suíte 236/236 PASS.
+- Evidência histórica: as linhas e falhas registradas no baseline original são preservadas como causa anterior, não como estado atual. Evidência atual: correção funcional presente; testes direcionados e suíte 257/257 PASS.
 - Impacto: Um rascunho duplicado pode exibir ou persistir artista incoerente com o título, exigindo correção manual.
 - Escopo: domains domain.event-administration; capabilities event.duplicate; flows admin.whatsapp_event_management, admin.web_event_workspace.
 - Blast radius: **DOMAIN**
-- Resolução: correção funcional já presente e prova direta incluída na suíte 236/236; lifecycle reconciliado em 2.4.1.
+- Resolução: correção funcional já presente e prova direta incluída na suíte 257/257; lifecycle reconciliado em 2.4.1.
 - Limitação: a resolução cobre o defeito específico e as superfícies revalidadas; não encerra riscos diferentes de fluxo administrativo nem garante ausência absoluta de corrupção textual futura.
 - Justificativa da prioridade: P1 por produzir dado administrativo incorreto em uma ação ativa, com workaround manual.
 
@@ -115,11 +115,11 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 - Tipo / severidade / prioridade: **BUG / MEDIUM / P1**
 - Status / confiança: **RESOLVED / CONFIRMED**
 - Problema histórico preservado; o comportamento descrito não se reproduz no source atual.
-- Evidência histórica: as linhas e falhas registradas no baseline original são preservadas como causa anterior, não como estado atual. Evidência atual: correção funcional presente; testes direcionados e suíte 236/236 PASS.
+- Evidência histórica: as linhas e falhas registradas no baseline original são preservadas como causa anterior, não como estado atual. Evidência atual: correção funcional presente; testes direcionados e suíte 257/257 PASS.
 - Impacto: Usuários e administradores recebem texto corrompido; IDs/keywords corrompidos também alteram resultados e contratos de busca.
 - Escopo: domains domain.whatsapp-conversations, domain.analytics-reporting, domain.orders-payments, domain.combo-commerce-fulfillment; capabilities messaging.respond, messaging.help, payment.checkout_view, combo.kitchen_open, analytics.general_dashboard, analytics.event_dashboard; flows whatsapp.public_discovery, admin.web_event_workspace, kitchen.combo_redemption.
 - Blast radius: **MULTI_DOMAIN**
-- Resolução: correção funcional já presente e prova direta incluída na suíte 236/236; lifecycle reconciliado em 2.4.1.
+- Resolução: correção funcional já presente e prova direta incluída na suíte 257/257; lifecycle reconciliado em 2.4.1.
 - Limitação: a resolução cobre o defeito específico e as superfícies revalidadas; não encerra riscos diferentes de fluxo administrativo nem garante ausência absoluta de corrupção textual futura.
 - Justificativa da prioridade: P1 porque o defeito é visível em jornadas públicas e administrativas e já quebra testes.
 

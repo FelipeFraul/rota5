@@ -1,4 +1,11 @@
-> **Current Baseline 2.5.0 (2026-09-14):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on repository source `e931d66d03a620d5e26588c8f6c8714c62ef5d1d` (fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`, 379 files, 83 migrations). Atomicity and admin location consistency are **RESOLVED**. Findings: 45 total, 13 RESOLVED, 21 ACTIVE, 6 POTENTIAL, 5 NOT_VALIDATED; release blockers: 0. PRODUCT_HEALTH and INFRASTRUCTURE_HEALTH: **DEGRADED**. Quality: 257/257 Node, 2/2 PostgreSQL 16, Quality Gate 34898804387 PASS. Production `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` runs application source `148b8200a44f4eeb49e004af45060a302bac9f20`; later migration/test-only commits create expected non-runtime drift. No deployment or remote mutation occurred during this freeze.
+> **Current Baseline 2.5.1 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on unchanged repository source `e931d66d03a620d5e26588c8f6c8714c62ef5d1d` (fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`, 379 files, 83 migrations). Atomicity and admin location consistency remain **RESOLVED**. Findings and health are unchanged: 45 total, 13 RESOLVED, 21 ACTIVE, 6 POTENTIAL, 5 NOT_VALIDATED, 0 release blockers; PRODUCT_HEALTH and INFRASTRUCTURE_HEALTH are **DEGRADED**. Quality remains 257/257 Node, 2/2 PostgreSQL 16 and Quality Gate 34898804387 PASS. Production `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` remains on application source `148b8200a44f4eeb49e004af45060a302bac9f20`; no runtime, database, deployment or functional change occurred.
+
+## BASELINE 2.5.1 — CURRENT PROJECTION RECONCILIATION
+
+- Type: `PATCH_DOCUMENTARY_CORRECTION`; source and fingerprint unchanged at `e931d66d03a620d5e26588c8f6c8714c62ef5d1d` / `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`.
+- Corrected the manifest Git observation and the top-level findings reconciliation method.
+- Reconciled focused CURRENT projections still referring to Baseline 2.4.x, source `678453260…`, 236/236 or PostgreSQL 1/1. Historical snapshots and the three-day functional milestones were preserved.
+- No runtime, database, test result, finding lifecycle, health, release-blocker or deployment change.
 
 ## BASELINE 2.5.0 — THREE-DAY STABILIZATION FREEZE
 

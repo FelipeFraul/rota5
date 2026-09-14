@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.0",
+  "stage": "2.5.1",
   "sourceCommit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
-  "scope": "Current dead/legacy catalogue projection for Baseline 2.4.4.",
+  "scope": "Current dead/legacy catalogue projection for Baseline 2.5.1.",
   "method": "Revalidated as a semantic projection; version-labelled history is retained.",
   "count": 11,
   "by_classification": {

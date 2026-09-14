@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.0",
+  "stage": "2.5.1",
   "sourceCommit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
-  "scope": "Canonical finding catalog for Baseline 2.5.0, including resolved stabilization history.",
-  "method": "Reconciled machine-readable current state against taxonomy, source, current behavioral catalogs and Baseline 2.4.1 resolution evidence; no lifecycle changed.",
+  "scope": "Canonical finding catalog for Baseline 2.5.1, including resolved stabilization history and the post-freeze documentary correction.",
+  "method": "Reconciled machine-readable current state for Baseline 2.5.x against the canonical taxonomy, functional source, current behavioral catalogs and preserved historical evidence. Baseline 2.5.0 resolved the administrative atomicity finding and incorporated the resolved location-consistency finding.",
   "count": 45,
   "records": [
     {
@@ -306,7 +306,7 @@
         },
         {
           "path": "package.json",
-          "claim": "Current default suite passes 236/236, including the direct duplication test.",
+          "claim": "Current default suite passes 257/257, including the direct duplication test.",
           "evidence_state": "CURRENT"
         }
       ],
@@ -387,7 +387,7 @@
           },
           {
             "path": "package.json",
-            "claim": "Current default suite passes 236/236, including the direct duplication test.",
+            "claim": "Current default suite passes 257/257, including the direct duplication test.",
             "evidence_state": "CURRENT"
           }
         ],
@@ -441,7 +441,7 @@
         },
         {
           "path": "package.json",
-          "claim": "Current default suite passes 236/236.",
+          "claim": "Current default suite passes 257/257.",
           "evidence_state": "CURRENT"
         }
       ],
@@ -543,7 +543,7 @@
           },
           {
             "path": "package.json",
-            "claim": "Current default suite passes 236/236.",
+            "claim": "Current default suite passes 257/257.",
             "evidence_state": "CURRENT"
           }
         ],
@@ -2281,7 +2281,7 @@
       "evidence": [
         {
           "path": "system-knowledge/tests.json",
-          "claim": "The current canonical default suite passes 236/236 with zero failures, skips, todos or regressions.",
+          "claim": "The current canonical default suite passes 257/257 with zero failures, skips, todos or regressions.",
           "evidence_state": "CURRENT"
         },
         {
@@ -2405,7 +2405,7 @@
         "current_evidence": [
           {
             "path": "system-knowledge/tests.json",
-            "claim": "The current canonical default suite passes 236/236 with zero failures, skips, todos or regressions.",
+            "claim": "The current canonical default suite passes 257/257 with zero failures, skips, todos or regressions.",
             "evidence_state": "CURRENT"
           },
           {
@@ -2460,7 +2460,7 @@
         },
         {
           "path": ".github/workflows/quality-gate.yml",
-          "claim": "Quality Gate run 34867214724 passed npm ci, 236/236 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
+          "claim": "Quality Gate run 34898804387 passed npm ci, 257/257 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
           "evidence_state": "CURRENT"
         },
         {
@@ -2614,7 +2614,7 @@
           },
           {
             "path": ".github/workflows/quality-gate.yml",
-            "claim": "Quality Gate run 34867214724 passed npm ci, 236/236 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
+            "claim": "Quality Gate run 34898804387 passed npm ci, 257/257 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
             "evidence_state": "CURRENT"
           },
           {
@@ -2750,7 +2750,7 @@
         },
         {
           "path": "package.json",
-          "claim": "The current default suite uses the tracked loader and passes 236/236.",
+          "claim": "The current default suite uses the tracked loader and passes 257/257.",
           "evidence_state": "CURRENT"
         }
       ],
@@ -2823,7 +2823,7 @@
           },
           {
             "path": "package.json",
-            "claim": "The current default suite uses the tracked loader and passes 236/236.",
+            "claim": "The current default suite uses the tracked loader and passes 257/257.",
             "evidence_state": "CURRENT"
           }
         ],
@@ -3898,5 +3898,13 @@
       "RESOLVED_OPERATIONAL_OPEN_TRUE": 0,
       "HISTORICAL_EVIDENCE_PRESERVED": "SIM"
     }
+  },
+  "baseline_2_5_1": {
+    "change_type": "PATCH_DOCUMENTARY_CORRECTION",
+    "method_projection_reconciled": true,
+    "lifecycle_changes": 0,
+    "new_findings": 0,
+    "atomicity": "RESOLVED",
+    "admin_location_consistency": "RESOLVED"
   }
 }

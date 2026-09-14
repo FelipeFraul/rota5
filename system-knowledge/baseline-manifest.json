@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.0",
+  "stage": "2.5.1",
   "baseline_id": "rota5-baseline-v1",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "status": "FROZEN",
   "frozen_at": "2026-09-14T22:14:45.242Z",
   "source_state": {
@@ -16,12 +16,12 @@
     "baseline_commit_policy": "The Git commit containing this baseline is intentionally not embedded in its own content to avoid self-reference."
   },
   "git_observation_at_generation": {
-    "observed_at": "2026-09-14T16:52:21.715Z",
+    "observed_at": "2026-09-14T22:14:45.242Z",
     "branch": "production",
-    "head": "1023cbfd979a1e07228b9989e17fa26576bc4629",
+    "head": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
     "working_tree_clean": false,
     "validity_role": "INFORMATIONAL_ONLY",
-    "note": "Only Baseline 2.4.1 documentary/taxonomical artifacts are uncommitted; canonical functional source is unchanged."
+    "note": "Only Baseline 2.5.0 documentary artifacts are uncommitted; functional source fingerprint is derived from the canonical repository source."
   },
   "baseline_integrity": {
     "status": "PASS",
@@ -709,5 +709,21 @@
     "location_finding_added_to_canon": true,
     "admin_event_operations_retention": "SEPARATE_HARDENING_CANDIDATE",
     "stabilization_period": "2026-09-12_TO_2026-09-14"
+  },
+  "baseline_2_5_1": {
+    "change_type": "PATCH_DOCUMENTARY_CORRECTION",
+    "source_unchanged": true,
+    "runtime_unchanged": true,
+    "database_unchanged": true,
+    "tests_unchanged": true,
+    "finding_lifecycles_unchanged": true,
+    "health_unchanged": true,
+    "release_blockers_unchanged": true,
+    "deployment_unchanged": true,
+    "corrections": [
+      "baseline-manifest.git_observation_at_generation",
+      "findings.method"
+    ],
+    "other_current_stale_projection_groups_corrected": 14
   }
 }

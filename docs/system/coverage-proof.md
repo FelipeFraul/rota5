@@ -1,4 +1,4 @@
-> **Current Baseline 2.5.0 (2026-09-14):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on repository source `e931d66d03a620d5e26588c8f6c8714c62ef5d1d` (fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`, 379 files, 83 migrations). Atomicity and admin location consistency are **RESOLVED**. Findings: 45 total, 13 RESOLVED, 21 ACTIVE, 6 POTENTIAL, 5 NOT_VALIDATED; release blockers: 0. PRODUCT_HEALTH and INFRASTRUCTURE_HEALTH: **DEGRADED**. Quality: 257/257 Node, 2/2 PostgreSQL 16, Quality Gate 34898804387 PASS. Production `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` runs application source `148b8200a44f4eeb49e004af45060a302bac9f20`; later migration/test-only commits create expected non-runtime drift. No deployment or remote mutation occurred during this freeze.
+> **Current Baseline 2.5.1 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on unchanged repository source `e931d66d03a620d5e26588c8f6c8714c62ef5d1d` (fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`, 379 files, 83 migrations). Atomicity and admin location consistency remain **RESOLVED**. Findings and health are unchanged: 45 total, 13 RESOLVED, 21 ACTIVE, 6 POTENTIAL, 5 NOT_VALIDATED, 0 release blockers; PRODUCT_HEALTH and INFRASTRUCTURE_HEALTH are **DEGRADED**. Quality remains 257/257 Node, 2/2 PostgreSQL 16 and Quality Gate 34898804387 PASS. Production `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` remains on application source `148b8200a44f4eeb49e004af45060a302bac9f20`; no runtime, database, deployment or functional change occurred.
 
 # Coverage proof
 
@@ -19,7 +19,7 @@ The test harness loads production TypeScript modules and checks authorization, m
 
 ## Gate evidence
 
-- DEFAULT_NODE_SUITE: **236/236 PASS** (0 skip, 0 todo, 0 regressions).
+- DEFAULT_NODE_SUITE: **257/257 PASS** (0 skip, 0 todo, 0 regressions).
 - POSTGRES_INTEGRATION_SUITE: **1/1 PASS**, PostgreSQL 16.
 - Actual production trigger executed in CI: **SIM** — `sync_official_table_map_reservation_status`.
-- QUALITY_GATE: **PASS**, run **34867214724**, commit `67845326088eac47452224b00ef1e866036e86f1`; npm ci, typecheck, lint and build all PASS.
+- QUALITY_GATE: **PASS**, run **34898804387**, commit `e931d66d03a620d5e26588c8f6c8714c62ef5d1d`; default Node 257/257, PostgreSQL 2/2, npm ci, typecheck, lint and build all PASS.

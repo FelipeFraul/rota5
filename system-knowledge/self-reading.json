@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.0",
+  "stage": "2.5.1",
   "id": "rota5-self-reading-v1",
   "baseline_id": "rota5-baseline-v1",
   "bootstrap_files": [
@@ -202,7 +202,7 @@
         "runtime-validation.json"
       ],
       "method": "Não confunda integridade da baseline com saúde do produto.",
-      "product_health_update": "HIGH #1 is RESOLVED after EXPAND, NEW_APP, gates A-I, CONTRACT and strict runtime passed. Product health remains BROKEN because independent findings remain open."
+      "product_health_update": "Administrative atomicity and location consistency are RESOLVED. Product health remains DEGRADED because independent operational and validation-queue findings remain."
     },
     "STABILIZATION_HISTORY": {
       "catalogs": [
@@ -255,24 +255,24 @@
       "findings.json"
     ],
     "remote_database_not_validated": "HIGH #1 migration history, FINAL_DB constraints/functions/triggers and runtime behavior were validated. Other remote PostgreSQL internals, RLS, policies, grants and Supabase Auth configuration remain NOT_VALIDATED.",
-    "infrastructure_state": "Production dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa remains READY on c726902505fd69c2cfef2dec8013ffe0cf0adba3; current canonical source is not deployed, Git auto-deploy is disabled, and infrastructure health remains DEGRADED.",
+    "infrastructure_state": "Production dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf remains READY on application source 148b8200a44f4eeb49e004af45060a302bac9f20; canonical repository source is e931d66d03a620d5e26588c8f6c8714c62ef5d1d, the difference is expected non-runtime drift, Git auto-deploy is disabled, and infrastructure health remains DEGRADED.",
     "p0_findings": [],
     "add_capability": "Assign canonical ID, domain, type, description, modules, entrypoints, data/integrations, flow placement, tests and evidence; update capability and related flow/data/test catalogs, validate, then version the baseline.",
     "after_change": "Follow CHANGE-PROTOCOL.md and update every affected JSON plus its Markdown projection; regenerate fingerprint and baseline-integrity.json and run the validator.",
-    "product_health_update": "Canonical release blockers are zero after two stale findings were RESOLVED and the confirmed aggregate E2E gap was retained ACTIVE at P2. One POTENTIAL HIGH and other risks remain, so product health is DEGRADED.",
+    "product_health_update": "Canonical release blockers are zero. Administrative atomicity and location consistency are RESOLVED; independent operational and validation-queue findings keep product health DEGRADED.",
     "high_1": "RESOLVED: EXPAND and CONTRACT are APPLIED_AND_VALIDATED, gates A-I passed, authorization is strict-only and source attribution is non-null and immutable.",
     "legacy_brand": "RESOLVED for DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES on Preview dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW and Production dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo; this is not a repository-wide assertion about historical strings.",
     "test_runner": "RESOLVED on source 3e2bdc2979301301b3f1566a2ac75a477ee4c169: npm test uses scripts/test-support/typescript-alias-loader.mjs, and npm ci plus 207/214 was proven from canonical Git blobs without .tmp.",
-    "current_baseline": "2.4.1",
-    "functional_source": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
-    "default_suite": "236/236_PASS",
+    "current_baseline": "2.5.1",
+    "functional_source": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+    "default_suite": "257/257_PASS",
     "next_active_high": "NONE",
     "product_health": "DEGRADED",
     "infrastructure_health": "DEGRADED",
-    "production": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa READY on c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+    "production": "dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf READY on 148b8200a44f4eeb49e004af45060a302bac9f20",
     "preview": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6",
-    "canonical_source": "67845326088eac47452224b00ef1e866036e86f1",
-    "production_runtime_source": "c726902505fd69c2cfef2dec8013ffe0cf0adba3"
+    "canonical_source": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+    "production_runtime_source": "148b8200a44f4eeb49e004af45060a302bac9f20"
   },
   "baseline_2_3_0": {
     "version": "2.3.0",
@@ -360,5 +360,9 @@
   "baseline_2_5_0": {
     "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
     "history": "system-knowledge/stabilization-history.json"
+  },
+  "baseline_2_5_1": {
+    "change_type": "PATCH_DOCUMENTARY_CORRECTION",
+    "current_projection_reconciled": true
   }
 }

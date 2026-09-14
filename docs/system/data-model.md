@@ -4,7 +4,7 @@ FINAL_DB requires `gate_sessions.source_kind`, permits `legacy_unattributed`, `a
 
 # Data model AS-IS — Etapa 5
 
-Referência canônica corrente: commit `67845326088eac47452224b00ef1e866036e86f1`. O schema local resultante foi reconstruído em ordem sobre 79 migrations; não é uma cópia de um único arquivo histórico. O PostgREST remoto confirmou as 44 tabelas e os nomes de suas colunas. Constraints, índices, triggers, RLS, policies e grants remotos não são expostos por essa superfície e permanecem `NOT_VALIDATED`.
+Referência canônica corrente: commit `e931d66d03a620d5e26588c8f6c8714c62ef5d1d`. O schema local resultante foi reconstruído em ordem sobre 83 migrations; o catálogo atual contém 45 tabelas e 44 funções SQL. O estado remoto final validou `admin_event_operations`, as RPCs administrativas atuais e a ausência da RPC legada; demais internals remotos mantêm sua classificação canônica.
 
 ## Resultado
 

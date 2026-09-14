@@ -1,4 +1,4 @@
-> **Current Baseline 2.5.0 (2026-09-14):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on repository source `e931d66d03a620d5e26588c8f6c8714c62ef5d1d` (fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`, 379 files, 83 migrations). Atomicity and admin location consistency are **RESOLVED**. Findings: 45 total, 13 RESOLVED, 21 ACTIVE, 6 POTENTIAL, 5 NOT_VALIDATED; release blockers: 0. PRODUCT_HEALTH and INFRASTRUCTURE_HEALTH: **DEGRADED**. Quality: 257/257 Node, 2/2 PostgreSQL 16, Quality Gate 34898804387 PASS. Production `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` runs application source `148b8200a44f4eeb49e004af45060a302bac9f20`; later migration/test-only commits create expected non-runtime drift. No deployment or remote mutation occurred during this freeze.
+> **Current Baseline 2.5.1 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on unchanged repository source `e931d66d03a620d5e26588c8f6c8714c62ef5d1d` (fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`, 379 files, 83 migrations). Atomicity and admin location consistency remain **RESOLVED**. Findings and health are unchanged: 45 total, 13 RESOLVED, 21 ACTIVE, 6 POTENTIAL, 5 NOT_VALIDATED, 0 release blockers; PRODUCT_HEALTH and INFRASTRUCTURE_HEALTH are **DEGRADED**. Quality remains 257/257 Node, 2/2 PostgreSQL 16 and Quality Gate 34898804387 PASS. Production `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` remains on application source `148b8200a44f4eeb49e004af45060a302bac9f20`; no runtime, database, deployment or functional change occurred.
 
 # Completeness scorecard — Etapa 7
 
@@ -11,7 +11,7 @@
 | DATA | MEDIUM_CONFIDENCE | 44 tabelas e OpenAPI remoto coincidem; 79 migrations e definições finais locais foram recontadas. | Catálogo PostgreSQL remoto read-only. |
 | INTEGRATIONS | MEDIUM_CONFIDENCE | As 6 integrações e suas dependências foram reencontradas; superfícies seguras responderam. | Configuração e logs read-only dos provedores. |
 | INFRASTRUCTURE | MEDIUM_CONFIDENCE | Projetos, aliases, healthchecks, crons e drift site × rota5 foram revalidados. | Metadados e logs completos do deployment. |
-| TESTS | MEDIUM_CONFIDENCE | 51 records in the canonical historical test inventory; current default suite reexecuted: 236/236 PASS, plus PostgreSQL integration 1/1 PASS. | Ambiente isolado para a suíte ampliada e testes reais. |
+| TESTS | MEDIUM_CONFIDENCE | 53 records in the canonical test inventory; current default suite: 257/257 PASS, plus separate PostgreSQL integration 2/2 PASS. | Ambiente isolado para a suíte ampliada e testes reais. |
 | RISKS | HIGH_CONFIDENCE | 44 findings foram contabilizados integralmente: P0 3, P1 10, P2 20, P3 9 e P4 2; as somas por type, severity, priority e status fecham em 44, sem record ausente. | Evidência remota dos itens NOT_VALIDATED. |
 | RUNTIME | MEDIUM_CONFIDENCE | 15 checks foram revisados; distribuição canônica permanece 12 PASS, 2 PARTIAL e 1 FAIL. | Observação read-only adicional ou ambiente isolado. |
 

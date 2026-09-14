@@ -1,4 +1,4 @@
-> **Current Baseline 2.5.0 (2026-09-14):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on repository source `e931d66d03a620d5e26588c8f6c8714c62ef5d1d` (fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`, 379 files, 83 migrations). Atomicity and admin location consistency are **RESOLVED**. Findings: 45 total, 13 RESOLVED, 21 ACTIVE, 6 POTENTIAL, 5 NOT_VALIDATED; release blockers: 0. PRODUCT_HEALTH and INFRASTRUCTURE_HEALTH: **DEGRADED**. Quality: 257/257 Node, 2/2 PostgreSQL 16, Quality Gate 34898804387 PASS. Production `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` runs application source `148b8200a44f4eeb49e004af45060a302bac9f20`; later migration/test-only commits create expected non-runtime drift. No deployment or remote mutation occurred during this freeze.
+> **Current Baseline 2.5.1 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on unchanged repository source `e931d66d03a620d5e26588c8f6c8714c62ef5d1d` (fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`, 379 files, 83 migrations). Atomicity and admin location consistency remain **RESOLVED**. Findings and health are unchanged: 45 total, 13 RESOLVED, 21 ACTIVE, 6 POTENTIAL, 5 NOT_VALIDATED, 0 release blockers; PRODUCT_HEALTH and INFRASTRUCTURE_HEALTH are **DEGRADED**. Quality remains 257/257 Node, 2/2 PostgreSQL 16 and Quality Gate 34898804387 PASS. Production `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` remains on application source `148b8200a44f4eeb49e004af45060a302bac9f20`; no runtime, database, deployment or functional change occurred.
 
 ## Baseline 2.5.0 test state
 
@@ -9,7 +9,7 @@ The catalog contains 53 test artifacts. The default Node suite passes **257/257*
 Baseline 2.2.0 runner evidence on source `3e2bdc2979301301b3f1566a2ac75a477ee4c169`: typecheck PASS; lint PASS with 0 errors and 23 warnings; build PASS; workspace default suite 207/214; canonical Git materialization after npm ci 207/214; same seven known failures; new regressions 0.
 
 
-The canonical historical inventory contains 51 records. The tracked runner is reproducible and the current default suite passes 236/236 with zero failures, skips, todos or regressions; PostgreSQL integration passes 1/1 in Quality Gate 34867214724. Historical 207/214 and 214/214 evidence is preserved below.
+The canonical inventory contains 53 records. The tracked runner is reproducible and the current default suite passes 257/257 with zero failures, skips, todos or regressions; the separate PostgreSQL integration passes 2/2 in Quality Gate 34898804387. Historical 207/214, 214/214 and 236/236 evidence is preserved below.
 
 # Inventário de testes e auditorias
 
@@ -143,7 +143,7 @@ Limitação comum: várias ferramentas usam Supabase real/service role, criam da
 | `npm run typecheck` | PASS | 0 diagnósticos após a correção mínima |
 | `npm run lint` | PASS | 0 erros; 23 warnings |
 | `npm run build` | PASS | compilação concluída; warning NFT/Turbopack preexistente no mapa |
-| `npm test` | PASS | 236/236 passed; 0 failures, skips, todos or regressions |
+| `npm test` | PASS | 257/257 passed; 0 failures, skips, todos or regressions |
 
 O lint sinalizou ainda imports, funções e variáveis sem uso, uso de `<img>` e uma dependência desnecessária de hook. Esses sinais foram inventariados como possíveis lacunas/legado; nenhum foi alterado.
 
