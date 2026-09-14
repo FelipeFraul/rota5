@@ -1,33 +1,34 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T17:29:04.216Z",
-  "stage": "2.4.3",
+  "generatedAt": "2026-09-14T17:43:51.677Z",
+  "stage": "2.4.4",
   "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
-  "scope": "Current canonical finding lifecycle and evidence projection for Baseline 2.4.3; historical claims remain nested under explicitly historical fields.",
+  "scope": "Current canonical finding lifecycle and evidence projection for Baseline 2.4.4; historical claims remain nested under explicitly historical fields.",
   "method": "Reconciled machine-readable current state against taxonomy, source, current behavioral catalogs and Baseline 2.4.1 resolution evidence; no lifecycle changed.",
   "count": 44,
   "records": [
     {
       "id": "bug.create-event-invalid-jsx",
-      "title": "JSX inválido impede compilar o workspace web de eventos",
+      "title": "RESOLVED — bug.create-event-invalid-jsx",
       "type": "BUG",
       "severity": "HIGH",
       "priority": "P0",
       "status": "RESOLVED",
       "confidence": "CONFIRMED",
-      "description": "CreateEventModal fecha um div antes do footer e deixa o JSX estruturalmente inválido. TypeScript e ESLint param no parse.",
+      "description": "Current RESOLVED state for bug.create-event-invalid-jsx: Removido apenas o </div> excedente entre a mensagem do formulário e o footer em CreateEventModal.tsx.",
       "evidence": [
         {
-          "path": "src/app/admin/eventos/event-editor/CreateEventModal.tsx",
-          "line": 19,
-          "claim": "JSX em uma única linha contém fechamento incompatível."
+          "path": ".github/workflows/quality-gate.yml",
+          "claim": "The current Quality Gate passes typecheck, lint, build and the complete default suite.",
+          "evidence_state": "CURRENT"
         },
         {
-          "path": "system-knowledge/flows.json",
-          "claim": "admin.web_event_workspace foi reclassificado de QUEBRADO para PARCIAL após os gates locais passarem."
+          "path": "scripts/test-admin-events-editor-event-modal-extraction.mjs",
+          "claim": "The focused event-modal regression proof passes in the current test catalog.",
+          "evidence_state": "CURRENT"
         }
       ],
-      "impact": "A aplicação no estado local não passa typecheck/build e o workspace administrativo web não pode ser entregue com segurança.",
+      "impact": "The historical impact is not current under the proven RESOLVED lifecycle.",
       "domains": [
         "domain.event-administration",
         "domain.analytics-reporting",
@@ -61,9 +62,9 @@
         "npm run lint"
       ],
       "blast_radius": "MULTI_DOMAIN",
-      "workaround": "APIs e jornada administrativa por WhatsApp continuam estruturalmente presentes.",
-      "direction": "Restaurar a estrutura JSX e só então revalidar build e workspace.",
-      "priority_justification": "P0 porque bloqueia a compilação da baseline local e a evolução segura do principal workspace administrativo.",
+      "workaround": "No workaround is required for the resolved condition.",
+      "direction": "Maintain the current regression/runtime proof and reopen only if new current evidence demonstrates recurrence.",
+      "priority_justification": "P0 is retained as historical classification metadata; RESOLVED is non-operational and non-release-blocking.",
       "historical_status_at_baseline_v1_0_0": "ACTIVE",
       "resolution": {
         "date": "2026-09-12",
@@ -96,36 +97,80 @@
           "before": "QUEBRADO",
           "after": "PARCIAL"
         },
-        "lifecycle_policy": "ID, severity and priority preserved; status migrated from historical ACTIVE to RESOLVED with explicit evidence."
+        "lifecycle_policy": "ID, severity and priority preserved; status migrated from historical ACTIVE to RESOLVED with explicit evidence.",
+        "historical_evidence": {
+          "description": "CreateEventModal fecha um div antes do footer e deixa o JSX estruturalmente inválido. TypeScript e ESLint param no parse.",
+          "evidence": [
+            {
+              "path": "src/app/admin/eventos/event-editor/CreateEventModal.tsx",
+              "line": 19,
+              "claim": "JSX em uma única linha contém fechamento incompatível."
+            },
+            {
+              "path": "system-knowledge/flows.json",
+              "claim": "admin.web_event_workspace foi reclassificado de QUEBRADO para PARCIAL após os gates locais passarem."
+            }
+          ],
+          "impact": "A aplicação no estado local não passa typecheck/build e o workspace administrativo web não pode ser entregue com segurança.",
+          "workaround": "APIs e jornada administrativa por WhatsApp continuam estruturalmente presentes.",
+          "direction": "Restaurar a estrutura JSX e só então revalidar build e workspace.",
+          "priority_justification": "P0 porque bloqueia a compilação da baseline local e a evolução segura do principal workspace administrativo.",
+          "title": "JSX inválido impede compilar o workspace web de eventos"
+        },
+        "current_evidence": [
+          {
+            "path": ".github/workflows/quality-gate.yml",
+            "claim": "The current Quality Gate passes typecheck, lint, build and the complete default suite.",
+            "evidence_state": "CURRENT"
+          },
+          {
+            "path": "scripts/test-admin-events-editor-event-modal-extraction.mjs",
+            "claim": "The focused event-modal regression proof passes in the current test catalog.",
+            "evidence_state": "CURRENT"
+          }
+        ],
+        "semantic_reconciliation": {
+          "baseline": "2.4.4",
+          "reconciled_at": "2026-09-14T17:43:51.677Z",
+          "contract": "TOP_LEVEL_CURRENT__HISTORY_UNDER_RESOLUTION_HISTORICAL_EVIDENCE",
+          "lifecycle_changed": false,
+          "severity_changed": false,
+          "priority_changed": false
+        }
       },
-      "current_impact": "O bloqueio de parse foi removido. Nenhuma regra de negócio ou layout foi alterado."
+      "current_impact": "O bloqueio de parse foi removido. Nenhuma regra de negócio ou layout foi alterado.",
+      "current_state": {
+        "lifecycle": "RESOLVED",
+        "operational_open": false,
+        "release_blocking": false,
+        "current_impact": "The historical impact is not current under the proven RESOLVED lifecycle.",
+        "workaround_required": false,
+        "top_level_claims": "CURRENT_RESOLUTION_ONLY",
+        "top_level_evidence": "CURRENT"
+      }
     },
     {
       "id": "bug.combo-redemption-unreachable-consume",
-      "title": "Caso válido de combo não alcança a RPC que consome o resgate",
+      "title": "RESOLVED — bug.combo-redemption-unreachable-consume",
       "type": "BROKEN_FLOW",
       "severity": "HIGH",
       "priority": "P0",
       "status": "RESOLVED",
       "confidence": "CONFIRMED",
-      "description": "Todos os ramos observados de paid + issued + escopo válido retornam antes da chamada validate_combo_redemption; a transição issued→used não ocorre pelo fluxo analisado.",
+      "description": "Current RESOLVED state for bug.combo-redemption-unreachable-consume: Restrict the early delivery-choice branch to redemptions without delivery_choice_confirmed_at, allowing confirmed and prepared redemptions to reach validate_combo_redemption.",
       "evidence": [
         {
           "path": "src/lib/tickets/services/comboRedemptions.ts",
-          "line": 935,
-          "claim": "Início da validação do scan."
+          "claim": "The current guarded path allows confirmed/prepared redemptions to reach atomic validation.",
+          "evidence_state": "CURRENT"
         },
         {
-          "path": "src/lib/tickets/services/comboRedemptions.ts",
-          "line": 1462,
-          "claim": "RPC de consumo aparece depois dos retornos dos casos válidos."
-        },
-        {
-          "path": "system-knowledge/flows.json",
-          "claim": "kitchen.combo_redemption está QUEBRADO."
+          "path": "scripts/test-ticket-delivery-distribution.mjs",
+          "claim": "Focused combo delivery and consumption behavior remains covered.",
+          "evidence_state": "CURRENT"
         }
       ],
-      "impact": "A cozinha pode validar ou orientar entrega sem concluir atomicamente o consumo, permitindo reapresentação e divergência de estado.",
+      "impact": "The historical impact is not current within the proven resolution scope. Residual limitation, without reopening this finding: Remote database equivalence was not validated. risk.combo-metadata-read-modify-write-race remains active.",
       "domains": [
         "domain.combo-commerce-fulfillment"
       ],
@@ -155,9 +200,9 @@
         "integration-supabase"
       ],
       "blast_radius": "DOMAIN",
-      "workaround": "Não há conclusão equivalente comprovada no mesmo fluxo.",
-      "direction": "Reconectar o caminho válido à transição atômica existente.",
-      "priority_justification": "P0 porque o fluxo operacional de consumo está comprovadamente quebrado e afeta controle de entrega.",
+      "workaround": "No workaround is required for the resolved condition.",
+      "direction": "Maintain the current regression/runtime proof and reopen only if new current evidence demonstrates recurrence.",
+      "priority_justification": "P0 is retained as historical classification metadata; RESOLVED is non-operational and non-release-blocking.",
       "resolution": {
         "date": "2026-09-12",
         "base_commit": "121b7a8a4870f5933bd0cf0d45f12a8d71132424",
@@ -183,18 +228,71 @@
         "limitations": [
           "Remote database equivalence was not validated.",
           "risk.combo-metadata-read-modify-write-race remains active."
-        ]
+        ],
+        "historical_evidence": {
+          "description": "Todos os ramos observados de paid + issued + escopo válido retornam antes da chamada validate_combo_redemption; a transição issued→used não ocorre pelo fluxo analisado.",
+          "evidence": [
+            {
+              "path": "src/lib/tickets/services/comboRedemptions.ts",
+              "line": 935,
+              "claim": "Início da validação do scan."
+            },
+            {
+              "path": "src/lib/tickets/services/comboRedemptions.ts",
+              "line": 1462,
+              "claim": "RPC de consumo aparece depois dos retornos dos casos válidos."
+            },
+            {
+              "path": "system-knowledge/flows.json",
+              "claim": "kitchen.combo_redemption está QUEBRADO."
+            }
+          ],
+          "impact": "A cozinha pode validar ou orientar entrega sem concluir atomicamente o consumo, permitindo reapresentação e divergência de estado.",
+          "workaround": "Não há conclusão equivalente comprovada no mesmo fluxo.",
+          "direction": "Reconectar o caminho válido à transição atômica existente.",
+          "priority_justification": "P0 porque o fluxo operacional de consumo está comprovadamente quebrado e afeta controle de entrega.",
+          "title": "Caso válido de combo não alcança a RPC que consome o resgate"
+        },
+        "current_evidence": [
+          {
+            "path": "src/lib/tickets/services/comboRedemptions.ts",
+            "claim": "The current guarded path allows confirmed/prepared redemptions to reach atomic validation.",
+            "evidence_state": "CURRENT"
+          },
+          {
+            "path": "scripts/test-ticket-delivery-distribution.mjs",
+            "claim": "Focused combo delivery and consumption behavior remains covered.",
+            "evidence_state": "CURRENT"
+          }
+        ],
+        "semantic_reconciliation": {
+          "baseline": "2.4.4",
+          "reconciled_at": "2026-09-14T17:43:51.677Z",
+          "contract": "TOP_LEVEL_CURRENT__HISTORY_UNDER_RESOLUTION_HISTORICAL_EVIDENCE",
+          "lifecycle_changed": false,
+          "severity_changed": false,
+          "priority_changed": false
+        }
+      },
+      "current_state": {
+        "lifecycle": "RESOLVED",
+        "operational_open": false,
+        "release_blocking": false,
+        "current_impact": "The historical impact is not current within the proven resolution scope. Residual limitation, without reopening this finding: Remote database equivalence was not validated. risk.combo-metadata-read-modify-write-race remains active.",
+        "workaround_required": false,
+        "top_level_claims": "CURRENT_RESOLUTION_ONLY",
+        "top_level_evidence": "CURRENT"
       }
     },
     {
       "id": "bug.event-duplicate-artist-leak",
-      "title": "Duplicação de evento preserva artista do evento de origem",
+      "title": "RESOLVED — bug.event-duplicate-artist-leak",
       "type": "BUG",
       "severity": "MEDIUM",
       "priority": "P1",
       "status": "RESOLVED",
       "confidence": "CONFIRMED",
-      "description": "Historical event-duplication defect is corrected: the current payload assigns artist_name to the duplicated title rather than inheriting the source artist.",
+      "description": "Current RESOLVED state for bug.event-duplicate-artist-leak: The canonical resolution proof remains valid.",
       "evidence": [
         {
           "path": "src/lib/tickets/services/adminEventDuplication.ts",
@@ -212,7 +310,7 @@
           "evidence_state": "CURRENT"
         }
       ],
-      "impact": "CURRENT_NONE_OBSERVED: the documented defect is resolved; original impact is retained only in resolution.historical_evidence.impact.",
+      "impact": "The historical impact is not current within the proven resolution scope. Residual limitation, without reopening this finding: Resolution covers the documented artist inheritance defect; it does not assert that every administrative multi-step failure mode is resolved.",
       "domains": [
         "domain.event-administration"
       ],
@@ -233,9 +331,9 @@
         "test-002"
       ],
       "blast_radius": "DOMAIN",
-      "workaround": "NOT_REQUIRED_CURRENTLY: regression evidence is green; the historical workaround remains in resolution.historical_evidence.workaround.",
-      "direction": "Maintain the existing direct regression proof; investigate only if new current evidence contradicts the resolved state.",
-      "priority_justification": "Historical P1 classification retained for traceability. RESOLVED is non-operational and non-release-blocking under the canonical taxonomy.",
+      "workaround": "No workaround is required for the resolved condition.",
+      "direction": "Maintain the current regression/runtime proof and reopen only if new current evidence demonstrates recurrence.",
+      "priority_justification": "P1 is retained as historical classification metadata; RESOLVED is non-operational and non-release-blocking.",
       "baseline_2_3_0_technical_evidence": {
         "lifecycle_changed": false,
         "evidence": [
@@ -273,20 +371,24 @@
           "impact": "Um rascunho duplicado pode exibir ou persistir artista incoerente com o título, exigindo correção manual.",
           "workaround": "Editar manualmente o artista após duplicar.",
           "direction": "Alinhar a regra de duplicação ao contrato de título/artista.",
-          "priority_justification": "P1 por produzir dado administrativo incorreto em uma ação ativa, com workaround manual."
+          "priority_justification": "P1 por produzir dado administrativo incorreto em uma ação ativa, com workaround manual.",
+          "title": "Duplicação de evento preserva artista do evento de origem"
         },
         "current_evidence": [
           {
             "path": "src/lib/tickets/services/adminEventDuplication.ts",
-            "claim": "buildDuplicatedAdminEventPayload sets title and artist_name to duplicatedTitle."
+            "claim": "buildDuplicatedAdminEventPayload sets title and artist_name to duplicatedTitle.",
+            "evidence_state": "CURRENT"
           },
           {
             "path": "scripts/test-admin-event-artist-name-leak.mjs",
-            "claim": "Behavioral duplication proof passes and confirms source artist is not inherited."
+            "claim": "Behavioral duplication proof passes and confirms source artist is not inherited.",
+            "evidence_state": "CURRENT"
           },
           {
             "path": "package.json",
-            "claim": "Current default suite passes 236/236, including the direct duplication test."
+            "claim": "Current default suite passes 236/236, including the direct duplication test.",
+            "evidence_state": "CURRENT"
           }
         ],
         "scope_limitation": "Resolution covers the documented artist inheritance defect; it does not assert that every administrative multi-step failure mode is resolved.",
@@ -294,30 +396,33 @@
         "database_change": false,
         "deployment_required": false,
         "semantic_reconciliation": {
-          "baseline": "2.4.2",
-          "reconciled_at": "2026-09-14T17:13:55.692Z",
-          "rule": "Top-level fields describe current resolved state; original claims remain exclusively under resolution.historical_evidence.",
-          "lifecycle_changed": false
+          "baseline": "2.4.4",
+          "reconciled_at": "2026-09-14T17:43:51.677Z",
+          "contract": "TOP_LEVEL_CURRENT__HISTORY_UNDER_RESOLUTION_HISTORICAL_EVIDENCE",
+          "lifecycle_changed": false,
+          "severity_changed": false,
+          "priority_changed": false
         }
       },
       "current_state": {
-        "evidence_state": "CURRENT",
-        "defect_present": false,
-        "regression_test_status": "PASS",
-        "current_impact": "NONE_OBSERVED",
+        "lifecycle": "RESOLVED",
+        "operational_open": false,
+        "release_blocking": false,
+        "current_impact": "The historical impact is not current within the proven resolution scope. Residual limitation, without reopening this finding: Resolution covers the documented artist inheritance defect; it does not assert that every administrative multi-step failure mode is resolved.",
         "workaround_required": false,
-        "release_blocking": false
+        "top_level_claims": "CURRENT_RESOLUTION_ONLY",
+        "top_level_evidence": "CURRENT"
       }
     },
     {
       "id": "bug.user-visible-text-corruption",
-      "title": "Textos ativos contêm mojibake e substituições por interrogação",
+      "title": "RESOLVED — bug.user-visible-text-corruption",
       "type": "BUG",
       "severity": "MEDIUM",
       "priority": "P1",
       "status": "RESOLVED",
       "confidence": "CONFIRMED",
-      "description": "Historical scoped text-corruption defects are corrected in the cited active surfaces; direct text/help tests and the complete default suite pass.",
+      "description": "Current RESOLVED state for bug.user-visible-text-corruption: The canonical resolution proof remains valid.",
       "evidence": [
         {
           "path": "scripts/test-message-mojibake.mjs",
@@ -340,7 +445,7 @@
           "evidence_state": "CURRENT"
         }
       ],
-      "impact": "CURRENT_NONE_OBSERVED: the documented defect is resolved; original impact is retained only in resolution.historical_evidence.impact.",
+      "impact": "The historical impact is not current within the proven resolution scope. Residual limitation, without reopening this finding: Resolution is limited to the documented and revalidated active surfaces; it is not an absolute guarantee that arbitrary future or external text can never be corrupted.",
       "domains": [
         "domain.whatsapp-conversations",
         "domain.analytics-reporting",
@@ -372,9 +477,9 @@
         "test-032"
       ],
       "blast_radius": "MULTI_DOMAIN",
-      "workaround": "NOT_REQUIRED_CURRENTLY: regression evidence is green; the historical workaround remains in resolution.historical_evidence.workaround.",
-      "direction": "Maintain the existing direct regression proof; investigate only if new current evidence contradicts the resolved state.",
-      "priority_justification": "Historical P1 classification retained for traceability. RESOLVED is non-operational and non-release-blocking under the canonical taxonomy.",
+      "workaround": "No workaround is required for the resolved condition.",
+      "direction": "Maintain the current regression/runtime proof and reopen only if new current evidence demonstrates recurrence.",
+      "priority_justification": "P1 is retained as historical classification metadata; RESOLVED is non-operational and non-release-blocking.",
       "baseline_2_3_0_technical_evidence": {
         "lifecycle_changed": false,
         "evidence": [
@@ -417,24 +522,29 @@
           "impact": "Usuários e administradores recebem texto corrompido; IDs/keywords corrompidos também alteram resultados e contratos de busca.",
           "workaround": "O sanitizador de saída repara apenas parte dos casos e não corrige IDs ou UI web.",
           "direction": "Normalizar os arquivos fonte e ampliar a verificação para corrupção por substituição e bytes reinterpretados.",
-          "priority_justification": "P1 porque o defeito é visível em jornadas públicas e administrativas e já quebra testes."
+          "priority_justification": "P1 porque o defeito é visível em jornadas públicas e administrativas e já quebra testes.",
+          "title": "Textos ativos contêm mojibake e substituições por interrogação"
         },
         "current_evidence": [
           {
             "path": "scripts/test-message-mojibake.mjs",
-            "claim": "Scoped active public and administrative source scan passes."
+            "claim": "Scoped active public and administrative source scan passes.",
+            "evidence_state": "CURRENT"
           },
           {
             "path": "scripts/test-public-help-flow.mjs",
-            "claim": "Public help IDs, keywords and behavior pass direct tests."
+            "claim": "Public help IDs, keywords and behavior pass direct tests.",
+            "evidence_state": "CURRENT"
           },
           {
             "path": "src/lib/zapi/textEncoding.ts",
-            "claim": "Repository-wide source scan found the marker sequence only inside the intentional mojibake detector/repair implementation."
+            "claim": "Repository-wide source scan found the marker sequence only inside the intentional mojibake detector/repair implementation.",
+            "evidence_state": "CURRENT"
           },
           {
             "path": "package.json",
-            "claim": "Current default suite passes 236/236."
+            "claim": "Current default suite passes 236/236.",
+            "evidence_state": "CURRENT"
           }
         ],
         "scope_limitation": "Resolution is limited to the documented and revalidated active surfaces; it is not an absolute guarantee that arbitrary future or external text can never be corrupted.",
@@ -442,53 +552,46 @@
         "database_change": false,
         "deployment_required": false,
         "semantic_reconciliation": {
-          "baseline": "2.4.2",
-          "reconciled_at": "2026-09-14T17:13:55.692Z",
-          "rule": "Top-level fields describe current resolved state; original claims remain exclusively under resolution.historical_evidence.",
-          "lifecycle_changed": false
+          "baseline": "2.4.4",
+          "reconciled_at": "2026-09-14T17:43:51.677Z",
+          "contract": "TOP_LEVEL_CURRENT__HISTORY_UNDER_RESOLUTION_HISTORICAL_EVIDENCE",
+          "lifecycle_changed": false,
+          "severity_changed": false,
+          "priority_changed": false
         }
       },
       "current_state": {
-        "evidence_state": "CURRENT",
-        "defect_present": false,
-        "regression_test_status": "PASS",
-        "current_impact": "NONE_OBSERVED",
+        "lifecycle": "RESOLVED",
+        "operational_open": false,
+        "release_blocking": false,
+        "current_impact": "The historical impact is not current within the proven resolution scope. Residual limitation, without reopening this finding: Resolution is limited to the documented and revalidated active surfaces; it is not an absolute guarantee that arbitrary future or external text can never be corrupted.",
         "workaround_required": false,
-        "release_blocking": false
+        "top_level_claims": "CURRENT_RESOLUTION_ONLY",
+        "top_level_evidence": "CURRENT"
       }
     },
     {
       "id": "legacy.active-brand-contamination",
-      "title": "Superfícies Rota5 exibem referências e assets Black House/RockBar",
+      "title": "RESOLVED — legacy.active-brand-contamination",
       "type": "LEGACY",
       "severity": "HIGH",
       "priority": "P1",
       "status": "RESOLVED",
       "confidence": "CONFIRMED",
-      "description": "Checkout, ajuda e logs de pagamento usam Black House; CSS de checkout usa rockbar.webp/rockbar_mb.webp; domínio canônico declarado também é Black House.",
+      "description": "Current RESOLVED state for legacy.active-brand-contamination: Removed legacy Black House copy from checkout pending and success. Corrected the five documented contaminated public-help responses. Corrected the Rock Bar resend fallback and the three additional audited router prompts. Removed the dead Rock Bar greeting block. Replaced active CSS rockbar.webp and rockbar_mb.webp references with valid Rota5 assets. Removed the Black House static CORS configuration. Removed the unused ROCK_BAR_OFFICIAL_WHATSAPP_PHONE environment schema entry. Preview and Production scoped validation passed with zero relevant Production log errors.",
       "evidence": [
         {
-          "path": "src/app/checkout/pending/page.tsx",
-          "line": 8,
-          "claim": "Mensagem de pagamento cita Black House."
+          "path": "system-knowledge/runtime-validation.json",
+          "claim": "Current canonical runtime evidence preserves the scoped resolution proof.",
+          "evidence_state": "CURRENT"
         },
         {
-          "path": "src/app/checkout/success/page.tsx",
-          "line": 8,
-          "claim": "Mensagem de confirmação cita Black House."
-        },
-        {
-          "path": "src/app/globals.css",
-          "line": 174,
-          "claim": "Checkout usa rockbar.webp."
-        },
-        {
-          "path": "next.config.ts",
-          "line": 3,
-          "claim": "Origin de produção aponta para domínio Black House."
+          "path": "system-knowledge/infrastructure.json",
+          "claim": "The current production/runtime projection does not re-establish the historical scoped condition.",
+          "evidence_state": "CURRENT"
         }
       ],
-      "impact": "A marca, confiança de pagamento e identidade visual podem ser incorretas para compradores Rota5, além de aumentar o risco de operar o projeto errado.",
+      "impact": "The historical impact is not current within the proven resolution scope. Residual limitation, without reopening this finding: Resolution is scoped to the active surfaces documented and revalidated for this finding; it is not a repository-wide assertion that historical brand strings do not exist elsewhere.",
       "domains": [
         "domain.brand-presentation",
         "domain.orders-payments",
@@ -520,9 +623,9 @@
         "integration-mercado-pago"
       ],
       "blast_radius": "MULTI_DOMAIN",
-      "workaround": "Nenhum seletor de marca/tenant foi encontrado.",
-      "direction": "Definir a identidade canônica antes de classificar cada referência como compartilhada ou legado removível.",
-      "priority_justification": "P1 porque referências legadas estão ativas em pagamento e comunicação ao cliente.",
+      "workaround": "No workaround is required for the resolved condition.",
+      "direction": "Maintain the current regression/runtime proof and reopen only if new current evidence demonstrates recurrence.",
+      "priority_justification": "P1 is retained as historical classification metadata; RESOLVED is non-operational and non-release-blocking.",
       "resolution": {
         "resolved_at": "2026-09-13T23:22:29.421Z",
         "resolution_scope": "DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES",
@@ -555,61 +658,101 @@
           "rota5_mb_webp_http": 200,
           "relevant_production_log_errors": 0
         },
-        "limitation": "Resolution is scoped to the active surfaces documented and revalidated for this finding; it is not a repository-wide assertion that historical brand strings do not exist elsewhere."
+        "limitation": "Resolution is scoped to the active surfaces documented and revalidated for this finding; it is not a repository-wide assertion that historical brand strings do not exist elsewhere.",
+        "historical_evidence": {
+          "description": "Checkout, ajuda e logs de pagamento usam Black House; CSS de checkout usa rockbar.webp/rockbar_mb.webp; domínio canônico declarado também é Black House.",
+          "evidence": [
+            {
+              "path": "src/app/checkout/pending/page.tsx",
+              "line": 8,
+              "claim": "Mensagem de pagamento cita Black House."
+            },
+            {
+              "path": "src/app/checkout/success/page.tsx",
+              "line": 8,
+              "claim": "Mensagem de confirmação cita Black House."
+            },
+            {
+              "path": "src/app/globals.css",
+              "line": 174,
+              "claim": "Checkout usa rockbar.webp."
+            },
+            {
+              "path": "next.config.ts",
+              "line": 3,
+              "claim": "Origin de produção aponta para domínio Black House."
+            }
+          ],
+          "impact": "A marca, confiança de pagamento e identidade visual podem ser incorretas para compradores Rota5, além de aumentar o risco de operar o projeto errado.",
+          "workaround": "Nenhum seletor de marca/tenant foi encontrado.",
+          "direction": "Definir a identidade canônica antes de classificar cada referência como compartilhada ou legado removível.",
+          "priority_justification": "P1 porque referências legadas estão ativas em pagamento e comunicação ao cliente.",
+          "title": "Superfícies Rota5 exibem referências e assets Black House/RockBar"
+        },
+        "current_evidence": [
+          {
+            "path": "system-knowledge/runtime-validation.json",
+            "claim": "Current canonical runtime evidence preserves the scoped resolution proof.",
+            "evidence_state": "CURRENT"
+          },
+          {
+            "path": "system-knowledge/infrastructure.json",
+            "claim": "The current production/runtime projection does not re-establish the historical scoped condition.",
+            "evidence_state": "CURRENT"
+          }
+        ],
+        "semantic_reconciliation": {
+          "baseline": "2.4.4",
+          "reconciled_at": "2026-09-14T17:43:51.677Z",
+          "contract": "TOP_LEVEL_CURRENT__HISTORY_UNDER_RESOLUTION_HISTORICAL_EVIDENCE",
+          "lifecycle_changed": false,
+          "severity_changed": false,
+          "priority_changed": false
+        }
+      },
+      "current_state": {
+        "lifecycle": "RESOLVED",
+        "operational_open": false,
+        "release_blocking": false,
+        "current_impact": "The historical impact is not current within the proven resolution scope. Residual limitation, without reopening this finding: Resolution is scoped to the active surfaces documented and revalidated for this finding; it is not a repository-wide assertion that historical brand strings do not exist elsewhere.",
+        "workaround_required": false,
+        "top_level_claims": "CURRENT_RESOLUTION_ONLY",
+        "top_level_evidence": "CURRENT"
       }
     },
     {
       "id": "risk.gate-credential-revocation-does-not-revoke-session",
-      "title": "Pausa/revogação da credencial não invalida sessões de leitor já emitidas",
+      "title": "RESOLVED — risk.gate-credential-revocation-does-not-revoke-session",
       "type": "AUTHORIZATION",
       "severity": "HIGH",
       "priority": "P1",
       "status": "RESOLVED",
       "confidence": "CONFIRMED",
-      "description": "Credential-derived gate sessions are attributed to their source; pause/revoke invalidates linked sessions transactionally, and FINAL_DB authorizes ticket/combo mutations only through a currently authorized attributed session.",
+      "description": "Current RESOLVED state for risk.gate-credential-revocation-does-not-revoke-session: Completed EXPAND -> NEW_APP -> CONTRACT. Credential source attribution is required and immutable, pause/revoke invalidates attributed sessions, and ticket/combo authorization is strict-only.",
       "evidence": [
         {
-          "path": "src/lib/tickets/services/gateAccesses.ts",
-          "line": 126,
-          "claim": "Pausa apenas gate_accesses."
-        },
-        {
-          "path": "src/lib/tickets/services/fixedGateAccesses.ts",
-          "line": 84,
-          "claim": "Revoga apenas fixed_gate_accesses."
-        },
-        {
-          "path": "src/lib/tickets/services/gateSessions.ts",
-          "line": 282,
-          "claim": "Validação consulta token/status/expiração da sessão."
-        },
-        {
           "path": "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
-          "line": 1,
-          "claim": "EXPAND source attribution and authorization objects are APPLIED_AND_VALIDATED remotely since 2026-09-13T14:20:15.059853Z."
-        },
-        {
-          "path": "supabase/rollout/gate_credential_session_revocation_contract.sql",
-          "line": 1,
-          "claim": "CONTRACT is a protected rollout draft outside active migrations."
-        },
-        {
-          "path": "scripts/test-gate-credential-revocation-rollout-postgres.mjs",
-          "line": 1,
-          "claim": "Disposable PostgreSQL 16 rollout matrix passed."
-        },
-        {
-          "path": "scripts/test-gate-credential-revocation-postgres.mjs",
-          "line": 1,
-          "claim": "Ticket race 2/2 and combo race 2/2 passed."
+          "claim": "EXPAND introduced source attribution and atomic authorization objects.",
+          "evidence_state": "CURRENT"
         },
         {
           "path": "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql",
-          "line": 1,
-          "claim": "CONTRACT 20260913000100_gate_credential_session_revocation_contract is APPLIED_AND_VALIDATED since 2026-09-13T18:11:18.773635Z; SHA-256 bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525."
+          "sha256": "bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525",
+          "claim": "CONTRACT made source attribution mandatory and immutable and removed legacy ticket/combo authorization.",
+          "evidence_state": "CURRENT"
+        },
+        {
+          "path": "scripts/test-gate-credential-revocation-rollout-postgres.mjs",
+          "claim": "Disposable PostgreSQL 16 matrix proved NEW_APP + FINAL_DB and expected OLD_APP incompatibility.",
+          "evidence_state": "CURRENT"
+        },
+        {
+          "path": "system-knowledge/runtime-validation.json",
+          "claim": "Gates A-I and the post-CONTRACT strict runtime audit passed; production relevant log errors remained zero.",
+          "evidence_state": "CURRENT"
         }
       ],
-      "impact": "Um operador removido pode continuar usando um link já emitido até expiração, inclusive para portaria ou cozinha.",
+      "impact": "The historical impact is not current under the proven RESOLVED lifecycle.",
       "domains": [
         "domain.gate-admission",
         "domain.combo-commerce-fulfillment",
@@ -638,9 +781,9 @@
         "gate_sessions"
       ],
       "blast_radius": "MULTI_DOMAIN",
-      "workaround": "NONE_REQUIRED",
-      "direction": "Monitor the strict-only production contract; OLD_APP rollback is intentionally unsupported after CONTRACT.",
-      "priority_justification": "P1 porque mantém autorização operacional após revogação explícita.",
+      "workaround": "No workaround is required for the resolved condition.",
+      "direction": "Maintain the current regression/runtime proof and reopen only if new current evidence demonstrates recurrence.",
+      "priority_justification": "P1 is retained as historical classification metadata; RESOLVED is non-operational and non-release-blocking.",
       "source_implementation": "IMPLEMENTED_AND_VALIDATED",
       "production_rollout": "COMPLETE",
       "rollout_state": {
@@ -953,7 +1096,97 @@
           "source attribution mutation rejected",
           "fixture cleanup PASS"
         ],
-        "lifecycle_policy": "ID, HIGH severity, P1 priority and historical evidence are preserved; ACTIVE migrated explicitly to RESOLVED after full remote rollout and runtime proof."
+        "lifecycle_policy": "ID, HIGH severity, P1 priority and historical evidence are preserved; ACTIVE migrated explicitly to RESOLVED after full remote rollout and runtime proof.",
+        "historical_evidence": {
+          "description": "Credential-derived gate sessions are attributed to their source; pause/revoke invalidates linked sessions transactionally, and FINAL_DB authorizes ticket/combo mutations only through a currently authorized attributed session.",
+          "evidence": [
+            {
+              "path": "src/lib/tickets/services/gateAccesses.ts",
+              "line": 126,
+              "claim": "Pausa apenas gate_accesses."
+            },
+            {
+              "path": "src/lib/tickets/services/fixedGateAccesses.ts",
+              "line": 84,
+              "claim": "Revoga apenas fixed_gate_accesses."
+            },
+            {
+              "path": "src/lib/tickets/services/gateSessions.ts",
+              "line": 282,
+              "claim": "Validação consulta token/status/expiração da sessão."
+            },
+            {
+              "path": "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
+              "line": 1,
+              "claim": "EXPAND source attribution and authorization objects are APPLIED_AND_VALIDATED remotely since 2026-09-13T14:20:15.059853Z."
+            },
+            {
+              "path": "supabase/rollout/gate_credential_session_revocation_contract.sql",
+              "line": 1,
+              "claim": "CONTRACT is a protected rollout draft outside active migrations."
+            },
+            {
+              "path": "scripts/test-gate-credential-revocation-rollout-postgres.mjs",
+              "line": 1,
+              "claim": "Disposable PostgreSQL 16 rollout matrix passed."
+            },
+            {
+              "path": "scripts/test-gate-credential-revocation-postgres.mjs",
+              "line": 1,
+              "claim": "Ticket race 2/2 and combo race 2/2 passed."
+            },
+            {
+              "path": "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql",
+              "line": 1,
+              "claim": "CONTRACT 20260913000100_gate_credential_session_revocation_contract is APPLIED_AND_VALIDATED since 2026-09-13T18:11:18.773635Z; SHA-256 bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525."
+            }
+          ],
+          "impact": "Um operador removido pode continuar usando um link já emitido até expiração, inclusive para portaria ou cozinha.",
+          "workaround": "NONE_REQUIRED",
+          "direction": "Monitor the strict-only production contract; OLD_APP rollback is intentionally unsupported after CONTRACT.",
+          "priority_justification": "P1 porque mantém autorização operacional após revogação explícita.",
+          "title": "Pausa/revogação da credencial não invalida sessões de leitor já emitidas"
+        },
+        "current_evidence": [
+          {
+            "path": "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
+            "claim": "EXPAND introduced source attribution and atomic authorization objects.",
+            "evidence_state": "CURRENT"
+          },
+          {
+            "path": "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql",
+            "sha256": "bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525",
+            "claim": "CONTRACT made source attribution mandatory and immutable and removed legacy ticket/combo authorization.",
+            "evidence_state": "CURRENT"
+          },
+          {
+            "path": "scripts/test-gate-credential-revocation-rollout-postgres.mjs",
+            "claim": "Disposable PostgreSQL 16 matrix proved NEW_APP + FINAL_DB and expected OLD_APP incompatibility.",
+            "evidence_state": "CURRENT"
+          },
+          {
+            "path": "system-knowledge/runtime-validation.json",
+            "claim": "Gates A-I and the post-CONTRACT strict runtime audit passed; production relevant log errors remained zero.",
+            "evidence_state": "CURRENT"
+          }
+        ],
+        "semantic_reconciliation": {
+          "baseline": "2.4.4",
+          "reconciled_at": "2026-09-14T17:43:51.677Z",
+          "contract": "TOP_LEVEL_CURRENT__HISTORY_UNDER_RESOLUTION_HISTORICAL_EVIDENCE",
+          "lifecycle_changed": false,
+          "severity_changed": false,
+          "priority_changed": false
+        }
+      },
+      "current_state": {
+        "lifecycle": "RESOLVED",
+        "operational_open": false,
+        "release_blocking": false,
+        "current_impact": "The historical impact is not current under the proven RESOLVED lifecycle.",
+        "workaround_required": false,
+        "top_level_claims": "CURRENT_RESOLUTION_ONLY",
+        "top_level_evidence": "CURRENT"
       }
     },
     {
@@ -1242,29 +1475,26 @@
     },
     {
       "id": "risk.vercel-project-identity-drift",
-      "title": "Domínio declarado pertence a site, enquanto checkout local está ligado a rota5",
+      "title": "RESOLVED — risk.vercel-project-identity-drift",
       "type": "CONFIGURATION_DRIFT",
       "severity": "HIGH",
       "priority": "P0",
       "status": "RESOLVED",
       "confidence": "CONFIRMED",
-      "description": "next.config.ts declara blackhouseclubedecomedia.vercel.app, resolvido para o projeto site; .vercel/project.json liga o workspace ao projeto rota5.",
+      "description": "Current RESOLVED state for risk.vercel-project-identity-drift: A cadeia operacional canônica foi separada: origin FelipeFraul/rota5 na branch production e projeto Vercel rota5 ligado ao mesmo repositório e branch.",
       "evidence": [
         {
-          "path": "next.config.ts",
-          "line": 3,
-          "claim": "Origin declarado Black House."
+          "path": ".vercel/project.json",
+          "claim": "The current workspace remains linked to the canonical Rota5 Vercel project.",
+          "evidence_state": "CURRENT"
         },
         {
-          "path": "system-knowledge/infrastructure.json",
-          "claim": "Projetos remoto declarado e ligado são diferentes."
-        },
-        {
-          "path": "system-knowledge/configuration-drift.json",
-          "claim": "Drift catalogado na Etapa 5."
+          "path": "vercel.json",
+          "claim": "Git auto-deploy remains disabled for the canonical Rota5 release path.",
+          "evidence_state": "CURRENT"
         }
       ],
-      "impact": "Deploy, cron, URLs de checkout e validação de produção podem atingir projetos diferentes sem que o operador perceba.",
+      "impact": "The historical impact is not current under the proven RESOLVED lifecycle.",
       "domains": [
         "domain.platform-runtime",
         "domain.orders-payments"
@@ -1288,9 +1518,9 @@
         "integration-vercel"
       ],
       "blast_radius": "SYSTEM_WIDE",
-      "workaround": "Ambos os aliases responderam health 200 na observação, mas representam deployments distintos.",
-      "direction": "Estabelecer um único projeto/domínio canônico antes de qualquer deploy.",
-      "priority_justification": "P0 porque qualquer evolução/deploy pode ser aplicada ao alvo errado.",
+      "workaround": "No workaround is required for the resolved condition.",
+      "direction": "Maintain the current regression/runtime proof and reopen only if new current evidence demonstrates recurrence.",
+      "priority_justification": "P0 is retained as historical classification metadata; RESOLVED is non-operational and non-release-blocking.",
       "historical_status_at_baseline_v1_2_0": "ACTIVE",
       "root_cause": "Separação incorreta de identidade Git/Vercel entre Rota5 e Ticketeira.",
       "resolution": {
@@ -1321,38 +1551,84 @@
           }
         ],
         "historical_cause_evidence": "O projeto Vercel site e o repositório FelipeFraul/ticketeira pertencem à Ticketeira e permanecem apenas como evidência histórica.",
-        "lifecycle_policy": "ID, severity, priority, root cause and prior evidence preserved; ACTIVE migrated explicitly to RESOLVED."
+        "lifecycle_policy": "ID, severity, priority, root cause and prior evidence preserved; ACTIVE migrated explicitly to RESOLVED.",
+        "historical_evidence": {
+          "description": "next.config.ts declara blackhouseclubedecomedia.vercel.app, resolvido para o projeto site; .vercel/project.json liga o workspace ao projeto rota5.",
+          "evidence": [
+            {
+              "path": "next.config.ts",
+              "line": 3,
+              "claim": "Origin declarado Black House."
+            },
+            {
+              "path": "system-knowledge/infrastructure.json",
+              "claim": "Projetos remoto declarado e ligado são diferentes."
+            },
+            {
+              "path": "system-knowledge/configuration-drift.json",
+              "claim": "Drift catalogado na Etapa 5."
+            }
+          ],
+          "impact": "Deploy, cron, URLs de checkout e validação de produção podem atingir projetos diferentes sem que o operador perceba.",
+          "workaround": "Ambos os aliases responderam health 200 na observação, mas representam deployments distintos.",
+          "direction": "Estabelecer um único projeto/domínio canônico antes de qualquer deploy.",
+          "priority_justification": "P0 porque qualquer evolução/deploy pode ser aplicada ao alvo errado.",
+          "title": "Domínio declarado pertence a site, enquanto checkout local está ligado a rota5"
+        },
+        "current_evidence": [
+          {
+            "path": ".vercel/project.json",
+            "claim": "The current workspace remains linked to the canonical Rota5 Vercel project.",
+            "evidence_state": "CURRENT"
+          },
+          {
+            "path": "vercel.json",
+            "claim": "Git auto-deploy remains disabled for the canonical Rota5 release path.",
+            "evidence_state": "CURRENT"
+          }
+        ],
+        "semantic_reconciliation": {
+          "baseline": "2.4.4",
+          "reconciled_at": "2026-09-14T17:43:51.677Z",
+          "contract": "TOP_LEVEL_CURRENT__HISTORY_UNDER_RESOLUTION_HISTORICAL_EVIDENCE",
+          "lifecycle_changed": false,
+          "severity_changed": false,
+          "priority_changed": false
+        }
       },
-      "current_impact": "A identidade operacional do Rota5 está correta. O release do HEAD continua pendente e o auto-deploy Git permanece desabilitado."
+      "current_impact": "A identidade operacional do Rota5 está correta. O release do HEAD continua pendente e o auto-deploy Git permanece desabilitado.",
+      "current_state": {
+        "lifecycle": "RESOLVED",
+        "operational_open": false,
+        "release_blocking": false,
+        "current_impact": "The historical impact is not current under the proven RESOLVED lifecycle.",
+        "workaround_required": false,
+        "top_level_claims": "CURRENT_RESOLUTION_ONLY",
+        "top_level_evidence": "CURRENT"
+      }
     },
     {
       "id": "risk.latest-rota5-deployment-error",
-      "title": "Deployment ERROR histórico substituído pelo Production READY atual",
+      "title": "RESOLVED — risk.latest-rota5-deployment-error",
       "type": "INFRASTRUCTURE",
       "severity": "HIGH",
       "priority": "P1",
       "status": "RESOLVED",
       "confidence": "CONFIRMED",
-      "description": "A inspeção anterior encontrou o deployment mais recente de rota5 em ERROR enquanto o alias servia um deployment READY anterior; essa condição foi encerrada pelo cutover controlado do deployment Production READY atual.",
+      "description": "Current RESOLVED state for risk.latest-rota5-deployment-error: Deployment Production dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT reached READY and became the canonical alias target at 2026-09-13T16:19:42.340Z.",
       "evidence": [
         {
           "path": "system-knowledge/runtime-validation.json",
-          "claim": "Historical evidence at Baseline 1.4.0: runtime.vercel-linked-deployment = FAIL."
+          "claim": "The current canonical Production deployment is READY and current runtime probes are green.",
+          "evidence_state": "CURRENT"
         },
         {
           "path": "system-knowledge/infrastructure.json",
-          "claim": "Historical evidence at Baseline 1.4.0 recorded the prior ready_deployment and latest_deployment_state ERROR."
-        },
-        {
-          "path": "system-knowledge/runtime-validation.json",
-          "claim": "runtime.high-1-new-app-production proves dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT READY with health, public, admin-auth and EXPAND probes PASS and zero relevant log errors."
-        },
-        {
-          "path": "system-knowledge/configuration-drift.json",
-          "claim": "drift.vercel-latest-deployment is MATCH after the controlled cutover."
+          "claim": "The historical latest-deployment ERROR condition is not present in the current projection.",
+          "evidence_state": "CURRENT"
         }
       ],
-      "impact": "Impacto histórico: mudanças recentes não chegavam ao alias produtivo enquanto o deployment mais recente permanecia em ERROR.",
+      "impact": "The historical impact is not current under the proven RESOLVED lifecycle.",
       "domains": [
         "domain.platform-runtime"
       ],
@@ -1363,9 +1639,9 @@
         "integration-vercel"
       ],
       "blast_radius": "EXTERNAL",
-      "workaround": "Não necessário; o deployment Production mais recente está READY e serve os aliases canônicos.",
-      "direction": "Preservar a evidência histórica do deployment ERROR; tratar published-commit parity e demais riscos em findings separados.",
-      "priority_justification": "Prioridade histórica P1: a produção permanecia acessível, mas a linha de entrega mais recente havia falhado.",
+      "workaround": "No workaround is required for the resolved condition.",
+      "direction": "Maintain the current regression/runtime proof and reopen only if new current evidence demonstrates recurrence.",
+      "priority_justification": "P1 is retained as historical classification metadata; RESOLVED is non-operational and non-release-blocking.",
       "historical_status_at_baseline_v1_4_0": "ACTIVE",
       "resolution": {
         "date": "2026-09-13",
@@ -1392,9 +1668,64 @@
           "cutover_at": "2026-09-13T16:19:42.340Z"
         },
         "proving_test": "Production GET /api/health=200, public page=200, admin page=307, admin API=401, EXPAND probe=200/not_found.",
-        "lifecycle_policy": "ID, severity, priority and historical evidence preserved; ACTIVE migrated explicitly to RESOLVED because the defining current deployment ERROR condition no longer exists."
+        "lifecycle_policy": "ID, severity, priority and historical evidence preserved; ACTIVE migrated explicitly to RESOLVED because the defining current deployment ERROR condition no longer exists.",
+        "historical_evidence": {
+          "description": "A inspeção anterior encontrou o deployment mais recente de rota5 em ERROR enquanto o alias servia um deployment READY anterior; essa condição foi encerrada pelo cutover controlado do deployment Production READY atual.",
+          "evidence": [
+            {
+              "path": "system-knowledge/runtime-validation.json",
+              "claim": "Historical evidence at Baseline 1.4.0: runtime.vercel-linked-deployment = FAIL."
+            },
+            {
+              "path": "system-knowledge/infrastructure.json",
+              "claim": "Historical evidence at Baseline 1.4.0 recorded the prior ready_deployment and latest_deployment_state ERROR."
+            },
+            {
+              "path": "system-knowledge/runtime-validation.json",
+              "claim": "runtime.high-1-new-app-production proves dpl_4LxzB5GnHoW6VHYnkHyPC9NEQFVT READY with health, public, admin-auth and EXPAND probes PASS and zero relevant log errors."
+            },
+            {
+              "path": "system-knowledge/configuration-drift.json",
+              "claim": "drift.vercel-latest-deployment is MATCH after the controlled cutover."
+            }
+          ],
+          "impact": "Impacto histórico: mudanças recentes não chegavam ao alias produtivo enquanto o deployment mais recente permanecia em ERROR.",
+          "workaround": "Não necessário; o deployment Production mais recente está READY e serve os aliases canônicos.",
+          "direction": "Preservar a evidência histórica do deployment ERROR; tratar published-commit parity e demais riscos em findings separados.",
+          "priority_justification": "Prioridade histórica P1: a produção permanecia acessível, mas a linha de entrega mais recente havia falhado.",
+          "title": "Deployment ERROR histórico substituído pelo Production READY atual"
+        },
+        "current_evidence": [
+          {
+            "path": "system-knowledge/runtime-validation.json",
+            "claim": "The current canonical Production deployment is READY and current runtime probes are green.",
+            "evidence_state": "CURRENT"
+          },
+          {
+            "path": "system-knowledge/infrastructure.json",
+            "claim": "The historical latest-deployment ERROR condition is not present in the current projection.",
+            "evidence_state": "CURRENT"
+          }
+        ],
+        "semantic_reconciliation": {
+          "baseline": "2.4.4",
+          "reconciled_at": "2026-09-14T17:43:51.677Z",
+          "contract": "TOP_LEVEL_CURRENT__HISTORY_UNDER_RESOLUTION_HISTORICAL_EVIDENCE",
+          "lifecycle_changed": false,
+          "severity_changed": false,
+          "priority_changed": false
+        }
       },
-      "current_impact": "The latest Production deployment is READY, serves the canonical aliases and passed immediate runtime validation. Other infrastructure findings remain independent."
+      "current_impact": "The latest Production deployment is READY, serves the canonical aliases and passed immediate runtime validation. Other infrastructure findings remain independent.",
+      "current_state": {
+        "lifecycle": "RESOLVED",
+        "operational_open": false,
+        "release_blocking": false,
+        "current_impact": "The historical impact is not current under the proven RESOLVED lifecycle.",
+        "workaround_required": false,
+        "top_level_claims": "CURRENT_RESOLUTION_ONLY",
+        "top_level_evidence": "CURRENT"
+      }
     },
     {
       "id": "risk.published-commit-unvalidated",
@@ -1668,40 +1999,26 @@
     },
     {
       "id": "gap.default-test-suite-failing",
-      "title": "Suíte padrão está vermelha com sete casos falhos",
+      "title": "RESOLVED — gap.default-test-suite-failing",
       "type": "TEST_GAP",
       "severity": "HIGH",
       "priority": "P1",
       "status": "RESOLVED",
       "confidence": "CONFIRMED",
-      "description": "npm test executou 210 casos: 203 passaram e 7 falharam em seis arquivos; a suíte não oferece sinal verde de regressão.",
+      "description": "Current RESOLVED state for gap.default-test-suite-failing: The canonical resolution proof remains valid.",
       "evidence": [
         {
+          "path": "system-knowledge/tests.json",
+          "claim": "The current canonical default suite passes 236/236 with zero failures, skips, todos or regressions.",
+          "evidence_state": "CURRENT"
+        },
+        {
           "path": "package.json",
-          "claim": "npm test contém 15 arquivos."
-        },
-        {
-          "path": "scripts/test-admin-auth-pending-cancel.mjs",
-          "line": 32,
-          "claim": "Expectativa de logout falha."
-        },
-        {
-          "path": "scripts/test-admin-event-artist-name-leak.mjs",
-          "line": 143,
-          "claim": "Duplicação falha."
-        },
-        {
-          "path": "scripts/test-public-help-flow.mjs",
-          "line": 420,
-          "claim": "Dois casos falham."
-        },
-        {
-          "path": "scripts/test-whatsapp-batch-compat.mjs",
-          "line": 82,
-          "claim": "Contrato textual falha."
+          "claim": "The current default test command is reproducible from tracked source.",
+          "evidence_state": "CURRENT"
         }
       ],
-      "impact": "Mudanças futuras não conseguem distinguir regressões novas de falhas preexistentes sem triagem manual.",
+      "impact": "The historical impact is not current under the proven RESOLVED lifecycle.",
       "domains": [
         "domain.platform-runtime"
       ],
@@ -1710,9 +2027,9 @@
         "npm test"
       ],
       "blast_radius": "SYSTEM_WIDE",
-      "workaround": "203 casos passam e cada falha foi triada nesta etapa.",
-      "direction": "Reconciliar defeitos reais e expectativas obsoletas em etapa de remediação.",
-      "priority_justification": "P1 porque uma baseline evolutiva precisa de um gate padrão confiável.",
+      "workaround": "No workaround is required for the resolved condition.",
+      "direction": "Maintain the current regression/runtime proof and reopen only if new current evidence demonstrates recurrence.",
+      "priority_justification": "P1 is retained as historical classification metadata; RESOLVED is non-operational and non-release-blocking.",
       "resolution": {
         "resolved_at": "2026-09-14T02:43:43.522Z",
         "baseline": "2.3.0",
@@ -1778,41 +2095,109 @@
           "203/210 original evidence",
           "207/214 later evidence",
           "seven-failure autopsy"
-        ]
+        ],
+        "historical_evidence": {
+          "description": "npm test executou 210 casos: 203 passaram e 7 falharam em seis arquivos; a suíte não oferece sinal verde de regressão.",
+          "evidence": [
+            {
+              "path": "package.json",
+              "claim": "npm test contém 15 arquivos."
+            },
+            {
+              "path": "scripts/test-admin-auth-pending-cancel.mjs",
+              "line": 32,
+              "claim": "Expectativa de logout falha."
+            },
+            {
+              "path": "scripts/test-admin-event-artist-name-leak.mjs",
+              "line": 143,
+              "claim": "Duplicação falha."
+            },
+            {
+              "path": "scripts/test-public-help-flow.mjs",
+              "line": 420,
+              "claim": "Dois casos falham."
+            },
+            {
+              "path": "scripts/test-whatsapp-batch-compat.mjs",
+              "line": 82,
+              "claim": "Contrato textual falha."
+            }
+          ],
+          "impact": "Mudanças futuras não conseguem distinguir regressões novas de falhas preexistentes sem triagem manual.",
+          "workaround": "203 casos passam e cada falha foi triada nesta etapa.",
+          "direction": "Reconciliar defeitos reais e expectativas obsoletas em etapa de remediação.",
+          "priority_justification": "P1 porque uma baseline evolutiva precisa de um gate padrão confiável.",
+          "title": "Suíte padrão está vermelha com sete casos falhos"
+        },
+        "current_evidence": [
+          {
+            "path": "system-knowledge/tests.json",
+            "claim": "The current canonical default suite passes 236/236 with zero failures, skips, todos or regressions.",
+            "evidence_state": "CURRENT"
+          },
+          {
+            "path": "package.json",
+            "claim": "The current default test command is reproducible from tracked source.",
+            "evidence_state": "CURRENT"
+          }
+        ],
+        "semantic_reconciliation": {
+          "baseline": "2.4.4",
+          "reconciled_at": "2026-09-14T17:43:51.677Z",
+          "contract": "TOP_LEVEL_CURRENT__HISTORY_UNDER_RESOLUTION_HISTORICAL_EVIDENCE",
+          "lifecycle_changed": false,
+          "severity_changed": false,
+          "priority_changed": false
+        }
+      },
+      "current_state": {
+        "lifecycle": "RESOLVED",
+        "operational_open": false,
+        "release_blocking": false,
+        "current_impact": "The historical impact is not current under the proven RESOLVED lifecycle.",
+        "workaround_required": false,
+        "top_level_claims": "CURRENT_RESOLUTION_ONLY",
+        "top_level_evidence": "CURRENT"
       }
     },
     {
       "id": "gap.critical-capability-and-flow-coverage",
-      "title": "Capabilities e flows relevantes não têm teste direto",
+      "title": "RESOLVED — gap.critical-capability-and-flow-coverage",
       "type": "TEST_GAP",
       "severity": "HIGH",
       "priority": "P1",
       "status": "RESOLVED",
       "confidence": "CONFIRMED",
-      "description": "Resolved by risk-based behavioral coverage: all 21 MUST capabilities and both high-risk flows are covered; the gross uncovered-capability counter is intentionally not required to be zero.",
+      "description": "Current RESOLVED state for gap.critical-capability-and-flow-coverage: Risk-based behavioral coverage proves 21/21 MUST capabilities.",
       "evidence": [
         {
           "path": "system-knowledge/capabilities.json",
-          "claim": "critical_behavioral_coverage records 21/21 MUST, zero MUST gaps, two incidental capabilities and seven historical/orphan exclusions."
+          "claim": "critical_behavioral_coverage records 21/21 MUST, zero MUST gaps, two incidental capabilities and seven historical/orphan exclusions.",
+          "evidence_state": "CURRENT"
         },
         {
           "path": "system-knowledge/flows.json",
-          "claim": "event.auto_finish and codex.automation are COVERED; high-risk flows without behavioral coverage = 0."
+          "claim": "event.auto_finish and codex.automation are COVERED; high-risk flows without behavioral coverage = 0.",
+          "evidence_state": "CURRENT"
         },
         {
           "path": "scripts/test-support/production-module-harness.mjs",
-          "claim": "The harness loads and executes production modules; proof is behavioral and not source-regex-only."
+          "claim": "The harness loads and executes production modules; proof is behavioral and not source-regex-only.",
+          "evidence_state": "CURRENT"
         },
         {
           "path": ".github/workflows/quality-gate.yml",
-          "claim": "Quality Gate run 34867214724 passed npm ci, 236/236 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD."
+          "claim": "Quality Gate run 34867214724 passed npm ci, 236/236 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
+          "evidence_state": "CURRENT"
         },
         {
           "path": "scripts/test-table-map-sync-postgres.mjs",
-          "claim": "CI integration executed the real sync_official_table_map_reservation_status trigger and passed 1/1."
+          "claim": "CI integration executed the real sync_official_table_map_reservation_status trigger and passed 1/1.",
+          "evidence_state": "CURRENT"
         }
       ],
-      "impact": "Regressões em autorização, mutações e automação externa podem chegar sem detecção automatizada.",
+      "impact": "The historical impact is not current under the proven RESOLVED lifecycle.",
       "domains": [
         "domain.event-administration",
         "domain.gate-admission",
@@ -1835,9 +2220,9 @@
         "codex.automation"
       ],
       "blast_radius": "MULTI_DOMAIN",
-      "workaround": "Há auditorias manuais e contratos indiretos para parte da superfície.",
-      "direction": "Priorizar testes por criticidade e side effect, não por contagem bruta.",
-      "priority_justification": "P1 pela presença de ações privilegiadas e externas sem teste direto.",
+      "workaround": "No workaround is required for the resolved condition.",
+      "direction": "Maintain the current regression/runtime proof and reopen only if new current evidence demonstrates recurrence.",
+      "priority_justification": "P1 is retained as historical classification metadata; RESOLVED is non-operational and non-release-blocking.",
       "resolution": {
         "baseline": "2.4.0",
         "resolved_at": "2026-09-14T16:29:51.547Z",
@@ -1908,7 +2293,81 @@
           "todo": 0,
           "regressions": 0
         },
-        "runtime_changed": false
+        "runtime_changed": false,
+        "historical_evidence": {
+          "description": "Resolved by risk-based behavioral coverage: all 21 MUST capabilities and both high-risk flows are covered; the gross uncovered-capability counter is intentionally not required to be zero.",
+          "evidence": [
+            {
+              "path": "system-knowledge/capabilities.json",
+              "claim": "critical_behavioral_coverage records 21/21 MUST, zero MUST gaps, two incidental capabilities and seven historical/orphan exclusions."
+            },
+            {
+              "path": "system-knowledge/flows.json",
+              "claim": "event.auto_finish and codex.automation are COVERED; high-risk flows without behavioral coverage = 0."
+            },
+            {
+              "path": "scripts/test-support/production-module-harness.mjs",
+              "claim": "The harness loads and executes production modules; proof is behavioral and not source-regex-only."
+            },
+            {
+              "path": ".github/workflows/quality-gate.yml",
+              "claim": "Quality Gate run 34867214724 passed npm ci, 236/236 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD."
+            },
+            {
+              "path": "scripts/test-table-map-sync-postgres.mjs",
+              "claim": "CI integration executed the real sync_official_table_map_reservation_status trigger and passed 1/1."
+            }
+          ],
+          "impact": "Regressões em autorização, mutações e automação externa podem chegar sem detecção automatizada.",
+          "workaround": "Há auditorias manuais e contratos indiretos para parte da superfície.",
+          "direction": "Priorizar testes por criticidade e side effect, não por contagem bruta.",
+          "priority_justification": "P1 pela presença de ações privilegiadas e externas sem teste direto.",
+          "title": "Capabilities e flows relevantes não têm teste direto"
+        },
+        "current_evidence": [
+          {
+            "path": "system-knowledge/capabilities.json",
+            "claim": "critical_behavioral_coverage records 21/21 MUST, zero MUST gaps, two incidental capabilities and seven historical/orphan exclusions.",
+            "evidence_state": "CURRENT"
+          },
+          {
+            "path": "system-knowledge/flows.json",
+            "claim": "event.auto_finish and codex.automation are COVERED; high-risk flows without behavioral coverage = 0.",
+            "evidence_state": "CURRENT"
+          },
+          {
+            "path": "scripts/test-support/production-module-harness.mjs",
+            "claim": "The harness loads and executes production modules; proof is behavioral and not source-regex-only.",
+            "evidence_state": "CURRENT"
+          },
+          {
+            "path": ".github/workflows/quality-gate.yml",
+            "claim": "Quality Gate run 34867214724 passed npm ci, 236/236 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
+            "evidence_state": "CURRENT"
+          },
+          {
+            "path": "scripts/test-table-map-sync-postgres.mjs",
+            "claim": "CI integration executed the real sync_official_table_map_reservation_status trigger and passed 1/1.",
+            "evidence_state": "CURRENT"
+          }
+        ],
+        "semantic_reconciliation": {
+          "baseline": "2.4.4",
+          "reconciled_at": "2026-09-14T17:43:51.677Z",
+          "contract": "TOP_LEVEL_CURRENT__HISTORY_UNDER_RESOLUTION_HISTORICAL_EVIDENCE",
+          "lifecycle_changed": false,
+          "severity_changed": false,
+          "priority_changed": false
+        }
+      },
+      "current_state": {
+        "lifecycle": "RESOLVED",
+        "operational_open": false,
+        "release_blocking": false,
+        "current_impact": "The historical impact is not current under the proven RESOLVED lifecycle.",
+        "workaround_required": false,
+        "top_level_claims": "CURRENT_RESOLUTION_ONLY",
+        "top_level_evidence": "CURRENT"
       }
     },
     {
@@ -2004,24 +2463,26 @@
     },
     {
       "id": "gap.test-runner-depends-on-untracked-loader",
-      "title": "npm test depende de loader em diretório temporário não versionado",
+      "title": "RESOLVED — gap.test-runner-depends-on-untracked-loader",
       "type": "TEST_GAP",
       "severity": "HIGH",
       "priority": "P1",
       "status": "RESOLVED",
       "confidence": "CONFIRMED",
-      "description": "package.json aponta para ./.tmp/typescript-alias-loader.mjs; git não rastreia arquivos em .tmp, embora o loader exista nesta máquina.",
+      "description": "Current RESOLVED state for gap.test-runner-depends-on-untracked-loader: Resolution strategy: VERSIONED_BYTE_IDENTICAL_LOADER.",
       "evidence": [
         {
-          "path": "package.json",
-          "claim": "Script test referencia .tmp/typescript-alias-loader.mjs."
+          "path": "scripts/test-support/typescript-alias-loader.mjs",
+          "claim": "The tracked loader remains the current default-suite resolution mechanism.",
+          "evidence_state": "CURRENT"
         },
         {
-          "path": ".gitignore",
-          "claim": ".tmp é área ignorada/temporária conforme inventário do repositório."
+          "path": "package.json",
+          "claim": "The current default suite uses the tracked loader and passes 236/236.",
+          "evidence_state": "CURRENT"
         }
       ],
-      "impact": "Um checkout limpo ou CI pode falhar antes de executar qualquer teste por ausência do loader.",
+      "impact": "The historical impact is not current under the proven RESOLVED lifecycle.",
       "domains": [
         "domain.platform-runtime"
       ],
@@ -2030,9 +2491,9 @@
         "npm test"
       ],
       "blast_radius": "SYSTEM_WIDE",
-      "workaround": "O arquivo existe no workspace auditado.",
-      "direction": "Versionar o mecanismo de resolução ou usar configuração padrão do runner.",
-      "priority_justification": "P1 porque compromete a portabilidade do único gate padrão.",
+      "workaround": "No workaround is required for the resolved condition.",
+      "direction": "Maintain the current regression/runtime proof and reopen only if new current evidence demonstrates recurrence.",
+      "priority_justification": "P1 is retained as historical classification metadata; RESOLVED is non-operational and non-release-blocking.",
       "resolution": {
         "resolved_at": "2026-09-14T01:52:43.483Z",
         "source_commit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
@@ -2063,7 +2524,54 @@
           "depends_on_untracked_file": false
         },
         "crlf_observation": "A first Windows worktree with core.autocrlf=true exposed two additional source-text assertion failures. Canonical Git blobs without EOL conversion returned 207/214. This is evidence for gap.source-contract-assertion-bias and is not a loader regression.",
-        "deployment_required": false
+        "deployment_required": false,
+        "historical_evidence": {
+          "description": "package.json aponta para ./.tmp/typescript-alias-loader.mjs; git não rastreia arquivos em .tmp, embora o loader exista nesta máquina.",
+          "evidence": [
+            {
+              "path": "package.json",
+              "claim": "Script test referencia .tmp/typescript-alias-loader.mjs."
+            },
+            {
+              "path": ".gitignore",
+              "claim": ".tmp é área ignorada/temporária conforme inventário do repositório."
+            }
+          ],
+          "impact": "Um checkout limpo ou CI pode falhar antes de executar qualquer teste por ausência do loader.",
+          "workaround": "O arquivo existe no workspace auditado.",
+          "direction": "Versionar o mecanismo de resolução ou usar configuração padrão do runner.",
+          "priority_justification": "P1 porque compromete a portabilidade do único gate padrão.",
+          "title": "npm test depende de loader em diretório temporário não versionado"
+        },
+        "current_evidence": [
+          {
+            "path": "scripts/test-support/typescript-alias-loader.mjs",
+            "claim": "The tracked loader remains the current default-suite resolution mechanism.",
+            "evidence_state": "CURRENT"
+          },
+          {
+            "path": "package.json",
+            "claim": "The current default suite uses the tracked loader and passes 236/236.",
+            "evidence_state": "CURRENT"
+          }
+        ],
+        "semantic_reconciliation": {
+          "baseline": "2.4.4",
+          "reconciled_at": "2026-09-14T17:43:51.677Z",
+          "contract": "TOP_LEVEL_CURRENT__HISTORY_UNDER_RESOLUTION_HISTORICAL_EVIDENCE",
+          "lifecycle_changed": false,
+          "severity_changed": false,
+          "priority_changed": false
+        }
+      },
+      "current_state": {
+        "lifecycle": "RESOLVED",
+        "operational_open": false,
+        "release_blocking": false,
+        "current_impact": "The historical impact is not current under the proven RESOLVED lifecycle.",
+        "workaround_required": false,
+        "top_level_claims": "CURRENT_RESOLUTION_ONLY",
+        "top_level_evidence": "CURRENT"
       }
     },
     {
@@ -3100,6 +3608,23 @@
         "validation_queue": true,
         "closed": false
       }
+    }
+  },
+  "resolved_semantic_contract": {
+    "baseline": "2.4.4",
+    "top_level": "CURRENT_STATE_ONLY",
+    "historical_location": "resolution.historical_evidence",
+    "current_evidence_marker": "evidence_state=CURRENT",
+    "validator": ".tools/baseline/validate-baseline.mjs",
+    "invariants": {
+      "RESOLVED_FINDINGS_TOTAL": 11,
+      "RESOLVED_CURRENT_STATE_COMPLETE": 11,
+      "RESOLVED_WITHOUT_CURRENT_STATE": 0,
+      "RESOLVED_WITH_ACTIVE_TOP_LEVEL_CLAIMS": 0,
+      "RESOLVED_WITH_NONCURRENT_TOP_LEVEL_EVIDENCE": 0,
+      "RESOLVED_RELEASE_BLOCKING_TRUE": 0,
+      "RESOLVED_OPERATIONAL_OPEN_TRUE": 0,
+      "HISTORICAL_EVIDENCE_PRESERVED": "SIM"
     }
   }
 }

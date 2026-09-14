@@ -1,9 +1,29 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T17:29:04.216Z",
-  "stage": "2.4.3",
-  "count": 17,
+  "generatedAt": "2026-09-14T17:43:51.677Z",
+  "stage": "2.4.4",
+  "count": 18,
   "records": [
+    {
+      "version": "2.4.4",
+      "date": "2026-09-14T17:43:51.677Z",
+      "reason": "PATCH_DOCUMENTARY_CORRECTION",
+      "summary": "Normalized every derived RESOLVED finding under a universal current-state versus historical-evidence contract and made it validator-enforced.",
+      "resolved_findings_total": 11,
+      "resolved_normalized": 11,
+      "resolved_semantic_invariants": {
+        "RESOLVED_FINDINGS_TOTAL": 11,
+        "RESOLVED_CURRENT_STATE_COMPLETE": 11,
+        "RESOLVED_WITHOUT_CURRENT_STATE": 0,
+        "RESOLVED_WITH_ACTIVE_TOP_LEVEL_CLAIMS": 0,
+        "RESOLVED_WITH_NONCURRENT_TOP_LEVEL_EVIDENCE": 0,
+        "RESOLVED_RELEASE_BLOCKING_TRUE": 0,
+        "RESOLVED_OPERATIONAL_OPEN_TRUE": 0,
+        "HISTORICAL_EVIDENCE_PRESERVED": "SIM"
+      },
+      "runtime_change": false,
+      "deployment": false
+    },
     {
       "version": "2.4.3",
       "date": "2026-09-14T17:29:04.216Z",

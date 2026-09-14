@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T17:29:04.216Z",
-  "stage": "2.4.3",
+  "generatedAt": "2026-09-14T17:43:51.677Z",
+  "stage": "2.4.4",
   "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
-  "scope": "Current health projection by system, domain and infrastructure for Baseline 2.4.3, with resolved history separated from operational risk.",
+  "scope": "Current health projection by system, domain and infrastructure for Baseline 2.4.4, with resolved history separated from operational risk.",
   "method": "Health is derived from canonical finding scopes and taxonomy. BROKEN requires a current release blocker; DEGRADED requires current operational or validation-queue risk; resolved findings are historical only.",
   "vocabulary": [
     "HEALTHY",
@@ -1986,12 +1986,23 @@
     "ticketeira": "UNTOUCHED"
   },
   "semantic_consistency": {
-    "baseline": "2.4.3",
+    "baseline": "2.4.4",
     "status": "PASS",
     "current_semantic_contradictions": 0,
     "current_stale_projections": 0,
     "resolved_findings_with_active_top_level_claims": 0,
     "current_release_blockers": 0,
-    "aggregation_invariants_required": true
+    "aggregation_invariants_required": true,
+    "resolved_semantic_contract_required": true
+  },
+  "resolved_semantic_invariants": {
+    "RESOLVED_FINDINGS_TOTAL": 11,
+    "RESOLVED_CURRENT_STATE_COMPLETE": 11,
+    "RESOLVED_WITHOUT_CURRENT_STATE": 0,
+    "RESOLVED_WITH_ACTIVE_TOP_LEVEL_CLAIMS": 0,
+    "RESOLVED_WITH_NONCURRENT_TOP_LEVEL_EVIDENCE": 0,
+    "RESOLVED_RELEASE_BLOCKING_TRUE": 0,
+    "RESOLVED_OPERATIONAL_OPEN_TRUE": 0,
+    "HISTORICAL_EVIDENCE_PRESERVED": "SIM"
   }
 }

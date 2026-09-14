@@ -298,6 +298,61 @@ for (const owner of [riskSummary?.aggregation_invariants,catalogs['cross-audit']
   for (const [key,value] of Object.entries(expectedAggregationInvariants)) if (owner?.[key] !== value) add('AGGREGATION_INVARIANT_MISMATCH',`${key}: ${owner?.[key]} != ${value}`);
 }
 if (catalogs['cross-audit']?.semantic_consistency?.status !== 'PASS') add('SEMANTIC_AUDIT_NOT_PASS','cross-audit.semantic_consistency.status');
+const resolvedTopLevelFields = ['title','description','evidence','impact','workaround','direction','priority_justification'];
+const resolvedFindings = findings.filter(isResolvedFinding);
+let resolvedCurrentStateComplete = 0;
+let resolvedWithoutCurrentState = 0;
+let resolvedWithActiveTopLevelClaims = 0;
+let resolvedWithNoncurrentTopLevelEvidence = 0;
+let resolvedReleaseBlockingTrue = 0;
+let resolvedOperationalOpenTrue = 0;
+let historicalEvidencePreserved = true;
+for (const finding of resolvedFindings) {
+  const state = finding.current_state;
+  const stateComplete = state && state.lifecycle==='RESOLVED' && state.operational_open===false && state.release_blocking===false &&
+    state.workaround_required===false && findingFieldIsPresent(state.current_impact);
+  if (stateComplete) resolvedCurrentStateComplete += 1;
+  else {
+    if (!state) resolvedWithoutCurrentState += 1;
+    add('RESOLVED_CURRENT_STATE_INCOMPLETE',finding.id);
+  }
+  if (state?.release_blocking===true) resolvedReleaseBlockingTrue += 1;
+  if (state?.operational_open===true) resolvedOperationalOpenTrue += 1;
+  const historical = finding.resolution?.historical_evidence;
+  const hasHistoricalSnapshot = historical && typeof historical==='object' && !Array.isArray(historical) &&
+    resolvedTopLevelFields.every(field => Object.hasOwn(historical,field));
+  if (!hasHistoricalSnapshot) {
+    historicalEvidencePreserved = false;
+    add('RESOLVED_HISTORICAL_EVIDENCE_MISSING',finding.id);
+  }
+  const topEvidenceCurrent = Array.isArray(finding.evidence) && finding.evidence.length>0 &&
+    finding.evidence.every(entry => entry && entry.evidence_state==='CURRENT');
+  if (!topEvidenceCurrent) {
+    resolvedWithNoncurrentTopLevelEvidence += 1;
+    add('RESOLVED_TOP_LEVEL_EVIDENCE_NOT_CURRENT',finding.id);
+  }
+  const repeatsHistoricalClaim = hasHistoricalSnapshot && ['title','description','impact','workaround','direction','priority_justification']
+    .some(field => JSON.stringify(finding[field])===JSON.stringify(historical[field]));
+  const currentOnlyContract = state?.top_level_claims==='CURRENT_RESOLUTION_ONLY' &&
+    ['title','description','impact','workaround','direction','priority_justification'].every(field => findingFieldIsPresent(finding[field]));
+  if (!currentOnlyContract || repeatsHistoricalClaim) {
+    resolvedWithActiveTopLevelClaims += 1;
+    add('RESOLVED_ACTIVE_TOP_LEVEL_CLAIM',finding.id);
+  }
+}
+const expectedResolvedSemanticInvariants = {
+  RESOLVED_FINDINGS_TOTAL:resolvedFindings.length,
+  RESOLVED_CURRENT_STATE_COMPLETE:resolvedCurrentStateComplete,
+  RESOLVED_WITHOUT_CURRENT_STATE:resolvedWithoutCurrentState,
+  RESOLVED_WITH_ACTIVE_TOP_LEVEL_CLAIMS:resolvedWithActiveTopLevelClaims,
+  RESOLVED_WITH_NONCURRENT_TOP_LEVEL_EVIDENCE:resolvedWithNoncurrentTopLevelEvidence,
+  RESOLVED_RELEASE_BLOCKING_TRUE:resolvedReleaseBlockingTrue,
+  RESOLVED_OPERATIONAL_OPEN_TRUE:resolvedOperationalOpenTrue,
+  HISTORICAL_EVIDENCE_PRESERVED:historicalEvidencePreserved?'SIM':'NAO'
+};
+for (const owner of [riskSummary?.resolved_semantic_invariants,catalogs['cross-audit']?.resolved_semantic_invariants]) {
+  for (const [key,value] of Object.entries(expectedResolvedSemanticInvariants)) if (owner?.[key] !== value) add('RESOLVED_SEMANTIC_INVARIANT_MISMATCH',`${key}: ${owner?.[key]} != ${value}`);
+}
 const healthFindingCounts = catalogs.health?.system?.active_findings;
 if (healthFindingCounts) {
   checkDerivedCount('health.system.active_findings.P0',healthFindingCounts.P0,'active_p0');

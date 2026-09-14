@@ -1,5 +1,7 @@
 # Bugs e flows quebrados
 
+> **HISTORICAL SNAPSHOT:** the detailed problem/evidence/impact fields below preserve the original Baseline V1 findings. For every `RESOLVED` record, current state is defined only by `system-knowledge/findings.json` top-level fields; historical claims live under `resolution.historical_evidence`.
+
 Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb8442f95493de3ca4ec4d4c997b e o working tree descrito no machine-readable. Esta etapa registra fatos e riscos; não aplica correções.
 
 ### bug.create-event-invalid-jsx — JSX inválido impede compilar o workspace web de eventos

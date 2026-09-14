@@ -1,4 +1,4 @@
-> **Current Baseline 2.4.3 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on canonical source `67845326088eac47452224b00ef1e866036e86f1` (fingerprint `df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0`, 368 files, 79 migrations). Findings `bug.event-duplicate-artist-leak` and `bug.user-visible-text-corruption` are **RESOLVED** as stale. `gap.partial-flows-lack-end-to-end-proof` remains **ACTIVE**, decomposed from P1 to P2; no specific P1 was justified. Canonical release blockers: **0**. Metrics: ACTIVE HIGH 0, POTENTIAL HIGH 1, OPEN HIGH 1, RESOLVED 11. PRODUCT_HEALTH: **DEGRADED**; INFRASTRUCTURE_HEALTH: **DEGRADED**. Quality evidence remains 236/236, PostgreSQL 1/1 and Quality Gate 34867214724 PASS. Production remains `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` on `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; no deployment, Supabase change or Ticketeira access.
+> **Current Baseline 2.4.4 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on canonical source `67845326088eac47452224b00ef1e866036e86f1` (fingerprint `df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0`, 368 files, 79 migrations). Findings `bug.event-duplicate-artist-leak` and `bug.user-visible-text-corruption` are **RESOLVED** as stale. `gap.partial-flows-lack-end-to-end-proof` remains **ACTIVE**, decomposed from P1 to P2; no specific P1 was justified. Canonical release blockers: **0**. Metrics: ACTIVE HIGH 0, POTENTIAL HIGH 1, OPEN HIGH 1, RESOLVED 11. PRODUCT_HEALTH: **DEGRADED**; INFRASTRUCTURE_HEALTH: **DEGRADED**. Quality evidence remains 236/236, PostgreSQL 1/1 and Quality Gate 34867214724 PASS. Production remains `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` on `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; no deployment, Supabase change or Ticketeira access.
 
 # Baseline 2.0.1 HIGH #1 final state
 
@@ -8,6 +8,8 @@ Baseline 2.2.0: `gap.test-runner-depends-on-untracked-loader` is RESOLVED on sou
 `risk.gate-credential-revocation-does-not-revoke-session` is `RESOLVED/HIGH/P1`. EXPAND and CONTRACT are APPLIED_AND_VALIDATED, gates A-I passed, and strict post-CONTRACT runtime passed. Product health remains BROKEN and infrastructure health DEGRADED due independent findings.
 
 # Risk register
+
+> Current `RESOLVED` semantics follow the universal Baseline 2.4.4 contract: top-level is current, while the detailed original claims below are historical evidence. The canonical machine-readable source is `system-knowledge/findings.json`.
 
 Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb8442f95493de3ca4ec4d4c997b e o working tree descrito no machine-readable. Esta etapa registra fatos e riscos; não aplica correções.
 
@@ -19,10 +21,10 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 
 | ID | Tipo | Severidade | Prioridade | Status | Confiança | Título |
 |---|---|---|---|---|---|---|
-| bug.create-event-invalid-jsx | BUG | HIGH | P0 | RESOLVED | CONFIRMED | JSX inválido impede compilar o workspace web de eventos |
-| bug.combo-redemption-unreachable-consume | BROKEN_FLOW | HIGH | P0 | RESOLVED | CONFIRMED | Caso válido de combo não alcança a RPC que consome o resgate |
-| bug.event-duplicate-artist-leak | BUG | MEDIUM | P1 | RESOLVED | CONFIRMED | Duplicação de evento preserva artista do evento de origem |
-| bug.user-visible-text-corruption | BUG | MEDIUM | P1 | RESOLVED | CONFIRMED | Textos ativos contêm mojibake e substituições por interrogação |
+| bug.create-event-invalid-jsx | BUG | HIGH | P0 | RESOLVED | CONFIRMED | RESOLVED — current JSX/build regression proof is green |
+| bug.combo-redemption-unreachable-consume | BROKEN_FLOW | HIGH | P0 | RESOLVED | CONFIRMED | RESOLVED — guarded combo path reaches atomic validation |
+| bug.event-duplicate-artist-leak | BUG | MEDIUM | P1 | RESOLVED | CONFIRMED | RESOLVED — duplication regression proof is green |
+| bug.user-visible-text-corruption | BUG | MEDIUM | P1 | RESOLVED | CONFIRMED | RESOLVED — scoped text/help regression proof is green |
 | legacy.active-brand-contamination | LEGACY | HIGH | P1 | RESOLVED | CONFIRMED | Scoped active-brand surfaces corrected and runtime-validated |
 | risk.gate-credential-revocation-does-not-revoke-session | AUTHORIZATION | HIGH | P1 | RESOLVED | CONFIRMED | Source attribution and strict credential/session authorization completed |
 | risk.admin-event-multistep-partial-state | DATA_INTEGRITY | HIGH | P1 | POTENTIAL | HIGH | Criação de evento e catálogo inicial cruza entidades sem transação única |
@@ -39,8 +41,8 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 | gap.critical-flow-correlation | OBSERVABILITY | MEDIUM | P2 | ACTIVE | CONFIRMED | Fluxos críticos não têm correlação ponta a ponta |
 | debt.router-responsibility-concentration | ARCHITECTURE | MEDIUM | P2 | ACTIVE | CONFIRMED | Roteador conversacional concentra coordenação de muitos domínios |
 | debt.zapi-webhook-responsibility-coupling | COUPLING | MEDIUM | P2 | ACTIVE | CONFIRMED | Handler Z-API acopla transporte, deduplicação, automação e entrega |
-| gap.default-test-suite-failing | TEST_GAP | HIGH | P1 | RESOLVED | CONFIRMED | Suíte padrão está vermelha com sete casos falhos |
-| gap.critical-capability-and-flow-coverage | TEST_GAP | HIGH | P1 | RESOLVED | CONFIRMED | Capabilities e flows relevantes não têm teste direto |
+| gap.default-test-suite-failing | TEST_GAP | HIGH | P1 | RESOLVED | CONFIRMED | RESOLVED — current default suite passes 236/236 |
+| gap.critical-capability-and-flow-coverage | TEST_GAP | HIGH | P1 | RESOLVED | CONFIRMED | RESOLVED — 21/21 MUST and 2/2 high-risk flows covered |
 | gap.real-integration-tests-outside-default | TEST_GAP | MEDIUM | P2 | ACTIVE | CONFIRMED | Testes reais e de integração ficam fora da suíte padrão |
 | gap.source-contract-assertion-bias | TEST_GAP | MEDIUM | P2 | ACTIVE | CONFIRMED | Parte relevante dos testes valida texto-fonte e regex de implementação |
 | gap.test-runner-depends-on-untracked-loader | TEST_GAP | HIGH | P1 | RESOLVED | CONFIRMED | Loader versionado e runner provado em materialização Git limpa |

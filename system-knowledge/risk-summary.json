@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T17:29:04.216Z",
-  "stage": "2.4.3",
+  "generatedAt": "2026-09-14T17:43:51.677Z",
+  "stage": "2.4.4",
   "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
-  "scope": "Current risk, coverage, validation and release-blocker projection for Baseline 2.4.3.",
+  "scope": "Current risk, coverage, validation and release-blocker projection for Baseline 2.4.4.",
   "method": "All current metrics are derived from canonical catalogs and finding_status_taxonomy; historical snapshots remain only in version-labelled fields.",
   "status": "PASS",
   "total": 44,
@@ -319,7 +319,7 @@
     "open": "status in {ACTIVE, POTENTIAL, OPEN, MITIGATED}",
     "release_blocking": "status in {ACTIVE, OPEN, MITIGATED} at applicable severity",
     "closed_for_operational_metrics": "status in {RESOLVED, ACCEPTED, NOT_VALIDATED}",
-    "current_projection": "Derived at Baseline 2.4.3 generation time from canonical catalogs and lifecycle taxonomy.",
+    "current_projection": "Derived at Baseline 2.4.4 generation time from canonical catalogs and lifecycle taxonomy.",
     "release_blocker_rule": "operational_open + status.release_blocking + P0/P1 or CRITICAL/HIGH",
     "historical_snapshots": "Only fields whose names explicitly contain a baseline version or historical marker are historical."
   },
@@ -682,10 +682,23 @@
     "RELEASE_BLOCKER_COUNT": 0
   },
   "semantic_consistency": {
-    "baseline": "2.4.3",
+    "baseline": "2.4.4",
     "status": "PASS",
     "current_semantic_contradictions": 0,
     "current_stale_projections": 0,
-    "aggregation_invariants_required": true
+    "aggregation_invariants_required": true,
+    "resolved_findings_with_active_top_level_claims": 0,
+    "current_release_blockers": 0,
+    "resolved_semantic_contract_required": true
+  },
+  "resolved_semantic_invariants": {
+    "RESOLVED_FINDINGS_TOTAL": 11,
+    "RESOLVED_CURRENT_STATE_COMPLETE": 11,
+    "RESOLVED_WITHOUT_CURRENT_STATE": 0,
+    "RESOLVED_WITH_ACTIVE_TOP_LEVEL_CLAIMS": 0,
+    "RESOLVED_WITH_NONCURRENT_TOP_LEVEL_EVIDENCE": 0,
+    "RESOLVED_RELEASE_BLOCKING_TRUE": 0,
+    "RESOLVED_OPERATIONAL_OPEN_TRUE": 0,
+    "HISTORICAL_EVIDENCE_PRESERVED": "SIM"
   }
 }

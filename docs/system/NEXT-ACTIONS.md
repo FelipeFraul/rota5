@@ -1,4 +1,4 @@
-> **Current Baseline 2.4.3 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on canonical source `67845326088eac47452224b00ef1e866036e86f1` (fingerprint `df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0`, 368 files, 79 migrations). Findings `bug.event-duplicate-artist-leak` and `bug.user-visible-text-corruption` are **RESOLVED** as stale. `gap.partial-flows-lack-end-to-end-proof` remains **ACTIVE**, decomposed from P1 to P2; no specific P1 was justified. Canonical release blockers: **0**. Metrics: ACTIVE HIGH 0, POTENTIAL HIGH 1, OPEN HIGH 1, RESOLVED 11. PRODUCT_HEALTH: **DEGRADED**; INFRASTRUCTURE_HEALTH: **DEGRADED**. Quality evidence remains 236/236, PostgreSQL 1/1 and Quality Gate 34867214724 PASS. Production remains `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` on `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; no deployment, Supabase change or Ticketeira access.
+> **Current Baseline 2.4.4 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on canonical source `67845326088eac47452224b00ef1e866036e86f1` (fingerprint `df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0`, 368 files, 79 migrations). Findings `bug.event-duplicate-artist-leak` and `bug.user-visible-text-corruption` are **RESOLVED** as stale. `gap.partial-flows-lack-end-to-end-proof` remains **ACTIVE**, decomposed from P1 to P2; no specific P1 was justified. Canonical release blockers: **0**. Metrics: ACTIVE HIGH 0, POTENTIAL HIGH 1, OPEN HIGH 1, RESOLVED 11. PRODUCT_HEALTH: **DEGRADED**; INFRASTRUCTURE_HEALTH: **DEGRADED**. Quality evidence remains 236/236, PostgreSQL 1/1 and Quality Gate 34867214724 PASS. Production remains `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` on `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; no deployment, Supabase change or Ticketeira access.
 
 # Next actions from existing findings
 
@@ -19,13 +19,13 @@ Nenhum finding P0 ativo.
 - `bug.combo-redemption-unreachable-consume` — caminho atômico restaurado localmente; equivalência remota continua não validada.
 - `risk.vercel-project-identity-drift` — cadeia canônica separada como `FelipeFraul/rota5` `production` → Vercel `rota5`; nenhum deployment realizado.
 - `risk.latest-rota5-deployment-error` — deployment Production mais recente está READY, serve os aliases canônicos e passou os probes de runtime.
+- `bug.event-duplicate-artist-leak` — payload corrente não herda o artista da origem; prova comportamental e suíte 236/236 passam.
+- `bug.user-visible-text-corruption` — superfícies documentadas foram corrigidas; provas direcionadas e suíte 236/236 passam.
+- `gap.default-test-suite-failing` — suíte padrão corrente passa 236/236, sem skip, todo ou regressão.
+- `gap.critical-capability-and-flow-coverage` — 21/21 MUST e 2/2 flows de alto risco possuem cobertura comportamental.
 
 ## P1 — ACTIVE AND POTENTIAL STABILIZATION
-- `bug.event-duplicate-artist-leak` — Duplicação de evento preserva artista do evento de origem
-- `bug.user-visible-text-corruption` — Textos ativos contêm mojibake e substituições por interrogação
 - `risk.admin-event-multistep-partial-state` (POTENTIAL) — Criação de evento e catálogo inicial cruza entidades sem transação única
-- `gap.default-test-suite-failing` — Suíte padrão está vermelha com sete casos falhos
-- `gap.critical-capability-and-flow-coverage` is RESOLVED in Baseline 2.4.0; no ACTIVE HIGH remains.
 - `risk.payment-confirmed-before-external-delivery` (POTENTIAL) — Confirmação atômica e entrega externa formam fronteira de consistência eventual
 - `gap.partial-flows-lack-end-to-end-proof` — Sete flows parciais não possuem prova ponta a ponta
 
@@ -64,4 +64,4 @@ Nenhum finding P0 ativo.
 - `debt.distributed-status-literals` (P4) — Estados e mensagens de negócio estão distribuídos em arquivos extensos
 
 ## RESOLVED STABILIZATION ITEMS
-- `gap.test-runner-depends-on-untracked-loader` — loader byte-identical versionado; checkout Git canônico executou npm ci e 207/214 sem depender de .tmp.
+- `gap.test-runner-depends-on-untracked-loader` — loader byte-identical permanece versionado; o runner corrente é reproduzível e a suíte passa 236/236.
