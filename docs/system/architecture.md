@@ -1,5 +1,7 @@
 # Arquitetura as-is do Rota5
 
+> **HISTORICAL SNAPSHOT:** preserved original-stage inventory; current values are projected by the Baseline 2.5.2 bannered documents and canonical machine-readable catalogs.
+
 **Data da leitura:** 2026-09-11
 **Commit de referência:** a141c6004421fb8442f95493de3ca4ec4d4c997b
 **Escopo:** código, configuração e migrations locais; o estado publicado e o banco remoto não foram validados nesta etapa.

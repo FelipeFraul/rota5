@@ -1,6 +1,6 @@
 # Baseline 2.0.1 HIGH #1 final database runtime
 
-## Baseline 2.5.0 database state
+## Baseline 2.5.2 database state
 
 Canonical local/validated state: 83 migrations, 45 tables, 44 SQL functions and 36 triggers. `admin_event_operations` is present. Current administrative RPCs are `create_admin_event_catalog`, `update_admin_event_catalog` and `update_admin_event_location`; historical `update_admin_event_venue` is absent after migration 004.
 
@@ -12,7 +12,7 @@ The rollout draft is preserved as historical source. The active migration `supab
 
 ## Migrations e objetos
 
-A ordem lexicográfica das 79 migrations define a reconstrução local. Cada registro inclui objetos criados, alterados e removidos, dependência anterior, impacto e reversão manual. Foram considerados `CREATE OR REPLACE FUNCTION`, recriação de triggers, alterações de tabela e remoções; o resultado final local contém 44 tabelas, 39 funções, 36 triggers e 155 índices.
+A ordem lexicográfica das 83 migrations define a reconstrução local. Cada registro inclui objetos criados, alterados e removidos, dependência anterior, impacto e reversão manual. Foram considerados `CREATE OR REPLACE FUNCTION`, recriação de triggers, alterações de tabela e remoções; o resultado final local contém 45 tabelas, 44 funções, 36 triggers e 157 índices.
 
 | Migration | Creates | Alters | Drops | Reversão |
 | --- | ---: | ---: | ---: | --- |
@@ -98,8 +98,8 @@ A ordem lexicográfica das 79 migrations define a reconstrução local. Cada reg
 
 | Superfície | Evidência | Resultado |
 | --- | --- | --- |
-| Tabelas e colunas | REMOTE_SCHEMA / OpenAPI PostgREST | 44; MATCH local |
-| Rotas RPC | REMOTE_SCHEMA / OpenAPI | 33 rotas |
+| Tabelas e colunas | REMOTE_SCHEMA / OpenAPI PostgREST | 45; MATCH local |
+| Rotas RPC | REMOTE_SCHEMA / OpenAPI | 42 rotas medidas diretamente |
 | Funções SQL internas | NOT_VALIDATED | OpenAPI só prova superfície RPC |
 | Constraints, índices e triggers | NOT_VALIDATED | Sem conexão SQL read-only disponível |
 | RLS, policies e grants | NOT_VALIDATED | Não inferidos do resultado anon |
@@ -107,7 +107,7 @@ A ordem lexicográfica das 79 migrations define a reconstrução local. Cada reg
 | Storage | REMOTE_CONFIG | zero buckets |
 | Auth | NOT_VALIDATED | configuração não consultável pelas credenciais usadas |
 
-Das 39 funções locais, 30 aparecem como RPC. As três restantes são funções de trigger: `set_updated_at`, `enforce_one_active_reservation_per_customer` e `sync_official_table_map_reservation_status`. O remoto também expõe `show_limit`, `show_trgm` e `unaccent`, ligados a extensões e ausentes como funções próprias nas migrations. Isso é `PARTIAL_MATCH` da superfície RPC, não prova de drift do schema.
+Das 44 funções locais, 39 aparecem como rotas RPC. As cinco restantes são funções de trigger: `enforce_one_active_reservation_per_customer`, `prevent_gate_session_source_change`, `revoke_linked_gate_sessions_on_credential_change`, `set_updated_at` e `sync_official_table_map_reservation_status`. O remoto também expõe `show_limit`, `show_trgm` e `unaccent`, ligados a extensões e ausentes como funções próprias nas migrations. Isso é `PARTIAL_MATCH` da superfície RPC, não prova de drift do schema.
 
 ## Modos de acesso
 

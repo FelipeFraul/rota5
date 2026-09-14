@@ -1358,7 +1358,7 @@
     "safeLocalExecution": true,
     "note": "stage3Validation permanece histórico e não foi reinterpretado."
   },
-  "stage": "2.5.1",
+  "stage": "2.5.2",
   "high_1_validation": {
     "focused_new_app": {
       "passed": 96,

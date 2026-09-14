@@ -1,4 +1,4 @@
-> **Current Baseline 2.5.1 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on unchanged repository source `e931d66d03a620d5e26588c8f6c8714c62ef5d1d` (fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`, 379 files, 83 migrations). Atomicity and admin location consistency remain **RESOLVED**. Findings and health are unchanged: 45 total, 13 RESOLVED, 21 ACTIVE, 6 POTENTIAL, 5 NOT_VALIDATED, 0 release blockers; PRODUCT_HEALTH and INFRASTRUCTURE_HEALTH are **DEGRADED**. Quality remains 257/257 Node, 2/2 PostgreSQL 16 and Quality Gate 34898804387 PASS. Production `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` remains on application source `148b8200a44f4eeb49e004af45060a302bac9f20`; no runtime, database, deployment or functional change occurred.
+> **Current Baseline 2.5.2 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on unchanged repository source `e931d66d03a620d5e26588c8f6c8714c62ef5d1d` (fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`, 379 files, 83 migrations). Atomicity and admin location consistency remain **RESOLVED**. Findings and health are unchanged: 45 total, 13 RESOLVED, 21 ACTIVE, 6 POTENTIAL, 5 NOT_VALIDATED, 0 release blockers; PRODUCT_HEALTH and INFRASTRUCTURE_HEALTH are **DEGRADED**. Quality remains 257/257 Node, 2/2 PostgreSQL 16 and Quality Gate 34898804387 PASS. Production `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` remains on application source `148b8200a44f4eeb49e004af45060a302bac9f20`; no runtime, database, deployment or functional change occurred.
 
 # Stabilization history — 12–14 September 2026
 
@@ -47,3 +47,7 @@ The stabilization cycle of 12–14/09/2026 is closed. This statement does not me
 ## Post-freeze documentary correction — Baseline 2.5.1
 
 Baseline 2.5.1 is a `PATCH_DOCUMENTARY_CORRECTION` after the functional 2.5.0 freeze. It reconciles stale current/top-level metadata only; the 12–14/09/2026 milestones, source, runtime, database, tests, findings lifecycles, health, release blockers and closed-cycle status are unchanged.
+
+## Post-freeze documentary patch — Baseline 2.5.2
+
+Baseline 2.5.2 is a `PATCH_DOCUMENTARY_CORRECTION` that reconciles verified CURRENT scorecard/runtime projections and records a side-effect-free OpenAPI revalidation. The functional three-day milestones remain preserved and `DOCUMENTED_AND_CLOSED`; no runtime behavior, database mutation, finding lifecycle, health, release blocker or deployment changed.

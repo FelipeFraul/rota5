@@ -131,9 +131,9 @@
       "purpose": "Tabelas, constraints, RLS, triggers, helpers e RPCs.",
       "status": "PARCIALMENTE CONFIRMADO",
       "evidence": [
-        "79 migrations",
-        "44 tabelas",
-        "39 funções",
+        "83 migrations",
+        "45 tabelas",
+        "44 funções",
         "36 triggers"
       ],
       "notes": "Estado remoto não validado."
@@ -585,5 +585,5 @@
     "hotspot.batch-disabled",
     "hotspot.admin-reports"
   ],
-  "stage": "2.5.1"
+  "stage": "2.5.2"
 }

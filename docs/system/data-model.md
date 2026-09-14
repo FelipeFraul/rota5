@@ -8,9 +8,9 @@ Referência canônica corrente: commit `e931d66d03a620d5e26588c8f6c8714c62ef5d1d
 
 ## Resultado
 
-- 44 tabelas locais e 44 remotas: **MATCH** para nomes de tabelas e colunas.
+- 45 tabelas locais e 45 remotas: **MATCH** para nomes de tabelas e colunas.
 - 44 tabelas com RLS habilitado localmente; zero `CREATE POLICY` encontrado.
-- 39 funções SQL, 36 triggers e 155 índices reconstruídos localmente.
+- 44 funções SQL, 36 triggers e 157 índices reconstruídos localmente.
 - O runtime principal usa service role, portanto a autorização das APIs é aplicada antes do acesso e esse cliente contorna RLS.
 - Acesso anon por HEAD: 7 tabelas aceitaram a consulta e 37 negaram/indisponibilizaram. Aceite não prova leitura de linhas.
 

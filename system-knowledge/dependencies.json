@@ -11123,7 +11123,7 @@
       "src/lib/tickets/tableMap/persistOfficialPlaces.ts"
     ]
   },
-  "stage": "2.5.1",
+  "stage": "2.5.2",
   "high_1_source_relationships": {
     "lock_order": [
       "credential",

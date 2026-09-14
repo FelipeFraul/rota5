@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.1",
+  "generatedAt": "2026-09-14T22:50:20.174Z",
+  "stage": "2.5.2",
   "count": 4,
   "critical": 1,
   "records": [
@@ -108,8 +108,8 @@
   "declared_remote_runtime_matrix": [
     {
       "object": "Supabase tables/columns",
-      "local": "44 tabelas reconstruídas",
-      "remote": "44 tabelas e colunas via OpenAPI",
+      "local": "45 tabelas reconstruídas",
+      "remote": "45 tabelas e colunas via OpenAPI read-only",
       "runtime": "OpenAPI HTTP 200",
       "result": "MATCH"
     },
@@ -122,8 +122,8 @@
     },
     {
       "object": "Supabase RPC surface",
-      "local": "39 funções SQL catalogadas no source corrente; a projeção remota abaixo pertence à última observação e não redefine a contagem local",
-      "remote": "Historical remote observation: 33 RPCs (30 da aplicação + 3 extensões)",
+      "local": "44 funções SQL catalogadas; 39 expostas nominalmente como rotas RPC",
+      "remote": "42 rotas RPC medidas diretamente: 39 da aplicação + 3 extensões",
       "runtime": "OpenAPI HTTP 200",
       "result": "PARTIAL_MATCH"
     },
@@ -290,5 +290,11 @@
     "new_deployment_in_freeze": false,
     "supabase_changed_in_freeze": false,
     "ticketeira_touched": false
+  },
+  "baseline_2_5_2": {
+    "remote_openapi_revalidated": true,
+    "observed_at": "2026-09-14T22:50:20.174Z",
+    "tables": 45,
+    "rpc_routes": 42
   }
 }

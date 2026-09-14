@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.1",
+  "generatedAt": "2026-09-14T22:50:20.174Z",
+  "stage": "2.5.2",
   "sourceCommit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
   "counts": {
     "tables": 45,
@@ -6649,10 +6649,12 @@
     }
   ],
   "remote": {
-    "tables": 44,
-    "rpc_routes": 33,
+    "tables": 45,
+    "rpc_routes": 42,
     "local_function_names_not_exposed_as_rpc": [
       "enforce_one_active_reservation_per_customer",
+      "prevent_gate_session_source_change",
+      "revoke_linked_gate_sessions_on_credential_change",
       "set_updated_at",
       "sync_official_table_map_reservation_status"
     ],
@@ -6667,6 +6669,7 @@
     "policies": "NOT_VALIDATED",
     "grants": "NOT_VALIDATED",
     "application_rpc_matches": [
+      "admin_event_location_block_reason",
       "append_whatsapp_message_batch",
       "assign_participant_contacts_to_order_tickets",
       "cancel_pending_reservation",
@@ -6674,8 +6677,10 @@
       "claim_whatsapp_outbound_delivery",
       "confirm_paid_ticket_order",
       "consume_rate_limit",
+      "create_admin_event_catalog",
       "expire_reservations",
       "finish_whatsapp_message_batch",
+      "gate_session_source_rollout_status",
       "get_admin_event_editor_payload",
       "get_admin_general_dashboard_summary",
       "get_admin_intelligence_dashboard",
@@ -6685,15 +6690,21 @@
       "issue_public_free_ticket_order",
       "list_admin_events_fast",
       "lock_and_validate_courtesy_limits",
+      "lock_authorized_gate_session",
       "lock_customer_active_reservation_slot",
       "lock_validate_and_record_reservation_buyer_risk",
       "mark_buyer_ticket_qr_delivered",
       "normalize_event_search_text",
+      "pause_gate_access_and_revoke_sessions",
       "reschedule_whatsapp_message_batch",
       "reserve_official_table_map_place",
       "reserve_seats",
       "reserve_ticket_cart",
+      "revoke_fixed_gate_access_and_revoke_sessions",
       "search_public_events_ranked",
+      "update_admin_event_catalog",
+      "update_admin_event_catalog_legacy",
+      "update_admin_event_location",
       "update_admin_section_capacity",
       "validate_combo_redemption",
       "validate_ticket_entry"
@@ -6725,7 +6736,9 @@
       "public.create_admin_event_catalog",
       "public.update_admin_event_catalog",
       "public.update_admin_event_location"
-    ]
+    ],
+    "openapi_observed_at": "2026-09-14T22:50:20.174Z",
+    "openapi_measurement_digest": "cee582981b49dcd230ec034ed1f027a73494fb0191c02591edec6abc3d38aea7"
   },
   "migration_analysis": {
     "ordering": "Ordem lexicográfica dos 79 nomes timestampados.",

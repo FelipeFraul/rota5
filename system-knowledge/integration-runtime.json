@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.1",
+  "generatedAt": "2026-09-14T22:50:20.174Z",
+  "stage": "2.5.2",
   "sourceCommit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
   "count": 6,
   "remoteValidated": 5,
@@ -54,7 +54,7 @@
       "evidence": [
         "src/lib/supabase/admin.ts",
         "supabase/migrations",
-        "Supabase PostgREST OpenAPI: 44 tabelas e 33 rotas RPC"
+        "Supabase PostgREST OpenAPI read-only: 45 tabelas e 42 rotas RPC medidas diretamente em 2026-09-14T22:50:20.174Z"
       ],
       "gate_validation": {
         "local_declared": "SIM",

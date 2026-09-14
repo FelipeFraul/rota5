@@ -1,4 +1,4 @@
-> **Current Baseline 2.5.1 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on unchanged repository source `e931d66d03a620d5e26588c8f6c8714c62ef5d1d` (fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`, 379 files, 83 migrations). Atomicity and admin location consistency remain **RESOLVED**. Findings and health are unchanged: 45 total, 13 RESOLVED, 21 ACTIVE, 6 POTENTIAL, 5 NOT_VALIDATED, 0 release blockers; PRODUCT_HEALTH and INFRASTRUCTURE_HEALTH are **DEGRADED**. Quality remains 257/257 Node, 2/2 PostgreSQL 16 and Quality Gate 34898804387 PASS. Production `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` remains on application source `148b8200a44f4eeb49e004af45060a302bac9f20`; no runtime, database, deployment or functional change occurred.
+> **Current Baseline 2.5.2 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on unchanged repository source `e931d66d03a620d5e26588c8f6c8714c62ef5d1d` (fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`, 379 files, 83 migrations). Atomicity and admin location consistency remain **RESOLVED**. Findings and health are unchanged: 45 total, 13 RESOLVED, 21 ACTIVE, 6 POTENTIAL, 5 NOT_VALIDATED, 0 release blockers; PRODUCT_HEALTH and INFRASTRUCTURE_HEALTH are **DEGRADED**. Quality remains 257/257 Node, 2/2 PostgreSQL 16 and Quality Gate 34898804387 PASS. Production `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` remains on application source `148b8200a44f4eeb49e004af45060a302bac9f20`; no runtime, database, deployment or functional change occurred.
 
 # Configuration drift — Etapa 5
 
@@ -18,9 +18,9 @@ Current Production deployment `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` is READY on exa
 
 | Objeto | Local | Remote | Runtime | Result |
 | --- | --- | --- | --- | --- |
-| Supabase tables/columns | 44 tabelas reconstruídas | 44 tabelas e colunas via OpenAPI | OpenAPI HTTP 200 | MATCH |
+| Supabase tables/columns | 45 tabelas reconstruídas | 45 tabelas e colunas via OpenAPI read-only | OpenAPI HTTP 200 | MATCH |
 | Supabase constraints/indexes/triggers/RLS/policies/grants | catalogados quando declarados | NOT_VALIDATED | NOT_VALIDATED | NOT_VALIDATED |
-| Supabase RPC surface | 39 funções SQL; 30 expostas como RPC esperada | 33 RPCs: 30 da aplicação + 3 extensões | OpenAPI HTTP 200 | PARTIAL_MATCH |
+| Supabase RPC surface | 44 funções SQL; 39 expostas nominalmente como rotas RPC | 42 rotas RPC medidas: 39 da aplicação + 3 extensões | OpenAPI HTTP 200 | PARTIAL_MATCH |
 | Z-API webhook registration | /api/webhook/zapi | NOT_VALIDATED | instância conectada | NOT_VALIDATED |
 | Mercado Pago webhook registration | /api/webhook/payment/mercado-pago | NOT_VALIDATED | credencial aceitou leitura de conta | NOT_VALIDATED |
 | Vercel crons | 2 | 2 | execução não disparada | MATCH |

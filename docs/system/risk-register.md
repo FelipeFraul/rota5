@@ -1,4 +1,4 @@
-> **Current Baseline 2.5.1 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on unchanged repository source `e931d66d03a620d5e26588c8f6c8714c62ef5d1d` (fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`, 379 files, 83 migrations). Atomicity and admin location consistency remain **RESOLVED**. Findings and health are unchanged: 45 total, 13 RESOLVED, 21 ACTIVE, 6 POTENTIAL, 5 NOT_VALIDATED, 0 release blockers; PRODUCT_HEALTH and INFRASTRUCTURE_HEALTH are **DEGRADED**. Quality remains 257/257 Node, 2/2 PostgreSQL 16 and Quality Gate 34898804387 PASS. Production `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` remains on application source `148b8200a44f4eeb49e004af45060a302bac9f20`; no runtime, database, deployment or functional change occurred.
+> **Current Baseline 2.5.2 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on unchanged repository source `e931d66d03a620d5e26588c8f6c8714c62ef5d1d` (fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`, 379 files, 83 migrations). Atomicity and admin location consistency remain **RESOLVED**. Findings and health are unchanged: 45 total, 13 RESOLVED, 21 ACTIVE, 6 POTENTIAL, 5 NOT_VALIDATED, 0 release blockers; PRODUCT_HEALTH and INFRASTRUCTURE_HEALTH are **DEGRADED**. Quality remains 257/257 Node, 2/2 PostgreSQL 16 and Quality Gate 34898804387 PASS. Production `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` remains on application source `148b8200a44f4eeb49e004af45060a302bac9f20`; no runtime, database, deployment or functional change occurred.
 
 # Baseline 2.0.1 HIGH #1 final state
 
@@ -207,7 +207,7 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 - Impacto: A baseline não pode afirmar que guardas locais de integridade, concorrência e autorização existem com a mesma forma em produção.
 - Escopo: domains domain.platform-runtime, domain.reservation-inventory, domain.orders-payments, domain.ticketing-delivery; capabilities —; flows —.
 - Blast radius: **SYSTEM_WIDE**
-- Workaround: Comparação de 44 tabelas/colunas e 33 RPCs reduz a incerteza de superfície.
+- Workaround: Comparação de 45 tabelas/colunas e 42 rotas RPC medidas diretamente reduz a incerteza de superfície.
 - Direção: Comparar metadados e definições remotas por canal autorizado.
 - Justificativa da prioridade: P2 porque é incerteza relevante, não vulnerabilidade ou divergência comprovada.
 
@@ -394,12 +394,12 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 
 - Tipo / severidade / prioridade: **TEST_GAP / MEDIUM / P2**
 - Status / confiança: **NOT_VALIDATED / CONFIRMED**
-- Problema: 33 nomes de RPC coincidem parcialmente com definições locais, mas corpos, triggers, constraints e índices remotos não foram inspecionados; testes reais não fazem parte do npm test.
+- Problema: 39 rotas RPC de aplicação coincidem com definições locais, mas corpos, triggers, constraints e índices remotos não foram inspecionados; testes reais não fazem parte do npm test.
 - Evidência: `system-knowledge/database-objects.json` — Catálogo local/rotas remotas.; `system-knowledge/runtime-validation.json` — OpenAPI não prova comportamento interno.; `system-knowledge/tests.json` — Testes reais ficam fora do gate padrão.
 - Impacto: A camada responsável por atomicidade e idempotência pode divergir do repositório sem detecção pelo gate local.
 - Escopo: domains domain.reservation-inventory, domain.orders-payments, domain.ticketing-delivery, domain.combo-commerce-fulfillment; capabilities —; flows —.
 - Blast radius: **MULTI_DOMAIN**
-- Workaround: Nomes de 30 RPCs de aplicação coincidem e rotas remotas foram observadas.
+- Workaround: As 39 rotas RPC de aplicação coincidem nominalmente e foram observadas diretamente no OpenAPI remoto.
 - Direção: Adicionar verificação não destrutiva de definição/versão e testes controlados de invariantes.
 - Justificativa da prioridade: MEDIUM com alcance MULTI_DOMAIN, considerando probabilidade, workaround e capacidade de detecção.
 

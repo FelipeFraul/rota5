@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.1",
+  "generatedAt": "2026-09-14T22:50:20.174Z",
+  "stage": "2.5.2",
   "sourceCommit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
-  "scope": "Canonical finding catalog for Baseline 2.5.1, including resolved stabilization history and the post-freeze documentary correction.",
+  "scope": "Canonical finding catalog for Baseline 2.5.2, including resolved stabilization history and post-freeze documentary corrections.",
   "method": "Reconciled machine-readable current state for Baseline 2.5.x against the canonical taxonomy, functional source, current behavioral catalogs and preserved historical evidence. Baseline 2.5.0 resolved the administrative atomicity finding and incorporated the resolved location-consistency finding.",
   "count": 45,
   "records": [
@@ -1692,7 +1692,7 @@
         "integration-supabase"
       ],
       "blast_radius": "SYSTEM_WIDE",
-      "workaround": "Comparação de 44 tabelas/colunas e 33 RPCs reduz a incerteza de superfície.",
+      "workaround": "Comparação de 45 tabelas/colunas e 42 rotas RPC medidas diretamente reduz a incerteza de superfície.",
       "direction": "Comparar metadados e definições remotas por canal autorizado.",
       "priority_justification": "P2 porque é incerteza relevante, não vulnerabilidade ou divergência comprovada."
     },
@@ -2854,7 +2854,7 @@
       "priority": "P2",
       "status": "NOT_VALIDATED",
       "confidence": "CONFIRMED",
-      "description": "33 nomes de RPC coincidem parcialmente com definições locais, mas corpos, triggers, constraints e índices remotos não foram inspecionados; testes reais não fazem parte do npm test.",
+      "description": "39 rotas RPC de aplicação coincidem com definições locais, mas corpos, triggers, constraints e índices remotos não foram inspecionados; testes reais não fazem parte do npm test.",
       "evidence": [
         {
           "path": "system-knowledge/database-objects.json",
@@ -2886,7 +2886,7 @@
         "integration-supabase"
       ],
       "blast_radius": "MULTI_DOMAIN",
-      "workaround": "Nomes de 30 RPCs de aplicação coincidem e rotas remotas foram observadas.",
+      "workaround": "As 39 rotas RPC de aplicação coincidem nominalmente e foram observadas diretamente no OpenAPI remoto.",
       "direction": "Adicionar verificação não destrutiva de definição/versão e testes controlados de invariantes.",
       "priority_justification": "MEDIUM com alcance MULTI_DOMAIN, considerando probabilidade, workaround e capacidade de detecção."
     },
@@ -3906,5 +3906,13 @@
     "new_findings": 0,
     "atomicity": "RESOLVED",
     "admin_location_consistency": "RESOLVED"
+  },
+  "baseline_2_5_2": {
+    "change_type": "PATCH_DOCUMENTARY_CORRECTION",
+    "lifecycle_changes": 0,
+    "new_findings": 0,
+    "atomicity": "RESOLVED",
+    "admin_location_consistency": "RESOLVED",
+    "remote_openapi_revalidated": true
   }
 }

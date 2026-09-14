@@ -120,6 +120,29 @@ for (const [name, count] of Object.entries(expected)) if (getRecords(name).lengt
 if ((objects.migrations||[]).length !== baselineCounts.migrations) add('CANONICAL_COUNT_MISMATCH','migrations');
 if ((objects.functions||[]).length !== baselineCounts.sql_functions) add('CANONICAL_COUNT_MISMATCH','sql functions');
 if ((objects.triggers||[]).length !== baselineCounts.triggers) add('CANONICAL_COUNT_MISMATCH','triggers');
+const joinHumanList = (values) => values.length < 2 ? (values[0] || '') : `${values.slice(0, -1).join(', ')} e ${values.at(-1)}`;
+const priorityVocabulary = [...new Set(findings.map(finding => finding.priority).filter(Boolean))]
+  .sort((left,right) => String(left).localeCompare(String(right),undefined,{numeric:true}));
+const priorityProjection = joinHumanList(priorityVocabulary.map(priority => `${priority} ${findings.filter(finding => finding.priority===priority).length}`));
+const runtimeRecords = getRecords('runtime-validation');
+const runtimeStatusProjection = ['PASS','PARTIAL','FAIL']
+  .map(status => `${runtimeRecords.filter(record => record.status===status).length} ${status}`)
+  .join(', ').replace(/, ([^,]+)$/, ' e $1');
+const canonicalScorecardJustifications = {
+  DATA: `${(objects.tables||[]).length} tabelas locais e remotas coincidem por nome no OpenAPI read-only; ${(objects.migrations||[]).length} migrations e definições finais locais foram recontadas.`,
+  RISKS: `${findings.length} findings foram contabilizados integralmente: ${priorityProjection}; as somas por type, severity, priority e status fecham em ${findings.length}, sem record ausente.`,
+  RUNTIME: `${runtimeRecords.length} checks foram revisados; a distribuição canônica atual é ${runtimeStatusProjection}.`
+};
+const completenessRecords = new Map(getRecords('completeness').map(record => [record.area,record]));
+const scorecardText = fs.readFileSync(path.join(docsDir,'completeness-scorecard.md'),'utf8');
+const scorecardRows = new Map(scorecardText.split(/\r?\n/).filter(line => /^\| (DATA|RISKS|RUNTIME) \|/.test(line)).map(line => {
+  const cells = line.split('|').map(cell => cell.trim());
+  return [cells[1],cells[3]];
+}));
+for (const [area,expectedJustification] of Object.entries(canonicalScorecardJustifications)) {
+  if (completenessRecords.get(area)?.justification !== expectedJustification) add('COMPLETENESS_CANONICAL_COUNT_MISMATCH',`completeness.json:${area}`);
+  if (scorecardRows.get(area) !== expectedJustification) add('COMPLETENESS_SCORECARD_PROJECTION_MISMATCH',`completeness-scorecard.md:${area}`);
+}
 if ((catalogs.capabilities?.metrics?.by_status?.DESCONHECIDA || 0) !== 0) add('UNCLASSIFIED_CAPABILITY','capabilities.metrics.by_status.DESCONHECIDA');
 if ((catalogs.flows?.metrics?.capabilities_unclassified || 0) !== 0) add('UNCLASSIFIED_CAPABILITY','flows.metrics.capabilities_unclassified');
 if ((catalogs.flows?.metrics?.functional_entrypoints_unclassified || 0) !== 0) add('UNCLASSIFIED_ENTRYPOINT','flows.metrics.functional_entrypoints_unclassified');

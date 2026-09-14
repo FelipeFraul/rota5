@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.1",
+  "stage": "2.5.2",
   "base_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
   "functional_changes_since_base": [],
   "baseline_commit": "SELF_NOT_RECORDED",
@@ -11,7 +11,7 @@
     "head": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
     "working_tree_clean": false,
     "validity_role": "INFORMATIONAL_ONLY",
-    "note": "Only Baseline 2.5.0 documentary artifacts are uncommitted; functional source fingerprint is derived from the canonical repository source."
+    "note": "Historical Git observation captured during the Baseline 2.5.0 freeze; functional source fingerprint is derived from the canonical repository source."
   },
   "package_lock_sha256": "2e2c187914e8a6f554462787a4c5d2f2315ddb59dd06bf85330a9073bd9f529c",
   "migrations_aggregate_hash": "420706af613a83a2686d08c9e9768cf43db7b219e396cd4e27a06e7daaf1f2c3",

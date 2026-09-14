@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.1",
+  "generatedAt": "2026-09-14T22:50:20.174Z",
+  "stage": "2.5.2",
   "globalConfidence": "HIGH",
   "count": 10,
   "records": [
@@ -36,7 +36,7 @@
     {
       "area": "DATA",
       "status": "MEDIUM_CONFIDENCE",
-      "justification": "44 tabelas e OpenAPI remoto coincidem; 79 migrations e definições finais locais foram recontadas.",
+      "justification": "45 tabelas locais e remotas coincidem por nome no OpenAPI read-only; 83 migrations e definições finais locais foram recontadas.",
       "missingEvidence": "Internos PostgreSQL e histórico remoto.",
       "higherConfidenceRequires": "Catálogo PostgreSQL remoto read-only."
     },
@@ -64,14 +64,14 @@
     {
       "area": "RISKS",
       "status": "HIGH_CONFIDENCE",
-      "justification": "44 findings counted completely by type, severity, priority and status; priority vocabulary P0, P1, P2, P3, P4; 0 release blockers.",
+      "justification": "45 findings foram contabilizados integralmente: P0 3, P1 11, P2 20, P3 9 e P4 2; as somas por type, severity, priority e status fecham em 45, sem record ausente.",
       "missingEvidence": "Riscos dependentes de estado remoto não exposto.",
       "higherConfidenceRequires": "Evidência remota dos itens NOT_VALIDATED."
     },
     {
       "area": "RUNTIME",
       "status": "MEDIUM_CONFIDENCE",
-      "justification": "20 checks foram revisados; a distribuição canônica atual é 18 PASS, 2 PARTIAL e 0 FAIL.",
+      "justification": "24 checks foram revisados; a distribuição canônica atual é 22 PASS, 2 PARTIAL e 0 FAIL.",
       "missingEvidence": "Execuções mutáveis, cron/webhook history e logs completos.",
       "higherConfidenceRequires": "Observação read-only adicional ou ambiente isolado."
     }
@@ -81,5 +81,10 @@
     "atomicity": "RESOLVED",
     "admin_location_consistency": "RESOLVED",
     "history_artifacts": 2
+  },
+  "baseline_2_5_2": {
+    "status": "PASS",
+    "scorecard_canonical_counts": "PASS",
+    "remote_openapi_revalidated": true
   }
 }

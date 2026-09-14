@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
   "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.1",
+  "stage": "2.5.2",
   "period": {
     "start": "2026-09-12",
     "end": "2026-09-14",
     "status": "CLOSED"
   },
   "baseline_start": "1.0.0",
-  "baseline_end": "2.5.1",
+  "baseline_end": "2.5.2",
   "source_start": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
   "source_end": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
   "days": [
@@ -267,7 +267,7 @@
     "orphan.seat-map-renders-table"
   ],
   "final_state": {
-    "baseline": "2.5.1",
+    "baseline": "2.5.2",
     "repository_source": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
     "production_application_source": "148b8200a44f4eeb49e004af45060a302bac9f20",
     "source_tree_fingerprint": "6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954",
@@ -291,6 +291,14 @@
       "type": "PATCH_DOCUMENTARY_CORRECTION",
       "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
       "reason": "Post-freeze reconciliation of stale current/top-level metadata.",
+      "functional_milestones_changed": false
+    },
+    {
+      "version": "2.5.2",
+      "date": "2026-09-14",
+      "type": "PATCH_DOCUMENTARY_CORRECTION",
+      "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+      "reason": "Final reconciliation of verified CURRENT projections and read-only OpenAPI evidence.",
       "functional_milestones_changed": false
     }
   ]

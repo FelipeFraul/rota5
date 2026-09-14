@@ -28,7 +28,7 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 - Impacto: A baseline não pode afirmar que guardas locais de integridade, concorrência e autorização existem com a mesma forma em produção.
 - Escopo: domains domain.platform-runtime, domain.reservation-inventory, domain.orders-payments, domain.ticketing-delivery; capabilities —; flows —.
 - Blast radius: **SYSTEM_WIDE**
-- Workaround: Comparação de 44 tabelas/colunas e 33 RPCs reduz a incerteza de superfície.
+- Workaround: Comparação de 45 tabelas/colunas e 42 rotas RPC medidas diretamente reduz a incerteza de superfície.
 - Direção: Comparar metadados e definições remotas por canal autorizado.
 - Justificativa da prioridade: P2 porque é incerteza relevante, não vulnerabilidade ou divergência comprovada.
 

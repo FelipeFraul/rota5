@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.1",
+  "generatedAt": "2026-09-14T22:50:20.174Z",
+  "stage": "2.5.2",
   "count": 24,
-  "ok": 19,
+  "ok": 22,
   "records": [
     {
       "id": "runtime.supabase-openapi",
@@ -11,13 +11,20 @@
       "method": "GET",
       "evidence_source": "REMOTE_SCHEMA",
       "status": "PASS",
-      "result": "44 tabelas e 33 rotas RPC retornadas; nomes de colunas comparados.",
+      "result": "45 tabelas e 42 rotas RPC retornadas; contagens medidas diretamente e nomes de colunas comparados.",
       "side_effect_free": true,
       "expected": "Schema OpenAPI acessível sem escrita.",
       "evidence": [
         "REMOTE_SCHEMA",
         "Supabase PostgREST OpenAPI"
-      ]
+      ],
+      "observed_at": "2026-09-14T22:50:20.174Z",
+      "measurement": {
+        "http_status": 200,
+        "tables": 45,
+        "rpc_routes": 42,
+        "digest": "cee582981b49dcd230ec034ed1f027a73494fb0191c02591edec6abc3d38aea7"
+      }
     },
     {
       "id": "runtime.supabase-anon-head",
@@ -630,5 +637,12 @@
       "city_state_divergences": 0,
       "legacy_update_admin_event_venue": "ABSENT"
     }
+  },
+  "baseline_2_5_2": {
+    "change_type": "PATCH_DOCUMENTARY_CORRECTION",
+    "remote_openapi_revalidated": true,
+    "tables": 45,
+    "rpc_routes": 42,
+    "side_effect_free": true
   }
 }
