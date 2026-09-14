@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
+import { buildDuplicatedAdminEventPayload } from "../src/lib/tickets/services/adminEventDuplication.ts";
+
 const router = readFileSync(
   new URL("../src/lib/tickets/router.ts", import.meta.url),
   "utf8",
@@ -141,10 +143,24 @@ test("edicao permite limpar artistName sem usar fallback do ultimo evento", () =
 });
 
 test("duplicacao explicita nao herda artist_name do evento origem", () => {
-  assert.match(adminEventsService, /export async function duplicateAdminEvent/);
-  assert.match(adminEventsService, /const duplicatedTitle = `\$\{sourceEvent\.title\} - C/);
-  assert.match(adminEventsService, /artist_name: duplicatedTitle/);
-  assert.doesNotMatch(adminEventsService, /artist_name: sourceEvent\.artist_name/);
+  const duplicated = buildDuplicatedAdminEventPayload({
+    sourceEvent: {
+      title: "Evento B",
+      artist_name: "Artista A",
+      artist_icon: null,
+      description: "Descrição",
+      city: "São Paulo",
+      state: "SP",
+      image_url: null,
+    },
+    venueId: "venue-b",
+  });
+
+  assert.equal(duplicated.title, "Evento B - CÓPIA");
+  assert.equal(duplicated.artist_name, duplicated.title);
+  assert.notEqual(duplicated.artist_name, "Artista A");
+  assert.equal(duplicated.venue_id, "venue-b");
+  assert.match(adminEventsService, /buildDuplicatedAdminEventPayload\(\{/);
 });
 
 test("editor sincroniza artista com titulo enquanto artista ainda espelha titulo", () => {

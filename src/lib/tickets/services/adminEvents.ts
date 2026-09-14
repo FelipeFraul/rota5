@@ -1,6 +1,7 @@
 ﻿import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { buildDuplicatedAdminEventPayload } from "@/lib/tickets/services/adminEventDuplication";
 import { OFFICIAL_TABLE_MAP_PLACES } from "@/lib/tickets/tableMap/officialPlaces";
 
 export type AdminEventStatus = "draft" | "published" | "cancelled" | "finished";
@@ -1709,18 +1710,10 @@ export async function duplicateAdminEvent(input: {
     duplicatedVenueId = newVenue.id;
   }
 
-  const duplicatedTitle = `${sourceEvent.title} - CÓPIA`;
-  const eventPayload = {
-    title: duplicatedTitle,
-    artist_name: sourceEvent.artist_name,
-    artist_icon: sourceEvent.artist_icon ?? "🎤",
-    description: sourceEvent.description,
-    city: sourceEvent.city,
-    state: sourceEvent.state,
-    image_url: sourceEvent.image_url,
-    venue_id: duplicatedVenueId,
-    status: "draft" as AdminEventStatus,
-  };
+  const eventPayload = buildDuplicatedAdminEventPayload({
+    sourceEvent,
+    venueId: duplicatedVenueId,
+  });
   const eventOwnerPayload = {
     ...eventPayload,
     created_by_admin_user_id: input.createdByAdminUserId ?? null,
@@ -2754,4 +2747,3 @@ export async function updateAdminPrice(
 
   return { ok: true as const, price: data };
 }
-

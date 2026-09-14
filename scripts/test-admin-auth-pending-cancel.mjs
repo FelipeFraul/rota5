@@ -29,7 +29,7 @@ function withoutUpdatedAt(context) {
   return clone;
 }
 
-test("admin_auth_pending cancela login com logout sem executar outros ramos", async () => {
+test("cancelamento global encerra admin_auth_pending antes dos ramos administrativos", async () => {
   const result = await routeTicketMessage({
     customer: {
       id: "customer-admin-cancel",
@@ -43,7 +43,7 @@ test("admin_auth_pending cancela login com logout sem executar outros ramos", as
         state: "admin_auth_pending",
         admin: {
           authChallengeId: "challenge-id",
-          authChallengeExpiresAt: "2026-07-20T23:59:59.000Z",
+          authChallengeExpiresAt: new Date(Date.now() + 60_000).toISOString(),
           role: "admin",
           adminUserId: "admin-user-id",
         },
@@ -52,7 +52,7 @@ test("admin_auth_pending cancela login com logout sem executar outros ramos", as
     text: "sair",
   });
 
-  assert.equal(result.reply, TICKET_MESSAGES.genericHelpPrompt);
+  assert.equal(result.reply, TICKET_MESSAGES.conversationClosed);
   assert.equal(result.outboundMessages, undefined);
   assert.equal(result.intentResolution, undefined);
   assert.equal(typeof result.nextContext.updatedAt, "string");

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
+import { formatSingleEventMoreInfoOptions } from "../src/lib/tickets/router.ts";
 import { classifyPublicAvailability } from "../src/lib/tickets/services/publicAvailability.ts";
 
 const source = readFileSync(
@@ -226,10 +227,11 @@ test("more info continua disponivel para sold out e vendas encerradas", () => {
     routerSource,
     /availabilityStatus: availabilityStatus \?\? event\.availabilityStatus/,
   );
-  assert.match(
-    routerSource,
-    /function formatSingleEventMoreInfoOptions[\s\S]*event\.availabilityStatus === "sold_out" \|\| event\.availabilityStatus === "sales_closed"[\s\S]*Para uma nova pesquisa, \*NEW\*/,
-  );
+  for (const availabilityStatus of ["sold_out", "sales_closed"]) {
+    const reply = formatSingleEventMoreInfoOptions({ availabilityStatus });
+    assert.match(reply, /\bNOVO\b/);
+    assert.doesNotMatch(reply, /comprar/i);
+  }
   assert.doesNotMatch(
     routerSource.match(/function formatSingleEventMoreInfoOptions[\s\S]*?function buildSelectedEvent/)?.[0] ?? "",
     /SOLD OUT[\s\S]*Digite \*1\* para \*comprar\*|VENDAS ENCERRADAS[\s\S]*Digite \*1\* para \*comprar\*/,

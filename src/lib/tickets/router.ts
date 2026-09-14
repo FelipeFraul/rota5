@@ -1966,7 +1966,7 @@ function formatSingleEventMoreInfo(
   ].join("\n");
 }
 
-function formatSingleEventMoreInfoOptions(
+export function formatSingleEventMoreInfoOptions(
   event: TicketConversationEventOption | TicketConversationSelectedEvent,
 ) {
   return event.availabilityStatus === "sold_out" || event.availabilityStatus === "sales_closed"

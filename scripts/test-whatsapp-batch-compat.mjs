@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
+import { TICKET_MESSAGES } from "../src/lib/tickets/messages.ts";
+
 const batchService = readFileSync(
   new URL("../src/lib/tickets/services/whatsappMessageBatches.ts", import.meta.url),
   "utf8",
@@ -28,10 +30,6 @@ const conversationFinalizer = readFileSync(
 );
 const ticketRouter = readFileSync(
   new URL("../src/lib/tickets/router.ts", import.meta.url),
-  "utf8",
-);
-const ticketMessages = readFileSync(
-  new URL("../src/lib/tickets/messages.ts", import.meta.url),
   "utf8",
 );
 const retryMigration = readFileSync(
@@ -88,9 +86,10 @@ test("cron finalizes inactive open conversations without duplicating finalizers"
   assert.doesNotMatch(conversationFinalizer, /latestMessage\?\.direction === "outbound"/);
   assert.match(conversationFinalizer, /status:\s*"closed"/);
   assert.match(conversationFinalizer, /reason:\s*FINALIZER_REASON/);
-  assert.match(ticketMessages, /conversationClosed:\s*['"][\s\S]*?encerrada\. Para iniciar uma nova digite NOVO/);
-  assert.match(ticketMessages, /adminLogout:\s*"[^"]*administrativa encerrada\."/);
-  assert.doesNotMatch(ticketMessages, /conversationClosed:\s*"ATENDIMENTO/);
+  const conversationClosed = TICKET_MESSAGES.conversationClosed.replace(/\*/g, "");
+  assert.match(conversationClosed, /encerrada\. Para iniciar uma nova digite NOVO/);
+  assert.match(TICKET_MESSAGES.adminLogout, /administrativa encerrada\./);
+  assert.doesNotMatch(TICKET_MESSAGES.conversationClosed, /^ATENDIMENTO/);
 });
 
 test("public initial reply is sent immediately instead of waiting for the batch", () => {

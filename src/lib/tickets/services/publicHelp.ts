@@ -154,14 +154,14 @@ const HELP_TOPICS: PublicHelpTopic[] = [
   {
     id: "assentos-multiplos",
     question: "Como enviar vários assentos?",
-    keywords: ["varios", "vários", "assentos", "c?digos", "códigos", "virgula"],
+    keywords: ["varios", "vários", "assentos", "codigos", "códigos", "virgula"],
     answer:
       "Quando comprar mais de 1 ingresso com assento marcado, envie exatamente a quantidade de códigos pedida. Pode usar espaço ou vírgula, como `A03 A04` ou `A03,A04`.",
   },
   {
     id: "assento-exatamente",
     question: "Por que preciso enviar exatamente a quantidade de assentos?",
-    keywords: ["exatamente", "quantidade", "assentos", "c?digo", "código", "erro"],
+    keywords: ["exatamente", "quantidade", "assentos", "codigo", "código", "erro"],
     answer:
       "Se você pediu 2 ingressos, precisa enviar 2 assentos disponíveis. Se enviar menos, mais ou um código indisponível, o sistema pede para corrigir.",
   },
@@ -173,9 +173,9 @@ const HELP_TOPICS: PublicHelpTopic[] = [
       "Em setores sem assento marcado, você escolhe apenas a quantidade. O sistema cria a reserva sem pedir código de cadeira.",
   },
   {
-    id: "assento-indispon?vel",
+    id: "assento-indisponivel",
     question: "Por que o assento ficou indisponível?",
-    keywords: ["assento", "indispon?vel", "indisponível", "ocupado", "reservado", "cadeira"],
+    keywords: ["assento", "indisponivel", "indisponível", "ocupado", "reservado", "cadeira"],
     answer:
       "Um assento pode ficar indisponível se outra pessoa reservou antes, se foi vendido, bloqueado ou se a reserva expirou/foi alterada. Escolha outro assento disponível no mapa.",
   },
@@ -245,7 +245,7 @@ const HELP_TOPICS: PublicHelpTopic[] = [
   {
     id: "pix",
     question: "Como pagar por Pix?",
-    keywords: ["pix", "copia", "cola", "c?digo", "código", "pagamento"],
+    keywords: ["pix", "copia", "cola", "codigo", "código", "pagamento"],
     answer:
       "Abra o link de pagamento e gere o código Pix. Copie o Pix copia e cola, pague no app do banco e aguarde a confirmação. A tela muda para pagamento aprovado quando o sistema recebe a confirmação.",
   },
@@ -271,16 +271,16 @@ const HELP_TOPICS: PublicHelpTopic[] = [
       "Aguarde a confirmação do pagamento. No Pix, a confirmação pode levar alguns instantes após pagar no banco. Se a reserva expirar antes da aprovação, faça uma nova compra.",
   },
   {
-    id: "link-pagamento-indispon?vel",
+    id: "link-pagamento-indisponivel",
     question: "O link de pagamento não abriu ou está indisponível.",
-    keywords: ["link", "pagamento", "indispon?vel", "indisponível", "checkout", "erro"],
+    keywords: ["link", "pagamento", "indisponivel", "indisponível", "checkout", "erro"],
     answer:
       "O link pode ficar indisponível se a reserva expirou, foi cancelada ou deixou de estar aguardando pagamento. Volte ao WhatsApp, busque o evento e gere uma nova compra.",
   },
   {
     id: "checkout-expirado",
     question: "A tela diz pagamento indisponível. Por quê?",
-    keywords: ["pagamento", "indispon?vel", "indisponível", "tela", "checkout", "expirou"],
+    keywords: ["pagamento", "indisponivel", "indisponível", "tela", "checkout", "expirou"],
     answer:
       "A tela de pagamento fica indisponível quando a reserva expirou, foi cancelada ou já não está aguardando pagamento. Volte ao WhatsApp e gere uma nova compra.",
   },
@@ -308,7 +308,7 @@ const HELP_TOPICS: PublicHelpTopic[] = [
   {
     id: "qr-code",
     question: "Como usar o QR Code do ingresso?",
-    keywords: ["qr", "qrcode", "code", "c?digo", "código", "entrada"],
+    keywords: ["qr", "qrcode", "code", "codigo", "código", "entrada"],
     answer:
       "Apresente o QR Code na portaria do evento. Ele será validado uma única vez. Por segurança, não compartilhe o QR Code com terceiros.",
   },
@@ -336,7 +336,7 @@ const HELP_TOPICS: PublicHelpTopic[] = [
   {
     id: "dados-ingresso",
     question: "Quais dados aparecem no ingresso?",
-    keywords: ["dados", "ingresso", "evento", "local", "setor", "c?digo"],
+    keywords: ["dados", "ingresso", "evento", "local", "setor", "codigo"],
     answer:
       "O ingresso mostra evento, data, local, setor, ingresso/assento e código do ticket. Esses dados também aparecem na mensagem enviada pelo WhatsApp.",
   },
@@ -364,14 +364,14 @@ const HELP_TOPICS: PublicHelpTopic[] = [
   {
     id: "vendas-fechadas",
     question: "Por que as vendas não estão abertas?",
-    keywords: ["vendas", "fechadas", "indispon?vel", "indisponível", "sessao", "sessão"],
+    keywords: ["vendas", "fechadas", "indisponivel", "indisponível", "sessao", "sessão"],
     answer:
       "A venda depende do status do evento/sessão, disponibilidade de setor e preço ativo. Se não aparecer setor ou preço, pode não haver ingressos ativos naquele momento.",
   },
   {
     id: "sem-assentos",
     question: "Não tem assentos disponíveis.",
-    keywords: ["sem", "assentos", "lugares", "esgotado", "dispon?vel", "disponível"],
+    keywords: ["sem", "assentos", "lugares", "esgotado", "disponivel", "disponível"],
     answer:
       "Se não houver assentos disponíveis, o setor pode estar esgotado, bloqueado ou temporariamente reservado por outras pessoas. Tente outro setor ou faça nova busca depois.",
   },

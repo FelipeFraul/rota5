@@ -56,7 +56,7 @@ const GeneralDashboardCards = memo(function GeneralDashboardCards({
           <article>
             <span>Receita</span>
             <strong>{formatCurrency(today.totalRevenueCents)}</strong>
-            <small>Ingressos {formatCurrency(today.ticketRevenueCents)} Â· Combos {formatCurrency(today.comboRevenueCents)}</small>
+            <small>Ingressos {formatCurrency(today.ticketRevenueCents)} · Combos {formatCurrency(today.comboRevenueCents)}</small>
           </article>
           <article>
             <span>Ingressos</span>
@@ -112,13 +112,13 @@ function AdminDashboardSectionComponent({
         if (!active) return;
 
         if (!response.ok || !data.ok || !data.dashboard) {
-          setDashboard({ event: selectedEvent, data: null, loading: false, message: data.message ?? "NÃ£o foi possÃ­vel carregar a dashboard." });
+          setDashboard({ event: selectedEvent, data: null, loading: false, message: data.message ?? "Não foi possível carregar a dashboard." });
           return;
         }
 
         setDashboard({ event: selectedEvent, data: data.dashboard, loading: false, message: null });
       } catch {
-        if (active) setDashboard({ event: selectedEvent, data: null, loading: false, message: "NÃ£o foi possÃ­vel carregar a dashboard." });
+        if (active) setDashboard({ event: selectedEvent, data: null, loading: false, message: "Não foi possível carregar a dashboard." });
       }
     }
 
@@ -159,13 +159,13 @@ function AdminDashboardSectionComponent({
       };
 
       if (!response.ok || !result.ok || !result.dashboard) {
-        setGeneralDashboardMessage(result.message ?? "NÃ£o foi possÃ­vel carregar o dashboard geral.");
+        setGeneralDashboardMessage(result.message ?? "Não foi possível carregar o dashboard geral.");
         return;
       }
 
       setGeneralDashboard(result.dashboard);
     } catch {
-      setGeneralDashboardMessage("NÃ£o foi possÃ­vel carregar o dashboard geral.");
+      setGeneralDashboardMessage("Não foi possível carregar o dashboard geral.");
     } finally {
       setGeneralDashboardLoading(false);
     }
@@ -195,7 +195,7 @@ function AdminDashboardSectionComponent({
         }));
       }
     } catch (error) {
-      console.error("NÃ£o foi possÃ­vel atualizar os contatos.", error);
+      console.error("Não foi possível atualizar os contatos.", error);
     } finally {
       setGeneralContactsLoadingRange((current) => current === range ? null : current);
     }
@@ -237,12 +237,12 @@ function AdminDashboardSectionComponent({
         message?: string;
       };
       if (!response.ok || !result.ok || !result.dashboard) {
-        onError(result.message ?? "NÃ£o foi possÃ­vel atualizar o perÃ­odo.");
+        onError(result.message ?? "Não foi possível atualizar o período.");
         return;
       }
       setDashboard((current) => current ? { ...current, data: result.dashboard!, message: null } : current);
     } catch {
-      onError("NÃ£o foi possÃ­vel atualizar o perÃ­odo.");
+      onError("Não foi possível atualizar o período.");
     } finally {
       setEventDashboardRangeLoading(false);
     }
@@ -263,7 +263,7 @@ function AdminDashboardSectionComponent({
       ) : null}
 
       {event && dashboard?.data && contactsOpen ? (
-        <ContactsModal activity={dashboard.data.contactActivity} title={`Contatos compradores â€” ${dashboard.event.title}`} onClose={closeContacts} />
+        <ContactsModal activity={dashboard.data.contactActivity} title={`Contatos compradores — ${dashboard.event.title}`} onClose={closeContacts} />
       ) : null}
 
       {generalDashboardOpen && generalDashboard ? (
