@@ -1,3 +1,5 @@
+> **Current Baseline 2.3.0 (2026-09-14):** functional source `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; fingerprint `6851aa10ce08fec1444d08bd213b18349dd70ec8ee6b7753c023164207e9b1d3`; default suite **214/214 PASS** with zero known failures and zero new regressions. Finding `gap.default-test-suite-failing` is **RESOLVED**. Current Production is `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` (READY) and Preview evidence is `dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6`. Metrics: ACTIVE HIGH 1, POTENTIAL HIGH 1, OPEN HIGH 2, RESOLVED 8. Product health remains BROKEN; infrastructure health remains DEGRADED. Older baseline sections below are historical evidence.
+
 # Baseline 2.0.1 HIGH #1 final state
 
 Baseline 2.2.0: `gap.test-runner-depends-on-untracked-loader` is RESOLVED on source `3e2bdc2979301301b3f1566a2ac75a477ee4c169`. ACTIVE HIGH=2, POTENTIAL HIGH=1, OPEN HIGH=3, RESOLVED=7. Product health remains BROKEN.
@@ -37,7 +39,7 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 | gap.critical-flow-correlation | OBSERVABILITY | MEDIUM | P2 | ACTIVE | CONFIRMED | Fluxos críticos não têm correlação ponta a ponta |
 | debt.router-responsibility-concentration | ARCHITECTURE | MEDIUM | P2 | ACTIVE | CONFIRMED | Roteador conversacional concentra coordenação de muitos domínios |
 | debt.zapi-webhook-responsibility-coupling | COUPLING | MEDIUM | P2 | ACTIVE | CONFIRMED | Handler Z-API acopla transporte, deduplicação, automação e entrega |
-| gap.default-test-suite-failing | TEST_GAP | HIGH | P1 | ACTIVE | CONFIRMED | Suíte padrão está vermelha com sete casos falhos |
+| gap.default-test-suite-failing | TEST_GAP | HIGH | P1 | RESOLVED | CONFIRMED | Suíte padrão está vermelha com sete casos falhos |
 | gap.critical-capability-and-flow-coverage | TEST_GAP | HIGH | P1 | ACTIVE | CONFIRMED | Capabilities e flows relevantes não têm teste direto |
 | gap.real-integration-tests-outside-default | TEST_GAP | MEDIUM | P2 | ACTIVE | CONFIRMED | Testes reais e de integração ficam fora da suíte padrão |
 | gap.source-contract-assertion-bias | TEST_GAP | MEDIUM | P2 | ACTIVE | CONFIRMED | Parte relevante dos testes valida texto-fonte e regex de implementação |

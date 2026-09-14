@@ -1,6 +1,8 @@
+> **Current Baseline 2.3.0 (2026-09-14):** functional source `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; fingerprint `6851aa10ce08fec1444d08bd213b18349dd70ec8ee6b7753c023164207e9b1d3`; default suite **214/214 PASS** with zero known failures and zero new regressions. Finding `gap.default-test-suite-failing` is **RESOLVED**. Current Production is `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` (READY) and Preview evidence is `dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6`. Metrics: ACTIVE HIGH 1, POTENTIAL HIGH 1, OPEN HIGH 2, RESOLVED 8. Product health remains BROKEN; infrastructure health remains DEGRADED. Older baseline sections below are historical evidence.
+
 # Baseline 2.1.0 scoped active-brand runtime evidence
 
-Preview `dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW` and Production `dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo` are READY on exact source `d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8`. Checkout pending/success, five public-help topics, scoped router points, CSS/assets and static CORS passed; relevant Production log errors are zero.
+Preview `dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6` and Production `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` are READY on exact source `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; the default-suite remediation probes passed and relevant Production log errors are zero.
 
 # Runtime validation — Etapa 5
 
@@ -16,7 +18,7 @@ Todas as verificações foram GET, HEAD, metadata ou logs em modo leitura. O cat
 | `runtime.vercel-project` | Vercel linked project | REMOTE_CONFIG | PASS | `rota5` (`prj_dl7tt8fZbw88ZQV0GhklY0akEwbf`) ligado a `FelipeFraul/rota5`; Production Branch `production`. |
 | `runtime.vercel-env` | Vercel environment names | REMOTE_CONFIG | PASS | 24 nomes observados; valores não lidos nem persistidos. |
 | `runtime.vercel-declared-domain` | Historical Ticketeira classification | REMOTE_CONFIG | PASS | `site` e `FelipeFraul/ticketeira` são infraestrutura da Ticketeira, não da cadeia operacional do Rota5. |
-| `runtime.vercel-linked-deployment` | Vercel linked production deployment | REMOTE_CONFIG | PASS | Deployment Production `dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo` READY atende os aliases canônicos e executa o source exato `d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8`. |
+| `runtime.vercel-linked-deployment` | Vercel linked production deployment | REMOTE_CONFIG | PASS | Deployment Production `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` READY atende os aliases canônicos e executa o source exato `c726902505fd69c2cfef2dec8013ffe0cf0adba3`. |
 | `runtime.health-declared` | Health declared domain | RUNTIME_OBSERVED | PASS | GET /api/health retornou HTTP 200 e status ok. |
 | `runtime.health-linked` | Health linked alias | RUNTIME_OBSERVED | PASS | GET /api/health retornou HTTP 200 e status ok. |
 | `runtime.github-repository` | GitHub repository metadata | REMOTE_CONFIG | PASS | Repositório privado `FelipeFraul/rota5`; branch operacional `production`. |
@@ -24,7 +26,7 @@ Todas as verificações foram GET, HEAD, metadata ou logs em modo leitura. O cat
 | `runtime.codex-version` | Codex CLI version | RUNTIME_OBSERVED | PASS | codex-cli 0.147.0 observado localmente. |
 | `runtime.vercel-logs` | Vercel runtime logs | RUNTIME_OBSERVED | PARTIAL | 50 registros na janela consultada, com 1 entrada de erro; conteúdo sensível não persistido. |
 
-O source funcional atual foi validado no deployment Production `dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo`. O finding independente de published-commit mantém seu lifecycle anterior nesta tarefa, conforme a regra de não alterar outros findings.
+O source funcional atual foi validado no deployment Production `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa`. O finding independente de published-commit mantém seu lifecycle anterior nesta tarefa, conforme a regra de não alterar outros findings.
 
 ## Revalidação dos resultados fora de PASS
 

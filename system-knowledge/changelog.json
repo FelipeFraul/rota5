@@ -1,9 +1,55 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T01:52:43.483Z",
-  "stage": "stabilization/test-runner-baseline-2.2.0",
-  "count": 12,
+  "generatedAt": "2026-09-14T02:43:43.522Z",
+  "stage": "stabilization/default-suite-baseline-2.3.0",
+  "count": 13,
   "records": [
+    {
+      "version": "2.3.0",
+      "date": "2026-09-14",
+      "type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+      "source_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+      "source_fingerprint": "6851aa10ce08fec1444d08bd213b18349dd70ec8ee6b7753c023164207e9b1d3",
+      "source_file_count": 358,
+      "migration_count": 79,
+      "changes": [
+        "Resolved the seven historical default-suite failures in four remediation blocks.",
+        "Corrected event duplication artist inheritance, scoped user-visible/dashboard and publicHelp corruption, and fragile test assertions.",
+        "Changed gap.default-test-suite-failing from ACTIVE to RESOLVED while preserving related finding lifecycles.",
+        "Validated Preview and Production from the exact functional source; Supabase unchanged and Ticketeira untouched."
+      ],
+      "finding_transition": {
+        "id": "gap.default-test-suite-failing",
+        "from": "ACTIVE",
+        "to": "RESOLVED",
+        "proof": "NPM_TEST_214_OF_214"
+      },
+      "validation": {
+        "typecheck": "PASS",
+        "lint": "PASS_0_ERRORS_23_WARNINGS",
+        "build": "PASS",
+        "npm_test": "214/214",
+        "known_failures": 0,
+        "new_regressions": 0,
+        "F1_F7": "PASS",
+        "runner_reproducible_from_git": true,
+        "preview": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6",
+        "production": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa"
+      },
+      "metrics": {
+        "active_high": 1,
+        "potential_high": 1,
+        "open_high": 2,
+        "resolved": 8
+      },
+      "related_findings_lifecycle_changed": false,
+      "remote_changes": {
+        "production_deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
+        "supabase": "UNCHANGED",
+        "ticketeira": "UNTOUCHED",
+        "git_auto_deploy": "DISABLED"
+      }
+    },
     {
       "version": "2.2.0",
       "date": "2026-09-13",

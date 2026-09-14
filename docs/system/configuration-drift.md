@@ -1,6 +1,8 @@
+> **Current Baseline 2.3.0 (2026-09-14):** functional source `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; fingerprint `6851aa10ce08fec1444d08bd213b18349dd70ec8ee6b7753c023164207e9b1d3`; default suite **214/214 PASS** with zero known failures and zero new regressions. Finding `gap.default-test-suite-failing` is **RESOLVED**. Current Production is `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` (READY) and Preview evidence is `dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6`. Metrics: ACTIVE HIGH 1, POTENTIAL HIGH 1, OPEN HIGH 2, RESOLVED 8. Product health remains BROKEN; infrastructure health remains DEGRADED. Older baseline sections below are historical evidence.
+
 # Configuration drift — Etapa 5
 
-Current Production deployment `dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo` is READY on exact source `d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8`; the active Black House CORS drift is removed. Historical rows remain evidence of earlier states.
+Current Production deployment `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` is READY on exact source `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; the prior branding deployment remains historical evidence.
 
 
 ## Divergências

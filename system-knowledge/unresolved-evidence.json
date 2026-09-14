@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T23:22:29.421Z",
-  "stage": "stabilization/legacy-brand-baseline-2.1.0",
+  "generatedAt": "2026-09-14T02:43:43.522Z",
+  "stage": "stabilization/default-suite-baseline-2.3.0",
   "count": 10,
   "status": "EXPLICITLY_PRESERVED_WITH_RESOLVED_HISTORY",
   "records": [
@@ -64,7 +64,7 @@
       "category": "INFRASTRUCTURE",
       "question": "Commit/source SHA efetivamente publicado nos deployments observados",
       "status": "RESOLVED",
-      "currentEvidence": "Production deployment dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo was proven to serve exact source commit d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8.",
+      "currentEvidence": "Production deployment dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa was proven to serve exact source commit c726902505fd69c2cfef2dec8013ffe0cf0adba3.",
       "neededEvidence": "NONE_FOR_CURRENT_STATE",
       "lastReviewedAt": "2026-09-13"
     },
@@ -95,5 +95,22 @@
       "neededEvidence": "Telemetria, referências externas ou inventário de consumidores.",
       "lastReviewedAt": "2026-09-12"
     }
-  ]
+  ],
+  "baseline_2_3_0": {
+    "version": "2.3.0",
+    "source_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+    "source_fingerprint": "6851aa10ce08fec1444d08bd213b18349dd70ec8ee6b7753c023164207e9b1d3",
+    "default_suite": "214/214",
+    "finding_transition": "gap.default-test-suite-failing: ACTIVE -> RESOLVED",
+    "active_high": 1,
+    "potential_high": 1,
+    "open_high": 2,
+    "resolved": 8,
+    "production_deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
+    "preview_deployment": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6",
+    "production_status": "READY",
+    "production_relevant_log_errors": 0,
+    "supabase": "UNCHANGED",
+    "ticketeira": "UNTOUCHED"
+  }
 }

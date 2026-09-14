@@ -1,3 +1,5 @@
+> **Current Baseline 2.3.0 (2026-09-14):** functional source `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; fingerprint `6851aa10ce08fec1444d08bd213b18349dd70ec8ee6b7753c023164207e9b1d3`; default suite **214/214 PASS** with zero known failures and zero new regressions. Finding `gap.default-test-suite-failing` is **RESOLVED**. Current Production is `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` (READY) and Preview evidence is `dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6`. Metrics: ACTIVE HIGH 1, POTENTIAL HIGH 1, OPEN HIGH 2, RESOLVED 8. Product health remains BROKEN; infrastructure health remains DEGRADED. Older baseline sections below are historical evidence.
+
 # Resumo de qualidade
 
 Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb8442f95493de3ca4ec4d4c997b e o working tree descrito no machine-readable. Esta etapa registra fatos e riscos; não aplica correções.
@@ -31,4 +33,4 @@ Não houve pentest, carga destrutiva, pagamento, WhatsApp, cron, mutação de ba
 
 ## Estado atual da Baseline 2.2.0
 
-A identidade de infraestrutura permanece correta e não há P0 ativo. Permanecem 2 HIGH ACTIVE, 1 HIGH POTENTIAL e 3 HIGH abertos, além de 0 flows quebrados, 9 flows parciais e as mesmas 7 falhas de `npm test`; por isso PRODUCT_HEALTH continua BROKEN. O runner é reproduzível a partir do Git no source `3e2bdc2979301301b3f1566a2ac75a477ee4c169`. Production `dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo` permanece READY no source runtime `d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8`; INFRASTRUCTURE_HEALTH permanece DEGRADED devido aos demais findings.
+A identidade de infraestrutura permanece correta e não há P0 ativo. Permanecem 1 HIGH ACTIVE, 1 HIGH POTENTIAL e 2 HIGH abertos. A suíte padrão está verde em 214/214 com runner reproduzível do Git; PRODUCT_HEALTH continua BROKEN pelo gap crítico de cobertura. Production `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` está READY no source `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; INFRASTRUCTURE_HEALTH permanece DEGRADED devido aos demais findings.

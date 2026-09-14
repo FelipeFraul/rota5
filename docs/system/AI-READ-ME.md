@@ -1,6 +1,8 @@
+> **Current Baseline 2.3.0 (2026-09-14):** functional source `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; fingerprint `6851aa10ce08fec1444d08bd213b18349dd70ec8ee6b7753c023164207e9b1d3`; default suite **214/214 PASS** with zero known failures and zero new regressions. Finding `gap.default-test-suite-failing` is **RESOLVED**. Current Production is `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` (READY) and Preview evidence is `dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6`. Metrics: ACTIVE HIGH 1, POTENTIAL HIGH 1, OPEN HIGH 2, RESOLVED 8. Product health remains BROKEN; infrastructure health remains DEGRADED. Older baseline sections below are historical evidence.
+
 # Rota5 — AI READ ME
 
-Current canonical state: Baseline **2.2.0**, source 3e2bdc2979301301b3f1566a2ac75a477ee4c169. The test runner is reproducible from tracked Git content; the default suite remains 207/214 with seven known failures. Product health remains BROKEN and infrastructure health DEGRADED. Production runtime remains dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo on source d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8 because this tooling-only change requires no deployment.
+Historical Baseline 2.2.0 snapshot: source 3e2bdc2979301301b3f1566a2ac75a477ee4c169 recorded the tracked runner proof and the then-current 207/214 result. The current canonical state is the Baseline 2.3.0 banner above.
 
 1. Read `system-knowledge/baseline-manifest.json`.
 2. Read `system-knowledge/index.json`.

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T01:52:43.483Z",
-  "stage": "stabilization/test-runner-baseline-2.2.0",
-  "sourceCommit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
+  "generatedAt": "2026-09-14T02:43:43.522Z",
+  "stage": "stabilization/default-suite-baseline-2.3.0",
+  "sourceCommit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
   "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
   "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
   "count": 7,
@@ -18,7 +18,7 @@
       "title": "Suíte padrão está vermelha com sete casos falhos",
       "severity": "HIGH",
       "priority": "P1",
-      "status": "ACTIVE",
+      "status": "RESOLVED",
       "evidence": [
         {
           "path": "package.json",
@@ -51,6 +51,73 @@
         "integrations": [],
         "tests": [
           "npm test"
+        ]
+      },
+      "resolution": {
+        "resolved_at": "2026-09-14T02:43:43.522Z",
+        "baseline": "2.3.0",
+        "source_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+        "previous_status": "ACTIVE",
+        "current_status": "RESOLVED",
+        "default_suite_before": {
+          "passed": 207,
+          "cases": 214,
+          "known_failures": 7
+        },
+        "default_suite_after": {
+          "passed": 214,
+          "cases": 214,
+          "known_failures": 0
+        },
+        "new_regressions": 0,
+        "runner": "scripts/test-support/typescript-alias-loader.mjs",
+        "runner_reproducible_from_git": true,
+        "root_causes": {
+          "F1": "TEST_EXPECTATION_OBSOLETE",
+          "F2": "PRODUCT_BUG_EVENT_DUPLICATION_ARTIST_LEAK",
+          "F3": "PRODUCT_BUG_DASHBOARD_MOJIBAKE",
+          "F4": "SOURCE_CONTRACT_ASSERTION_FRAGILITY",
+          "F5": "PRODUCT_BUG_PUBLIC_HELP_CORRUPTED_IDS",
+          "F6": "PRODUCT_BUG_PUBLIC_HELP_CORRUPTED_KEYWORDS",
+          "F7": "SOURCE_CONTRACT_ASSERTION_FRAGILITY"
+        },
+        "remediation_blocks": [
+          "admin authentication cancellation fixture and current conversationClosed semantics",
+          "event duplication payload isolated in buildDuplicatedAdminEventPayload without inherited artist_name",
+          "scoped dashboard and publicHelp text/identifier corruption repaired",
+          "fragile source-regex assertions replaced by behavior/export assertions"
+        ],
+        "validation": {
+          "F1_F7": "PASS",
+          "npm_test": "214/214",
+          "typecheck": "PASS",
+          "lint": "PASS_0_ERRORS_23_PREEXISTING_WARNINGS",
+          "build": "PASS",
+          "preview": {
+            "deployment": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6",
+            "status": "PASS"
+          },
+          "production": {
+            "deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
+            "status": "READY",
+            "source_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+            "relevant_log_errors": 0
+          }
+        },
+        "criteria_satisfied": {
+          "npm_test_214_of_214": true,
+          "known_failures_zero": true,
+          "new_regressions_zero": true,
+          "runner_reproducible": true,
+          "skipped_or_todo": 0,
+          "functional_assertions_removed_to_obtain_green": false,
+          "real_bugs_fixed": true,
+          "fragile_tests_redesigned": true
+        },
+        "historical_evidence_preserved": [
+          "203/210 original evidence",
+          "207/214 later evidence",
+          "seven-failure autopsy"
         ]
       }
     },

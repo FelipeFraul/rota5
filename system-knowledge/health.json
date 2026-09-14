@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T01:52:43.483Z",
-  "stage": "stabilization/test-runner-baseline-2.2.0",
-  "sourceCommit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
-  "scope": "Baseline 2.2.0 after reproducible test-runner remediation; product and infrastructure health retain independent open findings.",
+  "generatedAt": "2026-09-14T02:43:43.522Z",
+  "stage": "stabilization/default-suite-baseline-2.3.0",
+  "sourceCommit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+  "scope": "Baseline 2.3.0 after the default suite reached 214/214; health remains independently derived from open findings.",
   "method": "Análise estática, cinco testes comportamentais focados com fronteira Supabase simulada e gates locais canônicos; testes mutantes remotos não executados.",
   "vocabulary": [
     "HEALTHY",
@@ -16,7 +16,7 @@
   "system": {
     "id": "system.rota5",
     "health": "BROKEN",
-    "reason": "No active P0 remains. 2 ACTIVE HIGH, 1 POTENTIAL HIGH and 3 open HIGH remain after the test-runner finding resolution; the same seven default-test failures remain.",
+    "reason": "The default suite is green at 214/214. One ACTIVE HIGH coverage gap, one POTENTIAL HIGH and two open HIGH remain.",
     "finding_counts_by_severity": {
       "CRITICAL": 0,
       "HIGH": 10,
@@ -26,11 +26,11 @@
     },
     "active_findings": {
       "P0": 0,
-      "HIGH": 2,
+      "HIGH": 1,
       "CRITICAL": 0,
-      "RESOLVED": 7,
+      "RESOLVED": 8,
       "POTENTIAL_HIGH": 1,
-      "OPEN_HIGH": 3
+      "OPEN_HIGH": 2
     }
   },
   "domains": [
@@ -43,7 +43,6 @@
         "risk.published-commit-unvalidated",
         "risk.local-runtime-env-incomplete",
         "debt.seat-map-storage-contract-drift",
-        "gap.default-test-suite-failing",
         "gap.real-integration-tests-outside-default",
         "gap.source-contract-assertion-bias",
         "debt.direct-supabase-access-spread",
@@ -1689,5 +1688,13 @@
     "deployment_required": false,
     "production_runtime_changed": false,
     "crlf_assertion_fragility_recorded": true
-  }
+  },
+  "default_suite": {
+    "status": "PASS",
+    "passed": 214,
+    "cases": 214,
+    "failed": 0,
+    "known_failures": 0
+  },
+  "next_active_high": "gap.critical-capability-and-flow-coverage"
 }

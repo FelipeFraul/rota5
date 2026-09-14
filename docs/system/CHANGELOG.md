@@ -1,3 +1,16 @@
+> **Current Baseline 2.3.0 (2026-09-14):** functional source `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; fingerprint `6851aa10ce08fec1444d08bd213b18349dd70ec8ee6b7753c023164207e9b1d3`; default suite **214/214 PASS** with zero known failures and zero new regressions. Finding `gap.default-test-suite-failing` is **RESOLVED**. Current Production is `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` (READY) and Preview evidence is `dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6`. Metrics: ACTIVE HIGH 1, POTENTIAL HIGH 1, OPEN HIGH 2, RESOLVED 8. Product health remains BROKEN; infrastructure health remains DEGRADED. Older baseline sections below are historical evidence.
+
+## Baseline 2.3.0 — default suite restored
+
+- Type: `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE`
+- Source: `c726902505fd69c2cfef2dec8013ffe0cf0adba3`
+- Functional fingerprint: `6851aa10ce08fec1444d08bd213b18349dd70ec8ee6b7753c023164207e9b1d3` (358 files; 79 migrations)
+- Default suite: **207/214 → 214/214**; seven known failures → zero; no new regressions.
+- `gap.default-test-suite-failing`: **ACTIVE → RESOLVED**.
+- Event duplication artist inheritance, scoped dashboard/publicHelp corruption, and fragile assertions were corrected in four remediation blocks.
+- Typecheck, lint (0 errors/23 preexisting warnings), build, F1–F7, Preview `dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6` and Production `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa`: PASS/READY.
+- Related finding lifecycles unchanged. Supabase unchanged; Ticketeira untouched.
+
 ## BASELINE 2.2.0 — TEST RUNNER REPRODUCIBLE
 
 - **MINOR_COMPATIBLE_TOOLING_CHANGE** on source `3e2bdc2979301301b3f1566a2ac75a477ee4c169`, fingerprint `fcfe71ec31dc69efc87275b598ab526dab43d6564369772b71be335703deadba`, 357 source files and 79 migrations.

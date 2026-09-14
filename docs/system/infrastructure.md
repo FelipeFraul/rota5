@@ -1,6 +1,8 @@
+> **Current Baseline 2.3.0 (2026-09-14):** functional source `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; fingerprint `6851aa10ce08fec1444d08bd213b18349dd70ec8ee6b7753c023164207e9b1d3`; default suite **214/214 PASS** with zero known failures and zero new regressions. Finding `gap.default-test-suite-failing` is **RESOLVED**. Current Production is `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` (READY) and Preview evidence is `dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6`. Metrics: ACTIVE HIGH 1, POTENTIAL HIGH 1, OPEN HIGH 2, RESOLVED 8. Product health remains BROKEN; infrastructure health remains DEGRADED. Older baseline sections below are historical evidence.
+
 # Baseline 2.1.0 scoped active-brand infrastructure
 
-Git auto-deploy remains disabled. Production deployment `dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo` is READY and serves exact source `d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8`; corresponding Preview `dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW` is READY. Scoped branding runtime checks and relevant-log audit passed. Supabase and Ticketeira were unchanged. Infrastructure remains DEGRADED due independent findings.
+Git auto-deploy remains disabled. Production deployment `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` is READY and serves exact source `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; Preview `dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6` passed. Supabase and Ticketeira were unchanged. Infrastructure remains DEGRADED due independent findings.
 
 # Infrastructure AS-IS — Etapa 5
 
@@ -10,7 +12,7 @@ A aplicação é Next.js 16.2.6. A cadeia operacional canônica é GitHub `Felip
 
 - **local:** `.env` e `.env.example`; configuração incompleta para o schema central de `getEnv()`.
 - **preview:** target e URLs de preview existem na Vercel; banco e modo de integrações dependem de env e seus valores não foram lidos.
-- **production:** variáveis e deployments existem no projeto Vercel `rota5`. O source funcional atual está publicado como `dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo` e o auto-deploy Git permanece desabilitado.
+- **production:** variáveis e deployments existem no projeto Vercel `rota5`. O source funcional atual está publicado como `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` e o auto-deploy Git permanece desabilitado.
 
 ## Configuração funcional
 

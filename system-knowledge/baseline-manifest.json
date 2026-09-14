@@ -1,27 +1,27 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T01:52:43.483Z",
-  "stage": "stabilization/test-runner-baseline-2.2.0",
+  "generatedAt": "2026-09-14T02:43:43.522Z",
+  "stage": "stabilization/default-suite-baseline-2.3.0",
   "baseline_id": "rota5-baseline-v1",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "status": "FROZEN",
-  "frozen_at": "2026-09-14T01:52:43.483Z",
+  "frozen_at": "2026-09-14T02:43:43.522Z",
   "source_state": {
-    "base_commit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
-    "source_tree_fingerprint": "fcfe71ec31dc69efc87275b598ab526dab43d6564369772b71be335703deadba",
-    "source_tree_file_count": 357,
+    "base_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+    "source_tree_fingerprint": "6851aa10ce08fec1444d08bd213b18349dd70ec8ee6b7753c023164207e9b1d3",
+    "source_tree_file_count": 358,
     "functional_changes_since_base": [],
     "generated_from_working_tree": false,
     "baseline_commit": "SELF_NOT_RECORDED",
     "baseline_commit_policy": "The Git commit containing this baseline is intentionally not embedded in its own content to avoid self-reference."
   },
   "git_observation_at_generation": {
-    "observed_at": "2026-09-14T01:52:43.483Z",
+    "observed_at": "2026-09-14T02:43:43.522Z",
     "branch": "production",
-    "head": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
+    "head": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
     "working_tree_clean": false,
     "validity_role": "INFORMATIONAL_ONLY",
-    "note": "Only Baseline 2.2.0 knowledge artifacts are being generated; the tooling source is already committed and pushed."
+    "note": "Only Baseline 2.3.0 knowledge artifacts are uncommitted; functional source is already committed, pushed and deployed."
   },
   "baseline_integrity": {
     "status": "PASS",
@@ -30,16 +30,16 @@
   },
   "product_health": {
     "status": "BROKEN",
-    "reason": "0 active P0, 2 active HIGH, 1 potential HIGH, 3 open HIGH, 0 broken flows, 9 partial flows and the same seven default-suite failures; infrastructure remains DEGRADED due independent findings.",
+    "reason": "0 active P0, 1 active HIGH, 1 potential HIGH and 2 open HIGH remain. The default suite is green at 214/214; critical capability and flow coverage remains the next ACTIVE HIGH.",
     "findings": 44,
     "active_p0": 0,
-    "active_high": 2,
+    "active_high": 1,
     "critical": 0,
-    "resolved": 7,
+    "resolved": 8,
     "broken_flows": 0,
     "partial_flows": 9,
     "potential_high": 1,
-    "open_high": 3
+    "open_high": 2
   },
   "confidence": "HIGH",
   "canonical_counts": {
@@ -74,7 +74,6 @@
   "p0_findings": [],
   "high_findings": [
     "risk.admin-event-multistep-partial-state",
-    "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage"
   ],
   "canonical_catalogs": [
@@ -231,17 +230,18 @@
     "self_exclusion": "baseline-integrity.json is excluded to avoid circularity."
   },
   "notes": [
-    "Baseline 2.2.0 freezes pure source commit 3e2bdc2979301301b3f1566a2ac75a477ee4c169, fingerprint fcfe71ec31dc69efc87275b598ab526dab43d6564369772b71be335703deadba, across 357 files.",
+    "Historical Baseline 2.2.0 evidence: Baseline 2.2.0 freezes pure source commit 3e2bdc2979301301b3f1566a2ac75a477ee4c169, fingerprint fcfe71ec31dc69efc87275b598ab526dab43d6564369772b71be335703deadba, across 357 files.",
     "gap.test-runner-depends-on-untracked-loader is RESOLVED after a byte-identical loader was moved to a versioned path and npm ci plus npm test passed runner reproducibility from canonical Git blobs.",
-    "The default suite remains 207/214 with the same seven preexisting failures; this resolution does not close gap.default-test-suite-failing.",
+    "Historical Baseline 2.2.0 evidence: The default suite remains 207/214 with the same seven preexisting failures; this resolution does not close gap.default-test-suite-failing.",
     "A core.autocrlf=true Windows worktree exposed two additional source-text assertion failures; this is recorded as evidence for gap.source-contract-assertion-bias and did not change its lifecycle.",
-    "Production runtime remains dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo on d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8; deployment is unnecessary for this tooling-only change.",
+    "Historical Baseline 2.2.0 evidence: Production runtime remains dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo on d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8; deployment is unnecessary for this tooling-only change.",
     "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE: active user-visible branding, runtime configuration and the local environment schema were corrected without architectural or contract incompatibility.",
     "Finding legacy.active-brand-contamination is RESOLVED for DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES; historical strings outside the documented and reaudited active surfaces are not part of this assertion.",
     "Preview dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW and Production dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo are READY on the exact source commit; scoped branding checks passed and relevant Production log errors are zero.",
     "Supabase and Ticketeira were unchanged. Git auto-deploy remains DISABLED.",
     "EXPAND and CONTRACT are APPLIED_AND_VALIDATED; CONTRACT 20260913000100_gate_credential_session_revocation_contract applied at 2026-09-13T18:11:18.773635Z with SHA-256 bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525.",
-    "HIGH #1 is RESOLVED after gates A-I and the post-CONTRACT runtime audit passed. Other findings keep product health BROKEN and infrastructure health DEGRADED."
+    "HIGH #1 is RESOLVED after gates A-I and the post-CONTRACT runtime audit passed. Other findings keep product health BROKEN and infrastructure health DEGRADED.",
+    "Baseline 2.3.0 records the resolution of the default-suite finding at 214/214 without changing related finding lifecycles."
   ],
   "resolved_findings": [
     "bug.create-event-invalid-jsx",
@@ -250,10 +250,10 @@
     "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.vercel-project-identity-drift",
     "risk.latest-rota5-deployment-error",
+    "gap.default-test-suite-failing",
     "gap.test-runner-depends-on-untracked-loader"
   ],
   "active_high_findings": [
-    "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage"
   ],
   "potential_high_findings": [
@@ -261,7 +261,6 @@
   ],
   "open_high_findings": [
     "risk.admin-event-multistep-partial-state",
-    "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage"
   ],
   "high_1_rollout_state": {
@@ -448,5 +447,82 @@
     "deployment_required": false,
     "production_runtime_changed": false,
     "crlf_assertion_fragility_recorded": true
+  },
+  "default_suite_resolution": {
+    "resolved_at": "2026-09-14T02:43:43.522Z",
+    "baseline": "2.3.0",
+    "source_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+    "previous_status": "ACTIVE",
+    "current_status": "RESOLVED",
+    "default_suite_before": {
+      "passed": 207,
+      "cases": 214,
+      "known_failures": 7
+    },
+    "default_suite_after": {
+      "passed": 214,
+      "cases": 214,
+      "known_failures": 0
+    },
+    "new_regressions": 0,
+    "runner": "scripts/test-support/typescript-alias-loader.mjs",
+    "runner_reproducible_from_git": true,
+    "root_causes": {
+      "F1": "TEST_EXPECTATION_OBSOLETE",
+      "F2": "PRODUCT_BUG_EVENT_DUPLICATION_ARTIST_LEAK",
+      "F3": "PRODUCT_BUG_DASHBOARD_MOJIBAKE",
+      "F4": "SOURCE_CONTRACT_ASSERTION_FRAGILITY",
+      "F5": "PRODUCT_BUG_PUBLIC_HELP_CORRUPTED_IDS",
+      "F6": "PRODUCT_BUG_PUBLIC_HELP_CORRUPTED_KEYWORDS",
+      "F7": "SOURCE_CONTRACT_ASSERTION_FRAGILITY"
+    },
+    "remediation_blocks": [
+      "admin authentication cancellation fixture and current conversationClosed semantics",
+      "event duplication payload isolated in buildDuplicatedAdminEventPayload without inherited artist_name",
+      "scoped dashboard and publicHelp text/identifier corruption repaired",
+      "fragile source-regex assertions replaced by behavior/export assertions"
+    ],
+    "validation": {
+      "F1_F7": "PASS",
+      "npm_test": "214/214",
+      "typecheck": "PASS",
+      "lint": "PASS_0_ERRORS_23_PREEXISTING_WARNINGS",
+      "build": "PASS",
+      "preview": {
+        "deployment": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6",
+        "status": "PASS"
+      },
+      "production": {
+        "deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
+        "status": "READY",
+        "source_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+        "relevant_log_errors": 0
+      }
+    },
+    "criteria_satisfied": {
+      "npm_test_214_of_214": true,
+      "known_failures_zero": true,
+      "new_regressions_zero": true,
+      "runner_reproducible": true,
+      "skipped_or_todo": 0,
+      "functional_assertions_removed_to_obtain_green": false,
+      "real_bugs_fixed": true,
+      "fragile_tests_redesigned": true
+    },
+    "historical_evidence_preserved": [
+      "203/210 original evidence",
+      "207/214 later evidence",
+      "seven-failure autopsy"
+    ]
+  },
+  "current_runtime": {
+    "production_deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
+    "production_source_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+    "production_status": "READY",
+    "preview_deployment": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6",
+    "relevant_log_errors": 0,
+    "supabase": "UNCHANGED",
+    "ticketeira": "UNTOUCHED",
+    "git_auto_deploy": "DISABLED"
   }
 }

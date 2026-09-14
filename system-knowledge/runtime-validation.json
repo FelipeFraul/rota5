@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-13T23:22:29.421Z",
-  "stage": "stabilization/legacy-brand-baseline-2.1.0",
+  "generatedAt": "2026-09-14T02:43:43.522Z",
+  "stage": "stabilization/default-suite-baseline-2.3.0",
   "count": 22,
   "ok": 19,
   "records": [
@@ -124,14 +124,14 @@
       "method": "CLI_READ",
       "evidence_source": "REMOTE_CONFIG",
       "status": "PASS",
-      "result": "Latest Production deployment dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo is READY, serves the canonical aliases and runs exact source commit d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8.",
+      "result": "Latest Production deployment dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa is READY, serves the canonical aliases and runs exact source commit c726902505fd69c2cfef2dec8013ffe0cf0adba3.",
       "side_effect_free": true,
       "expected": "Identificar deployment mais recente e deployment servido.",
       "evidence": [
-        "dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo",
-        "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+        "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
+        "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
         "Vercel linked Production deployment",
-        "Scoped branding runtime probes"
+        "Default-suite remediation runtime probes"
       ]
     },
     {
@@ -501,5 +501,29 @@
       "relevant_production_log_errors": 0
     },
     "limitation": "Resolution is scoped to the active surfaces documented and revalidated for this finding; it is not a repository-wide assertion that historical brand strings do not exist elsewhere."
+  },
+  "baseline_2_3_0": {
+    "version": "2.3.0",
+    "source_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+    "source_fingerprint": "6851aa10ce08fec1444d08bd213b18349dd70ec8ee6b7753c023164207e9b1d3",
+    "default_suite": "214/214",
+    "finding_transition": "gap.default-test-suite-failing: ACTIVE -> RESOLVED",
+    "active_high": 1,
+    "potential_high": 1,
+    "open_high": 2,
+    "resolved": 8,
+    "production_deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
+    "preview_deployment": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6",
+    "production_status": "READY",
+    "production_relevant_log_errors": 0,
+    "supabase": "UNCHANGED",
+    "ticketeira": "UNTOUCHED"
+  },
+  "current_production": {
+    "deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
+    "source_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+    "status": "READY",
+    "preview": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6",
+    "relevant_log_errors": 0
   }
 }

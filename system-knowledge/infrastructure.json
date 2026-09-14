@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-13T23:22:29.421Z",
-  "stage": "stabilization/legacy-brand-baseline-2.1.0",
-  "sourceCommit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+  "generatedAt": "2026-09-14T02:43:43.522Z",
+  "stage": "stabilization/default-suite-baseline-2.3.0",
+  "sourceCommit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
   "application": {
     "framework": "Next.js 16.2.6",
     "runtime": "Node.js 24.x no projeto Vercel",
@@ -45,7 +45,7 @@
       "domain": [
         "rota5-khaki.vercel.app"
       ],
-      "deployment": "Projeto Vercel rota5; source funcional atual publicado como dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo; auto-deploy Git desabilitado."
+      "deployment": "Projeto Vercel rota5; source funcional c726902505fd69c2cfef2dec8013ffe0cf0adba3 publicado como dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa; auto-deploy Git desabilitado."
     }
   ],
   "vercel": {
@@ -59,16 +59,17 @@
     },
     "linked_project_production": {
       "alias": "rota5-khaki.vercel.app",
-      "ready_deployment": "dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo",
+      "ready_deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
       "latest_deployment_state": "READY",
       "evidence_source": "REMOTE_CONFIG",
-      "current_head": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+      "current_head": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
       "current_head_deployed": true,
       "new_deployment_during_separation": false,
-      "production_source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+      "production_source_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
       "production_cutover_at": "2026-09-13T16:19:42.340Z",
       "current_deployment_created_at": "2026-09-13T23:06:15.417Z",
-      "branding_preview_deployment": "dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW"
+      "branding_preview_deployment": "dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW",
+      "test_remediation_preview_deployment": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6"
     },
     "published_commit": {
       "status": "VALIDATED",
@@ -82,7 +83,7 @@
       "classification": "TICKETEIRA_INFRASTRUCTURE_NOT_ROTA5_OPERATIONAL_INFRASTRUCTURE",
       "note": "Preserved only as historical evidence of the identity-drift root cause."
     },
-    "production_runtime_app_artifact": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+    "production_runtime_app_artifact": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
     "post_contract_runtime": "PASS",
     "relevant_log_errors": 0
   },
@@ -90,7 +91,7 @@
     "repository": "FelipeFraul/rota5",
     "visibility": "private",
     "production_branch": "production",
-    "production_branch_commit": "9302cbd46aec802fef371e9c948e7d558c3dfc2a",
+    "production_branch_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
     "evidence_source": "REMOTE_CONFIG",
     "historical_remote": {
       "repository": "FelipeFraul/ticketeira",
@@ -357,5 +358,22 @@
     "git_auto_deploy": "DISABLED",
     "supabase_changed": false,
     "ticketeira_touched": false
+  },
+  "baseline_2_3_0": {
+    "version": "2.3.0",
+    "source_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+    "source_fingerprint": "6851aa10ce08fec1444d08bd213b18349dd70ec8ee6b7753c023164207e9b1d3",
+    "default_suite": "214/214",
+    "finding_transition": "gap.default-test-suite-failing: ACTIVE -> RESOLVED",
+    "active_high": 1,
+    "potential_high": 1,
+    "open_high": 2,
+    "resolved": 8,
+    "production_deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
+    "preview_deployment": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6",
+    "production_status": "READY",
+    "production_relevant_log_errors": 0,
+    "supabase": "UNCHANGED",
+    "ticketeira": "UNTOUCHED"
   }
 }

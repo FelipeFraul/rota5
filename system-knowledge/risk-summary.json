@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T01:52:43.483Z",
-  "stage": "stabilization/test-runner-baseline-2.2.0",
-  "sourceCommit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
-  "scope": "Baseline 2.2.0 with reproducible test-runner remediation resolved from canonical Git checkout evidence.",
+  "generatedAt": "2026-09-14T02:43:43.522Z",
+  "stage": "stabilization/default-suite-baseline-2.3.0",
+  "sourceCommit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+  "scope": "Baseline 2.3.0 after grouped remediation of the seven historical default-suite failures.",
   "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
   "status": "PASS",
   "total": 44,
@@ -46,11 +46,11 @@
     "P4": 2
   },
   "by_status": {
-    "ACTIVE": 25,
+    "ACTIVE": 24,
     "POTENTIAL": 7,
     "OPEN": 0,
     "MITIGATED": 0,
-    "RESOLVED": 7,
+    "RESOLVED": 8,
     "ACCEPTED": 0,
     "NOT_VALIDATED": 5
   },
@@ -103,10 +103,12 @@
   "validation": {
     "npm_test": {
       "cases": 214,
-      "passed": 207,
-      "failed": 7,
-      "status": "FAIL",
-      "change_from_baseline": "SEVEN_PREEXISTING_FAILURES_UNCHANGED"
+      "passed": 214,
+      "failed": 0,
+      "status": "PASS",
+      "known_failures": 0,
+      "new_regressions": 0,
+      "change_from_baseline": "SEVEN_HISTORICAL_FAILURES_RESOLVED"
     },
     "typecheck": {
       "status": "PASS",
@@ -280,13 +282,11 @@
     }
   },
   "active_high_critical": [
-    "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage"
   ],
   "active_p0_p1": [
     "bug.event-duplicate-artist-leak",
     "bug.user-visible-text-corruption",
-    "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
     "gap.partial-flows-lack-end-to-end-proof"
   ],
@@ -297,6 +297,7 @@
     "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.vercel-project-identity-drift",
     "risk.latest-rota5-deployment-error",
+    "gap.default-test-suite-failing",
     "gap.test-runner-depends-on-untracked-loader"
   ],
   "infrastructure_identity": "CORRECT",
@@ -306,7 +307,6 @@
   ],
   "open_high_critical": [
     "risk.admin-event-multistep-partial-state",
-    "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage"
   ],
   "potential_p0_p1": [
@@ -317,7 +317,6 @@
     "bug.event-duplicate-artist-leak",
     "bug.user-visible-text-corruption",
     "risk.admin-event-multistep-partial-state",
-    "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
     "risk.payment-confirmed-before-external-delivery",
     "gap.partial-flows-lack-end-to-end-proof"
@@ -513,5 +512,82 @@
     "deployment_required": false,
     "production_runtime_changed": false,
     "crlf_assertion_fragility_recorded": true
+  },
+  "default_suite_resolution": {
+    "resolved_at": "2026-09-14T02:43:43.522Z",
+    "baseline": "2.3.0",
+    "source_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+    "previous_status": "ACTIVE",
+    "current_status": "RESOLVED",
+    "default_suite_before": {
+      "passed": 207,
+      "cases": 214,
+      "known_failures": 7
+    },
+    "default_suite_after": {
+      "passed": 214,
+      "cases": 214,
+      "known_failures": 0
+    },
+    "new_regressions": 0,
+    "runner": "scripts/test-support/typescript-alias-loader.mjs",
+    "runner_reproducible_from_git": true,
+    "root_causes": {
+      "F1": "TEST_EXPECTATION_OBSOLETE",
+      "F2": "PRODUCT_BUG_EVENT_DUPLICATION_ARTIST_LEAK",
+      "F3": "PRODUCT_BUG_DASHBOARD_MOJIBAKE",
+      "F4": "SOURCE_CONTRACT_ASSERTION_FRAGILITY",
+      "F5": "PRODUCT_BUG_PUBLIC_HELP_CORRUPTED_IDS",
+      "F6": "PRODUCT_BUG_PUBLIC_HELP_CORRUPTED_KEYWORDS",
+      "F7": "SOURCE_CONTRACT_ASSERTION_FRAGILITY"
+    },
+    "remediation_blocks": [
+      "admin authentication cancellation fixture and current conversationClosed semantics",
+      "event duplication payload isolated in buildDuplicatedAdminEventPayload without inherited artist_name",
+      "scoped dashboard and publicHelp text/identifier corruption repaired",
+      "fragile source-regex assertions replaced by behavior/export assertions"
+    ],
+    "validation": {
+      "F1_F7": "PASS",
+      "npm_test": "214/214",
+      "typecheck": "PASS",
+      "lint": "PASS_0_ERRORS_23_PREEXISTING_WARNINGS",
+      "build": "PASS",
+      "preview": {
+        "deployment": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6",
+        "status": "PASS"
+      },
+      "production": {
+        "deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
+        "status": "READY",
+        "source_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+        "relevant_log_errors": 0
+      }
+    },
+    "criteria_satisfied": {
+      "npm_test_214_of_214": true,
+      "known_failures_zero": true,
+      "new_regressions_zero": true,
+      "runner_reproducible": true,
+      "skipped_or_todo": 0,
+      "functional_assertions_removed_to_obtain_green": false,
+      "real_bugs_fixed": true,
+      "fragile_tests_redesigned": true
+    },
+    "historical_evidence_preserved": [
+      "203/210 original evidence",
+      "207/214 later evidence",
+      "seven-failure autopsy"
+    ]
+  },
+  "next_active_high": "gap.critical-capability-and-flow-coverage",
+  "current_runtime": {
+    "production_deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
+    "production_source_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+    "preview_deployment": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6",
+    "status": "READY",
+    "relevant_log_errors": 0,
+    "supabase": "UNCHANGED",
+    "ticketeira": "UNTOUCHED"
   }
 }

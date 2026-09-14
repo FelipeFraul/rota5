@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T01:52:43.483Z",
+  "generatedAt": "2026-09-14T02:43:43.522Z",
   "baseline": {
     "stage": "1/8",
     "name": "Reconhecimento total do sistema",
@@ -28,7 +28,7 @@
     "triggerNames": 33,
     "views": 0,
     "createPolicyStatements": 0,
-    "testFiles": 43,
+    "testFiles": 51,
     "auditScripts": 3,
     "auditTools": 21,
     "publicAssets": 15
@@ -435,7 +435,7 @@
       "failed": 7
     }
   },
-  "stage": "stabilization/test-runner-baseline-2.2.0",
+  "stage": "stabilization/default-suite-baseline-2.3.0",
   "test_runner_reproducibility": {
     "finding": "gap.test-runner-depends-on-untracked-loader",
     "status": "RESOLVED",
@@ -452,5 +452,31 @@
     "deployment_required": false,
     "production_runtime_changed": false,
     "crlf_assertion_fragility_recorded": true
+  },
+  "baseline_2_3_0": {
+    "version": "2.3.0",
+    "source_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+    "source_fingerprint": "6851aa10ce08fec1444d08bd213b18349dd70ec8ee6b7753c023164207e9b1d3",
+    "default_suite": "214/214",
+    "finding_transition": "gap.default-test-suite-failing: ACTIVE -> RESOLVED",
+    "active_high": 1,
+    "potential_high": 1,
+    "open_high": 2,
+    "resolved": 8,
+    "production_deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
+    "preview_deployment": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6",
+    "production_status": "READY",
+    "production_relevant_log_errors": 0,
+    "supabase": "UNCHANGED",
+    "ticketeira": "UNTOUCHED"
+  },
+  "current_test_gate": {
+    "default_files": 15,
+    "total_catalogued_files": 51,
+    "passed": 214,
+    "cases": 214,
+    "failed": 0,
+    "status": "PASS",
+    "runner": "scripts/test-support/typescript-alias-loader.mjs"
   }
 }

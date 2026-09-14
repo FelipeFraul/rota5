@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T01:52:43.483Z",
-  "stage": "stabilization/test-runner-baseline-2.2.0",
+  "generatedAt": "2026-09-14T02:43:43.522Z",
+  "stage": "stabilization/default-suite-baseline-2.3.0",
   "id": "rota5-self-reading-v1",
   "baseline_id": "rota5-baseline-v1",
   "bootstrap_files": [
@@ -252,6 +252,31 @@
     "product_health_update": "No P0 is active. 2 ACTIVE HIGH, 1 POTENTIAL HIGH and 3 open HIGH remain. The test runner and scoped active-brand findings are RESOLVED; product health remains BROKEN.",
     "high_1": "RESOLVED: EXPAND and CONTRACT are APPLIED_AND_VALIDATED, gates A-I passed, authorization is strict-only and source attribution is non-null and immutable.",
     "legacy_brand": "RESOLVED for DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES on Preview dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW and Production dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo; this is not a repository-wide assertion about historical strings.",
-    "test_runner": "RESOLVED on source 3e2bdc2979301301b3f1566a2ac75a477ee4c169: npm test uses scripts/test-support/typescript-alias-loader.mjs, and npm ci plus 207/214 was proven from canonical Git blobs without .tmp."
+    "test_runner": "RESOLVED on source 3e2bdc2979301301b3f1566a2ac75a477ee4c169: npm test uses scripts/test-support/typescript-alias-loader.mjs, and npm ci plus 207/214 was proven from canonical Git blobs without .tmp.",
+    "current_baseline": "2.3.0",
+    "functional_source": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+    "default_suite": "214/214_PASS",
+    "next_active_high": "gap.critical-capability-and-flow-coverage",
+    "product_health": "BROKEN",
+    "infrastructure_health": "DEGRADED",
+    "production": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa READY on c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+    "preview": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6"
+  },
+  "baseline_2_3_0": {
+    "version": "2.3.0",
+    "source_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+    "source_fingerprint": "6851aa10ce08fec1444d08bd213b18349dd70ec8ee6b7753c023164207e9b1d3",
+    "default_suite": "214/214",
+    "finding_transition": "gap.default-test-suite-failing: ACTIVE -> RESOLVED",
+    "active_high": 1,
+    "potential_high": 1,
+    "open_high": 2,
+    "resolved": 8,
+    "production_deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
+    "preview_deployment": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6",
+    "production_status": "READY",
+    "production_relevant_log_errors": 0,
+    "supabase": "UNCHANGED",
+    "ticketeira": "UNTOUCHED"
   }
 }
