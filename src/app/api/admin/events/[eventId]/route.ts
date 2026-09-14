@@ -14,6 +14,7 @@ import {
   updateAdminEvent,
   updateAdminEventCatalog,
 } from "@/lib/tickets/services/adminEvents";
+import { isAdminEventLocationUnchanged } from "@/lib/tickets/adminEventLocation";
 import {
   getAdminContactActivity,
   type AdminContactRange,
@@ -135,12 +136,6 @@ function first<T>(value: MaybeArray<T>): T | null {
 
 function safeCents(value: number | null | undefined) {
   return Number.isFinite(value) ? Number(value) : 0;
-}
-
-function sameVenueValue(left: string | null | undefined, right: string) {
-  return (left ?? "").trim().localeCompare(right.trim(), "pt-BR", {
-    sensitivity: "accent",
-  }) === 0;
 }
 
 function getDayKey(value: string) {
@@ -761,12 +756,14 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ ok: false, message: "Crie uma sessão antes de criar setores." }, { status: 409 });
   }
 
-  const keepsCurrentVenue = Boolean(
-    existing.venueId &&
-      sameVenueValue(existing.venueName, parsed.data.event.venueName) &&
-      sameVenueValue(existing.city, parsed.data.event.city) &&
-      sameVenueValue(existing.state, parsed.data.event.state),
-  );
+  const keepsCurrentVenue = Boolean(existing.venueId && isAdminEventLocationUnchanged(
+    { venueName: existing.venueName ?? "", city: existing.city, state: existing.state },
+    {
+      venueName: parsed.data.event.venueName,
+      city: parsed.data.event.city,
+      state: parsed.data.event.state,
+    },
+  ));
   const prices = parsed.data.prices.map((price) => ({
     price_id: price.priceId,
     label: price.label,
@@ -828,9 +825,16 @@ export async function PATCH(request: Request, context: RouteContext) {
   });
   if (!updated.ok) {
     const message = String(updated.error?.message ?? "");
-    const conflict = message.includes("session_has_usage") || message.includes("capacity_below_busy");
+    const multiVenue = message.includes("admin_event_multi_venue_location_change_unsupported");
+    const requiresRemap = message.includes("admin_event_location_requires_remap");
+    const conflict = multiVenue || requiresRemap || message.includes("session_has_usage") || message.includes("capacity_below_busy");
+    const conflictMessage = multiVenue
+      ? "Este evento possui sessões em locais diferentes e exige remapeamento explícito."
+      : requiresRemap
+        ? "A localização não pode mudar enquanto houver catálogo, cortesias, reservas ou ingressos vinculados; faça o remapeamento primeiro."
+        : "Não foi possível alterar o catálogo sem afetar uso existente.";
     return NextResponse.json(
-      { ok: false, message: conflict ? "Não foi possível alterar o catálogo sem afetar uso existente." : "Não foi possível salvar o evento." },
+      { ok: false, message: conflict ? conflictMessage : "Não foi possível salvar o evento." },
       { status: conflict ? 409 : 500 },
     );
   }

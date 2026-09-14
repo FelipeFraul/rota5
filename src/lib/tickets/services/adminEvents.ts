@@ -2018,7 +2018,7 @@ export async function updateAdminEventVenue(input: {
   state: string;
 }) {
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase.rpc("update_admin_event_venue", {
+  const { data, error } = await supabase.rpc("update_admin_event_location", {
     p_operation_id: input.operationId,
     p_event_id: input.eventId,
     p_venue_name: input.venueName.trim(),
@@ -2027,7 +2027,13 @@ export async function updateAdminEventVenue(input: {
   });
 
   if (error || !data) {
-    return { ok: false as const, error: error ?? new Error("event_venue_not_updated") };
+    const message = String(error?.message ?? "");
+    const reason = message.includes("admin_event_multi_venue_location_change_unsupported")
+      ? "multi_venue_unsupported" as const
+      : message.includes("admin_event_location_requires_remap")
+        ? "requires_remap" as const
+        : "database_error" as const;
+    return { ok: false as const, reason, error: error ?? new Error("event_location_not_updated") };
   }
 
   return data as { ok: true; eventId: string; venueId: string };

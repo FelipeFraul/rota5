@@ -22,6 +22,7 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
   const capacityRpc = readFileSync("supabase/migrations/20260803000100_create_update_admin_section_capacity_rpc.sql", "utf8");
   const mutationRpcs = readFileSync("supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql", "utf8");
   const venueRpc = readFileSync("supabase/migrations/20260914000200_create_update_admin_event_venue_rpc.sql", "utf8");
+  const locationConsistency = readFileSync("supabase/migrations/20260914000300_enforce_admin_event_location_consistency.sql", "utf8");
 
   const output = psql(`
     begin;
@@ -87,6 +88,7 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
     ${capacityRpc}
     ${mutationRpcs}
     ${venueRpc}
+    ${locationConsistency}
 
     alter table public.ticket_prices add constraint audit_create_failure check (label <> 'FAIL_CREATE');
     alter table public.courtesy_section_limits add constraint audit_update_failure check (label <> 'FAIL_UPDATE');
@@ -361,6 +363,175 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
     end
     $audit$;
 
+    do $location_audit$
+    declare
+      venue_a uuid;
+      venue_b uuid;
+      event_id uuid;
+      session_one uuid;
+      session_two uuid;
+      section_id uuid;
+      seat_id uuid;
+      payload jsonb;
+      first_result jsonb;
+      retry_result jsonb;
+      before_venue_count integer;
+      relation_kind text;
+      op_sequence integer := 10;
+    begin
+      insert into public.venues(name, city, state) values ('LOCATION A', 'Sorocaba', 'SP') returning id into venue_a;
+      insert into public.venues(name, city, state) values ('LOCATION B', 'Itu', 'SP') returning id into venue_b;
+
+      insert into public.events(title, artist_name, city, state, venue_id)
+      values ('EMPTY LOCATION', 'Artist', 'Sorocaba', 'SP', venue_a) returning id into event_id;
+      insert into public.event_sessions(event_id, venue_id, starts_at)
+      values (event_id, venue_a, '2099-02-01T20:00:00Z') returning id into session_one;
+      insert into public.event_sessions(event_id, venue_id, starts_at)
+      values (event_id, venue_a, '2099-02-02T20:00:00Z') returning id into session_two;
+
+      first_result := public.update_admin_event_location(
+        '60000000-0000-4000-8000-000000000001', event_id, 'LOCATION B', 'Itu', 'SP'
+      );
+      if (select venue_id from public.events where id = event_id) is distinct from venue_b
+        or (select city from public.events where id = event_id) <> 'Itu'
+        or exists (select 1 from public.event_sessions where event_id = location_audit.event_id and venue_id is distinct from venue_b)
+      then raise exception 'SAFE_EMPTY_EVENT_REASSIGNMENT failed'; end if;
+
+      retry_result := public.update_admin_event_location(
+        '60000000-0000-4000-8000-000000000001', event_id, 'LOCATION B', 'Itu', 'SP'
+      );
+      if retry_result is distinct from first_result then raise exception 'LOCATION_RETRY failed'; end if;
+      begin
+        perform public.update_admin_event_location(
+          '60000000-0000-4000-8000-000000000001', event_id, 'LOCATION A', 'Sorocaba', 'SP'
+        );
+        raise exception 'LOCATION_PAYLOAD_MISMATCH did not fail';
+      exception when raise_exception then
+        if sqlerrm <> 'admin_event_operation_payload_mismatch' then raise; end if;
+      end;
+
+      select count(*) into before_venue_count from public.venues;
+      begin
+        perform public.update_admin_event_location(
+          '60000000-0000-4000-8000-000000000002', event_id, 'FAIL VENUE', 'Itu', 'SP'
+        );
+        raise exception 'LOCATION_FORCED_FAILURE did not fail';
+      exception when check_violation then null;
+      end;
+      if (select count(*) from public.venues) <> before_venue_count
+        or (select venue_id from public.events where id = event_id) is distinct from venue_b
+        or exists (select 1 from public.event_sessions where event_id = location_audit.event_id and venue_id is distinct from venue_b)
+      then raise exception 'LOCATION_FORCED_FAILURE rollback/orphan failed'; end if;
+
+      for relation_kind in select unnest(array['ticket_price','session_seat','reservation','ticket','courtesy']) loop
+        insert into public.events(title, artist_name, city, state, venue_id)
+        values ('BLOCK ' || relation_kind, 'Artist', 'Sorocaba', 'SP', venue_a) returning id into event_id;
+        insert into public.event_sessions(event_id, venue_id, starts_at)
+        values (event_id, venue_a, '2099-03-01T20:00:00Z') returning id into session_one;
+        insert into public.venue_sections(venue_id, name, slug, capacity)
+        values (venue_a, relation_kind, relation_kind || op_sequence, 1) returning id into section_id;
+        if relation_kind = 'ticket_price' then
+          insert into public.ticket_prices(session_id, section_id, ticket_type, label, price_cents)
+          values (session_one, section_id, 'full', 'Full', 1000);
+        elsif relation_kind = 'session_seat' then
+          insert into public.seats(venue_id, section_id, seat_number, seat_code)
+          values (venue_a, section_id, '1', 'S-' || op_sequence) returning id into seat_id;
+          insert into public.session_seats(session_id, seat_id, section_id) values (session_one, seat_id, section_id);
+        elsif relation_kind = 'reservation' then
+          insert into public.reservations(session_id) values (session_one);
+        elsif relation_kind = 'ticket' then
+          insert into public.tickets(session_id) values (session_one);
+        else
+          insert into public.courtesy_section_limits(event_id, section_id, label, max_courtesies, status)
+          values (event_id, section_id, 'Courtesy', 1, 'active');
+        end if;
+        begin
+          perform public.update_admin_event_location(
+            ('60000000-0000-4000-8000-' || lpad(op_sequence::text, 12, '0'))::uuid,
+            event_id, 'LOCATION B', 'Itu', 'SP'
+          );
+          raise exception 'LOCATION_USAGE_BLOCK did not fail for %', relation_kind;
+        exception when raise_exception then
+          if sqlerrm <> 'admin_event_location_requires_remap' then raise; end if;
+        end;
+        if (select venue_id from public.events where id = location_audit.event_id) is distinct from venue_a
+          or (select venue_id from public.event_sessions where id = session_one) is distinct from venue_a
+        then raise exception 'LOCATION_USAGE_BLOCK mutated %', relation_kind; end if;
+        if relation_kind = 'ticket_price' and not exists (
+          select 1 from public.ticket_prices tp
+          join public.event_sessions es on es.id = tp.session_id
+          join public.venue_sections vs on vs.id = tp.section_id
+          where es.event_id = location_audit.event_id
+            and tp.status = 'active'
+            and vs.venue_id = coalesce(es.venue_id, venue_a)
+        ) then raise exception 'BLOCKED_CHANGE_PRESERVES_AVAILABILITY failed'; end if;
+        op_sequence := op_sequence + 1;
+      end loop;
+
+      insert into public.events(title, artist_name, city, state, venue_id)
+      values ('MULTI VENUE', 'Artist', 'Sorocaba', 'SP', venue_a) returning id into event_id;
+      insert into public.event_sessions(event_id, venue_id, starts_at)
+      values (event_id, venue_a, '2099-04-01T20:00:00Z') returning id into session_one;
+      insert into public.event_sessions(event_id, venue_id, starts_at)
+      values (event_id, venue_b, '2099-04-02T20:00:00Z') returning id into session_two;
+      payload := jsonb_build_object(
+        'venue', jsonb_build_object('keep_current', true, 'name', 'LOCATION A', 'city', 'Sorocaba', 'state', 'SP'),
+        'event', jsonb_build_object('title', 'MULTI VENUE EDITED', 'artist_name', 'Artist', 'artist_icon', 'A', 'city', 'Sorocaba', 'state', 'SP', 'status', 'draft'),
+        'sessions', jsonb_build_array(
+          jsonb_build_object('session_id', session_one, 'starts_at', '2099-04-01T20:00:00Z', 'status', 'scheduled'),
+          jsonb_build_object('session_id', session_two, 'starts_at', '2099-04-02T20:00:00Z', 'status', 'scheduled')
+        ), 'sections', '[]'::jsonb, 'new_sections', '[]'::jsonb,
+        'prices', '[]'::jsonb, 'courtesy_limits', '[]'::jsonb
+      );
+      perform public.update_admin_event_catalog('60000000-0000-4000-8000-000000000020', event_id, payload);
+      if (select venue_id from public.event_sessions where id = session_one) is distinct from venue_a
+        or (select venue_id from public.event_sessions where id = session_two) is distinct from venue_b
+      then raise exception 'MULTI_VENUE_SAVE_PRESERVE failed'; end if;
+      begin
+        perform public.update_admin_event_location(
+          '60000000-0000-4000-8000-000000000021', event_id, 'LOCATION B', 'Itu', 'SP'
+        );
+        raise exception 'MULTI_VENUE_LOCATION_CHANGE did not fail';
+      exception when raise_exception then
+        if sqlerrm <> 'admin_event_multi_venue_location_change_unsupported' then raise; end if;
+      end;
+
+      insert into public.events(title, artist_name, city, state, venue_id)
+      values ('CITY ONLY', 'Artist', 'Sorocaba', 'SP', venue_a) returning id into event_id;
+      insert into public.event_sessions(event_id, venue_id, starts_at)
+      values (event_id, venue_a, '2099-05-01T20:00:00Z');
+      perform public.update_admin_event_location(
+        '60000000-0000-4000-8000-000000000022', event_id, 'LOCATION A', 'Itu', 'SP'
+      );
+      if (select city from public.events where id = location_audit.event_id) <> 'Itu'
+        or exists (select 1 from public.event_sessions where event_id = location_audit.event_id and venue_id is distinct from (select venue_id from public.events where id = location_audit.event_id))
+      then raise exception 'CITY_ONLY_CHANGE failed'; end if;
+
+      insert into public.events(title, artist_name, city, state, venue_id)
+      values ('STATE ONLY', 'Artist', 'Sorocaba', 'SP', venue_a) returning id into event_id;
+      insert into public.event_sessions(event_id, venue_id, starts_at)
+      values (event_id, venue_a, '2099-05-02T20:00:00Z');
+      perform public.update_admin_event_location(
+        '60000000-0000-4000-8000-000000000023', event_id, 'LOCATION A', 'Sorocaba', 'RJ'
+      );
+      if (select state from public.events where id = location_audit.event_id) <> 'RJ'
+      then raise exception 'STATE_ONLY_CHANGE failed'; end if;
+
+      raise notice 'SAFE_EMPTY_EVENT_REASSIGNMENT PASS';
+      raise notice 'EVENT_AND_SESSIONS_UPDATED_ATOMICALLY PASS';
+      raise notice 'LOCATION_RETRY_IDEMPOTENT PASS';
+      raise notice 'LOCATION_PAYLOAD_MISMATCH PASS';
+      raise notice 'VENUE_FAILURE_ROLLBACK PASS';
+      raise notice 'ORPHAN_VENUE_AFTER_FAILURE 0';
+      raise notice 'CATALOG_CHANGE_BLOCK PASS';
+      raise notice 'USAGE_CHANGE_BLOCK PASS';
+      raise notice 'BLOCKED_CHANGE_PRESERVES_AVAILABILITY PASS';
+      raise notice 'MULTI_VENUE_SAVE_PRESERVES_SESSION_VENUES PASS';
+      raise notice 'MULTI_VENUE_LOCATION_CHANGE_BLOCKED PASS';
+      raise notice 'CITY_STATE_UNIT_CHANGE PASS';
+    end
+    $location_audit$;
+
     do $privileges$
     begin
       if exists (
@@ -370,6 +541,7 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
             'public.create_admin_event_catalog(uuid,text,jsonb)'::regprocedure,
             'public.update_admin_event_catalog(uuid,uuid,jsonb)'::regprocedure,
             'public.update_admin_event_venue(uuid,uuid,text,text,text)'::regprocedure
+            , 'public.update_admin_event_location(uuid,uuid,text,text,text)'::regprocedure
           ) and acl.grantee = 0 and acl.privilege_type = 'EXECUTE'
         )
         or has_function_privilege('anon', 'public.create_admin_event_catalog(uuid,text,jsonb)', 'EXECUTE')
@@ -383,11 +555,27 @@ test("admin event CREATE, UPDATE and DUPLICATE execute the production PostgreSQL
         or has_function_privilege('anon', 'public.update_admin_event_venue(uuid,uuid,text,text,text)', 'EXECUTE')
         or has_function_privilege('authenticated', 'public.update_admin_event_venue(uuid,uuid,text,text,text)', 'EXECUTE')
         or not has_function_privilege('service_role', 'public.update_admin_event_venue(uuid,uuid,text,text,text)', 'EXECUTE')
+        or has_function_privilege('public', 'public.update_admin_event_location(uuid,uuid,text,text,text)', 'EXECUTE')
+        or has_function_privilege('anon', 'public.update_admin_event_location(uuid,uuid,text,text,text)', 'EXECUTE')
+        or has_function_privilege('authenticated', 'public.update_admin_event_location(uuid,uuid,text,text,text)', 'EXECUTE')
+        or not has_function_privilege('service_role', 'public.update_admin_event_location(uuid,uuid,text,text,text)', 'EXECUTE')
+        or has_function_privilege('service_role', 'public.update_admin_event_catalog_legacy(uuid,uuid,jsonb)', 'EXECUTE')
+        or has_function_privilege('service_role', 'public.admin_event_location_block_reason(uuid)', 'EXECUTE')
       then raise exception 'RPC privilege contract failed'; end if;
       if (select array_to_string(proconfig, ',') from pg_proc where oid = 'public.create_admin_event_catalog(uuid,text,jsonb)'::regprocedure) is distinct from 'search_path=pg_catalog, public'
         or (select array_to_string(proconfig, ',') from pg_proc where oid = 'public.update_admin_event_catalog(uuid,uuid,jsonb)'::regprocedure) is distinct from 'search_path=pg_catalog, public'
         or (select array_to_string(proconfig, ',') from pg_proc where oid = 'public.update_admin_event_venue(uuid,uuid,text,text,text)'::regprocedure) is distinct from 'search_path=pg_catalog, public'
+        or (select array_to_string(proconfig, ',') from pg_proc where oid = 'public.update_admin_event_location(uuid,uuid,text,text,text)'::regprocedure) is distinct from 'search_path=pg_catalog, public'
       then raise exception 'RPC search_path contract failed'; end if;
+      if not (select prosecdef from pg_proc where oid = 'public.update_admin_event_catalog(uuid,uuid,jsonb)'::regprocedure)
+        or not (select prosecdef from pg_proc where oid = 'public.update_admin_event_location(uuid,uuid,text,text,text)'::regprocedure)
+        or not exists (
+          select 1 from pg_constraint
+          where conrelid = 'public.admin_event_operations'::regclass
+            and conname = 'admin_event_operations_type_check'
+            and pg_get_constraintdef(oid) like '%location_update%'
+        )
+      then raise exception 'RPC security or operation compatibility contract failed'; end if;
       if has_table_privilege('anon', 'public.admin_event_operations', 'SELECT,INSERT,UPDATE,DELETE')
         or has_table_privilege('authenticated', 'public.admin_event_operations', 'SELECT,INSERT,UPDATE,DELETE')
         or not has_table_privilege('service_role', 'public.admin_event_operations', 'SELECT,INSERT,UPDATE')

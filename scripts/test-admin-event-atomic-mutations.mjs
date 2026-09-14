@@ -44,7 +44,7 @@ function atomicRpcHarness(initialTables = {}) {
       completed.set(args.p_operation_id, { serialized, result });
       return { data: result, error: null };
     },
-    update_admin_event_venue: (args) => {
+    update_admin_event_location: (args) => {
       const serialized = JSON.stringify({
         eventId: args.p_event_id,
         venueName: args.p_venue_name,
@@ -202,10 +202,88 @@ test("WhatsApp venue edit uses one atomic and idempotent RPC", async () => {
   assert.deepEqual(retry, first);
   assert.equal(mismatch.ok, false);
   assert.deepEqual(db.calls.map((call) => call.operation), [
-    "update_admin_event_venue",
-    "update_admin_event_venue",
-    "update_admin_event_venue",
+    "update_admin_event_location",
+    "update_admin_event_location",
+    "update_admin_event_location",
   ]);
+});
+
+test("web distinguishes unchanged location from any venue, city or state change", async () => {
+  const { isAdminEventLocationUnchanged } = await loadProductionModule(
+    "src/lib/tickets/adminEventLocation.ts",
+  );
+  const current = { venueName: "Casa A", city: "Sorocaba", state: "SP" };
+  assert.equal(isAdminEventLocationUnchanged(current, { venueName: " casa a ", city: "SOROCABA", state: "sp" }), true);
+  assert.equal(isAdminEventLocationUnchanged(current, { ...current, venueName: "Casa B" }), false);
+  assert.equal(isAdminEventLocationUnchanged(current, { ...current, city: "Itu" }), false);
+  assert.equal(isAdminEventLocationUnchanged(current, { ...current, state: "RJ" }), false);
+});
+
+test("WhatsApp venue, city and state edits build one coherent location payload", async () => {
+  const { buildAdminEventLocationChange } = await loadProductionModule(
+    "src/lib/tickets/adminEventLocation.ts",
+  );
+  const current = { venueName: "Casa A", city: "Sorocaba", state: "SP" };
+  assert.deepEqual(buildAdminEventLocationChange("venue", "Casa B", current), { venueName: "Casa B", city: "Sorocaba", state: "SP" });
+  assert.deepEqual(buildAdminEventLocationChange("city", "Itu", current), { venueName: "Casa A", city: "Itu", state: "SP" });
+  assert.deepEqual(buildAdminEventLocationChange("state", "rj", current), { venueName: "Casa A", city: "Sorocaba", state: "RJ" });
+});
+
+test("WhatsApp location retry keeps its operation id and a new intent receives another", async () => {
+  const intent = await loadProductionModule("src/lib/tickets/adminEventOperationIntent.ts", {
+    randomUUID: () => "unused",
+  });
+  const used = [];
+  const draft = { field: "city", city: "Itu", operationId: "location-A" };
+  const failure = await intent.runAdminEventOperationIntent(draft, async (operationId) => {
+    used.push(operationId);
+    return { ok: false, reason: "database_error" };
+  });
+  const retry = await intent.runAdminEventOperationIntent(failure.draft, async (operationId) => {
+    used.push(operationId);
+    return { ok: true };
+  });
+  const next = intent.renewAdminEventOperationId(draft, () => "location-B");
+  assert.equal(retry.status, "success");
+  assert.deepEqual(used, ["location-A", "location-A"]);
+  assert.equal(next.operationId, "location-B");
+});
+
+test("blocked WhatsApp location edit gives a terminal remap message", async () => {
+  const { adminEventLocationBlockMessage } = await loadProductionModule(
+    "src/lib/tickets/adminEventLocation.ts",
+  );
+  assert.match(adminEventLocationBlockMessage("requires_remap"), /remapear/i);
+  assert.match(adminEventLocationBlockMessage("multi_venue_unsupported"), /sessões em locais diferentes/i);
+  assert.equal(adminEventLocationBlockMessage("database_error"), null);
+});
+
+test("location service exposes proven domain blocks instead of an ambiguous retry", async () => {
+  const db = new MemorySupabase({}, {
+    update_admin_event_location: () => ({
+      data: null,
+      error: new Error("admin_event_location_requires_remap"),
+    }),
+  });
+  const service = await loadService(db);
+  const result = await service.updateAdminEventVenue({
+    operationId: "50000000-0000-4000-8000-000000000099",
+    eventId: "event-a",
+    venueName: "Casa B",
+    city: "Itu",
+    state: "SP",
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, "requires_remap");
+});
+
+test("ticket readers prefer session venue and retain event venue as fallback", async () => {
+  const { resolveEffectiveVenue } = await loadProductionModule("src/lib/tickets/effectiveVenue.ts");
+  const sessionVenue = { name: "Sessão", address: "Rua B" };
+  const eventVenue = { name: "Evento", address: "Rua A" };
+  assert.equal(resolveEffectiveVenue(sessionVenue, eventVenue), sessionVenue);
+  assert.equal(resolveEffectiveVenue(null, eventVenue), eventVenue);
+  assert.equal(resolveEffectiveVenue(null, null), null);
 });
 
 test("a duplicated event remains independently editable", async () => {

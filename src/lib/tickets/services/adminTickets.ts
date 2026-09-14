@@ -29,6 +29,9 @@ type TicketLookupRow = {
   }>;
   event_sessions: MaybeArray<{
     starts_at: string;
+    venues: MaybeArray<{
+      name: string;
+    }>;
     events: MaybeArray<{
       title: string;
       artist_name: string;
@@ -83,6 +86,9 @@ type PendingReservationRow = {
   }>;
   event_sessions: MaybeArray<{
     starts_at: string;
+    venues: MaybeArray<{
+      name: string;
+    }>;
     events: MaybeArray<{
       title: string;
       city: string;
@@ -183,7 +189,7 @@ function mapTicket(row: TicketLookupRow): AdminTicketLookup {
   const reservationItem = first(row.reservation_items);
   const session = first(row.event_sessions);
   const event = first(session?.events);
-  const venue = first(event?.venues);
+  const venue = first(session?.venues) ?? first(event?.venues);
   const section = first(row.venue_sections);
 
   return {
@@ -234,7 +240,7 @@ function mapPendingReservation(
   const section = first(firstItem?.venue_sections);
   const session = first(row.event_sessions);
   const event = first(session?.events);
-  const venue = first(event?.venues);
+  const venue = first(session?.venues) ?? first(event?.venues);
 
   return {
     reservationId: row.id,
@@ -421,7 +427,7 @@ async function listTicketsByCustomerId(customerId: string) {
   const { data, error } = await supabase
     .from("tickets")
     .select(
-      "id, ticket_code, status, order_id, issued_at, used_at, cancelled_at, customers(id, whatsapp_phone, name), reservation_items(seat_code), event_sessions(starts_at, events(title, artist_name, city, state, venues(name))), venue_sections(name)",
+      "id, ticket_code, status, order_id, issued_at, used_at, cancelled_at, customers(id, whatsapp_phone, name), reservation_items(seat_code), event_sessions(starts_at, venues(name), events(title, artist_name, city, state, venues(name))), venue_sections(name)",
     )
     .eq("customer_id", customerId)
     .order("created_at", { ascending: false })
@@ -440,7 +446,7 @@ async function listPendingReservationsByCustomerId(customerId: string) {
   const { data, error } = await supabase
     .from("reservations")
     .select(
-      "id, customer_id, expires_at, total_amount_cents, total_fee_cents, currency, customers(id, whatsapp_phone, name), orders!inner(id, status), reservation_items(seat_code, venue_sections(name)), event_sessions(starts_at, events(title, city, state, venues(name)))",
+      "id, customer_id, expires_at, total_amount_cents, total_fee_cents, currency, customers(id, whatsapp_phone, name), orders!inner(id, status), reservation_items(seat_code, venue_sections(name)), event_sessions(starts_at, venues(name), events(title, city, state, venues(name)))",
     )
     .eq("customer_id", customerId)
     .eq("status", "active")
@@ -516,7 +522,7 @@ export async function findAdminTicketByCode(
   const { data, error } = await supabase
     .from("tickets")
     .select(
-      "id, ticket_code, status, order_id, issued_at, used_at, cancelled_at, customers(id, whatsapp_phone, name), reservation_items(seat_code), event_sessions(starts_at, events(title, artist_name, city, state, venues(name))), venue_sections(name)",
+      "id, ticket_code, status, order_id, issued_at, used_at, cancelled_at, customers(id, whatsapp_phone, name), reservation_items(seat_code), event_sessions(starts_at, venues(name), events(title, artist_name, city, state, venues(name))), venue_sections(name)",
     )
     .eq("ticket_code", normalizeTicketCode(code))
     .maybeSingle<TicketLookupRow>();
@@ -554,7 +560,7 @@ async function findPendingReservationByReservationId(reservationId: string) {
   const { data, error } = await supabase
     .from("reservations")
     .select(
-      "id, customer_id, expires_at, total_amount_cents, total_fee_cents, currency, customers(id, whatsapp_phone, name), orders!inner(id, status), reservation_items(seat_code, venue_sections(name)), event_sessions(starts_at, events(title, city, state, venues(name)))",
+      "id, customer_id, expires_at, total_amount_cents, total_fee_cents, currency, customers(id, whatsapp_phone, name), orders!inner(id, status), reservation_items(seat_code, venue_sections(name)), event_sessions(starts_at, venues(name), events(title, city, state, venues(name)))",
     )
     .eq("id", reservationId)
     .eq("status", "active")

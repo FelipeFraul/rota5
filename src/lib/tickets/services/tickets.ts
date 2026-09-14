@@ -3,6 +3,7 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "crypto";
 import { getEnv } from "@/lib/env";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { resolveEffectiveVenue } from "@/lib/tickets/effectiveVenue";
 import {
   getPublicEventVisibilityQueryFloorIso,
   isPublicEventVisible,
@@ -30,6 +31,10 @@ type TicketRow = {
     starts_at: string;
     timezone?: string | null;
     status?: string;
+    venues: {
+      name: string;
+      address: string | null;
+    } | null;
     events: {
       title: string;
       artist_name: string;
@@ -114,6 +119,10 @@ type PublicTicketRow = {
     starts_at: string;
     timezone?: string | null;
     status?: string;
+    venues: {
+      name: string;
+      address: string | null;
+    } | null;
     events: {
       title: string;
       artist_name: string;
@@ -245,6 +254,10 @@ function mapTicketRow(row: TicketRow): TicketForDelivery | null {
     return null;
   }
 
+  const venue = resolveEffectiveVenue(
+    row.event_sessions.venues,
+    row.event_sessions.events.venues,
+  );
   return {
     ticketId: row.id,
     ticketCode: row.ticket_code,
@@ -257,8 +270,8 @@ function mapTicketRow(row: TicketRow): TicketForDelivery | null {
     artistName: row.event_sessions.events.artist_name,
     city: row.event_sessions.events.city,
     state: row.event_sessions.events.state,
-    venueName: row.event_sessions.events.venues?.name ?? null,
-    venueAddress: row.event_sessions.events.venues?.address ?? null,
+    venueName: venue?.name ?? null,
+    venueAddress: venue?.address ?? null,
     startsAt: row.event_sessions.starts_at,
     sectionName: row.venue_sections?.name ?? "Setor",
     seatCode: row.reservation_items?.seat_code ?? "A confirmar",
@@ -396,14 +409,18 @@ function mapPublicTicketRow(row: PublicTicketRow): PublicTicketView | null {
     return null;
   }
 
+  const venue = resolveEffectiveVenue(
+    row.event_sessions.venues,
+    row.event_sessions.events.venues,
+  );
   return {
     ticketCode: row.ticket_code,
     eventTitle: row.event_sessions.events.title,
     artistName: row.event_sessions.events.artist_name,
     city: row.event_sessions.events.city,
     state: row.event_sessions.events.state,
-    venueName: row.event_sessions.events.venues?.name ?? null,
-    venueAddress: row.event_sessions.events.venues?.address ?? null,
+    venueName: venue?.name ?? null,
+    venueAddress: venue?.address ?? null,
     startsAt: row.event_sessions.starts_at,
     sectionName: row.venue_sections?.name ?? "Setor",
     seatCode: row.reservation_items?.seat_code ?? "A confirmar",
@@ -471,7 +488,7 @@ export async function getTicketsForOrder(
   const { data, error } = await supabase
     .from("tickets")
     .select(
-      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, recipient_name, customers(name), reservation_items!inner(seat_code), event_sessions!inner(starts_at, timezone, status, events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
+      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, recipient_name, customers(name), reservation_items!inner(seat_code), event_sessions!inner(starts_at, timezone, status, venues(name, address), events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
     )
     .eq("order_id", orderId)
     .eq("status", "issued")
@@ -503,7 +520,7 @@ export async function getBuyerReservedTicketsForOrder(
   const { data, error } = await supabase
     .from("tickets")
     .select(
-      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, recipient_name, recipient_phone, participant_delivery_status, customers(name), reservation_items!inner(seat_code), event_sessions!inner(starts_at, timezone, status, events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
+      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, recipient_name, recipient_phone, participant_delivery_status, customers(name), reservation_items!inner(seat_code), event_sessions!inner(starts_at, timezone, status, venues(name, address), events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
     )
     .eq("order_id", orderId)
     .eq("status", "issued")
@@ -594,7 +611,7 @@ export async function listPaidTicketResendGroupsForPhone(
   const { data, error } = await supabase
     .from("tickets")
     .select(
-      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, recipient_name, issued_at, customers!inner(whatsapp_phone, name), orders!inner(id, status, payments!inner(id, status, paid_at)), reservation_items!inner(seat_code), event_sessions!inner(event_id, starts_at, timezone, status, events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
+      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, recipient_name, issued_at, customers!inner(whatsapp_phone, name), orders!inner(id, status, payments!inner(id, status, paid_at)), reservation_items!inner(seat_code), event_sessions!inner(event_id, starts_at, timezone, status, venues(name, address), events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
     )
     .eq("customers.whatsapp_phone", phone)
     .eq("status", "issued")
@@ -690,7 +707,7 @@ export async function listParticipantTicketDeliveriesForPhone(
   const { data, error } = await supabase
     .from("tickets")
     .select(
-      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, recipient_name, issued_at, participant_delivery_status, participant_delivered_at, orders!inner(id, status, payments!inner(id, status, paid_at)), reservation_items!inner(seat_code), event_sessions!inner(starts_at, timezone, status, events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
+      "id, ticket_code, status, order_id, customer_id, session_id, section_id, seat_id, recipient_name, issued_at, participant_delivery_status, participant_delivered_at, orders!inner(id, status, payments!inner(id, status, paid_at)), reservation_items!inner(seat_code), event_sessions!inner(starts_at, timezone, status, venues(name, address), events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
     )
     .eq("recipient_phone", phone)
     .eq("status", "issued")
@@ -814,7 +831,7 @@ export async function getTicketBySignedToken(
   const { data, error } = await supabase
     .from("tickets")
     .select(
-      "ticket_code, reservation_items!inner(seat_code), event_sessions!inner(starts_at, timezone, status, events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
+      "ticket_code, reservation_items!inner(seat_code), event_sessions!inner(starts_at, timezone, status, venues(name, address), events!inner(title, artist_name, city, state, status, venues(name, address))), venue_sections!inner(name)",
     )
     .eq("id", payload.tid)
     .eq("ticket_code", payload.code)

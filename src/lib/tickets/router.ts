@@ -147,6 +147,11 @@ import {
   runAdminEventOperationIntent,
 } from "@/lib/tickets/adminEventOperationIntent";
 import {
+  adminEventLocationBlockMessage,
+  buildAdminEventLocationChange,
+  type AdminEventLocationField,
+} from "@/lib/tickets/adminEventLocation";
+import {
   createAdminPrice,
   listAdminPrices,
   parseMoneyToCents,
@@ -9392,7 +9397,7 @@ async function handleAdminEventsFlow({
           nextContext: withAdminEventsContext(baseContext, "admin_event_edit_collecting", adminEvents),
         };
       }
-      value = { field, city: text.trim() };
+      value = ensureAdminEventOperationId({ field, city: text.trim() });
     } else if (field === "state") {
       const state = text.trim().toUpperCase();
       if (!/^[A-Z]{2}$/.test(state)) {
@@ -9401,7 +9406,7 @@ async function handleAdminEventsFlow({
           nextContext: withAdminEventsContext(baseContext, "admin_event_edit_collecting", adminEvents),
         };
       }
-      value = { field, state };
+      value = ensureAdminEventOperationId({ field, state });
     } else if (field === "venue") {
       if (!text.trim()) {
         return {
@@ -9551,17 +9556,14 @@ async function handleAdminEventsFlow({
     } else if (field === "artist_name") {
       const artistName = String(draft.artist_name ?? "").trim();
       if (artistName) values = { artist_name: artistName };
-    } else if (field === "city") {
-      const city = String(draft.city ?? "").trim();
-      if (city) values = { city };
-    } else if (field === "state") {
-      const state = String(draft.state ?? "").trim().toUpperCase();
-      if (/^[A-Z]{2}$/.test(state)) values = { state };
-    } else if (field === "venue") {
-      const venueName = String(draft.venueName ?? "").trim();
+    } else if (field === "venue" || field === "city" || field === "state") {
+      const locationField = field as AdminEventLocationField;
+      const locationValue = String(
+        locationField === "venue" ? draft.venueName : draft[locationField],
+      ).trim();
       const details = await getScopedAdminEventDetails(eventId, scope);
 
-      if (!details.ok || !venueName) {
+      if (!details.ok || !locationValue || !details.event.venueName) {
         values = null;
       } else {
         const freshAuth = await requireFreshAdminEventsPermission(
@@ -9571,20 +9573,34 @@ async function handleAdminEventsFlow({
         );
         if (!freshAuth.ok) return freshAuth.response;
 
+        const location = buildAdminEventLocationChange(locationField, locationValue, {
+          venueName: details.event.venueName,
+          city: details.event.city,
+          state: details.event.state,
+        });
         const venueAttempt = await runAdminEventOperationIntent(
           draft,
           (operationId) => updateAdminEventVenue({
             operationId,
             eventId,
-            venueName,
-            city: details.event.city,
-            state: details.event.state,
+            ...location,
           }),
         );
 
         if (venueAttempt.status !== "success") {
+          const blockMessage = "result" in venueAttempt && venueAttempt.result && !venueAttempt.result.ok
+            ? adminEventLocationBlockMessage(venueAttempt.result.reason)
+            : null;
+          if (blockMessage) {
+            return {
+              reply: blockMessage,
+              nextContext: withAdminEventsContext(baseContext, "admin_event_edit_menu", {
+                selectedEventId: eventId,
+              }),
+            };
+          }
           return {
-            reply: "Não consegui alterar esse local agora. Envie CONFIRMAR para tentar novamente ou CANCELAR para abandonar.",
+            reply: "Não consegui alterar essa localização agora. Envie CONFIRMAR para tentar novamente ou CANCELAR para abandonar.",
             nextContext: withAdminEventsContext(baseContext, "admin_event_edit_confirm", {
               ...adminEvents,
               draft,
