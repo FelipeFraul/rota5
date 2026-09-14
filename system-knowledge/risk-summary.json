@@ -1,35 +1,35 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T16:52:21.715Z",
-  "stage": "stabilization/release-blocker-reconciliation-baseline-2.4.1",
+  "generatedAt": "2026-09-14T17:13:55.692Z",
+  "stage": "2.4.2",
   "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
-  "scope": "Baseline 2.4.1 documentary reconciliation of stale blockers and risk-based decomposition of the confirmed aggregate E2E gap.",
-  "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
+  "scope": "Current risk, coverage, validation and release-blocker projection for Baseline 2.4.2.",
+  "method": "All current metrics are derived from canonical catalogs and finding_status_taxonomy; historical snapshots remain only in version-labelled fields.",
   "status": "PASS",
   "total": 44,
   "by_type": {
     "BUG": 3,
     "BROKEN_FLOW": 1,
+    "LEGACY": 2,
+    "AUTHORIZATION": 1,
     "DATA_INTEGRITY": 2,
     "CONCURRENCY": 2,
     "IDEMPOTENCY": 1,
     "SECURITY": 2,
-    "AUTHORIZATION": 1,
+    "UNKNOWN": 1,
     "INTEGRATION": 1,
+    "CONFIGURATION_DRIFT": 3,
     "INFRASTRUCTURE": 1,
+    "OPERATIONAL": 2,
     "OBSERVABILITY": 2,
-    "TEST_GAP": 7,
     "ARCHITECTURE": 1,
     "COUPLING": 2,
-    "DUPLICATION": 1,
+    "TEST_GAP": 7,
     "DEAD_CODE": 1,
     "ORPHAN": 5,
-    "LEGACY": 2,
-    "CONFIGURATION_DRIFT": 3,
     "MAINTAINABILITY": 2,
-    "PERFORMANCE": 1,
-    "OPERATIONAL": 2,
-    "UNKNOWN": 1
+    "DUPLICATION": 1,
+    "PERFORMANCE": 1
   },
   "by_severity": {
     "CRITICAL": 0,
@@ -40,10 +40,9 @@
   },
   "by_priority": {
     "P0": 3,
-    "P1": 11,
-    "P2": 19,
-    "P3": 9,
-    "P4": 2
+    "P1": 10,
+    "P2": 20,
+    "P3": 9
   },
   "by_status": {
     "ACTIVE": 21,
@@ -79,8 +78,7 @@
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
     "gap.test-runner-depends-on-untracked-loader",
-    "risk.payment-confirmed-before-external-delivery",
-    "gap.partial-flows-lack-end-to-end-proof"
+    "risk.payment-confirmed-before-external-delivery"
   ],
   "coverage": {
     "domains": 17,
@@ -89,26 +87,28 @@
     "capabilities": 140,
     "flows": 34,
     "flow_steps": 169,
-    "state_transitions": 66,
+    "state_transitions": 68,
     "tables": 44,
-    "sql_functions": 33,
-    "triggers": 33,
+    "sql_functions": 39,
+    "triggers": 36,
     "integrations": 6,
     "webhooks": 2,
     "crons": 2,
     "environment_variables": 43,
     "configuration_drifts": 4,
-    "catalogued_tests": 43
+    "catalogued_tests": 51,
+    "findings": 44
   },
   "validation": {
     "npm_test": {
-      "cases": 214,
-      "passed": 214,
+      "cases": 236,
+      "passed": 236,
       "failed": 0,
       "status": "PASS",
       "known_failures": 0,
       "new_regressions": 0,
-      "change_from_baseline": "SEVEN_HISTORICAL_FAILURES_RESOLVED"
+      "skipped": 0,
+      "todo": 0
     },
     "typecheck": {
       "status": "PASS",
@@ -317,7 +317,10 @@
     "potential": "status in {POTENTIAL}",
     "open": "status in {ACTIVE, POTENTIAL, OPEN, MITIGATED}",
     "release_blocking": "status in {ACTIVE, OPEN, MITIGATED} at applicable severity",
-    "closed_for_operational_metrics": "status in {RESOLVED, ACCEPTED, NOT_VALIDATED}"
+    "closed_for_operational_metrics": "status in {RESOLVED, ACCEPTED, NOT_VALIDATED}",
+    "current_projection": "Derived at Baseline 2.4.2 generation time from canonical catalogs and lifecycle taxonomy.",
+    "release_blocker_rule": "operational_open + status.release_blocking + P0/P1 or CRITICAL/HIGH",
+    "historical_snapshots": "Only fields whose names explicitly contain a baseline version or historical marker are historical."
   },
   "high_1": {
     "source_implementation": "IMPLEMENTED_AND_VALIDATED",
@@ -646,5 +649,15 @@
     "new_deployment": false,
     "supabase": "UNCHANGED",
     "ticketeira": "UNTOUCHED"
+  },
+  "release_blockers": [],
+  "release_blocker_count": 0,
+  "baseline_2_4_2": {
+    "reason": "PATCH_DOCUMENTARY_CORRECTION",
+    "current_release_blockers": 0,
+    "semantic_contradictions": 0,
+    "current_stale_projections": 0,
+    "resolved_findings_with_active_top_level_claims": 0,
+    "default_node_suite": "236/236 PASS"
   }
 }

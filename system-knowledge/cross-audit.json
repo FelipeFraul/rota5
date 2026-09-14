@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T16:52:21.715Z",
-  "stage": "stabilization/release-blocker-reconciliation-baseline-2.4.1",
+  "generatedAt": "2026-09-14T17:13:55.692Z",
+  "stage": "2.4.2",
   "status": "PASS",
   "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
   "question": "Podemos confiar na BASELINE V1 como representação do Rota5 atual?",
@@ -439,5 +439,18 @@
     "new_deployment": false,
     "supabase": "UNCHANGED",
     "ticketeira": "UNTOUCHED"
+  },
+  "semantic_consistency": {
+    "baseline": "2.4.2",
+    "status": "PASS",
+    "method": "Explicit deterministic checks over current finding fields, canonical catalogue counts, taxonomy-derived health/release blockers, metadata and current prose projections.",
+    "stale_current_projections_before": 109,
+    "stale_current_projections_after": 0,
+    "contradictory_finding_records_before": 2,
+    "contradictory_finding_records_after": 0,
+    "current_semantic_contradictions": 0,
+    "current_stale_projections": 0,
+    "resolved_findings_with_active_top_level_claims": 0,
+    "current_release_blockers": 0
   }
 }

@@ -1,9 +1,21 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T16:52:21.715Z",
-  "stage": "stabilization/release-blocker-reconciliation-baseline-2.4.1",
-  "count": 15,
+  "generatedAt": "2026-09-14T17:13:55.692Z",
+  "stage": "2.4.2",
+  "count": 16,
   "records": [
+    {
+      "version": "2.4.2",
+      "date": "2026-09-14T17:13:55.692Z",
+      "reason": "PATCH_DOCUMENTARY_CORRECTION",
+      "summary": "Reconciled resolved finding current fields, canonical coverage/risk counts, taxonomy-derived health and stale current projections without lifecycle or runtime changes.",
+      "semantic_audit": {
+        "before_stale": 109,
+        "after_stale": 0,
+        "before_contradictions": 2,
+        "after_contradictions": 0
+      }
+    },
     {
       "version": "2.4.1",
       "date": "2026-09-14",

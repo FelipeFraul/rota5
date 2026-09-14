@@ -34,7 +34,7 @@ Essa topologia é real, mas não forma uma separação rígida. O webhook da Z-A
 | Orquestração e routing | webhook Z-API, router.ts, webhook Mercado Pago, APIs administrativas e crons | Vários desses módulos também executam regra e persistência. |
 | Serviços e regras de domínio | src/lib/tickets/services e serviços de admin, combo, gate, reserva, pagamento e entrega | É a maior concentração de regra, sem exclusividade de acesso a dados. |
 | Acesso a dados | cliente Supabase compartilhado e chamadas .from(), .rpc() ou REST | Não há repository dedicado; o acesso está distribuído. |
-| Banco e transações SQL | 44 tabelas, 33 funções e 33 triggers extraídos de 77 migrations | Arquitetura local confirmada; aplicação e equivalência remotas não foram verificadas. |
+| Banco e transações SQL | 44 tabelas, 39 funções e 36 triggers extraídos de 79 migrations | Arquitetura local confirmada; aplicação e equivalência remotas não foram verificadas. |
 | Integrações | adapters Supabase, Z-API, Mercado Pago, GitHub, Vercel e Codex CLI | Z-API e Mercado Pago são chamados por mais de um domínio. |
 | Processamento agendado | expiração de reservas, finalização de conversas e batches | A ativação e execução efetiva em produção não foi verificada. |
 | Infraestrutura transversal | ambiente, logging, respostas HTTP, rate limit, marca e estado de conversa | Esses módulos têm fan-in alto e atravessam vários domínios. |

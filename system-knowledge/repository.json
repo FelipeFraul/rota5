@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T16:52:21.715Z",
+  "generatedAt": "2026-09-14T17:13:55.692Z",
   "baseline": {
     "stage": "1/8",
     "name": "Reconhecimento total do sistema",
@@ -184,14 +184,14 @@
       "evidence": [
         "51 test files",
         "package.json executes 15",
-        "npm test: 207/214",
-        "clean canonical Git materialization: npm ci PASS and runner STARTED"
+        "current npm test: 236/236 PASS",
+        "Quality Gate 34867214724: npm ci and default runner PASS"
       ],
       "dependencies": [
         "node:test",
         "scripts/test-support/typescript-alias-loader.mjs"
       ],
-      "notes": "Seven known cases fail; 36 test files are outside the default command. The default runner is reproducible from tracked Git content."
+      "notes": "Current default suite passes 236/236 with zero failures, skips, todos or regressions; 36 catalogued test files are outside the default command. The default runner is reproducible from tracked Git content."
     },
     {
       "id": "repo-audit-tools",
@@ -435,7 +435,7 @@
       "failed": 7
     }
   },
-  "stage": "stabilization/release-blocker-reconciliation-baseline-2.4.1",
+  "stage": "2.4.2",
   "test_runner_reproducibility": {
     "finding": "gap.test-runner-depends-on-untracked-loader",
     "status": "RESOLVED",

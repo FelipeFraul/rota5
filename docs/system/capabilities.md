@@ -1888,6 +1888,6 @@ O catálogo está pronto para servir de entrada à Etapa 4 com as restrições e
 
 ## Checagem final da auditoria
 
-JSONs válidos; 140 IDs únicos; 36 relações válidas; referências a domains, modules, integrações e testes verificadas; 1.143 referências com path/linha conferidas. Os 56 entrypoints, 66 modules, 33 nomes de função SQL, 33 triggers e 67 arquivos de testes/auditorias estão classificados. Nenhum `flows.json` foi criado.
+JSONs válidos; 140 IDs únicos; 36 relações válidas; referências a domains, modules, integrações e testes verificadas; 1.143 referências com path/linha conferidas. Os 56 entrypoints, 66 modules, 39 nomes de função SQL, 36 triggers e 67 arquivos de testes/auditorias estão classificados. Nenhum `flows.json` foi criado.
 
 A comparação SHA-256 de 363 arquivos originais confirmou **nenhuma alteração funcional nesta etapa**. O hash inicial/final de `src/lib/tickets/messages.ts` permaneceu `c567c2bca0a3494d96ef6242e59139832a4cf648b3a85f02f84ba9f06c937694`. O HEAD não mudou. Foram criados seis artefatos e atualizados sete arquivos documentais das etapas anteriores. A varredura de credenciais nos artefatos não encontrou padrões de segredo. Resultado documental: **PASS**, confiança **MEDIA**, pronto para a Etapa 4 sem iniciá-la.

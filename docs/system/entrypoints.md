@@ -87,7 +87,7 @@ O matcher exclui assets estáticos, otimização de imagem, favicon e prefetch. 
 | 51 | `scripts/split-black-house-special-items.mjs` | dividir itens/setores especiais Black House | POSSÍVEL LEGADO |
 | 52 | `scripts/update-black-house-sectors.mjs` | atualizar setores Black House | POSSÍVEL LEGADO |
 
-Os 43 testes, 3 scripts de auditoria de intenção e 21 ferramentas `.tools/audit_*.mjs` também são executáveis manualmente, mas são catalogados como verificação em [tests-inventory.md](tests-inventory.md), sem inflar esta contagem de entrypoints operacionais.
+Os 51 testes, 3 scripts de auditoria de intenção e 21 ferramentas `.tools/audit_*.mjs` também são executáveis manualmente, mas são catalogados como verificação em [tests-inventory.md](tests-inventory.md), sem inflar esta contagem de entrypoints operacionais.
 
 ## Disparos externos configurados
 

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-14T16:52:21.715Z",
-  "stage": "stabilization/release-blocker-reconciliation-baseline-2.4.1",
+  "generatedAt": "2026-09-14T17:13:55.692Z",
+  "stage": "2.4.2",
   "count": 22,
   "ok": 19,
   "records": [

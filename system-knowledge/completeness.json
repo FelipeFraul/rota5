@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T16:52:21.715Z",
-  "stage": "stabilization/release-blocker-reconciliation-baseline-2.4.1",
+  "generatedAt": "2026-09-14T17:13:55.692Z",
+  "stage": "2.4.2",
   "globalConfidence": "HIGH",
   "count": 10,
   "records": [
@@ -29,7 +29,7 @@
     {
       "area": "FLOWS",
       "status": "HIGH_CONFIDENCE",
-      "justification": "34 flows, 169 steps e 66 transitions têm referências válidas; branches e terminais foram rechecados.",
+      "justification": "34 flows, 169 steps e 68 transitions têm referências válidas; branches e terminais foram rechecados.",
       "missingEvidence": "Execução E2E de flows que dependem de serviços externos.",
       "higherConfidenceRequires": "Traces E2E controlados."
     },
@@ -57,8 +57,8 @@
     {
       "area": "TESTS",
       "status": "MEDIUM_CONFIDENCE",
-      "justification": "43 arquivos foram recontados e a suíte padrão foi reexecutada: 203/210.",
-      "missingEvidence": "28 arquivos fora da suíte; testes reais mutáveis não executados.",
+      "justification": "51 testes estão catalogados e a suíte padrão corrente foi reexecutada: 236/236, com 0 skip, 0 todo e 0 regressões.",
+      "missingEvidence": "36 arquivos de teste ficam fora do comando padrão; testes reais mutáveis exigem ambiente isolado.",
       "higherConfidenceRequires": "Ambiente isolado para a suíte ampliada e testes reais."
     },
     {

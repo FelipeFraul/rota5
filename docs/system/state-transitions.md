@@ -1,6 +1,6 @@
 # State Transitions — Etapa 4
 
-Foram catalogadas **66 transições** suportadas pelo código/migrations. Campo de origem ausente significa inserção de linha; o catálogo não inventa estado anterior não armazenado. Valores separados por `|` representam alternativas explicitamente aceitas.
+Foram catalogadas **68 transições** suportadas pelo código/migrations. Campo de origem ausente significa inserção de linha; o catálogo não inventa estado anterior não armazenado. Valores separados por `|` representam alternativas explicitamente aceitas.
 
 | ID | Entidade | De | Para | Capability | Flow | Trigger | Implementação/status |
 | --- | --- | --- | --- | --- | --- | --- | --- |

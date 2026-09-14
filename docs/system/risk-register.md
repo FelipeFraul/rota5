@@ -1,4 +1,4 @@
-> **Current Baseline 2.4.1 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on canonical source `67845326088eac47452224b00ef1e866036e86f1` (fingerprint `df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0`, 368 files, 79 migrations). Findings `bug.event-duplicate-artist-leak` and `bug.user-visible-text-corruption` are **RESOLVED** as stale. `gap.partial-flows-lack-end-to-end-proof` remains **ACTIVE**, decomposed from P1 to P2; no specific P1 was justified. Canonical release blockers: **0**. Metrics: ACTIVE HIGH 0, POTENTIAL HIGH 1, OPEN HIGH 1, RESOLVED 11. PRODUCT_HEALTH: **DEGRADED**; INFRASTRUCTURE_HEALTH: **DEGRADED**. Quality evidence remains 236/236, PostgreSQL 1/1 and Quality Gate 34867214724 PASS. Production remains `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` on `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; no deployment, Supabase change or Ticketeira access.
+> **Current Baseline 2.4.2 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on canonical source `67845326088eac47452224b00ef1e866036e86f1` (fingerprint `df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0`, 368 files, 79 migrations). Findings `bug.event-duplicate-artist-leak` and `bug.user-visible-text-corruption` are **RESOLVED** as stale. `gap.partial-flows-lack-end-to-end-proof` remains **ACTIVE**, decomposed from P1 to P2; no specific P1 was justified. Canonical release blockers: **0**. Metrics: ACTIVE HIGH 0, POTENTIAL HIGH 1, OPEN HIGH 1, RESOLVED 11. PRODUCT_HEALTH: **DEGRADED**; INFRASTRUCTURE_HEALTH: **DEGRADED**. Quality evidence remains 236/236, PostgreSQL 1/1 and Quality Gate 34867214724 PASS. Production remains `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` on `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; no deployment, Supabase change or Ticketeira access.
 
 # Baseline 2.0.1 HIGH #1 final state
 
@@ -608,8 +608,8 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 
 - Tipo / severidade / prioridade: **MAINTAINABILITY / INFO / P4**
 - Status / confiança: **ACTIVE / CONFIRMED**
-- Problema: Status de evento, sessão, pagamento, entrega e conversa aparecem em unions, branches, SQL e strings de UI/router; o catálogo reconstruiu 66 transições para reconciliá-los.
-- Evidência: `system-knowledge/state-transitions.json` — 66 transições catalogadas.; `src/lib/tickets/router.ts` — Branches de estado conversacional.; `src/lib/tickets/services/comboRedemptions.ts` — Estados operacionais também vivem em raw_metadata.
+- Problema: Status de evento, sessão, pagamento, entrega e conversa aparecem em unions, branches, SQL e strings de UI/router; o catálogo corrente reconstruiu 68 transições para reconciliá-los.
+- Evidência: `system-knowledge/state-transitions.json` — 68 transições catalogadas.; `src/lib/tickets/router.ts` — Branches de estado conversacional.; `src/lib/tickets/services/comboRedemptions.ts` — Estados operacionais também vivem em raw_metadata.
 - Impacto: Alterações de lifecycle exigem sincronização manual entre aplicação, SQL, UI e testes.
 - Escopo: domains domain.event-administration, domain.orders-payments, domain.combo-commerce-fulfillment, domain.whatsapp-conversations; capabilities —; flows —.
 - Blast radius: **MULTI_DOMAIN**

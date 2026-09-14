@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-14T16:52:21.715Z",
-  "stage": "stabilization/release-blocker-reconciliation-baseline-2.4.1",
+  "generatedAt": "2026-09-14T17:13:55.692Z",
+  "stage": "2.4.2",
   "count": 4,
   "critical": 1,
   "records": [
@@ -122,8 +122,8 @@
     },
     {
       "object": "Supabase RPC surface",
-      "local": "33 funções SQL; 30 expostas como RPC esperada",
-      "remote": "33 RPCs: 30 da aplicação + 3 extensões",
+      "local": "39 funções SQL catalogadas no source corrente; a projeção remota abaixo pertence à última observação e não redefine a contagem local",
+      "remote": "Historical remote observation: 33 RPCs (30 da aplicação + 3 extensões)",
       "runtime": "OpenAPI HTTP 200",
       "result": "PARTIAL_MATCH"
     },

@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T16:52:21.715Z",
-  "stage": "stabilization/release-blocker-reconciliation-baseline-2.4.1",
+  "generatedAt": "2026-09-14T17:13:55.692Z",
+  "stage": "2.4.2",
   "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
-  "scope": "Baseline 2.2.0 after reproducible test-runner remediation and clean Git materialization proof.",
-  "method": "Preserve historical evidence, resolve only the untracked-loader finding, and retain all other finding lifecycles.",
+  "scope": "Current canonical finding lifecycle and evidence projection for Baseline 2.4.2; historical claims remain nested under explicitly historical fields.",
+  "method": "Reconciled machine-readable current state against taxonomy, source, current behavioral catalogs and Baseline 2.4.1 resolution evidence; no lifecycle changed.",
   "count": 44,
   "records": [
     {
@@ -197,22 +197,22 @@
       "description": "Historical event-duplication defect is corrected: the current payload assigns artist_name to the duplicated title rather than inheriting the source artist.",
       "evidence": [
         {
-          "path": "src/lib/tickets/services/adminEvents.ts",
-          "line": 1712,
-          "claim": "Cria duplicatedTitle."
-        },
-        {
-          "path": "src/lib/tickets/services/adminEvents.ts",
-          "line": 1715,
-          "claim": "Copia artist_name da origem."
+          "path": "src/lib/tickets/services/adminEventDuplication.ts",
+          "claim": "buildDuplicatedAdminEventPayload sets title and artist_name to duplicatedTitle.",
+          "evidence_state": "CURRENT"
         },
         {
           "path": "scripts/test-admin-event-artist-name-leak.mjs",
-          "line": 143,
-          "claim": "Teste direto falha nesta divergência."
+          "claim": "Behavioral duplication proof passes and confirms source artist is not inherited.",
+          "evidence_state": "CURRENT"
+        },
+        {
+          "path": "package.json",
+          "claim": "Current default suite passes 236/236, including the direct duplication test.",
+          "evidence_state": "CURRENT"
         }
       ],
-      "impact": "Um rascunho duplicado pode exibir ou persistir artista incoerente com o título, exigindo correção manual.",
+      "impact": "CURRENT_NONE_OBSERVED: the documented defect is resolved; original impact is retained only in resolution.historical_evidence.impact.",
       "domains": [
         "domain.event-administration"
       ],
@@ -233,9 +233,9 @@
         "test-002"
       ],
       "blast_radius": "DOMAIN",
-      "workaround": "Editar manualmente o artista após duplicar.",
-      "direction": "Alinhar a regra de duplicação ao contrato de título/artista.",
-      "priority_justification": "P1 por produzir dado administrativo incorreto em uma ação ativa, com workaround manual.",
+      "workaround": "NOT_REQUIRED_CURRENTLY: regression evidence is green; the historical workaround remains in resolution.historical_evidence.workaround.",
+      "direction": "Maintain the existing direct regression proof; investigate only if new current evidence contradicts the resolved state.",
+      "priority_justification": "Historical P1 classification retained for traceability. RESOLVED is non-operational and non-release-blocking under the canonical taxonomy.",
       "baseline_2_3_0_technical_evidence": {
         "lifecycle_changed": false,
         "evidence": [
@@ -292,7 +292,21 @@
         "scope_limitation": "Resolution covers the documented artist inheritance defect; it does not assert that every administrative multi-step failure mode is resolved.",
         "runtime_change_in_this_baseline": false,
         "database_change": false,
-        "deployment_required": false
+        "deployment_required": false,
+        "semantic_reconciliation": {
+          "baseline": "2.4.2",
+          "reconciled_at": "2026-09-14T17:13:55.692Z",
+          "rule": "Top-level fields describe current resolved state; original claims remain exclusively under resolution.historical_evidence.",
+          "lifecycle_changed": false
+        }
+      },
+      "current_state": {
+        "evidence_state": "CURRENT",
+        "defect_present": false,
+        "regression_test_status": "PASS",
+        "current_impact": "NONE_OBSERVED",
+        "workaround_required": false,
+        "release_blocking": false
       }
     },
     {
@@ -306,27 +320,27 @@
       "description": "Historical scoped text-corruption defects are corrected in the cited active surfaces; direct text/help tests and the complete default suite pass.",
       "evidence": [
         {
-          "path": "src/app/admin/eventos/dashboard/AdminDashboardSection.tsx",
-          "line": 59,
-          "claim": "Separador e mensagens do dashboard contêm sequências mojibake."
-        },
-        {
-          "path": "src/lib/tickets/messages.ts",
-          "line": 61,
-          "claim": "Emoji está armazenado como sequência de bytes interpretada incorretamente."
-        },
-        {
-          "path": "src/lib/tickets/services/publicHelp.ts",
-          "line": 176,
-          "claim": "ID e keywords usam interrogação no lugar do acento."
-        },
-        {
           "path": "scripts/test-message-mojibake.mjs",
-          "line": 18,
-          "claim": "Teste de mensagens falha com nove ocorrências no dashboard."
+          "claim": "Scoped active public and administrative source scan passes.",
+          "evidence_state": "CURRENT"
+        },
+        {
+          "path": "scripts/test-public-help-flow.mjs",
+          "claim": "Public help IDs, keywords and behavior pass direct tests.",
+          "evidence_state": "CURRENT"
+        },
+        {
+          "path": "src/lib/zapi/textEncoding.ts",
+          "claim": "Repository-wide source scan found the marker sequence only inside the intentional mojibake detector/repair implementation.",
+          "evidence_state": "CURRENT"
+        },
+        {
+          "path": "package.json",
+          "claim": "Current default suite passes 236/236.",
+          "evidence_state": "CURRENT"
         }
       ],
-      "impact": "Usuários e administradores recebem texto corrompido; IDs/keywords corrompidos também alteram resultados e contratos de busca.",
+      "impact": "CURRENT_NONE_OBSERVED: the documented defect is resolved; original impact is retained only in resolution.historical_evidence.impact.",
       "domains": [
         "domain.whatsapp-conversations",
         "domain.analytics-reporting",
@@ -358,9 +372,9 @@
         "test-032"
       ],
       "blast_radius": "MULTI_DOMAIN",
-      "workaround": "O sanitizador de saída repara apenas parte dos casos e não corrige IDs ou UI web.",
-      "direction": "Normalizar os arquivos fonte e ampliar a verificação para corrupção por substituição e bytes reinterpretados.",
-      "priority_justification": "P1 porque o defeito é visível em jornadas públicas e administrativas e já quebra testes.",
+      "workaround": "NOT_REQUIRED_CURRENTLY: regression evidence is green; the historical workaround remains in resolution.historical_evidence.workaround.",
+      "direction": "Maintain the existing direct regression proof; investigate only if new current evidence contradicts the resolved state.",
+      "priority_justification": "Historical P1 classification retained for traceability. RESOLVED is non-operational and non-release-blocking under the canonical taxonomy.",
       "baseline_2_3_0_technical_evidence": {
         "lifecycle_changed": false,
         "evidence": [
@@ -426,7 +440,21 @@
         "scope_limitation": "Resolution is limited to the documented and revalidated active surfaces; it is not an absolute guarantee that arbitrary future or external text can never be corrupted.",
         "runtime_change_in_this_baseline": false,
         "database_change": false,
-        "deployment_required": false
+        "deployment_required": false,
+        "semantic_reconciliation": {
+          "baseline": "2.4.2",
+          "reconciled_at": "2026-09-14T17:13:55.692Z",
+          "rule": "Top-level fields describe current resolved state; original claims remain exclusively under resolution.historical_evidence.",
+          "lifecycle_changed": false
+        }
+      },
+      "current_state": {
+        "evidence_state": "CURRENT",
+        "defect_present": false,
+        "regression_test_status": "PASS",
+        "current_impact": "NONE_OBSERVED",
+        "workaround_required": false,
+        "release_blocking": false
       }
     },
     {
@@ -2904,11 +2932,11 @@
       "priority": "P4",
       "status": "ACTIVE",
       "confidence": "CONFIRMED",
-      "description": "Status de evento, sessão, pagamento, entrega e conversa aparecem em unions, branches, SQL e strings de UI/router; o catálogo reconstruiu 66 transições para reconciliá-los.",
+      "description": "Status de evento, sessão, pagamento, entrega e conversa aparecem em unions, branches, SQL e strings de UI/router; o catálogo corrente reconstruiu 68 transições para reconciliá-los.",
       "evidence": [
         {
           "path": "system-knowledge/state-transitions.json",
-          "claim": "66 transições catalogadas."
+          "claim": "68 transições catalogadas."
         },
         {
           "path": "src/lib/tickets/router.ts",

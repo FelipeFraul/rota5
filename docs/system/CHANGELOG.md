@@ -1,4 +1,4 @@
-> **Current Baseline 2.4.1 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on canonical source `67845326088eac47452224b00ef1e866036e86f1` (fingerprint `df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0`, 368 files, 79 migrations). Findings `bug.event-duplicate-artist-leak` and `bug.user-visible-text-corruption` are **RESOLVED** as stale. `gap.partial-flows-lack-end-to-end-proof` remains **ACTIVE**, decomposed from P1 to P2; no specific P1 was justified. Canonical release blockers: **0**. Metrics: ACTIVE HIGH 0, POTENTIAL HIGH 1, OPEN HIGH 1, RESOLVED 11. PRODUCT_HEALTH: **DEGRADED**; INFRASTRUCTURE_HEALTH: **DEGRADED**. Quality evidence remains 236/236, PostgreSQL 1/1 and Quality Gate 34867214724 PASS. Production remains `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` on `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; no deployment, Supabase change or Ticketeira access.
+> **Current Baseline 2.4.2 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on canonical source `67845326088eac47452224b00ef1e866036e86f1` (fingerprint `df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0`, 368 files, 79 migrations). Findings `bug.event-duplicate-artist-leak` and `bug.user-visible-text-corruption` are **RESOLVED** as stale. `gap.partial-flows-lack-end-to-end-proof` remains **ACTIVE**, decomposed from P1 to P2; no specific P1 was justified. Canonical release blockers: **0**. Metrics: ACTIVE HIGH 0, POTENTIAL HIGH 1, OPEN HIGH 1, RESOLVED 11. PRODUCT_HEALTH: **DEGRADED**; INFRASTRUCTURE_HEALTH: **DEGRADED**. Quality evidence remains 236/236, PostgreSQL 1/1 and Quality Gate 34867214724 PASS. Production remains `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` on `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; no deployment, Supabase change or Ticketeira access.
 
 ## Baseline 2.3.0 — default suite restored
 
@@ -109,3 +109,12 @@
 - Metrics: 17 domains, 66 modules, 56 entrypoints, 140 capabilities, 34 flows, 44 tables, 43 tests and 44 findings.
 - Known broken state: 3 P0, 10 HIGH, 2 broken flows, 7 partial flows; npm test, typecheck and lint fail.
 - Unresolved evidence: 10 explicit groups. No commit, push or deploy was performed.
+
+## Baseline 2.4.2 — semantic consistency correction
+
+- Type: `PATCH_DOCUMENTARY_CORRECTION`; canonical runtime source unchanged.
+- Reconciled the two RESOLVED bug records so top-level machine-readable fields describe current resolution while original evidence remains explicitly historical.
+- Re-derived risk, coverage, finding-status, release-blocker and health projections from canonical catalogs and taxonomy.
+- Current audit: 0 semantic contradictions, 0 stale current projections, 0 resolved findings with active top-level claims and 0 release blockers.
+- Product and infrastructure health remain `DEGRADED`; no domain is `BROKEN`.
+- No lifecycle, source, test, workflow, deployment, Supabase or Ticketeira change.

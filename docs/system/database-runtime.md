@@ -8,7 +8,7 @@ The rollout draft is preserved as historical source. The active migration `supab
 
 ## Migrations e objetos
 
-A ordem lexicográfica das 77 migrations define a reconstrução local. Cada registro inclui objetos criados, alterados e removidos, dependência anterior, impacto e reversão manual. Foram considerados `CREATE OR REPLACE FUNCTION`, recriação de triggers, alterações de tabela e remoções; o resultado final local contém 44 tabelas, 33 funções, 33 triggers e 155 índices.
+A ordem lexicográfica das 79 migrations define a reconstrução local. Cada registro inclui objetos criados, alterados e removidos, dependência anterior, impacto e reversão manual. Foram considerados `CREATE OR REPLACE FUNCTION`, recriação de triggers, alterações de tabela e remoções; o resultado final local contém 44 tabelas, 39 funções, 36 triggers e 155 índices.
 
 | Migration | Creates | Alters | Drops | Reversão |
 | --- | ---: | ---: | ---: | --- |
@@ -103,7 +103,7 @@ A ordem lexicográfica das 77 migrations define a reconstrução local. Cada reg
 | Storage | REMOTE_CONFIG | zero buckets |
 | Auth | NOT_VALIDATED | configuração não consultável pelas credenciais usadas |
 
-Das 33 funções locais, 30 aparecem como RPC. As três restantes são funções de trigger: `set_updated_at`, `enforce_one_active_reservation_per_customer` e `sync_official_table_map_reservation_status`. O remoto também expõe `show_limit`, `show_trgm` e `unaccent`, ligados a extensões e ausentes como funções próprias nas migrations. Isso é `PARTIAL_MATCH` da superfície RPC, não prova de drift do schema.
+Das 39 funções locais, 30 aparecem como RPC. As três restantes são funções de trigger: `set_updated_at`, `enforce_one_active_reservation_per_customer` e `sync_official_table_map_reservation_status`. O remoto também expõe `show_limit`, `show_trgm` e `unaccent`, ligados a extensões e ausentes como funções próprias nas migrations. Isso é `PARTIAL_MATCH` da superfície RPC, não prova de drift do schema.
 
 ## Modos de acesso
 

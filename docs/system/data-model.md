@@ -10,7 +10,7 @@ Referência: commit `a141c6004421fb8442f95493de3ca4ec4d4c997b`. O schema local r
 
 - 44 tabelas locais e 44 remotas: **MATCH** para nomes de tabelas e colunas.
 - 44 tabelas com RLS habilitado localmente; zero `CREATE POLICY` encontrado.
-- 33 funções SQL, 33 triggers e 155 índices reconstruídos localmente.
+- 39 funções SQL, 36 triggers e 155 índices reconstruídos localmente.
 - O runtime principal usa service role, portanto a autorização das APIs é aplicada antes do acesso e esse cliente contorna RLS.
 - Acesso anon por HEAD: 7 tabelas aceitaram a consulta e 37 negaram/indisponibilizaram. Aceite não prova leitura de linhas.
 
@@ -67,7 +67,7 @@ Os detalhes completos de colunas, defaults, constraints, consumidores, functions
 
 ## Lifecycle
 
-As 66 transições canônicas de `state-transitions.json` foram cruzadas com tabelas e colunas de status. Referências foram resolvidas sem inconsistência de entidade/coluna encontrada. Nenhum lifecycle novo foi inferido para tabelas sem estado explícito. Estados permitidos continuam definidos por checks, lógica SQL e serviços; estados observados no código não foram promovidos a runtime remoto sem evidência.
+As 68 transições canônicas de `state-transitions.json` foram cruzadas com tabelas e colunas de status. Referências foram resolvidas sem inconsistência de entidade/coluna encontrada. Nenhum lifecycle novo foi inferido para tabelas sem estado explícito. Estados permitidos continuam definidos por checks, lógica SQL e serviços; estados observados no código não foram promovidos a runtime remoto sem evidência.
 
 ## Limites
 
@@ -79,4 +79,4 @@ O catálogo machine-readable registra, para cada tabela com transição canônic
 
 ## Correção do gate da Etapa 5
 
-A primeira contagem informou 17 tabelas stateful porque usou singularização simples e não resolveu aliases como gate_access, whatsapp_outbound_delivery, whatsapp_message_batch e courtesy. O gate substituiu essa regra por um mapa explícito e tratou ticket.participant_delivery como um segundo lifecycle da tabela tickets, na coluna participant_delivery_status. O resultado correto é 22 tabelas, 23 entidades e 66 transições, sem transição sem tabela, coluna ou estado local correspondente.
+A primeira contagem informou 17 tabelas stateful porque usou singularização simples e não resolveu aliases como gate_access, whatsapp_outbound_delivery, whatsapp_message_batch e courtesy. O gate substituiu essa regra por um mapa explícito e tratou ticket.participant_delivery como um segundo lifecycle da tabela tickets, na coluna participant_delivery_status. O resultado correto é 22 tabelas, 23 entidades e 68 transições, sem transição sem tabela, coluna ou estado local correspondente.

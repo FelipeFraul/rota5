@@ -10,7 +10,7 @@ Baseline: 11/09/2026, commit-base `a141c6004421fb8442f95493de3ca4ec4d4c997b`.
 | `.tools/` | 21 | CONFIRMADO | ferramentas `audit_*.mjs` |
 | `docs/` preexistente | 10 | CONFIRMADO | documentos operacionais e históricos |
 | `public/` | 15 | CONFIRMADO | imagens, fontes, `robots.txt` e PSD |
-| `scripts/` | 52 | CONFIRMADO | 43 testes, 3 auditorias e 6 scripts operacionais |
+| `scripts/` | 66 | CONFIRMADO | 51 testes catalogados; auditorias e scripts operacionais podem compartilhar classificação |
 | `src/` | 157 | CONFIRMADO | 113 módulos `.ts` e 45 `.tsx` no repositório total |
 | `supabase/` | 77 | CONFIRMADO | 77 migrations SQL |
 | **Total inicial** | **344** | CONFIRMADO | antes da documentação desta etapa |
@@ -165,4 +165,4 @@ A segunda passagem encontrou referências de código ou ferramentas para 43 tabe
 
 ## Segunda passagem de rastreabilidade
 
-A revisão adicional comparou árvore rastreada, exports/imports, referências a tabelas e RPCs, rotas HTTP, scripts NPM, 77 migrations, 43 testes, configuração Vercel/Next/TypeScript, nomes de ambiente, nomes de assets e ocorrências Rota5/RockBar/Black House. Essa passagem encontrou `.tools/`, `BrandLogo.tsx` sem importador, os assets RockBar ausentes, os assets sem consumidor, a tabela `seat_map_renders` sem chamada e variáveis usadas fora do contrato de `.env.example`.
+A revisão adicional comparou árvore rastreada, exports/imports, referências a tabelas e RPCs, rotas HTTP, scripts NPM, 79 migrations, 51 testes, configuração Vercel/Next/TypeScript, nomes de ambiente, nomes de assets e ocorrências Rota5/RockBar/Black House. Essa passagem encontrou `.tools/`, `BrandLogo.tsx` sem importador, os assets RockBar ausentes, os assets sem consumidor, a tabela `seat_map_renders` sem chamada e variáveis usadas fora do contrato de `.env.example`.

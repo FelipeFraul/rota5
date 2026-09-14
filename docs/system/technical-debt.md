@@ -84,8 +84,8 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 
 - Tipo / severidade / prioridade: **MAINTAINABILITY / INFO / P4**
 - Status / confiança: **ACTIVE / CONFIRMED**
-- Problema: Status de evento, sessão, pagamento, entrega e conversa aparecem em unions, branches, SQL e strings de UI/router; o catálogo reconstruiu 66 transições para reconciliá-los.
-- Evidência: `system-knowledge/state-transitions.json` — 66 transições catalogadas.; `src/lib/tickets/router.ts` — Branches de estado conversacional.; `src/lib/tickets/services/comboRedemptions.ts` — Estados operacionais também vivem em raw_metadata.
+- Problema: Status de evento, sessão, pagamento, entrega e conversa aparecem em unions, branches, SQL e strings de UI/router; o catálogo reconstruiu 68 transições para reconciliá-los.
+- Evidência: `system-knowledge/state-transitions.json` — 68 transições catalogadas.; `src/lib/tickets/router.ts` — Branches de estado conversacional.; `src/lib/tickets/services/comboRedemptions.ts` — Estados operacionais também vivem em raw_metadata.
 - Impacto: Alterações de lifecycle exigem sincronização manual entre aplicação, SQL, UI e testes.
 - Escopo: domains domain.event-administration, domain.orders-payments, domain.combo-commerce-fulfillment, domain.whatsapp-conversations; capabilities —; flows —.
 - Blast radius: **MULTI_DOMAIN**

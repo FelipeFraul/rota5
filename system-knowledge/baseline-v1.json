@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T16:52:21.715Z",
-  "stage": "stabilization/release-blocker-reconciliation-baseline-2.4.1",
+  "generatedAt": "2026-09-14T17:13:55.692Z",
+  "stage": "2.4.2",
   "baseline_id": "rota5-baseline-v1",
-  "version": "2.4.1",
+  "version": "2.4.2",
   "status": "FROZEN",
   "domains": 17,
   "modules": 66,
@@ -88,22 +88,7 @@
       "todo": 0,
       "change": "CRITICAL_BEHAVIORAL_COVERAGE_ADDED"
     },
-    "typecheck": {
-      "status": "PASS",
-      "diagnostics": 0
-    },
-    "lint": {
-      "status": "PASS",
-      "errors": 0,
-      "warnings": 23
-    },
-    "build": {
-      "status": "PASS",
-      "warning": "PREEXISTING_TURBOPACK_NFT_TRACE_WARNING"
-    },
-    "baseline_integrity": "PASS",
     "infrastructure_health": "DEGRADED",
-    "current_head_deployed": false,
     "release_gate": {
       "status": "PASS",
       "applicable_threshold": "priority in {P0, P1} or severity in {CRITICAL, HIGH}",
@@ -538,6 +523,20 @@
     "current_head_deployed": false,
     "new_deployment": false,
     "supabase": "UNCHANGED",
-    "ticketeira": "UNTOUCHED"
+    "ticketeira": "UNTOUCHED",
+    "baseline": "2.4.2",
+    "current_release_blockers": 0,
+    "lifecycle_changed": false
+  },
+  "semantic_consistency": {
+    "reason": "PATCH_DOCUMENTARY_CORRECTION",
+    "stale_current_projections_before": 109,
+    "stale_current_projections_after": 0,
+    "contradictory_finding_records_before": 2,
+    "contradictory_finding_records_after": 0,
+    "current_semantic_contradictions": 0,
+    "current_stale_projections": 0,
+    "resolved_findings_with_active_top_level_claims": 0,
+    "current_release_blockers": 0
   }
 }

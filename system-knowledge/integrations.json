@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T16:52:21.715Z",
+  "generatedAt": "2026-09-14T17:13:55.692Z",
   "count": 6,
   "records": [
     {
@@ -268,5 +268,5 @@
     "reason": "Evidência read-only externa tornou notas anteriores factualmente incompletas.",
     "metricsChanged": false
   },
-  "stage": "stabilization/release-blocker-reconciliation-baseline-2.4.1"
+  "stage": "2.4.2"
 }

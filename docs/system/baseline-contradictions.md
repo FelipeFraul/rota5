@@ -5,7 +5,7 @@ Foram encontradas **2 contradições materiais**, ambas corrigidas e registradas
 | ID | Antes | Depois | Evidência | Estado |
 | --- | --- | --- | --- | --- |
 | `contradiction.readme-stage5-gate` | README continha gates concorrentes PARTIAL e PASS para a Etapa 5 e índice desatualizado. | Mantido o gate final PASS e índice atualizado até a Etapa 7. | Gate final da Etapa 5 e artefatos da Etapa 6. | CORRECTED |
-| `contradiction.default-suite-current-result` | Snapshot corrente dizia 204/210, 6 falhas, 5 arquivos. | Snapshot atual diz 203/210, 7 falhas, 6 arquivos; o anterior permanece histórico. | Duas execuções em 12/09/2026 e `risk-summary.json`. | CORRECTED |
+| `contradiction.default-suite-current-result` | Snapshot histórico então corrente dizia 204/210, 6 falhas, 5 arquivos. | A correção histórica registrou 203/210, 7 falhas, 6 arquivos; ambos os valores são históricos, e a suíte corrente está no banner canônico. | Duas execuções em 12/09/2026 e `risk-summary.json`. | CORRECTED |
 
 ## Alteração de métrica
 

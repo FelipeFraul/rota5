@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T16:52:21.715Z",
-  "stage": "stabilization/release-blocker-reconciliation-baseline-2.4.1",
+  "generatedAt": "2026-09-14T17:13:55.692Z",
+  "stage": "2.4.2",
   "baseline_id": "rota5-baseline-v1",
-  "version": "2.4.1",
+  "version": "2.4.2",
   "status": "FROZEN",
-  "frozen_at": "2026-09-14T16:52:21.715Z",
+  "frozen_at": "2026-09-14T17:13:55.692Z",
   "source_state": {
     "base_commit": "67845326088eac47452224b00ef1e866036e86f1",
     "source_tree_fingerprint": "df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0",
@@ -30,14 +30,12 @@
   },
   "product_health": {
     "status": "DEGRADED",
-    "reason": "Release blockers are zero, but one POTENTIAL HIGH and other active/potential risks remain; canonical health is DEGRADED rather than HEALTHY.",
+    "reason": "Canonical release blockers are zero, but current operational and validation-queue findings remain; HEALTHY is not justified.",
     "findings": 44,
     "active_p0": 0,
     "active_high": 0,
     "critical": 0,
     "resolved": 11,
-    "broken_flows": 0,
-    "partial_flows": 9,
     "potential_high": 1,
     "open_high": 1
   },
@@ -667,6 +665,20 @@
     "current_head_deployed": false,
     "new_deployment": false,
     "supabase": "UNCHANGED",
-    "ticketeira": "UNTOUCHED"
+    "ticketeira": "UNTOUCHED",
+    "baseline": "2.4.2",
+    "current_release_blockers": 0,
+    "lifecycle_changed": false
+  },
+  "semantic_consistency": {
+    "reason": "PATCH_DOCUMENTARY_CORRECTION",
+    "stale_current_projections_before": 109,
+    "stale_current_projections_after": 0,
+    "contradictory_finding_records_before": 2,
+    "contradictory_finding_records_after": 0,
+    "current_semantic_contradictions": 0,
+    "current_stale_projections": 0,
+    "resolved_findings_with_active_top_level_claims": 0,
+    "current_release_blockers": 0
   }
 }
