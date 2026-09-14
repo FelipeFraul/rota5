@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-14T17:43:51.677Z",
-  "stage": "2.4.4",
-  "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
+  "generatedAt": "2026-09-14T22:14:45.242Z",
+  "stage": "2.5.0",
+  "sourceCommit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
   "application": {
     "framework": "Next.js 16.2.6",
     "runtime": "Node.js 24.x no projeto Vercel",
@@ -59,17 +59,18 @@
     },
     "linked_project_production": {
       "alias": "rota5-khaki.vercel.app",
-      "ready_deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
+      "ready_deployment": "dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf",
       "latest_deployment_state": "READY",
       "evidence_source": "REMOTE_CONFIG",
-      "current_head": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
-      "current_head_deployed": true,
+      "current_head": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+      "current_head_deployed": false,
       "new_deployment_during_separation": false,
-      "production_source_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+      "production_source_commit": "148b8200a44f4eeb49e004af45060a302bac9f20",
       "production_cutover_at": "2026-09-13T16:19:42.340Z",
       "current_deployment_created_at": "2026-09-13T23:06:15.417Z",
       "branding_preview_deployment": "dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW",
-      "test_remediation_preview_deployment": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6"
+      "test_remediation_preview_deployment": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6",
+      "production_runtime_source": "148b8200a44f4eeb49e004af45060a302bac9f20"
     },
     "published_commit": {
       "status": "VALIDATED",
@@ -83,7 +84,7 @@
       "classification": "TICKETEIRA_INFRASTRUCTURE_NOT_ROTA5_OPERATIONAL_INFRASTRUCTURE",
       "note": "Preserved only as historical evidence of the identity-drift root cause."
     },
-    "production_runtime_app_artifact": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+    "production_runtime_app_artifact": "148b8200a44f4eeb49e004af45060a302bac9f20",
     "post_contract_runtime": "PASS",
     "relevant_log_errors": 0
   },
@@ -212,8 +213,11 @@
   "identity_reaudit": {
     "status": "CORRECT",
     "finding": "risk.vercel-project-identity-drift",
-    "current_head_deployed_to_production": true,
-    "remote_changes_during_baseline_update": "NONE"
+    "current_head_deployed_to_production": false,
+    "remote_changes_during_baseline_update": "NONE",
+    "repository_source": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+    "production_application_source": "148b8200a44f4eeb49e004af45060a302bac9f20",
+    "app_runtime_diff_after_deploy": "NAO"
   },
   "high_1_rollout": {
     "source_implementation": "IMPLEMENTED_AND_VALIDATED",
@@ -441,5 +445,16 @@
     "new_deployment": false,
     "supabase": "UNCHANGED",
     "ticketeira": "UNTOUCHED"
+  },
+  "baseline_2_5_0": {
+    "repository_source": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+    "production_application_source": "148b8200a44f4eeb49e004af45060a302bac9f20",
+    "production_deployment": "dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf",
+    "deployment_sha_difference": "EXPECTED_NON_RUNTIME_DRIFT",
+    "app_runtime_diff_after_deploy": "NAO",
+    "git_auto_deploy": "DISABLED",
+    "new_deployment_in_freeze": false,
+    "supabase_changed_in_freeze": false,
+    "ticketeira_touched": false
   }
 }

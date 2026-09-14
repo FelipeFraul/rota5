@@ -1,4 +1,13 @@
-> **Current Baseline 2.4.4 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on canonical source `67845326088eac47452224b00ef1e866036e86f1` (fingerprint `df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0`, 368 files, 79 migrations). Findings `bug.event-duplicate-artist-leak` and `bug.user-visible-text-corruption` are **RESOLVED** as stale. `gap.partial-flows-lack-end-to-end-proof` remains **ACTIVE**, decomposed from P1 to P2; no specific P1 was justified. Canonical release blockers: **0**. Metrics: ACTIVE HIGH 0, POTENTIAL HIGH 1, OPEN HIGH 1, RESOLVED 11. PRODUCT_HEALTH: **DEGRADED**; INFRASTRUCTURE_HEALTH: **DEGRADED**. Quality evidence remains 236/236, PostgreSQL 1/1 and Quality Gate 34867214724 PASS. Production remains `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` on `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; no deployment, Supabase change or Ticketeira access.
+> **Current Baseline 2.5.0 (2026-09-14):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on repository source `e931d66d03a620d5e26588c8f6c8714c62ef5d1d` (fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`, 379 files, 83 migrations). Atomicity and admin location consistency are **RESOLVED**. Findings: 45 total, 13 RESOLVED, 21 ACTIVE, 6 POTENTIAL, 5 NOT_VALIDATED; release blockers: 0. PRODUCT_HEALTH and INFRASTRUCTURE_HEALTH: **DEGRADED**. Quality: 257/257 Node, 2/2 PostgreSQL 16, Quality Gate 34898804387 PASS. Production `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` runs application source `148b8200a44f4eeb49e004af45060a302bac9f20`; later migration/test-only commits create expected non-runtime drift. No deployment or remote mutation occurred during this freeze.
+
+## BASELINE 2.5.0 — THREE-DAY STABILIZATION FREEZE
+
+- Type: `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE`; repository source `e931d66d03a620d5e26588c8f6c8714c62ef5d1d`; fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954` (379 files; 83 migrations).
+- Administrative CREATE/UPDATE/DUPLICATE are atomic and persistently idempotent; `risk.admin-event-multistep-partial-state` is RESOLVED.
+- Venue/session/city/state consistency is enforced and the legacy venue-only RPC is absent; `bug.admin-event-location-consistency` is incorporated as RESOLVED history.
+- Validation: 257/257 default Node, 2/2 PostgreSQL 16 and Quality Gate 34898804387 PASS.
+- Remote audit: 7 events, 7 sessions, 0 venue divergences, 0 city/state divergences.
+- Production remains `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` on application source `148b8200a44f4eeb49e004af45060a302bac9f20`; later migration/test-only commits are expected non-runtime drift. No Vercel deployment, Supabase mutation or Ticketeira access occurred during the freeze.
 
 ## Baseline 2.3.0 — default suite restored
 

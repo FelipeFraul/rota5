@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-14T17:43:51.677Z",
-  "stage": "2.4.4",
-  "count": 44,
+  "generatedAt": "2026-09-14T22:14:45.242Z",
+  "stage": "2.5.0",
+  "count": 45,
   "evidence_policy": [
     "LOCAL_DECLARED",
     "REMOTE_CONFIG",
@@ -15287,6 +15287,146 @@
         ],
         "consistency": "MATCH"
       }
+    },
+    {
+      "id": "table.admin_event_operations",
+      "name": "admin_event_operations",
+      "domain": "domain.event-administration",
+      "purpose": "Persistent idempotency ledger for atomic administrative event mutations.",
+      "entity": "admin_event_operation",
+      "columns": [
+        {
+          "name": "operation_id",
+          "type": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "operation_type",
+          "type": "text",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "payload_hash",
+          "type": "text",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "result_event_id",
+          "type": "uuid",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "result",
+          "type": "jsonb",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "nullable": false,
+          "default": "'pending'"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "completed_at",
+          "type": "timestamptz",
+          "nullable": true,
+          "default": null
+        }
+      ],
+      "primary_key": [
+        {
+          "name": "admin_event_operations_pkey",
+          "type": "PRIMARY_KEY",
+          "definition": "operation_id uuid primary key"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "name": "admin_event_operations_result_event_id_fkey",
+          "type": "FOREIGN_KEY",
+          "columns": [
+            "result_event_id"
+          ],
+          "references_table": "events",
+          "references_columns": [
+            "id"
+          ],
+          "definition": "result_event_id uuid references public.events(id)"
+        }
+      ],
+      "unique_constraints": [],
+      "check_constraints": [
+        {
+          "name": "admin_event_operations_type_check",
+          "type": "CHECK",
+          "definition": "operation_type in ('create','duplicate','update','venue_update','location_update')"
+        },
+        {
+          "name": "admin_event_operations_status_check",
+          "type": "CHECK",
+          "definition": "status in ('pending','completed')"
+        }
+      ],
+      "indexes": [],
+      "rls": {
+        "local_enabled": false,
+        "remote_status": "REMOTE_VALIDATED"
+      },
+      "policies": {
+        "local_count": 0,
+        "remote_status": "REMOTE_VALIDATED"
+      },
+      "grants": {
+        "local": [
+          "service_role select, insert, update"
+        ],
+        "revokes": [
+          "public",
+          "anon",
+          "authenticated"
+        ],
+        "remote_status": "REMOTE_VALIDATED"
+      },
+      "triggers": [],
+      "functions": [
+        "function.create_admin_event_catalog",
+        "function.update_admin_event_catalog",
+        "function.update_admin_event_location"
+      ],
+      "modules": [
+        "event-admin.service"
+      ],
+      "capabilities": [
+        "event.create",
+        "event.edit",
+        "event.duplicate"
+      ],
+      "flows": [
+        "admin.web_event_workspace",
+        "admin.whatsapp_event_management"
+      ],
+      "state_transitions": [],
+      "status_local": "LOCAL_DECLARED",
+      "status_remote": "REMOTE_SCHEMA",
+      "consistency": "MATCH",
+      "evidence": [
+        "supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql",
+        {
+          "source": "remote final audit",
+          "type": "REMOTE_SCHEMA"
+        }
+      ]
     }
   ],
   "validation": {
@@ -15526,5 +15666,13 @@
     "new_deployment": false,
     "supabase": "UNCHANGED",
     "ticketeira": "UNTOUCHED"
+  },
+  "baseline_2_5_0": {
+    "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+    "tables": 45,
+    "added": [
+      "admin_event_operations"
+    ],
+    "remote_status": "VALIDATED"
   }
 }

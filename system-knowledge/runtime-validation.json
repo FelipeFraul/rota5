@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-14T17:43:51.677Z",
-  "stage": "2.4.4",
-  "count": 22,
+  "generatedAt": "2026-09-14T22:14:45.242Z",
+  "stage": "2.5.0",
+  "count": 24,
   "ok": 19,
   "records": [
     {
@@ -124,14 +124,14 @@
       "method": "CLI_READ",
       "evidence_source": "REMOTE_CONFIG",
       "status": "PASS",
-      "result": "Latest Production deployment dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa is READY, serves the canonical aliases and runs exact source commit c726902505fd69c2cfef2dec8013ffe0cf0adba3.",
+      "result": "Latest Production deployment dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf is READY and runs application source 148b8200a44f4eeb49e004af45060a302bac9f20; repository e931d66d03a620d5e26588c8f6c8714c62ef5d1d adds only migration/test evidence.",
       "side_effect_free": true,
       "expected": "Identificar deployment mais recente e deployment servido.",
       "evidence": [
-        "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
-        "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
-        "Vercel linked Production deployment",
-        "Default-suite remediation runtime probes"
+        "dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf",
+        "148b8200a44f4eeb49e004af45060a302bac9f20",
+        "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+        "Vercel linked Production deployment"
       ]
     },
     {
@@ -182,11 +182,11 @@
       "method": "GIT_READ",
       "evidence_source": "REMOTE_CONFIG",
       "status": "PASS",
-      "result": "HEAD e origin/production apontam para 9302cbd46aec802fef371e9c948e7d558c3dfc2a.",
+      "result": "HEAD and origin/production point to e931d66d03a620d5e26588c8f6c8714c62ef5d1d.",
       "side_effect_free": true,
       "expected": "Comparar HEAD e origin/production sem inferir deploy.",
       "evidence": [
-        "REMOTE_CONFIG",
+        "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
         "Git production branch"
       ]
     },
@@ -324,6 +324,28 @@
         "rota5.webp HTTP 200",
         "rota5_mb.webp HTTP 200"
       ]
+    },
+    {
+      "id": "runtime.baseline-2-5-production-source",
+      "kind": "REMOTE_DEPLOYMENT",
+      "status": "PASS",
+      "result": "Production dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf runs application source 148b8200a44f4eeb49e004af45060a302bac9f20; repository source e931d66d03a620d5e26588c8f6c8714c62ef5d1d differs only by migration/test files after deployment.",
+      "evidence": [
+        "dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf",
+        "148b8200a44f4eeb49e004af45060a302bac9f20",
+        "e931d66d03a620d5e26588c8f6c8714c62ef5d1d"
+      ],
+      "observed_at": "2026-09-14T22:14:45.242Z"
+    },
+    {
+      "id": "runtime.baseline-2-5-location-audit",
+      "kind": "REMOTE_DATABASE",
+      "status": "PASS",
+      "result": "7 events, 7 sessions, 0 event/session venue divergences, 0 city/state divergences; update_admin_event_venue is absent.",
+      "evidence": [
+        "scripts/test-admin-event-catalog-postgres.mjs"
+      ],
+      "observed_at": "2026-09-14T22:14:45.242Z"
     }
   ],
   "prohibited_actions_performed": false,
@@ -520,11 +542,14 @@
     "ticketeira": "UNTOUCHED"
   },
   "current_production": {
-    "deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
-    "source_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+    "deployment": "dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf",
+    "application_source": "148b8200a44f4eeb49e004af45060a302bac9f20",
+    "repository_source": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
     "status": "READY",
-    "preview": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6",
-    "relevant_log_errors": 0
+    "app_runtime_diff_after_deploy": "NAO",
+    "deployment_sha_difference": "EXPECTED_NON_RUNTIME_DRIFT",
+    "git_auto_deploy": "DISABLED",
+    "new_deployment_in_freeze": false
   },
   "baseline_2_4_0": {
     "version": "2.4.0",
@@ -591,5 +616,19 @@
     "new_deployment": false,
     "supabase": "UNCHANGED",
     "ticketeira": "UNTOUCHED"
+  },
+  "baseline_2_5_0": {
+    "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+    "quality_gate_run": 34898804387,
+    "quality_gate": "PASS",
+    "default_node_suite": "257/257 PASS",
+    "postgres_integration": "2/2 PASS",
+    "remote": {
+      "events": 7,
+      "sessions": 7,
+      "event_session_venue_divergences": 0,
+      "city_state_divergences": 0,
+      "legacy_update_admin_event_venue": "ABSENT"
+    }
   }
 }

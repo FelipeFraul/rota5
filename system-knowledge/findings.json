@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T17:43:51.677Z",
-  "stage": "2.4.4",
-  "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
-  "scope": "Current canonical finding lifecycle and evidence projection for Baseline 2.4.4; historical claims remain nested under explicitly historical fields.",
+  "generatedAt": "2026-09-14T22:14:45.242Z",
+  "stage": "2.5.0",
+  "sourceCommit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+  "scope": "Canonical finding catalog for Baseline 2.5.0, including resolved stabilization history.",
   "method": "Reconciled machine-readable current state against taxonomy, source, current behavioral catalogs and Baseline 2.4.1 resolution evidence; no lifecycle changed.",
-  "count": 44,
+  "count": 45,
   "records": [
     {
       "id": "bug.create-event-invalid-jsx",
@@ -1191,28 +1191,41 @@
     },
     {
       "id": "risk.admin-event-multistep-partial-state",
-      "title": "Criação de evento e catálogo inicial cruza entidades sem transação única",
+      "title": "RESOLVED — risk.admin-event-multistep-partial-state",
       "type": "DATA_INTEGRITY",
       "severity": "HIGH",
       "priority": "P1",
-      "status": "POTENTIAL",
-      "confidence": "HIGH",
-      "description": "createAdminEvent coordena evento, local, sessão, setor, assentos, preços e mapa por chamadas Supabase sequenciais; o catálogo marca event.create como PARCIAL e registra possibilidade de resíduos.",
+      "status": "RESOLVED",
+      "confidence": "CONFIRMED",
+      "description": "Administrative CREATE, UPDATE and DUPLICATE now execute inside PostgreSQL transaction boundaries with persistent idempotency and retry-safe application intents.",
       "evidence": [
         {
+          "path": "supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql",
+          "claim": "Current atomic CREATE, UPDATE and DUPLICATE catalog functions and persistent operation ledger.",
+          "evidence_state": "CURRENT"
+        },
+        {
           "path": "src/lib/tickets/services/adminEvents.ts",
-          "claim": "Serviço executa criação multi-entidade via aplicação."
+          "claim": "Current service routes aggregate mutations through the transactional RPC boundary.",
+          "evidence_state": "CURRENT"
         },
         {
-          "path": "system-knowledge/capabilities.json",
-          "claim": "event.create está PARCIAL."
+          "path": "src/lib/tickets/router.ts",
+          "claim": "Current WhatsApp retry path preserves the administrative operation intent.",
+          "evidence_state": "CURRENT"
         },
         {
-          "path": "system-knowledge/flows.json",
-          "claim": "admin.whatsapp_event_management documenta drafts/resíduos em falhas intermediárias."
+          "path": "scripts/test-admin-event-atomic-mutations.mjs",
+          "claim": "Current default-suite regression coverage proves web and WhatsApp retry contracts.",
+          "evidence_state": "CURRENT"
+        },
+        {
+          "path": "scripts/test-admin-event-catalog-postgres.mjs",
+          "claim": "PostgreSQL 16 integration proves rollback and persistent idempotency.",
+          "evidence_state": "CURRENT"
         }
       ],
-      "impact": "Falha intermediária pode deixar rascunho ou inventário incompleto e exigir limpeza manual antes de tentar novamente.",
+      "impact": "The historical partial-state and duplicate-aggregate impact is no longer active in the proven CREATE, UPDATE and DUPLICATE scope.",
       "domains": [
         "domain.event-administration",
         "domain.reservation-inventory"
@@ -1241,9 +1254,268 @@
         "ticket_prices"
       ],
       "blast_radius": "MULTI_DOMAIN",
-      "workaround": "Operar/limpar o rascunho parcialmente criado de forma manual.",
-      "direction": "Definir uma fronteira transacional para a criação composta.",
-      "priority_justification": "P1 pela quantidade de entidades e pelo risco de estado persistente incompleto."
+      "workaround": "No workaround is required for the resolved condition.",
+      "direction": "Maintain the current PostgreSQL and retry regression proofs; reopen only if new current evidence demonstrates recurrence.",
+      "priority_justification": "P1 and HIGH are retained as historical classification metadata; RESOLVED is non-operational and non-release-blocking.",
+      "resolution": {
+        "date": "2026-09-14",
+        "base_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+        "change": "Introduced transactional PostgreSQL catalog mutations, persistent idempotency and stable retry intents for web and WhatsApp CREATE, UPDATE and DUPLICATE.",
+        "evidence": [
+          {
+            "path": "supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql",
+            "claim": "Transactional aggregate mutations and admin_event_operations ledger."
+          },
+          {
+            "path": "src/lib/tickets/services/adminEvents.ts",
+            "claim": "Application integration with catalog RPCs."
+          },
+          {
+            "path": "src/lib/tickets/router.ts",
+            "claim": "WhatsApp retry integration."
+          },
+          {
+            "path": "scripts/test-admin-event-atomic-mutations.mjs",
+            "claim": "Default Node regression proof."
+          },
+          {
+            "path": "scripts/test-admin-event-catalog-postgres.mjs",
+            "claim": "Real PostgreSQL rollback and idempotency proof."
+          },
+          {
+            "path": ".github/workflows/quality-gate.yml",
+            "claim": "Quality Gate runs the default and PostgreSQL suites."
+          }
+        ],
+        "gates": {
+          "default_node": "257/257 PASS",
+          "postgres16": "2/2 PASS",
+          "quality_gate": "34898804387 PASS",
+          "runtime_validation": "PASS",
+          "remote_validation": "PASS"
+        },
+        "historical_evidence": {
+          "title": "Criação de evento e catálogo inicial cruza entidades sem transação única",
+          "description": "In Baseline 2.4.4 the finding was POTENTIAL. Subsequent audit reproduced partial-state behavior: CREATE could leave a partial aggregate and retry could create a second aggregate; UPDATE exposed partial changes; DUPLICATE shared the same multi-step boundary. Transactional PostgreSQL boundaries and persistent idempotency were then introduced, including stable web and WhatsApp retry intents.",
+          "evidence": [
+            {
+              "path": "src/lib/tickets/services/adminEvents.ts",
+              "claim": "Serviço executa criação multi-entidade via aplicação."
+            },
+            {
+              "path": "system-knowledge/capabilities.json",
+              "claim": "event.create está PARCIAL."
+            },
+            {
+              "path": "system-knowledge/flows.json",
+              "claim": "admin.whatsapp_event_management documenta drafts/resíduos em falhas intermediárias."
+            },
+            {
+              "path": "supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql",
+              "claim": "Historical remediation introduced create_admin_event_catalog, update_admin_event_catalog and admin_event_operations."
+            },
+            {
+              "path": "scripts/test-admin-event-catalog-postgres.mjs",
+              "claim": "PostgreSQL audit reproduced failure boundaries and then proved rollback/idempotency."
+            }
+          ],
+          "impact": "Falha intermediária pode deixar rascunho ou inventário incompleto e exigir limpeza manual antes de tentar novamente.",
+          "workaround": "Operar/limpar o rascunho parcialmente criado de forma manual.",
+          "direction": "Definir uma fronteira transacional para a criação composta.",
+          "priority_justification": "P1 pela quantidade de entidades e pelo risco de estado persistente incompleto."
+        },
+        "current_evidence": [
+          {
+            "path": "supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql",
+            "claim": "Current atomic CREATE, UPDATE and DUPLICATE catalog functions and persistent operation ledger.",
+            "evidence_state": "CURRENT"
+          },
+          {
+            "path": "src/lib/tickets/services/adminEvents.ts",
+            "claim": "Current service routes aggregate mutations through the transactional RPC boundary.",
+            "evidence_state": "CURRENT"
+          },
+          {
+            "path": "src/lib/tickets/router.ts",
+            "claim": "Current WhatsApp retry path preserves the administrative operation intent.",
+            "evidence_state": "CURRENT"
+          },
+          {
+            "path": "scripts/test-admin-event-atomic-mutations.mjs",
+            "claim": "Current default-suite regression coverage proves web and WhatsApp retry contracts.",
+            "evidence_state": "CURRENT"
+          },
+          {
+            "path": "scripts/test-admin-event-catalog-postgres.mjs",
+            "claim": "PostgreSQL 16 integration proves rollback and persistent idempotency.",
+            "evidence_state": "CURRENT"
+          }
+        ]
+      },
+      "current_state": {
+        "lifecycle": "RESOLVED",
+        "operational_open": false,
+        "release_blocking": false,
+        "current_impact": "No current partial-state impact remains inside the proven administrative CREATE, UPDATE and DUPLICATE transaction scope.",
+        "workaround_required": false,
+        "top_level_claims": "CURRENT_RESOLUTION_ONLY",
+        "top_level_evidence": "CURRENT"
+      }
+    },
+    {
+      "id": "bug.admin-event-location-consistency",
+      "title": "RESOLVED — bug.admin-event-location-consistency",
+      "type": "DATA_INTEGRITY",
+      "severity": "HIGH",
+      "priority": "P1",
+      "status": "RESOLVED",
+      "confidence": "CONFIRMED",
+      "description": "Administrative location changes now preserve session venues when unchanged, reject unsafe multi-venue or mapped changes, and atomically update event and sessions for safe single-venue reassignment.",
+      "evidence": [
+        {
+          "path": "supabase/migrations/20260914000300_enforce_admin_event_location_consistency.sql",
+          "claim": "Current coherent venue/city/state policy and atomic event/session location update.",
+          "evidence_state": "CURRENT"
+        },
+        {
+          "path": "supabase/migrations/20260914000400_retire_legacy_admin_event_venue_rpc.sql",
+          "claim": "Legacy event-only venue RPC is absent from the final schema.",
+          "evidence_state": "CURRENT"
+        },
+        {
+          "path": "src/lib/tickets/effectiveVenue.ts",
+          "claim": "Current ticket readers prefer session venue where applicable.",
+          "evidence_state": "CURRENT"
+        },
+        {
+          "path": "scripts/test-admin-event-catalog-postgres.mjs",
+          "claim": "PostgreSQL audit proves location guards and zero final divergence fixtures.",
+          "evidence_state": "CURRENT"
+        }
+      ],
+      "impact": "The historical event/session and city/state inconsistency is not active in the proven administrative location scope.",
+      "domains": [
+        "domain.event-administration",
+        "domain.event-catalog",
+        "domain.ticketing-delivery"
+      ],
+      "modules": [
+        "event-admin.service",
+        "event-admin.api"
+      ],
+      "capabilities": [
+        "event.edit",
+        "event.inspect",
+        "ticket.view"
+      ],
+      "flows": [
+        "admin.web_event_workspace",
+        "admin.whatsapp_event_management",
+        "ticket.view"
+      ],
+      "tables": [
+        "events",
+        "event_sessions",
+        "venues",
+        "ticket_prices",
+        "session_seats",
+        "reservations",
+        "tickets"
+      ],
+      "functions": [
+        "update_admin_event_catalog",
+        "update_admin_event_location"
+      ],
+      "blast_radius": "MULTI_DOMAIN",
+      "workaround": "No workaround is required for the resolved condition.",
+      "direction": "Maintain location-consistency regression and remote audit proofs; reopen only if new current evidence demonstrates divergence.",
+      "priority_justification": "P1 and HIGH are retained as historical classification metadata; RESOLVED is non-operational and non-release-blocking.",
+      "resolution": {
+        "date": "2026-09-14",
+        "base_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+        "change": "Preserve per-session venues on non-location saves; block multi-venue and incompatible catalog/usage changes; atomically update event plus sessions for safe single-venue reassignment; retire the legacy event-only RPC.",
+        "evidence": [
+          {
+            "path": "supabase/migrations/20260914000300_enforce_admin_event_location_consistency.sql",
+            "claim": "Final transactional location contract."
+          },
+          {
+            "path": "supabase/migrations/20260914000400_retire_legacy_admin_event_venue_rpc.sql",
+            "claim": "Legacy bypass removed."
+          },
+          {
+            "path": "src/lib/tickets/adminEventLocation.ts",
+            "claim": "Coherent application location policy."
+          },
+          {
+            "path": "src/lib/tickets/effectiveVenue.ts",
+            "claim": "Session-first effective venue reader."
+          },
+          {
+            "path": "scripts/test-admin-event-catalog-postgres.mjs",
+            "claim": "Remote audit: 0 event/session venue divergences, 0 city/state divergences and legacy RPC absent."
+          }
+        ],
+        "gates": {
+          "default_node": "257/257 PASS",
+          "postgres16": "2/2 PASS",
+          "quality_gate": "34898804387 PASS",
+          "final_joint_audit": "PASS"
+        },
+        "historical_evidence": {
+          "title": "Administrative event and session locations could diverge",
+          "description": "events.venue_id and event_sessions.venue_id could diverge while the public read side preferred the session venue. An administrative save could collapse multi-venue semantics, and venue/city/state were not one coherent unit. The first venue-specific RPC still permitted an event-only bypass; that legacy bypass was later removed.",
+          "evidence": [
+            {
+              "path": "supabase/migrations/20260914000200_create_update_admin_event_venue_rpc.sql",
+              "claim": "Historical venue RPC updated only events.venue_id."
+            },
+            {
+              "path": "src/lib/tickets/services/adminEvents.ts",
+              "claim": "Historical administrative save coordinated location fields."
+            },
+            {
+              "path": "src/lib/tickets/services/adminTickets.ts",
+              "claim": "Ticket-side venue resolution required explicit session-first semantics."
+            }
+          ],
+          "impact": "An administrative change could expose mutually inconsistent event, session, venue, city and state values to readers and sales flows.",
+          "workaround": "Manual reconciliation was required before the final atomic contract.",
+          "direction": "Treat venue, city and state as a coherent unit and remove every event-only mutation bypass.",
+          "priority_justification": "P1 because the reproduced defect could expose inconsistent sellable event data across administrative and public flows."
+        },
+        "current_evidence": [
+          {
+            "path": "supabase/migrations/20260914000300_enforce_admin_event_location_consistency.sql",
+            "claim": "Current coherent venue/city/state policy and atomic event/session location update.",
+            "evidence_state": "CURRENT"
+          },
+          {
+            "path": "supabase/migrations/20260914000400_retire_legacy_admin_event_venue_rpc.sql",
+            "claim": "Legacy event-only venue RPC is absent from the final schema.",
+            "evidence_state": "CURRENT"
+          },
+          {
+            "path": "src/lib/tickets/effectiveVenue.ts",
+            "claim": "Current ticket readers prefer session venue where applicable.",
+            "evidence_state": "CURRENT"
+          },
+          {
+            "path": "scripts/test-admin-event-catalog-postgres.mjs",
+            "claim": "PostgreSQL audit proves location guards and zero final divergence fixtures.",
+            "evidence_state": "CURRENT"
+          }
+        ]
+      },
+      "current_state": {
+        "lifecycle": "RESOLVED",
+        "operational_open": false,
+        "release_blocking": false,
+        "current_impact": "No current location inconsistency remains in the proven administrative and remote-audit scope.",
+        "workaround_required": false,
+        "top_level_claims": "CURRENT_RESOLUTION_ONLY",
+        "top_level_evidence": "CURRENT"
+      }
     },
     {
       "id": "risk.combo-metadata-read-modify-write-race",

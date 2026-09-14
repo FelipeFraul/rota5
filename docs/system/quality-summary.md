@@ -1,4 +1,8 @@
-> **Current Baseline 2.4.4 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on canonical source `67845326088eac47452224b00ef1e866036e86f1` (fingerprint `df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0`, 368 files, 79 migrations). Findings `bug.event-duplicate-artist-leak` and `bug.user-visible-text-corruption` are **RESOLVED** as stale. `gap.partial-flows-lack-end-to-end-proof` remains **ACTIVE**, decomposed from P1 to P2; no specific P1 was justified. Canonical release blockers: **0**. Metrics: ACTIVE HIGH 0, POTENTIAL HIGH 1, OPEN HIGH 1, RESOLVED 11. PRODUCT_HEALTH: **DEGRADED**; INFRASTRUCTURE_HEALTH: **DEGRADED**. Quality evidence remains 236/236, PostgreSQL 1/1 and Quality Gate 34867214724 PASS. Production remains `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` on `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; no deployment, Supabase change or Ticketeira access.
+> **Current Baseline 2.5.0 (2026-09-14):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on repository source `e931d66d03a620d5e26588c8f6c8714c62ef5d1d` (fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`, 379 files, 83 migrations). Atomicity and admin location consistency are **RESOLVED**. Findings: 45 total, 13 RESOLVED, 21 ACTIVE, 6 POTENTIAL, 5 NOT_VALIDATED; release blockers: 0. PRODUCT_HEALTH and INFRASTRUCTURE_HEALTH: **DEGRADED**. Quality: 257/257 Node, 2/2 PostgreSQL 16, Quality Gate 34898804387 PASS. Production `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` runs application source `148b8200a44f4eeb49e004af45060a302bac9f20`; later migration/test-only commits create expected non-runtime drift. No deployment or remote mutation occurred during this freeze.
+
+## Baseline 2.5.0 current quality state
+
+Default Node: **257/257 PASS** (0 fail, 0 skip, 0 todo). Separate PostgreSQL 16 integration: **2/2 PASS**. Quality Gate **34898804387 PASS** on `e931d66d03a620d5e26588c8f6c8714c62ef5d1d`. These are separate suites and must not be reported as 259/259.
 
 # Resumo de qualidade
 
@@ -33,10 +37,10 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 
 Não houve pentest, carga destrutiva, pagamento, WhatsApp, cron, mutação de banco, alteração Vercel, deploy, commit ou push. Internals remotos do PostgreSQL e registros remotos de webhook continuam NOT_VALIDATED.
 
-## Estado canônico atual — Baseline 2.4.4
+## Estado canônico atual — Baseline 2.5.0
 
-- Findings por prioridade, derivados dos 44 registros: P0 3, P1 10, P2 20, P3 9, P4 2.
-- As somas por type, severity, priority e status são 44; registros desconhecidos ou não contabilizados: 0.
+- Findings por prioridade, derivados dos 45 registros: P0 3, P1 11, P2 20, P3 9, P4 2.
+- As somas por type, severity, priority e status são 45; registros desconhecidos ou não contabilizados: 0.
 - Os invariantes de agregação são obrigatórios para `SEMANTIC_AUDIT: PASS`.
 
-A identidade de infraestrutura permanece correta e não há P0 ou HIGH ACTIVE. Restam 1 HIGH POTENTIAL e 1 HIGH operacionalmente aberto. A suíte padrão está verde em 236/236 e o Quality Gate 34867214724 passou; PRODUCT_HEALTH is DEGRADED: release blockers are zero, while one POTENTIAL HIGH and other open risks remain.
+A identidade de infraestrutura permanece correta e não há P0 ou HIGH ACTIVE/POTENTIAL. A suíte padrão está verde em 257/257, a integração PostgreSQL em 2/2 e o Quality Gate 34898804387 passou; PRODUCT_HEALTH permanece DEGRADED porque outros riscos operacionais e itens NOT_VALIDATED continuam abertos.

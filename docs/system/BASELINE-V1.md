@@ -1,21 +1,21 @@
-> **Current Baseline 2.4.4 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on canonical source `67845326088eac47452224b00ef1e866036e86f1` (fingerprint `df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0`, 368 files, 79 migrations). Findings `bug.event-duplicate-artist-leak` and `bug.user-visible-text-corruption` are **RESOLVED** as stale. `gap.partial-flows-lack-end-to-end-proof` remains **ACTIVE**, decomposed from P1 to P2; no specific P1 was justified. Canonical release blockers: **0**. Metrics: ACTIVE HIGH 0, POTENTIAL HIGH 1, OPEN HIGH 1, RESOLVED 11. PRODUCT_HEALTH: **DEGRADED**; INFRASTRUCTURE_HEALTH: **DEGRADED**. Quality evidence remains 236/236, PostgreSQL 1/1 and Quality Gate 34867214724 PASS. Production remains `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` on `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; no deployment, Supabase change or Ticketeira access.
+> **Current Baseline 2.5.0 (2026-09-14):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on repository source `e931d66d03a620d5e26588c8f6c8714c62ef5d1d` (fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`, 379 files, 83 migrations). Atomicity and admin location consistency are **RESOLVED**. Findings: 45 total, 13 RESOLVED, 21 ACTIVE, 6 POTENTIAL, 5 NOT_VALIDATED; release blockers: 0. PRODUCT_HEALTH and INFRASTRUCTURE_HEALTH: **DEGRADED**. Quality: 257/257 Node, 2/2 PostgreSQL 16, Quality Gate 34898804387 PASS. Production `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` runs application source `148b8200a44f4eeb49e004af45060a302bac9f20`; later migration/test-only commits create expected non-runtime drift. No deployment or remote mutation occurred during this freeze.
 
 # Rota5 Baseline V1
 
-**Identity:** `rota5-baseline-v1`, version **2.4.4**, status **FROZEN**. Its canonical functional source is pure commit `67845326088eac47452224b00ef1e866036e86f1`, with 368 files and fingerprint `df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0`. The baseline commit is `SELF_NOT_RECORDED` to avoid self-reference.
+**Identity:** `rota5-baseline-v1`, version **2.5.0**, status **FROZEN**. Repository source is pure commit `e931d66d03a620d5e26588c8f6c8714c62ef5d1d`, with 379 files and fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`. The baseline commit is `SELF_NOT_RECORDED` to avoid self-reference.
 
-Rota5 is a Next.js application backed by Supabase/PostgreSQL. The canonical catalog contains 17 domains, 66 modules, 56 entrypoints, 140 capabilities, 34 flows, 169 steps and 68 state transitions. The data catalog contains 44 tables, 79 active migrations, 39 local SQL functions, 36 triggers and 2,257 typed relations.
+Rota5 is a Next.js application backed by Supabase/PostgreSQL. The canonical catalog contains 17 domains, 66 modules, 56 entrypoints, 140 capabilities, 34 flows, 169 steps and 68 state transitions. The data catalog contains 45 tables, 83 migrations, 44 SQL functions, 36 triggers and 2,257 currently catalogued typed relations.
 
 ## PRODUCT HEALTH AT FREEZE
 
-**DEGRADED.** Baseline integrity is PASS and the canonical release-blocker set is empty, while one POTENTIAL HIGH and other independent findings remain open.
+**DEGRADED.** Baseline integrity is PASS and the canonical release-blocker set is empty, while independent operational and validation-queue findings remain open.
 
-- Findings: 44; active P0: 0; active HIGH: 0; potential HIGH: 1; open HIGH: 1; resolved: 11; release blockers: 0.
+- Findings: 45; active P0: 0; active HIGH: 0; potential HIGH: 0; open HIGH: 0; resolved: 13; release blockers: 0.
 - Broken flows: 0; partial flows: 9.
-- Default node suite: 236/236 PASS; PostgreSQL integration: 1/1 PASS on PostgreSQL 16 with the real trigger executed; Quality Gate 34867214724 PASS; typecheck, lint and build PASS; 0 skip, 0 todo and 0 regressions.
+- Default Node suite: 257/257 PASS; separate PostgreSQL 16 integration: 2/2 PASS; Quality Gate 34898804387 PASS; 0 skip, 0 todo and 0 regressions.
 - Infrastructure health: **DEGRADED** because independent findings remain open. Git auto-deploy is DISABLED.
 
-## HIGH #1 FINAL STATE
+## HISTORICAL HIGH #1 FINAL STATE — BASELINE 2.0.0
 
 - `risk.gate-credential-revocation-does-not-revoke-session`: **RESOLVED / HIGH / P1**.
 - EXPAND and CONTRACT: `APPLIED_AND_VALIDATED`; CONTRACT applied at `2026-09-13T18:11:18.773635Z` with SHA-256 `bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525`.
@@ -52,4 +52,4 @@ PATCH_DOCUMENTARY_CORRECTION. A auditoria explícita partiu de 109 projeções/m
 
 ## Universal RESOLVED semantics — Baseline 2.4.4
 
-All 11 findings derived with `status=RESOLVED` now use one mandatory contract: top-level fields describe only current state; every top-level evidence entry carries `evidence_state=CURRENT`; `current_state` is closed, non-operational and non-release-blocking; and the complete former top-level snapshot is retained under `resolution.historical_evidence`. The validator rejects any resolved record that violates this structure or repeats its historical claims as current. No lifecycle, severity, priority or runtime source changed.
+All 13 findings derived with `status=RESOLVED` now use one mandatory contract: top-level fields describe only current state; every top-level evidence entry carries `evidence_state=CURRENT`; `current_state` is closed, non-operational and non-release-blocking; and the complete former top-level snapshot is retained under `resolution.historical_evidence`. The validator rejects any resolved record that violates this structure or repeats its historical claims as current. No lifecycle, severity, priority or runtime source changed.

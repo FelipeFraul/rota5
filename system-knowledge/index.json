@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T17:43:51.677Z",
-  "stage": "2.4.4",
+  "generatedAt": "2026-09-14T22:14:45.242Z",
+  "stage": "2.5.0",
   "id": "rota5-machine-catalog-index",
   "baseline_id": "rota5-baseline-v1",
-  "count": 43,
+  "count": 44,
   "records": [
     {
       "id": "catalog.architecture",
@@ -491,6 +491,22 @@
       "generated_by_stage": 8,
       "status": "FROZEN",
       "last_validated_at": "2026-09-12T13:36:12.110Z"
+    },
+    {
+      "id": "catalog.stabilization-history",
+      "path": "system-knowledge/stabilization-history.json",
+      "purpose": "Canonical structured history of the 2026-09-12 through 2026-09-14 stabilization cycle.",
+      "category": "GOVERNANCE",
+      "canonical": true,
+      "entities": 15,
+      "depends_on": [
+        "system-knowledge/changelog.json",
+        "system-knowledge/findings.json",
+        "system-knowledge/runtime-validation.json"
+      ],
+      "generated_by_stage": 8,
+      "status": "FROZEN",
+      "last_validated_at": "2026-09-14T22:14:45.242Z"
     },
     {
       "id": "catalog.state-transitions",

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T17:43:51.677Z",
-  "stage": "2.4.4",
+  "generatedAt": "2026-09-14T22:14:45.242Z",
+  "stage": "2.5.0",
   "globalConfidence": "HIGH",
   "count": 10,
   "records": [
@@ -57,7 +57,7 @@
     {
       "area": "TESTS",
       "status": "MEDIUM_CONFIDENCE",
-      "justification": "51 testes estão catalogados e a suíte padrão corrente foi reexecutada: 236/236, com 0 skip, 0 todo e 0 regressões.",
+      "justification": "53 test artifacts are catalogued; the current default suite passes 257/257 and PostgreSQL integration passes 2/2.",
       "missingEvidence": "36 arquivos de teste ficam fora do comando padrão; testes reais mutáveis exigem ambiente isolado.",
       "higherConfidenceRequires": "Ambiente isolado para a suíte ampliada e testes reais."
     },
@@ -75,5 +75,11 @@
       "missingEvidence": "Execuções mutáveis, cron/webhook history e logs completos.",
       "higherConfidenceRequires": "Observação read-only adicional ou ambiente isolado."
     }
-  ]
+  ],
+  "baseline_2_5_0": {
+    "status": "PASS",
+    "atomicity": "RESOLVED",
+    "admin_location_consistency": "RESOLVED",
+    "history_artifacts": 2
+  }
 }

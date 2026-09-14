@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T17:43:51.677Z",
-  "stage": "2.4.4",
+  "generatedAt": "2026-09-14T22:14:45.242Z",
+  "stage": "2.5.0",
   "id": "rota5-self-reading-v1",
   "baseline_id": "rota5-baseline-v1",
   "bootstrap_files": [
@@ -48,7 +48,8 @@
     "system-knowledge/contradictions.json",
     "system-knowledge/unresolved-evidence.json",
     "system-knowledge/completeness.json",
-    "system-knowledge/coverage.json"
+    "system-knowledge/coverage.json",
+    "system-knowledge/stabilization-history.json"
   ],
   "source_precedence": [
     {
@@ -202,6 +203,15 @@
       ],
       "method": "Não confunda integridade da baseline com saúde do produto.",
       "product_health_update": "HIGH #1 is RESOLVED after EXPAND, NEW_APP, gates A-I, CONTRACT and strict runtime passed. Product health remains BROKEN because independent findings remain open."
+    },
+    "STABILIZATION_HISTORY": {
+      "catalogs": [
+        "stabilization-history.json",
+        "changelog.json",
+        "findings.json",
+        "runtime-validation.json"
+      ],
+      "method": "Use structured milestone IDs and follow versioned source, migration, gate and deployment evidence."
     }
   },
   "validation_rules": [
@@ -346,5 +356,9 @@
     "new_deployment": false,
     "supabase": "UNCHANGED",
     "ticketeira": "UNTOUCHED"
+  },
+  "baseline_2_5_0": {
+    "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+    "history": "system-knowledge/stabilization-history.json"
   }
 }

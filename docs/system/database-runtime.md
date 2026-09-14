@@ -1,5 +1,9 @@
 # Baseline 2.0.1 HIGH #1 final database runtime
 
+## Baseline 2.5.0 database state
+
+Canonical local/validated state: 83 migrations, 45 tables, 44 SQL functions and 36 triggers. `admin_event_operations` is present. Current administrative RPCs are `create_admin_event_catalog`, `update_admin_event_catalog` and `update_admin_event_location`; historical `update_admin_event_venue` is absent after migration 004.
+
 EXPAND and CONTRACT are APPLIED_AND_VALIDATED. Remote history ends at `20260913000100_gate_credential_session_revocation_contract` with no pending migration. FINAL_DB is strict-only; `source_kind` is NOT NULL and immutable. OLD_APP is incompatible by design and is not a safe rollback target.
 
 The rollout draft is preserved as historical source. The active migration `supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql` is APPLIED_AND_VALIDATED; migration history is complete with zero pending migrations.

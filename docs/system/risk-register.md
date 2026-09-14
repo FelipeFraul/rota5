@@ -1,4 +1,4 @@
-> **Current Baseline 2.4.4 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on canonical source `67845326088eac47452224b00ef1e866036e86f1` (fingerprint `df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0`, 368 files, 79 migrations). Findings `bug.event-duplicate-artist-leak` and `bug.user-visible-text-corruption` are **RESOLVED** as stale. `gap.partial-flows-lack-end-to-end-proof` remains **ACTIVE**, decomposed from P1 to P2; no specific P1 was justified. Canonical release blockers: **0**. Metrics: ACTIVE HIGH 0, POTENTIAL HIGH 1, OPEN HIGH 1, RESOLVED 11. PRODUCT_HEALTH: **DEGRADED**; INFRASTRUCTURE_HEALTH: **DEGRADED**. Quality evidence remains 236/236, PostgreSQL 1/1 and Quality Gate 34867214724 PASS. Production remains `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` on `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; no deployment, Supabase change or Ticketeira access.
+> **Current Baseline 2.5.0 (2026-09-14):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on repository source `e931d66d03a620d5e26588c8f6c8714c62ef5d1d` (fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`, 379 files, 83 migrations). Atomicity and admin location consistency are **RESOLVED**. Findings: 45 total, 13 RESOLVED, 21 ACTIVE, 6 POTENTIAL, 5 NOT_VALIDATED; release blockers: 0. PRODUCT_HEALTH and INFRASTRUCTURE_HEALTH: **DEGRADED**. Quality: 257/257 Node, 2/2 PostgreSQL 16, Quality Gate 34898804387 PASS. Production `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` runs application source `148b8200a44f4eeb49e004af45060a302bac9f20`; later migration/test-only commits create expected non-runtime drift. No deployment or remote mutation occurred during this freeze.
 
 # Baseline 2.0.1 HIGH #1 final state
 
@@ -27,7 +27,8 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 | bug.user-visible-text-corruption | BUG | MEDIUM | P1 | RESOLVED | CONFIRMED | RESOLVED — scoped text/help regression proof is green |
 | legacy.active-brand-contamination | LEGACY | HIGH | P1 | RESOLVED | CONFIRMED | Scoped active-brand surfaces corrected and runtime-validated |
 | risk.gate-credential-revocation-does-not-revoke-session | AUTHORIZATION | HIGH | P1 | RESOLVED | CONFIRMED | Source attribution and strict credential/session authorization completed |
-| risk.admin-event-multistep-partial-state | DATA_INTEGRITY | HIGH | P1 | POTENTIAL | HIGH | Criação de evento e catálogo inicial cruza entidades sem transação única |
+| risk.admin-event-multistep-partial-state | DATA_INTEGRITY | HIGH | P1 | RESOLVED | CONFIRMED | RESOLVED — transactional administrative event mutations |
+| bug.admin-event-location-consistency | DATA_INTEGRITY | HIGH | P1 | RESOLVED | CONFIRMED | RESOLVED — coherent admin event/session location |
 | risk.combo-metadata-read-modify-write-race | CONCURRENCY | MEDIUM | P2 | POTENTIAL | HIGH | Atualizações concorrentes podem sobrescrever metadados do combo |
 | risk.github-issue-create-replay | IDEMPOTENCY | MEDIUM | P2 | POTENTIAL | HIGH | Criação de issue não possui chave de idempotência |
 | risk.rate-limit-fails-open | SECURITY | MEDIUM | P2 | ACTIVE | CONFIRMED | Falha do rate limiter libera a requisição |
@@ -141,18 +142,22 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 - Compatibility boundary: OLD_APP + FINAL_DB is `INCOMPATIBLE_BY_DESIGN`; OLD_APP rollback is unsafe.
 - Evidence: `system-knowledge/findings.json`, `system-knowledge/runtime-validation.json` and the active CONTRACT migration.
 
-### risk.admin-event-multistep-partial-state — Criação de evento e catálogo inicial cruza entidades sem transação única
+### risk.admin-event-multistep-partial-state — RESOLVED
 
-- Tipo / severidade / prioridade: **DATA_INTEGRITY / HIGH / P1**
-- Status / confiança: **POTENTIAL / HIGH**
-- Problema: createAdminEvent coordena evento, local, sessão, setor, assentos, preços e mapa por chamadas Supabase sequenciais; o catálogo marca event.create como PARCIAL e registra possibilidade de resíduos.
-- Evidência: `src/lib/tickets/services/adminEvents.ts` — Serviço executa criação multi-entidade via aplicação.; `system-knowledge/capabilities.json` — event.create está PARCIAL.; `system-knowledge/flows.json` — admin.whatsapp_event_management documenta drafts/resíduos em falhas intermediárias.
-- Impacto: Falha intermediária pode deixar rascunho ou inventário incompleto e exigir limpeza manual antes de tentar novamente.
-- Escopo: domains domain.event-administration, domain.reservation-inventory; capabilities event.create, event.session_create, event.section_create, event.seats_create, event.price_create; flows admin.whatsapp_event_management, admin.web_event_workspace.
-- Blast radius: **MULTI_DOMAIN**
-- Workaround: Operar/limpar o rascunho parcialmente criado de forma manual.
-- Direção: Definir uma fronteira transacional para a criação composta.
-- Justificativa da prioridade: P1 pela quantidade de entidades e pelo risco de estado persistente incompleto.
+- Type / severity / priority: **DATA_INTEGRITY / HIGH / P1** (severity and priority retained as history).
+- Status / confidence: **RESOLVED / CONFIRMED**.
+- Current state: CREATE, UPDATE and DUPLICATE execute through transactional PostgreSQL catalog functions with persistent idempotency; web and WhatsApp retries preserve stable operation intent.
+- Current evidence: `20260914000100_create_admin_event_catalog_rpcs.sql`, `adminEvents.ts`, `router.ts`, `test-admin-event-atomic-mutations.mjs`, `test-admin-event-catalog-postgres.mjs` and Quality Gate 34898804387.
+- Current impact: historical partial-state impact is no longer active in the proven scope; no workaround is required.
+- History: Baseline 2.4.4 classified the finding as POTENTIAL; later audit reproduced partial CREATE/UPDATE/DUPLICATE state and duplicate retry behavior before the transactional remediation. Full history is under `resolution.historical_evidence` in `system-knowledge/findings.json`.
+
+### bug.admin-event-location-consistency — RESOLVED
+
+- Type / severity / priority: **DATA_INTEGRITY / HIGH / P1**.
+- Status / confidence: **RESOLVED / CONFIRMED**.
+- Current state: non-location saves preserve session venues; unsafe multi-venue or mapped changes are blocked; safe single-venue changes update event plus sessions atomically; venue/city/state follow one policy; ticket readers prefer session venue; legacy `update_admin_event_venue` is absent.
+- Current evidence: migrations `20260914000300_enforce_admin_event_location_consistency.sql` and `20260914000400_retire_legacy_admin_event_venue_rpc.sql`, session-first reader code, PostgreSQL integration and final remote audit with zero divergences.
+- Historical evidence, including the superseded migration 002 bypass, is preserved under `resolution.historical_evidence`.
 
 ### risk.combo-metadata-read-modify-write-race — Atualizações concorrentes podem sobrescrever metadados do combo
 

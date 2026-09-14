@@ -1,17 +1,17 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-14T17:43:51.677Z",
-  "stage": "2.4.4",
-  "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
+  "generatedAt": "2026-09-14T22:14:45.242Z",
+  "stage": "2.5.0",
+  "sourceCommit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
   "counts": {
-    "tables": 44,
-    "migrations": 79,
-    "functions": 39,
+    "tables": 45,
+    "migrations": 83,
+    "functions": 44,
     "triggers": 36,
     "indexes": 157,
     "rls_enabled": 44,
     "policies": 0,
-    "function_table_accesses": 160
+    "function_table_accesses": 194
   },
   "tables": [
     "table.admin_auth_attempts",
@@ -57,7 +57,147 @@
     "table.whatsapp_message_batch_messages",
     "table.whatsapp_message_batches",
     "table.whatsapp_messages",
-    "table.whatsapp_outbound_deliveries"
+    "table.whatsapp_outbound_deliveries",
+    {
+      "id": "table.admin_event_operations",
+      "name": "admin_event_operations",
+      "domain": "domain.event-administration",
+      "purpose": "Persistent idempotency ledger for atomic administrative event mutations.",
+      "entity": "admin_event_operation",
+      "columns": [
+        {
+          "name": "operation_id",
+          "type": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "operation_type",
+          "type": "text",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "payload_hash",
+          "type": "text",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "result_event_id",
+          "type": "uuid",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "result",
+          "type": "jsonb",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "nullable": false,
+          "default": "'pending'"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "completed_at",
+          "type": "timestamptz",
+          "nullable": true,
+          "default": null
+        }
+      ],
+      "primary_key": [
+        {
+          "name": "admin_event_operations_pkey",
+          "type": "PRIMARY_KEY",
+          "definition": "operation_id uuid primary key"
+        }
+      ],
+      "foreign_keys": [
+        {
+          "name": "admin_event_operations_result_event_id_fkey",
+          "type": "FOREIGN_KEY",
+          "columns": [
+            "result_event_id"
+          ],
+          "references_table": "events",
+          "references_columns": [
+            "id"
+          ],
+          "definition": "result_event_id uuid references public.events(id)"
+        }
+      ],
+      "unique_constraints": [],
+      "check_constraints": [
+        {
+          "name": "admin_event_operations_type_check",
+          "type": "CHECK",
+          "definition": "operation_type in ('create','duplicate','update','venue_update','location_update')"
+        },
+        {
+          "name": "admin_event_operations_status_check",
+          "type": "CHECK",
+          "definition": "status in ('pending','completed')"
+        }
+      ],
+      "indexes": [],
+      "rls": {
+        "local_enabled": false,
+        "remote_status": "REMOTE_VALIDATED"
+      },
+      "policies": {
+        "local_count": 0,
+        "remote_status": "REMOTE_VALIDATED"
+      },
+      "grants": {
+        "local": [
+          "service_role select, insert, update"
+        ],
+        "revokes": [
+          "public",
+          "anon",
+          "authenticated"
+        ],
+        "remote_status": "REMOTE_VALIDATED"
+      },
+      "triggers": [],
+      "functions": [
+        "function.create_admin_event_catalog",
+        "function.update_admin_event_catalog",
+        "function.update_admin_event_location"
+      ],
+      "modules": [
+        "event-admin.service"
+      ],
+      "capabilities": [
+        "event.create",
+        "event.edit",
+        "event.duplicate"
+      ],
+      "flows": [
+        "admin.web_event_workspace",
+        "admin.whatsapp_event_management"
+      ],
+      "state_transitions": [],
+      "status_local": "LOCAL_DECLARED",
+      "status_remote": "REMOTE_SCHEMA",
+      "consistency": "MATCH",
+      "evidence": [
+        "supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql",
+        {
+          "source": "remote final audit",
+          "type": "REMOTE_SCHEMA"
+        }
+      ]
+    }
   ],
   "functions": [
     {
@@ -1744,6 +1884,353 @@
       "table_operations": [],
       "remote_status": "APPLIED_AND_VALIDATED",
       "remote_evidence": "POST_CONTRACT_RUNTIME_VALIDATED"
+    },
+    {
+      "id": "function.create_admin_event_catalog",
+      "name": "create_admin_event_catalog",
+      "domain": "domain.event-administration",
+      "tables": [
+        "admin_event_operations",
+        "events",
+        "venues",
+        "event_sessions",
+        "venue_sections",
+        "seats",
+        "session_seats",
+        "ticket_prices"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_REMOTE_VALIDATED",
+      "evidence": [
+        "supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql",
+        "supabase/migrations/20260914000300_enforce_admin_event_location_consistency.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "admin_event_operations",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "events",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "venues",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "event_sessions",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "venue_sections",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "seats",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "session_seats",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "ticket_prices",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ],
+      "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
+      "id": "function.update_admin_event_catalog_legacy",
+      "name": "update_admin_event_catalog_legacy",
+      "domain": "domain.event-administration",
+      "tables": [
+        "admin_event_operations",
+        "events",
+        "venues",
+        "event_sessions",
+        "venue_sections",
+        "seats",
+        "session_seats",
+        "ticket_prices",
+        "courtesy_section_limits",
+        "reservations",
+        "tickets"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_REMOTE_VALIDATED",
+      "evidence": [
+        "supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql",
+        "supabase/migrations/20260914000300_enforce_admin_event_location_consistency.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "admin_event_operations",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "events",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "venues",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "event_sessions",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "venue_sections",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "seats",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "session_seats",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "ticket_prices",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "courtesy_section_limits",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "reservations",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "tickets",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ],
+      "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
+      "id": "function.admin_event_location_block_reason",
+      "name": "admin_event_location_block_reason",
+      "domain": "domain.event-administration",
+      "tables": [
+        "events",
+        "event_sessions",
+        "ticket_prices",
+        "session_seats",
+        "courtesy_section_limits",
+        "reservations",
+        "tickets"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_REMOTE_VALIDATED",
+      "evidence": [
+        "supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql",
+        "supabase/migrations/20260914000300_enforce_admin_event_location_consistency.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "events",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "event_sessions",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "ticket_prices",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "session_seats",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "courtesy_section_limits",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "reservations",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "tickets",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ],
+      "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
+      "id": "function.update_admin_event_catalog",
+      "name": "update_admin_event_catalog",
+      "domain": "domain.event-administration",
+      "tables": [
+        "events",
+        "venues",
+        "event_sessions",
+        "admin_event_operations"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_REMOTE_VALIDATED",
+      "evidence": [
+        "supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql",
+        "supabase/migrations/20260914000300_enforce_admin_event_location_consistency.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "events",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "venues",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "event_sessions",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "admin_event_operations",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ],
+      "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
+      "id": "function.update_admin_event_location",
+      "name": "update_admin_event_location",
+      "domain": "domain.event-administration",
+      "tables": [
+        "admin_event_operations",
+        "events",
+        "venues",
+        "event_sessions"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_REMOTE_VALIDATED",
+      "evidence": [
+        "supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql",
+        "supabase/migrations/20260914000300_enforce_admin_event_location_consistency.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "admin_event_operations",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "events",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "venues",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "event_sessions",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ],
+      "remote_status": "APPLIED_AND_VALIDATED"
     }
   ],
   "triggers": [
@@ -6047,6 +6534,101 @@
       "evidence_source": "REMOTE_MIGRATION_HISTORY_AND_RUNTIME",
       "applied_at": "2026-09-13T18:11:18.773635Z",
       "sha256": "bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525"
+    },
+    {
+      "id": "migration.20260914000100_create_admin_event_catalog_rpcs",
+      "timestamp": "20260914000100",
+      "name": "20260914000100_create_admin_event_catalog_rpcs.sql",
+      "path": "supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql",
+      "purpose": "create admin event catalog rpcs",
+      "creates": [
+        "table:admin_event_operations",
+        "function:create_admin_event_catalog",
+        "function:update_admin_event_catalog"
+      ],
+      "alters": [],
+      "drops": [],
+      "depends_on": "migration.20260913000100_gate_credential_session_revocation_contract",
+      "reversal": "MANUAL_ONLY_NO_DOWN_MIGRATION",
+      "functional_impact": [
+        "admin_event_operations",
+        "create_admin_event_catalog",
+        "update_admin_event_catalog"
+      ],
+      "status_local": "LOCAL_DECLARED",
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "evidence_source": "REMOTE_MIGRATION_HISTORY_AND_RUNTIME"
+    },
+    {
+      "id": "migration.20260914000200_create_update_admin_event_venue_rpc",
+      "timestamp": "20260914000200",
+      "name": "20260914000200_create_update_admin_event_venue_rpc.sql",
+      "path": "supabase/migrations/20260914000200_create_update_admin_event_venue_rpc.sql",
+      "purpose": "create update admin event venue rpc",
+      "creates": [
+        "function:update_admin_event_venue"
+      ],
+      "alters": [
+        "table:admin_event_operations"
+      ],
+      "drops": [],
+      "depends_on": "migration.20260914000100_create_admin_event_catalog_rpcs",
+      "reversal": "MANUAL_ONLY_NO_DOWN_MIGRATION",
+      "functional_impact": [
+        "update_admin_event_venue",
+        "admin_event_operations"
+      ],
+      "status_local": "LOCAL_DECLARED",
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "evidence_source": "REMOTE_MIGRATION_HISTORY_AND_RUNTIME"
+    },
+    {
+      "id": "migration.20260914000300_enforce_admin_event_location_consistency",
+      "timestamp": "20260914000300",
+      "name": "20260914000300_enforce_admin_event_location_consistency.sql",
+      "path": "supabase/migrations/20260914000300_enforce_admin_event_location_consistency.sql",
+      "purpose": "enforce admin event location consistency",
+      "creates": [
+        "function:admin_event_location_block_reason",
+        "function:update_admin_event_catalog",
+        "function:update_admin_event_location"
+      ],
+      "alters": [
+        "function:update_admin_event_catalog",
+        "table:admin_event_operations"
+      ],
+      "drops": [],
+      "depends_on": "migration.20260914000200_create_update_admin_event_venue_rpc",
+      "reversal": "MANUAL_ONLY_NO_DOWN_MIGRATION",
+      "functional_impact": [
+        "admin_event_location_block_reason",
+        "update_admin_event_catalog",
+        "update_admin_event_location",
+        "admin_event_operations"
+      ],
+      "status_local": "LOCAL_DECLARED",
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "evidence_source": "REMOTE_MIGRATION_HISTORY_AND_RUNTIME"
+    },
+    {
+      "id": "migration.20260914000400_retire_legacy_admin_event_venue_rpc",
+      "timestamp": "20260914000400",
+      "name": "20260914000400_retire_legacy_admin_event_venue_rpc.sql",
+      "path": "supabase/migrations/20260914000400_retire_legacy_admin_event_venue_rpc.sql",
+      "purpose": "retire legacy admin event venue rpc",
+      "creates": [],
+      "alters": [],
+      "drops": [
+        "function:update_admin_event_venue"
+      ],
+      "depends_on": "migration.20260914000300_enforce_admin_event_location_consistency",
+      "reversal": "MANUAL_ONLY_NO_DOWN_MIGRATION",
+      "functional_impact": [
+        "update_admin_event_venue"
+      ],
+      "status_local": "LOCAL_DECLARED",
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "evidence_source": "REMOTE_MIGRATION_HISTORY_AND_RUNTIME"
     }
   ],
   "extensions": [
@@ -6132,7 +6714,18 @@
       "source_null_total": 0,
       "ticket_auth": "STRICT_ONLY",
       "combo_auth": "STRICT_ONLY"
-    }
+    },
+    "status": "VALIDATED_FINAL_STATE",
+    "events": 7,
+    "sessions": 7,
+    "event_session_venue_divergences": 0,
+    "event_venue_city_state_divergences": 0,
+    "legacy_update_admin_event_venue": "ABSENT",
+    "current_rpcs": [
+      "public.create_admin_event_catalog",
+      "public.update_admin_event_catalog",
+      "public.update_admin_event_location"
+    ]
   },
   "migration_analysis": {
     "ordering": "Ordem lexicográfica dos 79 nomes timestampados.",
@@ -6490,5 +7083,14 @@
     "new_deployment": false,
     "supabase": "UNCHANGED",
     "ticketeira": "UNTOUCHED"
+  },
+  "baseline_2_5_0": {
+    "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+    "migrations": 83,
+    "tables": 45,
+    "functions": 44,
+    "triggers": 36,
+    "admin_event_operations": "PRESENT",
+    "legacy_update_admin_event_venue": "ABSENT"
   }
 }

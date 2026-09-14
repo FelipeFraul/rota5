@@ -1,0 +1,285 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-14T22:14:45.242Z",
+  "stage": "2.5.0",
+  "period": {
+    "start": "2026-09-12",
+    "end": "2026-09-14",
+    "status": "CLOSED"
+  },
+  "baseline_start": "1.0.0",
+  "baseline_end": "2.5.0",
+  "source_start": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
+  "source_end": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+  "days": [
+    {
+      "date": "2026-09-12",
+      "milestone_ids": [
+        "freeze-v1",
+        "p0-admin-jsx",
+        "p0-combo-redemption",
+        "vercel-identity",
+        "credential-expand-source"
+      ]
+    },
+    {
+      "date": "2026-09-13",
+      "milestone_ids": [
+        "credential-contract",
+        "brand-cleanup",
+        "test-runner",
+        "default-suite"
+      ]
+    },
+    {
+      "date": "2026-09-14",
+      "milestone_ids": [
+        "critical-coverage",
+        "baseline-2-4-semantics",
+        "admin-atomicity",
+        "admin-location",
+        "final-joint-audit",
+        "freeze-2-5-0"
+      ]
+    }
+  ],
+  "milestones": [
+    {
+      "id": "freeze-v1",
+      "date": "2026-09-12",
+      "classification": "DOCUMENTED",
+      "source_commit": "7c00adb7db018786494b7b2b5124df3df69284ff",
+      "result": "Baseline 1.0.0 frozen."
+    },
+    {
+      "id": "p0-admin-jsx",
+      "date": "2026-09-12",
+      "classification": "RESOLVED",
+      "source_commit": "121b7a8a4870f5933bd0cf0d45f12a8d71132424",
+      "result": "Admin event workspace compile blocker removed."
+    },
+    {
+      "id": "p0-combo-redemption",
+      "date": "2026-09-12",
+      "classification": "RESOLVED",
+      "source_commit": "19950bca860fe4246f7427b0ef6fad09c73de387",
+      "result": "Atomic combo redemption path restored."
+    },
+    {
+      "id": "vercel-identity",
+      "date": "2026-09-12",
+      "classification": "RESOLVED",
+      "source_commit": "9302cbd46aec802fef371e9c948e7d558c3dfc2a",
+      "result": "Rota5 production identity separated and Git auto-deploy disabled."
+    },
+    {
+      "id": "credential-expand-source",
+      "date": "2026-09-12",
+      "classification": "MITIGATED",
+      "source_commit": "cacbc4306abc82ce2ef4469125c62c3b6a8bf1b8",
+      "migration": "20260912000100_gate_credential_session_revocation_expand.sql",
+      "result": "Credential/session guards and rollout source introduced."
+    },
+    {
+      "id": "credential-contract",
+      "date": "2026-09-13",
+      "classification": "RESOLVED",
+      "source_commit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
+      "migration": "20260913000100_gate_credential_session_revocation_contract.sql",
+      "result": "Strict credential/session contract applied and validated."
+    },
+    {
+      "id": "brand-cleanup",
+      "date": "2026-09-13",
+      "classification": "RESOLVED",
+      "source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+      "result": "Audited active legacy-brand contamination removed."
+    },
+    {
+      "id": "test-runner",
+      "date": "2026-09-13",
+      "classification": "RESOLVED",
+      "source_commit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
+      "result": "Default test runner made reproducible from tracked Git."
+    },
+    {
+      "id": "default-suite",
+      "date": "2026-09-13",
+      "classification": "RESOLVED",
+      "source_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+      "result": "Default suite restored."
+    },
+    {
+      "id": "critical-coverage",
+      "date": "2026-09-14",
+      "classification": "RESOLVED",
+      "source_commit": "67845326088eac47452224b00ef1e866036e86f1",
+      "quality_gate": 34867214724,
+      "result": "Critical behavioral coverage and PostgreSQL CI established."
+    },
+    {
+      "id": "baseline-2-4-semantics",
+      "date": "2026-09-14",
+      "classification": "RESOLVED",
+      "source_commit": "770732f2811b3cdc1e060d4735720ff673d0de59",
+      "result": "Release-blocker, aggregation and universal RESOLVED semantics normalized."
+    },
+    {
+      "id": "admin-atomicity",
+      "date": "2026-09-14",
+      "classification": "RESOLVED",
+      "source_commit": "2520566eceb3db55e0ebbc3c3c92e6b4cfcb4348",
+      "migration": "20260914000100_create_admin_event_catalog_rpcs.sql",
+      "result": "CREATE, UPDATE and DUPLICATE became atomic and retry-safe."
+    },
+    {
+      "id": "admin-location",
+      "date": "2026-09-14",
+      "classification": "RESOLVED",
+      "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+      "migrations": [
+        "20260914000200_create_update_admin_event_venue_rpc.sql",
+        "20260914000300_enforce_admin_event_location_consistency.sql",
+        "20260914000400_retire_legacy_admin_event_venue_rpc.sql"
+      ],
+      "result": "Venue/session/city/state policy reconciled and legacy bypass retired."
+    },
+    {
+      "id": "final-joint-audit",
+      "date": "2026-09-14",
+      "classification": "RESOLVED",
+      "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+      "quality_gate": 34898804387,
+      "result": "FINAL_JOINT_AUDIT PASS; remote divergences zero."
+    },
+    {
+      "id": "freeze-2-5-0",
+      "date": "2026-09-14",
+      "classification": "DOCUMENTED",
+      "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+      "result": "Baseline 2.5.0 documentary freeze."
+    }
+  ],
+  "remediations": [
+    "p0-admin-jsx",
+    "p0-combo-redemption",
+    "credential-expand-source",
+    "credential-contract",
+    "brand-cleanup",
+    "test-runner",
+    "default-suite",
+    "critical-coverage",
+    "admin-atomicity",
+    "admin-location"
+  ],
+  "audits": [
+    {
+      "id": "final-joint-audit",
+      "result": "PASS",
+      "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+      "remote_event_session_divergences": 0,
+      "remote_city_state_divergences": 0,
+      "legacy_venue_rpc": "ABSENT"
+    }
+  ],
+  "quality_gates": [
+    {
+      "run": 34867214724,
+      "result": "PASS",
+      "source_commit": "67845326088eac47452224b00ef1e866036e86f1"
+    },
+    {
+      "run": 34898804387,
+      "result": "PASS",
+      "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d"
+    }
+  ],
+  "deployments": [
+    {
+      "id": "dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf",
+      "environment": "production",
+      "application_source": "148b8200a44f4eeb49e004af45060a302bac9f20",
+      "status": "READY",
+      "created_during_freeze": false
+    }
+  ],
+  "migrations": [
+    {
+      "name": "20260914000100_create_admin_event_catalog_rpcs.sql",
+      "status": "APPLIED_AND_VALIDATED",
+      "final_role": "CURRENT"
+    },
+    {
+      "name": "20260914000200_create_update_admin_event_venue_rpc.sql",
+      "status": "APPLIED_AND_VALIDATED",
+      "final_role": "HISTORICAL_SUPERSEDED_AND_RETIRED_IN_PART"
+    },
+    {
+      "name": "20260914000300_enforce_admin_event_location_consistency.sql",
+      "status": "APPLIED_AND_VALIDATED",
+      "final_role": "CURRENT"
+    },
+    {
+      "name": "20260914000400_retire_legacy_admin_event_venue_rpc.sql",
+      "status": "APPLIED_AND_VALIDATED",
+      "final_role": "RETIRES_LEGACY_RPC"
+    }
+  ],
+  "findings_resolved": [
+    "risk.admin-event-multistep-partial-state",
+    "bug.admin-event-location-consistency"
+  ],
+  "new_findings_documented": [
+    "bug.admin-event-location-consistency"
+  ],
+  "remaining_risks": [
+    "risk.rate-limit-fails-open",
+    "risk.local-runtime-env-incomplete",
+    "debt.seat-map-storage-contract-drift",
+    "gap.critical-flow-correlation",
+    "debt.router-responsibility-concentration",
+    "debt.zapi-webhook-responsibility-coupling",
+    "gap.real-integration-tests-outside-default",
+    "gap.source-contract-assertion-bias",
+    "dead.brand-logo-component",
+    "orphan.ticket-validation-history",
+    "orphan.gate-session-revoke",
+    "orphan.courtesy-event-limit",
+    "orphan.gate-sessions-list",
+    "legacy.table-map-presentation-disabled",
+    "debt.direct-supabase-access-spread",
+    "debt.large-mixed-service-modules",
+    "debt.payment-reconciliation-duplication-is-intentional",
+    "risk.checkout-status-fixed-polling",
+    "gap.partial-flows-lack-end-to-end-proof",
+    "gap.client-errors-not-persisted",
+    "debt.distributed-status-literals",
+    "risk.combo-metadata-read-modify-write-race",
+    "risk.github-issue-create-replay",
+    "risk.payment-confirmed-before-external-delivery",
+    "risk.whatsapp-conversation-context-race",
+    "risk.production-capable-scripts-outside-test-isolation",
+    "risk.service-role-application-authorization-boundary",
+    "risk.remote-database-controls-unvalidated",
+    "risk.remote-webhook-registration-unvalidated",
+    "risk.published-commit-unvalidated",
+    "gap.remote-database-behavior-tests",
+    "orphan.seat-map-renders-table"
+  ],
+  "final_state": {
+    "baseline": "2.5.0",
+    "repository_source": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+    "production_application_source": "148b8200a44f4eeb49e004af45060a302bac9f20",
+    "source_tree_fingerprint": "6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954",
+    "default_node_suite": "257/257 PASS",
+    "postgres_integration": "2/2 PASS",
+    "quality_gate": "34898804387 PASS",
+    "atomicity": "RESOLVED",
+    "admin_location_consistency": "RESOLVED",
+    "product_health": "DEGRADED",
+    "infrastructure_health": "DEGRADED",
+    "release_blockers": 0,
+    "admin_event_operations_retention": "SEPARATE_HARDENING_CANDIDATE",
+    "cycle": "DOCUMENTED_AND_CLOSED"
+  }
+}

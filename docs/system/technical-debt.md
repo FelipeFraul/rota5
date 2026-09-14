@@ -1,5 +1,9 @@
 # Dívida técnica
 
+## Separate hardening candidate
+
+Retention/cleanup for `admin_event_operations` is a **SEPARATE_HARDENING_CANDIDATE**. Current evidence does not justify a formal HIGH/P1 finding or release blocker.
+
 Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb8442f95493de3ca4ec4d4c997b e o working tree descrito no machine-readable. Esta etapa registra fatos e riscos; não aplica correções.
 
 ### debt.router-responsibility-concentration — Roteador conversacional concentra coordenação de muitos domínios

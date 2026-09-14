@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-14T17:43:51.677Z",
-  "stage": "2.4.4",
+  "generatedAt": "2026-09-14T22:14:45.242Z",
+  "stage": "2.5.0",
   "id": "rota5.flow-catalog.v1",
   "canonical": true,
   "count": 34,
@@ -1357,7 +1357,7 @@
         "admin"
       ],
       "implementation_status": "PARCIAL",
-      "test_status": "PARTIAL",
+      "test_status": "CONFIRMED",
       "domains": [
         "domain.admin-identity-access",
         "domain.event-administration",
@@ -1394,12 +1394,16 @@
         "customers",
         "conversations",
         "reservations",
-        "orders"
+        "orders",
+        "admin_event_operations"
       ],
       "database_functions": [
         "list_admin_events_fast",
         "get_admin_event_editor_payload",
-        "get_admin_general_dashboard_summary"
+        "get_admin_general_dashboard_summary",
+        "create_admin_event_catalog",
+        "update_admin_event_catalog",
+        "update_admin_event_location"
       ],
       "database_triggers": [],
       "integrations": [
@@ -1423,7 +1427,9 @@
         "test-004",
         "test-005",
         "test-017",
-        "test-040"
+        "test-040",
+        "test-052",
+        "test-053"
       ],
       "failing_tests": [],
       "evidence": [
@@ -1558,7 +1564,7 @@
         "admin"
       ],
       "implementation_status": "PARCIAL",
-      "test_status": "PARTIAL",
+      "test_status": "CONFIRMED",
       "domains": [
         "domain.admin-identity-access",
         "domain.event-administration"
@@ -1583,12 +1589,16 @@
         "venues",
         "seats",
         "reservations",
-        "tickets"
+        "tickets",
+        "admin_event_operations"
       ],
       "database_functions": [
         "list_admin_events_fast",
         "get_admin_event_editor_payload",
-        "update_admin_section_capacity"
+        "update_admin_section_capacity",
+        "create_admin_event_catalog",
+        "update_admin_event_catalog",
+        "update_admin_event_location"
       ],
       "database_triggers": [],
       "integrations": [
@@ -1610,7 +1620,9 @@
         "test-002",
         "audit.admin-event-edit-duplicate",
         "test-013",
-        "test-015"
+        "test-015",
+        "test-052",
+        "test-053"
       ],
       "failing_tests": [],
       "evidence": [
@@ -6209,5 +6221,13 @@
         "blackhouse.maintenance"
       ]
     }
+  },
+  "baseline_2_5_0": {
+    "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+    "direct_tests": [
+      "test-052",
+      "test-053"
+    ],
+    "claim": "Direct regression and PostgreSQL evidence added only to administrative event capabilities and flows exercised by those tests."
   }
 }

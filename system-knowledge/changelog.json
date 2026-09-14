@@ -1,9 +1,56 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T17:43:51.677Z",
-  "stage": "2.4.4",
-  "count": 18,
+  "generatedAt": "2026-09-14T22:14:45.242Z",
+  "stage": "2.5.0",
+  "count": 19,
   "records": [
+    {
+      "version": "2.5.0",
+      "type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+      "status": "FROZEN",
+      "date": "2026-09-14T22:14:45.242Z",
+      "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+      "source_fingerprint": "6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954",
+      "source_file_count": 379,
+      "migration_count": 83,
+      "changes": [
+        "Administrative CREATE, UPDATE and DUPLICATE are transactional and persistently idempotent.",
+        "Administrative venue/session/city/state consistency is enforced; the legacy venue-only RPC is absent.",
+        "Atomicity and location findings are RESOLVED; the location finding is newly preserved as resolved history.",
+        "Three-day stabilization history is canonical in Markdown and JSON."
+      ],
+      "findings": {
+        "resolved": [
+          "risk.admin-event-multistep-partial-state",
+          "bug.admin-event-location-consistency"
+        ],
+        "new_historical": [
+          "bug.admin-event-location-consistency"
+        ]
+      },
+      "validation": {
+        "default_node_suite": "257/257 PASS",
+        "postgres_integration": "2/2 PASS",
+        "quality_gate_run": 34898804387,
+        "quality_gate": "PASS"
+      },
+      "runtime": {
+        "repository_source": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+        "production_application_source": "148b8200a44f4eeb49e004af45060a302bac9f20",
+        "production_deployment": "dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf",
+        "deployment_sha_difference": "EXPECTED_NON_RUNTIME_DRIFT",
+        "app_runtime_diff_after_deploy": "NAO",
+        "remote_event_session_divergences": 0,
+        "remote_city_state_divergences": 0,
+        "legacy_venue_rpc": "ABSENT"
+      },
+      "freeze_actions": {
+        "vercel_deployment_created": false,
+        "supabase_changed": false,
+        "ticketeira_touched": false,
+        "git_auto_deploy": "DISABLED"
+      }
+    },
     {
       "version": "2.4.4",
       "date": "2026-09-14T17:43:51.677Z",
@@ -691,5 +738,52 @@
     "ticketeira": "UNTOUCHED",
     "git_auto_deploy": "DISABLED",
     "new_deployment": false
+  },
+  "baseline_2_5_0": {
+    "version": "2.5.0",
+    "type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+    "status": "FROZEN",
+    "date": "2026-09-14T22:14:45.242Z",
+    "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+    "source_fingerprint": "6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954",
+    "source_file_count": 379,
+    "migration_count": 83,
+    "changes": [
+      "Administrative CREATE, UPDATE and DUPLICATE are transactional and persistently idempotent.",
+      "Administrative venue/session/city/state consistency is enforced; the legacy venue-only RPC is absent.",
+      "Atomicity and location findings are RESOLVED; the location finding is newly preserved as resolved history.",
+      "Three-day stabilization history is canonical in Markdown and JSON."
+    ],
+    "findings": {
+      "resolved": [
+        "risk.admin-event-multistep-partial-state",
+        "bug.admin-event-location-consistency"
+      ],
+      "new_historical": [
+        "bug.admin-event-location-consistency"
+      ]
+    },
+    "validation": {
+      "default_node_suite": "257/257 PASS",
+      "postgres_integration": "2/2 PASS",
+      "quality_gate_run": 34898804387,
+      "quality_gate": "PASS"
+    },
+    "runtime": {
+      "repository_source": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+      "production_application_source": "148b8200a44f4eeb49e004af45060a302bac9f20",
+      "production_deployment": "dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf",
+      "deployment_sha_difference": "EXPECTED_NON_RUNTIME_DRIFT",
+      "app_runtime_diff_after_deploy": "NAO",
+      "remote_event_session_divergences": 0,
+      "remote_city_state_divergences": 0,
+      "legacy_venue_rpc": "ABSENT"
+    },
+    "freeze_actions": {
+      "vercel_deployment_created": false,
+      "supabase_changed": false,
+      "ticketeira_touched": false,
+      "git_auto_deploy": "DISABLED"
+    }
   }
 }

@@ -1,19 +1,27 @@
 # Riscos de integridade, transação, concorrência e idempotência
 
+## Resolved administrative integrity findings in 2.5.0
+
+`risk.admin-event-multistep-partial-state` and `bug.admin-event-location-consistency` are RESOLVED. Historical HIGH/P1 metadata remains, but both are non-operational and non-release-blocking. Canonical detail and historical evidence live in `system-knowledge/findings.json`.
+
 Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb8442f95493de3ca4ec4d4c997b e o working tree descrito no machine-readable. Esta etapa registra fatos e riscos; não aplica correções.
 
-### risk.admin-event-multistep-partial-state — Criação de evento e catálogo inicial cruza entidades sem transação única
+### risk.admin-event-multistep-partial-state — RESOLVED
 
-- Tipo / severidade / prioridade: **DATA_INTEGRITY / HIGH / P1**
-- Status / confiança: **POTENTIAL / HIGH**
-- Problema: createAdminEvent coordena evento, local, sessão, setor, assentos, preços e mapa por chamadas Supabase sequenciais; o catálogo marca event.create como PARCIAL e registra possibilidade de resíduos.
-- Evidência: `src/lib/tickets/services/adminEvents.ts` — Serviço executa criação multi-entidade via aplicação.; `system-knowledge/capabilities.json` — event.create está PARCIAL.; `system-knowledge/flows.json` — admin.whatsapp_event_management documenta drafts/resíduos em falhas intermediárias.
-- Impacto: Falha intermediária pode deixar rascunho ou inventário incompleto e exigir limpeza manual antes de tentar novamente.
-- Escopo: domains domain.event-administration, domain.reservation-inventory; capabilities event.create, event.session_create, event.section_create, event.seats_create, event.price_create; flows admin.whatsapp_event_management, admin.web_event_workspace.
-- Blast radius: **MULTI_DOMAIN**
-- Workaround: Operar/limpar o rascunho parcialmente criado de forma manual.
-- Direção: Definir uma fronteira transacional para a criação composta.
-- Justificativa da prioridade: P1 pela quantidade de entidades e pelo risco de estado persistente incompleto.
+- Type / severity / priority: **DATA_INTEGRITY / HIGH / P1** (severity and priority retained as history).
+- Status / confidence: **RESOLVED / CONFIRMED**.
+- Current state: CREATE, UPDATE and DUPLICATE execute through transactional PostgreSQL catalog functions with persistent idempotency; web and WhatsApp retries preserve stable operation intent.
+- Current evidence: `20260914000100_create_admin_event_catalog_rpcs.sql`, `adminEvents.ts`, `router.ts`, `test-admin-event-atomic-mutations.mjs`, `test-admin-event-catalog-postgres.mjs` and Quality Gate 34898804387.
+- Current impact: historical partial-state impact is no longer active in the proven scope; no workaround is required.
+- History: Baseline 2.4.4 classified the finding as POTENTIAL; later audit reproduced partial CREATE/UPDATE/DUPLICATE state and duplicate retry behavior before the transactional remediation. Full history is under `resolution.historical_evidence` in `system-knowledge/findings.json`.
+
+### bug.admin-event-location-consistency — RESOLVED
+
+- Type / severity / priority: **DATA_INTEGRITY / HIGH / P1**.
+- Status / confidence: **RESOLVED / CONFIRMED**.
+- Current state: non-location saves preserve session venues; unsafe multi-venue or mapped changes are blocked; safe single-venue changes update event plus sessions atomically; venue/city/state follow one policy; ticket readers prefer session venue; legacy `update_admin_event_venue` is absent.
+- Current evidence: migrations `20260914000300_enforce_admin_event_location_consistency.sql` and `20260914000400_retire_legacy_admin_event_venue_rpc.sql`, session-first reader code, PostgreSQL integration and final remote audit with zero divergences.
+- Historical evidence, including the superseded migration 002 bypass, is preserved under `resolution.historical_evidence`.
 
 ### risk.combo-metadata-read-modify-write-race — Atualizações concorrentes podem sobrescrever metadados do combo
 

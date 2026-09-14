@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T17:43:51.677Z",
-  "stage": "2.4.4",
+  "generatedAt": "2026-09-14T22:14:45.242Z",
+  "stage": "2.5.0",
   "id": "capability-catalog.v1",
   "canonical": true,
   "status": "PASS",
   "confidence": "MEDIA",
-  "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
+  "sourceCommit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
   "sourceScope": "Working tree local, incluindo alteração preexistente em src/lib/tickets/messages.ts; não equivale ao commit puro nem ao deploy.",
   "count": 140,
   "methodology": {
@@ -2976,13 +2976,19 @@
         "venue_sections",
         "seats",
         "session_seats",
-        "ticket_prices"
+        "ticket_prices",
+        "admin_event_operations"
       ],
-      "database_functions": [],
+      "database_functions": [
+        "create_admin_event_catalog",
+        "update_admin_event_catalog"
+      ],
       "tests": [
         "test-002",
         "test-006",
-        "audit.admin-event-creation-flow"
+        "audit.admin-event-creation-flow",
+        "test-052",
+        "test-053"
       ],
       "description": "Criar evento e dados iniciais; formulário web atual tem erro de parse, caminho de serviço/WhatsApp existe.",
       "evidence": [
@@ -3056,7 +3062,7 @@
       "status": "PARCIAL",
       "implementation_status": "PARCIAL",
       "failing_tests": [],
-      "test_status": "PARTIAL",
+      "test_status": "CONFIRMED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -3122,13 +3128,20 @@
       ],
       "database_tables": [
         "events",
-        "venues"
+        "venues",
+        "admin_event_operations"
       ],
-      "database_functions": [],
+      "database_functions": [
+        "create_admin_event_catalog",
+        "update_admin_event_catalog",
+        "update_admin_event_location"
+      ],
       "tests": [
         "test-006",
         "audit.admin-event-edit-duplicate",
-        "audit.admin-profiles-permissions"
+        "audit.admin-profiles-permissions",
+        "test-052",
+        "test-053"
       ],
       "description": "Alterar título, artista, descrição, imagem e local sob autorização.",
       "evidence": [
@@ -3244,7 +3257,7 @@
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "PARTIAL",
+      "test_status": "CONFIRMED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -3736,12 +3749,18 @@
         "venue_sections",
         "seats",
         "session_seats",
-        "ticket_prices"
+        "ticket_prices",
+        "admin_event_operations"
       ],
-      "database_functions": [],
+      "database_functions": [
+        "create_admin_event_catalog",
+        "update_admin_event_catalog"
+      ],
       "tests": [
         "test-002",
-        "audit.admin-event-edit-duplicate"
+        "audit.admin-event-edit-duplicate",
+        "test-052",
+        "test-053"
       ],
       "description": "Copiar configuração para novo draft e inventário próprio; não copiar pedidos/ingressos.",
       "evidence": [
@@ -3792,7 +3811,7 @@
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "PARTIAL",
+      "test_status": "CONFIRMED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -21783,5 +21802,13 @@
       "run": 34867214724,
       "source_commit": "67845326088eac47452224b00ef1e866036e86f1"
     }
+  },
+  "baseline_2_5_0": {
+    "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+    "direct_tests": [
+      "test-052",
+      "test-053"
+    ],
+    "claim": "Direct regression and PostgreSQL evidence added only to administrative event capabilities and flows exercised by those tests."
   }
 }

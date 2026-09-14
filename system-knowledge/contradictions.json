@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T17:43:51.677Z",
-  "stage": "2.4.4",
+  "generatedAt": "2026-09-14T22:14:45.242Z",
+  "stage": "2.5.0",
   "count": 2,
   "corrected": 2,
   "pending": 0,
@@ -40,5 +40,13 @@
         "scripts/test-whatsapp-batch-compat.mjs"
       ]
     }
-  ]
+  ],
+  "baseline_2_5_0": {
+    "contradictions": 0,
+    "stale_current_projections": 0,
+    "resolved_with_active_top_level_claims": 0,
+    "resolved_with_release_blocking_true": 0,
+    "unaccounted_findings": 0,
+    "status": "PASS"
+  }
 }

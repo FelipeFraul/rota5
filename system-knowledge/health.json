@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T17:43:51.677Z",
-  "stage": "2.4.4",
-  "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
+  "generatedAt": "2026-09-14T22:14:45.242Z",
+  "stage": "2.5.0",
+  "sourceCommit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
   "scope": "Current health projection by system, domain and infrastructure for Baseline 2.4.4, with resolved history separated from operational risk.",
   "method": "Health is derived from canonical finding scopes and taxonomy. BROKEN requires a current release blocker; DEGRADED requires current operational or validation-queue risk; resolved findings are historical only.",
   "vocabulary": [
@@ -12,14 +12,14 @@
     "ORPHANED",
     "UNKNOWN"
   ],
-  "note": "ORPHANED é usado apenas na dimensão capability solicitada; agregados usam HEALTHY/DEGRADED/BROKEN/UNKNOWN.",
+  "note": "Health is derived from current lifecycle semantics. Resolved HIGH/P1 metadata is historical and does not block release.",
   "system": {
     "id": "system.rota5",
     "health": "DEGRADED",
-    "reason": "Canonical release blockers are zero, but current operational and validation-queue findings remain; HEALTHY is not justified.",
+    "reason": "Release blockers are zero, but 27 operational findings and 5 validation-queue findings remain; HEALTHY is not justified.",
     "finding_counts_by_severity": {
       "CRITICAL": 0,
-      "HIGH": 1,
+      "HIGH": 0,
       "MEDIUM": 17,
       "LOW": 8,
       "INFO": 2
@@ -28,12 +28,11 @@
       "P0": 0,
       "HIGH": 0,
       "CRITICAL": 0,
-      "RESOLVED": 11,
-      "POTENTIAL_HIGH": 1,
-      "OPEN_HIGH": 1
+      "RESOLVED": 13,
+      "POTENTIAL_HIGH": 0,
+      "OPEN_HIGH": 0
     },
     "current_findings": [
-      "risk.admin-event-multistep-partial-state",
       "risk.combo-metadata-read-modify-write-race",
       "risk.github-issue-create-replay",
       "risk.rate-limit-fails-open",
@@ -69,6 +68,8 @@
       "bug.user-visible-text-corruption",
       "legacy.active-brand-contamination",
       "risk.gate-credential-revocation-does-not-revoke-session",
+      "risk.admin-event-multistep-partial-state",
+      "bug.admin-event-location-consistency",
       "risk.vercel-project-identity-drift",
       "risk.latest-rota5-deployment-error",
       "gap.default-test-suite-failing",
@@ -83,7 +84,7 @@
       "orphan.seat-map-renders-table"
     ],
     "release_blockers": [],
-    "current_findings_count": 28,
+    "current_findings_count": 27,
     "current_aggregation_invariants": {
       "FINDINGS_TOTAL_MATCH": "SIM",
       "BY_SEVERITY_SUM_MATCH": "SIM",
@@ -1703,6 +1704,8 @@
     "bug.user-visible-text-corruption",
     "legacy.active-brand-contamination",
     "risk.gate-credential-revocation-does-not-revoke-session",
+    "risk.admin-event-multistep-partial-state",
+    "bug.admin-event-location-consistency",
     "risk.vercel-project-identity-drift",
     "risk.latest-rota5-deployment-error",
     "gap.default-test-suite-failing",
@@ -1996,13 +1999,30 @@
     "resolved_semantic_contract_required": true
   },
   "resolved_semantic_invariants": {
-    "RESOLVED_FINDINGS_TOTAL": 11,
-    "RESOLVED_CURRENT_STATE_COMPLETE": 11,
+    "RESOLVED_FINDINGS_TOTAL": 13,
+    "RESOLVED_CURRENT_STATE_COMPLETE": 13,
     "RESOLVED_WITHOUT_CURRENT_STATE": 0,
     "RESOLVED_WITH_ACTIVE_TOP_LEVEL_CLAIMS": 0,
     "RESOLVED_WITH_NONCURRENT_TOP_LEVEL_EVIDENCE": 0,
     "RESOLVED_RELEASE_BLOCKING_TRUE": 0,
     "RESOLVED_OPERATIONAL_OPEN_TRUE": 0,
     "HISTORICAL_EVIDENCE_PRESERVED": "SIM"
+  },
+  "baseline_2_5_0": {
+    "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+    "source_fingerprint": "3ead25584e6d48eb0a6b16acb101c0cfbeb0f990714e535330dc94e7e4cee430",
+    "default_node_suite": "257/257 PASS",
+    "postgres_integration": "2/2 PASS",
+    "quality_gate_run": 34898804387,
+    "quality_gate": "PASS",
+    "production_runtime_source": "148b8200a44f4eeb49e004af45060a302bac9f20",
+    "production_deployment": "dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf",
+    "deployment_sha_difference": "EXPECTED_NON_RUNTIME_DRIFT",
+    "app_runtime_diff_after_deploy": "NAO",
+    "atomicity": "RESOLVED",
+    "admin_location_consistency": "RESOLVED",
+    "release_blockers": 0,
+    "product_health": "DEGRADED",
+    "infrastructure_health": "DEGRADED"
   }
 }

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T17:43:51.677Z",
+  "generatedAt": "2026-09-14T22:14:45.242Z",
   "count": 56,
   "countingRule": "25 route modules + 14 pages + 1 proxy + 8 npm commands + 6 operational scripts + 2 external cron triggers; overlaps intentionally retained.",
   "records": [
@@ -831,5 +831,5 @@
       "notes": "Incluído na Etapa 3: toolchain, sem capability funcional independente."
     }
   ],
-  "stage": "2.4.4"
+  "stage": "2.5.0"
 }

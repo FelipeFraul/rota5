@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T17:43:51.677Z",
-  "stage": "2.4.4",
-  "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
-  "scope": "Current risk, coverage, validation and release-blocker projection for Baseline 2.4.4.",
+  "generatedAt": "2026-09-14T22:14:45.242Z",
+  "stage": "2.5.0",
+  "sourceCommit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+  "scope": "Current risk, coverage, validation and release-blocker projection for Baseline 2.5.0.",
   "method": "All current metrics are derived from canonical catalogs and finding_status_taxonomy; historical snapshots remain only in version-labelled fields.",
   "status": "PASS",
-  "total": 44,
+  "total": 45,
   "by_type": {
     "ARCHITECTURE": 1,
     "AUTHORIZATION": 1,
@@ -15,7 +15,7 @@
     "CONCURRENCY": 2,
     "CONFIGURATION_DRIFT": 3,
     "COUPLING": 2,
-    "DATA_INTEGRITY": 2,
+    "DATA_INTEGRITY": 3,
     "DEAD_CODE": 1,
     "DUPLICATION": 1,
     "IDEMPOTENCY": 1,
@@ -33,24 +33,24 @@
   },
   "by_severity": {
     "CRITICAL": 0,
-    "HIGH": 10,
+    "HIGH": 11,
     "MEDIUM": 23,
     "LOW": 9,
     "INFO": 2
   },
   "by_priority": {
     "P0": 3,
-    "P1": 10,
+    "P1": 11,
     "P2": 20,
     "P3": 9,
     "P4": 2
   },
   "by_status": {
     "ACTIVE": 21,
-    "POTENTIAL": 7,
+    "POTENTIAL": 6,
     "OPEN": 0,
     "MITIGATED": 0,
-    "RESOLVED": 11,
+    "RESOLVED": 13,
     "ACCEPTED": 0,
     "NOT_VALIDATED": 5
   },
@@ -60,6 +60,7 @@
     "legacy.active-brand-contamination",
     "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.admin-event-multistep-partial-state",
+    "bug.admin-event-location-consistency",
     "risk.vercel-project-identity-drift",
     "risk.latest-rota5-deployment-error",
     "gap.default-test-suite-failing",
@@ -74,6 +75,7 @@
     "legacy.active-brand-contamination",
     "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.admin-event-multistep-partial-state",
+    "bug.admin-event-location-consistency",
     "risk.vercel-project-identity-drift",
     "risk.latest-rota5-deployment-error",
     "gap.default-test-suite-failing",
@@ -89,21 +91,21 @@
     "flows": 34,
     "flow_steps": 169,
     "state_transitions": 68,
-    "tables": 44,
-    "sql_functions": 39,
+    "tables": 45,
+    "sql_functions": 44,
     "triggers": 36,
     "integrations": 6,
     "webhooks": 2,
     "crons": 2,
     "environment_variables": 43,
     "configuration_drifts": 4,
-    "catalogued_tests": 51,
-    "findings": 44
+    "catalogued_tests": 53,
+    "findings": 45
   },
   "validation": {
     "npm_test": {
-      "cases": 236,
-      "passed": 236,
+      "cases": 257,
+      "passed": 257,
       "failed": 0,
       "status": "PASS",
       "known_failures": 0,
@@ -280,6 +282,13 @@
       "failed_preexisting_unrelated": 2,
       "new_regressions": 0,
       "status": "PASS"
+    },
+    "postgres_integration": {
+      "postgres_version": 16,
+      "cases": 2,
+      "passed": 2,
+      "failed": 0,
+      "status": "PASS"
     }
   },
   "active_high_critical": [],
@@ -291,6 +300,8 @@
     "bug.user-visible-text-corruption",
     "legacy.active-brand-contamination",
     "risk.gate-credential-revocation-does-not-revoke-session",
+    "risk.admin-event-multistep-partial-state",
+    "bug.admin-event-location-consistency",
     "risk.vercel-project-identity-drift",
     "risk.latest-rota5-deployment-error",
     "gap.default-test-suite-failing",
@@ -299,18 +310,12 @@
   ],
   "infrastructure_identity": "CORRECT",
   "current_head_deployed": false,
-  "potential_high_critical": [
-    "risk.admin-event-multistep-partial-state"
-  ],
-  "open_high_critical": [
-    "risk.admin-event-multistep-partial-state"
-  ],
+  "potential_high_critical": [],
+  "open_high_critical": [],
   "potential_p0_p1": [
-    "risk.admin-event-multistep-partial-state",
     "risk.payment-confirmed-before-external-delivery"
   ],
   "open_p0_p1": [
-    "risk.admin-event-multistep-partial-state",
     "risk.payment-confirmed-before-external-delivery"
   ],
   "metric_semantics": {
@@ -319,7 +324,7 @@
     "open": "status in {ACTIVE, POTENTIAL, OPEN, MITIGATED}",
     "release_blocking": "status in {ACTIVE, OPEN, MITIGATED} at applicable severity",
     "closed_for_operational_metrics": "status in {RESOLVED, ACCEPTED, NOT_VALIDATED}",
-    "current_projection": "Derived at Baseline 2.4.4 generation time from canonical catalogs and lifecycle taxonomy.",
+    "current_projection": "Derived at Baseline 2.5.0 generation time from canonical catalogs and lifecycle taxonomy.",
     "release_blocker_rule": "operational_open + status.release_blocking + P0/P1 or CRITICAL/HIGH",
     "historical_snapshots": "Only fields whose names explicitly contain a baseline version or historical marker are historical."
   },
@@ -692,13 +697,30 @@
     "resolved_semantic_contract_required": true
   },
   "resolved_semantic_invariants": {
-    "RESOLVED_FINDINGS_TOTAL": 11,
-    "RESOLVED_CURRENT_STATE_COMPLETE": 11,
+    "RESOLVED_FINDINGS_TOTAL": 13,
+    "RESOLVED_CURRENT_STATE_COMPLETE": 13,
     "RESOLVED_WITHOUT_CURRENT_STATE": 0,
     "RESOLVED_WITH_ACTIVE_TOP_LEVEL_CLAIMS": 0,
     "RESOLVED_WITH_NONCURRENT_TOP_LEVEL_EVIDENCE": 0,
     "RESOLVED_RELEASE_BLOCKING_TRUE": 0,
     "RESOLVED_OPERATIONAL_OPEN_TRUE": 0,
     "HISTORICAL_EVIDENCE_PRESERVED": "SIM"
+  },
+  "baseline_2_5_0": {
+    "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+    "source_fingerprint": "6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954",
+    "default_node_suite": "257/257 PASS",
+    "postgres_integration": "2/2 PASS",
+    "quality_gate_run": 34898804387,
+    "quality_gate": "PASS",
+    "production_runtime_source": "148b8200a44f4eeb49e004af45060a302bac9f20",
+    "production_deployment": "dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf",
+    "deployment_sha_difference": "EXPECTED_NON_RUNTIME_DRIFT",
+    "app_runtime_diff_after_deploy": "NAO",
+    "atomicity": "RESOLVED",
+    "admin_location_consistency": "RESOLVED",
+    "release_blockers": 0,
+    "product_health": "DEGRADED",
+    "infrastructure_health": "DEGRADED"
   }
 }

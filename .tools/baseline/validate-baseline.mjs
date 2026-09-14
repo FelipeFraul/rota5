@@ -46,10 +46,10 @@ const committedFunctionalSource = (commit) => {
 };
 const required = [
   'baseline-manifest.json','baseline-v1.json','index.json','self-reading.json',
-  'source-fingerprint.json','changelog.json','baseline-integrity.json'
+  'source-fingerprint.json','changelog.json','baseline-integrity.json','stabilization-history.json'
 ];
 for (const name of required) if (!fs.existsSync(path.join(jsonDir, name))) add('MISSING_CANONICAL_FILE', `system-knowledge/${name}`);
-for (const name of ['AI-READ-ME.md','BASELINE-V1.md','CANONICAL-INDEX.md','GOVERNANCE.md','CHANGE-PROTOCOL.md','CHANGELOG.md','KNOWN-LIMITS.md','NEXT-ACTIONS.md']) {
+for (const name of ['AI-READ-ME.md','BASELINE-V1.md','CANONICAL-INDEX.md','GOVERNANCE.md','CHANGE-PROTOCOL.md','CHANGELOG.md','KNOWN-LIMITS.md','NEXT-ACTIONS.md','stabilization-history.md']) {
   if (!fs.existsSync(path.join(docsDir, name))) add('MISSING_CANONICAL_FILE', `docs/system/${name}`);
 }
 
@@ -107,17 +107,25 @@ for (const x of getRecords('capability-relations')) { checkRefs(x.id,'from',[x.f
 for (const x of getRecords('flow-relations')) { checkRefs(x.id,'from',[x.from],sets.flow); checkRefs(x.id,'to',[x.to],sets.flow); }
 for (const x of getRecords('finding-relations')) { checkRefs(`${x.from}->${x.to}`,'from',[x.from],sets.finding); checkRefs(`${x.from}->${x.to}`,'to',[x.to],sets.finding); }
 
-const expected = {domains:17,modules:66,entrypoints:56,capabilities:140,flows:34,'flow-steps':169,'state-transitions':68,'data-model':44,'database-relations':2257,integrations:6,webhooks:2,cron:2,environment:43,tests:51,findings:44};
+const baselineCounts = catalogs['baseline-v1'] || {};
+const expected = {
+  domains:baselineCounts.domains, modules:baselineCounts.modules, entrypoints:baselineCounts.entrypoints,
+  capabilities:baselineCounts.capabilities, flows:baselineCounts.flows, 'flow-steps':baselineCounts.flow_steps,
+  'state-transitions':baselineCounts.state_transitions, 'data-model':baselineCounts.tables,
+  'database-relations':baselineCounts.data_relations, integrations:baselineCounts.integrations,
+  webhooks:baselineCounts.webhooks, cron:baselineCounts.crons, environment:baselineCounts.environment_variables,
+  tests:baselineCounts.tests, findings:baselineCounts.findings
+};
 for (const [name, count] of Object.entries(expected)) if (getRecords(name).length !== count) add('CANONICAL_COUNT_MISMATCH', `${name}: expected ${count}, got ${getRecords(name).length}`);
-if ((objects.migrations||[]).length !== 79) add('CANONICAL_COUNT_MISMATCH','migrations');
-if ((objects.functions||[]).length !== 39) add('CANONICAL_COUNT_MISMATCH','sql functions');
-if ((objects.triggers||[]).length !== 36) add('CANONICAL_COUNT_MISMATCH','triggers');
+if ((objects.migrations||[]).length !== baselineCounts.migrations) add('CANONICAL_COUNT_MISMATCH','migrations');
+if ((objects.functions||[]).length !== baselineCounts.sql_functions) add('CANONICAL_COUNT_MISMATCH','sql functions');
+if ((objects.triggers||[]).length !== baselineCounts.triggers) add('CANONICAL_COUNT_MISMATCH','triggers');
 if ((catalogs.capabilities?.metrics?.by_status?.DESCONHECIDA || 0) !== 0) add('UNCLASSIFIED_CAPABILITY','capabilities.metrics.by_status.DESCONHECIDA');
 if ((catalogs.flows?.metrics?.capabilities_unclassified || 0) !== 0) add('UNCLASSIFIED_CAPABILITY','flows.metrics.capabilities_unclassified');
 if ((catalogs.flows?.metrics?.functional_entrypoints_unclassified || 0) !== 0) add('UNCLASSIFIED_ENTRYPOINT','flows.metrics.functional_entrypoints_unclassified');
 if (flows.some(flow=>!flow.status)) add('FLOW_WITHOUT_STATUS','flows.json');
 if ((catalogs.contradictions?.pending ?? -1) !== 0) add('PENDING_CONTRADICTION','contradictions.json');
-if ((catalogs['unresolved-evidence']?.count ?? 0) !== 10) add('UNRESOLVED_EVIDENCE_DRIFT','unresolved-evidence.json');
+if ((catalogs['unresolved-evidence']?.count ?? -1) !== getRecords('unresolved-evidence').length) add('UNRESOLVED_EVIDENCE_DRIFT','unresolved-evidence.json');
 
 const baselineFiles = [docsDir,jsonDir].flatMap(dir=>fs.readdirSync(dir).filter(name=>fs.statSync(path.join(dir,name)).isFile()).map(name=>path.join(dir,name)));
 const secretPatterns = [/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,/\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/,/\b(?:ghp|github_pat|sk_live|sk_test|sk-proj)-?[A-Za-z0-9_-]{16,}\b/,/\b(?:postgres(?:ql)?|https?):\/\/[^\s/:]+:[^\s/@]+@/i,/(?:api[_-]?key|password|token|secret)\s*[:=]\s*["'][A-Za-z0-9_+\/-]{16,}["']/i];
@@ -405,6 +413,26 @@ for (const change of functionalChanges || []) {
 }
 if (manifest?.git_observation_at_generation?.validity_role!=='INFORMATIONAL_ONLY') add('MANIFEST_TRANSIENT_STATE_ROLE_INVALID','baseline-manifest.json');
 if (!catalogs['self-reading']?.query_routes?.IMPACT_ANALYSIS) add('SELF_READING_ROUTE_MISSING','IMPACT_ANALYSIS');
+
+const stabilizationHistory = catalogs['stabilization-history'];
+if (stabilizationHistory) {
+  const requiredArrays = ['days','milestones','remediations','audits','quality_gates','deployments','migrations','findings_resolved','new_findings_documented','remaining_risks'];
+  for (const field of requiredArrays) if (!Array.isArray(stabilizationHistory[field])) add('STABILIZATION_HISTORY_SCHEMA_INVALID',field);
+  if (!stabilizationHistory.period?.start || !stabilizationHistory.period?.end || stabilizationHistory.period.start > stabilizationHistory.period.end) add('STABILIZATION_HISTORY_PERIOD_INVALID','stabilization-history.json');
+  const milestoneIds = new Set((stabilizationHistory.milestones||[]).map(item=>item.id));
+  for (const day of stabilizationHistory.days || []) {
+    if (!day.date || day.date < stabilizationHistory.period.start || day.date > stabilizationHistory.period.end) add('STABILIZATION_HISTORY_DAY_OUTSIDE_PERIOD',day.date || '(missing)');
+    for (const id of day.milestone_ids || []) if (!milestoneIds.has(id)) add('STABILIZATION_HISTORY_BROKEN_MILESTONE_REFERENCE',id);
+  }
+  for (const id of stabilizationHistory.findings_resolved || []) {
+    const finding = findings.find(item=>item.id===id);
+    if (!finding || finding.status!=='RESOLVED') add('STABILIZATION_HISTORY_FINDING_NOT_RESOLVED',id);
+  }
+  for (const id of stabilizationHistory.remaining_risks || []) if (!sets.finding.has(id)) add('STABILIZATION_HISTORY_UNKNOWN_FINDING',id);
+  if (stabilizationHistory.final_state?.baseline !== manifest?.version) add('STABILIZATION_HISTORY_BASELINE_MISMATCH','final_state.baseline');
+  if (stabilizationHistory.final_state?.repository_source !== manifest?.source_state?.base_commit) add('STABILIZATION_HISTORY_SOURCE_MISMATCH','final_state.repository_source');
+  if (stabilizationHistory.final_state?.source_tree_fingerprint !== fingerprint?.source_tree_fingerprint) add('STABILIZATION_HISTORY_FINGERPRINT_MISMATCH','final_state.source_tree_fingerprint');
+}
 
 if (errors.length) {
   console.error(JSON.stringify({status:'FAIL',errorCount:errors.length,errors},null,2));

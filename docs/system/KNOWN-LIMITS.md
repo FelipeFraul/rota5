@@ -1,5 +1,9 @@
 # Known limits
 
+## Baseline 2.5.0 clarification
+
+The 5 NOT_VALIDATED findings and other current risks remain governed by their canonical lifecycle. Retention/cleanup for `admin_event_operations` is a separate hardening candidate, not a claim that the resolved atomicity or location defects are active.
+
 Source: `system-knowledge/unresolved-evidence.json`. Seven records remain NOT_VALIDATED; resolved records stay in the machine catalog as history.
 
 | ID | Category | Evidence still missing |

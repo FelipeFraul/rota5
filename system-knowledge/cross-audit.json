@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T17:43:51.677Z",
-  "stage": "2.4.4",
+  "generatedAt": "2026-09-14T22:14:45.242Z",
+  "stage": "2.5.0",
   "status": "PASS",
-  "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
+  "sourceCommit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
   "question": "Podemos confiar na BASELINE V1 como representação do Rota5 atual?",
-  "answer": "SIM, dentro dos limites UNKNOWN/NOT_VALIDATED explicitamente preservados.",
+  "answer": "FINAL_JOINT_AUDIT: PASS. Baseline 2.5.0 is ready for documentary freeze.",
   "frozenScope": {
     "branch": "production",
     "head": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
@@ -158,8 +158,7 @@
     "newFindingsFound": 0
   },
   "contradictions": {
-    "found": 2,
-    "corrected": 2,
+    "count": 0,
     "pending": 0
   },
   "unresolvedEvidenceCount": 7,
@@ -441,15 +440,12 @@
     "ticketeira": "UNTOUCHED"
   },
   "semantic_consistency": {
-    "baseline": "2.4.4",
     "status": "PASS",
-    "method": "Semantic PASS requires complete taxonomy-derived finding aggregations, zero missing aggregation fields, zero current contradictions and zero stale current projections.",
-    "current_semantic_contradictions": 0,
-    "current_stale_projections": 0,
-    "resolved_findings_with_active_top_level_claims": 0,
-    "current_release_blockers": 0,
-    "aggregation_invariants_required": true,
-    "resolved_semantic_contract_required": true
+    "contradictions": 0,
+    "stale_current_projections": 0,
+    "resolved_with_active_top_level_claims": 0,
+    "resolved_with_release_blocking_true": 0,
+    "unaccounted_findings": 0
   },
   "aggregation_invariants": {
     "FINDINGS_TOTAL_MATCH": "SIM",
@@ -461,13 +457,21 @@
     "RELEASE_BLOCKER_COUNT": 0
   },
   "resolved_semantic_invariants": {
-    "RESOLVED_FINDINGS_TOTAL": 11,
-    "RESOLVED_CURRENT_STATE_COMPLETE": 11,
+    "RESOLVED_FINDINGS_TOTAL": 13,
+    "RESOLVED_CURRENT_STATE_COMPLETE": 13,
     "RESOLVED_WITHOUT_CURRENT_STATE": 0,
     "RESOLVED_WITH_ACTIVE_TOP_LEVEL_CLAIMS": 0,
     "RESOLVED_WITH_NONCURRENT_TOP_LEVEL_EVIDENCE": 0,
     "RESOLVED_RELEASE_BLOCKING_TRUE": 0,
     "RESOLVED_OPERATIONAL_OPEN_TRUE": 0,
     "HISTORICAL_EVIDENCE_PRESERVED": "SIM"
+  },
+  "baseline_2_5_0": {
+    "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+    "atomicity": "RESOLVED",
+    "admin_location_consistency": "RESOLVED",
+    "quality_gate_run": 34898804387,
+    "quality_gate": "PASS",
+    "remote_divergences": 0
   }
 }
