@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { FormEvent, type MouseEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, type MouseEvent, useCallback, useEffect, useRef, useState } from "react";
 import type {
   ActiveTab,
   Draft,
@@ -200,6 +200,7 @@ function closeOnOverlayClick(
 }
 
 export default function EventEditorModal({ eventId, onClose, onSaved }: EventEditorModalProps) {
+  const operationId = useRef(crypto.randomUUID());
   const [selected, setSelected] = useState<EventDetails | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
@@ -253,6 +254,7 @@ export default function EventEditorModal({ eventId, onClose, onSaved }: EventEdi
         headers: {
           "content-type": "application/json",
           "x-admin-csrf": decodeURIComponent(getCsrfToken()),
+          "x-idempotency-key": operationId.current,
         },
         body: JSON.stringify(draft),
       });
@@ -265,6 +267,7 @@ export default function EventEditorModal({ eventId, onClose, onSaved }: EventEdi
 
       setSelected(data.event);
       setDraft(buildDraft(data.event));
+      operationId.current = crypto.randomUUID();
       setMessage(null);
       await onSaved();
       return true;

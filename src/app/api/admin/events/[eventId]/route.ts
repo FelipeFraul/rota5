@@ -6,25 +6,13 @@ import {
   requireAdminEventEditorSession,
 } from "@/lib/tickets/services/adminWebAuth";
 import {
-  upsertCourtesySectionLimits,
-} from "@/lib/tickets/services/adminCourtesies";
-import {
   duplicateAdminEvent,
-  createAdminEventSections,
-  findOrCreateVenue,
   getAdminEventDetails,
   getAdminSessionUsage,
   listAdminPrices,
   parseMoneyToCents,
   updateAdminEvent,
-  updateAdminPrice,
-  updateAdminSection,
-  updateAdminSectionCapacity,
-  updateAdminSession,
-  type AdminEventStatus,
-  type AdminSectionStatus,
-  type AdminSessionStatus,
-  type AdminTicketPriceStatus,
+  updateAdminEventCatalog,
 } from "@/lib/tickets/services/adminEvents";
 import {
   getAdminContactActivity,
@@ -293,6 +281,11 @@ async function buildEventPayload(eventId: string) {
     auth: auth.session,
     event: result.event,
   };
+}
+
+function slugifySection(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "entrada";
 }
 
 async function buildEventDashboard(eventId: string, range: AdminContactRange = "day") {
@@ -741,40 +734,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     return jsonForbidden();
   }
 
-  const keepsCurrentVenue = Boolean(
-    existing.venueId &&
-      sameVenueValue(existing.venueName, parsed.data.event.venueName) &&
-      sameVenueValue(existing.city, parsed.data.event.city) &&
-      sameVenueValue(existing.state, parsed.data.event.state),
-  );
-  const venue = keepsCurrentVenue
-    ? { ok: true as const, venueId: existing.venueId!, created: false as const }
-    : await findOrCreateVenue({
-        name: parsed.data.event.venueName,
-        city: parsed.data.event.city,
-        state: parsed.data.event.state,
-      });
-
-  if (!venue.ok) {
-    return NextResponse.json({ ok: false, message: "Não foi possível validar o local." }, { status: 500 });
+  const operationId = request.headers.get("x-idempotency-key");
+  if (!operationId || !z.string().uuid().safeParse(operationId).success) {
+    return NextResponse.json({ ok: false, message: "Identidade da operação inválida." }, { status: 400 });
   }
-
-  const eventUpdate = await updateAdminEvent(eventId, {
-    title: parsed.data.event.title,
-    artist_name: parsed.data.event.artistName?.trim() || parsed.data.event.title,
-    artist_icon: parsed.data.event.artistIcon?.trim() || "🎤",
-    description: parsed.data.event.description || null,
-    city: parsed.data.event.city,
-    state: parsed.data.event.state.toUpperCase(),
-    venue_id: venue.venueId,
-    image_url: parsed.data.event.imageUrl || null,
-    status: parsed.data.event.status as AdminEventStatus,
-  });
-
-  if (!eventUpdate.ok) {
-    return NextResponse.json({ ok: false, message: "Não foi possível salvar o evento." }, { status: 500 });
-  }
-
   for (const session of parsed.data.sessions) {
     const currentSession = existing.sessions.find((item) => item.sessionId === session.sessionId);
     const startsAtChanged = currentSession?.startsAt !== session.startsAt;
@@ -792,125 +755,84 @@ export async function PATCH(request: Request, context: RouteContext) {
         );
       }
     }
-
-    const updated = await updateAdminSession(session.sessionId, {
-      starts_at: session.startsAt,
-      venue_id: venue.venueId,
-      status: session.status as AdminSessionStatus,
-    });
-
-    if (!updated.ok) {
-      return NextResponse.json({ ok: false, message: "Não foi possível salvar uma sessão." }, { status: 500 });
-    }
   }
 
-  for (const section of parsed.data.sections) {
-    const currentSection = sectionById.get(section.sectionId);
-    if (!currentSection) return jsonForbidden();
-
-    if (!currentSection.hasNumberedSeats && section.capacity !== null) {
-      const result = await updateAdminSectionCapacity({
-        venueId: existing.venueId ?? venue.venueId,
-        sectionId: section.sectionId,
-        sessionIds: existing.sessions.map((session) => session.sessionId),
-        newCapacity: section.capacity,
-      });
-
-      if (!result.ok) {
-        return NextResponse.json(
-          { ok: false, message: "Não foi possível alterar a carga sem afetar vendas existentes." },
-          { status: 409 },
-        );
-      }
-
-      const metadataUpdate = await updateAdminSection(section.sectionId, {
-        name: section.name,
-        status: section.status as AdminSectionStatus,
-      });
-
-      if (!metadataUpdate.ok) {
-        return NextResponse.json({ ok: false, message: "Não foi possível salvar um setor." }, { status: 500 });
-      }
-
-      continue;
-    }
-
-    const updated = await updateAdminSection(section.sectionId, {
-      name: section.name,
-      capacity: section.capacity,
-      status: section.status as AdminSectionStatus,
-    });
-
-    if (!updated.ok) {
-      return NextResponse.json({ ok: false, message: "Não foi possível salvar um setor." }, { status: 500 });
-    }
+  if (parsed.data.newSections.length && !existing.sessions.length) {
+    return NextResponse.json({ ok: false, message: "Crie uma sessão antes de criar setores." }, { status: 409 });
   }
 
-  if (parsed.data.newSections.length) {
-    if (!existing.sessions.length) {
-      return NextResponse.json(
-        { ok: false, message: "Crie uma sessão antes de criar setores." },
-        { status: 409 },
-      );
-    }
+  const keepsCurrentVenue = Boolean(
+    existing.venueId &&
+      sameVenueValue(existing.venueName, parsed.data.event.venueName) &&
+      sameVenueValue(existing.city, parsed.data.event.city) &&
+      sameVenueValue(existing.state, parsed.data.event.state),
+  );
+  const prices = parsed.data.prices.map((price) => ({
+    price_id: price.priceId,
+    label: price.label,
+    price_cents: parseMoneyToCents(price.price),
+    fee_cents: parseMoneyToCents(price.fee),
+    sales_start_at: price.salesStartAt,
+    sales_end_at: price.salesEndAt,
+    status: price.status,
+  }));
+  if (prices.some((price) => price.price_cents === null || price.fee_cents === null)) {
+    return NextResponse.json({ ok: false, message: "Preço ou taxa inválidos." }, { status: 400 });
+  }
 
-    const created = await createAdminEventSections({
-      venueId: venue.venueId,
-      sessionIds: existing.sessions.map((session) => session.sessionId),
-      sections: parsed.data.newSections.map((section) => ({
+  const updated = await updateAdminEventCatalog({
+    operationId,
+    eventId,
+    payload: {
+      venue: {
+        keep_current: keepsCurrentVenue,
+        name: parsed.data.event.venueName,
+        city: parsed.data.event.city,
+        state: parsed.data.event.state,
+      },
+      event: {
+        title: parsed.data.event.title,
+        artist_name: parsed.data.event.artistName?.trim() || parsed.data.event.title,
+        artist_icon: parsed.data.event.artistIcon?.trim() || "🎤",
+        description: parsed.data.event.description || null,
+        city: parsed.data.event.city,
+        state: parsed.data.event.state.toUpperCase(),
+        image_url: parsed.data.event.imageUrl || null,
+        status: parsed.data.event.status,
+      },
+      sessions: parsed.data.sessions.map((session) => ({
+        session_id: session.sessionId,
+        starts_at: session.startsAt,
+        status: session.status,
+      })),
+      sections: parsed.data.sections.map((section) => ({
+        section_id: section.sectionId,
         name: section.name,
         capacity: section.capacity,
-        label: section.name,
-        priceCents: 0,
-        feeCents: 0,
+        status: section.status,
+        has_numbered_seats: sectionById.get(section.sectionId)?.hasNumberedSeats ?? false,
       })),
-    });
-
-    if (!created.ok) {
-      return NextResponse.json(
-        { ok: false, message: "Não foi possível criar um novo setor." },
-        { status: 500 },
-      );
-    }
-  }
-
-  for (const price of parsed.data.prices) {
-    const priceCents = parseMoneyToCents(price.price);
-    const feeCents = parseMoneyToCents(price.fee);
-
-    if (priceCents === null || feeCents === null) {
-      return NextResponse.json(
-        { ok: false, message: "Preço ou taxa inválidos." },
-        { status: 400 },
-      );
-    }
-
-    const updated = await updateAdminPrice(price.priceId, {
-      label: price.label,
-      price_cents: priceCents,
-      fee_cents: feeCents,
-      sales_start_at: price.salesStartAt,
-      sales_end_at: price.salesEndAt,
-      status: price.status as AdminTicketPriceStatus,
-    });
-
-    if (!updated.ok) {
-      return NextResponse.json({ ok: false, message: "Não foi possível salvar um preço." }, { status: 500 });
-    }
-  }
-
-  const courtesyUpdate = await upsertCourtesySectionLimits(
-    eventId,
-    parsed.data.courtesy.sections.map((section) => ({
-      sectionId: section.sectionId,
-      label: section.label,
-      maxCourtesies: section.limit,
-      status: section.status,
-    })),
-  );
-
-  if (!courtesyUpdate.ok) {
-    return NextResponse.json({ ok: false, message: "Não foi possível salvar as cortesias." }, { status: 500 });
+      new_sections: parsed.data.newSections.map((section) => ({
+        name: section.name,
+        slug: slugifySection(section.name),
+        capacity: section.capacity,
+      })),
+      prices,
+      courtesy_limits: parsed.data.courtesy.sections.map((section) => ({
+        section_id: section.sectionId,
+        label: section.label,
+        max_courtesies: section.limit,
+        status: section.status,
+      })),
+    },
+  });
+  if (!updated.ok) {
+    const message = String(updated.error?.message ?? "");
+    const conflict = message.includes("session_has_usage") || message.includes("capacity_below_busy");
+    return NextResponse.json(
+      { ok: false, message: conflict ? "Não foi possível alterar o catálogo sem afetar uso existente." : "Não foi possível salvar o evento." },
+      { status: conflict ? 409 : 500 },
+    );
   }
 
   const payload = await buildEventPayload(eventId);
@@ -933,10 +855,16 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ ok: false, message: "Sessão inválida." }, { status: 403 });
   }
 
+  const operationId = request.headers.get("x-idempotency-key");
+  if (!operationId || !z.string().uuid().safeParse(operationId).success) {
+    return NextResponse.json({ ok: false, message: "Identidade da operação inválida." }, { status: 400 });
+  }
+
   const duplicated = await duplicateAdminEvent({
     eventId,
     createdByAdminUserId: loaded.auth.adminUser.id,
     createdByAdminPhone: loaded.auth.adminUser.phone,
+    operationId,
   });
 
   if (!duplicated.ok) {

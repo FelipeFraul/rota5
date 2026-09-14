@@ -1,5 +1,6 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import { getEnv } from "@/lib/env";
 import { logError, logWarn } from "@/lib/logger";
 import {
@@ -8063,6 +8064,7 @@ async function handleAdminEventsFlow({
         reply: renderAdminEventDuplicateConfirmReply(details.event),
         nextContext: withAdminEventsContext(baseContext, "admin_event_duplicate_confirm", {
           selectedEventId: eventId,
+          draft: { operationId: randomUUID() },
         }),
       };
     }
@@ -8126,6 +8128,9 @@ async function handleAdminEventsFlow({
       eventId,
       createdByAdminUserId: freshAuth.scope.adminUserId,
       createdByAdminPhone: freshAuth.scope.adminPhone,
+      operationId: typeof adminEvents.draft?.operationId === "string"
+        ? adminEvents.draft.operationId
+        : randomUUID(),
     });
 
     if (!duplicateResult.ok) {
@@ -8215,6 +8220,7 @@ async function handleAdminEventsFlow({
 
   if (baseContext.state === "admin_event_create_collecting") {
     const draft = { ...(adminEvents.draft ?? {}) };
+    if (typeof draft.operationId !== "string") draft.operationId = randomUUID();
     const field = String(draft.field ?? "title");
 
     if (isAbortText(text)) {
@@ -9197,13 +9203,12 @@ async function handleAdminEventsFlow({
       initialSections,
       createdByAdminUserId: freshAuth.scope.adminUserId,
       createdByAdminPhone: freshAuth.scope.adminPhone,
+      operationId: typeof draft.operationId === "string" ? draft.operationId : undefined,
     });
 
     if (!result.ok) {
       return {
-        reply: result.partialEventCreated
-          ? "O evento foi salvo como rascunho, mas não consegui concluir toda a estrutura. Revise o evento antes de publicar."
-          : "Não consegui criar o evento agora. Verifique os dados e tente novamente.",
+        reply: "Não consegui criar o evento agora. Verifique os dados e tente novamente.",
         nextContext: withAdminEventsContext(baseContext, "admin_events_menu", {}),
       };
     }

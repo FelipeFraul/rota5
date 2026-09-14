@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 
 type Props = { onClose: () => void; onCreated: (eventId: string) => void };
 
@@ -8,11 +8,12 @@ function csrf() { return document.cookie.split(";").map((v) => v.trim()).find((v
 function cents(value: string) { return Math.round(Number(value.replace(",", ".")) * 100); }
 
 export default function CreateEventModal({ onClose, onCreated }: Props) {
+  const operationId = useRef(crypto.randomUUID());
   const [saving, setSaving] = useState(false); const [message, setMessage] = useState<string | null>(null); const [tab, setTab] = useState<"event" | "sessions" | "sections" | "prices">("event");
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setSaving(true); setMessage(null);
     const form = new FormData(event.currentTarget);
-    const response = await fetch("/api/admin/events", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json", "x-admin-csrf": decodeURIComponent(csrf()) }, body: JSON.stringify({ title: form.get("title"), artistName: form.get("artistName"), city: form.get("city"), state: form.get("state"), venueName: form.get("venueName"), description: form.get("description"), imageUrl: form.get("imageUrl"), startsAt: new Date(String(form.get("startsAt"))).toISOString(), sectionName: form.get("sectionName"), capacity: Number(form.get("capacity")), priceCents: cents(String(form.get("price"))), feeCents: cents(String(form.get("fee") || "0")) }) });
+    const response = await fetch("/api/admin/events", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json", "x-admin-csrf": decodeURIComponent(csrf()), "x-idempotency-key": operationId.current }, body: JSON.stringify({ title: form.get("title"), artistName: form.get("artistName"), city: form.get("city"), state: form.get("state"), venueName: form.get("venueName"), description: form.get("description"), imageUrl: form.get("imageUrl"), startsAt: new Date(String(form.get("startsAt"))).toISOString(), sectionName: form.get("sectionName"), capacity: Number(form.get("capacity")), priceCents: cents(String(form.get("price"))), feeCents: cents(String(form.get("fee") || "0")) }) });
     const data = await response.json() as { ok?: boolean; eventId?: string; message?: string };
     setSaving(false); if (!response.ok || !data.ok || !data.eventId) { setMessage(data.message ?? "Não foi possível criar o evento."); return; } onCreated(data.eventId);
   }

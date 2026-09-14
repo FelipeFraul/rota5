@@ -897,12 +897,17 @@ export async function POST(request: Request) {
 
   const parsed = createEventSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ ok: false, message: "Confira os dados do novo evento." }, { status: 400 });
+  const operationId = request.headers.get("x-idempotency-key");
+  if (!operationId || !z.string().uuid().safeParse(operationId).success) {
+    return NextResponse.json({ ok: false, message: "Identidade da operação inválida." }, { status: 400 });
+  }
   const data = parsed.data;
   const created = await createAdminEvent({
     title: data.title, artistName: data.artistName || data.title, artistIcon: "??", city: data.city, state: data.state, venueName: data.venueName,
     description: data.description || null, imageUrl: data.imageUrl || null, sessionsStartsAt: [data.startsAt], status: "draft",
     initialSections: [{ name: data.sectionName, slug: slugify(data.sectionName), hasNumberedSeats: false, capacity: data.capacity, createInventorySeats: false, ticketType: "full", label: "Ingresso", priceCents: data.priceCents, feeCents: data.feeCents }],
     createdByAdminUserId: auth.session.adminUser.id, createdByAdminPhone: auth.session.adminUser.phone,
+    operationId,
   });
   if (!created.ok) return NextResponse.json({ ok: false, message: "N?o foi poss?vel criar o evento." }, { status: 500 });
   return NextResponse.json({ ok: true, eventId: created.eventId }, { status: 201 });

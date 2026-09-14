@@ -494,6 +494,7 @@ export function AdminEventsEditor() {
 
     setDuplicatingEventId(eventId);
     setMessage(null);
+    const operationId = crypto.randomUUID();
 
     try {
       const response = await fetch(`/api/admin/events/${eventId}`, {
@@ -501,6 +502,7 @@ export function AdminEventsEditor() {
         credentials: "same-origin",
         headers: {
           "x-admin-csrf": decodeURIComponent(getCsrfToken()),
+          "x-idempotency-key": operationId,
         },
       });
       const data = await response.json() as { ok?: boolean; eventId?: string; event?: EventDetails; message?: string };
@@ -656,5 +658,4 @@ export function AdminEventsEditor() {
     </>
   );
 }
-
 
