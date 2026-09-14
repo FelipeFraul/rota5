@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T02:43:43.522Z",
-  "stage": "stabilization/default-suite-baseline-2.3.0",
-  "sourceCommit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+  "generatedAt": "2026-09-14T16:29:51.547Z",
+  "stage": "stabilization/critical-coverage-baseline-2.4.0",
+  "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
   "scope": "Baseline 2.2.0 after reproducible test-runner remediation and clean Git materialization proof.",
   "method": "Preserve historical evidence, resolve only the untracked-loader finding, and retain all other finding lifecycles.",
   "count": 44,
@@ -1654,17 +1654,29 @@
       "type": "TEST_GAP",
       "severity": "HIGH",
       "priority": "P1",
-      "status": "ACTIVE",
+      "status": "RESOLVED",
       "confidence": "CONFIRMED",
-      "description": "37 capabilities não têm referência de teste e 4 flows não têm teste; entre eles há status/eventos, acesso fixo, automação Codex e finalização de evento.",
+      "description": "Resolved by risk-based behavioral coverage: all 21 MUST capabilities and both high-risk flows are covered; the gross uncovered-capability counter is intentionally not required to be zero.",
       "evidence": [
         {
           "path": "system-knowledge/capabilities.json",
-          "claim": "metrics.without_test = 37."
+          "claim": "critical_behavioral_coverage records 21/21 MUST, zero MUST gaps, two incidental capabilities and seven historical/orphan exclusions."
         },
         {
           "path": "system-knowledge/flows.json",
-          "claim": "metrics.without_test = 4."
+          "claim": "event.auto_finish and codex.automation are COVERED; high-risk flows without behavioral coverage = 0."
+        },
+        {
+          "path": "scripts/test-support/production-module-harness.mjs",
+          "claim": "The harness loads and executes production modules; proof is behavioral and not source-regex-only."
+        },
+        {
+          "path": ".github/workflows/quality-gate.yml",
+          "claim": "Quality Gate run 34867214724 passed npm ci, 236/236 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD."
+        },
+        {
+          "path": "scripts/test-table-map-sync-postgres.mjs",
+          "claim": "CI integration executed the real sync_official_table_map_reservation_status trigger and passed 1/1."
         }
       ],
       "impact": "Regressões em autorização, mutações e automação externa podem chegar sem detecção automatizada.",
@@ -1692,7 +1704,79 @@
       "blast_radius": "MULTI_DOMAIN",
       "workaround": "Há auditorias manuais e contratos indiretos para parte da superfície.",
       "direction": "Priorizar testes por criticidade e side effect, não por contagem bruta.",
-      "priority_justification": "P1 pela presença de ações privilegiadas e externas sem teste direto."
+      "priority_justification": "P1 pela presença de ações privilegiadas e externas sem teste direto.",
+      "resolution": {
+        "baseline": "2.4.0",
+        "resolved_at": "2026-09-14T16:29:51.547Z",
+        "source_commit": "67845326088eac47452224b00ef1e866036e86f1",
+        "must_capabilities": {
+          "total": 21,
+          "covered": 21,
+          "without_behavioral_coverage_after": 0,
+          "ids": [
+            "event.change_status",
+            "event.cancel",
+            "event.auto_finish",
+            "gate.fixed_create",
+            "gate.fixed_list",
+            "gate.fixed_revoke",
+            "payment.checkout_view",
+            "payment.status",
+            "combo.status",
+            "combo.confirm",
+            "combo.scope",
+            "combo.activate",
+            "combo.delete",
+            "combo.expire",
+            "combo.kitchen_release",
+            "courtesy.section_limit",
+            "automation.request",
+            "automation.issue",
+            "automation.execute",
+            "automation.notify",
+            "background.remind_interest"
+          ]
+        },
+        "incidental_capabilities": [
+          "analytics.track_click",
+          "automation.list"
+        ],
+        "high_risk_flows": {
+          "total": 2,
+          "covered": 2,
+          "without_behavioral_coverage_after": 0,
+          "ids": [
+            "event.auto_finish",
+            "codex.automation"
+          ]
+        },
+        "historical_or_orphan_exclusions": [
+          "event.import_program",
+          "event.legacy_rename",
+          "event.legacy_split",
+          "event.legacy_update",
+          "ticket.validation_history",
+          "courtesy.event_limit",
+          "gate.sessions_list"
+        ],
+        "validation": {
+          "default_node_suite": "236/236 PASS",
+          "postgres_integration_suite": "1/1 PASS",
+          "postgres_version": 16,
+          "actual_production_trigger_executed_in_ci": true,
+          "trigger": "sync_official_table_map_reservation_status",
+          "quality_gate_run": 34867214724,
+          "quality_gate": "PASS",
+          "npm_ci": "PASS",
+          "typecheck": "PASS",
+          "lint": "PASS",
+          "build": "PASS",
+          "skip": 0,
+          "todo": 0,
+          "regressions": 0
+        },
+        "runtime_changed": false
+      }
     },
     {
       "id": "gap.real-integration-tests-outside-default",

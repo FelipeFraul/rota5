@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-13T23:22:29.421Z",
-  "stage": "stabilization/legacy-brand-baseline-2.1.0",
+  "generatedAt": "2026-09-14T16:29:51.547Z",
+  "stage": "stabilization/critical-coverage-baseline-2.4.0",
   "id": "rota5.flow-catalog.v1",
   "canonical": true,
   "count": 34,
@@ -20,9 +20,9 @@
     },
     "steps": 169,
     "state_transitions": 68,
-    "with_test": 30,
-    "without_test": 4,
-    "with_failing_test": 8,
+    "with_test": 32,
+    "without_test": 2,
+    "with_failing_test": 0,
     "capabilities_in_flows": 136,
     "capabilities_standalone": 4,
     "capabilities_unclassified": 0,
@@ -121,7 +121,7 @@
         "customer"
       ],
       "implementation_status": "PARCIAL",
-      "test_status": "FAILING",
+      "test_status": "PARTIAL",
       "domains": [
         "domain.brand-presentation",
         "domain.whatsapp-conversations",
@@ -169,10 +169,7 @@
         "test-035",
         "audit.seatmap-qr-image"
       ],
-      "failing_tests": [
-        "test-032",
-        "test-030"
-      ],
+      "failing_tests": [],
       "evidence": [
         {
           "kind": "implementation",
@@ -1138,7 +1135,7 @@
         "admin"
       ],
       "implementation_status": "CONFIRMADO",
-      "test_status": "FAILING",
+      "test_status": "PARTIAL",
       "domains": [
         "domain.whatsapp-conversations",
         "domain.admin-identity-access"
@@ -1169,9 +1166,7 @@
         "audit.admin-login-lockout",
         "audit.admin-tokenized-login"
       ],
-      "failing_tests": [
-        "test-001"
-      ],
+      "failing_tests": [],
       "evidence": [
         {
           "kind": "implementation",
@@ -1362,7 +1357,7 @@
         "admin"
       ],
       "implementation_status": "PARCIAL",
-      "test_status": "FAILING",
+      "test_status": "PARTIAL",
       "domains": [
         "domain.admin-identity-access",
         "domain.event-administration",
@@ -1430,13 +1425,7 @@
         "test-017",
         "test-040"
       ],
-      "failing_tests": [
-        "test-009",
-        "test-002",
-        "test-005",
-        "test-017",
-        "test-040"
-      ],
+      "failing_tests": [],
       "evidence": [
         {
           "kind": "local_validation",
@@ -1569,7 +1558,7 @@
         "admin"
       ],
       "implementation_status": "PARCIAL",
-      "test_status": "FAILING",
+      "test_status": "PARTIAL",
       "domains": [
         "domain.admin-identity-access",
         "domain.event-administration"
@@ -1623,11 +1612,7 @@
         "test-013",
         "test-015"
       ],
-      "failing_tests": [
-        "test-009",
-        "test-002",
-        "test-015"
-      ],
+      "failing_tests": [],
       "evidence": [
         {
           "kind": "implementation",
@@ -1748,7 +1733,7 @@
         "admin"
       ],
       "implementation_status": "CONFIRMADO",
-      "test_status": "FAILING",
+      "test_status": "PARTIAL",
       "domains": [
         "domain.admin-identity-access",
         "domain.combo-commerce-fulfillment"
@@ -1784,9 +1769,7 @@
         "test-019",
         "test-021"
       ],
-      "failing_tests": [
-        "test-019"
-      ],
+      "failing_tests": [],
       "evidence": [
         {
           "kind": "implementation",
@@ -3047,7 +3030,7 @@
         "Z-API"
       ],
       "implementation_status": "CONFIRMADO",
-      "test_status": "FAILING",
+      "test_status": "PARTIAL",
       "domains": [
         "domain.platform-runtime",
         "domain.whatsapp-conversations",
@@ -3098,9 +3081,7 @@
         "audit.gate-phone-checkin",
         "audit.system-closure"
       ],
-      "failing_tests": [
-        "test-025"
-      ],
+      "failing_tests": [],
       "evidence": [
         {
           "kind": "implementation",
@@ -3608,7 +3589,7 @@
         "cron"
       ],
       "implementation_status": "CONFIRMADO",
-      "test_status": "FAILING",
+      "test_status": "PARTIAL",
       "domains": [
         "domain.combo-commerce-fulfillment"
       ],
@@ -3645,9 +3626,7 @@
         "test-021",
         "test-036"
       ],
-      "failing_tests": [
-        "test-019"
-      ],
+      "failing_tests": [],
       "evidence": [
         {
           "kind": "implementation",
@@ -3721,7 +3700,7 @@
         "cron"
       ],
       "implementation_status": "CONFIRMADO",
-      "test_status": "FAILING",
+      "test_status": "PARTIAL",
       "domains": [
         "domain.background-processing"
       ],
@@ -3753,9 +3732,7 @@
         "test-038",
         "test-023"
       ],
-      "failing_tests": [
-        "test-038"
-      ],
+      "failing_tests": [],
       "evidence": [
         {
           "kind": "implementation",
@@ -3816,7 +3793,7 @@
         "internal scheduler check"
       ],
       "implementation_status": "CONFIRMADO",
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "domains": [
         "domain.event-administration"
       ],
@@ -3834,7 +3811,9 @@
         "integration-supabase",
         "integration-zapi"
       ],
-      "tests": [],
+      "tests": [
+        "scripts/test-event-lifecycle-critical.mjs"
+      ],
       "failing_tests": [],
       "evidence": [
         {
@@ -3844,6 +3823,12 @@
           "end_line": 354,
           "symbol": "finishPastPublishedEvents",
           "claim": "Consulta de eventos para cortesias/portaria/relatórios pode persistir finished nos eventos publicados passados."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-event-lifecycle-critical.mjs",
+          "line": 67,
+          "claim": "Executes finishPastPublishedEvents against stateful test data and proves eligibility and idempotency."
         }
       ]
     },
@@ -4159,7 +4144,7 @@
         "admin_and_local_operator"
       ],
       "implementation_status": "CONFIRMADO",
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "domains": [
         "domain.codex-automation"
       ],
@@ -4182,7 +4167,9 @@
         "integration-github",
         "integration-codex-cli"
       ],
-      "tests": [],
+      "tests": [
+        "scripts/test-codex-automation-contract.mjs"
+      ],
       "failing_tests": [],
       "evidence": [
         {
@@ -4221,6 +4208,12 @@
           "line": 1,
           "end_line": 552,
           "claim": "Implementação operacional/SQL lida; não executada."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-codex-automation-contract.mjs",
+          "line": 44,
+          "claim": "Executes request, issue, list, local-runner and notification behavior with authorization, idempotency and failure branches."
         }
       ]
     },
@@ -6197,6 +6190,24 @@
       "missing_flows": [],
       "late_capabilities": [],
       "status": "PASS"
+    }
+  },
+  "critical_behavioral_coverage": {
+    "high_risk_flows": [
+      "event.auto_finish",
+      "codex.automation"
+    ],
+    "covered": 2,
+    "without_behavioral_coverage_after": 0,
+    "gross_uncovered_flows": [
+      "event.program_import",
+      "blackhouse.maintenance"
+    ],
+    "exclusions": {
+      "historical_or_operational_outside_current_risk": [
+        "event.program_import",
+        "blackhouse.maintenance"
+      ]
     }
   }
 }

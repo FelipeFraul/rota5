@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T02:43:43.522Z",
+  "generatedAt": "2026-09-14T16:29:51.547Z",
   "count": 51,
   "defaultSuite": {
     "command": "npm test",
-    "fileCount": 15,
-    "observedCases": 214,
-    "passed": 214,
+    "fileCount": 22,
+    "observedCases": 236,
+    "passed": 236,
     "failed": 0,
     "status": "PASS",
     "failingFiles": [],
-    "evidence": "Executed on source c726902505fd69c2cfef2dec8013ffe0cf0adba3; 214/214 passed with the tracked Git runner.",
+    "evidence": "Local and Quality Gate run 34867214724 passed 236/236 on 67845326088eac47452224b00ef1e866036e86f1.",
     "previousSnapshot": {
       "date": "2026-09-11",
       "observedCases": 210,
@@ -18,8 +18,8 @@
       "failed": 6,
       "note": "Resultado histórico preservado; não representa o HEAD observado em 2026-09-12."
     },
-    "cases": 214,
-    "change": "SEVEN_HISTORICAL_FAILURES_RESOLVED",
+    "cases": 236,
+    "change": "CRITICAL_BEHAVIORAL_COVERAGE_ADDED",
     "runner": "scripts/test-support/typescript-alias-loader.mjs",
     "runner_reproducible_from_git": true,
     "known_failures": 0,
@@ -1324,7 +1324,7 @@
     "safeLocalExecution": true,
     "note": "stage3Validation permanece histórico e não foi reinterpretado."
   },
-  "stage": "stabilization/default-suite-baseline-2.3.0",
+  "stage": "stabilization/critical-coverage-baseline-2.4.0",
   "high_1_validation": {
     "focused_new_app": {
       "passed": 96,
@@ -1417,5 +1417,24 @@
     "runner_reproducible_from_git": true,
     "preview": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6",
     "production": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa"
+  },
+  "baseline_2_4_0": {
+    "source_commit": "67845326088eac47452224b00ef1e866036e86f1",
+    "default_node_suite": "236/236 PASS",
+    "postgres_integration": "1/1 PASS",
+    "postgres_version": 16,
+    "trigger": "sync_official_table_map_reservation_status",
+    "actual_trigger_executed_in_ci": true,
+    "quality_gate_run": 34867214724,
+    "quality_gate": "PASS",
+    "npm_ci": "PASS",
+    "typecheck": "PASS",
+    "lint": "PASS",
+    "build": "PASS",
+    "skip": 0,
+    "todo": 0,
+    "regressions": 0,
+    "production_runtime_source": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+    "current_head_deployed": false
   }
 }

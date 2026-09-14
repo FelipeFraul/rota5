@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T23:22:29.421Z",
-  "stage": "stabilization/legacy-brand-baseline-2.1.0",
+  "generatedAt": "2026-09-14T16:29:51.547Z",
+  "stage": "stabilization/critical-coverage-baseline-2.4.0",
   "id": "capability-catalog.v1",
   "canonical": true,
   "status": "PASS",
   "confidence": "MEDIA",
-  "sourceCommit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+  "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
   "sourceScope": "Working tree local, incluindo alteração preexistente em src/lib/tickets/messages.ts; não equivale ao commit puro nem ao deploy.",
   "count": 140,
   "methodology": {
@@ -57,18 +57,18 @@
     },
     "by_test_status": {
       "UNKNOWN": 48,
-      "UNCOVERED": 37,
-      "PARTIAL": 33,
-      "FAILING": 14,
-      "COVERED": 8
+      "UNCOVERED": 14,
+      "PARTIAL": 47,
+      "FAILING": 0,
+      "COVERED": 31
     },
     "orphans": 4,
     "broken": 0,
     "not_tested_status": 0,
     "without_entrypoint": 4,
-    "with_test": 107,
-    "without_test": 33,
-    "with_failing_test": 14,
+    "with_test": 129,
+    "without_test": 11,
+    "with_failing_test": 0,
     "with_external_integration": 139,
     "with_external_integration_except_database": 114,
     "without_test_executed_in_stage3": 89,
@@ -639,10 +639,8 @@
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
-      "failing_tests": [
-        "test-025"
-      ],
-      "test_status": "FAILING",
+      "failing_tests": [],
+      "test_status": "PARTIAL",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -1047,10 +1045,8 @@
       ],
       "status": "PARCIAL",
       "implementation_status": "PARCIAL",
-      "failing_tests": [
-        "test-032"
-      ],
-      "test_status": "FAILING",
+      "failing_tests": [],
+      "test_status": "PARTIAL",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -2136,10 +2132,8 @@
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
-      "failing_tests": [
-        "test-030"
-      ],
-      "test_status": "FAILING",
+      "failing_tests": [],
+      "test_status": "PARTIAL",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -2760,10 +2754,8 @@
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
-      "failing_tests": [
-        "test-009"
-      ],
-      "test_status": "FAILING",
+      "failing_tests": [],
+      "test_status": "PARTIAL",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -3458,7 +3450,9 @@
         "events"
       ],
       "database_functions": [],
-      "tests": [],
+      "tests": [
+        "scripts/test-event-lifecycle-critical.mjs"
+      ],
       "description": "Alterar estado operacional do evento sem apagar dados de venda.",
       "evidence": [
         {
@@ -3539,12 +3533,18 @@
           "line": 16472,
           "symbol": "handleAdminEventsFlow",
           "claim": "Consumidor no mesmo módulo; ler guardas e notas para disponibilidade efetiva."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-event-lifecycle-critical.mjs",
+          "line": 1,
+          "claim": "Baseline 2.4.0 executes production code for event.change_status; evidence is behavioral, not a source-regex-only assertion."
         }
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -3600,7 +3600,9 @@
         "events"
       ],
       "database_functions": [],
-      "tests": [],
+      "tests": [
+        "scripts/test-event-lifecycle-critical.mjs"
+      ],
       "description": "DELETE grava status cancelled; não faz exclusão física nem estorno.",
       "evidence": [
         {
@@ -3667,12 +3669,18 @@
           "line": 1,
           "entrypoint": "page-admin-events",
           "claim": "Catálogo/editor de eventos e ofertas."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-event-lifecycle-critical.mjs",
+          "line": 1,
+          "claim": "Baseline 2.4.0 executes production code for event.cancel; evidence is behavioral, not a source-regex-only assertion."
         }
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -3783,10 +3791,8 @@
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
-      "failing_tests": [
-        "test-002"
-      ],
-      "test_status": "FAILING",
+      "failing_tests": [],
+      "test_status": "PARTIAL",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -4829,10 +4835,8 @@
       ],
       "status": "PARCIAL",
       "implementation_status": "PARCIAL",
-      "failing_tests": [
-        "test-015"
-      ],
-      "test_status": "FAILING",
+      "failing_tests": [],
+      "test_status": "PARTIAL",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -4891,7 +4895,9 @@
         "event_sessions"
       ],
       "database_functions": [],
-      "tests": [],
+      "tests": [
+        "scripts/test-event-lifecycle-critical.mjs"
+      ],
       "description": "Consulta de eventos para cortesias/portaria/relatórios pode persistir finished nos eventos publicados passados.",
       "evidence": [
         {
@@ -4951,12 +4957,18 @@
           "line": 388,
           "symbol": "finishPastPublishedEvents",
           "claim": "Consumidor no mesmo módulo; ler guardas e notas para disponibilidade efetiva."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-event-lifecycle-critical.mjs",
+          "line": 1,
+          "claim": "Baseline 2.4.0 executes production code for event.auto_finish; evidence is behavioral, not a source-regex-only assertion."
         }
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -6109,7 +6121,9 @@
         "venue_sections"
       ],
       "database_functions": [],
-      "tests": [],
+      "tests": [
+        "scripts/test-checkout-status-and-combo-confirmation.mjs"
+      ],
       "description": "Validar token e exibir pedido, valor, formulário e dados Pix no cliente web.",
       "evidence": [
         {
@@ -6148,12 +6162,18 @@
           "line": 1114,
           "symbol": "getPublicCheckoutOrder",
           "claim": "Consumidor no mesmo módulo; ler guardas e notas para disponibilidade efetiva."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-checkout-status-and-combo-confirmation.mjs",
+          "line": 1,
+          "claim": "Baseline 2.4.0 executes production code for payment.checkout_view; evidence is behavioral, not a source-regex-only assertion."
         }
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -6334,7 +6354,9 @@
       "database_functions": [
         "confirm_paid_ticket_order"
       ],
-      "tests": [],
+      "tests": [
+        "scripts/test-checkout-status-and-combo-confirmation.mjs"
+      ],
       "description": "Consultar estado; polling pode buscar aprovação no provedor, confirmar e entregar ingresso.",
       "evidence": [
         {
@@ -6380,12 +6402,18 @@
           "line": 1,
           "entrypoint": "page-checkout",
           "claim": "Checkout de ingresso."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-checkout-status-and-combo-confirmation.mjs",
+          "line": 1,
+          "claim": "Baseline 2.4.0 executes production code for payment.status; evidence is behavioral, not a source-regex-only assertion."
         }
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -7898,10 +7926,8 @@
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
-      "failing_tests": [
-        "test-001"
-      ],
-      "test_status": "FAILING",
+      "failing_tests": [],
+      "test_status": "PARTIAL",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -9214,7 +9240,9 @@
         "fixed_gate_accesses"
       ],
       "database_functions": [],
-      "tests": [],
+      "tests": [
+        "scripts/test-fixed-gate-access-lifecycle.mjs"
+      ],
       "description": "Cadastrar acesso por telefone/senha ligado ao administrador proprietário.",
       "evidence": [
         {
@@ -9238,12 +9266,18 @@
           "line": 1,
           "entrypoint": "http-zapi-webhook",
           "claim": "Receber e responder mensagens WhatsApp."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-fixed-gate-access-lifecycle.mjs",
+          "line": 1,
+          "claim": "Baseline 2.4.0 executes production code for gate.fixed_create; evidence is behavioral, not a source-regex-only assertion."
         }
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -9294,7 +9328,9 @@
         "fixed_gate_accesses"
       ],
       "database_functions": [],
-      "tests": [],
+      "tests": [
+        "scripts/test-fixed-gate-access-lifecycle.mjs"
+      ],
       "description": "Exibir acessos fixos do proprietário.",
       "evidence": [
         {
@@ -9318,12 +9354,18 @@
           "line": 1,
           "entrypoint": "http-zapi-webhook",
           "claim": "Receber e responder mensagens WhatsApp."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-fixed-gate-access-lifecycle.mjs",
+          "line": 1,
+          "claim": "Baseline 2.4.0 executes production code for gate.fixed_list; evidence is behavioral, not a source-regex-only assertion."
         }
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -9380,7 +9422,8 @@
       "tests": [
         "test-044",
         "test-046",
-        "test-047"
+        "test-047",
+        "scripts/test-fixed-gate-access-lifecycle.mjs"
       ],
       "description": "Revoke fixed gate access and its attributed sessions transactionally.",
       "evidence": [
@@ -9405,12 +9448,18 @@
           "line": 1,
           "entrypoint": "http-zapi-webhook",
           "claim": "Receber e responder mensagens WhatsApp."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-fixed-gate-access-lifecycle.mjs",
+          "line": 1,
+          "claim": "Baseline 2.4.0 executes production code for gate.fixed_revoke; evidence is behavioral, not a source-regex-only assertion."
         }
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -10463,7 +10512,9 @@
         "courtesy_section_limits"
       ],
       "database_functions": [],
-      "tests": [],
+      "tests": [
+        "scripts/test-courtesy-section-limits.mjs"
+      ],
       "description": "Persistir limites e labels por setor; aba visual está oculta por flag global.",
       "evidence": [
         {
@@ -10487,12 +10538,18 @@
           "line": 1,
           "entrypoint": "http-admin-event-id",
           "claim": "Ler, editar, duplicar/acionar e excluir evento."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-courtesy-section-limits.mjs",
+          "line": 1,
+          "claim": "Baseline 2.4.0 executes production code for courtesy.section_limit; evidence is behavioral, not a source-regex-only assertion."
         }
       ],
       "status": "PARCIAL",
       "implementation_status": "PARCIAL",
       "failing_tests": [],
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -11130,7 +11187,9 @@
         "combo_offers"
       ],
       "database_functions": [],
-      "tests": [],
+      "tests": [
+        "scripts/test-combo-critical-lifecycle.mjs"
+      ],
       "description": "Configurar escopo por evento ou dias da semana.",
       "evidence": [
         {
@@ -11190,12 +11249,18 @@
           "line": 673,
           "symbol": "insertOfferScopes",
           "claim": "Consumidor no mesmo módulo; ler guardas e notas para disponibilidade efetiva."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-combo-critical-lifecycle.mjs",
+          "line": 1,
+          "claim": "Baseline 2.4.0 executes production code for combo.scope; evidence is behavioral, not a source-regex-only assertion."
         }
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -11341,10 +11406,8 @@
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
-      "failing_tests": [
-        "test-019"
-      ],
-      "test_status": "FAILING",
+      "failing_tests": [],
+      "test_status": "PARTIAL",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -11401,7 +11464,9 @@
         "combo_offers"
       ],
       "database_functions": [],
-      "tests": [],
+      "tests": [
+        "scripts/test-combo-critical-lifecycle.mjs"
+      ],
       "description": "Alterar active/paused para controlar elegibilidade da oferta.",
       "evidence": [
         {
@@ -11460,12 +11525,18 @@
           "line": 1,
           "entrypoint": "page-admin-events",
           "claim": "Catálogo/editor de eventos e ofertas."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-combo-critical-lifecycle.mjs",
+          "line": 1,
+          "claim": "Baseline 2.4.0 executes production code for combo.activate; evidence is behavioral, not a source-regex-only assertion."
         }
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -11572,10 +11643,8 @@
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
-      "failing_tests": [
-        "test-019"
-      ],
-      "test_status": "FAILING",
+      "failing_tests": [],
+      "test_status": "PARTIAL",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -11631,7 +11700,9 @@
         "combo_offers"
       ],
       "database_functions": [],
-      "tests": [],
+      "tests": [
+        "scripts/test-combo-critical-lifecycle.mjs"
+      ],
       "description": "Marcar deleted, preservando pedidos e histórico.",
       "evidence": [
         {
@@ -11698,12 +11769,18 @@
           "line": 1,
           "entrypoint": "page-admin-events",
           "claim": "Catálogo/editor de eventos e ofertas."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-combo-critical-lifecycle.mjs",
+          "line": 1,
+          "claim": "Baseline 2.4.0 executes production code for combo.delete; evidence is behavioral, not a source-regex-only assertion."
         }
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -11823,10 +11900,8 @@
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
-      "failing_tests": [
-        "test-019"
-      ],
-      "test_status": "FAILING",
+      "failing_tests": [],
+      "test_status": "PARTIAL",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -12188,7 +12263,9 @@
         "combo_orders"
       ],
       "database_functions": [],
-      "tests": [],
+      "tests": [
+        "scripts/test-checkout-status-and-combo-confirmation.mjs"
+      ],
       "description": "Consultar situação mediante token; não equivale à reconciliação de ingresso.",
       "evidence": [
         {
@@ -12219,12 +12296,18 @@
           "line": 1,
           "entrypoint": "page-combo-checkout",
           "claim": "Checkout de combo."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-checkout-status-and-combo-confirmation.mjs",
+          "line": 1,
+          "claim": "Baseline 2.4.0 executes production code for combo.status; evidence is behavioral, not a source-regex-only assertion."
         }
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -12277,7 +12360,9 @@
         "payment_events"
       ],
       "database_functions": [],
-      "tests": [],
+      "tests": [
+        "scripts/test-checkout-status-and-combo-confirmation.mjs"
+      ],
       "description": "Validar referência/valor/vínculo e persistir pedido pago e pagamento aprovado em operações separadas.",
       "evidence": [
         {
@@ -12301,12 +12386,18 @@
           "line": 1,
           "entrypoint": "http-mp-webhook",
           "claim": "Processar notificação assinada de pagamento."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-checkout-status-and-combo-confirmation.mjs",
+          "line": 1,
+          "claim": "Baseline 2.4.0 executes production code for combo.confirm; evidence is behavioral, not a source-regex-only assertion."
         }
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -12480,7 +12571,9 @@
         "combo_orders"
       ],
       "database_functions": [],
-      "tests": [],
+      "tests": [
+        "scripts/test-combo-critical-lifecycle.mjs"
+      ],
       "description": "Marcar pedidos pendentes vencidos como expired.",
       "evidence": [
         {
@@ -12526,12 +12619,18 @@
           "line": 2353,
           "symbol": "expireComboOrders",
           "claim": "Consumidor no mesmo módulo; ler guardas e notas para disponibilidade efetiva."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-combo-critical-lifecycle.mjs",
+          "line": 1,
+          "claim": "Baseline 2.4.0 executes production code for combo.expire; evidence is behavioral, not a source-regex-only assertion."
         }
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -12773,7 +12872,9 @@
         "conversations"
       ],
       "database_functions": [],
-      "tests": [],
+      "tests": [
+        "scripts/test-combo-critical-lifecycle.mjs"
+      ],
       "description": "Após entrada autorizada, tornar combos visíveis à cozinha e avisar comprador.",
       "evidence": [
         {
@@ -12819,12 +12920,18 @@
           "line": 249,
           "symbol": "validateTicketEntry",
           "claim": "Consumidor no mesmo módulo; ler guardas e notas para disponibilidade efetiva."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-combo-critical-lifecycle.mjs",
+          "line": 1,
+          "claim": "Baseline 2.4.0 executes production code for combo.kitchen_release; evidence is behavioral, not a source-regex-only assertion."
         }
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -14189,10 +14296,8 @@
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
-      "failing_tests": [
-        "test-005"
-      ],
-      "test_status": "FAILING",
+      "failing_tests": [],
+      "test_status": "PARTIAL",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -14292,10 +14397,8 @@
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
-      "failing_tests": [
-        "test-005"
-      ],
-      "test_status": "FAILING",
+      "failing_tests": [],
+      "test_status": "PARTIAL",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -14431,11 +14534,8 @@
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
-      "failing_tests": [
-        "test-017",
-        "test-040"
-      ],
-      "test_status": "FAILING",
+      "failing_tests": [],
+      "test_status": "PARTIAL",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -14601,7 +14701,9 @@
         "combo_orders"
       ],
       "database_functions": [],
-      "tests": [],
+      "tests": [
+        "scripts/test-checkout-status-and-combo-confirmation.mjs"
+      ],
       "description": "Persistir instante de abertura e contagem de cliques nos metadados do checkout de ingresso ou combo.",
       "evidence": [
         {
@@ -14647,12 +14749,18 @@
           "line": 1,
           "entrypoint": "page-combo-checkout",
           "claim": "Checkout de combo."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-checkout-status-and-combo-confirmation.mjs",
+          "line": 1,
+          "claim": "Baseline 2.4.0 executes production code for analytics.track_click; evidence is behavioral, not a source-regex-only assertion."
         }
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -14823,7 +14931,9 @@
         "whatsapp_messages"
       ],
       "database_functions": [],
-      "tests": [],
+      "tests": [
+        "scripts/test-reservation-side-effects.mjs"
+      ],
       "description": "Selecionar conversas interessadas sem compra gerada e enviar lembrete deduplicado.",
       "evidence": [
         {
@@ -14869,12 +14979,18 @@
           "line": 451,
           "symbol": "notifyBuyerInterest",
           "claim": "Consumidor no mesmo módulo; ler guardas e notas para disponibilidade efetiva."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-reservation-side-effects.mjs",
+          "line": 1,
+          "claim": "Baseline 2.4.0 executes production code for background.remind_interest; evidence is behavioral, not a source-regex-only assertion."
         }
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -15104,10 +15220,8 @@
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
-      "failing_tests": [
-        "test-038"
-      ],
-      "test_status": "FAILING",
+      "failing_tests": [],
+      "test_status": "PARTIAL",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -15328,7 +15442,9 @@
         "conversations"
       ],
       "database_functions": [],
-      "tests": [],
+      "tests": [
+        "scripts/test-codex-automation-contract.mjs"
+      ],
       "description": "Validar origem/segredo e persistir pedido aprovado com contexto de implantação.",
       "evidence": [
         {
@@ -15360,12 +15476,18 @@
           "line": 1,
           "entrypoint": "http-zapi-webhook",
           "claim": "Receber e responder mensagens WhatsApp."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-codex-automation-contract.mjs",
+          "line": 1,
+          "claim": "Baseline 2.4.0 executes production code for automation.request; evidence is behavioral, not a source-regex-only assertion."
         }
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -15419,7 +15541,9 @@
         "whatsapp_messages"
       ],
       "database_functions": [],
-      "tests": [],
+      "tests": [
+        "scripts/test-codex-automation-contract.mjs"
+      ],
       "description": "Publicar solicitação aprovada como issue quando integração está configurada.",
       "evidence": [
         {
@@ -15465,12 +15589,18 @@
           "line": 1438,
           "symbol": "createIssueForCodexRequest",
           "claim": "Consumidor no mesmo módulo; ler guardas e notas para disponibilidade efetiva."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-codex-automation-contract.mjs",
+          "line": 1,
+          "claim": "Baseline 2.4.0 executes production code for automation.issue; evidence is behavioral, not a source-regex-only assertion."
         }
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -15524,7 +15654,9 @@
         "whatsapp_messages"
       ],
       "database_functions": [],
-      "tests": [],
+      "tests": [
+        "scripts/test-codex-automation-contract.mjs"
+      ],
       "description": "Consultar pedidos por telefone/prefixo e imprimir lista operacional.",
       "evidence": [
         {
@@ -15547,12 +15679,18 @@
           "line": 1,
           "entrypoint": "script-codex-list",
           "claim": "Listar pedidos por telefone."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-codex-automation-contract.mjs",
+          "line": 1,
+          "claim": "Baseline 2.4.0 executes production code for automation.list; evidence is behavioral, not a source-regex-only assertion."
         }
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -15601,7 +15739,9 @@
         "whatsapp_messages"
       ],
       "database_functions": [],
-      "tests": [],
+      "tests": [
+        "scripts/test-codex-automation-contract.mjs"
+      ],
       "description": "Polling lê pedidos aprovados, controla estado em arquivo e invoca codex exec no checkout local.",
       "evidence": [
         {
@@ -15624,12 +15764,18 @@
           "line": 1,
           "entrypoint": "script-codex-runner",
           "claim": "Consultar pedidos, executar CLI e enviar resultado opcional."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-codex-automation-contract.mjs",
+          "line": 1,
+          "claim": "Baseline 2.4.0 executes production code for automation.execute; evidence is behavioral, not a source-regex-only assertion."
         }
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -15683,7 +15829,9 @@
         "whatsapp_messages"
       ],
       "database_functions": [],
-      "tests": [],
+      "tests": [
+        "scripts/test-codex-automation-contract.mjs"
+      ],
       "description": "Após execução, enviar resumo ao telefone do solicitante se disponível; ausência de credenciais Z-API retorna falha de configuração.",
       "evidence": [
         {
@@ -15706,12 +15854,18 @@
           "line": 1,
           "entrypoint": "script-codex-runner",
           "claim": "Consultar pedidos, executar CLI e enviar resultado opcional."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-codex-automation-contract.mjs",
+          "line": 1,
+          "claim": "Baseline 2.4.0 executes production code for automation.notify; evidence is behavioral, not a source-regex-only assertion."
         }
       ],
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNCOVERED",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -21584,5 +21738,50 @@
       "Nenhum dado ou segredo de .env foi necessário para a auditoria.",
       "Migrations são evidência estrutural local; não foi consultado schema remoto."
     ]
+  },
+  "critical_behavioral_coverage": {
+    "baseline": "2.4.0",
+    "methodology": "RISK_BASED_BEHAVIORAL_COVERAGE",
+    "must_total": 21,
+    "must_covered": 21,
+    "must_without_behavioral_coverage_after": 0,
+    "incidental_covered": [
+      "analytics.track_click",
+      "automation.list"
+    ],
+    "gross_uncovered_capability_count": 14,
+    "gross_count_required_to_be_zero": false,
+    "historical_or_orphan_excluded_from_current_risk": [
+      "event.import_program",
+      "event.legacy_rename",
+      "event.legacy_split",
+      "event.legacy_update",
+      "ticket.validation_history",
+      "courtesy.event_limit",
+      "gate.sessions_list"
+    ],
+    "historical_or_orphan_count": 7,
+    "evidence_model": "Production modules are loaded and executed by the test harness; assertions verify authorization, mutation, idempotency and side effects rather than only matching source text.",
+    "default_node_suite": {
+      "status": "PASS",
+      "passed": 236,
+      "cases": 236,
+      "skipped": 0,
+      "todo": 0,
+      "regressions": 0
+    },
+    "postgres_integration_suite": {
+      "status": "PASS",
+      "passed": 1,
+      "cases": 1,
+      "postgres": 16,
+      "trigger": "sync_official_table_map_reservation_status",
+      "actual_trigger_executed": true
+    },
+    "quality_gate": {
+      "status": "PASS",
+      "run": 34867214724,
+      "source_commit": "67845326088eac47452224b00ef1e866036e86f1"
+    }
   }
 }

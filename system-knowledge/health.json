@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T02:43:43.522Z",
-  "stage": "stabilization/default-suite-baseline-2.3.0",
-  "sourceCommit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
-  "scope": "Baseline 2.3.0 after the default suite reached 214/214; health remains independently derived from open findings.",
+  "generatedAt": "2026-09-14T16:29:51.547Z",
+  "stage": "stabilization/critical-coverage-baseline-2.4.0",
+  "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
+  "scope": "Baseline 2.4.0; health remains independently derived from all open findings, not only ACTIVE HIGH.",
   "method": "Análise estática, cinco testes comportamentais focados com fronteira Supabase simulada e gates locais canônicos; testes mutantes remotos não executados.",
   "vocabulary": [
     "HEALTHY",
@@ -16,7 +16,7 @@
   "system": {
     "id": "system.rota5",
     "health": "BROKEN",
-    "reason": "The default suite is green at 214/214. One ACTIVE HIGH coverage gap, one POTENTIAL HIGH and two open HIGH remain.",
+    "reason": "ACTIVE HIGH is zero, but three confirmed release-blocking P1 findings remain; therefore canonical product health is not HEALTHY.",
     "finding_counts_by_severity": {
       "CRITICAL": 0,
       "HIGH": 10,
@@ -26,11 +26,11 @@
     },
     "active_findings": {
       "P0": 0,
-      "HIGH": 1,
+      "HIGH": 0,
       "CRITICAL": 0,
-      "RESOLVED": 8,
+      "RESOLVED": 9,
       "POTENTIAL_HIGH": 1,
-      "OPEN_HIGH": 2
+      "OPEN_HIGH": 1
     }
   },
   "domains": [
@@ -1691,10 +1691,89 @@
   },
   "default_suite": {
     "status": "PASS",
-    "passed": 214,
-    "cases": 214,
+    "passed": 236,
+    "cases": 236,
     "failed": 0,
-    "known_failures": 0
+    "known_failures": 0,
+    "skipped": 0,
+    "todo": 0
   },
-  "next_active_high": "gap.critical-capability-and-flow-coverage"
+  "next_active_high": null,
+  "critical_coverage": {
+    "baseline": "2.4.0",
+    "methodology": "RISK_BASED_BEHAVIORAL_COVERAGE",
+    "must_total": 21,
+    "must_covered": 21,
+    "must_without_behavioral_coverage_after": 0,
+    "incidental_covered": [
+      "analytics.track_click",
+      "automation.list"
+    ],
+    "gross_uncovered_capability_count": 14,
+    "gross_count_required_to_be_zero": false,
+    "historical_or_orphan_excluded_from_current_risk": [
+      "event.import_program",
+      "event.legacy_rename",
+      "event.legacy_split",
+      "event.legacy_update",
+      "ticket.validation_history",
+      "courtesy.event_limit",
+      "gate.sessions_list"
+    ],
+    "historical_or_orphan_count": 7,
+    "evidence_model": "Production modules are loaded and executed by the test harness; assertions verify authorization, mutation, idempotency and side effects rather than only matching source text.",
+    "default_node_suite": {
+      "status": "PASS",
+      "passed": 236,
+      "cases": 236,
+      "skipped": 0,
+      "todo": 0,
+      "regressions": 0
+    },
+    "postgres_integration_suite": {
+      "status": "PASS",
+      "passed": 1,
+      "cases": 1,
+      "postgres": 16,
+      "trigger": "sync_official_table_map_reservation_status",
+      "actual_trigger_executed": true
+    },
+    "quality_gate": {
+      "status": "PASS",
+      "run": 34867214724,
+      "source_commit": "67845326088eac47452224b00ef1e866036e86f1"
+    }
+  },
+  "quality_gate": {
+    "version": "2.4.0",
+    "reason": "MINOR_COMPATIBLE_TOOLING_CHANGE",
+    "source_commit": "67845326088eac47452224b00ef1e866036e86f1",
+    "source_fingerprint": "df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0",
+    "source_file_count": 368,
+    "migration_count": 79,
+    "production_runtime_source": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+    "production_deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
+    "current_head_deployed": false,
+    "default_node_suite": "236/236 PASS",
+    "postgres_integration_suite": "1/1 PASS",
+    "postgres_version": 16,
+    "actual_trigger_executed_in_ci": true,
+    "trigger": "sync_official_table_map_reservation_status",
+    "quality_gate_run": 34867214724,
+    "quality_gate": "PASS",
+    "skip": 0,
+    "todo": 0,
+    "regressions": 0,
+    "finding_transition": "gap.critical-capability-and-flow-coverage: ACTIVE -> RESOLVED",
+    "active_high": 0,
+    "potential_high": 1,
+    "open_high": 1,
+    "resolved": 9,
+    "product_health": "BROKEN",
+    "infrastructure_health": "DEGRADED",
+    "supabase": "UNCHANGED",
+    "ticketeira": "UNTOUCHED",
+    "git_auto_deploy": "DISABLED",
+    "new_deployment": false
+  }
 }

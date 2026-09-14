@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T15:29:26.315Z",
-  "stage": "stabilization/p0-3",
+  "generatedAt": "2026-09-14T16:29:51.547Z",
+  "stage": "stabilization/critical-coverage-baseline-2.4.0",
   "id": "rota5-machine-catalog-index",
   "baseline_id": "rota5-baseline-v1",
   "count": 43,

@@ -1,4 +1,4 @@
-> **Current Baseline 2.3.0 (2026-09-14):** functional source `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; fingerprint `6851aa10ce08fec1444d08bd213b18349dd70ec8ee6b7753c023164207e9b1d3`; default suite **214/214 PASS** with zero known failures and zero new regressions. Finding `gap.default-test-suite-failing` is **RESOLVED**. Current Production is `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` (READY) and Preview evidence is `dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6`. Metrics: ACTIVE HIGH 1, POTENTIAL HIGH 1, OPEN HIGH 2, RESOLVED 8. Product health remains BROKEN; infrastructure health remains DEGRADED. Older baseline sections below are historical evidence.
+> **Current Baseline 2.4.0 (2026-09-14):** canonical HEAD `67845326088eac47452224b00ef1e866036e86f1`; source fingerprint `df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0` across 368 files and 79 migrations. **DEFAULT_NODE_SUITE 236/236 PASS**; **POSTGRES_INTEGRATION_SUITE 1/1 PASS** on PostgreSQL 16 with real `sync_official_table_map_reservation_status`; **QUALITY_GATE run 34867214724 PASS**. Coverage: 21/21 MUST, 0 MUST gaps, 2/2 high-risk flows, 0 high-risk flow gaps, 0 skip, 0 todo, 0 regressions. Finding `gap.critical-capability-and-flow-coverage` is **RESOLVED**. Metrics: ACTIVE HIGH 0, POTENTIAL HIGH 1, OPEN HIGH 1, RESOLVED 9. Product health remains BROKEN by the canonical release-blocker rule; infrastructure health remains DEGRADED. Production remains `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` on functional source `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; current HEAD deployed: **NAO** (post-runtime changes are test/tooling/CI only).
 
 # Resumo de qualidade
 
@@ -6,7 +6,7 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 
 ## Resultado
 
-**PASS documental. Saúde do sistema: BROKEN.** A auditoria completou os 17 domínios, 66 módulos, 56 entrypoints, 140 capabilities, 34 flows, 169 steps, 66 transições, 44 tabelas, 33 funções SQL, 33 triggers, 6 integrações, 2 webhooks, 2 crons, 43 env vars, 4 drifts e todos os 43 testes catalogados. PASS significa que os artefatos da Etapa 6 foram produzidos e validados; não significa que o produto esteja saudável.
+**PASS documental. Saúde do sistema: BROKEN.** A auditoria completou os 17 domínios, 66 módulos, 56 entrypoints, 140 capabilities, 34 flows, 169 steps, 68 transições, 44 tabelas, 39 funções SQL, 36 triggers, 6 integrações, 2 webhooks, 2 crons, 43 env vars e 51 records no inventário canônico de testes. PASS significa que os artefatos da Etapa 6 foram produzidos e validados; não significa que o produto esteja saudável.
 
 ## Contagens
 
@@ -33,4 +33,4 @@ Não houve pentest, carga destrutiva, pagamento, WhatsApp, cron, mutação de ba
 
 ## Estado atual da Baseline 2.2.0
 
-A identidade de infraestrutura permanece correta e não há P0 ativo. Permanecem 1 HIGH ACTIVE, 1 HIGH POTENTIAL e 2 HIGH abertos. A suíte padrão está verde em 214/214 com runner reproduzível do Git; PRODUCT_HEALTH continua BROKEN pelo gap crítico de cobertura. Production `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` está READY no source `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; INFRASTRUCTURE_HEALTH permanece DEGRADED devido aos demais findings.
+A identidade de infraestrutura permanece correta e não há P0 ou HIGH ACTIVE. Restam 1 HIGH POTENTIAL e 1 HIGH operacionalmente aberto. A suíte padrão está verde em 236/236 e o Quality Gate 34867214724 passou; PRODUCT_HEALTH continua BROKEN porque três findings P1 confirmados ainda bloqueiam release. Production `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` permanece READY no source funcional `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; o HEAD atual não foi implantado e INFRASTRUCTURE_HEALTH permanece DEGRADED.

@@ -1,27 +1,27 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T02:43:43.522Z",
-  "stage": "stabilization/default-suite-baseline-2.3.0",
+  "generatedAt": "2026-09-14T16:29:51.547Z",
+  "stage": "stabilization/critical-coverage-baseline-2.4.0",
   "baseline_id": "rota5-baseline-v1",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "status": "FROZEN",
-  "frozen_at": "2026-09-14T02:43:43.522Z",
+  "frozen_at": "2026-09-14T16:29:51.547Z",
   "source_state": {
-    "base_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
-    "source_tree_fingerprint": "6851aa10ce08fec1444d08bd213b18349dd70ec8ee6b7753c023164207e9b1d3",
-    "source_tree_file_count": 358,
+    "base_commit": "67845326088eac47452224b00ef1e866036e86f1",
+    "source_tree_fingerprint": "df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0",
+    "source_tree_file_count": 368,
     "functional_changes_since_base": [],
     "generated_from_working_tree": false,
     "baseline_commit": "SELF_NOT_RECORDED",
     "baseline_commit_policy": "The Git commit containing this baseline is intentionally not embedded in its own content to avoid self-reference."
   },
   "git_observation_at_generation": {
-    "observed_at": "2026-09-14T02:43:43.522Z",
+    "observed_at": "2026-09-14T16:29:51.547Z",
     "branch": "production",
-    "head": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+    "head": "67845326088eac47452224b00ef1e866036e86f1",
     "working_tree_clean": false,
     "validity_role": "INFORMATIONAL_ONLY",
-    "note": "Only Baseline 2.3.0 knowledge artifacts are uncommitted; functional source is already committed, pushed and deployed."
+    "note": "Only Baseline 2.4.0 documentation artifacts are uncommitted; canonical source is committed and pushed. Production intentionally remains on the prior functional runtime source."
   },
   "baseline_integrity": {
     "status": "PASS",
@@ -30,16 +30,16 @@
   },
   "product_health": {
     "status": "BROKEN",
-    "reason": "0 active P0, 1 active HIGH, 1 potential HIGH and 2 open HIGH remain. The default suite is green at 214/214; critical capability and flow coverage remains the next ACTIVE HIGH.",
+    "reason": "ACTIVE HIGH is zero, but three confirmed release-blocking P1 findings remain; product health is not inferred from ACTIVE HIGH alone.",
     "findings": 44,
     "active_p0": 0,
-    "active_high": 1,
+    "active_high": 0,
     "critical": 0,
-    "resolved": 8,
+    "resolved": 9,
     "broken_flows": 0,
     "partial_flows": 9,
     "potential_high": 1,
-    "open_high": 2
+    "open_high": 1
   },
   "confidence": "HIGH",
   "canonical_counts": {
@@ -73,8 +73,7 @@
   "contradictions_pending": 0,
   "p0_findings": [],
   "high_findings": [
-    "risk.admin-event-multistep-partial-state",
-    "gap.critical-capability-and-flow-coverage"
+    "risk.admin-event-multistep-partial-state"
   ],
   "canonical_catalogs": [
     "system-knowledge/architecture.json",
@@ -241,7 +240,10 @@
     "Supabase and Ticketeira were unchanged. Git auto-deploy remains DISABLED.",
     "EXPAND and CONTRACT are APPLIED_AND_VALIDATED; CONTRACT 20260913000100_gate_credential_session_revocation_contract applied at 2026-09-13T18:11:18.773635Z with SHA-256 bb90b8da28217c1cdfa86bc68780aac05fbb8c16cb8058d2ba55f9d48e16a525.",
     "HIGH #1 is RESOLVED after gates A-I and the post-CONTRACT runtime audit passed. Other findings keep product health BROKEN and infrastructure health DEGRADED.",
-    "Baseline 2.3.0 records the resolution of the default-suite finding at 214/214 without changing related finding lifecycles."
+    "Baseline 2.3.0 records the resolution of the default-suite finding at 214/214 without changing related finding lifecycles.",
+    "Baseline 2.4.0: MINOR_COMPATIBLE_TOOLING_CHANGE for behavioral tests, production-module harness, PostgreSQL CI gate and manual Quality Gate; no functional runtime change.",
+    "Critical coverage resolution: 21/21 MUST capabilities and 2/2 high-risk flows covered; 0 MUST gaps, 0 high-risk flow gaps, 0 skip, 0 todo and 0 regressions. The gross uncovered-capability counter is not required to be zero.",
+    "Quality Gate run 34867214724 passed on 67845326088eac47452224b00ef1e866036e86f1, including PostgreSQL 16 and real trigger sync_official_table_map_reservation_status. Earlier startup failures remain historical only."
   ],
   "resolved_findings": [
     "bug.create-event-invalid-jsx",
@@ -251,17 +253,15 @@
     "risk.vercel-project-identity-drift",
     "risk.latest-rota5-deployment-error",
     "gap.default-test-suite-failing",
+    "gap.critical-capability-and-flow-coverage",
     "gap.test-runner-depends-on-untracked-loader"
   ],
-  "active_high_findings": [
-    "gap.critical-capability-and-flow-coverage"
-  ],
+  "active_high_findings": [],
   "potential_high_findings": [
     "risk.admin-event-multistep-partial-state"
   ],
   "open_high_findings": [
-    "risk.admin-event-multistep-partial-state",
-    "gap.critical-capability-and-flow-coverage"
+    "risk.admin-event-multistep-partial-state"
   ],
   "high_1_rollout_state": {
     "source_implementation": "IMPLEMENTED_AND_VALIDATED",
@@ -519,10 +519,116 @@
     "production_deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
     "production_source_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
     "production_status": "READY",
-    "preview_deployment": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6",
+    "current_head_deployed": false,
+    "source_difference": "TEST_TOOLING_CI_ONLY",
     "relevant_log_errors": 0,
     "supabase": "UNCHANGED",
     "ticketeira": "UNTOUCHED",
-    "git_auto_deploy": "DISABLED"
+    "git_auto_deploy": "DISABLED",
+    "new_deployment": false
+  },
+  "critical_coverage_resolution": {
+    "baseline": "2.4.0",
+    "resolved_at": "2026-09-14T16:29:51.547Z",
+    "source_commit": "67845326088eac47452224b00ef1e866036e86f1",
+    "must_capabilities": {
+      "total": 21,
+      "covered": 21,
+      "without_behavioral_coverage_after": 0,
+      "ids": [
+        "event.change_status",
+        "event.cancel",
+        "event.auto_finish",
+        "gate.fixed_create",
+        "gate.fixed_list",
+        "gate.fixed_revoke",
+        "payment.checkout_view",
+        "payment.status",
+        "combo.status",
+        "combo.confirm",
+        "combo.scope",
+        "combo.activate",
+        "combo.delete",
+        "combo.expire",
+        "combo.kitchen_release",
+        "courtesy.section_limit",
+        "automation.request",
+        "automation.issue",
+        "automation.execute",
+        "automation.notify",
+        "background.remind_interest"
+      ]
+    },
+    "incidental_capabilities": [
+      "analytics.track_click",
+      "automation.list"
+    ],
+    "high_risk_flows": {
+      "total": 2,
+      "covered": 2,
+      "without_behavioral_coverage_after": 0,
+      "ids": [
+        "event.auto_finish",
+        "codex.automation"
+      ]
+    },
+    "historical_or_orphan_exclusions": [
+      "event.import_program",
+      "event.legacy_rename",
+      "event.legacy_split",
+      "event.legacy_update",
+      "ticket.validation_history",
+      "courtesy.event_limit",
+      "gate.sessions_list"
+    ],
+    "validation": {
+      "default_node_suite": "236/236 PASS",
+      "postgres_integration_suite": "1/1 PASS",
+      "postgres_version": 16,
+      "actual_production_trigger_executed_in_ci": true,
+      "trigger": "sync_official_table_map_reservation_status",
+      "quality_gate_run": 34867214724,
+      "quality_gate": "PASS",
+      "npm_ci": "PASS",
+      "typecheck": "PASS",
+      "lint": "PASS",
+      "build": "PASS",
+      "skip": 0,
+      "todo": 0,
+      "regressions": 0
+    },
+    "runtime_changed": false
+  },
+  "quality_gate": {
+    "version": "2.4.0",
+    "reason": "MINOR_COMPATIBLE_TOOLING_CHANGE",
+    "source_commit": "67845326088eac47452224b00ef1e866036e86f1",
+    "source_fingerprint": "df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0",
+    "source_file_count": 368,
+    "migration_count": 79,
+    "production_runtime_source": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+    "production_deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
+    "current_head_deployed": false,
+    "default_node_suite": "236/236 PASS",
+    "postgres_integration_suite": "1/1 PASS",
+    "postgres_version": 16,
+    "actual_trigger_executed_in_ci": true,
+    "trigger": "sync_official_table_map_reservation_status",
+    "quality_gate_run": 34867214724,
+    "quality_gate": "PASS",
+    "skip": 0,
+    "todo": 0,
+    "regressions": 0,
+    "finding_transition": "gap.critical-capability-and-flow-coverage: ACTIVE -> RESOLVED",
+    "active_high": 0,
+    "potential_high": 1,
+    "open_high": 1,
+    "resolved": 9,
+    "product_health": "BROKEN",
+    "infrastructure_health": "DEGRADED",
+    "supabase": "UNCHANGED",
+    "ticketeira": "UNTOUCHED",
+    "git_auto_deploy": "DISABLED",
+    "new_deployment": false
   }
 }

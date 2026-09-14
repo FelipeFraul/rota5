@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-13T19:08:55.803Z",
-  "stage": "stabilization/high-1-final-baseline-2.0.0",
-  "sourceCommit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
+  "generatedAt": "2026-09-14T16:29:51.547Z",
+  "stage": "stabilization/critical-coverage-baseline-2.4.0",
+  "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
   "count": 6,
   "remoteValidated": 5,
   "records": [

@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T02:43:43.522Z",
-  "stage": "stabilization/default-suite-baseline-2.3.0",
-  "sourceCommit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
-  "scope": "Baseline 2.3.0 after grouped remediation of the seven historical default-suite failures.",
+  "generatedAt": "2026-09-14T16:29:51.547Z",
+  "stage": "stabilization/critical-coverage-baseline-2.4.0",
+  "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
+  "scope": "Baseline 2.4.0 after risk-based behavioral coverage and the complete CI Quality Gate passed.",
   "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
   "status": "PASS",
   "total": 44,
@@ -46,11 +46,11 @@
     "P4": 2
   },
   "by_status": {
-    "ACTIVE": 24,
+    "ACTIVE": 23,
     "POTENTIAL": 7,
     "OPEN": 0,
     "MITIGATED": 0,
-    "RESOLVED": 8,
+    "RESOLVED": 9,
     "ACCEPTED": 0,
     "NOT_VALIDATED": 5
   },
@@ -281,13 +281,10 @@
       "status": "PASS"
     }
   },
-  "active_high_critical": [
-    "gap.critical-capability-and-flow-coverage"
-  ],
+  "active_high_critical": [],
   "active_p0_p1": [
     "bug.event-duplicate-artist-leak",
     "bug.user-visible-text-corruption",
-    "gap.critical-capability-and-flow-coverage",
     "gap.partial-flows-lack-end-to-end-proof"
   ],
   "resolved": [
@@ -298,6 +295,7 @@
     "risk.vercel-project-identity-drift",
     "risk.latest-rota5-deployment-error",
     "gap.default-test-suite-failing",
+    "gap.critical-capability-and-flow-coverage",
     "gap.test-runner-depends-on-untracked-loader"
   ],
   "infrastructure_identity": "CORRECT",
@@ -306,8 +304,7 @@
     "risk.admin-event-multistep-partial-state"
   ],
   "open_high_critical": [
-    "risk.admin-event-multistep-partial-state",
-    "gap.critical-capability-and-flow-coverage"
+    "risk.admin-event-multistep-partial-state"
   ],
   "potential_p0_p1": [
     "risk.admin-event-multistep-partial-state",
@@ -317,7 +314,6 @@
     "bug.event-duplicate-artist-leak",
     "bug.user-visible-text-corruption",
     "risk.admin-event-multistep-partial-state",
-    "gap.critical-capability-and-flow-coverage",
     "risk.payment-confirmed-before-external-delivery",
     "gap.partial-flows-lack-end-to-end-proof"
   ],
@@ -580,14 +576,46 @@
       "seven-failure autopsy"
     ]
   },
-  "next_active_high": "gap.critical-capability-and-flow-coverage",
+  "next_active_high": null,
   "current_runtime": {
     "production_deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
     "production_source_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
-    "preview_deployment": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6",
+    "current_head_deployed": false,
     "status": "READY",
-    "relevant_log_errors": 0,
     "supabase": "UNCHANGED",
-    "ticketeira": "UNTOUCHED"
+    "ticketeira": "UNTOUCHED",
+    "git_auto_deploy": "DISABLED"
+  },
+  "baseline_2_4_0": {
+    "version": "2.4.0",
+    "reason": "MINOR_COMPATIBLE_TOOLING_CHANGE",
+    "source_commit": "67845326088eac47452224b00ef1e866036e86f1",
+    "source_fingerprint": "df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0",
+    "source_file_count": 368,
+    "migration_count": 79,
+    "production_runtime_source": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+    "production_deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
+    "current_head_deployed": false,
+    "default_node_suite": "236/236 PASS",
+    "postgres_integration_suite": "1/1 PASS",
+    "postgres_version": 16,
+    "actual_trigger_executed_in_ci": true,
+    "trigger": "sync_official_table_map_reservation_status",
+    "quality_gate_run": 34867214724,
+    "quality_gate": "PASS",
+    "skip": 0,
+    "todo": 0,
+    "regressions": 0,
+    "finding_transition": "gap.critical-capability-and-flow-coverage: ACTIVE -> RESOLVED",
+    "active_high": 0,
+    "potential_high": 1,
+    "open_high": 1,
+    "resolved": 9,
+    "product_health": "BROKEN",
+    "infrastructure_health": "DEGRADED",
+    "supabase": "UNCHANGED",
+    "ticketeira": "UNTOUCHED",
+    "git_auto_deploy": "DISABLED",
+    "new_deployment": false
   }
 }
