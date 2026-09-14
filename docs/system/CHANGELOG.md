@@ -1,3 +1,13 @@
+## BASELINE 2.2.0 — TEST RUNNER REPRODUCIBLE
+
+- **MINOR_COMPATIBLE_TOOLING_CHANGE** on source `3e2bdc2979301301b3f1566a2ac75a477ee4c169`, fingerprint `fcfe71ec31dc69efc87275b598ab526dab43d6564369772b71be335703deadba`, 357 source files and 79 migrations.
+- Replaced the ignored `.tmp/typescript-alias-loader.mjs` dependency with byte-identical tracked `scripts/test-support/typescript-alias-loader.mjs`; no dependency was added and loader behavior did not change.
+- Clean canonical Git materialization passed `npm ci` and started `npm test`: 207/214 with the same seven known failures and zero new regressions.
+- `gap.test-runner-depends-on-untracked-loader` moved ACTIVE → RESOLVED. No other finding lifecycle changed.
+- The first Windows `core.autocrlf=true` worktree exposed two additional source-text assertion failures; this was recorded as evidence for the existing `gap.source-contract-assertion-bias`, without changing its status.
+- Production runtime remains `dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo`; no deployment, Supabase change or Ticketeira change occurred.
+- ACTIVE HIGH=2, POTENTIAL HIGH=1, OPEN HIGH=3 and RESOLVED=7. Product health remains BROKEN and infrastructure health DEGRADED.
+
 # Baseline changelog
 
 ## BASELINE V2.1.0 - SCOPED ACTIVE-BRAND RESOLUTION

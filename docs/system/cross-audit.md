@@ -44,3 +44,7 @@ Foram corrigidas duas contradições documentais: gate duplicado da Etapa 5 no R
 ## Reauditoria de estabilização P0.3
 
 O finding `risk.vercel-project-identity-drift` foi resolvido. A evidência da Etapa 7 permanece histórica; a cadeia atual é `FelipeFraul/rota5` `production` → Vercel `rota5`. Nenhum deployment foi realizado e o HEAD atual não está publicado.
+
+## Baseline 2.2.0 — test runner reproducibility
+
+The ignored loader dependency was reproduced as `ERR_MODULE_NOT_FOUND` in a clean worktree. Source `3e2bdc2979301301b3f1566a2ac75a477ee4c169` tracks the byte-identical loader at `scripts/test-support/typescript-alias-loader.mjs`. Canonical Git materialization passed `npm ci` and ran 207/214 with the same seven known failures. A CRLF worktree exposed two additional source-text assertion failures, recorded as evidence for the existing `gap.source-contract-assertion-bias`; no lifecycle besides the runner finding changed.

@@ -1,6 +1,6 @@
 # Baseline 2.0.1 HIGH #1 final state
 
-Baseline 2.1.0: `legacy.active-brand-contamination` is RESOLVED for `DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES` on source `d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8`. ACTIVE HIGH=3, POTENTIAL HIGH=1, OPEN HIGH=4, RESOLVED=6. Product health remains BROKEN.
+Baseline 2.2.0: `gap.test-runner-depends-on-untracked-loader` is RESOLVED on source `3e2bdc2979301301b3f1566a2ac75a477ee4c169`. ACTIVE HIGH=2, POTENTIAL HIGH=1, OPEN HIGH=3, RESOLVED=7. Product health remains BROKEN.
 
 
 `risk.gate-credential-revocation-does-not-revoke-session` is `RESOLVED/HIGH/P1`. EXPAND and CONTRACT are APPLIED_AND_VALIDATED, gates A-I passed, and strict post-CONTRACT runtime passed. Product health remains BROKEN and infrastructure health DEGRADED due independent findings.
@@ -41,7 +41,7 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 | gap.critical-capability-and-flow-coverage | TEST_GAP | HIGH | P1 | ACTIVE | CONFIRMED | Capabilities e flows relevantes não têm teste direto |
 | gap.real-integration-tests-outside-default | TEST_GAP | MEDIUM | P2 | ACTIVE | CONFIRMED | Testes reais e de integração ficam fora da suíte padrão |
 | gap.source-contract-assertion-bias | TEST_GAP | MEDIUM | P2 | ACTIVE | CONFIRMED | Parte relevante dos testes valida texto-fonte e regex de implementação |
-| gap.test-runner-depends-on-untracked-loader | TEST_GAP | HIGH | P1 | ACTIVE | CONFIRMED | npm test depende de loader em diretório temporário não versionado |
+| gap.test-runner-depends-on-untracked-loader | TEST_GAP | HIGH | P1 | RESOLVED | CONFIRMED | Loader versionado e runner provado em materialização Git limpa |
 | gap.remote-database-behavior-tests | TEST_GAP | MEDIUM | P2 | NOT_VALIDATED | CONFIRMED | Equivalência remota de RPCs, triggers e constraints não tem teste de baseline |
 | dead.brand-logo-component | DEAD_CODE | LOW | P3 | ACTIVE | CONFIRMED | BrandLogo.tsx não possui consumidor encontrado |
 | orphan.ticket-validation-history | ORPHAN | LOW | P3 | ACTIVE | CONFIRMED | Capability de histórico de validações não tem entrypoint |
@@ -370,9 +370,10 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 ### gap.test-runner-depends-on-untracked-loader — npm test depende de loader em diretório temporário não versionado
 
 - Tipo / severidade / prioridade: **TEST_GAP / HIGH / P1**
-- Status / confiança: **ACTIVE / CONFIRMED**
-- Problema: package.json aponta para ./.tmp/typescript-alias-loader.mjs; git não rastreia arquivos em .tmp, embora o loader exista nesta máquina.
-- Evidência: `package.json` — Script test referencia .tmp/typescript-alias-loader.mjs.; `.gitignore` — .tmp é área ignorada/temporária conforme inventário do repositório.
+- Status / confiança: **RESOLVED / CONFIRMED**
+- Problema histórico preservado: package.json apontava para ./.tmp/typescript-alias-loader.mjs; Git não rastreava arquivos em .tmp, embora o loader existisse na máquina auditada.
+- Evidência histórica: `package.json` referenciava `.tmp/typescript-alias-loader.mjs`; `.gitignore` mantinha `.tmp` ignorado.
+- Resolução: loader byte-identical versionado em `scripts/test-support/typescript-alias-loader.mjs`; `npm ci` e `npm test` executados a partir de blobs Git canônicos, sem `.tmp` ou `node_modules` copiados; resultado 207/214, mesmas sete falhas e zero regressões novas.
 - Impacto: Um checkout limpo ou CI pode falhar antes de executar qualquer teste por ausência do loader.
 - Escopo: domains domain.platform-runtime; capabilities —; flows —.
 - Blast radius: **SYSTEM_WIDE**

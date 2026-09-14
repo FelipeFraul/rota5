@@ -57,9 +57,10 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 ### gap.test-runner-depends-on-untracked-loader — npm test depende de loader em diretório temporário não versionado
 
 - Tipo / severidade / prioridade: **TEST_GAP / HIGH / P1**
-- Status / confiança: **ACTIVE / CONFIRMED**
-- Problema: package.json aponta para ./.tmp/typescript-alias-loader.mjs; git não rastreia arquivos em .tmp, embora o loader exista nesta máquina.
-- Evidência: `package.json` — Script test referencia .tmp/typescript-alias-loader.mjs.; `.gitignore` — .tmp é área ignorada/temporária conforme inventário do repositório.
+- Status / confiança: **RESOLVED / CONFIRMED**
+- Problema histórico preservado: package.json apontava para ./.tmp/typescript-alias-loader.mjs; Git não rastreava arquivos em .tmp, embora o loader existisse na máquina auditada.
+- Evidência histórica: `package.json` referenciava `.tmp/typescript-alias-loader.mjs`; `.gitignore` mantinha `.tmp` ignorado.
+- Resolução: loader byte-identical versionado em `scripts/test-support/typescript-alias-loader.mjs`; `npm ci` e `npm test` executados a partir de blobs Git canônicos, sem `.tmp` ou `node_modules` copiados; resultado 207/214, mesmas sete falhas e zero regressões novas.
 - Impacto: Um checkout limpo ou CI pode falhar antes de executar qualquer teste por ausência do loader.
 - Escopo: domains domain.platform-runtime; capabilities —; flows —.
 - Blast radius: **SYSTEM_WIDE**

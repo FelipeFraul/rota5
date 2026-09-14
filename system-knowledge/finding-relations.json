@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T23:22:29.421Z",
-  "stage": "stabilization/legacy-brand-baseline-2.1.0",
-  "sourceCommit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+  "generatedAt": "2026-09-14T01:52:43.483Z",
+  "stage": "stabilization/test-runner-baseline-2.2.0",
+  "sourceCommit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
   "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
   "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
   "count": 8,
@@ -48,7 +48,8 @@
       "from": "gap.source-contract-assertion-bias",
       "type": "CAUSES",
       "to": "gap.default-test-suite-failing",
-      "evidence": "Três falhas atuais são expectativas textuais/estruturais sem defeito funcional equivalente provado."
+      "evidence": "Três falhas atuais são expectativas textuais/estruturais sem defeito funcional equivalente provado.",
+      "additional_evidence": "A Windows core.autocrlf=true materialization produced two additional source-text assertion failures, while canonical Git blobs returned 207/214. Lifecycle remains unchanged."
     },
     {
       "from": "risk.remote-database-controls-unvalidated",
@@ -82,6 +83,12 @@
       "status": "RESOLVED",
       "resolved_at": "2026-09-13T23:22:29.421Z",
       "reason": "Scoped active surfaces passed Preview and Production runtime validation on d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8."
+    },
+    {
+      "finding": "gap.test-runner-depends-on-untracked-loader",
+      "status": "RESOLVED",
+      "resolved_at": "2026-09-14T01:52:43.483Z",
+      "reason": "The loader is tracked in scripts/test-support and npm ci plus npm test started from canonical Git content without .tmp."
     }
   ],
   "high_1_rollout_dependency": {
@@ -95,5 +102,22 @@
       "CONTRACT_REMOTE",
       "POST_CONTRACT_RUNTIME_AUDIT"
     ]
+  },
+  "test_runner_resolution": {
+    "finding": "gap.test-runner-depends-on-untracked-loader",
+    "status": "RESOLVED",
+    "source_commit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
+    "old_loader": ".tmp/typescript-alias-loader.mjs",
+    "versioned_loader": "scripts/test-support/typescript-alias-loader.mjs",
+    "loader_behavior_changed": false,
+    "new_external_dependencies": 0,
+    "runner_reproducible_from_git": true,
+    "clean_checkout_validated": true,
+    "npm_ci": "PASS",
+    "default_suite": "207/214_SAME_7_PREEXISTING",
+    "new_regressions": 0,
+    "deployment_required": false,
+    "production_runtime_changed": false,
+    "crlf_assertion_fragility_recorded": true
   }
 }

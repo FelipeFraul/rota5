@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T23:22:29.421Z",
-  "stage": "stabilization/legacy-brand-baseline-2.1.0",
+  "generatedAt": "2026-09-14T01:52:43.483Z",
+  "stage": "stabilization/test-runner-baseline-2.2.0",
   "baseline_id": "rota5-baseline-v1",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "status": "FROZEN",
   "domains": 17,
   "modules": 66,
@@ -103,13 +103,12 @@
     "release_gate": {
       "status": "BLOCKED",
       "applicable_threshold": "priority in {P0, P1} or severity in {CRITICAL, HIGH}",
-      "blocking_count": 6,
+      "blocking_count": 5,
       "blocking_findings": [
         "bug.event-duplicate-artist-leak",
         "bug.user-visible-text-corruption",
         "gap.default-test-suite-failing",
         "gap.critical-capability-and-flow-coverage",
-        "gap.test-runner-depends-on-untracked-loader",
         "gap.partial-flows-lack-end-to-end-proof"
       ],
       "semantics_source": "system-knowledge/findings.json.finding_status_taxonomy.statuses.release_blocking"
@@ -121,14 +120,15 @@
     "legacy.active-brand-contamination",
     "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.vercel-project-identity-drift",
-    "risk.latest-rota5-deployment-error"
+    "risk.latest-rota5-deployment-error",
+    "gap.test-runner-depends-on-untracked-loader"
   ],
   "finding_status_metrics": {
     "active_p0": 0,
-    "active_high": 3,
+    "active_high": 2,
     "potential_high": 1,
-    "open_high": 4,
-    "resolved": 6
+    "open_high": 3,
+    "resolved": 7
   },
   "high_1_rollout": {
     "source_implementation": "IMPLEMENTED_AND_VALIDATED",
@@ -308,5 +308,22 @@
       "relevant_production_log_errors": 0
     },
     "limitation": "Resolution is scoped to the active surfaces documented and revalidated for this finding; it is not a repository-wide assertion that historical brand strings do not exist elsewhere."
+  },
+  "test_runner_resolution": {
+    "finding": "gap.test-runner-depends-on-untracked-loader",
+    "status": "RESOLVED",
+    "source_commit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
+    "old_loader": ".tmp/typescript-alias-loader.mjs",
+    "versioned_loader": "scripts/test-support/typescript-alias-loader.mjs",
+    "loader_behavior_changed": false,
+    "new_external_dependencies": 0,
+    "runner_reproducible_from_git": true,
+    "clean_checkout_validated": true,
+    "npm_ci": "PASS",
+    "default_suite": "207/214_SAME_7_PREEXISTING",
+    "new_regressions": 0,
+    "deployment_required": false,
+    "production_runtime_changed": false,
+    "crlf_assertion_fragility_recorded": true
   }
 }

@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T23:22:29.421Z",
-  "stage": "stabilization/legacy-brand-baseline-2.1.0",
-  "sourceCommit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
-  "scope": "Baseline 2.1.0 with scoped active-brand remediation resolved from immutable source and runtime evidence.",
+  "generatedAt": "2026-09-14T01:52:43.483Z",
+  "stage": "stabilization/test-runner-baseline-2.2.0",
+  "sourceCommit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
+  "scope": "Baseline 2.2.0 with reproducible test-runner remediation resolved from canonical Git checkout evidence.",
   "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
   "status": "PASS",
   "total": 44,
@@ -46,11 +46,11 @@
     "P4": 2
   },
   "by_status": {
-    "ACTIVE": 26,
+    "ACTIVE": 25,
     "POTENTIAL": 7,
     "OPEN": 0,
     "MITIGATED": 0,
-    "RESOLVED": 6,
+    "RESOLVED": 7,
     "ACCEPTED": 0,
     "NOT_VALIDATED": 5
   },
@@ -281,15 +281,13 @@
   },
   "active_high_critical": [
     "gap.default-test-suite-failing",
-    "gap.critical-capability-and-flow-coverage",
-    "gap.test-runner-depends-on-untracked-loader"
+    "gap.critical-capability-and-flow-coverage"
   ],
   "active_p0_p1": [
     "bug.event-duplicate-artist-leak",
     "bug.user-visible-text-corruption",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
-    "gap.test-runner-depends-on-untracked-loader",
     "gap.partial-flows-lack-end-to-end-proof"
   ],
   "resolved": [
@@ -298,18 +296,18 @@
     "legacy.active-brand-contamination",
     "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.vercel-project-identity-drift",
-    "risk.latest-rota5-deployment-error"
+    "risk.latest-rota5-deployment-error",
+    "gap.test-runner-depends-on-untracked-loader"
   ],
   "infrastructure_identity": "CORRECT",
-  "current_head_deployed": true,
+  "current_head_deployed": false,
   "potential_high_critical": [
     "risk.admin-event-multistep-partial-state"
   ],
   "open_high_critical": [
     "risk.admin-event-multistep-partial-state",
     "gap.default-test-suite-failing",
-    "gap.critical-capability-and-flow-coverage",
-    "gap.test-runner-depends-on-untracked-loader"
+    "gap.critical-capability-and-flow-coverage"
   ],
   "potential_p0_p1": [
     "risk.admin-event-multistep-partial-state",
@@ -321,7 +319,6 @@
     "risk.admin-event-multistep-partial-state",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
-    "gap.test-runner-depends-on-untracked-loader",
     "risk.payment-confirmed-before-external-delivery",
     "gap.partial-flows-lack-end-to-end-proof"
   ],
@@ -499,5 +496,22 @@
       "relevant_production_log_errors": 0
     },
     "limitation": "Resolution is scoped to the active surfaces documented and revalidated for this finding; it is not a repository-wide assertion that historical brand strings do not exist elsewhere."
+  },
+  "test_runner_resolution": {
+    "finding": "gap.test-runner-depends-on-untracked-loader",
+    "status": "RESOLVED",
+    "source_commit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
+    "old_loader": ".tmp/typescript-alias-loader.mjs",
+    "versioned_loader": "scripts/test-support/typescript-alias-loader.mjs",
+    "loader_behavior_changed": false,
+    "new_external_dependencies": 0,
+    "runner_reproducible_from_git": true,
+    "clean_checkout_validated": true,
+    "npm_ci": "PASS",
+    "default_suite": "207/214_SAME_7_PREEXISTING",
+    "new_regressions": 0,
+    "deployment_required": false,
+    "production_runtime_changed": false,
+    "crlf_assertion_fragility_recorded": true
   }
 }

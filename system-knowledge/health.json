@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T23:22:29.421Z",
-  "stage": "stabilization/legacy-brand-baseline-2.1.0",
-  "sourceCommit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
-  "scope": "Baseline 2.1.0 after scoped active-brand remediation and runtime validation.",
+  "generatedAt": "2026-09-14T01:52:43.483Z",
+  "stage": "stabilization/test-runner-baseline-2.2.0",
+  "sourceCommit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
+  "scope": "Baseline 2.2.0 after reproducible test-runner remediation; product and infrastructure health retain independent open findings.",
   "method": "Análise estática, cinco testes comportamentais focados com fronteira Supabase simulada e gates locais canônicos; testes mutantes remotos não executados.",
   "vocabulary": [
     "HEALTHY",
@@ -16,7 +16,7 @@
   "system": {
     "id": "system.rota5",
     "health": "BROKEN",
-    "reason": "No active P0 remains. 3 ACTIVE HIGH, 1 POTENTIAL HIGH and 4 open HIGH remain after the scoped brand finding resolution; the same seven default-test failures remain.",
+    "reason": "No active P0 remains. 2 ACTIVE HIGH, 1 POTENTIAL HIGH and 3 open HIGH remain after the test-runner finding resolution; the same seven default-test failures remain.",
     "finding_counts_by_severity": {
       "CRITICAL": 0,
       "HIGH": 10,
@@ -26,11 +26,11 @@
     },
     "active_findings": {
       "P0": 0,
-      "HIGH": 3,
+      "HIGH": 2,
       "CRITICAL": 0,
-      "RESOLVED": 6,
+      "RESOLVED": 7,
       "POTENTIAL_HIGH": 1,
-      "OPEN_HIGH": 4
+      "OPEN_HIGH": 3
     }
   },
   "domains": [
@@ -46,7 +46,6 @@
         "gap.default-test-suite-failing",
         "gap.real-integration-tests-outside-default",
         "gap.source-contract-assertion-bias",
-        "gap.test-runner-depends-on-untracked-loader",
         "debt.direct-supabase-access-spread",
         "risk.production-capable-scripts-outside-test-isolation",
         "risk.service-role-application-authorization-boundary"
@@ -1530,7 +1529,8 @@
     "legacy.active-brand-contamination",
     "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.vercel-project-identity-drift",
-    "risk.latest-rota5-deployment-error"
+    "risk.latest-rota5-deployment-error",
+    "gap.test-runner-depends-on-untracked-loader"
   ],
   "infrastructure_health": "DEGRADED",
   "high_1": {
@@ -1672,5 +1672,22 @@
     "scope": "DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES",
     "source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
     "production_deployment": "dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo"
+  },
+  "test_runner_resolution": {
+    "finding": "gap.test-runner-depends-on-untracked-loader",
+    "status": "RESOLVED",
+    "source_commit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
+    "old_loader": ".tmp/typescript-alias-loader.mjs",
+    "versioned_loader": "scripts/test-support/typescript-alias-loader.mjs",
+    "loader_behavior_changed": false,
+    "new_external_dependencies": 0,
+    "runner_reproducible_from_git": true,
+    "clean_checkout_validated": true,
+    "npm_ci": "PASS",
+    "default_suite": "207/214_SAME_7_PREEXISTING",
+    "new_regressions": 0,
+    "deployment_required": false,
+    "production_runtime_changed": false,
+    "crlf_assertion_fragility_recorded": true
   }
 }

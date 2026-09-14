@@ -1,6 +1,6 @@
-# Baseline 2.0.1 HIGH #1 test and runtime inventory
+# Baseline 2.2.0 — reproducible test runner inventory
 
-Baseline 2.1.0 scoped branding evidence: typecheck PASS; lint PASS with 0 errors and 23 warnings; build PASS; focused 114/116 with two unrelated preexisting failures; default suite 207/214 with the same seven failures; new regressions 0.
+Baseline 2.2.0 runner evidence on source `3e2bdc2979301301b3f1566a2ac75a477ee4c169`: typecheck PASS; lint PASS with 0 errors and 23 warnings; build PASS; workspace default suite 207/214; canonical Git materialization after npm ci 207/214; same seven known failures; new regressions 0.
 
 
 The canonical inventory remains 51 test files. NEW_APP focused validation passed 96/96; final CONTRACT source/packaging tests passed 15/15; PostgreSQL 16 rollout matrix and ticket/combo race suites passed. Post-CONTRACT remote gates passed with cleanup. The default suite remains 207/214 with the same seven historical failures.
@@ -16,7 +16,7 @@ The canonical inventory remains 51 test files. NEW_APP focused validation passed
 - Fora do comando padrão: **28**.
 - Scripts `scripts/audit-*.mjs`: **3**.
 - Ferramentas `.tools/audit_*.mjs`: **21**.
-- Framework principal: `node:test` e `node:assert`; o comando padrão usa um loader TypeScript experimental em `.tmp/typescript-alias-loader.mjs`.
+- Framework principal: `node:test` e `node:assert`; o comando padrão usa o loader TypeScript versionado `scripts/test-support/typescript-alias-loader.mjs`. O snapshot histórico da Etapa 3 usava `.tmp/typescript-alias-loader.mjs`.
 
 A maior parte dos testes lê arquivos como texto e verifica contratos com regex/asserts. Esse tipo confirma que uma estrutura textual está presente; não confirma compilação, integração real, browser ou serviço externo. Os testes marcados como **real/integrado** usam Supabase, PostgreSQL ou servidor HTTP local e não foram executados nesta etapa para evitar inferir ambiente/credenciais e efeitos de cleanup.
 
@@ -140,3 +140,7 @@ Limitação comum: várias ferramentas usam Supabase real/service role, criam da
 | `npm test` | FAIL | 207/214 passaram; as mesmas 7 falharam |
 
 O lint sinalizou ainda imports, funções e variáveis sem uso, uso de `<img>` e uma dependência desnecessária de hook. Esses sinais foram inventariados como possíveis lacunas/legado; nenhum foi alterado.
+
+## Runner reproducibility — Baseline 2.2.0
+
+The original untracked loader failed with `ERR_MODULE_NOT_FOUND` before useful test execution. The tracked loader has the same SHA-256 `3581a09ff5a8e0c5641409ef3127521b382613c5b89155141777c5b705ae9eb8`, uses only Node built-ins and preserves behavior. A clean canonical Git materialization passed `npm ci` and returned 207/214. A separate Windows CRLF materialization exposed two extra source-assertion failures; this is not a loader regression.

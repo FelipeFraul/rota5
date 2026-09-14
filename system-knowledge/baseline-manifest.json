@@ -1,27 +1,27 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T23:22:29.421Z",
-  "stage": "stabilization/legacy-brand-baseline-2.1.0",
+  "generatedAt": "2026-09-14T01:52:43.483Z",
+  "stage": "stabilization/test-runner-baseline-2.2.0",
   "baseline_id": "rota5-baseline-v1",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "status": "FROZEN",
-  "frozen_at": "2026-09-13T23:22:29.421Z",
+  "frozen_at": "2026-09-14T01:52:43.483Z",
   "source_state": {
-    "base_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
-    "source_tree_fingerprint": "b18a51cba6668b4ea37854f4e722181961cf9afac13d8f02638672a75c18426e",
-    "source_tree_file_count": 356,
+    "base_commit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
+    "source_tree_fingerprint": "fcfe71ec31dc69efc87275b598ab526dab43d6564369772b71be335703deadba",
+    "source_tree_file_count": 357,
     "functional_changes_since_base": [],
     "generated_from_working_tree": false,
     "baseline_commit": "SELF_NOT_RECORDED",
     "baseline_commit_policy": "The Git commit containing this baseline is intentionally not embedded in its own content to avoid self-reference."
   },
   "git_observation_at_generation": {
-    "observed_at": "2026-09-13T23:22:29.421Z",
+    "observed_at": "2026-09-14T01:52:43.483Z",
     "branch": "production",
-    "head": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+    "head": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
     "working_tree_clean": false,
     "validity_role": "INFORMATIONAL_ONLY",
-    "note": "Only Baseline 2.1.0 knowledge artifacts are being generated; the functional source is the already committed and deployed pure commit."
+    "note": "Only Baseline 2.2.0 knowledge artifacts are being generated; the tooling source is already committed and pushed."
   },
   "baseline_integrity": {
     "status": "PASS",
@@ -30,16 +30,16 @@
   },
   "product_health": {
     "status": "BROKEN",
-    "reason": "0 active P0, 3 active HIGH, 1 potential HIGH, 4 open HIGH, 0 broken flows, 9 partial flows and the same seven default-suite failures; infrastructure remains DEGRADED due independent findings.",
+    "reason": "0 active P0, 2 active HIGH, 1 potential HIGH, 3 open HIGH, 0 broken flows, 9 partial flows and the same seven default-suite failures; infrastructure remains DEGRADED due independent findings.",
     "findings": 44,
     "active_p0": 0,
-    "active_high": 3,
+    "active_high": 2,
     "critical": 0,
-    "resolved": 6,
+    "resolved": 7,
     "broken_flows": 0,
     "partial_flows": 9,
     "potential_high": 1,
-    "open_high": 4
+    "open_high": 3
   },
   "confidence": "HIGH",
   "canonical_counts": {
@@ -75,8 +75,7 @@
   "high_findings": [
     "risk.admin-event-multistep-partial-state",
     "gap.default-test-suite-failing",
-    "gap.critical-capability-and-flow-coverage",
-    "gap.test-runner-depends-on-untracked-loader"
+    "gap.critical-capability-and-flow-coverage"
   ],
   "canonical_catalogs": [
     "system-knowledge/architecture.json",
@@ -232,7 +231,11 @@
     "self_exclusion": "baseline-integrity.json is excluded to avoid circularity."
   },
   "notes": [
-    "Baseline 2.1.0 freezes pure functional source commit d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8, fingerprint b18a51cba6668b4ea37854f4e722181961cf9afac13d8f02638672a75c18426e, across 356 files.",
+    "Baseline 2.2.0 freezes pure source commit 3e2bdc2979301301b3f1566a2ac75a477ee4c169, fingerprint fcfe71ec31dc69efc87275b598ab526dab43d6564369772b71be335703deadba, across 357 files.",
+    "gap.test-runner-depends-on-untracked-loader is RESOLVED after a byte-identical loader was moved to a versioned path and npm ci plus npm test passed runner reproducibility from canonical Git blobs.",
+    "The default suite remains 207/214 with the same seven preexisting failures; this resolution does not close gap.default-test-suite-failing.",
+    "A core.autocrlf=true Windows worktree exposed two additional source-text assertion failures; this is recorded as evidence for gap.source-contract-assertion-bias and did not change its lifecycle.",
+    "Production runtime remains dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo on d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8; deployment is unnecessary for this tooling-only change.",
     "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE: active user-visible branding, runtime configuration and the local environment schema were corrected without architectural or contract incompatibility.",
     "Finding legacy.active-brand-contamination is RESOLVED for DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES; historical strings outside the documented and reaudited active surfaces are not part of this assertion.",
     "Preview dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW and Production dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo are READY on the exact source commit; scoped branding checks passed and relevant Production log errors are zero.",
@@ -246,12 +249,12 @@
     "legacy.active-brand-contamination",
     "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.vercel-project-identity-drift",
-    "risk.latest-rota5-deployment-error"
+    "risk.latest-rota5-deployment-error",
+    "gap.test-runner-depends-on-untracked-loader"
   ],
   "active_high_findings": [
     "gap.default-test-suite-failing",
-    "gap.critical-capability-and-flow-coverage",
-    "gap.test-runner-depends-on-untracked-loader"
+    "gap.critical-capability-and-flow-coverage"
   ],
   "potential_high_findings": [
     "risk.admin-event-multistep-partial-state"
@@ -259,8 +262,7 @@
   "open_high_findings": [
     "risk.admin-event-multistep-partial-state",
     "gap.default-test-suite-failing",
-    "gap.critical-capability-and-flow-coverage",
-    "gap.test-runner-depends-on-untracked-loader"
+    "gap.critical-capability-and-flow-coverage"
   ],
   "high_1_rollout_state": {
     "source_implementation": "IMPLEMENTED_AND_VALIDATED",
@@ -429,5 +431,22 @@
       "relevant_production_log_errors": 0
     },
     "limitation": "Resolution is scoped to the active surfaces documented and revalidated for this finding; it is not a repository-wide assertion that historical brand strings do not exist elsewhere."
+  },
+  "test_runner_resolution": {
+    "finding": "gap.test-runner-depends-on-untracked-loader",
+    "status": "RESOLVED",
+    "source_commit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
+    "old_loader": ".tmp/typescript-alias-loader.mjs",
+    "versioned_loader": "scripts/test-support/typescript-alias-loader.mjs",
+    "loader_behavior_changed": false,
+    "new_external_dependencies": 0,
+    "runner_reproducible_from_git": true,
+    "clean_checkout_validated": true,
+    "npm_ci": "PASS",
+    "default_suite": "207/214_SAME_7_PREEXISTING",
+    "new_regressions": 0,
+    "deployment_required": false,
+    "production_runtime_changed": false,
+    "crlf_assertion_fragility_recorded": true
   }
 }

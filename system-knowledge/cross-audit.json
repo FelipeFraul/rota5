@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T23:22:29.421Z",
-  "stage": "stabilization/legacy-brand-baseline-2.1.0",
+  "generatedAt": "2026-09-14T01:52:43.483Z",
+  "stage": "stabilization/test-runner-baseline-2.2.0",
   "status": "PASS",
-  "sourceCommit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
+  "sourceCommit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
   "question": "Podemos confiar na BASELINE V1 como representação do Rota5 atual?",
   "answer": "SIM, dentro dos limites UNKNOWN/NOT_VALIDATED explicitamente preservados.",
   "frozenScope": {
@@ -96,8 +96,8 @@
   "currentGates": {
     "npmTest": {
       "status": "FAIL",
-      "cases": 210,
-      "passed": 203,
+      "cases": 214,
+      "passed": 207,
       "failed": 7,
       "failingFiles": 6
     },
@@ -106,10 +106,10 @@
     "high_1_focused": "PASS_96_OF_96",
     "npm_test": "FAIL_207_OF_214_SAME_7",
     "build": "PASS_WITH_PREEXISTING_WARNING",
-    "active_high": 3,
+    "active_high": 2,
     "potential_high": 1,
-    "open_high": 4,
-    "resolved": 6,
+    "open_high": 3,
+    "resolved": 7,
     "latest_production_deployment": "PASS_READY"
   },
   "findings": {
@@ -175,7 +175,8 @@
   },
   "changes": {
     "functional": false,
-    "remote": false
+    "remote": false,
+    "tooling": true
   },
   "readyForStage8": true,
   "stabilization_p0_3_reaudit": {
@@ -338,5 +339,22 @@
     "preview_deployment": "dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW",
     "production_deployment": "dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo",
     "new_regressions": 0
+  },
+  "test_runner_resolution": {
+    "finding": "gap.test-runner-depends-on-untracked-loader",
+    "status": "RESOLVED",
+    "source_commit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
+    "old_loader": ".tmp/typescript-alias-loader.mjs",
+    "versioned_loader": "scripts/test-support/typescript-alias-loader.mjs",
+    "loader_behavior_changed": false,
+    "new_external_dependencies": 0,
+    "runner_reproducible_from_git": true,
+    "clean_checkout_validated": true,
+    "npm_ci": "PASS",
+    "default_suite": "207/214_SAME_7_PREEXISTING",
+    "new_regressions": 0,
+    "deployment_required": false,
+    "production_runtime_changed": false,
+    "crlf_assertion_fragility_recorded": true
   }
 }

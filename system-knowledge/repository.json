@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T23:22:29.421Z",
+  "generatedAt": "2026-09-14T01:52:43.483Z",
   "baseline": {
     "stage": "1/8",
     "name": "Reconhecimento total do sistema",
@@ -182,15 +182,16 @@
       "purpose": "Proteger contratos de fonte/SQL, módulos isolados, renderização e alguns fluxos reais.",
       "status": "PARCIALMENTE CONFIRMADO",
       "evidence": [
-        "43 arquivos",
-        "package.json executa 15",
-        "npm test: 204/210 pass"
+        "51 test files",
+        "package.json executes 15",
+        "npm test: 207/214",
+        "clean canonical Git materialization: npm ci PASS and runner STARTED"
       ],
       "dependencies": [
         "node:test",
-        ".tmp/typescript-alias-loader.mjs"
+        "scripts/test-support/typescript-alias-loader.mjs"
       ],
-      "notes": "6 casos falham; 28 arquivos não pertencem ao comando padrão."
+      "notes": "Seven known cases fail; 36 test files are outside the default command. The default runner is reproducible from tracked Git content."
     },
     {
       "id": "repo-audit-tools",
@@ -421,7 +422,7 @@
     },
     "lint": {
       "status": "PASS",
-      "evidence": "0 erros e 24 warnings preexistentes"
+      "evidence": "0 errors and 23 preexisting warnings"
     },
     "build": {
       "status": "PASS",
@@ -429,10 +430,27 @@
     },
     "tests": {
       "status": "FAIL",
-      "total": 210,
-      "passed": 203,
+      "total": 214,
+      "passed": 207,
       "failed": 7
     }
   },
-  "stage": "stabilization/legacy-brand-baseline-2.1.0"
+  "stage": "stabilization/test-runner-baseline-2.2.0",
+  "test_runner_reproducibility": {
+    "finding": "gap.test-runner-depends-on-untracked-loader",
+    "status": "RESOLVED",
+    "source_commit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
+    "old_loader": ".tmp/typescript-alias-loader.mjs",
+    "versioned_loader": "scripts/test-support/typescript-alias-loader.mjs",
+    "loader_behavior_changed": false,
+    "new_external_dependencies": 0,
+    "runner_reproducible_from_git": true,
+    "clean_checkout_validated": true,
+    "npm_ci": "PASS",
+    "default_suite": "207/214_SAME_7_PREEXISTING",
+    "new_regressions": 0,
+    "deployment_required": false,
+    "production_runtime_changed": false,
+    "crlf_assertion_fragility_recorded": true
+  }
 }

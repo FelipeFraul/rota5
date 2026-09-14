@@ -1,9 +1,52 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T23:22:29.421Z",
-  "stage": "stabilization/legacy-brand-baseline-2.1.0",
-  "count": 11,
+  "generatedAt": "2026-09-14T01:52:43.483Z",
+  "stage": "stabilization/test-runner-baseline-2.2.0",
+  "count": 12,
   "records": [
+    {
+      "version": "2.2.0",
+      "date": "2026-09-13",
+      "type": "MINOR_COMPATIBLE_TOOLING_CHANGE",
+      "source_commit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
+      "source_fingerprint": "fcfe71ec31dc69efc87275b598ab526dab43d6564369772b71be335703deadba",
+      "source_file_count": 357,
+      "migration_count": 79,
+      "changes": [
+        "Replaced the ignored .tmp test loader dependency with the byte-identical tracked scripts/test-support/typescript-alias-loader.mjs.",
+        "Proved npm ci and npm test from canonical Git content without copying .tmp or node_modules.",
+        "Changed gap.test-runner-depends-on-untracked-loader from ACTIVE to RESOLVED.",
+        "Recorded CRLF-sensitive source assertions as evidence for the existing gap.source-contract-assertion-bias without changing its lifecycle.",
+        "Production runtime, Supabase and Ticketeira were unchanged; no deployment was required and no new regression was introduced."
+      ],
+      "finding_transition": {
+        "id": "gap.test-runner-depends-on-untracked-loader",
+        "from": "ACTIVE",
+        "to": "RESOLVED",
+        "proof": "CLEAN_CHECKOUT_NPM_CI_AND_207_OF_214"
+      },
+      "validation": {
+        "typecheck": "PASS",
+        "lint": "PASS_0_ERRORS_23_WARNINGS",
+        "build": "PASS",
+        "npm_test": "207/214_SAME_7_PREEXISTING",
+        "clean_checkout": "PASS",
+        "new_regressions": 0
+      },
+      "metrics": {
+        "active_high": 2,
+        "potential_high": 1,
+        "open_high": 3,
+        "resolved": 7
+      },
+      "remote_changes": {
+        "production_runtime": "UNCHANGED",
+        "production_deployment": "dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo",
+        "supabase": "UNCHANGED",
+        "ticketeira": "UNTOUCHED",
+        "git_auto_deploy": "DISABLED"
+      }
+    },
     {
       "version": "2.1.0",
       "date": "2026-09-13",

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T23:22:29.421Z",
+  "generatedAt": "2026-09-14T01:52:43.483Z",
   "count": 51,
   "defaultSuite": {
     "command": "npm test",
@@ -17,7 +17,7 @@
       "test-public-help-flow.mjs",
       "test-whatsapp-batch-compat.mjs"
     ],
-    "evidence": "Reexecuted for scoped active-brand remediation on 2026-09-13; 207/214 with the same seven historical failures.",
+    "evidence": "Reexecuted on source 3e2bdc2979301301b3f1566a2ac75a477ee4c169 in the workspace and after npm ci from canonical Git blobs; 207/214 with the same seven historical failures.",
     "previousSnapshot": {
       "date": "2026-09-11",
       "observedCases": 210,
@@ -1305,7 +1305,7 @@
     "safeLocalExecution": true,
     "note": "stage3Validation permanece histórico e não foi reinterpretado."
   },
-  "stage": "stabilization/legacy-brand-baseline-2.1.0",
+  "stage": "stabilization/test-runner-baseline-2.2.0",
   "high_1_validation": {
     "focused_new_app": {
       "passed": 96,
@@ -1362,5 +1362,27 @@
     },
     "new_regressions": 0,
     "source_commit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8"
+  },
+  "test_runner_reproducibility": {
+    "finding": "gap.test-runner-depends-on-untracked-loader",
+    "status": "RESOLVED",
+    "source_commit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
+    "old_loader": ".tmp/typescript-alias-loader.mjs",
+    "versioned_loader": "scripts/test-support/typescript-alias-loader.mjs",
+    "loader_behavior_changed": false,
+    "new_external_dependencies": 0,
+    "runner_reproducible_from_git": true,
+    "clean_checkout_validated": true,
+    "npm_ci": "PASS",
+    "default_suite": "207/214_SAME_7_PREEXISTING",
+    "new_regressions": 0,
+    "deployment_required": false,
+    "production_runtime_changed": false,
+    "crlf_assertion_fragility_recorded": true,
+    "original_loader_sha256": "3581a09ff5a8e0c5641409ef3127521b382613c5b89155141777c5b705ae9eb8",
+    "versioned_loader_sha256": "3581a09ff5a8e0c5641409ef3127521b382613c5b89155141777c5b705ae9eb8",
+    "pre_fix_failure": "ERR_MODULE_NOT_FOUND",
+    "crlf_first_worktree_result": "205/214_TWO_ADDITIONAL_SOURCE_ASSERTION_FAILURES",
+    "canonical_blob_result": "207/214_SAME_7_PREEXISTING"
   }
 }

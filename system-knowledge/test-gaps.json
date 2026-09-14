@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T19:08:55.803Z",
-  "stage": "stabilization/high-1-final-baseline-2.0.0",
-  "sourceCommit": "bd0012f3a3277b2b6d1a97390ba7c3cc460a9165",
+  "generatedAt": "2026-09-14T01:52:43.483Z",
+  "stage": "stabilization/test-runner-baseline-2.2.0",
+  "sourceCommit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
   "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
   "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
   "count": 7,
   "default_suite": {
-    "cases": 210,
-    "passed": 203,
+    "cases": 214,
+    "passed": 207,
     "failed": 7,
     "status": "FAIL"
   },
@@ -158,7 +158,7 @@
       "title": "npm test depende de loader em diretório temporário não versionado",
       "severity": "HIGH",
       "priority": "P1",
-      "status": "ACTIVE",
+      "status": "RESOLVED",
       "evidence": [
         {
           "path": "package.json",
@@ -176,6 +176,38 @@
         "tests": [
           "npm test"
         ]
+      },
+      "resolution": {
+        "resolved_at": "2026-09-14T01:52:43.483Z",
+        "source_commit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
+        "strategy": "VERSIONED_BYTE_IDENTICAL_LOADER",
+        "old_loader_path": ".tmp/typescript-alias-loader.mjs",
+        "versioned_loader_path": "scripts/test-support/typescript-alias-loader.mjs",
+        "original_loader_sha256": "3581a09ff5a8e0c5641409ef3127521b382613c5b89155141777c5b705ae9eb8",
+        "versioned_loader_sha256": "3581a09ff5a8e0c5641409ef3127521b382613c5b89155141777c5b705ae9eb8",
+        "loader_behavior_changed": false,
+        "new_external_dependencies": 0,
+        "untracked_loader_references_after": 0,
+        "pre_fix_clean_checkout": {
+          "loader_present": false,
+          "test_command_reached": false,
+          "failure": "ERR_MODULE_NOT_FOUND for .tmp/typescript-alias-loader.mjs; all 15 files failed before useful test execution."
+        },
+        "post_fix_clean_checkout": {
+          "materialization": "CANONICAL_GIT_BLOBS_WITHOUT_EOL_CONVERSION",
+          "copied_tmp_or_node_modules": false,
+          "npm_ci": "PASS",
+          "runner": "STARTED",
+          "tests": {
+            "cases": 214,
+            "passed": 207,
+            "failed_known": 7,
+            "new_regressions": 0
+          },
+          "depends_on_untracked_file": false
+        },
+        "crlf_observation": "A first Windows worktree with core.autocrlf=true exposed two additional source-text assertion failures. Canonical Git blobs without EOL conversion returned 207/214. This is evidence for gap.source-contract-assertion-bias and is not a loader regression.",
+        "deployment_required": false
       }
     },
     {

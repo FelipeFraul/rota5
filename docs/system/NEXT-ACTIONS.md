@@ -24,7 +24,6 @@ Nenhum finding P0 ativo.
 - `risk.admin-event-multistep-partial-state` (POTENTIAL) — Criação de evento e catálogo inicial cruza entidades sem transação única
 - `gap.default-test-suite-failing` — Suíte padrão está vermelha com sete casos falhos
 - `gap.critical-capability-and-flow-coverage` — Capabilities e flows relevantes não têm teste direto
-- `gap.test-runner-depends-on-untracked-loader` — npm test depende de loader em diretório temporário não versionado
 - `risk.payment-confirmed-before-external-delivery` (POTENTIAL) — Confirmação atômica e entrega externa formam fronteira de consistência eventual
 - `gap.partial-flows-lack-end-to-end-proof` — Sete flows parciais não possuem prova ponta a ponta
 
@@ -61,3 +60,6 @@ Nenhum finding P0 ativo.
 - `risk.checkout-status-fixed-polling` (P3) — Checkouts consultam status a cada cinco segundos sem backoff
 - `gap.client-errors-not-persisted` (P3) — Falhas de polling e scanner ficam apenas no estado do cliente
 - `debt.distributed-status-literals` (P4) — Estados e mensagens de negócio estão distribuídos em arquivos extensos
+
+## RESOLVED STABILIZATION ITEMS
+- `gap.test-runner-depends-on-untracked-loader` — loader byte-identical versionado; checkout Git canônico executou npm ci e 207/214 sem depender de .tmp.

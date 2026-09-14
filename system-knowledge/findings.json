@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T23:22:29.421Z",
-  "stage": "stabilization/legacy-brand-baseline-2.1.0",
-  "sourceCommit": "d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8",
-  "scope": "Baseline 2.1.0 after scoped active-brand remediation and Preview/Production runtime proof.",
-  "method": "Preserve the original finding and evidence, then record scoped source and runtime resolution without making a repository-wide brand-string assertion.",
+  "generatedAt": "2026-09-14T01:52:43.483Z",
+  "stage": "stabilization/test-runner-baseline-2.2.0",
+  "sourceCommit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
+  "scope": "Baseline 2.2.0 after reproducible test-runner remediation and clean Git materialization proof.",
+  "method": "Preserve historical evidence, resolve only the untracked-loader finding, and retain all other finding lifecycles.",
   "count": 44,
   "records": [
     {
@@ -1694,7 +1694,7 @@
       "type": "TEST_GAP",
       "severity": "HIGH",
       "priority": "P1",
-      "status": "ACTIVE",
+      "status": "RESOLVED",
       "confidence": "CONFIRMED",
       "description": "package.json aponta para ./.tmp/typescript-alias-loader.mjs; git não rastreia arquivos em .tmp, embora o loader exista nesta máquina.",
       "evidence": [
@@ -1718,7 +1718,39 @@
       "blast_radius": "SYSTEM_WIDE",
       "workaround": "O arquivo existe no workspace auditado.",
       "direction": "Versionar o mecanismo de resolução ou usar configuração padrão do runner.",
-      "priority_justification": "P1 porque compromete a portabilidade do único gate padrão."
+      "priority_justification": "P1 porque compromete a portabilidade do único gate padrão.",
+      "resolution": {
+        "resolved_at": "2026-09-14T01:52:43.483Z",
+        "source_commit": "3e2bdc2979301301b3f1566a2ac75a477ee4c169",
+        "strategy": "VERSIONED_BYTE_IDENTICAL_LOADER",
+        "old_loader_path": ".tmp/typescript-alias-loader.mjs",
+        "versioned_loader_path": "scripts/test-support/typescript-alias-loader.mjs",
+        "original_loader_sha256": "3581a09ff5a8e0c5641409ef3127521b382613c5b89155141777c5b705ae9eb8",
+        "versioned_loader_sha256": "3581a09ff5a8e0c5641409ef3127521b382613c5b89155141777c5b705ae9eb8",
+        "loader_behavior_changed": false,
+        "new_external_dependencies": 0,
+        "untracked_loader_references_after": 0,
+        "pre_fix_clean_checkout": {
+          "loader_present": false,
+          "test_command_reached": false,
+          "failure": "ERR_MODULE_NOT_FOUND for .tmp/typescript-alias-loader.mjs; all 15 files failed before useful test execution."
+        },
+        "post_fix_clean_checkout": {
+          "materialization": "CANONICAL_GIT_BLOBS_WITHOUT_EOL_CONVERSION",
+          "copied_tmp_or_node_modules": false,
+          "npm_ci": "PASS",
+          "runner": "STARTED",
+          "tests": {
+            "cases": 214,
+            "passed": 207,
+            "failed_known": 7,
+            "new_regressions": 0
+          },
+          "depends_on_untracked_file": false
+        },
+        "crlf_observation": "A first Windows worktree with core.autocrlf=true exposed two additional source-text assertion failures. Canonical Git blobs without EOL conversion returned 207/214. This is evidence for gap.source-contract-assertion-bias and is not a loader regression.",
+        "deployment_required": false
+      }
     },
     {
       "id": "gap.remote-database-behavior-tests",
