@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T16:29:51.547Z",
-  "stage": "stabilization/critical-coverage-baseline-2.4.0",
+  "generatedAt": "2026-09-14T16:52:21.715Z",
+  "stage": "stabilization/release-blocker-reconciliation-baseline-2.4.1",
   "baseline_id": "rota5-baseline-v1",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "status": "FROZEN",
   "domains": 17,
   "modules": 66,
@@ -77,7 +77,7 @@
     "RUNTIME": "MEDIUM_CONFIDENCE"
   },
   "product_gate_status": {
-    "product_health": "BROKEN",
+    "product_health": "DEGRADED",
     "npm_test": {
       "status": "PASS",
       "cases": 236,
@@ -105,20 +105,18 @@
     "infrastructure_health": "DEGRADED",
     "current_head_deployed": false,
     "release_gate": {
-      "status": "BLOCKED",
+      "status": "PASS",
       "applicable_threshold": "priority in {P0, P1} or severity in {CRITICAL, HIGH}",
-      "blocking_count": 3,
-      "blocking_findings": [
-        "bug.event-duplicate-artist-leak",
-        "bug.user-visible-text-corruption",
-        "gap.partial-flows-lack-end-to-end-proof"
-      ],
+      "blocking_count": 0,
+      "blocking_findings": [],
       "semantics_source": "system-knowledge/findings.json.finding_status_taxonomy.statuses.release_blocking"
     }
   },
   "resolved_findings": [
     "bug.create-event-invalid-jsx",
     "bug.combo-redemption-unreachable-consume",
+    "bug.event-duplicate-artist-leak",
+    "bug.user-visible-text-corruption",
     "legacy.active-brand-contamination",
     "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.vercel-project-identity-drift",
@@ -132,7 +130,7 @@
     "active_high": 0,
     "potential_high": 1,
     "open_high": 1,
-    "resolved": 9
+    "resolved": 11
   },
   "high_1_rollout": {
     "source_implementation": "IMPLEMENTED_AND_VALIDATED",
@@ -507,5 +505,39 @@
     "ticketeira": "UNTOUCHED",
     "git_auto_deploy": "DISABLED",
     "new_deployment": false
+  },
+  "release_blocker_reconciliation": {
+    "version": "2.4.1",
+    "reason": "PATCH_DOCUMENTARY_CORRECTION",
+    "canonical_source": "67845326088eac47452224b00ef1e866036e86f1",
+    "source_fingerprint": "df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0",
+    "source_file_count": 368,
+    "migration_count": 79,
+    "stale_findings_resolved": 2,
+    "aggregate_e2e_finding": {
+      "status": "ACTIVE",
+      "priority_before": "P1",
+      "priority_after": "P2"
+    },
+    "new_specific_findings": 0,
+    "new_p1_findings": [],
+    "release_blocker_count": 0,
+    "release_blockers": [],
+    "active_high": 0,
+    "potential_high": 1,
+    "open_high": 1,
+    "resolved": 11,
+    "product_health": "DEGRADED",
+    "infrastructure_health": "DEGRADED",
+    "default_node_suite": "236/236 PASS",
+    "postgres_integration": "1/1 PASS",
+    "quality_gate_run": 34867214724,
+    "quality_gate": "PASS",
+    "production_runtime_source": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+    "production_deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
+    "current_head_deployed": false,
+    "new_deployment": false,
+    "supabase": "UNCHANGED",
+    "ticketeira": "UNTOUCHED"
   }
 }

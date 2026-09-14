@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T16:29:51.547Z",
-  "stage": "stabilization/critical-coverage-baseline-2.4.0",
+  "generatedAt": "2026-09-14T16:52:21.715Z",
+  "stage": "stabilization/release-blocker-reconciliation-baseline-2.4.1",
   "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
   "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
   "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
@@ -396,12 +396,20 @@
       "id": "gap.partial-flows-lack-end-to-end-proof",
       "title": "Sete flows parciais não possuem prova ponta a ponta",
       "severity": "MEDIUM",
-      "priority": "P1",
+      "priority": "P2",
       "status": "ACTIVE",
       "evidence": [
         {
           "path": "system-knowledge/flows.json",
-          "claim": "whatsapp.public_discovery, ticket.purchase, courtesy.public, combo.delivery_choice, admin.whatsapp_event_management, admin.courtesy_management e table_map.calibration estão PARCIAL."
+          "claim": "All seven scoped flows remain implementation/test PARTIAL, with no failing test references; 32/34 flows have test evidence."
+        },
+        {
+          "path": "system-knowledge/findings.json",
+          "claim": "flow_assessment distinguishes component coverage from true E2E coverage and derives P2/P3 per flow."
+        },
+        {
+          "path": "package.json",
+          "claim": "Default suite revalidated at 236/236 with 0 failures, skips or todos."
         }
       ],
       "affected": {
@@ -417,6 +425,120 @@
         ],
         "integrations": [],
         "tests": []
+      },
+      "description": "Confirmed heterogeneous E2E evidence gap decomposed by flow. Component behavior is broadly covered, but no single proof spans every terminal and integration for the seven listed flows.",
+      "flow_assessment": {
+        "whatsapp.public_discovery": {
+          "runtime_reachable": "YES",
+          "mvp_relevance": "HIGH",
+          "current_test_coverage": "COMPONENT_BEHAVIOR_COVERED: initial/reentry, help, search/list formatting, visibility and availability branches execute in the default suite.",
+          "missing_e2e_proof": "No single live WhatsApp-to-database trace proves every terminal and provider failure/retry branch.",
+          "financial_impact": "INDIRECT",
+          "data_integrity_impact": "LOW",
+          "security_or_auth_impact": "LOW",
+          "user_impact": "HIGH",
+          "failure_recovery_coverage": "PARTIAL",
+          "priority": "P2",
+          "blocks_release": false,
+          "reason": "Core discovery behavior is extensively exercised; the remaining provider-spanning E2E proof is valuable hardening but no current defect is demonstrated."
+        },
+        "ticket.purchase": {
+          "runtime_reachable": "YES",
+          "mvp_relevance": "CRITICAL",
+          "current_test_coverage": "COMPONENT_BEHAVIOR_COVERED: reservation/risk audits, signed checkout isolation, payment status reconciliation and idempotency, payment confirmation contract, ticket generation contracts, delivery/distribution/retry behavior and public visibility are covered across current tests and audits.",
+          "missing_e2e_proof": "TRUE_END_TO_END_COVERED = NO. No single non-destructive trace currently joins selection -> real reservation transaction -> provider approval -> real confirm_paid_ticket_order -> ticket generation -> outbound delivery, including cross-boundary failure recovery.",
+          "financial_impact": "HIGH",
+          "data_integrity_impact": "HIGH",
+          "security_or_auth_impact": "MEDIUM",
+          "user_impact": "HIGH",
+          "failure_recovery_coverage": "PARTIAL_BY_COMPONENT",
+          "priority": "P2",
+          "blocks_release": false,
+          "reason": "The missing unified trace is material hardening for the MVP, but broad component behavior, idempotency and retry coverage plus a green current runtime provide no evidence of a present release-blocking defect."
+        },
+        "courtesy.public": {
+          "runtime_reachable": "CONDITIONAL",
+          "mvp_relevance": "MEDIUM",
+          "current_test_coverage": "COMPONENT_BEHAVIOR_COVERED: visibility/eligibility contracts and zero-value issuance path are covered; related section-limit authorization/mutation tests pass.",
+          "missing_e2e_proof": "No complete eligible reservation -> issuance RPC -> ticket/inventory terminal trace with rollback/failure branches.",
+          "financial_impact": "LOW_ZERO_VALUE",
+          "data_integrity_impact": "MEDIUM",
+          "security_or_auth_impact": "MEDIUM",
+          "user_impact": "MEDIUM",
+          "failure_recovery_coverage": "PARTIAL",
+          "priority": "P2",
+          "blocks_release": false,
+          "reason": "It can affect inventory and authorization, but is conditional, zero-value and has no demonstrated failure."
+        },
+        "combo.delivery_choice": {
+          "runtime_reachable": "CONDITIONAL",
+          "mvp_relevance": "MEDIUM",
+          "current_test_coverage": "COMPONENT_BEHAVIOR_COVERED: state/prerequisite handling, OK/1 responses, paid-item release and replay/idempotency branches are tested.",
+          "missing_e2e_proof": "No complete kitchen request -> customer response -> table reservation -> fulfillment trace across live integrations.",
+          "financial_impact": "MEDIUM",
+          "data_integrity_impact": "MEDIUM",
+          "security_or_auth_impact": "LOW",
+          "user_impact": "MEDIUM",
+          "failure_recovery_coverage": "PARTIAL",
+          "priority": "P2",
+          "blocks_release": false,
+          "reason": "Paid fulfillment is relevant, but the path is conditional and current behavioral tests cover its critical guards without a known defect."
+        },
+        "admin.whatsapp_event_management": {
+          "runtime_reachable": "YES",
+          "mvp_relevance": "HIGH",
+          "current_test_coverage": "COMPONENT_BEHAVIOR_COVERED: authentication/permissions, create/edit/duplicate/status/cancel behavior and multiple workspace contracts are covered.",
+          "missing_e2e_proof": "No full conversational trace proves every multi-entity terminal and cleanup after each intermediate failure.",
+          "financial_impact": "INDIRECT_HIGH",
+          "data_integrity_impact": "HIGH",
+          "security_or_auth_impact": "HIGH",
+          "user_impact": "MEDIUM_ADMIN",
+          "failure_recovery_coverage": "PARTIAL",
+          "priority": "P2",
+          "blocks_release": false,
+          "reason": "Authorization and critical mutations have direct coverage; residual multi-step atomicity is already tracked separately as POTENTIAL and is not a confirmed release defect."
+        },
+        "admin.courtesy_management": {
+          "runtime_reachable": "YES_WITH_HIDDEN_WEB_SUBSURFACE",
+          "mvp_relevance": "MEDIUM",
+          "current_test_coverage": "COMPONENT_BEHAVIOR_COVERED: authorization, section-limit mutation, issue/list/resend/cancel contracts and inventory behavior have partial/direct evidence.",
+          "missing_e2e_proof": "No single authorized issue -> ticket -> resend/cancel -> inventory release trace across the real database and delivery integration.",
+          "financial_impact": "LOW_ZERO_VALUE",
+          "data_integrity_impact": "MEDIUM",
+          "security_or_auth_impact": "HIGH",
+          "user_impact": "MEDIUM_ADMIN",
+          "failure_recovery_coverage": "PARTIAL",
+          "priority": "P2",
+          "blocks_release": false,
+          "reason": "Important authorization/inventory behavior is covered; the hidden web subsurface and absence of a demonstrated defect do not justify P1."
+        },
+        "table_map.calibration": {
+          "runtime_reachable": "HIDDEN_OR_OPERATOR_CONDITIONAL",
+          "mvp_relevance": "LOW",
+          "current_test_coverage": "COMPONENT_BEHAVIOR_COVERED: 14 default-suite tests cover catalog, persistence validation, editor/API reload, renderer parity, assets and invalid-image behavior.",
+          "missing_e2e_proof": "No browser-level operator session exercises the hidden calibration UI through persistence and final render.",
+          "financial_impact": "NONE_DIRECT",
+          "data_integrity_impact": "LOW_TO_MEDIUM",
+          "security_or_auth_impact": "MEDIUM",
+          "user_impact": "LOW_OPERATOR_ONLY",
+          "failure_recovery_coverage": "PARTIAL",
+          "priority": "P3",
+          "blocks_release": false,
+          "reason": "The surface is hidden/conditional and already has strong component/render coverage; browser E2E is not materially required for MVP release."
+        }
+      },
+      "decomposition": {
+        "baseline": "2.4.1",
+        "classification": "OVERSTATED_AT_P1",
+        "priority_before": "P1",
+        "priority_after": "P2",
+        "status": "ACTIVE",
+        "specific_findings_created": 0,
+        "new_p1_findings": [],
+        "release_blocking_after": false,
+        "component_behavior_covered": true,
+        "true_end_to_end_covered": false,
+        "decision": "Retain the confirmed aggregate gap as ACTIVE/P2; no individual P1 finding is justified by current evidence."
       }
     }
   ]

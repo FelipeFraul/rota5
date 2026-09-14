@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T16:29:51.547Z",
-  "stage": "stabilization/critical-coverage-baseline-2.4.0",
+  "generatedAt": "2026-09-14T16:52:21.715Z",
+  "stage": "stabilization/release-blocker-reconciliation-baseline-2.4.1",
   "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
-  "scope": "Baseline 2.4.0 after risk-based behavioral coverage and the complete CI Quality Gate passed.",
+  "scope": "Baseline 2.4.1 documentary reconciliation of stale blockers and risk-based decomposition of the confirmed aggregate E2E gap.",
   "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",
   "status": "PASS",
   "total": 44,
@@ -46,11 +46,11 @@
     "P4": 2
   },
   "by_status": {
-    "ACTIVE": 23,
+    "ACTIVE": 21,
     "POTENTIAL": 7,
     "OPEN": 0,
     "MITIGATED": 0,
-    "RESOLVED": 9,
+    "RESOLVED": 11,
     "ACCEPTED": 0,
     "NOT_VALIDATED": 5
   },
@@ -282,14 +282,12 @@
     }
   },
   "active_high_critical": [],
-  "active_p0_p1": [
-    "bug.event-duplicate-artist-leak",
-    "bug.user-visible-text-corruption",
-    "gap.partial-flows-lack-end-to-end-proof"
-  ],
+  "active_p0_p1": [],
   "resolved": [
     "bug.create-event-invalid-jsx",
     "bug.combo-redemption-unreachable-consume",
+    "bug.event-duplicate-artist-leak",
+    "bug.user-visible-text-corruption",
     "legacy.active-brand-contamination",
     "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.vercel-project-identity-drift",
@@ -311,11 +309,8 @@
     "risk.payment-confirmed-before-external-delivery"
   ],
   "open_p0_p1": [
-    "bug.event-duplicate-artist-leak",
-    "bug.user-visible-text-corruption",
     "risk.admin-event-multistep-partial-state",
-    "risk.payment-confirmed-before-external-delivery",
-    "gap.partial-flows-lack-end-to-end-proof"
+    "risk.payment-confirmed-before-external-delivery"
   ],
   "metric_semantics": {
     "active": "status in {ACTIVE}",
@@ -617,5 +612,39 @@
     "ticketeira": "UNTOUCHED",
     "git_auto_deploy": "DISABLED",
     "new_deployment": false
+  },
+  "baseline_2_4_1": {
+    "version": "2.4.1",
+    "reason": "PATCH_DOCUMENTARY_CORRECTION",
+    "canonical_source": "67845326088eac47452224b00ef1e866036e86f1",
+    "source_fingerprint": "df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0",
+    "source_file_count": 368,
+    "migration_count": 79,
+    "stale_findings_resolved": 2,
+    "aggregate_e2e_finding": {
+      "status": "ACTIVE",
+      "priority_before": "P1",
+      "priority_after": "P2"
+    },
+    "new_specific_findings": 0,
+    "new_p1_findings": [],
+    "release_blocker_count": 0,
+    "release_blockers": [],
+    "active_high": 0,
+    "potential_high": 1,
+    "open_high": 1,
+    "resolved": 11,
+    "product_health": "DEGRADED",
+    "infrastructure_health": "DEGRADED",
+    "default_node_suite": "236/236 PASS",
+    "postgres_integration": "1/1 PASS",
+    "quality_gate_run": 34867214724,
+    "quality_gate": "PASS",
+    "production_runtime_source": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
+    "production_deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
+    "current_head_deployed": false,
+    "new_deployment": false,
+    "supabase": "UNCHANGED",
+    "ticketeira": "UNTOUCHED"
   }
 }

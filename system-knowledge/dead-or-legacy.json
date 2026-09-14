@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T16:29:51.547Z",
-  "stage": "stabilization/critical-coverage-baseline-2.4.0",
+  "generatedAt": "2026-09-14T16:52:21.715Z",
+  "stage": "stabilization/release-blocker-reconciliation-baseline-2.4.1",
   "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
   "scope": "Working tree local, incluindo alteração funcional preexistente em src/lib/tickets/messages.ts; Etapa 6 não alterou código funcional nem sistemas remotos.",
   "method": "Revalidação das Etapas 1–5, auditoria independente estática, execução local de npm test/typecheck/lint, checks remotos read-only herdados e segunda passagem adversarial.",

@@ -33,27 +33,27 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 ### bug.event-duplicate-artist-leak — Duplicação de evento preserva artista do evento de origem
 
 - Tipo / severidade / prioridade: **BUG / MEDIUM / P1**
-- Status / confiança: **ACTIVE / CONFIRMED**
-- Problema: O título duplicado recebe sufixo, mas artist_name copia sourceEvent.artist_name, contrariando o contrato testado de sincronizar artista ao novo título.
-- Evidência: `src/lib/tickets/services/adminEvents.ts`:1712 — Cria duplicatedTitle.; `src/lib/tickets/services/adminEvents.ts`:1715 — Copia artist_name da origem.; `scripts/test-admin-event-artist-name-leak.mjs`:143 — Teste direto falha nesta divergência.
+- Status / confiança: **RESOLVED / CONFIRMED**
+- Problema histórico preservado; o comportamento descrito não se reproduz no source atual.
+- Evidência histórica: as linhas e falhas registradas no baseline original são preservadas como causa anterior, não como estado atual. Evidência atual: correção funcional presente; testes direcionados e suíte 236/236 PASS.
 - Impacto: Um rascunho duplicado pode exibir ou persistir artista incoerente com o título, exigindo correção manual.
 - Escopo: domains domain.event-administration; capabilities event.duplicate; flows admin.whatsapp_event_management, admin.web_event_workspace.
 - Blast radius: **DOMAIN**
-- Workaround: Editar manualmente o artista após duplicar.
-- Direção: Alinhar a regra de duplicação ao contrato de título/artista.
+- Resolução: correção funcional já presente e prova direta incluída na suíte 236/236; lifecycle reconciliado em 2.4.1.
+- Limitação: a resolução cobre o defeito específico e as superfícies revalidadas; não encerra riscos diferentes de fluxo administrativo nem garante ausência absoluta de corrupção textual futura.
 - Justificativa da prioridade: P1 por produzir dado administrativo incorreto em uma ação ativa, com workaround manual.
 
 ### bug.user-visible-text-corruption — Textos ativos contêm mojibake e substituições por interrogação
 
 - Tipo / severidade / prioridade: **BUG / MEDIUM / P1**
-- Status / confiança: **ACTIVE / CONFIRMED**
-- Problema: A varredura encontra mojibake no dashboard; mensagens, ajuda, checkout e leitor de combo contêm bytes de emoji interpretados incorretamente e interrogações no lugar de acentos.
-- Evidência: `src/app/admin/eventos/dashboard/AdminDashboardSection.tsx`:59 — Separador e mensagens do dashboard contêm sequências mojibake.; `src/lib/tickets/messages.ts`:61 — Emoji está armazenado como sequência de bytes interpretada incorretamente.; `src/lib/tickets/services/publicHelp.ts`:176 — ID e keywords usam interrogação no lugar do acento.; `scripts/test-message-mojibake.mjs`:18 — Teste de mensagens falha com nove ocorrências no dashboard.
+- Status / confiança: **RESOLVED / CONFIRMED**
+- Problema histórico preservado; o comportamento descrito não se reproduz no source atual.
+- Evidência histórica: as linhas e falhas registradas no baseline original são preservadas como causa anterior, não como estado atual. Evidência atual: correção funcional presente; testes direcionados e suíte 236/236 PASS.
 - Impacto: Usuários e administradores recebem texto corrompido; IDs/keywords corrompidos também alteram resultados e contratos de busca.
 - Escopo: domains domain.whatsapp-conversations, domain.analytics-reporting, domain.orders-payments, domain.combo-commerce-fulfillment; capabilities messaging.respond, messaging.help, payment.checkout_view, combo.kitchen_open, analytics.general_dashboard, analytics.event_dashboard; flows whatsapp.public_discovery, admin.web_event_workspace, kitchen.combo_redemption.
 - Blast radius: **MULTI_DOMAIN**
-- Workaround: O sanitizador de saída repara apenas parte dos casos e não corrige IDs ou UI web.
-- Direção: Normalizar os arquivos fonte e ampliar a verificação para corrupção por substituição e bytes reinterpretados.
+- Resolução: correção funcional já presente e prova direta incluída na suíte 236/236; lifecycle reconciliado em 2.4.1.
+- Limitação: a resolução cobre o defeito específico e as superfícies revalidadas; não encerra riscos diferentes de fluxo administrativo nem garante ausência absoluta de corrupção textual futura.
 - Justificativa da prioridade: P1 porque o defeito é visível em jornadas públicas e administrativas e já quebra testes.
 
 ## Revalidação dos flows

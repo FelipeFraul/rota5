@@ -1,4 +1,4 @@
-> **Current Baseline 2.4.0 (2026-09-14):** canonical HEAD `67845326088eac47452224b00ef1e866036e86f1`; source fingerprint `df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0` across 368 files and 79 migrations. **DEFAULT_NODE_SUITE 236/236 PASS**; **POSTGRES_INTEGRATION_SUITE 1/1 PASS** on PostgreSQL 16 with real `sync_official_table_map_reservation_status`; **QUALITY_GATE run 34867214724 PASS**. Coverage: 21/21 MUST, 0 MUST gaps, 2/2 high-risk flows, 0 high-risk flow gaps, 0 skip, 0 todo, 0 regressions. Finding `gap.critical-capability-and-flow-coverage` is **RESOLVED**. Metrics: ACTIVE HIGH 0, POTENTIAL HIGH 1, OPEN HIGH 1, RESOLVED 9. Product health remains BROKEN by the canonical release-blocker rule; infrastructure health remains DEGRADED. Production remains `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` on functional source `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; current HEAD deployed: **NAO** (post-runtime changes are test/tooling/CI only).
+> **Current Baseline 2.4.1 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on canonical source `67845326088eac47452224b00ef1e866036e86f1` (fingerprint `df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0`, 368 files, 79 migrations). Findings `bug.event-duplicate-artist-leak` and `bug.user-visible-text-corruption` are **RESOLVED** as stale. `gap.partial-flows-lack-end-to-end-proof` remains **ACTIVE**, decomposed from P1 to P2; no specific P1 was justified. Canonical release blockers: **0**. Metrics: ACTIVE HIGH 0, POTENTIAL HIGH 1, OPEN HIGH 1, RESOLVED 11. PRODUCT_HEALTH: **DEGRADED**; INFRASTRUCTURE_HEALTH: **DEGRADED**. Quality evidence remains 236/236, PostgreSQL 1/1 and Quality Gate 34867214724 PASS. Production remains `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` on `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; no deployment, Supabase change or Ticketeira access.
 
 # Gaps e qualidade da suíte
 
@@ -85,22 +85,22 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 
 ### gap.partial-flows-lack-end-to-end-proof — Sete flows parciais não possuem prova ponta a ponta
 
-- Tipo / severidade / prioridade: **TEST_GAP / MEDIUM / P1**
+- Tipo / severidade / prioridade: **TEST_GAP / MEDIUM / P2**
 - Status / confiança: **ACTIVE / CONFIRMED**
-- Problema: Os sete flows permanecem PARCIAL após revalidação; testes cobrem ramos ou contratos, mas não demonstram todos os terminais, integrações e recuperação.
+- Problema: gap E2E confirmado, porém heterogêneo; os sete flows foram avaliados individualmente e nenhum justificou P1 com a cobertura atual.
 - Evidência: `system-knowledge/flows.json` — whatsapp.public_discovery, ticket.purchase, courtesy.public, combo.delivery_choice, admin.whatsapp_event_management, admin.courtesy_management e table_map.calibration estão PARCIAL.
 - Impacto: A saúde dessas jornadas não pode ser promovida a HEALTHY e regressões entre módulos podem escapar.
 - Escopo: domains domain.whatsapp-conversations, domain.reservation-inventory, domain.courtesy, domain.combo-commerce-fulfillment, domain.event-administration, domain.table-map; capabilities —; flows whatsapp.public_discovery, ticket.purchase, courtesy.public, combo.delivery_choice, admin.whatsapp_event_management, admin.courtesy_management, table_map.calibration.
 - Blast radius: **MULTI_DOMAIN**
 - Workaround: Cada flow possui evidência estrutural e cobertura parcial documentada.
-- Direção: Criar cenários end-to-end não destrutivos para cada terminal crítico.
-- Justificativa da prioridade: P1 porque são jornadas de compra/admin/entrega ativas, embora não estejam todas quebradas.
+- Direção: manter ACTIVE/P2 e ampliar prova E2E por risco, priorizando `ticket.purchase`; ausência de E2E isoladamente não bloqueia release.
+- Justificativa da prioridade: P2 após decomposição; os sete flows têm cobertura comportamental relevante e nenhum defeito atual demonstrado, mas a prova E2E unificada continua incompleta.
 
 ## Execução atual
 
-- npm test: 214 casos, 207 PASS, 7 FAIL.
+- npm test: 236 casos, 236 PASS, 0 FAIL, 0 skip, 0 todo.
 - typecheck: PASS, zero diagnósticos após a resolução de bug.create-event-invalid-jsx.
-- lint: PASS, zero erros e os mesmos 24 warnings preexistentes.
+- lint: PASS no Quality Gate atual.
 - Suíte padrão: 15 arquivos.
 - Testes catalogados fora da suíte: 28 arquivos.
 - Catálogo total: 43 testes, além de auditorias/tools.

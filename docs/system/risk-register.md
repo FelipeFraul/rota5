@@ -1,4 +1,4 @@
-> **Current Baseline 2.4.0 (2026-09-14):** canonical HEAD `67845326088eac47452224b00ef1e866036e86f1`; source fingerprint `df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0` across 368 files and 79 migrations. **DEFAULT_NODE_SUITE 236/236 PASS**; **POSTGRES_INTEGRATION_SUITE 1/1 PASS** on PostgreSQL 16 with real `sync_official_table_map_reservation_status`; **QUALITY_GATE run 34867214724 PASS**. Coverage: 21/21 MUST, 0 MUST gaps, 2/2 high-risk flows, 0 high-risk flow gaps, 0 skip, 0 todo, 0 regressions. Finding `gap.critical-capability-and-flow-coverage` is **RESOLVED**. Metrics: ACTIVE HIGH 0, POTENTIAL HIGH 1, OPEN HIGH 1, RESOLVED 9. Product health remains BROKEN by the canonical release-blocker rule; infrastructure health remains DEGRADED. Production remains `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` on functional source `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; current HEAD deployed: **NAO** (post-runtime changes are test/tooling/CI only).
+> **Current Baseline 2.4.1 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on canonical source `67845326088eac47452224b00ef1e866036e86f1` (fingerprint `df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0`, 368 files, 79 migrations). Findings `bug.event-duplicate-artist-leak` and `bug.user-visible-text-corruption` are **RESOLVED** as stale. `gap.partial-flows-lack-end-to-end-proof` remains **ACTIVE**, decomposed from P1 to P2; no specific P1 was justified. Canonical release blockers: **0**. Metrics: ACTIVE HIGH 0, POTENTIAL HIGH 1, OPEN HIGH 1, RESOLVED 11. PRODUCT_HEALTH: **DEGRADED**; INFRASTRUCTURE_HEALTH: **DEGRADED**. Quality evidence remains 236/236, PostgreSQL 1/1 and Quality Gate 34867214724 PASS. Production remains `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` on `c726902505fd69c2cfef2dec8013ffe0cf0adba3`; no deployment, Supabase change or Ticketeira access.
 
 # Baseline 2.0.1 HIGH #1 final state
 
@@ -21,8 +21,8 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 |---|---|---|---|---|---|---|
 | bug.create-event-invalid-jsx | BUG | HIGH | P0 | RESOLVED | CONFIRMED | JSX inválido impede compilar o workspace web de eventos |
 | bug.combo-redemption-unreachable-consume | BROKEN_FLOW | HIGH | P0 | RESOLVED | CONFIRMED | Caso válido de combo não alcança a RPC que consome o resgate |
-| bug.event-duplicate-artist-leak | BUG | MEDIUM | P1 | ACTIVE | CONFIRMED | Duplicação de evento preserva artista do evento de origem |
-| bug.user-visible-text-corruption | BUG | MEDIUM | P1 | ACTIVE | CONFIRMED | Textos ativos contêm mojibake e substituições por interrogação |
+| bug.event-duplicate-artist-leak | BUG | MEDIUM | P1 | RESOLVED | CONFIRMED | Duplicação de evento preserva artista do evento de origem |
+| bug.user-visible-text-corruption | BUG | MEDIUM | P1 | RESOLVED | CONFIRMED | Textos ativos contêm mojibake e substituições por interrogação |
 | legacy.active-brand-contamination | LEGACY | HIGH | P1 | RESOLVED | CONFIRMED | Scoped active-brand surfaces corrected and runtime-validated |
 | risk.gate-credential-revocation-does-not-revoke-session | AUTHORIZATION | HIGH | P1 | RESOLVED | CONFIRMED | Source attribution and strict credential/session authorization completed |
 | risk.admin-event-multistep-partial-state | DATA_INTEGRITY | HIGH | P1 | POTENTIAL | HIGH | Criação de evento e catálogo inicial cruza entidades sem transação única |
@@ -59,7 +59,7 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 | debt.payment-reconciliation-duplication-is-intentional | DUPLICATION | INFO | P4 | ACTIVE | CONFIRMED | Webhook e consulta de status repetem confirmação com guardas idempotentes |
 | risk.checkout-status-fixed-polling | PERFORMANCE | LOW | P3 | ACTIVE | CONFIRMED | Checkouts consultam status a cada cinco segundos sem backoff |
 | risk.production-capable-scripts-outside-test-isolation | OPERATIONAL | MEDIUM | P2 | POTENTIAL | HIGH | Scripts reais podem ler ou alterar ambientes remotos por configuração |
-| gap.partial-flows-lack-end-to-end-proof | TEST_GAP | MEDIUM | P1 | ACTIVE | CONFIRMED | Sete flows parciais não possuem prova ponta a ponta |
+| gap.partial-flows-lack-end-to-end-proof | TEST_GAP | MEDIUM | P2 | ACTIVE | CONFIRMED | Sete flows parciais não possuem prova ponta a ponta |
 | gap.client-errors-not-persisted | OBSERVABILITY | LOW | P3 | ACTIVE | CONFIRMED | Falhas de polling e scanner ficam apenas no estado do cliente |
 | debt.distributed-status-literals | MAINTAINABILITY | INFO | P4 | ACTIVE | CONFIRMED | Estados e mensagens de negócio estão distribuídos em arquivos extensos |
 | risk.service-role-application-authorization-boundary | SECURITY | MEDIUM | P2 | POTENTIAL | HIGH | A autorização da aplicação protege operações que usam service role |
@@ -97,27 +97,27 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 ### bug.event-duplicate-artist-leak — Duplicação de evento preserva artista do evento de origem
 
 - Tipo / severidade / prioridade: **BUG / MEDIUM / P1**
-- Status / confiança: **ACTIVE / CONFIRMED**
-- Problema: O título duplicado recebe sufixo, mas artist_name copia sourceEvent.artist_name, contrariando o contrato testado de sincronizar artista ao novo título.
-- Evidência: `src/lib/tickets/services/adminEvents.ts`:1712 — Cria duplicatedTitle.; `src/lib/tickets/services/adminEvents.ts`:1715 — Copia artist_name da origem.; `scripts/test-admin-event-artist-name-leak.mjs`:143 — Teste direto falha nesta divergência.
+- Status / confiança: **RESOLVED / CONFIRMED**
+- Problema histórico preservado; o comportamento descrito não se reproduz no source atual.
+- Evidência histórica: as linhas e falhas registradas no baseline original são preservadas como causa anterior, não como estado atual. Evidência atual: correção funcional presente; testes direcionados e suíte 236/236 PASS.
 - Impacto: Um rascunho duplicado pode exibir ou persistir artista incoerente com o título, exigindo correção manual.
 - Escopo: domains domain.event-administration; capabilities event.duplicate; flows admin.whatsapp_event_management, admin.web_event_workspace.
 - Blast radius: **DOMAIN**
-- Workaround: Editar manualmente o artista após duplicar.
-- Direção: Alinhar a regra de duplicação ao contrato de título/artista.
+- Resolução: correção funcional já presente e prova direta incluída na suíte 236/236; lifecycle reconciliado em 2.4.1.
+- Limitação: a resolução cobre o defeito específico e as superfícies revalidadas; não encerra riscos diferentes de fluxo administrativo nem garante ausência absoluta de corrupção textual futura.
 - Justificativa da prioridade: P1 por produzir dado administrativo incorreto em uma ação ativa, com workaround manual.
 
 ### bug.user-visible-text-corruption — Textos ativos contêm mojibake e substituições por interrogação
 
 - Tipo / severidade / prioridade: **BUG / MEDIUM / P1**
-- Status / confiança: **ACTIVE / CONFIRMED**
-- Problema: A varredura encontra mojibake no dashboard; mensagens, ajuda, checkout e leitor de combo contêm bytes de emoji interpretados incorretamente e interrogações no lugar de acentos.
-- Evidência: `src/app/admin/eventos/dashboard/AdminDashboardSection.tsx`:59 — Separador e mensagens do dashboard contêm sequências mojibake.; `src/lib/tickets/messages.ts`:61 — Emoji está armazenado como sequência de bytes interpretada incorretamente.; `src/lib/tickets/services/publicHelp.ts`:176 — ID e keywords usam interrogação no lugar do acento.; `scripts/test-message-mojibake.mjs`:18 — Teste de mensagens falha com nove ocorrências no dashboard.
+- Status / confiança: **RESOLVED / CONFIRMED**
+- Problema histórico preservado; o comportamento descrito não se reproduz no source atual.
+- Evidência histórica: as linhas e falhas registradas no baseline original são preservadas como causa anterior, não como estado atual. Evidência atual: correção funcional presente; testes direcionados e suíte 236/236 PASS.
 - Impacto: Usuários e administradores recebem texto corrompido; IDs/keywords corrompidos também alteram resultados e contratos de busca.
 - Escopo: domains domain.whatsapp-conversations, domain.analytics-reporting, domain.orders-payments, domain.combo-commerce-fulfillment; capabilities messaging.respond, messaging.help, payment.checkout_view, combo.kitchen_open, analytics.general_dashboard, analytics.event_dashboard; flows whatsapp.public_discovery, admin.web_event_workspace, kitchen.combo_redemption.
 - Blast radius: **MULTI_DOMAIN**
-- Workaround: O sanitizador de saída repara apenas parte dos casos e não corrige IDs ou UI web.
-- Direção: Normalizar os arquivos fonte e ampliar a verificação para corrupção por substituição e bytes reinterpretados.
+- Resolução: correção funcional já presente e prova direta incluída na suíte 236/236; lifecycle reconciliado em 2.4.1.
+- Limitação: a resolução cobre o defeito específico e as superfícies revalidadas; não encerra riscos diferentes de fluxo administrativo nem garante ausência absoluta de corrupção textual futura.
 - Justificativa da prioridade: P1 porque o defeito é visível em jornadas públicas e administrativas e já quebra testes.
 
 ### legacy.active-brand-contamination - Scoped active surfaces resolved
@@ -580,16 +580,16 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 
 ### gap.partial-flows-lack-end-to-end-proof — Sete flows parciais não possuem prova ponta a ponta
 
-- Tipo / severidade / prioridade: **TEST_GAP / MEDIUM / P1**
+- Tipo / severidade / prioridade: **TEST_GAP / MEDIUM / P2**
 - Status / confiança: **ACTIVE / CONFIRMED**
-- Problema: Os sete flows permanecem PARCIAL após revalidação; testes cobrem ramos ou contratos, mas não demonstram todos os terminais, integrações e recuperação.
+- Problema: gap E2E confirmado, porém heterogêneo; os sete flows foram avaliados individualmente e nenhum justificou P1 com a cobertura atual.
 - Evidência: `system-knowledge/flows.json` — whatsapp.public_discovery, ticket.purchase, courtesy.public, combo.delivery_choice, admin.whatsapp_event_management, admin.courtesy_management e table_map.calibration estão PARCIAL.
 - Impacto: A saúde dessas jornadas não pode ser promovida a HEALTHY e regressões entre módulos podem escapar.
 - Escopo: domains domain.whatsapp-conversations, domain.reservation-inventory, domain.courtesy, domain.combo-commerce-fulfillment, domain.event-administration, domain.table-map; capabilities —; flows whatsapp.public_discovery, ticket.purchase, courtesy.public, combo.delivery_choice, admin.whatsapp_event_management, admin.courtesy_management, table_map.calibration.
 - Blast radius: **MULTI_DOMAIN**
 - Workaround: Cada flow possui evidência estrutural e cobertura parcial documentada.
-- Direção: Criar cenários end-to-end não destrutivos para cada terminal crítico.
-- Justificativa da prioridade: P1 porque são jornadas de compra/admin/entrega ativas, embora não estejam todas quebradas.
+- Direção: manter ACTIVE/P2 e ampliar prova E2E por risco, priorizando `ticket.purchase`; ausência de E2E isoladamente não bloqueia release.
+- Justificativa da prioridade: P2 após decomposição; os sete flows têm cobertura comportamental relevante e nenhum defeito atual demonstrado, mas a prova E2E unificada continua incompleta.
 
 ### gap.client-errors-not-persisted — Falhas de polling e scanner ficam apenas no estado do cliente
 

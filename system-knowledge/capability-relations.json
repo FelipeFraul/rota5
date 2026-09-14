@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T16:29:51.547Z",
-  "stage": "stabilization/critical-coverage-baseline-2.4.0",
+  "generatedAt": "2026-09-14T16:52:21.715Z",
+  "stage": "stabilization/release-blocker-reconciliation-baseline-2.4.1",
   "count": 38,
   "capability_catalog": "system-knowledge/capabilities.json",
   "direction_convention": "REQUIRES: origem depende do destino; TRIGGERS: origem aciona destino sob condição; EXTENDS: origem estende destino; ALTERNATIVE_TO: alternativa funcional. dependencies contém somente alvos REQUIRES, dependent_capabilities é o inverso.",

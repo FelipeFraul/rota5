@@ -1,9 +1,31 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T16:29:51.547Z",
-  "stage": "stabilization/critical-coverage-baseline-2.4.0",
-  "count": 14,
+  "generatedAt": "2026-09-14T16:52:21.715Z",
+  "stage": "stabilization/release-blocker-reconciliation-baseline-2.4.1",
+  "count": 15,
   "records": [
+    {
+      "version": "2.4.1",
+      "date": "2026-09-14",
+      "reason": "PATCH_DOCUMENTARY_CORRECTION",
+      "source_commit": "67845326088eac47452224b00ef1e866036e86f1",
+      "summary": "Reconciled two stale release blockers as RESOLVED and decomposed the confirmed aggregate E2E gap by runtime reachability, MVP relevance and current coverage; retained it ACTIVE at P2.",
+      "finding_transitions": [
+        "bug.event-duplicate-artist-leak: ACTIVE -> RESOLVED",
+        "bug.user-visible-text-corruption: ACTIVE -> RESOLVED",
+        "gap.partial-flows-lack-end-to-end-proof: ACTIVE/P1 -> ACTIVE/P2"
+      ],
+      "new_specific_findings": 0,
+      "new_p1_findings": [],
+      "release_blockers_after": [],
+      "product_health": "DEGRADED",
+      "infrastructure_health": "DEGRADED",
+      "runtime_change": false,
+      "database_change": false,
+      "deployment": false,
+      "supabase": "UNCHANGED",
+      "ticketeira": "UNTOUCHED"
+    },
     {
       "version": "2.4.0",
       "date": "2026-09-14",

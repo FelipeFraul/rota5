@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T16:29:51.547Z",
-  "stage": "stabilization/critical-coverage-baseline-2.4.0",
+  "generatedAt": "2026-09-14T16:52:21.715Z",
+  "stage": "stabilization/release-blocker-reconciliation-baseline-2.4.1",
   "sourceCommit": "67845326088eac47452224b00ef1e866036e86f1",
   "scope": "Baseline 2.2.0 after reproducible test-runner remediation and clean Git materialization proof.",
   "method": "Preserve historical evidence, resolve only the untracked-loader finding, and retain all other finding lifecycles.",
@@ -192,9 +192,9 @@
       "type": "BUG",
       "severity": "MEDIUM",
       "priority": "P1",
-      "status": "ACTIVE",
+      "status": "RESOLVED",
       "confidence": "CONFIRMED",
-      "description": "O título duplicado recebe sufixo, mas artist_name copia sourceEvent.artist_name, contrariando o contrato testado de sincronizar artista ao novo título.",
+      "description": "Historical event-duplication defect is corrected: the current payload assigns artist_name to the duplicated title rather than inheriting the source artist.",
       "evidence": [
         {
           "path": "src/lib/tickets/services/adminEvents.ts",
@@ -245,6 +245,54 @@
           "source c726902505fd69c2cfef2dec8013ffe0cf0adba3 deployed in Production",
           "no real remote event duplication created"
         ]
+      },
+      "resolution": {
+        "baseline": "2.4.1",
+        "classification": "STALE",
+        "resolved_at": "2026-09-14T16:52:21.715Z",
+        "original_cause": "The old duplication payload copied sourceEvent.artist_name while changing the title.",
+        "historical_evidence": {
+          "description": "O título duplicado recebe sufixo, mas artist_name copia sourceEvent.artist_name, contrariando o contrato testado de sincronizar artista ao novo título.",
+          "evidence": [
+            {
+              "path": "src/lib/tickets/services/adminEvents.ts",
+              "line": 1712,
+              "claim": "Cria duplicatedTitle."
+            },
+            {
+              "path": "src/lib/tickets/services/adminEvents.ts",
+              "line": 1715,
+              "claim": "Copia artist_name da origem."
+            },
+            {
+              "path": "scripts/test-admin-event-artist-name-leak.mjs",
+              "line": 143,
+              "claim": "Teste direto falha nesta divergência."
+            }
+          ],
+          "impact": "Um rascunho duplicado pode exibir ou persistir artista incoerente com o título, exigindo correção manual.",
+          "workaround": "Editar manualmente o artista após duplicar.",
+          "direction": "Alinhar a regra de duplicação ao contrato de título/artista.",
+          "priority_justification": "P1 por produzir dado administrativo incorreto em uma ação ativa, com workaround manual."
+        },
+        "current_evidence": [
+          {
+            "path": "src/lib/tickets/services/adminEventDuplication.ts",
+            "claim": "buildDuplicatedAdminEventPayload sets title and artist_name to duplicatedTitle."
+          },
+          {
+            "path": "scripts/test-admin-event-artist-name-leak.mjs",
+            "claim": "Behavioral duplication proof passes and confirms source artist is not inherited."
+          },
+          {
+            "path": "package.json",
+            "claim": "Current default suite passes 236/236, including the direct duplication test."
+          }
+        ],
+        "scope_limitation": "Resolution covers the documented artist inheritance defect; it does not assert that every administrative multi-step failure mode is resolved.",
+        "runtime_change_in_this_baseline": false,
+        "database_change": false,
+        "deployment_required": false
       }
     },
     {
@@ -253,9 +301,9 @@
       "type": "BUG",
       "severity": "MEDIUM",
       "priority": "P1",
-      "status": "ACTIVE",
+      "status": "RESOLVED",
       "confidence": "CONFIRMED",
-      "description": "A varredura encontra mojibake no dashboard; mensagens, ajuda, checkout e leitor de combo contêm bytes de emoji interpretados incorretamente e interrogações no lugar de acentos.",
+      "description": "Historical scoped text-corruption defects are corrected in the cited active surfaces; direct text/help tests and the complete default suite pass.",
       "evidence": [
         {
           "path": "src/app/admin/eventos/dashboard/AdminDashboardSection.tsx",
@@ -322,6 +370,63 @@
           "Production dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa READY"
         ],
         "limitation": "This evidence does not assert that the entire system is free of textual corruption."
+      },
+      "resolution": {
+        "baseline": "2.4.1",
+        "classification": "STALE",
+        "resolved_at": "2026-09-14T16:52:21.715Z",
+        "original_cause": "Source text contained mojibake byte reinterpretation and question-mark substitutions in active UI/message/help surfaces.",
+        "historical_evidence": {
+          "description": "A varredura encontra mojibake no dashboard; mensagens, ajuda, checkout e leitor de combo contêm bytes de emoji interpretados incorretamente e interrogações no lugar de acentos.",
+          "evidence": [
+            {
+              "path": "src/app/admin/eventos/dashboard/AdminDashboardSection.tsx",
+              "line": 59,
+              "claim": "Separador e mensagens do dashboard contêm sequências mojibake."
+            },
+            {
+              "path": "src/lib/tickets/messages.ts",
+              "line": 61,
+              "claim": "Emoji está armazenado como sequência de bytes interpretada incorretamente."
+            },
+            {
+              "path": "src/lib/tickets/services/publicHelp.ts",
+              "line": 176,
+              "claim": "ID e keywords usam interrogação no lugar do acento."
+            },
+            {
+              "path": "scripts/test-message-mojibake.mjs",
+              "line": 18,
+              "claim": "Teste de mensagens falha com nove ocorrências no dashboard."
+            }
+          ],
+          "impact": "Usuários e administradores recebem texto corrompido; IDs/keywords corrompidos também alteram resultados e contratos de busca.",
+          "workaround": "O sanitizador de saída repara apenas parte dos casos e não corrige IDs ou UI web.",
+          "direction": "Normalizar os arquivos fonte e ampliar a verificação para corrupção por substituição e bytes reinterpretados.",
+          "priority_justification": "P1 porque o defeito é visível em jornadas públicas e administrativas e já quebra testes."
+        },
+        "current_evidence": [
+          {
+            "path": "scripts/test-message-mojibake.mjs",
+            "claim": "Scoped active public and administrative source scan passes."
+          },
+          {
+            "path": "scripts/test-public-help-flow.mjs",
+            "claim": "Public help IDs, keywords and behavior pass direct tests."
+          },
+          {
+            "path": "src/lib/zapi/textEncoding.ts",
+            "claim": "Repository-wide source scan found the marker sequence only inside the intentional mojibake detector/repair implementation."
+          },
+          {
+            "path": "package.json",
+            "claim": "Current default suite passes 236/236."
+          }
+        ],
+        "scope_limitation": "Resolution is limited to the documented and revalidated active surfaces; it is not an absolute guarantee that arbitrary future or external text can never be corrupted.",
+        "runtime_change_in_this_baseline": false,
+        "database_change": false,
+        "deployment_required": false
       }
     },
     {
@@ -2589,17 +2694,25 @@
       "title": "Sete flows parciais não possuem prova ponta a ponta",
       "type": "TEST_GAP",
       "severity": "MEDIUM",
-      "priority": "P1",
+      "priority": "P2",
       "status": "ACTIVE",
       "confidence": "CONFIRMED",
-      "description": "Os sete flows permanecem PARCIAL após revalidação; testes cobrem ramos ou contratos, mas não demonstram todos os terminais, integrações e recuperação.",
+      "description": "Confirmed heterogeneous E2E evidence gap decomposed by flow. Component behavior is broadly covered, but no single proof spans every terminal and integration for the seven listed flows.",
       "evidence": [
         {
           "path": "system-knowledge/flows.json",
-          "claim": "whatsapp.public_discovery, ticket.purchase, courtesy.public, combo.delivery_choice, admin.whatsapp_event_management, admin.courtesy_management e table_map.calibration estão PARCIAL."
+          "claim": "All seven scoped flows remain implementation/test PARTIAL, with no failing test references; 32/34 flows have test evidence."
+        },
+        {
+          "path": "system-knowledge/findings.json",
+          "claim": "flow_assessment distinguishes component coverage from true E2E coverage and derives P2/P3 per flow."
+        },
+        {
+          "path": "package.json",
+          "claim": "Default suite revalidated at 236/236 with 0 failures, skips or todos."
         }
       ],
-      "impact": "A saúde dessas jornadas não pode ser promovida a HEALTHY e regressões entre módulos podem escapar.",
+      "impact": "Residual cross-module failures may escape component tests, especially in purchase and administrative multi-step recovery; no current broken terminal is demonstrated.",
       "domains": [
         "domain.whatsapp-conversations",
         "domain.reservation-inventory",
@@ -2619,9 +2732,122 @@
         "table_map.calibration"
       ],
       "blast_radius": "MULTI_DOMAIN",
-      "workaround": "Cada flow possui evidência estrutural e cobertura parcial documentada.",
-      "direction": "Criar cenários end-to-end não destrutivos para cada terminal crítico.",
-      "priority_justification": "P1 porque são jornadas de compra/admin/entrega ativas, embora não estejam todas quebradas."
+      "workaround": "Use the green behavioral suite, focused audits and controlled operational validation; prioritize a non-destructive purchase trace as hardening.",
+      "direction": "Track the heterogeneous gap at P2 and add risk-driven E2E evidence incrementally; do not treat missing E2E alone as a confirmed blocker.",
+      "priority_justification": "P2 after decomposition: no individual flow lacks enough current evidence to be materially release-blocking, while purchase and authorization paths still warrant planned E2E hardening.",
+      "flow_assessment": {
+        "whatsapp.public_discovery": {
+          "runtime_reachable": "YES",
+          "mvp_relevance": "HIGH",
+          "current_test_coverage": "COMPONENT_BEHAVIOR_COVERED: initial/reentry, help, search/list formatting, visibility and availability branches execute in the default suite.",
+          "missing_e2e_proof": "No single live WhatsApp-to-database trace proves every terminal and provider failure/retry branch.",
+          "financial_impact": "INDIRECT",
+          "data_integrity_impact": "LOW",
+          "security_or_auth_impact": "LOW",
+          "user_impact": "HIGH",
+          "failure_recovery_coverage": "PARTIAL",
+          "priority": "P2",
+          "blocks_release": false,
+          "reason": "Core discovery behavior is extensively exercised; the remaining provider-spanning E2E proof is valuable hardening but no current defect is demonstrated."
+        },
+        "ticket.purchase": {
+          "runtime_reachable": "YES",
+          "mvp_relevance": "CRITICAL",
+          "current_test_coverage": "COMPONENT_BEHAVIOR_COVERED: reservation/risk audits, signed checkout isolation, payment status reconciliation and idempotency, payment confirmation contract, ticket generation contracts, delivery/distribution/retry behavior and public visibility are covered across current tests and audits.",
+          "missing_e2e_proof": "TRUE_END_TO_END_COVERED = NO. No single non-destructive trace currently joins selection -> real reservation transaction -> provider approval -> real confirm_paid_ticket_order -> ticket generation -> outbound delivery, including cross-boundary failure recovery.",
+          "financial_impact": "HIGH",
+          "data_integrity_impact": "HIGH",
+          "security_or_auth_impact": "MEDIUM",
+          "user_impact": "HIGH",
+          "failure_recovery_coverage": "PARTIAL_BY_COMPONENT",
+          "priority": "P2",
+          "blocks_release": false,
+          "reason": "The missing unified trace is material hardening for the MVP, but broad component behavior, idempotency and retry coverage plus a green current runtime provide no evidence of a present release-blocking defect."
+        },
+        "courtesy.public": {
+          "runtime_reachable": "CONDITIONAL",
+          "mvp_relevance": "MEDIUM",
+          "current_test_coverage": "COMPONENT_BEHAVIOR_COVERED: visibility/eligibility contracts and zero-value issuance path are covered; related section-limit authorization/mutation tests pass.",
+          "missing_e2e_proof": "No complete eligible reservation -> issuance RPC -> ticket/inventory terminal trace with rollback/failure branches.",
+          "financial_impact": "LOW_ZERO_VALUE",
+          "data_integrity_impact": "MEDIUM",
+          "security_or_auth_impact": "MEDIUM",
+          "user_impact": "MEDIUM",
+          "failure_recovery_coverage": "PARTIAL",
+          "priority": "P2",
+          "blocks_release": false,
+          "reason": "It can affect inventory and authorization, but is conditional, zero-value and has no demonstrated failure."
+        },
+        "combo.delivery_choice": {
+          "runtime_reachable": "CONDITIONAL",
+          "mvp_relevance": "MEDIUM",
+          "current_test_coverage": "COMPONENT_BEHAVIOR_COVERED: state/prerequisite handling, OK/1 responses, paid-item release and replay/idempotency branches are tested.",
+          "missing_e2e_proof": "No complete kitchen request -> customer response -> table reservation -> fulfillment trace across live integrations.",
+          "financial_impact": "MEDIUM",
+          "data_integrity_impact": "MEDIUM",
+          "security_or_auth_impact": "LOW",
+          "user_impact": "MEDIUM",
+          "failure_recovery_coverage": "PARTIAL",
+          "priority": "P2",
+          "blocks_release": false,
+          "reason": "Paid fulfillment is relevant, but the path is conditional and current behavioral tests cover its critical guards without a known defect."
+        },
+        "admin.whatsapp_event_management": {
+          "runtime_reachable": "YES",
+          "mvp_relevance": "HIGH",
+          "current_test_coverage": "COMPONENT_BEHAVIOR_COVERED: authentication/permissions, create/edit/duplicate/status/cancel behavior and multiple workspace contracts are covered.",
+          "missing_e2e_proof": "No full conversational trace proves every multi-entity terminal and cleanup after each intermediate failure.",
+          "financial_impact": "INDIRECT_HIGH",
+          "data_integrity_impact": "HIGH",
+          "security_or_auth_impact": "HIGH",
+          "user_impact": "MEDIUM_ADMIN",
+          "failure_recovery_coverage": "PARTIAL",
+          "priority": "P2",
+          "blocks_release": false,
+          "reason": "Authorization and critical mutations have direct coverage; residual multi-step atomicity is already tracked separately as POTENTIAL and is not a confirmed release defect."
+        },
+        "admin.courtesy_management": {
+          "runtime_reachable": "YES_WITH_HIDDEN_WEB_SUBSURFACE",
+          "mvp_relevance": "MEDIUM",
+          "current_test_coverage": "COMPONENT_BEHAVIOR_COVERED: authorization, section-limit mutation, issue/list/resend/cancel contracts and inventory behavior have partial/direct evidence.",
+          "missing_e2e_proof": "No single authorized issue -> ticket -> resend/cancel -> inventory release trace across the real database and delivery integration.",
+          "financial_impact": "LOW_ZERO_VALUE",
+          "data_integrity_impact": "MEDIUM",
+          "security_or_auth_impact": "HIGH",
+          "user_impact": "MEDIUM_ADMIN",
+          "failure_recovery_coverage": "PARTIAL",
+          "priority": "P2",
+          "blocks_release": false,
+          "reason": "Important authorization/inventory behavior is covered; the hidden web subsurface and absence of a demonstrated defect do not justify P1."
+        },
+        "table_map.calibration": {
+          "runtime_reachable": "HIDDEN_OR_OPERATOR_CONDITIONAL",
+          "mvp_relevance": "LOW",
+          "current_test_coverage": "COMPONENT_BEHAVIOR_COVERED: 14 default-suite tests cover catalog, persistence validation, editor/API reload, renderer parity, assets and invalid-image behavior.",
+          "missing_e2e_proof": "No browser-level operator session exercises the hidden calibration UI through persistence and final render.",
+          "financial_impact": "NONE_DIRECT",
+          "data_integrity_impact": "LOW_TO_MEDIUM",
+          "security_or_auth_impact": "MEDIUM",
+          "user_impact": "LOW_OPERATOR_ONLY",
+          "failure_recovery_coverage": "PARTIAL",
+          "priority": "P3",
+          "blocks_release": false,
+          "reason": "The surface is hidden/conditional and already has strong component/render coverage; browser E2E is not materially required for MVP release."
+        }
+      },
+      "decomposition": {
+        "baseline": "2.4.1",
+        "classification": "OVERSTATED_AT_P1",
+        "priority_before": "P1",
+        "priority_after": "P2",
+        "status": "ACTIVE",
+        "specific_findings_created": 0,
+        "new_p1_findings": [],
+        "release_blocking_after": false,
+        "component_behavior_covered": true,
+        "true_end_to_end_covered": false,
+        "decision": "Retain the confirmed aggregate gap as ACTIVE/P2; no individual P1 finding is justified by current evidence."
+      }
     },
     {
       "id": "gap.client-errors-not-persisted",

@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T16:29:51.547Z",
-  "stage": "stabilization/critical-coverage-baseline-2.4.0",
+  "generatedAt": "2026-09-14T16:52:21.715Z",
+  "stage": "stabilization/release-blocker-reconciliation-baseline-2.4.1",
   "base_commit": "67845326088eac47452224b00ef1e866036e86f1",
   "functional_changes_since_base": [],
   "baseline_commit": "SELF_NOT_RECORDED",
   "git_observation_at_generation": {
-    "observed_at": "2026-09-14T16:29:51.547Z",
+    "observed_at": "2026-09-14T16:52:21.715Z",
     "branch": "production",
-    "head": "67845326088eac47452224b00ef1e866036e86f1",
+    "head": "1023cbfd979a1e07228b9989e17fa26576bc4629",
     "working_tree_clean": false,
     "validity_role": "INFORMATIONAL_ONLY",
-    "note": "Only Baseline 2.4.0 documentation artifacts are uncommitted."
+    "note": "Only Baseline 2.4.1 documentary/taxonomical artifacts are uncommitted; functional source fingerprint remains unchanged."
   },
   "package_lock_sha256": "a8b041c08ae27909dd319ba888c0e34494598b6889f10f92e28129ac5a55ee95",
   "migrations_aggregate_hash": "4c196e3220366238e42bf9a3a283a8089969c7fd77e0b2e5d19a0948c14d229a",
@@ -19,7 +19,7 @@
   "source_tree_fingerprint": "df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0",
   "source_tree_file_count": 368,
   "source_tree_strategy": "Run git ls-files -z; normalize paths to forward slashes; exclude docs/system/**, system-knowledge/**, .tools/baseline/** and any path segment beginning with .stage; sort remaining paths lexicographically; SHA-256 each tracked file in its canonical Git representation (index blob for staged/clean content, current working-tree bytes for an unstaged functional change); concatenate path + NUL + sha256 + LF; SHA-256 the UTF-8 concatenation. Reconstruct commits from their raw Git blob bytes with the same path and aggregation rules.",
-  "freeze_timestamp": "2026-09-14T16:29:51.547Z",
+  "freeze_timestamp": "2026-09-14T16:52:21.715Z",
   "secrets_included": false,
   "source_tree_strategy_version": 3,
   "source_tree_exclusions": [
