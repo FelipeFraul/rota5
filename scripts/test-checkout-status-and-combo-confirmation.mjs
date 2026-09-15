@@ -18,6 +18,7 @@ function checkoutMocks(db, overrides = {}) {
     centsToDecimalAmount: (value) => value / 100,
     decimalAmountToCents: (value) => Math.round(Number(value) * 100),
     deliverTicketsForOrder: overrides.deliverTicketsForOrder ?? (async () => ({ ok: true, sent: true })),
+    ensurePaidTicketDeliveryIntents: overrides.ensurePaidTicketDeliveryIntents ?? (async () => ({ ok: true, intentsCount: 1 })),
     getPublicEventVisibilityQueryFloorIso: () => "2000-01-01T00:00:00.000Z",
     isPublicEventVisible: () => true,
     PUBLIC_VISIBLE_EVENT_STATUSES: ["published"],

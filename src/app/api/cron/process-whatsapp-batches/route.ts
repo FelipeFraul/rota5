@@ -10,6 +10,7 @@ import {
   rateLimitResponse,
 } from "@/lib/security/rateLimit";
 import { finalizeInactiveWhatsAppConversations } from "@/lib/tickets/services/conversationFinalizer";
+import { processDuePaidTicketDeliveries } from "@/lib/tickets/services/paidTicketDeliveryWorker";
 import {
   claimDueWhatsAppMessageBatches,
   finishWhatsAppMessageBatch,
@@ -210,11 +211,15 @@ async function handleProcessWhatsAppBatchesCron(request: Request) {
   }
 
   let responseBody: Awaited<ReturnType<typeof processDueWhatsAppMessageBatches>>;
+  let paidTicketDeliveries: Awaited<
+    ReturnType<typeof processDuePaidTicketDeliveries>
+  >;
 
   try {
     responseBody = await processDueWhatsAppMessageBatches();
+    paidTicketDeliveries = await processDuePaidTicketDeliveries();
   } catch (error) {
-    logError("Failed to claim due WhatsApp batches", {
+    logError("Failed to process durable WhatsApp queues", {
       error,
     });
     return jsonError("Internal Server Error", 500);
@@ -229,6 +234,7 @@ async function handleProcessWhatsAppBatchesCron(request: Request) {
   const jsonBody = {
     ok: true,
     ...responseBody,
+    paidTicketDeliveries,
   };
 
   return hasOnlyFailures

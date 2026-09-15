@@ -111,10 +111,14 @@ test("ticket delivery uses required idempotency keys and skips sent or sending e
   assert.match(ticketDelivery, /conversation_status: "unavailable"/);
 });
 
-test("ticket QR deliveries are independent and do not block multiple tickets", () => {
+test("ticket QR deliveries preserve order and stop behind an active predecessor claim", () => {
   assert.match(ticketDelivery, /for \(const ticket of tickets\)/);
   assert.match(ticketDelivery, /continue;/);
-  assert.match(ticketDelivery, /let deliveryInProgress = false/);
+  assert.ok(
+    ticketDelivery.indexOf("const instructionDelivery") <
+      ticketDelivery.indexOf("for (const ticket of tickets)"),
+  );
+  assert.match(ticketDelivery, /claimToken: imageClaim\.delivery\.claim_token/);
   assert.match(ticketDelivery, /ticket_id: ticket\.ticketId/);
 });
 

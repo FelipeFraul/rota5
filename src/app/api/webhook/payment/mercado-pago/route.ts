@@ -153,6 +153,8 @@ const DEFINITIVE_CONFIRMATION_ERRORS = new Set([
   "reservation_items_not_found",
   "reserved_seat_not_available",
   "payment_already_linked",
+  "order_already_paid_with_different_payment",
+  "payment_replay_amount_mismatch",
 ]);
 
 function getDefinitiveConfirmationReason(error: { message?: string } | null | undefined) {
@@ -561,6 +563,8 @@ export async function POST(request: Request) {
     });
   }
 
+  // processed_at means the payment and its local durable effects (including
+  // delivery intents) were reconciled; external WhatsApp receipt is separate.
   await markPaymentEventProcessed(eventInsert.id);
 
   logInfo("Processed approved Black House payment", {

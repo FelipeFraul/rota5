@@ -15,6 +15,7 @@ import {
   decimalAmountToCents,
 } from "@/lib/tickets/services/payments";
 import { deliverTicketsForOrder } from "@/lib/tickets/services/ticketDelivery";
+import { ensurePaidTicketDeliveryIntents } from "@/lib/tickets/services/whatsappOutboundDeliveries";
 import {
   getPublicEventVisibilityQueryFloorIso,
   isPublicEventVisible,
@@ -1019,7 +1020,18 @@ export async function reconcileApprovedCheckoutPayment(orderId: string) {
     .eq("id", orderId)
     .maybeSingle<{ id: string; status: string }>();
 
-  if (orderError || !order || order.status === "paid") {
+  if (orderError || !order) {
+    return;
+  }
+
+  if (order.status === "paid") {
+    const ensureResult = await ensurePaidTicketDeliveryIntents({ orderId });
+    if (!ensureResult.ok) {
+      logWarn("Paid checkout reconciliation could not ensure delivery intents", {
+        orderId,
+        code: ensureResult.error.code,
+      });
+    }
     return;
   }
 
