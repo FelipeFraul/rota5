@@ -8,7 +8,8 @@ export type WhatsAppOutboundDeliveryStatus =
   | "sending"
   | "sent"
   | "failed"
-  | "dead_letter";
+  | "dead_letter"
+  | "superseded";
 
 export type WhatsAppOutboundDelivery = {
   id: string;
