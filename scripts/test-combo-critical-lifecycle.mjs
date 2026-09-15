@@ -65,10 +65,26 @@ test("combo.kitchen_release releases linked paid items once and does not notify 
       event_sessions: { event_id: "event-a", starts_at: "2099-01-01T00:00:00.000Z", timezone: "America/Sao_Paulo", status: "sales_open", events: { status: "published" } },
     }],
     combo_redemptions: [
-      { id: "redemption-a", combo_order_id: "combo-a", customer_id: "customer-a", event_id: "event-a", session_id: "session-a", status: "issued", redemption_code: "CMB-A", offer_name: "Oferta", quantity: 1, raw_metadata: {}, customers: { id: "customer-a", whatsapp_phone: "5515999999999" }, combo_orders: { status: "paid" } },
+      { id: "redemption-a", combo_order_id: "combo-a", customer_id: "customer-a", event_id: "event-a", session_id: "session-a", status: "issued", redemption_code: "CMB-A", offer_name: "Oferta", quantity: 1, raw_metadata: { delivery_choice: "table", ready_delivery_version: 2 }, customers: { id: "customer-a", whatsapp_phone: "5515999999999" }, combo_orders: { status: "paid" } },
       { id: "redemption-other", combo_order_id: "combo-b", customer_id: "customer-b", event_id: "event-a", session_id: "session-a", status: "issued", redemption_code: "CMB-B", offer_name: "Outra", quantity: 1, raw_metadata: {}, customers: { id: "customer-b", whatsapp_phone: "5515888888888" }, combo_orders: { status: "paid" } },
     ],
   });
+  db.rpc = async (name, args) => {
+    assert.equal(name, "record_combo_gate_arrival");
+    const redemption = db.tables.combo_redemptions.find((row) => row.id === args.p_redemption_id);
+    if (!redemption || redemption.status !== "issued") {
+      return { data: { applied: false, idempotent: false, reason: "status_incompatible" }, error: null };
+    }
+    if (typeof redemption.raw_metadata?.kitchen_arrived_at === "string") {
+      return { data: { applied: false, idempotent: true, reason: "already_arrived" }, error: null };
+    }
+    redemption.raw_metadata = {
+      ...(redemption.raw_metadata ?? {}),
+      kitchen_arrived_at: "2026-09-15T12:00:00.000Z",
+      kitchen_visible: true,
+    };
+    return { data: { applied: true, idempotent: false, reason: "applied" }, error: null };
+  };
   const service = await loadProductionModule("src/lib/tickets/services/comboRedemptions.ts", {
     createHash, randomBytes, getSupabaseAdmin: () => db, validateGateSessionToken: async () => ({ valid: false }),
     hashGateSessionToken: () => "", hashKitchenDeviceToken: () => "",
@@ -83,6 +99,8 @@ test("combo.kitchen_release releases linked paid items once and does not notify 
 
   assert.deepEqual(await service.releaseComboOrdersForKitchenAfterGateEntry(input), { ok: true, releasedCount: 1 });
   assert.equal(typeof db.tables.combo_redemptions[0].raw_metadata.kitchen_arrived_at, "string");
+  assert.equal(db.tables.combo_redemptions[0].raw_metadata.delivery_choice, "table");
+  assert.equal(db.tables.combo_redemptions[0].raw_metadata.ready_delivery_version, 2);
   assert.equal(db.tables.combo_redemptions[1].raw_metadata.kitchen_arrived_at, undefined);
   assert.equal(notifications, 1);
   assert.deepEqual(await service.releaseComboOrdersForKitchenAfterGateEntry(input), { ok: true, releasedCount: 0 });

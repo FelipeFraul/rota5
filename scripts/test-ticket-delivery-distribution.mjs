@@ -53,6 +53,10 @@ const comboRedemptionsSource = readFileSync(
   new URL("../src/lib/tickets/services/comboRedemptions.ts", import.meta.url),
   "utf8",
 );
+const comboMetadataTransitionMigration = readFileSync(
+  new URL("../supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql", import.meta.url),
+  "utf8",
+);
 let comboRedemptionModulePromise;
 
 async function loadComboRedemptionModule() {
@@ -75,7 +79,7 @@ async function loadComboRedemptionModule() {
       saveWhatsAppMessage: async () => ({ ok: true }),
       buildWhatsAppOutboundMetadata: (value) => value,
       sendZapiImage: async () => ({ ok: true, providerMessageId: "image-1" }),
-      sendZapiText: async () => ({ ok: true, providerMessageId: "text-1" }),
+      sendZapiText: (...args) => globalThis.__comboRedemptionScanScenario.sendZapiText(...args),
       generateComboQrImage: async () => Buffer.from("qr"),
       formatComboDescription: () => "",
       getOfficialTableMapPlace: () => ({ type: "table" }),
@@ -118,7 +122,7 @@ function createComboRedemptionScanScenario(overrides = {}) {
     combo_orders: { id: "combo-order-1", status: "paid", source_order_id: "source-order-1", combo_offers: { description: "" } },
     ...overrides.row,
   };
-  const state = { row, reservation: overrides.reservation ?? { place_code: "01", status: "paid" }, rpcCalls: [], consumptionCount: 0, events: [], updates: [] };
+  const state = { row, reservation: overrides.reservation ?? { place_code: "01", status: "paid" }, rpcCalls: [], consumptionCount: 0, events: [], updates: [], externalTexts: 0 };
 
   class Query {
     constructor(table) { this.table = table; this.operation = "select"; this.filters = []; }
@@ -155,8 +159,63 @@ function createComboRedemptionScanScenario(overrides = {}) {
   const supabase = {
     from: (table) => new Query(table),
     rpc: async (name, args) => {
+      state.rpcCalls.push({ name, args });
+      if (name === "confirm_combo_delivery_choice") {
+        if (overrides.choiceTransition) return { data: overrides.choiceTransition, error: null };
+        if (state.row.status !== "issued" || state.row.customer_id !== args.p_customer_id) {
+          return { data: { applied: false, idempotent: false, conflict: false, reason: "status_incompatible", status: state.row.status }, error: null };
+        }
+        const existingChoice = state.row.raw_metadata?.delivery_choice_confirmed_at
+          ? state.row.raw_metadata.delivery_choice
+          : null;
+        if (existingChoice) {
+          return { data: { applied: false, idempotent: existingChoice === args.p_choice, conflict: existingChoice !== args.p_choice, reason: existingChoice === args.p_choice ? "already_confirmed" : "choice_conflict", choice: existingChoice, place_label: state.row.raw_metadata.delivery_place_label, status: state.row.status }, error: null };
+        }
+        state.row.raw_metadata = {
+          ...(state.row.raw_metadata ?? {}),
+          delivery_choice: args.p_choice,
+          delivery_choice_confirmed_at: "2026-09-12T10:00:00.000Z",
+          delivery_place_code: args.p_place_code,
+          delivery_place_label: args.p_place_label,
+        };
+        state.events.push({ result: "allowed", source: "customer_delivery_choice", choice: args.p_choice });
+        return { data: { applied: true, idempotent: false, conflict: false, reason: "applied", choice: args.p_choice, place_label: args.p_place_label, status: state.row.status }, error: null };
+      }
+      if (name === "record_combo_delivery_choice_prompt") {
+        if (state.row.status !== "issued") return { data: { applied: false, reason: "status_incompatible", status: state.row.status }, error: null };
+        if (typeof state.row.raw_metadata?.delivery_choice_confirmed_at === "string") {
+          return { data: { applied: false, reason: "choice_already_confirmed", choice: state.row.raw_metadata.delivery_choice, place_label: state.row.raw_metadata.delivery_place_label }, error: null };
+        }
+        state.row.raw_metadata = {
+          ...(state.row.raw_metadata ?? {}),
+          kitchen_visible: true,
+          kitchen_status: state.row.raw_metadata?.kitchen_status === "preparing" ? "preparing" : "pending",
+          delivery_choice_status: "awaiting_customer",
+          delivery_choice_requested_at: state.row.raw_metadata?.delivery_choice_requested_at ?? "2026-09-12T10:00:00.000Z",
+          delivery_place_code: args.p_place_code,
+          delivery_place_label: args.p_place_label,
+          delivery_choice_prompt_sent: args.p_prompt_sent,
+        };
+        state.events.push({ result: "allowed", source: "customer_delivery_choice_prompt" });
+        return { data: { applied: true, reason: "applied", status: state.row.status }, error: null };
+      }
+      if (name === "record_combo_awaiting_preparation") {
+        if (state.row.status !== "issued") return { data: { applied: false, reason: "status_incompatible", status: state.row.status }, error: null };
+        if (state.row.raw_metadata?.kitchen_status === "preparing") return { data: { applied: false, reason: "preparation_started", status: state.row.status }, error: null };
+        state.row.raw_metadata = {
+          ...(state.row.raw_metadata ?? {}),
+          kitchen_visible: true,
+          ...(args.p_notification_sent ? { awaiting_preparation_notified_at: "2026-09-12T10:00:00.000Z" } : {}),
+        };
+        state.events.push({ result: "denied", source: "awaiting_preparation" });
+        return { data: { applied: true, reason: "applied", status: state.row.status }, error: null };
+      }
+      if (name === "complete_legacy_combo_ready_recovery") {
+        if (state.row.status !== "issued") return { data: { applied: false, idempotent: false, reason: "status_incompatible" }, error: null };
+        state.row.raw_metadata = { ...(state.row.raw_metadata ?? {}), ready_notified_at: "2026-09-12T10:10:00.000Z", ready_notification_recovered_at_scan: "2026-09-12T10:10:00.000Z" };
+        return { data: { applied: true, idempotent: false, reason: "applied" }, error: null };
+      }
       assert.equal(name, "validate_combo_redemption");
-      state.rpcCalls.push(args);
       let result;
       if (args.p_redemption_id !== state.row.id || args.p_qr_token_hash !== state.row.qr_token_hash) {
         result = { allowed: false, result: "not_found", message: "not found", redemption: null };
@@ -174,6 +233,12 @@ function createComboRedemptionScanScenario(overrides = {}) {
         state.consumptionCount += 1;
         state.row.status = "used";
         state.row.used_at = "2026-09-12T10:10:00.000Z";
+        state.row.raw_metadata = {
+          ...(state.row.raw_metadata ?? {}),
+          last_redemption: { redeemed_at: state.row.used_at },
+          kitchen_status: "delivered",
+          delivered_at: state.row.used_at,
+        };
         result = { allowed: true, result: "allowed", message: "allowed", redemption: { redemptionId: state.row.id, status: "used", usedAt: state.row.used_at } };
       }
       state.events.push({ result: result.result, source: "rpc" });
@@ -185,6 +250,7 @@ function createComboRedemptionScanScenario(overrides = {}) {
     state,
     supabase,
     comboToken: `combo:${row.id}:${token}`,
+    sendZapiText: async () => { state.externalTexts += 1; return { ok: true, providerMessageId: "text-1" }; },
     validateGateSessionToken: async () => overrides.kitchenSession ?? ({
       valid: true,
       gateSession: { id: "kitchen-session-1", gateLabel: "Bar", validatorIdentifier: "operator-1", eventId: overrides.eventId ?? "event-1", sessionId: overrides.sessionId ?? "session-1" },
@@ -196,6 +262,12 @@ async function scanCombo(scenario, comboToken = scenario.comboToken) {
   globalThis.__comboRedemptionScanScenario = scenario;
   const { validateComboRedemptionScan } = await loadComboRedemptionModule();
   return validateComboRedemptionScan({ kitchenSessionToken: "kitchen-token", comboToken, deviceToken: "device-token" });
+}
+
+async function confirmComboChoice(scenario, choice) {
+  globalThis.__comboRedemptionScanScenario = scenario;
+  const { confirmComboDeliveryChoice } = await loadComboRedemptionModule();
+  return confirmComboDeliveryChoice({ customerId: scenario.state.row.customer_id, redemptionId: scenario.state.row.id, choice });
 }
 
 const ticketsConfigSource = readFileSync(
@@ -1030,8 +1102,9 @@ test("QR vermelho solicita escolha de entrega sem marcar usado", () => {
   assert.match(comboRedemptionsSource, /\*ENTREGA DE BEBIDA\*/);
   assert.match(comboRedemptionsSource, /Digite \*OK\* para receber na sua \$\{input\.placeLabel\}/);
   assert.match(comboRedemptionsSource, /Digite \*1\* para solicitar um garçom/);
-  assert.match(comboRedemptionsSource, /delivery_choice_status:\s*"awaiting_customer"/);
-  assert.match(comboRedemptionsSource, /reason:\s*"combo_delivery_choice_requested"/);
+  assert.match(comboRedemptionsSource, /record_combo_delivery_choice_prompt/);
+  assert.match(comboMetadataTransitionMigration, /'delivery_choice_status', 'awaiting_customer'/);
+  assert.match(comboMetadataTransitionMigration, /'reason', 'delivery_choice_requested'/);
   assert.match(comboRedemptionsSource, /redemption\.status !== "issued"/);
 });
 
@@ -1045,7 +1118,30 @@ test("respostas OK e 1 revalidam compra e reserva e nao concluem entrega", () =>
   assert.match(comboRedemptionsSource, /\.eq\("customer_id", input\.customerId\)/);
   assert.match(comboRedemptionsSource, /order\.status !== "paid" \|\| redemption\.status !== "issued"/);
   assert.match(comboRedemptionsSource, /\.from\("official_table_map_reservations"\)[\s\S]*\.eq\("status", "paid"\)/);
-  assert.match(comboRedemptionsSource, /delivery_choice_status:\s*input\.choice === "waiter" \? "waiter_requested" : "table_requested"/);
+  assert.match(comboRedemptionsSource, /confirm_combo_delivery_choice/);
+  assert.match(comboMetadataTransitionMigration, /'delivery_choice_status', case when p_choice = 'waiter' then 'waiter_requested' else 'table_requested' end/);
+});
+
+test("combo delivery choice is applied once, idempotent for the same choice and conflicts for a different choice", async () => {
+  const scenario = createComboRedemptionScanScenario({
+    row: { raw_metadata: {}, combo_orders: { id: "combo-order-1", status: "paid", source_order_id: "source-order-1", combo_offers: { description: "" } } },
+  });
+  const applied = await confirmComboChoice(scenario, "table");
+  const replay = await confirmComboChoice(scenario, "table");
+  const conflict = await confirmComboChoice(scenario, "waiter");
+  assert.deepEqual({ ok: applied.ok, duplicate: applied.duplicate, choice: applied.choice }, { ok: true, duplicate: false, choice: "table" });
+  assert.deepEqual({ ok: replay.ok, duplicate: replay.duplicate, choice: replay.choice }, { ok: true, duplicate: true, choice: "table" });
+  assert.deepEqual(conflict, { ok: false, reason: "choice_conflict" });
+  assert.equal(scenario.state.events.filter((event) => event.source === "customer_delivery_choice").length, 1);
+});
+
+test("combo delivery choice does not report success after the redemption status changed", async () => {
+  const scenario = createComboRedemptionScanScenario({
+    row: { raw_metadata: {}, combo_orders: { id: "combo-order-1", status: "paid", source_order_id: "source-order-1", combo_offers: { description: "" } } },
+    choiceTransition: { applied: false, idempotent: false, conflict: false, reason: "status_incompatible", status: "used" },
+  });
+  assert.deepEqual(await confirmComboChoice(scenario, "table"), { ok: false, reason: "update_failed" });
+  assert.equal(scenario.state.events.length, 0);
 });
 
 test("combo redemption valid prepared scan consumes exactly once and replay is rejected", async () => {
@@ -1091,7 +1187,8 @@ test("combo redemption delivery and preparation branches preserve their prerequi
   });
   const choosingResult = await scanCombo(choosing);
   assert.equal(choosingResult.allowed, true);
-  assert.equal(choosing.state.rpcCalls.length, 0);
+  assert.equal(choosing.state.rpcCalls.length, 1);
+  assert.equal(choosing.state.rpcCalls[0].name, "record_combo_delivery_choice_prompt");
   assert.equal(choosing.state.row.status, "issued");
 
   const awaiting = createComboRedemptionScanScenario({
@@ -1099,7 +1196,38 @@ test("combo redemption delivery and preparation branches preserve their prerequi
   });
   const awaitingResult = await scanCombo(awaiting);
   assert.equal(awaitingResult.result, "awaiting_preparation");
-  assert.equal(awaiting.state.rpcCalls.length, 0);
+  assert.equal(awaiting.state.rpcCalls.length, 1);
+  assert.equal(awaiting.state.rpcCalls[0].name, "record_combo_awaiting_preparation");
   assert.equal(awaiting.state.consumptionCount, 0);
   assert.equal(awaiting.state.row.status, "issued");
+});
+
+test("versioned READY scan does not send recovery text or manufacture ready_notified_at", async () => {
+  const scenario = createComboRedemptionScanScenario({
+    row: {
+      qr_token_version: 2,
+      raw_metadata: { delivery_choice_confirmed_at: "2026-09-12T10:00:00.000Z", kitchen_status: "preparing" },
+    },
+  });
+  const result = await scanCombo(scenario);
+  assert.equal(result.allowed, false);
+  assert.match(result.message, /fila de entrega/);
+  assert.equal(scenario.state.externalTexts, 0);
+  assert.equal(scenario.state.row.raw_metadata.ready_notified_at, undefined);
+  assert.equal(scenario.state.rpcCalls.length, 0);
+});
+
+test("legacy READY scan retains its direct recovery while completing metadata through the restricted RPC", async () => {
+  const scenario = createComboRedemptionScanScenario({
+    row: {
+      qr_token_version: null,
+      raw_metadata: { delivery_choice_confirmed_at: "2026-09-12T10:00:00.000Z", kitchen_status: "preparing" },
+    },
+  });
+  const result = await scanCombo(scenario);
+  assert.equal(result.allowed, true);
+  assert.equal(scenario.state.externalTexts, 1);
+  assert.equal(typeof scenario.state.row.raw_metadata.ready_notified_at, "string");
+  assert.deepEqual(scenario.state.rpcCalls.map((call) => call.name), ["complete_legacy_combo_ready_recovery", "validate_combo_redemption"]);
+  assert.equal(scenario.state.row.raw_metadata.kitchen_status, "delivered");
 });

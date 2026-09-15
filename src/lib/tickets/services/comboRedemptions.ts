@@ -561,7 +561,6 @@ export async function releaseComboOrdersForKitchenAfterGateEntry(input: {
     return { ok: false as const, releasedCount: 0 };
   }
 
-  const releasedAt = new Date().toISOString();
   let releasedCount = 0;
 
   await Promise.all(
@@ -623,30 +622,19 @@ export async function releaseComboOrdersForKitchenAfterGateEntry(input: {
         }
       }
 
-      const { error: updateError } = await supabase
-        .from("combo_redemptions")
-        .update({
-          raw_metadata: {
-            ...metadata,
-            kitchen_visible: true,
-            kitchen_arrived_at: releasedAt,
-            kitchen_released_at:
-              typeof metadata.kitchen_released_at === "string"
-                ? metadata.kitchen_released_at
-                : releasedAt,
-            kitchen_released_by: "gate_ticket_entry",
-            kitchen_released_by_ticket_id: ticket.id,
-            kitchen_released_gate_session_id: input.gateSessionId,
-            kitchen_released_gate_label: input.gateLabel,
-            kitchen_released_validator_identifier: input.validatorIdentifier,
-            ...(notificationSent
-              ? { arrival_preparation_notified_at: releasedAt }
-              : {}),
-          },
-        })
-        .eq("id", redemption.id);
+      const { data: transition, error: updateError } = await supabase.rpc(
+        "record_combo_gate_arrival",
+        {
+          p_redemption_id: redemption.id,
+          p_ticket_id: ticket.id,
+          p_gate_session_id: input.gateSessionId,
+          p_gate_label: input.gateLabel,
+          p_validator_identifier: input.validatorIdentifier,
+          p_notification_sent: notificationSent,
+        },
+      );
 
-      if (!updateError) releasedCount += 1;
+      if (!updateError && transition?.applied === true) releasedCount += 1;
     }),
   );
 
@@ -939,20 +927,12 @@ export async function startKitchenOrderPreparation(input: {
   }
 
   if (kitchenStatus === "pending") {
-    const preparingAt = new Date().toISOString();
-    const { error: updateError } = await supabase
-      .from("combo_redemptions")
-      .update({
-        raw_metadata: {
-          ...metadata,
-          kitchen_status: "preparing",
-          preparing_at: preparingAt,
-        },
-      })
-      .eq("id", redemption.id)
-      .eq("status", "issued");
+    const { data: transition, error: updateError } = await supabase.rpc(
+      "start_combo_kitchen_preparation",
+      { p_redemption_id: redemption.id },
+    );
 
-    if (updateError) {
+    if (updateError || (!transition?.applied && !transition?.idempotent)) {
       return { ok: false as const, reason: "update_failed" as const };
     }
   }
@@ -1089,21 +1069,9 @@ export async function startKitchenOrderPreparation(input: {
     }
 
     if (textResult.ok && qrResult.ok) {
-      await supabase
-        .from("combo_redemptions")
-        .update({
-          raw_metadata: {
-            ...metadata,
-            kitchen_status: "preparing",
-            preparing_at:
-              typeof metadata.preparing_at === "string"
-                ? metadata.preparing_at
-                : new Date().toISOString(),
-            ready_notified_at: new Date().toISOString(),
-          },
-        })
-        .eq("id", redemption.id)
-        .eq("status", "issued");
+      await supabase.rpc("complete_legacy_combo_ready_recovery", {
+        p_redemption_id: redemption.id,
+      });
     }
 
     return {
@@ -1160,7 +1128,7 @@ export async function validateComboRedemptionScan(input: {
   const { data: scannedRedemption } = await supabase
     .from("combo_redemptions")
     .select(
-      "id, combo_order_id, customer_id, event_id, session_id, redemption_code, offer_name, quantity, status, qr_token_hash, raw_metadata, customers(id, whatsapp_phone), events(title), combo_orders!inner(id, status, source_order_id, combo_offers(description))",
+      "id, combo_order_id, customer_id, event_id, session_id, redemption_code, offer_name, quantity, status, qr_token_hash, qr_token_version, raw_metadata, customers(id, whatsapp_phone), events(title), combo_orders!inner(id, status, source_order_id, combo_offers(description))",
     )
     .eq("id", parsedToken.redemptionId)
     .eq("qr_token_hash", hashSecret(parsedToken.token))
@@ -1175,6 +1143,7 @@ export async function validateComboRedemptionScan(input: {
       quantity: number;
       status: "issued" | "used" | "cancelled";
       qr_token_hash: string;
+      qr_token_version: number | null;
       raw_metadata: Record<string, unknown> | null;
       customers:
         | { id: string; whatsapp_phone: string | null }
@@ -1341,63 +1310,46 @@ export async function validateComboRedemptionScan(input: {
       }
     }
 
-    const latest = await supabase
-      .from("combo_redemptions")
-      .select("raw_metadata")
-      .eq("id", scannedRedemption.id)
-      .eq("status", "issued")
-      .maybeSingle<{ raw_metadata: Record<string, unknown> | null }>();
-    const latestMetadata = latest.data?.raw_metadata ?? existingMetadata;
-
-    await supabase
-      .from("combo_redemptions")
-      .update({
-        raw_metadata: {
-          ...latestMetadata,
-          kitchen_visible: true,
-          kitchen_status:
-            latestMetadata.kitchen_status === "preparing"
-              ? "preparing"
-              : "pending",
-          delivery_choice_status: "awaiting_customer",
-          delivery_choice_requested_at:
-            typeof latestMetadata.delivery_choice_requested_at === "string"
-              ? latestMetadata.delivery_choice_requested_at
-              : now,
-          delivery_place_code: reservation.place_code,
-          delivery_place_label: placeLabel,
-          delivery_choice_prompt_sent: promptSent,
-          kitchen_released_at:
-            typeof latestMetadata.kitchen_released_at === "string"
-              ? latestMetadata.kitchen_released_at
-              : now,
-          kitchen_released_by: "combo_qr_delivery_choice",
-          kitchen_released_gate_session_id: kitchenSession.gateSession.id,
-          kitchen_released_gate_label: kitchenSession.gateSession.gateLabel,
-          kitchen_released_validator_identifier:
-            kitchenSession.gateSession.validatorIdentifier,
-        },
-      })
-      .eq("id", scannedRedemption.id)
-      .eq("status", "issued");
-
-    await supabase.from("combo_redemption_events").insert({
-      combo_redemption_id: scannedRedemption.id,
-      combo_order_id: scannedRedemption.combo_order_id,
-      kitchen_session_id: kitchenSession.gateSession.id,
-      result: "allowed",
-      redemption_code: scannedRedemption.redemption_code,
-      offer_name: scannedRedemption.offer_name,
-      quantity: scannedRedemption.quantity,
-      kitchen_label: kitchenSession.gateSession.gateLabel,
-      validator_identifier: kitchenSession.gateSession.validatorIdentifier,
-      metadata: {
-        source: "kitchen_scan",
-        reason: "delivery_choice_requested",
-        place_code: reservation.place_code,
-        prompt_sent: promptSent,
+    const { data: transition, error: transitionError } = await supabase.rpc(
+      "record_combo_delivery_choice_prompt",
+      {
+        p_redemption_id: scannedRedemption.id,
+        p_place_code: reservation.place_code,
+        p_place_label: placeLabel,
+        p_prompt_sent: promptSent,
+        p_kitchen_session_id: kitchenSession.gateSession.id,
+        p_kitchen_label: kitchenSession.gateSession.gateLabel,
+        p_validator_identifier: kitchenSession.gateSession.validatorIdentifier,
       },
-    });
+    );
+    if (transitionError || transition?.reason === "status_incompatible") {
+      return {
+        allowed: false,
+        result: "denied",
+        message: "O estado deste combo mudou durante a leitura. Leia o QR Code novamente.",
+      };
+    }
+    if (transition?.reason === "choice_already_confirmed") {
+      return {
+        allowed: true,
+        result: "allowed",
+        message: `A forma de entrega desse combo ja foi escolhida para ${String(transition.place_label ?? placeLabel)}. Mantenha o QR Code vermelho aberto para apresentar na entrega.`,
+        redemption: {
+          redemptionId: scannedRedemption.id,
+          redemptionCode: scannedRedemption.redemption_code,
+          offerName: scannedRedemption.offer_name,
+          quantity: scannedRedemption.quantity,
+          status: scannedRedemption.status,
+        },
+      };
+    }
+    if (transition?.applied !== true) {
+      return {
+        allowed: false,
+        result: "denied",
+        message: "N?o foi poss?vel registrar a leitura deste combo agora.",
+      };
+    }
 
     return {
       allowed: true,
@@ -1423,13 +1375,21 @@ export async function validateComboRedemptionScan(input: {
     scannedRedemption.raw_metadata?.kitchen_status === "preparing" &&
     typeof scannedRedemption.raw_metadata?.ready_notified_at !== "string"
   ) {
-    const metadata = scannedRedemption.raw_metadata ?? {};
     const customer = firstJoin(scannedRedemption.customers);
     const event = firstJoin(scannedRedemption.events);
     const offer = firstJoin(scannedOrder.combo_offers);
     const itemLines = formatComboDescription(offer?.description ?? "")
       .split("\n")
       .filter(Boolean);
+
+    if (scannedRedemption.qr_token_version != null) {
+      return {
+        allowed: false,
+        result: "denied",
+        message:
+          "PEDIDO EM PREPARO. A notificacao READY e o QR Code ainda estao sendo processados pela fila de entrega.",
+      };
+    }
 
     if (!customer?.whatsapp_phone) {
       return {
@@ -1499,20 +1459,12 @@ export async function validateComboRedemptionScan(input: {
       };
     }
 
-    const notifiedAt = new Date().toISOString();
-    const { error: notificationUpdateError } = await supabase
-      .from("combo_redemptions")
-      .update({
-        raw_metadata: {
-          ...metadata,
-          ready_notified_at: notifiedAt,
-          ready_notification_recovered_at_scan: notifiedAt,
-        },
-      })
-      .eq("id", scannedRedemption.id)
-      .eq("status", "issued");
+    const { data: transition, error: notificationUpdateError } = await supabase.rpc(
+      "complete_legacy_combo_ready_recovery",
+      { p_redemption_id: scannedRedemption.id },
+    );
 
-    if (notificationUpdateError) {
+    if (notificationUpdateError || (!transition?.applied && !transition?.idempotent)) {
       return {
         allowed: false,
         result: "denied",
@@ -1532,7 +1484,6 @@ export async function validateComboRedemptionScan(input: {
   ) {
     const metadata = scannedRedemption.raw_metadata ?? {};
     const customer = firstJoin(scannedRedemption.customers);
-    const now = new Date().toISOString();
     const alreadyNotified =
       typeof metadata.awaiting_preparation_notified_at === "string";
     let notificationSent = alreadyNotified;
@@ -1583,50 +1534,37 @@ export async function validateComboRedemptionScan(input: {
       }
     }
 
-    const { data: latestRedemption } = await supabase
-      .from("combo_redemptions")
-      .select("raw_metadata")
-      .eq("id", scannedRedemption.id)
-      .eq("status", "issued")
-      .maybeSingle<{ raw_metadata: Record<string, unknown> | null }>();
-    const latestMetadata = latestRedemption?.raw_metadata ?? metadata;
-
-    await supabase
-      .from("combo_redemptions")
-      .update({
-        raw_metadata: {
-          ...latestMetadata,
-          kitchen_visible: true,
-          kitchen_released_at:
-            typeof latestMetadata.kitchen_released_at === "string"
-              ? latestMetadata.kitchen_released_at
-              : now,
-          kitchen_released_by: "offer_reader_scan",
-          ...(notificationSent &&
-          typeof latestMetadata.awaiting_preparation_notified_at !== "string"
-            ? { awaiting_preparation_notified_at: now }
-            : {}),
-        },
-      })
-      .eq("id", scannedRedemption.id)
-      .eq("status", "issued");
-
-    await supabase.from("combo_redemption_events").insert({
-      combo_redemption_id: scannedRedemption.id,
-      combo_order_id: scannedRedemption.combo_order_id,
-      kitchen_session_id: kitchenSession.gateSession.id,
-      result: "denied",
-      redemption_code: scannedRedemption.redemption_code,
-      offer_name: scannedRedemption.offer_name,
-      quantity: scannedRedemption.quantity,
-      kitchen_label: kitchenSession.gateSession.gateLabel,
-      validator_identifier: kitchenSession.gateSession.validatorIdentifier,
-      metadata: {
-        source: "kitchen_scan",
-        reason: "awaiting_preparation",
-        notification_sent: notificationSent,
+    const { data: transition, error: transitionError } = await supabase.rpc(
+      "record_combo_awaiting_preparation",
+      {
+        p_redemption_id: scannedRedemption.id,
+        p_notification_sent: notificationSent,
+        p_kitchen_session_id: kitchenSession.gateSession.id,
+        p_kitchen_label: kitchenSession.gateSession.gateLabel,
+        p_validator_identifier: kitchenSession.gateSession.validatorIdentifier,
       },
-    });
+    );
+    if (transitionError) {
+      return {
+        allowed: false,
+        result: "denied",
+        message: "N?o foi poss?vel registrar a leitura deste combo agora.",
+      };
+    }
+    if (transition?.reason === "preparation_started") {
+      return {
+        allowed: false,
+        result: "denied",
+        message: "O preparo deste pedido iniciou durante a leitura. Aguarde a notificacao READY.",
+      };
+    }
+    if (transition?.applied !== true) {
+      return {
+        allowed: false,
+        result: "denied",
+        message: "O estado deste combo mudou durante a leitura. Leia o QR Code novamente.",
+      };
+    }
 
     return {
       allowed: false,
@@ -1670,28 +1608,6 @@ export async function validateComboRedemptionScan(input: {
 
   const result = data as ComboRedemptionScanResult;
 
-  if (result.allowed) {
-    const { data: redemption } = await getSupabaseAdmin()
-      .from("combo_redemptions")
-      .select("raw_metadata")
-      .eq("id", parsedToken.redemptionId)
-      .maybeSingle<{ raw_metadata: Record<string, unknown> | null }>();
-
-    if (redemption) {
-      await getSupabaseAdmin()
-        .from("combo_redemptions")
-        .update({
-          raw_metadata: {
-            ...(redemption.raw_metadata ?? {}),
-            kitchen_status: "delivered",
-            delivered_at: new Date().toISOString(),
-          },
-        })
-        .eq("id", parsedToken.redemptionId)
-        .eq("status", "used");
-    }
-  }
-
   return {
     allowed: Boolean(result.allowed),
     result: result.result,
@@ -1709,7 +1625,7 @@ export async function confirmComboDeliveryChoice(input: {
   const { data: redemption, error } = await supabase
     .from("combo_redemptions")
     .select(
-      "id, combo_order_id, customer_id, event_id, session_id, redemption_code, offer_name, quantity, status, raw_metadata, combo_orders!inner(id, status, source_order_id)",
+      "id, combo_order_id, customer_id, event_id, session_id, redemption_code, offer_name, quantity, status, combo_orders!inner(id, status, source_order_id)",
     )
     .eq("id", input.redemptionId)
     .eq("customer_id", input.customerId)
@@ -1723,7 +1639,6 @@ export async function confirmComboDeliveryChoice(input: {
       offer_name: string;
       quantity: number;
       status: "issued" | "used" | "cancelled";
-      raw_metadata: Record<string, unknown> | null;
       combo_orders:
         | { id: string; status: string; source_order_id: string | null }
         | Array<{ id: string; status: string; source_order_id: string | null }>
@@ -1752,67 +1667,35 @@ export async function confirmComboDeliveryChoice(input: {
     return { ok: false as const, reason: "place_not_found" as const };
   }
 
-  const metadata = redemption.raw_metadata ?? {};
-  if (typeof metadata.delivery_choice_confirmed_at === "string") {
+  const placeLabel = formatComboDeliveryPlace(reservation.place_code);
+  const { data: transition, error: updateError } = await supabase.rpc(
+    "confirm_combo_delivery_choice",
+    {
+      p_redemption_id: redemption.id,
+      p_customer_id: input.customerId,
+      p_choice: input.choice,
+      p_place_code: reservation.place_code,
+      p_place_label: placeLabel,
+    },
+  );
+
+  if (updateError || !transition || transition.conflict === true) {
     return {
-      ok: true as const,
-      duplicate: true as const,
-      choice: metadata.delivery_choice === "waiter" ? "waiter" as const : "table" as const,
-      placeLabel: String(metadata.delivery_place_label ?? formatComboDeliveryPlace(reservation.place_code)),
-      offerName: redemption.offer_name,
+      ok: false as const,
+      reason: transition?.conflict === true
+        ? "choice_conflict" as const
+        : "update_failed" as const,
     };
   }
-
-  const now = new Date().toISOString();
-  const placeLabel = formatComboDeliveryPlace(reservation.place_code);
-  const { error: updateError } = await supabase
-    .from("combo_redemptions")
-    .update({
-      raw_metadata: {
-        ...metadata,
-        kitchen_visible: true,
-        delivery_choice_status:
-          input.choice === "waiter" ? "waiter_requested" : "table_requested",
-        delivery_choice: input.choice,
-        delivery_choice_confirmed_at: now,
-        delivery_place_code: reservation.place_code,
-        delivery_place_label: placeLabel,
-        kitchen_released_at:
-          typeof metadata.kitchen_released_at === "string"
-            ? metadata.kitchen_released_at
-            : now,
-        kitchen_released_by:
-          input.choice === "waiter"
-            ? "customer_waiter_request"
-            : "customer_table_delivery_request",
-      },
-    })
-    .eq("id", redemption.id)
-    .eq("status", "issued");
-
-  if (updateError) {
+  if (transition.applied !== true && transition.idempotent !== true) {
     return { ok: false as const, reason: "update_failed" as const };
   }
 
-  await supabase.from("combo_redemption_events").insert({
-    combo_redemption_id: redemption.id,
-    combo_order_id: redemption.combo_order_id,
-    result: "allowed",
-    redemption_code: redemption.redemption_code,
-    offer_name: redemption.offer_name,
-    quantity: redemption.quantity,
-    metadata: {
-      source: "customer_delivery_choice",
-      choice: input.choice,
-      place_code: reservation.place_code,
-    },
-  });
-
   return {
     ok: true as const,
-    duplicate: false as const,
-    choice: input.choice,
-    placeLabel,
+    duplicate: transition.idempotent === true,
+    choice: transition.choice === "waiter" ? "waiter" as const : "table" as const,
+    placeLabel: String(transition.place_label ?? placeLabel),
     offerName: redemption.offer_name,
   };
 }

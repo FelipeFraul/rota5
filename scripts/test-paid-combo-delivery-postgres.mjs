@@ -28,6 +28,7 @@ test("paid combo confirmation, versioned QR and delivery queue are transactional
       "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql",
       "supabase/migrations/20260915000300_make_combo_redemption_codes_collision_safe.sql",
       "supabase/migrations/20260915000400_minimize_combo_redemption_code_sequence_privileges.sql",
+      "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
     ].map((path) => readFileSync(path, "utf8")).join("\n");
     psql(`
       do $roles$ begin
@@ -39,6 +40,7 @@ test("paid combo confirmation, versioned QR and delivery queue are transactional
       create table public.conversations(id uuid primary key, customer_id uuid references public.customers(id));
       create table public.events(id uuid primary key);
       create table public.event_sessions(id uuid primary key, event_id uuid references public.events(id));
+      create table public.gate_sessions(id uuid primary key, event_id uuid references public.events(id), session_id uuid references public.event_sessions(id));
       create table public.combo_offers(id uuid primary key, name text not null);
       create table public.combo_orders(
         id uuid primary key, offer_id uuid references public.combo_offers(id), customer_id uuid not null references public.customers(id),
@@ -53,7 +55,12 @@ test("paid combo confirmation, versioned QR and delivery queue are transactional
         id uuid primary key default gen_random_uuid(), combo_order_id uuid not null unique references public.combo_orders(id),
         customer_id uuid not null references public.customers(id), event_id uuid not null references public.events(id), session_id uuid not null references public.event_sessions(id),
         offer_name text not null, quantity integer not null, qr_token_hash text not null unique, redemption_code text not null unique,
-        status text not null default 'issued', raw_metadata jsonb not null default '{}'
+        status text not null default 'issued', issued_at timestamptz not null default now(), used_at timestamptz, raw_metadata jsonb not null default '{}'
+      );
+      create table public.combo_redemption_events(
+        id uuid primary key default gen_random_uuid(), combo_redemption_id uuid, combo_order_id uuid, kitchen_session_id uuid,
+        result text not null, redemption_code text, offer_name text, quantity integer, kitchen_label text,
+        validator_identifier text, metadata jsonb not null default '{}', created_at timestamptz not null default now()
       );
       create table public.whatsapp_outbound_deliveries(
         id uuid primary key default gen_random_uuid(), idempotency_key text not null unique, customer_id uuid not null references public.customers(id),
@@ -76,6 +83,10 @@ test("paid combo confirmation, versioned QR and delivery queue are transactional
           dead_letter_at=case when d.attempt_count>=5 then now() else d.dead_letter_at end,updated_at=now()
         where d.id=p_delivery_id and d.status='sending' and d.claim_token=p_claim_token returning d.*;
       $fn$;
+      create function public.lock_authorized_gate_session(p_gate_session_id uuid,p_expected_mode text,p_gate_session_token_hash text,p_event_id uuid,p_session_id uuid,p_kitchen_device_binding_hash text,p_required_kitchen_capability text)
+      returns public.gate_sessions language sql security invoker set search_path='' as $fn$
+        select g from public.gate_sessions g where g.id=p_gate_session_id for update;
+      $fn$;
       insert into public.customers values
         ('10000000-0000-4000-8000-000000000001','5511999990001'),
         ('10000000-0000-4000-8000-000000000002','5511999990002'),
@@ -83,6 +94,7 @@ test("paid combo confirmation, versioned QR and delivery queue are transactional
         ('10000000-0000-4000-8000-000000000004','5511999990004');
       insert into public.events values ('20000000-0000-4000-8000-000000000001');
       insert into public.event_sessions values ('30000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001');
+      insert into public.gate_sessions values ('31000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001');
       insert into public.combo_offers values ('40000000-0000-4000-8000-000000000001','Combo');
       insert into public.combo_orders
       select ((case when i=4 then '50000000' else '5000000'||(i-1)::text end)||'-0000-4000-8000-'||lpad(i::text,12,'0'))::uuid,'40000000-0000-4000-8000-000000000001',
@@ -198,9 +210,82 @@ test("paid combo confirmation, versioned QR and delivery queue are transactional
     assert.equal(readyCalls.filter((result) => result.includes('"idempotent": false')).length, 1);
     assert.equal(readyCalls.filter((result) => result.includes('"idempotent": true')).length, 1);
     assert.equal(psql(`select count(*) from public.whatsapp_outbound_deliveries where reason in ('combo_ready_at_bar','combo_ready_qr') and business_context->>'combo_redemption_id'='${raceRedemption}';`, ["-At"]).trim(), "2");
+    assert.equal(psql(`select (coalesce(raw_metadata ? 'ready_notified_at',false))::text||'|'||(public.complete_combo_ready_delivery('${raceRedemption}',2))::text from public.combo_redemptions where id='${raceRedemption}';`, ["-At"]).trim(), "false|false");
+    psql(`update public.whatsapp_outbound_deliveries set status='sent' where reason='combo_ready_at_bar' and business_context->>'combo_redemption_id'='${raceRedemption}';`);
+    assert.equal(psql(`select public.complete_combo_ready_delivery('${raceRedemption}',2);`, ["-At"]).trim(), "f");
+    psql(`update public.whatsapp_outbound_deliveries set status='sent' where reason='combo_ready_qr' and business_context->>'combo_redemption_id'='${raceRedemption}';`);
+    assert.equal(psql(`select public.complete_combo_ready_delivery('${raceRedemption}',2);`, ["-At"]).trim(), "t");
+    assert.equal(psql(`select raw_metadata ? 'ready_notified_at' from public.combo_redemptions where id='${raceRedemption}';`, ["-At"]).trim(), "t");
+
+    const transitionRedemption = "60000000-0000-4000-8000-000000000099";
+    const choiceArgs = `'${transitionRedemption}','10000000-0000-4000-8000-000000000003'`;
+    psql(`update public.combo_redemptions set status='issued',used_at=null,raw_metadata='{}' where id='${transitionRedemption}'; delete from public.combo_redemption_events where combo_redemption_id='${transitionRedemption}';`);
+    const differentChoices = await Promise.all([
+      psqlAsync(`select public.confirm_combo_delivery_choice(${choiceArgs},'table','01','mesa 1');`),
+      psqlAsync(`select public.confirm_combo_delivery_choice(${choiceArgs},'waiter','01','mesa 1');`),
+    ]);
+    assert.equal(differentChoices.filter((result) => result.includes('"applied": true')).length, 1);
+    assert.equal(differentChoices.filter((result) => result.includes('"conflict": true')).length, 1);
+    assert.equal(psql(`select count(*) from public.combo_redemption_events e join public.combo_redemptions r on r.id=e.combo_redemption_id where r.id='${transitionRedemption}' and e.metadata->>'choice'=r.raw_metadata->>'delivery_choice';`, ["-At"]).trim(), "1");
+
+    psql(`update public.combo_redemptions set raw_metadata='{}' where id='${transitionRedemption}'; delete from public.combo_redemption_events where combo_redemption_id='${transitionRedemption}';`);
+    const sameChoices = await Promise.all([
+      psqlAsync(`select public.confirm_combo_delivery_choice(${choiceArgs},'table','01','mesa 1');`),
+      psqlAsync(`select public.confirm_combo_delivery_choice(${choiceArgs},'table','01','mesa 1');`),
+    ]);
+    assert.equal(sameChoices.filter((result) => result.includes('"applied": true')).length, 1);
+    assert.equal(sameChoices.filter((result) => result.includes('"idempotent": true')).length, 1);
+    assert.equal(psql(`select count(*) from public.combo_redemption_events where combo_redemption_id='${transitionRedemption}';`, ["-At"]).trim(), "1");
+
+    psql(`update public.combo_redemptions set raw_metadata='{}' where id='${transitionRedemption}'; delete from public.combo_redemption_events where combo_redemption_id='${transitionRedemption}';`);
+    await Promise.all([
+      psqlAsync(`select public.confirm_combo_delivery_choice(${choiceArgs},'table','01','mesa 1');`),
+      psqlAsync(`select public.start_combo_kitchen_preparation('${transitionRedemption}');`),
+    ]);
+    assert.equal(psql(`select (raw_metadata->>'delivery_choice')||'|'||(raw_metadata->>'kitchen_status')||'|'||(raw_metadata ? 'preparing_at') from public.combo_redemptions where id='${transitionRedemption}';`, ["-At"]).trim(), "table|preparing|true");
+
+    psql(`update public.combo_redemptions set raw_metadata='{}' where id='${transitionRedemption}'; delete from public.combo_redemption_events where combo_redemption_id='${transitionRedemption}';`);
+    await Promise.all([
+      psqlAsync(`select public.record_combo_delivery_choice_prompt('${transitionRedemption}','01','mesa 1',true,'31000000-0000-4000-8000-000000000001','Bar','operator');`),
+      psqlAsync(`select public.start_combo_kitchen_preparation('${transitionRedemption}');`),
+    ]);
+    assert.equal(psql(`select (raw_metadata->>'delivery_choice_status')||'|'||(raw_metadata->>'kitchen_status')||'|'||(raw_metadata ? 'preparing_at') from public.combo_redemptions where id='${transitionRedemption}';`, ["-At"]).trim(), "awaiting_customer|preparing|true");
+
+    const currentReadyVersion = Number(psql(`select qr_token_version from public.combo_redemptions where id='${raceRedemption}';`, ["-At"]).trim());
+    psql(`update public.combo_redemptions set raw_metadata=jsonb_build_object('kitchen_status','pending') where id='${raceRedemption}';`);
+    await Promise.all([
+      psqlAsync(`select public.record_combo_delivery_choice_prompt('${raceRedemption}','01','mesa 1',true,'31000000-0000-4000-8000-000000000001','Bar','operator');`),
+      psqlAsync(`select public.prepare_combo_ready_delivery('${raceRedemption}',${currentReadyVersion},${currentReadyVersion + 1},'scan-ready-race-hash');`),
+    ]);
+    assert.equal(psql(`select (raw_metadata->>'delivery_choice_status')||'|'||(raw_metadata->>'ready_delivery_version')||'|'||(raw_metadata ? 'ready_prepared_at') from public.combo_redemptions where id='${raceRedemption}';`, ["-At"]).trim(), `awaiting_customer|${currentReadyVersion + 1}|true`);
+
+    const validationSql = `select public.validate_combo_redemption('${transitionRedemption}','legacy-hash','31000000-0000-4000-8000-000000000001','Bar','operator','20000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001','{}');`;
+    const arrivalSql = `select public.record_combo_gate_arrival('${transitionRedemption}','70000000-0000-4000-8000-000000000001','31000000-0000-4000-8000-000000000001','Portaria','operator',true);`;
+    psql(`update public.combo_redemptions set status='issued',used_at=null,raw_metadata=jsonb_build_object('kitchen_status','preparing','ready_notified_at',now()) where id='${transitionRedemption}';`);
+    const consumptionFirst = psqlAsync(`begin; ${validationSql} select pg_sleep(0.3); commit;`);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const arrivalAfterConsumption = await psqlAsync(arrivalSql);
+    await consumptionFirst;
+    assert.match(arrivalAfterConsumption, /status_incompatible/);
+    assert.equal(psql(`select status||'|'||(raw_metadata->>'kitchen_status')||'|'||(raw_metadata ? 'last_redemption')||'|'||(raw_metadata ? 'delivered_at')||'|'||(raw_metadata ? 'kitchen_arrived_at') from public.combo_redemptions where id='${transitionRedemption}';`, ["-At"]).trim(), "used|delivered|true|true|false");
+
+    psql(`update public.combo_redemptions set status='issued',used_at=null,raw_metadata=jsonb_build_object('kitchen_status','preparing','ready_notified_at',now()) where id='${transitionRedemption}';`);
+    const arrivalFirst = psqlAsync(`begin; ${arrivalSql} select pg_sleep(0.3); commit;`);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const validationAfterArrival = await psqlAsync(validationSql);
+    await arrivalFirst;
+    assert.match(validationAfterArrival, /"allowed": true/);
+    assert.equal(psql(`select status||'|'||(raw_metadata->>'kitchen_status')||'|'||(raw_metadata ? 'last_redemption')||'|'||(raw_metadata ? 'delivered_at')||'|'||(raw_metadata ? 'kitchen_arrived_at') from public.combo_redemptions where id='${transitionRedemption}';`, ["-At"]).trim(), "used|delivered|true|true|true");
+
+    const eventsBeforeRejectedChoice = psql(`select count(*) from public.combo_redemption_events where combo_redemption_id='${transitionRedemption}';`, ["-At"]).trim();
+    const rejectedChoice = await psqlAsync(`select public.confirm_combo_delivery_choice(${choiceArgs},'table','01','mesa 1');`);
+    assert.match(rejectedChoice, /status_incompatible/);
+    assert.equal(psql(`select count(*) from public.combo_redemption_events where combo_redemption_id='${transitionRedemption}';`, ["-At"]).trim(), eventsBeforeRejectedChoice);
 
     const privileges = psql(`select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('confirm_paid_combo_order','ensure_paid_combo_delivery_intents','ensure_combo_ready_delivery_intents','prepare_combo_ready_delivery','complete_combo_ready_delivery','list_due_paid_combo_delivery_tasks','get_paid_combo_delivery_queue_counts','claim_whatsapp_outbound_delivery') and has_function_privilege('service_role',p.oid,'execute') and not has_function_privilege('anon',p.oid,'execute') and not has_function_privilege('authenticated',p.oid,'execute') and not has_function_privilege('public',p.oid,'execute') and p.proconfig @> array['search_path=""'];`, ["-At"]).trim();
     assert.equal(privileges, "8");
+    const transitionPrivileges = psql(`select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('confirm_combo_delivery_choice','record_combo_gate_arrival','start_combo_kitchen_preparation','record_combo_delivery_choice_prompt','record_combo_awaiting_preparation','complete_legacy_combo_ready_recovery','validate_combo_redemption') and has_function_privilege('service_role',p.oid,'execute') and not has_function_privilege('anon',p.oid,'execute') and not has_function_privilege('authenticated',p.oid,'execute') and not has_function_privilege('public',p.oid,'execute');`, ["-At"]).trim();
+    assert.equal(transitionPrivileges, "7");
     const sequencePrivileges = psql("select has_sequence_privilege('service_role','public.combo_redemption_code_seq','USAGE'),has_sequence_privilege('service_role','public.combo_redemption_code_seq','SELECT'),has_sequence_privilege('service_role','public.combo_redemption_code_seq','UPDATE'),has_sequence_privilege('anon','public.combo_redemption_code_seq','USAGE'),has_sequence_privilege('authenticated','public.combo_redemption_code_seq','USAGE'),has_sequence_privilege('public','public.combo_redemption_code_seq','USAGE');", ["-At"]).trim();
     assert.equal(sequencePrivileges, "t|f|f|f|f|f");
   } finally {
