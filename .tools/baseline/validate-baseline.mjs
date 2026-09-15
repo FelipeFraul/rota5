@@ -452,8 +452,44 @@ const expectedResolvedSemanticInvariants = {
   RESOLVED_OPERATIONAL_OPEN_TRUE:resolvedOperationalOpenTrue,
   HISTORICAL_EVIDENCE_PRESERVED:historicalEvidencePreserved?'SIM':'NAO'
 };
-for (const owner of [riskSummary?.resolved_semantic_invariants,catalogs['cross-audit']?.resolved_semantic_invariants]) {
+for (const owner of [
+  catalogs.findings?.resolved_semantic_contract?.invariants,
+  riskSummary?.resolved_semantic_invariants,
+  catalogs['cross-audit']?.resolved_semantic_invariants
+]) {
   for (const [key,value] of Object.entries(expectedResolvedSemanticInvariants)) if (owner?.[key] !== value) add('RESOLVED_SEMANTIC_INVARIANT_MISMATCH',`${key}: ${owner?.[key]} != ${value}`);
+}
+const canonicalQualityGate = catalogs['baseline-v1']?.quality_gate;
+const canonicalDefaultSuite = canonicalQualityGate?.default_node_suite?.match(/\b\d+\/\d+\b/)?.[0];
+const canonicalQualityGateRun = canonicalQualityGate?.quality_gate_run;
+if (!canonicalDefaultSuite || !Number.isInteger(canonicalQualityGateRun)) add('CURRENT_EVIDENCE_CANONICAL_GATE_MISSING','baseline-v1.quality_gate');
+const currentEvidenceStrings = [];
+const visitCurrentEvidence = (value, owner, insideCurrent = false) => {
+  if (typeof value === 'string') {
+    if (insideCurrent) currentEvidenceStrings.push({ owner, value });
+    return;
+  }
+  if (!value || typeof value !== 'object') return;
+  const objectIsCurrent = insideCurrent || value.evidence_state === 'CURRENT' || value.temporal_semantics === 'CURRENT_CANONICAL_SEMANTICS';
+  if (Array.isArray(value)) {
+    value.forEach((entry,index) => visitCurrentEvidence(entry,`${owner}[${index}]`,objectIsCurrent));
+    return;
+  }
+  for (const [key,child] of Object.entries(value)) {
+    const fieldIsCurrent = key === 'current_evidence' || key === 'current_state' || key.startsWith('current_') || key.startsWith('CURRENT_');
+    visitCurrentEvidence(child,`${owner}.${key}`,objectIsCurrent || fieldIsCurrent);
+  }
+};
+for (const [name,catalog] of Object.entries(catalogs)) visitCurrentEvidence(catalog,name);
+for (const {owner,value} of currentEvidenceStrings) {
+  const suiteCounts = [
+    ...value.matchAll(/\b(\d+\/\d+)\s+(?:Node|default tests)\b/ig),
+    ...value.matchAll(/\bdefault(?:\s+Node)?\s+suite[^,.\n;]{0,40}\b(\d+\/\d+)\b/ig)
+  ].map(match => match[1]);
+  for (const count of suiteCounts) if (canonicalDefaultSuite && count !== canonicalDefaultSuite) add('CURRENT_EVIDENCE_TEST_COUNT_MISMATCH',`${owner}: ${count} != ${canonicalDefaultSuite}`);
+  for (const match of value.matchAll(/\bQuality Gate(?:\s+run)?\s+(\d+)\b/ig)) {
+    if (Number.isInteger(canonicalQualityGateRun) && Number(match[1]) !== canonicalQualityGateRun) add('CURRENT_EVIDENCE_QUALITY_GATE_MISMATCH',`${owner}: ${match[1]} != ${canonicalQualityGateRun}`);
+  }
 }
 const healthFindingCounts = catalogs.health?.system?.active_findings;
 if (healthFindingCounts) {

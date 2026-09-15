@@ -1,10 +1,10 @@
-> **Current Baseline 2.7.0 (2026-09-15):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`. Fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`; 391 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 57 test files and 47 findings. `risk.combo-metadata-read-modify-write-race` is RESOLVED; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is ACTIVE MEDIUM/P2 and non-release-blocking. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.7.1 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`. Fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`; 391 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 57 test files and 47 findings. `risk.combo-metadata-read-modify-write-race` is RESOLVED; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is ACTIVE MEDIUM/P2 and non-release-blocking. Release blockers: 0; Product and Infrastructure remain DEGRADED.
 
-## Baseline 2.7.0 quality gate
+## Baseline 2.7.1 quality gate
 
 Functional Quality Gate 34998744062: Node 280/280, PostgreSQL 4/4, typecheck PASS, lint PASS with existing warnings and no errors, build PASS. Release blockers remain zero. This documentary push creates no deployment.
 
-## Baseline 2.6.0 current quality state
+## Historical snapshot — Baseline 2.6.0 quality state
 
 Quality Gate **34984961888 PASS** on `0a10618648fc3f873afffd8f60e60bd0396b62e7`: Node 276/276, PostgreSQL 4/4, typecheck PASS, lint PASS with 23 preexisting warnings, and build PASS. Product and infrastructure health remain DEGRADED; release blockers are zero.
 

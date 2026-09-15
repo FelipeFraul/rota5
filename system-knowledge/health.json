@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T17:41:19.103Z",
-  "stage": "2.7.0",
+  "generatedAt": "2026-09-15T18:43:54.683Z",
+  "stage": "2.7.1",
   "sourceCommit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-  "scope": "Current health projection by system, domain and infrastructure for Baseline 2.7.0, with resolved history separated from operational risk.",
+  "scope": "Current health projection by system, domain and infrastructure for Baseline 2.7.1, with resolved history separated from operational risk.",
   "method": "Health is derived from canonical finding scopes and taxonomy. BROKEN requires a current release blocker; DEGRADED requires current operational or validation-queue risk; resolved findings are historical only.",
   "vocabulary": [
     "HEALTHY",
@@ -1930,10 +1930,10 @@
     }
   },
   "quality_gate": {
-    "run": 34984961888,
-    "source_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+    "run": 34998744062,
+    "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
     "status": "PASS",
-    "node": "276/276 PASS",
+    "node": "280/280 PASS",
     "postgresql": "4/4 PASS"
   },
   "release_blocker_reconciliation": {

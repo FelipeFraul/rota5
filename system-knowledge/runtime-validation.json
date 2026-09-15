@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-15T17:41:19.103Z",
-  "stage": "2.7.0",
+  "generatedAt": "2026-09-15T18:43:54.683Z",
+  "stage": "2.7.1",
   "count": 27,
   "ok": true,
   "records": [
@@ -370,10 +370,10 @@
     {
       "id": "runtime.paid-delivery-quality-gate",
       "kind": "QUALITY_GATE",
-      "target": "Paid TICKET + COMBO durable delivery",
-      "evidence_source": "GitHub Actions run 34984961888",
+      "target": "Current canonical functional Quality Gate",
+      "evidence_source": "GitHub Actions run 34998744062",
       "status": "PASS",
-      "result": "276/276 Node, 4/4 PostgreSQL 16, typecheck, lint (23 preexisting warnings) and build passed on 0a10618648fc3f873afffd8f60e60bd0396b62e7.",
+      "result": "280/280 Node, 4/4 PostgreSQL 16, typecheck, lint without errors and build passed on 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27.",
       "temporal_semantics": "CURRENT_CANONICAL_SEMANTICS"
     },
     {

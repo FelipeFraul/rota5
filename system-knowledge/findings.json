@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T17:41:19.103Z",
-  "stage": "2.7.0",
+  "generatedAt": "2026-09-15T18:43:54.683Z",
+  "stage": "2.7.1",
   "sourceCommit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-  "scope": "Canonical finding catalog for Baseline 2.7.0, with current lifecycle state separated from preserved historical evidence.",
-  "method": "Reconciled machine-readable current state for Baseline 2.7.0 against source 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27, migration 20260915000500, Quality Gate 34998744062, remote evidence captured by the completed re-audit, and preserved historical evidence.",
+  "scope": "Canonical finding catalog for Baseline 2.7.1, with current lifecycle state separated from preserved historical evidence.",
+  "method": "Reconciled machine-readable current state for Baseline 2.7.1 against source 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27, current Quality Gate 34998744062, remote evidence captured by the completed 2.7.0 re-audit, and preserved historical evidence.",
   "count": 47,
   "records": [
     {
@@ -170,7 +170,7 @@
           "evidence_state": "CURRENT"
         }
       ],
-      "impact": "The historical impact is not current within the proven resolution scope. Residual limitation, without reopening this finding: Remote database equivalence was not validated. risk.combo-metadata-read-modify-write-race remains active.",
+      "impact": "The specific resolution remains proven in the current source; validate_combo_redemption and the relevant remote combo contract were revalidated during the 2.7.0 cycle. Broader remote-database uncertainty remains tracked separately by risk.remote-database-controls-unvalidated and gap.remote-database-behavior-tests.",
       "domains": [
         "domain.combo-commerce-fulfillment"
       ],
@@ -278,7 +278,7 @@
         "lifecycle": "RESOLVED",
         "operational_open": false,
         "release_blocking": false,
-        "current_impact": "The historical impact is not current within the proven resolution scope. Residual limitation, without reopening this finding: Remote database equivalence was not validated. risk.combo-metadata-read-modify-write-race remains active.",
+        "current_impact": "The specific resolution remains proven in the current source; validate_combo_redemption and the relevant remote combo contract were revalidated during the 2.7.0 cycle. Broader remote-database uncertainty remains tracked separately by risk.remote-database-controls-unvalidated and gap.remote-database-behavior-tests.",
         "workaround_required": false,
         "top_level_claims": "CURRENT_RESOLUTION_ONLY",
         "top_level_evidence": "CURRENT"
@@ -387,7 +387,7 @@
           },
           {
             "path": "package.json",
-            "claim": "Current default suite passes 276/276, including the direct duplication test.",
+            "claim": "Current default suite passes 280/280, including the direct duplication test.",
             "evidence_state": "CURRENT"
           }
         ],
@@ -543,7 +543,7 @@
           },
           {
             "path": "package.json",
-            "claim": "Current default suite passes 276/276.",
+            "claim": "Current default suite passes 280/280.",
             "evidence_state": "CURRENT"
           }
         ],
@@ -2484,7 +2484,7 @@
         "current_evidence": [
           {
             "path": "system-knowledge/tests.json",
-            "claim": "The current canonical default suite passes 276/276 with zero failures, skips, todos or regressions.",
+            "claim": "The current canonical default suite passes 280/280 with zero failures, skips, todos or regressions.",
             "evidence_state": "CURRENT"
           },
           {
@@ -2539,7 +2539,7 @@
         },
         {
           "path": ".github/workflows/quality-gate.yml",
-          "claim": "Quality Gate run 34984961888 passed npm ci, 280/280 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
+          "claim": "Quality Gate run 34998744062 passed npm ci, 280/280 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
           "evidence_state": "CURRENT"
         },
         {
@@ -2693,7 +2693,7 @@
           },
           {
             "path": ".github/workflows/quality-gate.yml",
-            "claim": "Quality Gate run 34984961888 passed npm ci, 276/276 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
+            "claim": "Quality Gate run 34998744062 passed npm ci, 280/280 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
             "evidence_state": "CURRENT"
           },
           {
@@ -2902,7 +2902,7 @@
           },
           {
             "path": "package.json",
-            "claim": "The current default suite uses the tracked loader and passes 276/276.",
+            "claim": "The current default suite uses the tracked loader and passes 280/280.",
             "evidence_state": "CURRENT"
           }
         ],
@@ -4176,14 +4176,14 @@
     }
   },
   "resolved_semantic_contract": {
-    "baseline": "2.4.4",
+    "baseline": "2.7.1",
     "top_level": "CURRENT_STATE_ONLY",
     "historical_location": "resolution.historical_evidence",
     "current_evidence_marker": "evidence_state=CURRENT",
     "validator": ".tools/baseline/validate-baseline.mjs",
     "invariants": {
-      "RESOLVED_FINDINGS_TOTAL": 11,
-      "RESOLVED_CURRENT_STATE_COMPLETE": 11,
+      "RESOLVED_FINDINGS_TOTAL": 15,
+      "RESOLVED_CURRENT_STATE_COMPLETE": 15,
       "RESOLVED_WITHOUT_CURRENT_STATE": 0,
       "RESOLVED_WITH_ACTIVE_TOP_LEVEL_CLAIMS": 0,
       "RESOLVED_WITH_NONCURRENT_TOP_LEVEL_EVIDENCE": 0,
@@ -4233,5 +4233,12 @@
     "resolved": "risk.combo-metadata-read-modify-write-race",
     "new_active_p2": "risk.combo-direct-notification-concurrency-can-duplicate-or-stale",
     "release_blockers": 0
+  },
+  "baseline_2_7_1": {
+    "change_type": "PATCH_DOCUMENTARY_CORRECTION",
+    "lifecycle_changes": 0,
+    "resolved_semantic_invariants_reconciled": true,
+    "current_evidence_reconciled": true,
+    "combo_unreachable_current_projection_reconciled": true
   }
 }

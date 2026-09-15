@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T17:41:19.103Z",
+  "generatedAt": "2026-09-15T18:43:54.683Z",
   "count": 57,
   "defaultSuite": {
     "command": "npm test",
@@ -1030,8 +1030,8 @@
       "purpose": "Durable paid TICKET intent, worker, lease, bounded retry and dead-letter contracts",
       "status": "CONFIRMADO",
       "evidence": [
-        "default Node suite 276/276 PASS",
-        "Quality Gate 34984961888 PASS"
+        "default Node suite 280/280 PASS",
+        "Quality Gate 34998744062 PASS"
       ],
       "dependencies": [
         "node",
@@ -1048,7 +1048,7 @@
       "status": "CONFIRMADO",
       "evidence": [
         "PostgreSQL 16 integration 4/4 PASS",
-        "Quality Gate 34984961888 PASS"
+        "Quality Gate 34998744062 PASS"
       ],
       "dependencies": [
         "node",
@@ -1064,8 +1064,8 @@
       "purpose": "Durable paid/versioned-ready COMBO intent and canonical persisted redemption-code contracts",
       "status": "CONFIRMADO",
       "evidence": [
-        "default Node suite 276/276 PASS",
-        "Quality Gate 34984961888 PASS"
+        "default Node suite 280/280 PASS",
+        "Quality Gate 34998744062 PASS"
       ],
       "dependencies": [
         "node",
@@ -1082,7 +1082,7 @@
       "status": "CONFIRMADO",
       "evidence": [
         "PostgreSQL 16 integration 4/4 PASS",
-        "Quality Gate 34984961888 PASS"
+        "Quality Gate 34998744062 PASS"
       ],
       "dependencies": [
         "node",
@@ -1426,7 +1426,7 @@
     "safeLocalExecution": true,
     "note": "stage3Validation permanece histórico e não foi reinterpretado."
   },
-  "stage": "2.7.0",
+  "stage": "2.7.1",
   "high_1_validation": {
     "focused_new_app": {
       "passed": 96,

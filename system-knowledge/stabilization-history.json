@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T17:41:19.103Z",
-  "stage": "2.7.0",
+  "generatedAt": "2026-09-15T18:43:54.683Z",
+  "stage": "2.7.1",
   "period": {
     "start": "2026-09-12",
     "end": "2026-09-15",
     "status": "CLOSED"
   },
   "baseline_start": "1.0.0",
-  "baseline_end": "2.7.0",
+  "baseline_end": "2.7.1",
   "source_start": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
   "source_end": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
   "days": [
@@ -392,7 +392,7 @@
     "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
   ],
   "final_state": {
-    "baseline": "2.7.0",
+    "baseline": "2.7.1",
     "repository_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
     "production_application_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
     "source_tree_fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee",
@@ -463,6 +463,18 @@
       "deployment_changed": false,
       "finding_lifecycle_changed": false,
       "counts_changed": false
+    },
+    {
+      "version": "2.7.1",
+      "date": "2026-09-15",
+      "type": "PATCH_DOCUMENTARY_CORRECTION",
+      "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+      "reason": "Correct stale CURRENT finding invariants/evidence, stale combo resolution projection and one semantically false finding relation.",
+      "functional_milestones_changed": false,
+      "database_changed": false,
+      "deployment_changed": false,
+      "finding_lifecycle_changed": false,
+      "counts_changed": false
     }
   ],
   "functional_releases": [
@@ -494,6 +506,12 @@
   "baseline_2_7_0": {
     "status": "DOCUMENTED_AND_CLOSED",
     "change_type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+    "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "baseline_commit": "SELF_NOT_RECORDED"
+  },
+  "baseline_2_7_1": {
+    "status": "DOCUMENTED_AND_CLOSED",
+    "change_type": "PATCH_DOCUMENTARY_CORRECTION",
     "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
     "baseline_commit": "SELF_NOT_RECORDED"
   }

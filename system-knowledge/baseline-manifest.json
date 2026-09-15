@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T17:41:19.103Z",
-  "stage": "2.7.0",
+  "generatedAt": "2026-09-15T18:43:54.683Z",
+  "stage": "2.7.1",
   "baseline_id": "rota5-baseline-v1",
-  "version": "2.7.0",
+  "version": "2.7.1",
   "status": "FROZEN",
   "frozen_at": "2026-09-15T17:41:19.103Z",
   "source_state": {
@@ -637,8 +637,8 @@
     "runtime_changed": false
   },
   "quality_gate": {
-    "version": "2.7.0",
-    "type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+    "version": "2.7.1",
+    "type": "PATCH_DOCUMENTARY_CORRECTION",
     "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
     "source_fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee",
     "source_file_count": 391,
@@ -813,6 +813,19 @@
     "finding_resolution": "risk.combo-metadata-read-modify-write-race",
     "residual_finding": "risk.combo-direct-notification-concurrency-can-duplicate-or-stale",
     "release_blockers": 0,
+    "baseline_commit": "SELF_NOT_RECORDED"
+  },
+  "baseline_2_7_1": {
+    "change_type": "PATCH_DOCUMENTARY_CORRECTION",
+    "previous_baseline": "2.7.0",
+    "canonical_functional_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "source_fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee",
+    "finding_lifecycle_changed": false,
+    "functional_source_changed": false,
+    "database_changed": false,
+    "deployment_changed": false,
+    "health_changed": false,
+    "release_blockers_changed": false,
     "baseline_commit": "SELF_NOT_RECORDED"
   }
 }
