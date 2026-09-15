@@ -1,9 +1,21 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T15:55:59.919Z",
-  "stage": "2.6.1",
-  "count": 24,
+  "generatedAt": "2026-09-15T16:12:38.008Z",
+  "stage": "2.6.2",
+  "count": 25,
   "records": [
+    {
+      "version": "2.6.2",
+      "date": "2026-09-15",
+      "type": "PATCH_DOCUMENTARY_CORRECTION",
+      "canonical_functional_source": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+      "summary": "Correct NEXT-ACTIONS priority sections and stale current test-count evidence.",
+      "functional_source_changed": false,
+      "database_changed": false,
+      "deployment_changed": false,
+      "finding_lifecycle_changed": false,
+      "counts_changed": false
+    },
     {
       "version": "2.6.1",
       "date": "2026-09-15",
@@ -927,5 +939,9 @@
     "status": "FROZEN",
     "baseline_commit": "SELF_NOT_RECORDED",
     "timestamp_source": "EXECUTION_CLOCK_FOR_CURRENT_AND_GIT_FOR_PREVIOUS_FREEZE"
+  },
+  "baseline_2_6_2": {
+    "status": "FROZEN",
+    "baseline_commit": "SELF_NOT_RECORDED"
   }
 }

@@ -291,6 +291,24 @@ const isPotentialFinding = (finding) => hasTaxonomyFlag(finding,'potential_metri
 const isOpenFinding = (finding) => hasTaxonomyFlag(finding,'operational_open');
 const isResolvedFinding = (finding) => hasTaxonomyFlag(finding,'closed') && finding.status==='RESOLVED';
 const blocksRelease = (finding) => hasTaxonomyFlag(finding,'release_blocking');
+const nextActionsText = fs.readFileSync(path.join(docsDir,'NEXT-ACTIONS.md'),'utf8');
+const nextActionsOperationalStatuses = new Set(['ACTIVE','POTENTIAL','NOT_VALIDATED']);
+let nextActionsSection = null;
+for (const line of nextActionsText.split(/\r?\n/)) {
+  const sectionMatch = line.match(/^##\s+(P[0-4])\b/i) || line.match(/^##\s+(RESOLVED(?:\s+STABILIZATION\s+ITEMS)?|LATER)\b/i);
+  if (sectionMatch) nextActionsSection = sectionMatch[1].toUpperCase();
+  for (const match of line.matchAll(/`([^`]+)`/g)) {
+    const finding = findings.find(item => item.id===match[1]);
+    if (!finding || !nextActionsSection) continue;
+    const operational = nextActionsOperationalStatuses.has(finding.status);
+    const prioritySection = /^P[0-4]$/.test(nextActionsSection);
+    const resolvedSection = nextActionsSection.startsWith('RESOLVED');
+    if (operational && prioritySection && finding.priority!==nextActionsSection) add('NEXT_ACTIONS_PRIORITY_MISMATCH',`${finding.id}: ${nextActionsSection} != ${finding.priority}`);
+    if (operational && nextActionsSection==='LATER' && !['P3','P4'].includes(finding.priority)) add('NEXT_ACTIONS_PRIORITY_MISMATCH',`${finding.id}: LATER incompatible with ${finding.priority}`);
+    if (operational && resolvedSection) add('NEXT_ACTIONS_LIFECYCLE_SECTION_MISMATCH',`${finding.id}: ${finding.status} under ${nextActionsSection}`);
+    if (finding.status==='RESOLVED' && (prioritySection || nextActionsSection==='LATER')) add('NEXT_ACTIONS_LIFECYCLE_SECTION_MISMATCH',`${finding.id}: RESOLVED under ${nextActionsSection}`);
+  }
+}
 for (const finding of findings) if (!canonicalFindingStatuses?.includes(finding.status)) add('FINDING_STATUS_INVALID',`${finding.id}: ${finding.status}`);
 const isReleaseGateApplicable = (finding) => ['P0','P1'].includes(finding.priority) || ['CRITICAL','HIGH'].includes(finding.severity);
 const derivedGroups = {

@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T15:55:59.919Z",
-  "stage": "2.6.1",
+  "generatedAt": "2026-09-15T16:12:38.008Z",
+  "stage": "2.6.2",
   "baseline_id": "rota5-baseline-v1",
-  "version": "2.6.1",
+  "version": "2.6.2",
   "status": "FROZEN",
   "domains": 17,
   "modules": 66,
@@ -650,6 +650,13 @@
     "canonical_functional_source": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
     "counts_unchanged": true,
     "finding_lifecycles_unchanged": true,
+    "release_blockers": 0
+  },
+  "baseline_2_6_2": {
+    "change_type": "PATCH_DOCUMENTARY_CORRECTION",
+    "previous_baseline": "2.6.1",
+    "canonical_functional_source": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+    "counts_unchanged": true,
     "release_blockers": 0
   }
 }

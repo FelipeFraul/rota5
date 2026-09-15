@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T15:55:59.919Z",
-  "stage": "2.6.1",
+  "generatedAt": "2026-09-15T16:12:38.008Z",
+  "stage": "2.6.2",
   "sourceCommit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
-  "scope": "Canonical finding catalog for Baseline 2.6.1, with current lifecycle state separated from preserved historical evidence.",
-  "method": "Reconciled machine-readable current state for Baseline 2.6.1 against the canonical taxonomy, unchanged functional source, current behavioral catalogs and preserved historical evidence. Baseline 2.6.0 remains the functional MINOR baseline; 2.6.1 is a metadata-only documentary correction.",
+  "scope": "Canonical finding catalog for Baseline 2.6.2, with current lifecycle state separated from preserved historical evidence.",
+  "method": "Reconciled machine-readable current state for Baseline 2.6.2 against the canonical taxonomy, unchanged functional source, current behavioral catalogs and preserved historical evidence. Baseline 2.6.0 remains the functional MINOR baseline; 2.6.1 is a metadata-only documentary correction.",
   "count": 46,
   "records": [
     {
@@ -4069,5 +4069,9 @@
     "lifecycle_changes": 0,
     "original_finding": "RESOLVED_UNCHANGED",
     "residual_finding": "ACTIVE_MEDIUM_P2_NON_BLOCKING_UNCHANGED"
+  },
+  "baseline_2_6_2": {
+    "change_type": "PATCH_DOCUMENTARY_CORRECTION",
+    "lifecycle_changes": 0
   }
 }

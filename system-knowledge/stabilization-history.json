@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T15:55:59.919Z",
-  "stage": "2.6.1",
+  "generatedAt": "2026-09-15T16:12:38.008Z",
+  "stage": "2.6.2",
   "period": {
     "start": "2026-09-12",
     "end": "2026-09-15",
     "status": "CLOSED"
   },
   "baseline_start": "1.0.0",
-  "baseline_end": "2.6.1",
+  "baseline_end": "2.6.2",
   "source_start": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
   "source_end": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
   "days": [
@@ -363,7 +363,7 @@
     "risk.paid-delivery-ambiguous-external-ack"
   ],
   "final_state": {
-    "baseline": "2.6.1",
+    "baseline": "2.6.2",
     "repository_source": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
     "production_application_source": "148b8200a44f4eeb49e004af45060a302bac9f20",
     "source_tree_fingerprint": "8ae8433d11de2ba5c137bd1aa99ee55d2fc85aecb80bbec89847904387c73dbf",
@@ -421,6 +421,18 @@
       "finding_lifecycle_changed": false,
       "release_gate_changed": false,
       "health_changed": false
+    },
+    {
+      "version": "2.6.2",
+      "date": "2026-09-15",
+      "type": "PATCH_DOCUMENTARY_CORRECTION",
+      "source_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+      "reason": "Correct NEXT-ACTIONS priority sections and stale current Node evidence.",
+      "functional_milestones_changed": false,
+      "database_changed": false,
+      "deployment_changed": false,
+      "finding_lifecycle_changed": false,
+      "counts_changed": false
     }
   ],
   "functional_releases": [
@@ -436,5 +448,10 @@
     "status": "DOCUMENTED_AND_CLOSED",
     "current_timestamp_source": "REAL_EXECUTION_CLOCK",
     "previous_freeze_timestamp_source": "AUTHORITATIVE_GIT_COMMIT"
+  },
+  "baseline_2_6_2": {
+    "status": "DOCUMENTED_AND_CLOSED",
+    "next_actions_priority_mismatches": 0,
+    "current_stale_test_counts": 0
   }
 }

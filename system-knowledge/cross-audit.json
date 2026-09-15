@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T15:55:59.919Z",
-  "stage": "2.6.1",
+  "generatedAt": "2026-09-15T16:12:38.008Z",
+  "stage": "2.6.2",
   "status": "PASS",
   "sourceCommit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
   "question": "Podemos confiar na BASELINE V1 como representação do Rota5 atual?",
-  "answer": "BASELINE_2_6_1_DOCUMENTARY_CORRECTION: PASS. Current timestamps and findings methodology metadata are temporally and version-semantically coherent.",
+  "answer": "BASELINE_2_6_2_DOCUMENTARY_CORRECTION: PASS. NEXT-ACTIONS priorities and current test evidence match canonical findings and test catalogs.",
   "frozenScope": {
     "branch": "production",
     "head": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
@@ -515,5 +515,11 @@
     "current_stale_projections": 0,
     "human_machine_contradictions": 0,
     "functional_source_changed": false
+  },
+  "baseline_2_6_2": {
+    "status": "PASS",
+    "priority_mismatches": 0,
+    "current_stale_test_counts": 0,
+    "human_machine_contradictions": 0
   }
 }

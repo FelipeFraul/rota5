@@ -1,4 +1,4 @@
-> **Current Baseline 2.6.1 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` over functional Baseline 2.6.0 and unchanged canonical source `0a10618648fc3f873afffd8f60e60bd0396b62e7` (fingerprint `8ae8433d11de2ba5c137bd1aa99ee55d2fc85aecb80bbec89847904387c73dbf`, 390 files, 87 migrations, 57 SQL functions, 1 sequence). This patch corrects impossible future CURRENT timestamps and stale findings methodology metadata only. Findings remain 46 total (14 RESOLVED, 22 ACTIVE, 5 POTENTIAL, 5 NOT_VALIDATED), with 0 release blockers; product and infrastructure health remain **DEGRADED**. Node remains 276/276 and PostgreSQL 4/4. Baseline commit is `SELF_NOT_RECORDED`; no functional, database, deployment or lifecycle change occurred.
+> **Current Baseline 2.6.2 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` over unchanged functional Baseline 2.6.0/source `0a10618648fc3f873afffd8f60e60bd0396b62e7` and documentary Baseline 2.6.1. This surgical patch corrects only the NEXT-ACTIONS priority placement and stale current Node evidence. Fingerprint remains `8ae8433d11de2ba5c137bd1aa99ee55d2fc85aecb80bbec89847904387c73dbf`; counts remain 390 source files, 87 migrations, 45 tables, 57 SQL functions, 1 sequence, 57 tests and 46 findings. Lifecycle, release blockers (0), health, database and deployment are unchanged.
 
 ## Historical snapshot — Baseline 2.5.3 update
 
@@ -23,15 +23,13 @@ Nenhum finding P0 ativo.
 - `bug.combo-redemption-unreachable-consume` — caminho atômico restaurado localmente; equivalência remota continua não validada.
 - `risk.vercel-project-identity-drift` — cadeia canônica separada como `FelipeFraul/rota5` `production` → Vercel `rota5`; nenhum deployment realizado.
 - `risk.latest-rota5-deployment-error` — deployment Production mais recente está READY, serve os aliases canônicos e passou os probes de runtime.
-- `bug.event-duplicate-artist-leak` — payload corrente não herda o artista da origem; prova comportamental e suíte 257/257 passam.
-- `bug.user-visible-text-corruption` — superfícies documentadas foram corrigidas; provas direcionadas e suíte 257/257 passam.
-- `gap.default-test-suite-failing` — suíte padrão corrente passa 257/257, sem skip, todo ou regressão.
-- `gap.critical-capability-and-flow-coverage` — 21/21 MUST e 2/2 flows de alto risco possuem cobertura comportamental.
+- `bug.event-duplicate-artist-leak` — payload corrente não herda o artista da origem; prova comportamental e suíte 276/276 passam.
+- `bug.user-visible-text-corruption` — superfícies documentadas foram corrigidas; provas direcionadas e suíte 276/276 passam.
+- `gap.default-test-suite-failing` — suíte padrão corrente passa 276/276, sem skip, todo ou regressão.
+- `gap.critical-capability-and-flow-coverage` — 21/21 MUST e 2/2 flows de alto risco possuem cobertura comportamental (métrica de cobertura, não contagem da suíte PostgreSQL).
 
-## P1 — ACTIVE AND POTENTIAL STABILIZATION
-- `risk.payment-confirmed-before-external-delivery` (RESOLVED, historical MEDIUM/P1) — durable delivery work is transactionally persisted.
-- `risk.paid-delivery-ambiguous-external-ack` (ACTIVE, MEDIUM/P2) — investigate provider idempotency/reconciliation; not a release blocker.
-- `gap.partial-flows-lack-end-to-end-proof` — Sete flows parciais não possuem prova ponta a ponta
+## P1 — STABILIZATION
+Nenhum finding P1 operacionalmente aberto.
 
 ## P2 — STRUCTURAL DEBT
 - `risk.combo-metadata-read-modify-write-race` — Atualizações concorrentes podem sobrescrever metadados do combo
@@ -68,4 +66,4 @@ Nenhum finding P0 ativo.
 - `debt.distributed-status-literals` (P4) — Estados e mensagens de negócio estão distribuídos em arquivos extensos
 
 ## RESOLVED STABILIZATION ITEMS
-- `gap.test-runner-depends-on-untracked-loader` — loader byte-identical permanece versionado; o runner corrente é reproduzível e a suíte passa 257/257.
+- `gap.test-runner-depends-on-untracked-loader` — loader byte-identical permanece versionado; o runner corrente é reproduzível e a suíte passa 276/276.

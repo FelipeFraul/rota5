@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T15:55:59.919Z",
-  "stage": "2.6.1",
+  "generatedAt": "2026-09-15T16:12:38.008Z",
+  "stage": "2.6.2",
   "baseline_id": "rota5-baseline-v1",
-  "version": "2.6.1",
+  "version": "2.6.2",
   "status": "FROZEN",
-  "frozen_at": "2026-09-15T15:55:59.919Z",
+  "frozen_at": "2026-09-15T16:12:38.008Z",
   "source_state": {
     "base_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
     "source_tree_fingerprint": "8ae8433d11de2ba5c137bd1aa99ee55d2fc85aecb80bbec89847904387c73dbf",
@@ -16,7 +16,7 @@
     "baseline_commit_policy": "The Git commit containing this baseline is intentionally not embedded in its own content to avoid self-reference."
   },
   "git_observation_at_generation": {
-    "observed_at": "2026-09-15T15:55:59.919Z",
+    "observed_at": "2026-09-15T16:12:38.008Z",
     "branch": "production",
     "head": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
     "working_tree_clean": true,
@@ -781,5 +781,13 @@
       "Impossible future CURRENT generation timestamps",
       "Stale findings CURRENT methodology metadata"
     ]
+  },
+  "baseline_2_6_2": {
+    "semver_class": "PATCH_DOCUMENTARY_CORRECTION",
+    "previous_baseline": "2.6.1",
+    "canonical_functional_source": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+    "functional_change": false,
+    "correction": "NEXT-ACTIONS human-readable priority and current test-count projection",
+    "baseline_commit": "SELF_NOT_RECORDED"
   }
 }

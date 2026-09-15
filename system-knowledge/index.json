@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T15:55:59.919Z",
-  "stage": "2.6.1",
+  "generatedAt": "2026-09-15T16:12:38.008Z",
+  "stage": "2.6.2",
   "id": "rota5-machine-catalog-index",
   "baseline_id": "rota5-baseline-v1",
   "count": 44,
@@ -572,5 +572,9 @@
       "status": "FROZEN",
       "last_validated_at": "2026-09-12T13:36:12.110Z"
     }
-  ]
+  ],
+  "baseline_2_6_2": {
+    "change_type": "PATCH_DOCUMENTARY_CORRECTION",
+    "catalog_structure_changed": false
+  }
 }
