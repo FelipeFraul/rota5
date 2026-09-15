@@ -180,7 +180,7 @@ test("paid combo confirmation, versioned QR and delivery queue are transactional
     assert.match(samePrefixCode, /^CMB-[0-9]{10}$/);
     assert.notEqual(firstCode, samePrefixCode);
     assert.equal(psql(`select count(*) from public.combo_orders o join public.combo_payments p on p.combo_order_id=o.id and p.status='approved' join public.combo_redemptions r on r.combo_order_id=o.id and r.status='issued' where o.id in ('50000000-0000-4000-8000-000000000001','${samePaymentOrder}') and o.status='paid';`, ["-At"]).trim(), "2");
-    assert.equal(psql(`select count(*) from public.whatsapp_outbound_deliveries where business_context->>'combo_order_id' in ('50000000-0000-4000-8000-000000000001','${samePaymentOrder}');`, ["-At"]).trim(), "4");
+    assert.equal(psql(`select count(*) from public.whatsapp_outbound_deliveries where reason in ('paid_combo_delivery','paid_combo_qr_delivery') and business_context->>'combo_order_id' in ('50000000-0000-4000-8000-000000000001','${samePaymentOrder}');`, ["-At"]).trim(), "4");
 
     const paidQrDelivery = psql(`select id from public.whatsapp_outbound_deliveries where reason='paid_combo_qr_delivery' and business_context->>'combo_order_id'='${samePaymentOrder}';`, ["-At"]).trim();
     const claimCalls = await Promise.all([
