@@ -1,4 +1,4 @@
-> **Current Baseline 2.7.2 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`. Fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`; 391 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 57 test files and 47 findings. `risk.combo-metadata-read-modify-write-race` is RESOLVED; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is ACTIVE MEDIUM/P2 and non-release-blocking. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.7.3 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`. Fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`; 391 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 57 test files and 47 findings. `risk.combo-metadata-read-modify-write-race` is RESOLVED; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is ACTIVE MEDIUM/P2 and non-release-blocking. Release blockers: 0; Product and Infrastructure remain DEGRADED.
 
 # Riscos de infraestrutura e configuração
 
@@ -26,18 +26,14 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 - Direção: Preservar a evidência histórica; tratar riscos restantes pelos respectivos IDs.
 - Justificativa da prioridade histórica: P1 porque a produção permanecia acessível durante a falha da linha de entrega mais recente.
 
-### risk.published-commit-unvalidated — Commit publicado não pode ser reconciliado com o HEAD auditado
+### risk.published-commit-unvalidated — RESOLVED — deployment Production reconciliado com canonical functional source
 
-- Tipo / severidade / prioridade: **OPERATIONAL / MEDIUM / P2**
-- Status / confiança: **NOT_VALIDATED / CONFIRMED**
-- Problema: Os metadados retornados pelo deployment consultado não expuseram gitSource/commit; o HEAD local e origin/production foram confirmados, sem vínculo comprovado com o alias.
-- Evidência: `system-knowledge/infrastructure.json` — published_commit está NOT_VALIDATED.; `system-knowledge/runtime-validation.json` — Validação Vercel não reconcilia commit.
-- Impacto: Não é possível afirmar que a fotografia de código auditada corresponde ao binário publicado.
-- Escopo: domains domain.platform-runtime; capabilities —; flows —.
-- Blast radius: **SYSTEM_WIDE**
-- Workaround: Health e identidades de deployment foram observados separadamente.
-- Direção: Registrar SHA de origem nos deployments e reconciliar com a baseline.
-- Justificativa da prioridade: P2 por limitar a confiança operacional sem provar divergência funcional.
+- Tipo / severidade / prioridade histórica: **OPERATIONAL / MEDIUM / P2**
+- Status / confiança: **RESOLVED / CONFIRMED**
+- Evidência atual: GET Vercel REST v13 para `dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g` retornou HTTP 200, target Production READY e `meta.githubCommitSha=1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`, `meta.githubCommitRef=production`, repositório `FelipeFraul/rota5`.
+- Impacto atual: o artefato Production servido está reconciliado com a fotografia funcional canônica. Health HTTP 200 permanece evidência suplementar, não a prova de identidade.
+- Histórico preservado: a inspeção CLI anterior não expunha metadata Git/source suficiente.
+- Direção: preservar a metadata da plataforma como prova e reabrir somente diante de evidência contrária.
 
 ### risk.local-runtime-env-incomplete — Ambiente local não contém todas as variáveis exigidas
 

@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T19:16:24.946Z",
-  "stage": "2.7.2",
+  "generatedAt": "2026-09-15T21:15:39.403Z",
+  "stage": "2.7.3",
   "baseline_id": "rota5-baseline-v1",
-  "version": "2.7.2",
+  "version": "2.7.3",
   "status": "FROZEN",
   "domains": 17,
   "modules": 66,
@@ -54,12 +54,10 @@
   "critical_findings": [],
   "unresolved_evidence": [
     "unresolved.remote-postgres-internals",
-    "unresolved.remote-migration-history",
     "unresolved.supabase-auth-state",
     "unresolved.webhook-registration",
     "unresolved.webhook-delivery-history",
     "unresolved.cron-execution-history",
-    "unresolved.published-source-commit",
     "unresolved.anon-row-visibility",
     "unresolved.external-dynamic-consumers"
   ],
@@ -79,8 +77,8 @@
     "product_health": "DEGRADED",
     "npm_test": {
       "status": "PASS",
-      "cases": 276,
-      "passed": 276,
+      "cases": 280,
+      "passed": 280,
       "failed": 0,
       "known_failures": 0,
       "skipped": 0,
@@ -118,7 +116,7 @@
     "active_high": 0,
     "potential_high": 0,
     "open_high": 0,
-    "resolved": 15
+    "resolved": 16
   },
   "high_1_rollout": {
     "source_implementation": "IMPLEMENTED_AND_VALIDATED",
@@ -395,7 +393,10 @@
     "supabase": "MIGRATION_20260915000500_ALREADY_APPLIED",
     "ticketeira": "UNTOUCHED",
     "git_auto_deploy": "DISABLED",
-    "new_deployment": false
+    "new_deployment": false,
+    "source_evidence": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA",
+    "canonical_source_parity": "MATCH",
+    "documentary_head_policy": "VOLATILE_NOT_EMBEDDED"
   },
   "critical_coverage_resolution": {
     "baseline": "2.4.0",
@@ -694,6 +695,21 @@
     "database_changed": false,
     "deployment_changed": false,
     "health_changed": false,
+    "baseline_commit": "SELF_NOT_RECORDED"
+  },
+  "baseline_2_7_3": {
+    "change_type": "PATCH_DOCUMENTARY_CORRECTION",
+    "previous_baseline": "2.7.2",
+    "canonical_functional_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "source_fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee",
+    "deployment": "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g",
+    "deployment_source_evidence": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA",
+    "published_commit_finding": "risk.published-commit-unvalidated: NOT_VALIDATED -> RESOLVED",
+    "product_gate_projection": "280/280 PASS",
+    "unresolved_evidence_projection": "CURRENT_NOT_VALIDATED_ONLY",
+    "functional_source_changed": false,
+    "database_changed": false,
+    "deployment_changed": false,
     "baseline_commit": "SELF_NOT_RECORDED"
   }
 }

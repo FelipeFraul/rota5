@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T19:16:24.946Z",
-  "stage": "2.7.2",
+  "generatedAt": "2026-09-15T21:15:39.403Z",
+  "stage": "2.7.3",
   "sourceCommit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-  "scope": "Canonical finding catalog for Baseline 2.7.2, with current lifecycle state separated from preserved historical evidence.",
-  "method": "Reconciled machine-readable current state for Baseline 2.7.2 against source 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27, current Quality Gate 34998744062, remote evidence captured by the completed 2.7.0 re-audit, and preserved historical evidence.",
+  "scope": "Canonical finding catalog for Baseline 2.7.3, with current lifecycle state separated from preserved historical evidence.",
+  "method": "Reconciled machine-readable current state for Baseline 2.7.3 against source 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27, current Quality Gate 34998744062, remote evidence captured by the completed 2.7.0 re-audit, and preserved historical evidence.",
   "count": 47,
   "records": [
     {
@@ -2080,24 +2080,31 @@
     },
     {
       "id": "risk.published-commit-unvalidated",
-      "title": "Commit publicado não pode ser reconciliado com o HEAD auditado",
+      "title": "RESOLVED — deployment Production reconciliado com canonical functional source",
       "type": "OPERATIONAL",
       "severity": "MEDIUM",
       "priority": "P2",
-      "status": "NOT_VALIDATED",
+      "status": "RESOLVED",
       "confidence": "CONFIRMED",
-      "description": "Os metadados retornados pelo deployment consultado não expuseram gitSource/commit; o HEAD local e origin/production foram confirmados, sem vínculo comprovado com o alias.",
+      "description": "A metadata autoritativa da Vercel liga o deployment Production READY dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g ao Git SHA 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27, exatamente o canonical functional source da Baseline.",
       "evidence": [
         {
-          "path": "system-knowledge/infrastructure.json",
-          "claim": "published_commit está NOT_VALIDATED."
+          "path": "Vercel REST GET /v13/deployments",
+          "claim": "HTTP 200 for dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g; meta.githubCommitSha is 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27.",
+          "evidence_state": "CURRENT"
         },
         {
-          "path": "system-knowledge/runtime-validation.json",
-          "claim": "Validação Vercel não reconcilia commit."
+          "path": "Vercel REST deployment metadata",
+          "claim": "meta.githubCommitRef=production and meta.githubCommitOrg/githubCommitRepo=FelipeFraul/rota5.",
+          "evidence_state": "CURRENT"
+        },
+        {
+          "path": "system-knowledge/baseline-manifest.json",
+          "claim": "Canonical functional source is 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27; documentary HEAD is deliberately not embedded.",
+          "evidence_state": "CURRENT"
         }
       ],
-      "impact": "Não é possível afirmar que a fotografia de código auditada corresponde ao binário publicado.",
+      "impact": "The currently served Production artifact is reconciled exactly with the canonical functional source.",
       "domains": [
         "domain.platform-runtime"
       ],
@@ -2109,9 +2116,48 @@
         "integration-github"
       ],
       "blast_radius": "SYSTEM_WIDE",
-      "workaround": "Health e identidades de deployment foram observados separadamente.",
-      "direction": "Registrar SHA de origem nos deployments e reconciliar com a baseline.",
-      "priority_justification": "P2 por limitar a confiança operacional sem provar divergência funcional."
+      "workaround": "No workaround is required for the resolved condition.",
+      "direction": "Preserve Vercel deployment metadata as the authoritative source-identity proof and reopen only on new contrary evidence.",
+      "priority_justification": "MEDIUM/P2 are retained as historical classification metadata; the RESOLVED lifecycle is non-operational and non-release-blocking.",
+      "current_state": {
+        "lifecycle": "RESOLVED",
+        "operational_open": false,
+        "release_blocking": false,
+        "active_metric": false,
+        "potential_metric": false,
+        "validation_queue": false,
+        "closed": true,
+        "workaround_required": false,
+        "current_impact": "The currently served Production artifact is reconciled exactly with the canonical functional source.",
+        "top_level_claims": "CURRENT_RESOLUTION_ONLY",
+        "top_level_evidence": "CURRENT"
+      },
+      "resolution": {
+        "resolved_at": "2026-09-15T21:15:39.403Z",
+        "root_cause": "The deployment metadata available to the prior CLI inspection did not expose a source SHA sufficient to reconcile the served artifact.",
+        "current_resolution": "Vercel REST v13 returns authoritative metadata for dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g: target=production, readyState=READY, source=cli, meta.githubCommitSha=1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27, meta.githubCommitRef=production and repository=FelipeFraul/rota5. Filtered read-only deployment listing by githubCommitSha returned the same READY Production deployment.",
+        "source_evidence_type": "AUTHORITATIVE_PLATFORM_METADATA",
+        "canonical_source_parity": "MATCH",
+        "documentary_head_policy": "Documentary commits after the canonical functional source are intentionally excluded from runtime parity because Git auto-deploy is disabled and the frozen baseline does not embed a volatile branch tip.",
+        "historical_evidence": {
+          "title": "Commit publicado não pode ser reconciliado com o HEAD auditado",
+          "description": "Os metadados retornados pelo deployment consultado não expuseram gitSource/commit; o HEAD local e origin/production foram confirmados, sem vínculo comprovado com o alias.",
+          "evidence": [
+            {
+              "path": "system-knowledge/infrastructure.json",
+              "claim": "published_commit está NOT_VALIDATED."
+            },
+            {
+              "path": "system-knowledge/runtime-validation.json",
+              "claim": "Validação Vercel não reconcilia commit."
+            }
+          ],
+          "impact": "Não é possível afirmar que a fotografia de código auditada corresponde ao binário publicado.",
+          "workaround": "Health e identidades de deployment foram observados separadamente.",
+          "direction": "Registrar SHA de origem nos deployments e reconciliar com a baseline.",
+          "priority_justification": "P2 por limitar a confiança operacional sem provar divergência funcional."
+        }
+      }
     },
     {
       "id": "risk.local-runtime-env-incomplete",
@@ -4182,8 +4228,8 @@
     "current_evidence_marker": "evidence_state=CURRENT",
     "validator": ".tools/baseline/validate-baseline.mjs",
     "invariants": {
-      "RESOLVED_FINDINGS_TOTAL": 15,
-      "RESOLVED_CURRENT_STATE_COMPLETE": 15,
+      "RESOLVED_FINDINGS_TOTAL": 16,
+      "RESOLVED_CURRENT_STATE_COMPLETE": 16,
       "RESOLVED_WITHOUT_CURRENT_STATE": 0,
       "RESOLVED_WITH_ACTIVE_TOP_LEVEL_CLAIMS": 0,
       "RESOLVED_WITH_NONCURRENT_TOP_LEVEL_EVIDENCE": 0,
@@ -4246,5 +4292,11 @@
     "lifecycle_changes": 0,
     "valid_2_7_1_current_corrections_preserved": true,
     "historical_contract_attribution_restored": true
+  },
+  "baseline_2_7_3": {
+    "change_type": "PATCH_DOCUMENTARY_CORRECTION",
+    "lifecycle_changes": 1,
+    "resolved": "risk.published-commit-unvalidated",
+    "source_evidence": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA"
   }
 }

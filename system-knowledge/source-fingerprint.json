@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T19:16:24.946Z",
-  "stage": "2.7.2",
+  "generatedAt": "2026-09-15T21:15:39.403Z",
+  "stage": "2.7.3",
   "base_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
   "functional_changes_since_base": [],
   "baseline_commit": "SELF_NOT_RECORDED",
   "git_observation_at_generation": {
-    "observed_at": "2026-09-15T19:16:24.946Z",
+    "observed_at": "2026-09-15T21:15:39.403Z",
     "branch": "production",
     "head": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
     "working_tree_clean": true,
@@ -19,7 +19,7 @@
   "source_tree_fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee",
   "source_tree_file_count": 391,
   "source_tree_strategy": "Run git ls-files -z; normalize paths to forward slashes; exclude docs/system/**, system-knowledge/**, .tools/baseline/** and any path segment beginning with .stage; sort remaining paths lexicographically; SHA-256 each tracked file in its canonical Git representation (index blob for staged/clean content, current working-tree bytes for an unstaged functional change); concatenate path + NUL + sha256 + LF; SHA-256 the UTF-8 concatenation. Reconstruct commits from their raw Git blob bytes with the same path and aggregation rules.",
-  "freeze_timestamp": "2026-09-15T19:16:24.946Z",
+  "freeze_timestamp": "2026-09-15T21:15:39.403Z",
   "secrets_included": false,
   "source_tree_strategy_version": 3,
   "source_tree_exclusions": [

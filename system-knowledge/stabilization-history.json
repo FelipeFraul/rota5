@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T19:16:24.946Z",
-  "stage": "2.7.2",
+  "generatedAt": "2026-09-15T21:15:39.403Z",
+  "stage": "2.7.3",
   "period": {
     "start": "2026-09-12",
     "end": "2026-09-15",
@@ -349,7 +349,8 @@
     "risk.admin-event-multistep-partial-state",
     "bug.admin-event-location-consistency",
     "risk.payment-confirmed-before-external-delivery",
-    "risk.combo-metadata-read-modify-write-race"
+    "risk.combo-metadata-read-modify-write-race",
+    "risk.published-commit-unvalidated"
   ],
   "new_findings_documented": [
     "bug.admin-event-location-consistency",
@@ -385,14 +386,13 @@
     "risk.service-role-application-authorization-boundary",
     "risk.remote-database-controls-unvalidated",
     "risk.remote-webhook-registration-unvalidated",
-    "risk.published-commit-unvalidated",
     "gap.remote-database-behavior-tests",
     "orphan.seat-map-renders-table",
     "risk.paid-delivery-ambiguous-external-ack",
     "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
   ],
   "final_state": {
-    "baseline": "2.7.2",
+    "baseline": "2.7.3",
     "repository_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
     "production_application_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
     "source_tree_fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee",
@@ -409,7 +409,8 @@
     "cycle": "DOCUMENTED_AND_CLOSED",
     "functional_baseline": "2.7.0",
     "paid_delivery_atomicity": "RESOLVED",
-    "external_delivery_semantics": "AT_LEAST_ONCE"
+    "external_delivery_semantics": "AT_LEAST_ONCE",
+    "published_commit_parity": "RESOLVED_EXACT_SOURCE_PROVEN"
   },
   "functional_baseline_end": "2.7.0",
   "documentary_patches": [
@@ -531,6 +532,13 @@
     "status": "DOCUMENTED_AND_CLOSED",
     "change_type": "PATCH_DOCUMENTARY_CORRECTION",
     "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "baseline_commit": "SELF_NOT_RECORDED"
+  },
+  "baseline_2_7_3": {
+    "status": "DOCUMENTED_AND_CLOSED",
+    "change_type": "PATCH_DOCUMENTARY_CORRECTION",
+    "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "resolved": "risk.published-commit-unvalidated",
     "baseline_commit": "SELF_NOT_RECORDED"
   }
 }

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-15T19:16:24.946Z",
-  "stage": "2.7.2",
+  "generatedAt": "2026-09-15T21:15:39.403Z",
+  "stage": "2.7.3",
   "sourceCommit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
   "application": {
     "framework": "Next.js 16.2.6",
@@ -45,7 +45,7 @@
       "domain": [
         "rota5-khaki.vercel.app"
       ],
-      "deployment": "Projeto Vercel rota5; source funcional c726902505fd69c2cfef2dec8013ffe0cf0adba3 publicado como dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa; auto-deploy Git desabilitado."
+      "deployment": "Vercel rota5 Production dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g; READY; canonical functional source 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27 proven by Vercel REST v13 metadata; Git auto-deploy disabled."
     }
   ],
   "vercel": {
@@ -70,11 +70,22 @@
       "current_deployment_created_at": "2026-09-15T14:06:20-03:00",
       "branding_preview_deployment": "dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW",
       "test_remediation_preview_deployment": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6",
-      "production_runtime_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27"
+      "production_runtime_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+      "canonical_functional_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+      "source_evidence": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA",
+      "canonical_source_parity": "MATCH",
+      "git_auto_deploy": "DISABLED",
+      "documentary_head_policy": "VOLATILE_NOT_EMBEDDED"
     },
     "published_commit": {
-      "status": "VALIDATED_BEFORE_DOCUMENTARY_FREEZE",
-      "reason": "Existing Production deployment serves exact canonical functional source; no deployment occurred during Baseline 2.7.0 reconciliation."
+      "status": "RESOLVED_EXACT_SOURCE_PROVEN",
+      "evidence_type": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA",
+      "deployment": "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g",
+      "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+      "source_ref": "production",
+      "repository": "FelipeFraul/rota5",
+      "canonical_source_parity": "MATCH",
+      "health_is_source_identity_proof": false
     },
     "crons": 2,
     "environment_variable_names": 24,
@@ -84,7 +95,7 @@
       "classification": "TICKETEIRA_INFRASTRUCTURE_NOT_ROTA5_OPERATIONAL_INFRASTRUCTURE",
       "note": "Preserved only as historical evidence of the identity-drift root cause."
     },
-    "production_runtime_app_artifact": "148b8200a44f4eeb49e004af45060a302bac9f20",
+    "production_runtime_app_artifact": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
     "post_contract_runtime": "PASS",
     "relevant_log_errors": 0
   },
@@ -92,13 +103,14 @@
     "repository": "FelipeFraul/rota5",
     "visibility": "private",
     "production_branch": "production",
-    "production_branch_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
     "evidence_source": "REMOTE_CONFIG",
     "historical_remote": {
       "repository": "FelipeFraul/ticketeira",
       "remote": "ticketeira-old",
       "classification": "TICKETEIRA_HISTORY_ONLY"
-    }
+    },
+    "canonical_functional_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "documentary_head_policy": "VOLATILE_NOT_EMBEDDED"
   },
   "configuration_files": [
     {
@@ -213,11 +225,14 @@
   "identity_reaudit": {
     "status": "CORRECT",
     "finding": "risk.vercel-project-identity-drift",
-    "current_head_deployed_to_production": false,
+    "current_head_deployed_to_production": true,
     "remote_changes_during_baseline_update": "NONE",
-    "repository_source": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
-    "production_application_source": "148b8200a44f4eeb49e004af45060a302bac9f20",
-    "app_runtime_diff_after_deploy": "NAO"
+    "repository_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "production_application_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "app_runtime_diff_after_deploy": "NAO",
+    "canonical_functional_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "documentary_head_policy": "VOLATILE_NOT_EMBEDDED",
+    "source_evidence": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA"
   },
   "high_1_rollout": {
     "source_implementation": "IMPLEMENTED_AND_VALIDATED",
@@ -470,5 +485,14 @@
     "remote_database_changed_during_reconciliation": false,
     "git_auto_deploy": "DISABLED",
     "infrastructure_health": "DEGRADED"
+  },
+  "baseline_2_7_3": {
+    "change_type": "PATCH_DOCUMENTARY_CORRECTION",
+    "deployment": "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g",
+    "canonical_functional_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "source_evidence": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA",
+    "canonical_source_parity": "MATCH",
+    "deployment_changed": false,
+    "baseline_commit": "SELF_NOT_RECORDED"
   }
 }

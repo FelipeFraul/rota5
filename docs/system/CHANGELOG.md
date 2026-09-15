@@ -1,4 +1,12 @@
-> **Current Baseline 2.7.2 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`. Fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`; 391 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 57 test files and 47 findings. `risk.combo-metadata-read-modify-write-race` is RESOLVED; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is ACTIVE MEDIUM/P2 and non-release-blocking. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.7.3 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`. Fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`; 391 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 57 test files and 47 findings. `risk.combo-metadata-read-modify-write-race` is RESOLVED; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is ACTIVE MEDIUM/P2 and non-release-blocking. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+
+
+## Baseline 2.7.3 — authoritative Production source reconciliation
+
+- Vercel REST v13 metadata proves Production `dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g` serves canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`.
+- `risk.published-commit-unvalidated` moved from NOT_VALIDATED to RESOLVED; MEDIUM/P2 history is preserved.
+- Corrected the current 276/276 product-gate projection to 280/280, current unresolved-evidence projection and CURRENT infrastructure/runtime source projections.
+- No functional source, database, deployment or remote configuration changed.
 
 
 ## Baseline 2.7.2 — historical integrity correction

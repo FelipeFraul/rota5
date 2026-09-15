@@ -1,4 +1,4 @@
-> **Current Baseline 2.7.2 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`. Fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`; 391 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 57 test files and 47 findings. `risk.combo-metadata-read-modify-write-race` is RESOLVED; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is ACTIVE MEDIUM/P2 and non-release-blocking. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.7.3 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`. Fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`; 391 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 57 test files and 47 findings. `risk.combo-metadata-read-modify-write-race` is RESOLVED; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is ACTIVE MEDIUM/P2 and non-release-blocking. Release blockers: 0; Product and Infrastructure remain DEGRADED.
 
 ## Baseline 2.7.2 — historical integrity correction
 
@@ -19,7 +19,7 @@ Canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27` is deploy
 
 # Rota5 Baseline V1
 
-**Identity:** `rota5-baseline-v1`, version **2.7.2**, status **FROZEN**. Canonical functional source is `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`, with 391 files and fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`. The baseline commit is `SELF_NOT_RECORDED` to avoid self-reference.
+**Identity:** `rota5-baseline-v1`, version **2.7.3**, status **FROZEN**. Canonical functional source is `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`, with 391 files and fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`. The baseline commit is `SELF_NOT_RECORDED` to avoid self-reference.
 
 Rota5 is a Next.js application backed by Supabase/PostgreSQL. The canonical catalog contains 17 domains, 66 modules, 56 entrypoints, 140 capabilities, 34 flows, 169 steps and 74 state transitions. The data catalog contains 45 tables, 88 migrations, 63 SQL functions, 1 sequence, 36 triggers and 2,272 currently catalogued typed relations.
 
@@ -27,7 +27,7 @@ Rota5 is a Next.js application backed by Supabase/PostgreSQL. The canonical cata
 
 **DEGRADED.** Baseline integrity is PASS and the canonical release-blocker set is empty, while independent operational and validation-queue findings remain open.
 
-- Findings: 47; active P0: 0; active HIGH: 0; potential HIGH: 0; open HIGH: 0; resolved: 15; release blockers: 0.
+- Findings: 47; active P0: 0; active HIGH: 0; potential HIGH: 0; open HIGH: 0; resolved: 16; release blockers: 0.
 - Broken flows: 0; partial flows: 9.
 - Current quality: default Node 280/280 PASS; PostgreSQL 4/4 PASS; Quality Gate 34998744062 PASS; 0 skip, 0 todo and 0 regressions.
 - Infrastructure health: **DEGRADED** because independent findings remain open. Git auto-deploy is DISABLED.

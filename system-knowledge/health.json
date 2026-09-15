@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T19:16:24.946Z",
-  "stage": "2.7.2",
+  "generatedAt": "2026-09-15T21:15:39.403Z",
+  "stage": "2.7.3",
   "sourceCommit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-  "scope": "Current health projection by system, domain and infrastructure for Baseline 2.7.2, with resolved history separated from operational risk.",
+  "scope": "Current health projection by system, domain and infrastructure for Baseline 2.7.3, with resolved history separated from operational risk.",
   "method": "Health is derived from canonical finding scopes and taxonomy. BROKEN requires a current release blocker; DEGRADED requires current operational or validation-queue risk; resolved findings are historical only.",
   "vocabulary": [
     "HEALTHY",
@@ -16,9 +16,8 @@
   "system": {
     "id": "system.rota5",
     "health": "DEGRADED",
-    "reason": "27 operational findings and 5 validation-queue findings remain; release blockers are zero and HEALTHY is not justified.",
+    "reason": "27 operational findings and 4 validation-queue findings remain; release blockers are zero and HEALTHY is not justified.",
     "finding_counts_by_severity": {
-      "HIGH": 0,
       "INFO": 2,
       "LOW": 8,
       "MEDIUM": 17
@@ -27,7 +26,7 @@
       "P0": 0,
       "HIGH": 0,
       "CRITICAL": 0,
-      "RESOLVED": 15,
+      "RESOLVED": 16,
       "POTENTIAL_HIGH": 0,
       "OPEN_HIGH": 0
     },
@@ -69,18 +68,18 @@
       "risk.gate-credential-revocation-does-not-revoke-session",
       "risk.admin-event-multistep-partial-state",
       "bug.admin-event-location-consistency",
+      "risk.combo-metadata-read-modify-write-race",
       "risk.vercel-project-identity-drift",
       "risk.latest-rota5-deployment-error",
+      "risk.published-commit-unvalidated",
       "gap.default-test-suite-failing",
       "gap.critical-capability-and-flow-coverage",
       "gap.test-runner-depends-on-untracked-loader",
-      "risk.payment-confirmed-before-external-delivery",
-      "risk.combo-metadata-read-modify-write-race"
+      "risk.payment-confirmed-before-external-delivery"
     ],
     "validation_queue_findings": [
       "risk.remote-database-controls-unvalidated",
       "risk.remote-webhook-registration-unvalidated",
-      "risk.published-commit-unvalidated",
       "gap.remote-database-behavior-tests",
       "orphan.seat-map-renders-table"
     ],
@@ -111,14 +110,14 @@
         "risk.vercel-project-identity-drift",
         "risk.latest-rota5-deployment-error",
         "gap.default-test-suite-failing",
-        "gap.test-runner-depends-on-untracked-loader"
-      ],
-      "validation_queue_findings": [
-        "risk.remote-database-controls-unvalidated",
+        "gap.test-runner-depends-on-untracked-loader",
         "risk.published-commit-unvalidated"
       ],
+      "validation_queue_findings": [
+        "risk.remote-database-controls-unvalidated"
+      ],
       "release_blocking_causes": [],
-      "reason": "8 current operational finding(s) and 2 validation-queue finding(s); resolved findings are historical only."
+      "reason": "8 current operational finding(s) and 1 validation-queue finding(s); resolved findings are historical only."
     },
     {
       "id": "domain.brand-presentation",
@@ -1660,12 +1659,12 @@
     {
       "id": "infrastructure.vercel-linkage",
       "health": "DEGRADED",
-      "reason": "0 current operational finding(s) and 1 validation-queue finding(s); resolved findings are historical only.",
+      "reason": "0 current operational finding(s) and 0 validation-queue finding(s); resolved findings are historical only.",
       "current_findings": [],
-      "historical_resolved_findings": [],
-      "validation_queue_findings": [
+      "historical_resolved_findings": [
         "risk.published-commit-unvalidated"
       ],
+      "validation_queue_findings": [],
       "release_blocking_causes": []
     },
     {
@@ -1714,6 +1713,7 @@
     "risk.combo-metadata-read-modify-write-race",
     "risk.vercel-project-identity-drift",
     "risk.latest-rota5-deployment-error",
+    "risk.published-commit-unvalidated",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
     "gap.test-runner-depends-on-untracked-loader",
@@ -1952,8 +1952,8 @@
     "resolved_semantic_contract_required": true
   },
   "resolved_semantic_invariants": {
-    "RESOLVED_FINDINGS_TOTAL": 13,
-    "RESOLVED_CURRENT_STATE_COMPLETE": 13,
+    "RESOLVED_FINDINGS_TOTAL": 16,
+    "RESOLVED_CURRENT_STATE_COMPLETE": 16,
     "RESOLVED_WITHOUT_CURRENT_STATE": 0,
     "RESOLVED_WITH_ACTIVE_TOP_LEVEL_CLAIMS": 0,
     "RESOLVED_WITH_NONCURRENT_TOP_LEVEL_EVIDENCE": 0,
@@ -2004,5 +2004,12 @@
     "release_blockers": 0,
     "resolved": "risk.combo-metadata-read-modify-write-race",
     "residual": "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
+  },
+  "baseline_2_7_3": {
+    "product_health": "DEGRADED",
+    "infrastructure_health": "DEGRADED",
+    "resolved": "risk.published-commit-unvalidated",
+    "validation_queue_findings": 4,
+    "release_blockers": 0
   }
 }

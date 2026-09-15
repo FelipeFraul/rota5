@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-15T19:16:24.946Z",
-  "stage": "2.7.2",
+  "generatedAt": "2026-09-15T21:15:39.403Z",
+  "stage": "2.7.3",
   "count": 27,
   "ok": true,
   "records": [
@@ -395,19 +395,22 @@
     {
       "id": "runtime.baseline-2-7-functional-production",
       "target": "Vercel Production functional source",
-      "method": "PRIOR_COMPLETED_MANUAL_DEPLOYMENT_AND_HEALTH_CHECK",
-      "evidence_source": "RUNTIME_OBSERVED_BEFORE_DOCUMENTARY_RECONCILIATION",
+      "method": "VERCEL_REST_V13_DEPLOYMENT_METADATA",
+      "evidence_source": "AUTHORITATIVE_PLATFORM_METADATA",
       "status": "PASS",
-      "result": "Production deployment dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g serves exact functional source 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27; /api/health returned HTTP 200. No documentary deployment was created.",
+      "result": "GET /v13/deployments/dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g returned HTTP 200: target=production, readyState=READY, source=cli, meta.githubCommitSha=1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27, meta.githubCommitRef=production and repository=FelipeFraul/rota5. Filtered githubCommitSha listing returned the same deployment; health remains supplementary only.",
       "side_effect_free": true,
       "expected": "Record the existing functional deployment without deploying baseline documentation.",
       "evidence": [
-        "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g",
-        "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-        "GET /api/health HTTP 200"
+        "GET /v13/deployments/dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g",
+        "HTTP 200",
+        "meta.githubCommitSha=1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+        "meta.githubCommitRef=production",
+        "meta.githubCommitOrg/githubCommitRepo=FelipeFraul/rota5",
+        "filtered githubCommitSha=1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27 -> dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g"
       ],
-      "temporal_semantics": "HISTORICAL_SNAPSHOT",
-      "observed_at": "2026-09-15T14:08:14-03:00"
+      "temporal_semantics": "CURRENT_CANONICAL_SEMANTICS",
+      "observed_at": "2026-09-15T21:15:39.403Z"
     }
   ],
   "prohibited_actions_performed": false,
@@ -416,7 +419,10 @@
     "git_auto_deploy": "DISABLED",
     "current_head_deployed": true,
     "deployment_performed": true,
-    "deployment_performed_during_baseline_update": false
+    "deployment_performed_during_baseline_update": false,
+    "canonical_functional_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "source_evidence": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA",
+    "documentary_head_policy": "VOLATILE_NOT_EMBEDDED"
   },
   "high_1_rollout": {
     "source_implementation": "IMPLEMENTED_AND_VALIDATED",
@@ -611,7 +617,10 @@
     "app_runtime_diff_after_deploy": "NAO",
     "deployment_sha_difference": "NONE_AT_FUNCTIONAL_FREEZE",
     "git_auto_deploy": "DISABLED",
-    "new_deployment_in_freeze": false
+    "new_deployment_in_freeze": false,
+    "source_evidence": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA",
+    "canonical_source_parity": "MATCH",
+    "documentary_head_policy": "VOLATILE_NOT_EMBEDDED"
   },
   "baseline_2_4_0": {
     "version": "2.4.0",
@@ -740,5 +749,13 @@
     "functional_quality_gate": "34998744062 PASS",
     "remote_changed_during_reconciliation": false,
     "new_deployment": false
+  },
+  "baseline_2_7_3": {
+    "change_type": "PATCH_DOCUMENTARY_CORRECTION",
+    "source_identity_proof": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA",
+    "deployment": "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g",
+    "canonical_functional_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "deployment_changed": false,
+    "baseline_commit": "SELF_NOT_RECORDED"
   }
 }

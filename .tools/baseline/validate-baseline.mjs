@@ -469,6 +469,31 @@ const canonicalQualityGate = catalogs['baseline-v1']?.quality_gate;
 const canonicalDefaultSuite = canonicalQualityGate?.default_node_suite?.match(/\b\d+\/\d+\b/)?.[0];
 const canonicalQualityGateRun = canonicalQualityGate?.quality_gate_run;
 if (!canonicalDefaultSuite || !Number.isInteger(canonicalQualityGateRun)) add('CURRENT_EVIDENCE_CANONICAL_GATE_MISSING','baseline-v1.quality_gate');
+const productGateSuite = catalogs['baseline-v1']?.product_gate_status?.npm_test;
+if (!productGateSuite || !Number.isInteger(productGateSuite.cases) || !Number.isInteger(productGateSuite.passed)) {
+  add('PRODUCT_GATE_DEFAULT_SUITE_INVALID','baseline-v1.product_gate_status.npm_test');
+} else if (`${productGateSuite.passed}/${productGateSuite.cases}` !== canonicalDefaultSuite) {
+  add('PRODUCT_GATE_DEFAULT_SUITE_MISMATCH',`${productGateSuite.passed}/${productGateSuite.cases} != ${canonicalDefaultSuite}`);
+}
+const unresolvedRecords = getRecords('unresolved-evidence');
+const unresolvedById = new Map(unresolvedRecords.map(record => [record.id,record]));
+for (const id of catalogs['baseline-v1']?.unresolved_evidence || []) {
+  const record = unresolvedById.get(id);
+  if (!record) add('BASELINE_UNRESOLVED_REFERENCE_UNKNOWN',id);
+  else if (record.status !== 'NOT_VALIDATED') add('BASELINE_UNRESOLVED_REFERENCE_NOT_CURRENT',`${id}: ${record.status}`);
+}
+const expectedValidationQueue = findings.filter(finding => hasTaxonomyFlag(finding,'validation_queue')).map(finding => finding.id);
+if (!sameIds(catalogs.health?.system?.validation_queue_findings,expectedValidationQueue)) add('HEALTH_VALIDATION_QUEUE_MISMATCH','health.system.validation_queue_findings');
+const currentProductionSources = [
+  catalogs['baseline-manifest']?.current_runtime?.production_source_commit,
+  catalogs['baseline-v1']?.current_runtime?.production_source_commit,
+  catalogs['risk-summary']?.current_runtime?.production_source_commit,
+  catalogs.infrastructure?.vercel?.linked_project_production?.production_source_commit,
+  catalogs.infrastructure?.vercel?.linked_project_production?.production_runtime_source,
+  catalogs['runtime-validation']?.current_production?.application_source,
+  catalogs['runtime-validation']?.current_production?.repository_source
+].filter(value => typeof value === 'string' && value);
+if (new Set(currentProductionSources).size > 1) add('CURRENT_INFRA_PRODUCTION_SOURCE_MISMATCH',[...new Set(currentProductionSources)].join(', '));
 const currentEvidenceStrings = [];
 const visitCurrentEvidence = (value, owner, insideCurrent = false) => {
   if (typeof value === 'string') {

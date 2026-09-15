@@ -1,4 +1,4 @@
-> **Current Baseline 2.7.2 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`. Fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`; 391 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 57 test files and 47 findings. `risk.combo-metadata-read-modify-write-race` is RESOLVED; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is ACTIVE MEDIUM/P2 and non-release-blocking. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.7.3 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`. Fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`; 391 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 57 test files and 47 findings. `risk.combo-metadata-read-modify-write-race` is RESOLVED; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is ACTIVE MEDIUM/P2 and non-release-blocking. Release blockers: 0; Product and Infrastructure remain DEGRADED.
 
 ## Historical snapshot — Baseline 2.5.3 update
 
@@ -17,6 +17,7 @@ This document orders current findings; it does not introduce features or patches
 Nenhum finding P0 ativo.
 
 ## RESOLVED
+- `risk.published-commit-unvalidated` — Vercel REST v13 metadata proves Production `dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g` serves canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`; documentary HEAD remains intentionally outside runtime parity.
 - `risk.combo-metadata-read-modify-write-race` — transições CURRENT de raw_metadata serializadas no PostgreSQL; histórico preservado e limitação de notificação direta separada.
 - `legacy.active-brand-contamination` - scoped active surfaces passed Preview and Production validation on `d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8`; historical strings outside the audited scope are not covered.
 - `risk.gate-credential-revocation-does-not-revoke-session` — EXPAND/CONTRACT complete; gates A-I and strict runtime passed.
@@ -38,7 +39,6 @@ Nenhum finding P1 operacionalmente aberto.
 - `risk.rate-limit-fails-open` — Falha do rate limiter libera a requisição
 - `risk.remote-database-controls-unvalidated` — Controles remotos de banco além do schema visível não foram validados
 - `risk.remote-webhook-registration-unvalidated` — Registro remoto dos dois webhooks não foi confirmado
-- `risk.published-commit-unvalidated` — Commit publicado não pode ser reconciliado com o HEAD auditado
 - `risk.local-runtime-env-incomplete` — Ambiente local não contém todas as variáveis exigidas
 - `gap.critical-flow-correlation` — Fluxos críticos não têm correlação ponta a ponta
 - `debt.router-responsibility-concentration` — Roteador conversacional concentra coordenação de muitos domínios

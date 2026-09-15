@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T19:16:24.946Z",
-  "stage": "2.7.2",
+  "generatedAt": "2026-09-15T21:15:39.403Z",
+  "stage": "2.7.3",
   "sourceCommit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-  "scope": "Current finding relationship projection for Baseline 2.7.2.",
+  "scope": "Current finding relationship projection for Baseline 2.7.3.",
   "method": "Derived from canonical current finding records and explicit historical resolution data.",
-  "count": 8,
+  "count": 7,
   "relation_types": [
     "CAUSES",
     "AMPLIFIES",
@@ -14,12 +14,6 @@
     "DUPLICATES"
   ],
   "records": [
-    {
-      "from": "risk.vercel-project-identity-drift",
-      "type": "AMPLIFIES",
-      "to": "risk.published-commit-unvalidated",
-      "evidence": "Dois projetos tornam a reconciliação do artefato publicado ambígua."
-    },
     {
       "from": "risk.vercel-project-identity-drift",
       "type": "AMPLIFIES",
@@ -95,6 +89,14 @@
       "status": "RESOLVED",
       "resolved_at": "2026-09-15",
       "reason": "Migration 20260915000500 and final re-audit removed the client-side CURRENT raw_metadata lost-update cause."
+    },
+    {
+      "from": "risk.vercel-project-identity-drift",
+      "type": "AMPLIFIES",
+      "to": "risk.published-commit-unvalidated",
+      "status": "RESOLVED",
+      "resolved_at": "2026-09-15T21:10:22.409Z",
+      "reason": "The prior relationship was operational only while source parity was unproven; authoritative Vercel REST metadata now resolves the target finding."
     }
   ],
   "high_1_rollout_dependency": {

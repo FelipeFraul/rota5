@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-15T19:16:24.946Z",
-  "stage": "2.7.2",
+  "generatedAt": "2026-09-15T21:15:39.403Z",
+  "stage": "2.7.3",
   "count": 4,
   "critical": 1,
   "records": [
@@ -192,9 +192,12 @@
     ],
     "p0_3_reaudit": {
       "infrastructure_identity": "CORRECT",
-      "current_head_deployed_to_production": false,
+      "current_head_deployed_to_production": true,
       "git_auto_deploy": "DISABLED",
-      "ticketeira_role": "HISTORICAL_CAUSE_EVIDENCE_ONLY"
+      "ticketeira_role": "HISTORICAL_CAUSE_EVIDENCE_ONLY",
+      "canonical_functional_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+      "documentary_head_policy": "VOLATILE_NOT_EMBEDDED",
+      "source_evidence": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA"
     }
   },
   "baseline_2_3_0": {
