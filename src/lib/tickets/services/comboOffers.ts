@@ -1370,10 +1370,11 @@ export async function deliverComboOrder(orderId: string) {
 
   const existing = await supabase
     .from("combo_redemptions")
-    .select("id, qr_token_hash, qr_token_version")
+    .select("id, redemption_code, qr_token_hash, qr_token_version")
     .eq("combo_order_id", order.id)
     .maybeSingle<{
       id: string;
+      redemption_code: string;
       qr_token_hash: string;
       qr_token_version: number | null;
     }>();
@@ -1383,7 +1384,7 @@ export async function deliverComboOrder(orderId: string) {
     return { ok: false as const, reason: "delivery_state_not_prepared" as const };
   }
 
-  const redemptionCode = `CMB-${order.id.slice(0, 8).toUpperCase()}`;
+  const redemptionCode = existing.data.redemption_code;
   const offer = firstJoin(order.combo_offers);
   const redemptionId = existing.data.id;
 

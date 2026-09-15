@@ -8,6 +8,7 @@ const secret = "paid-combo-delivery-test-secret-0000000001";
 const comboOffers = readFileSync("src/lib/tickets/services/comboOffers.ts", "utf8");
 const comboRedemptions = readFileSync("src/lib/tickets/services/comboRedemptions.ts", "utf8");
 const migration = readFileSync("supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql", "utf8");
+const codeMigration = readFileSync("supabase/migrations/20260915000300_make_combo_redemption_codes_collision_safe.sql", "utf8");
 const worker = readFileSync("src/lib/tickets/services/paidComboDeliveryWorker.ts", "utf8");
 const cron = readFileSync("src/app/api/cron/process-whatsapp-batches/route.ts", "utf8");
 const webhook = readFileSync("src/app/api/webhook/payment/mercado-pago/route.ts", "utf8");
@@ -40,6 +41,23 @@ test("paid combo confirmation persists the complete aggregate and strict financi
   assert.match(comboOffers, /\.rpc\(\s*"confirm_paid_combo_order"/);
   assert.match(comboOffers, /p_qr_token_hash:\s*hashComboRedemptionToken\(token\)/);
   assert.match(webhook, /confirmation\.legacy_redemption\s*\? null\s*:\s*await deliverComboOrder/);
+});
+
+test("combo redemption codes are sequence-backed and delivery reads the persisted code", () => {
+  assert.match(codeMigration, /create sequence public\.combo_redemption_code_seq/i);
+  assert.match(codeMigration, /maxvalue 9999999999[\s\S]*no cycle/i);
+  assert.match(codeMigration, /pg_catalog\.nextval\('public\.combo_redemption_code_seq'::regclass\)/i);
+  assert.match(codeMigration, /pg_catalog\.lpad\([^;]+10, '0'\)/i);
+  assert.match(codeMigration, /grant usage on sequence public\.combo_redemption_code_seq to service_role/i);
+  assert.match(codeMigration, /revoke all on sequence public\.combo_redemption_code_seq from public, anon, authenticated/i);
+  const deliveryBody = comboOffers.slice(
+    comboOffers.indexOf("export async function deliverComboOrder"),
+    comboOffers.indexOf("export async function confirmPaidComboOrder"),
+  );
+  assert.match(deliveryBody, /redemption_code/);
+  assert.match(deliveryBody, /const redemptionCode = existing\.data\.redemption_code/);
+  assert.doesNotMatch(deliveryBody, /slice\(0,\s*8\)/);
+  assert.doesNotMatch(codeMigration, /pg_catalog\.left\(v_order\.id::text,\s*8\)/i);
 });
 
 test("versioned paid combo delivery claims before QR generation and fences every completion", () => {
@@ -75,7 +93,7 @@ test("existing versioned redemption retries the same valid token and claims befo
       events: { title: "Event", city: "City", state: "SP", venues: { name: "Venue" } },
       event_sessions: { starts_at: "2099-01-01T00:00:00.000Z", timezone: "America/Sao_Paulo", status: "sales_open", events: { status: "published" } },
     }],
-    combo_redemptions: [{ id: redemptionId, combo_order_id: orderId, qr_token_version: 1, qr_token_hash: createHash("sha256").update(token).digest("hex") }],
+    combo_redemptions: [{ id: redemptionId, combo_order_id: orderId, redemption_code: "CMB-0000000042", qr_token_version: 1, qr_token_hash: createHash("sha256").update(token).digest("hex") }],
   });
   const service = await loadProductionModule("src/lib/tickets/services/comboOffers.ts", {
     createHash, createHmac, randomBytes: () => Buffer.alloc(32), timingSafeEqual, QRCode: {},
@@ -90,21 +108,24 @@ test("existing versioned redemption retries the same valid token and claims befo
     claimWhatsAppOutboundDelivery: async (id) => { events.push(`claim:${id}`); return { ok: true, claimed: true, delivery: { claim_token: `claim-${id}` } }; },
     markWhatsAppOutboundDeliveryFailed: async ({ deliveryId, claimToken }) => { assert.equal(claimToken, `claim-${deliveryId}`); Object.values(deliveries).find((d) => d.id === deliveryId).status = "failed"; return { ok: true }; },
     markWhatsAppOutboundDeliverySent: async ({ deliveryId, claimToken }) => { assert.equal(claimToken, `claim-${deliveryId}`); Object.values(deliveries).find((d) => d.id === deliveryId).status = "sent"; return { ok: true }; },
-    generateComboQrImage: async ({ qrPayload }) => { events.push(`generate:${qrPayload}`); return Buffer.from("qr"); },
+    generateComboQrImage: async ({ qrPayload, redemptionCode }) => { events.push(`generate:${qrPayload}`); events.push(`render-code:${redemptionCode}`); return Buffer.from("qr"); },
     getOrCreateOpenConversation: async () => ({ ok: true, conversation: { id: "conversation" } }),
     updateConversationAfterMessage: async () => ({ ok: true }), upsertCustomerFromWhatsApp: async () => ({ ok: true }),
     saveWhatsAppMessage: async () => ({ ok: true }), buildWhatsAppOutboundMetadata: (x) => x,
     centsToDecimalAmount: (x) => x / 100, decimalAmountToCents: (x) => Math.round(Number(x) * 100),
     getPublicEventVisibilityQueryFloorIso: () => "2000-01-01T00:00:00.000Z", getPublicVisibleSessionStatuses: () => [], isPublicEventVisible: () => true, PUBLIC_VISIBLE_EVENT_STATUSES: ["published"],
     getOrCreateWhatsAppOutboundDelivery: async () => ({ ok: false }),
-    sendZapiText: async () => ({ ok: true, providerMessageId: "text-provider" }),
-    sendZapiImage: async () => { imageAttempts += 1; return imageAttempts === 1 ? { ok: false, error: "timeout" } : { ok: true, providerMessageId: "qr-provider" }; },
+    sendZapiText: async ({ message }) => { events.push(`text:${message}`); return { ok: true, providerMessageId: "text-provider" }; },
+    sendZapiImage: async ({ caption }) => { events.push(`caption:${caption}`); imageAttempts += 1; return imageAttempts === 1 ? { ok: false, error: "timeout" } : { ok: true, providerMessageId: "qr-provider" }; },
   });
 
   assert.equal((await service.deliverComboOrder(orderId)).sent, false);
   assert.equal((await service.deliverComboOrder(orderId)).sent, true);
   const generated = events.filter((event) => event.startsWith("generate:"));
   assert.deepEqual(generated, [`generate:combo:${redemptionId}:${token}`, `generate:combo:${redemptionId}:${token}`]);
+  assert.equal(events.filter((event) => event === "render-code:CMB-0000000042").length, 2);
+  assert.ok(events.some((event) => event.startsWith("text:") && event.includes("CMB-0000000042")));
+  assert.ok(events.some((event) => event.startsWith("caption:") && event.includes("CMB-0000000042")));
   assert.ok(events.indexOf("claim:qr") < events.indexOf(generated[0]));
 });
 

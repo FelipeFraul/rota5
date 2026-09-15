@@ -24,7 +24,10 @@ test("paid combo confirmation, versioned QR and delivery queue are transactional
   try {
     const version = Number(psql("show server_version_num;", ["-At"]).trim());
     assert.ok(version >= 160000 && version < 170000);
-    const migration = readFileSync("supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql", "utf8");
+    const migration = [
+      "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql",
+      "supabase/migrations/20260915000300_make_combo_redemption_codes_collision_safe.sql",
+    ].map((path) => readFileSync(path, "utf8")).join("\n");
     psql(`
       do $roles$ begin
         if not exists(select 1 from pg_roles where rolname='anon') then create role anon; end if;
@@ -81,7 +84,7 @@ test("paid combo confirmation, versioned QR and delivery queue are transactional
       insert into public.event_sessions values ('30000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001');
       insert into public.combo_offers values ('40000000-0000-4000-8000-000000000001','Combo');
       insert into public.combo_orders
-      select ('5000000'||(i-1)::text||'-0000-4000-8000-'||lpad(i::text,12,'0'))::uuid,'40000000-0000-4000-8000-000000000001',
+      select ((case when i=4 then '50000000' else '5000000'||(i-1)::text end)||'-0000-4000-8000-'||lpad(i::text,12,'0'))::uuid,'40000000-0000-4000-8000-000000000001',
         ('10000000-0000-4000-8000-'||lpad(i::text,12,'0'))::uuid,'20000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001','pending_payment',1,1000,null
       from generate_series(1,4) i;
       insert into public.combo_redemptions(id,combo_order_id,customer_id,event_id,session_id,offer_name,quantity,qr_token_hash,redemption_code,status)
@@ -90,17 +93,18 @@ test("paid combo confirmation, versioned QR and delivery queue are transactional
     `);
 
     psql(`
-      do $audit$ declare r jsonb; redemption_id uuid; c record; old_token uuid; new_token uuid; i integer; begin
+      do $audit$ declare r jsonb; redemption_id uuid; original_code text; c record; old_token uuid; new_token uuid; i integer; begin
         r:=public.confirm_paid_combo_order('50000000-0000-4000-8000-000000000001','mercado_pago','mp-1',1000,'BRL',now(),'{}','hash-v1',1);
         if r->>'idempotent'<>'false' then raise exception 'new confirmation not reported'; end if;
         redemption_id:=(r->>'redemption_id')::uuid;
+        select redemption_code into original_code from public.combo_redemptions where id=redemption_id;
         if (select status from public.combo_orders where id='50000000-0000-4000-8000-000000000001')<>'paid'
           or (select count(*) from public.combo_payments where combo_order_id='50000000-0000-4000-8000-000000000001' and status='approved')<>1
           or (select count(*) from public.combo_redemptions where combo_order_id='50000000-0000-4000-8000-000000000001' and qr_token_version=1 and qr_token_hash='hash-v1')<>1
           or (select count(*) from public.whatsapp_outbound_deliveries where business_context->>'combo_order_id'='50000000-0000-4000-8000-000000000001')<>2
         then raise exception 'atomic aggregate incomplete'; end if;
         r:=public.confirm_paid_combo_order('50000000-0000-4000-8000-000000000001','mercado_pago','mp-1',1000,'BRL',now(),'{}','ignored-on-replay',1);
-        if r->>'idempotent'<>'true' then raise exception 'same replay not idempotent'; end if;
+        if r->>'idempotent'<>'true' or (select redemption_code from public.combo_redemptions where id=redemption_id)<>original_code then raise exception 'same replay changed redemption code'; end if;
         begin perform public.confirm_paid_combo_order('50000000-0000-4000-8000-000000000001','mercado_pago','mp-2',1000,'BRL',now(),'{}','x',1); raise exception 'different id accepted'; exception when raise_exception then if sqlerrm<>'combo_paid_payment_replay_mismatch' then raise; end if; end;
         begin perform public.confirm_paid_combo_order('50000000-0000-4000-8000-000000000001','mercado_pago','mp-1',999,'BRL',now(),'{}','x',1); raise exception 'underpayment accepted'; exception when raise_exception then if sqlerrm<>'combo_payment_amount_mismatch' then raise; end if; end;
         begin perform public.confirm_paid_combo_order('50000000-0000-4000-8000-000000000001','mercado_pago','mp-1',1001,'BRL',now(),'{}','x',1); raise exception 'overpayment accepted'; exception when raise_exception then if sqlerrm<>'combo_payment_amount_mismatch' then raise; end if; end;
@@ -117,6 +121,7 @@ test("paid combo confirmation, versioned QR and delivery queue are transactional
         then raise exception 'collision did not roll back'; end if;
         if (select qr_token_version from public.combo_redemptions where id='60000000-0000-4000-8000-000000000099') is not null
           or (select qr_token_hash from public.combo_redemptions where id='60000000-0000-4000-8000-000000000099')<>'legacy-hash'
+          or (select redemption_code from public.combo_redemptions where id='60000000-0000-4000-8000-000000000099')<>'LEGACY'
         then raise exception 'legacy redemption changed'; end if;
 
         update public.whatsapp_outbound_deliveries set status='failed',next_attempt_at=now()+interval '1 hour'
@@ -160,7 +165,7 @@ test("paid combo confirmation, versioned QR and delivery queue are transactional
     assert.equal(calls.filter((x) => x.status === "rejected").length, 1);
     assert.equal(psql(`select count(*) from public.combo_payments where combo_order_id='${raceOrder}' and status='approved';`, ["-At"]).trim(), "1");
 
-    const samePaymentOrder = "50000003-0000-4000-8000-000000000004";
+    const samePaymentOrder = "50000000-0000-4000-8000-000000000004";
     const samePaymentCalls = await Promise.all([
       psqlAsync(`select public.confirm_paid_combo_order('${samePaymentOrder}','mercado_pago','race-same',1000,'BRL',now(),'{}','same-hash',1);`),
       psqlAsync(`select public.confirm_paid_combo_order('${samePaymentOrder}','mercado_pago','race-same',1000,'BRL',now(),'{}','same-hash',1);`),
@@ -168,6 +173,14 @@ test("paid combo confirmation, versioned QR and delivery queue are transactional
     assert.equal(samePaymentCalls.filter((result) => result.includes('"idempotent": false')).length, 1);
     assert.equal(samePaymentCalls.filter((result) => result.includes('"idempotent": true')).length, 1);
     assert.equal(psql(`select count(*) from public.combo_payments where combo_order_id='${samePaymentOrder}' and status='approved';`, ["-At"]).trim(), "1");
+    assert.equal(samePaymentOrder.slice(0, 8), "50000000");
+    const firstCode = psql("select redemption_code from public.combo_redemptions where combo_order_id='50000000-0000-4000-8000-000000000001';", ["-At"]).trim();
+    const samePrefixCode = psql(`select redemption_code from public.combo_redemptions where combo_order_id='${samePaymentOrder}';`, ["-At"]).trim();
+    assert.match(firstCode, /^CMB-[0-9]{10}$/);
+    assert.match(samePrefixCode, /^CMB-[0-9]{10}$/);
+    assert.notEqual(firstCode, samePrefixCode);
+    assert.equal(psql(`select count(*) from public.combo_orders o join public.combo_payments p on p.combo_order_id=o.id and p.status='approved' join public.combo_redemptions r on r.combo_order_id=o.id and r.status='issued' where o.id in ('50000000-0000-4000-8000-000000000001','${samePaymentOrder}') and o.status='paid';`, ["-At"]).trim(), "2");
+    assert.equal(psql(`select count(*) from public.whatsapp_outbound_deliveries where business_context->>'combo_order_id' in ('50000000-0000-4000-8000-000000000001','${samePaymentOrder}');`, ["-At"]).trim(), "4");
 
     const paidQrDelivery = psql(`select id from public.whatsapp_outbound_deliveries where reason='paid_combo_qr_delivery' and business_context->>'combo_order_id'='${samePaymentOrder}';`, ["-At"]).trim();
     const claimCalls = await Promise.all([
@@ -187,6 +200,8 @@ test("paid combo confirmation, versioned QR and delivery queue are transactional
 
     const privileges = psql(`select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('confirm_paid_combo_order','ensure_paid_combo_delivery_intents','ensure_combo_ready_delivery_intents','prepare_combo_ready_delivery','complete_combo_ready_delivery','list_due_paid_combo_delivery_tasks','get_paid_combo_delivery_queue_counts','claim_whatsapp_outbound_delivery') and has_function_privilege('service_role',p.oid,'execute') and not has_function_privilege('anon',p.oid,'execute') and not has_function_privilege('authenticated',p.oid,'execute') and not has_function_privilege('public',p.oid,'execute') and p.proconfig @> array['search_path=""'];`, ["-At"]).trim();
     assert.equal(privileges, "8");
+    const sequencePrivileges = psql("select has_sequence_privilege('service_role','public.combo_redemption_code_seq','USAGE'),has_sequence_privilege('anon','public.combo_redemption_code_seq','USAGE'),has_sequence_privilege('authenticated','public.combo_redemption_code_seq','USAGE'),has_sequence_privilege('public','public.combo_redemption_code_seq','USAGE');", ["-At"]).trim();
+    assert.equal(sequencePrivileges, "t|f|f|f");
   } finally {
     psql("drop schema if exists public cascade; create schema public authorization postgres; grant usage on schema public to public;");
   }
