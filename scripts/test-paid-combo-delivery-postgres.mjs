@@ -27,6 +27,7 @@ test("paid combo confirmation, versioned QR and delivery queue are transactional
     const migration = [
       "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql",
       "supabase/migrations/20260915000300_make_combo_redemption_codes_collision_safe.sql",
+      "supabase/migrations/20260915000400_minimize_combo_redemption_code_sequence_privileges.sql",
     ].map((path) => readFileSync(path, "utf8")).join("\n");
     psql(`
       do $roles$ begin
@@ -200,8 +201,8 @@ test("paid combo confirmation, versioned QR and delivery queue are transactional
 
     const privileges = psql(`select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('confirm_paid_combo_order','ensure_paid_combo_delivery_intents','ensure_combo_ready_delivery_intents','prepare_combo_ready_delivery','complete_combo_ready_delivery','list_due_paid_combo_delivery_tasks','get_paid_combo_delivery_queue_counts','claim_whatsapp_outbound_delivery') and has_function_privilege('service_role',p.oid,'execute') and not has_function_privilege('anon',p.oid,'execute') and not has_function_privilege('authenticated',p.oid,'execute') and not has_function_privilege('public',p.oid,'execute') and p.proconfig @> array['search_path=""'];`, ["-At"]).trim();
     assert.equal(privileges, "8");
-    const sequencePrivileges = psql("select has_sequence_privilege('service_role','public.combo_redemption_code_seq','USAGE'),has_sequence_privilege('anon','public.combo_redemption_code_seq','USAGE'),has_sequence_privilege('authenticated','public.combo_redemption_code_seq','USAGE'),has_sequence_privilege('public','public.combo_redemption_code_seq','USAGE');", ["-At"]).trim();
-    assert.equal(sequencePrivileges, "t|f|f|f");
+    const sequencePrivileges = psql("select has_sequence_privilege('service_role','public.combo_redemption_code_seq','USAGE'),has_sequence_privilege('service_role','public.combo_redemption_code_seq','SELECT'),has_sequence_privilege('service_role','public.combo_redemption_code_seq','UPDATE'),has_sequence_privilege('anon','public.combo_redemption_code_seq','USAGE'),has_sequence_privilege('authenticated','public.combo_redemption_code_seq','USAGE'),has_sequence_privilege('public','public.combo_redemption_code_seq','USAGE');", ["-At"]).trim();
+    assert.equal(sequencePrivileges, "t|f|f|f|f|f");
   } finally {
     psql("drop schema if exists public cascade; create schema public authorization postgres; grant usage on schema public to public;");
   }

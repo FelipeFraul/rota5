@@ -9,6 +9,7 @@ const comboOffers = readFileSync("src/lib/tickets/services/comboOffers.ts", "utf
 const comboRedemptions = readFileSync("src/lib/tickets/services/comboRedemptions.ts", "utf8");
 const migration = readFileSync("supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql", "utf8");
 const codeMigration = readFileSync("supabase/migrations/20260915000300_make_combo_redemption_codes_collision_safe.sql", "utf8");
+const privilegeMigration = readFileSync("supabase/migrations/20260915000400_minimize_combo_redemption_code_sequence_privileges.sql", "utf8");
 const worker = readFileSync("src/lib/tickets/services/paidComboDeliveryWorker.ts", "utf8");
 const cron = readFileSync("src/app/api/cron/process-whatsapp-batches/route.ts", "utf8");
 const webhook = readFileSync("src/app/api/webhook/payment/mercado-pago/route.ts", "utf8");
@@ -50,6 +51,8 @@ test("combo redemption codes are sequence-backed and delivery reads the persiste
   assert.match(codeMigration, /pg_catalog\.lpad\([^;]+10, '0'\)/i);
   assert.match(codeMigration, /grant usage on sequence public\.combo_redemption_code_seq to service_role/i);
   assert.match(codeMigration, /revoke all on sequence public\.combo_redemption_code_seq from public, anon, authenticated/i);
+  assert.match(privilegeMigration, /revoke all on sequence public\.combo_redemption_code_seq from service_role/i);
+  assert.match(privilegeMigration, /grant usage on sequence public\.combo_redemption_code_seq to service_role/i);
   const deliveryBody = comboOffers.slice(
     comboOffers.indexOf("export async function deliverComboOrder"),
     comboOffers.indexOf("export async function confirmPaidComboOrder"),
