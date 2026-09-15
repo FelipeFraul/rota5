@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.3",
+  "generatedAt": "2026-09-15T23:30:00.000Z",
+  "stage": "2.6.0",
   "period": {
     "start": "2026-09-12",
-    "end": "2026-09-14",
+    "end": "2026-09-15",
     "status": "CLOSED"
   },
   "baseline_start": "1.0.0",
-  "baseline_end": "2.5.3",
+  "baseline_end": "2.6.0",
   "source_start": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
-  "source_end": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+  "source_end": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
   "days": [
     {
       "date": "2026-09-12",
@@ -40,6 +40,16 @@
         "admin-location",
         "final-joint-audit",
         "freeze-2-5-0"
+      ]
+    },
+    {
+      "date": "2026-09-15",
+      "milestone_ids": [
+        "paid-ticket-durable",
+        "paid-combo-durable",
+        "combo-code-collision-safe",
+        "paid-delivery-joint-reaudit",
+        "freeze-2-6-0"
       ]
     }
   ],
@@ -158,6 +168,48 @@
       "classification": "DOCUMENTED",
       "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
       "result": "Baseline 2.5.0 documentary freeze."
+    },
+    {
+      "id": "paid-ticket-durable",
+      "date": "2026-09-15",
+      "classification": "RESOLVED",
+      "source_commit": "9cd0a5efd4622bbd2ee4d8e02f8641df4c91bbc5",
+      "migration": "20260915000100_make_paid_ticket_delivery_durable.sql",
+      "result": "Paid TICKET confirmation atomically persists durable delivery work with superseded status, fencing, lease, bounded retry and dead-letter."
+    },
+    {
+      "id": "paid-combo-durable",
+      "date": "2026-09-15",
+      "classification": "RESOLVED",
+      "source_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+      "migration": "20260915000200_make_paid_combo_delivery_durable.sql",
+      "result": "Paid COMBO and versioned COMBO READY delivery persist recoverable intents; deterministic HMAC QR recovery is limited to versioned records."
+    },
+    {
+      "id": "combo-code-collision-safe",
+      "date": "2026-09-15",
+      "classification": "RESOLVED",
+      "source_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+      "migrations": [
+        "20260915000300_make_combo_redemption_codes_collision_safe.sql",
+        "20260915000400_minimize_combo_redemption_code_sequence_privileges.sql"
+      ],
+      "result": "New redemption codes are sequence-backed and collision-safe; historical codes remain byte-identical and sequence privileges are minimized."
+    },
+    {
+      "id": "paid-delivery-joint-reaudit",
+      "date": "2026-09-15",
+      "classification": "RESOLVED",
+      "source_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+      "quality_gate": 34984961888,
+      "result": "Joint final reaudit resolved payment-before-delivery-work risk and separated ambiguous external ACK as P2 ACTIVE; exactly-once external was not claimed."
+    },
+    {
+      "id": "freeze-2-6-0",
+      "date": "2026-09-15",
+      "classification": "DOCUMENTED",
+      "source_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+      "result": "Baseline 2.6.0 documentary freeze over the stabilized functional source."
     }
   ],
   "remediations": [
@@ -170,7 +222,10 @@
     "default-suite",
     "critical-coverage",
     "admin-atomicity",
-    "admin-location"
+    "admin-location",
+    "paid-ticket-durable",
+    "paid-combo-durable",
+    "combo-code-collision-safe"
   ],
   "audits": [
     {
@@ -180,6 +235,13 @@
       "remote_event_session_divergences": 0,
       "remote_city_state_divergences": 0,
       "legacy_venue_rpc": "ABSENT"
+    },
+    {
+      "id": "paid-delivery-joint-reaudit",
+      "result": "PASS",
+      "source_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+      "external_delivery_semantics": "AT_LEAST_ONCE",
+      "exactly_once_external_proven": false
     }
   ],
   "quality_gates": [
@@ -192,6 +254,18 @@
       "run": 34898804387,
       "result": "PASS",
       "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d"
+    },
+    {
+      "run": 34925780077,
+      "result": "PASS",
+      "source_commit": "9cd0a5efd4622bbd2ee4d8e02f8641df4c91bbc5"
+    },
+    {
+      "run": 34984961888,
+      "result": "PASS",
+      "source_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+      "node": "276/276",
+      "postgresql": "4/4"
     }
   ],
   "deployments": [
@@ -223,14 +297,36 @@
       "name": "20260914000400_retire_legacy_admin_event_venue_rpc.sql",
       "status": "APPLIED_AND_VALIDATED",
       "final_role": "RETIRES_LEGACY_RPC"
+    },
+    {
+      "name": "20260915000100_make_paid_ticket_delivery_durable.sql",
+      "status": "APPLIED_AND_VALIDATED",
+      "final_role": "CURRENT"
+    },
+    {
+      "name": "20260915000200_make_paid_combo_delivery_durable.sql",
+      "status": "APPLIED_AND_VALIDATED",
+      "final_role": "CURRENT"
+    },
+    {
+      "name": "20260915000300_make_combo_redemption_codes_collision_safe.sql",
+      "status": "APPLIED_AND_VALIDATED",
+      "final_role": "CURRENT"
+    },
+    {
+      "name": "20260915000400_minimize_combo_redemption_code_sequence_privileges.sql",
+      "status": "APPLIED_AND_VALIDATED",
+      "final_role": "CURRENT"
     }
   ],
   "findings_resolved": [
     "risk.admin-event-multistep-partial-state",
-    "bug.admin-event-location-consistency"
+    "bug.admin-event-location-consistency",
+    "risk.payment-confirmed-before-external-delivery"
   ],
   "new_findings_documented": [
-    "bug.admin-event-location-consistency"
+    "bug.admin-event-location-consistency",
+    "risk.paid-delivery-ambiguous-external-ack"
   ],
   "remaining_risks": [
     "risk.rate-limit-fails-open",
@@ -256,7 +352,6 @@
     "debt.distributed-status-literals",
     "risk.combo-metadata-read-modify-write-race",
     "risk.github-issue-create-replay",
-    "risk.payment-confirmed-before-external-delivery",
     "risk.whatsapp-conversation-context-race",
     "risk.production-capable-scripts-outside-test-isolation",
     "risk.service-role-application-authorization-boundary",
@@ -264,16 +359,17 @@
     "risk.remote-webhook-registration-unvalidated",
     "risk.published-commit-unvalidated",
     "gap.remote-database-behavior-tests",
-    "orphan.seat-map-renders-table"
+    "orphan.seat-map-renders-table",
+    "risk.paid-delivery-ambiguous-external-ack"
   ],
   "final_state": {
-    "baseline": "2.5.3",
-    "repository_source": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+    "baseline": "2.6.0",
+    "repository_source": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
     "production_application_source": "148b8200a44f4eeb49e004af45060a302bac9f20",
-    "source_tree_fingerprint": "6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954",
-    "default_node_suite": "257/257 PASS",
-    "postgres_integration": "2/2 PASS",
-    "quality_gate": "34898804387 PASS",
+    "source_tree_fingerprint": "8ae8433d11de2ba5c137bd1aa99ee55d2fc85aecb80bbec89847904387c73dbf",
+    "default_node_suite": "276/276 PASS",
+    "postgres_integration": "4/4 PASS",
+    "quality_gate": "34984961888 PASS",
     "atomicity": "RESOLVED",
     "admin_location_consistency": "RESOLVED",
     "product_health": "DEGRADED",
@@ -281,9 +377,11 @@
     "release_blockers": 0,
     "admin_event_operations_retention": "SEPARATE_HARDENING_CANDIDATE",
     "cycle": "DOCUMENTED_AND_CLOSED",
-    "functional_baseline": "2.5.0"
+    "functional_baseline": "2.6.0",
+    "paid_delivery_atomicity": "RESOLVED",
+    "external_delivery_semantics": "AT_LEAST_ONCE"
   },
-  "functional_baseline_end": "2.5.0",
+  "functional_baseline_end": "2.6.0",
   "documentary_patches": [
     {
       "version": "2.5.1",
@@ -308,6 +406,15 @@
       "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
       "reason": "Remove volatile Git-head self-reference from CURRENT runtime semantics and derive the complete human runtime table from the machine catalog.",
       "functional_milestones_changed": false
+    }
+  ],
+  "functional_releases": [
+    {
+      "version": "2.6.0",
+      "date": "2026-09-15",
+      "type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+      "source_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+      "reason": "Durable paid TICKET/COMBO delivery stabilization and proven resolution of payment-confirmed-before-delivery-work risk."
     }
   ]
 }

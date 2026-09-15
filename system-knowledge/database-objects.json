@@ -1,17 +1,18 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-14T22:50:20.174Z",
-  "stage": "2.5.3",
-  "sourceCommit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+  "generatedAt": "2026-09-15T23:30:00.000Z",
+  "stage": "2.6.0",
+  "sourceCommit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
   "counts": {
     "tables": 45,
-    "migrations": 83,
-    "functions": 44,
+    "migrations": 87,
+    "functions": 57,
     "triggers": 36,
-    "indexes": 157,
+    "indexes": 159,
     "rls_enabled": 44,
     "policies": 0,
-    "function_table_accesses": 194
+    "function_table_accesses": 227,
+    "sequences": 1
   },
   "tables": [
     "table.admin_auth_attempts",
@@ -2231,6 +2232,439 @@
         }
       ],
       "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
+      "id": "function.confirm_paid_ticket_order_core_20260722",
+      "name": "confirm_paid_ticket_order_core_20260722",
+      "domain": "domain.orders-payments",
+      "tables": [
+        "orders",
+        "payments",
+        "reservations",
+        "reservation_items",
+        "session_seats",
+        "tickets"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "orders",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "payments",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "reservations",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "reservation_items",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "session_seats",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "tickets",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "function.ensure_paid_ticket_delivery_intents",
+      "name": "ensure_paid_ticket_delivery_intents",
+      "domain": "domain.ticketing-delivery",
+      "tables": [
+        "orders",
+        "reservations",
+        "event_sessions",
+        "customers",
+        "tickets",
+        "whatsapp_outbound_deliveries"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "orders",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "reservations",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "event_sessions",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "customers",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "tickets",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "whatsapp_outbound_deliveries",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "function.mark_whatsapp_outbound_delivery_sent",
+      "name": "mark_whatsapp_outbound_delivery_sent",
+      "domain": "domain.whatsapp-conversations",
+      "tables": [
+        "whatsapp_outbound_deliveries"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "whatsapp_outbound_deliveries",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "function.mark_whatsapp_outbound_delivery_failed",
+      "name": "mark_whatsapp_outbound_delivery_failed",
+      "domain": "domain.whatsapp-conversations",
+      "tables": [
+        "whatsapp_outbound_deliveries"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "whatsapp_outbound_deliveries",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "function.list_due_paid_ticket_delivery_orders",
+      "name": "list_due_paid_ticket_delivery_orders",
+      "domain": "domain.ticketing-delivery",
+      "tables": [
+        "whatsapp_outbound_deliveries"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "whatsapp_outbound_deliveries",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "function.get_paid_ticket_delivery_queue_counts",
+      "name": "get_paid_ticket_delivery_queue_counts",
+      "domain": "domain.ticketing-delivery",
+      "tables": [
+        "whatsapp_outbound_deliveries"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "whatsapp_outbound_deliveries",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "function.ensure_paid_combo_delivery_intents",
+      "name": "ensure_paid_combo_delivery_intents",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_orders",
+        "combo_redemptions",
+        "customers",
+        "whatsapp_outbound_deliveries"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "combo_orders",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "combo_redemptions",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "customers",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "whatsapp_outbound_deliveries",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "function.confirm_paid_combo_order",
+      "name": "confirm_paid_combo_order",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_orders",
+        "combo_payments",
+        "combo_redemptions",
+        "customers",
+        "whatsapp_outbound_deliveries"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000300_make_combo_redemption_codes_collision_safe.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "combo_orders",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "combo_payments",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "combo_redemptions",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "customers",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "whatsapp_outbound_deliveries",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "function.ensure_combo_ready_delivery_intents",
+      "name": "ensure_combo_ready_delivery_intents",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_redemptions",
+        "combo_orders",
+        "customers",
+        "whatsapp_outbound_deliveries"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "combo_redemptions",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "combo_orders",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "customers",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "whatsapp_outbound_deliveries",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "function.prepare_combo_ready_delivery",
+      "name": "prepare_combo_ready_delivery",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_redemptions"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "combo_redemptions",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "function.complete_combo_ready_delivery",
+      "name": "complete_combo_ready_delivery",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_redemptions"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "combo_redemptions",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "function.list_due_paid_combo_delivery_tasks",
+      "name": "list_due_paid_combo_delivery_tasks",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "whatsapp_outbound_deliveries"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "whatsapp_outbound_deliveries",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "function.get_paid_combo_delivery_queue_counts",
+      "name": "get_paid_combo_delivery_queue_counts",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "whatsapp_outbound_deliveries"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "whatsapp_outbound_deliveries",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ]
     }
   ],
   "triggers": [
@@ -4306,6 +4740,34 @@
       "evidence": [
         "supabase/migrations/20260721000100_create_whatsapp_outbound_deliveries.sql"
       ]
+    },
+    {
+      "id": "index.whatsapp_outbound_deliveries_paid_ticket_due_idx",
+      "name": "whatsapp_outbound_deliveries_paid_ticket_due_idx",
+      "table": "whatsapp_outbound_deliveries",
+      "unique": false,
+      "evidence": "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql"
+    },
+    {
+      "id": "index.combo_payments_provider_payment_unique_idx",
+      "name": "combo_payments_provider_payment_unique_idx",
+      "table": "combo_payments",
+      "unique": true,
+      "evidence": "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
+    },
+    {
+      "id": "index.combo_payments_one_approved_per_order_idx",
+      "name": "combo_payments_one_approved_per_order_idx",
+      "table": "combo_payments",
+      "unique": true,
+      "evidence": "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
+    },
+    {
+      "id": "index.whatsapp_outbound_deliveries_paid_combo_due_idx",
+      "name": "whatsapp_outbound_deliveries_paid_combo_due_idx",
+      "table": "whatsapp_outbound_deliveries",
+      "unique": false,
+      "evidence": "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
     }
   ],
   "migrations": [
@@ -6629,6 +7091,133 @@
       "status_local": "LOCAL_DECLARED",
       "remote_status": "APPLIED_AND_VALIDATED",
       "evidence_source": "REMOTE_MIGRATION_HISTORY_AND_RUNTIME"
+    },
+    {
+      "id": "migration.20260915000100_make_paid_ticket_delivery_durable",
+      "timestamp": "20260915000100",
+      "name": "20260915000100_make_paid_ticket_delivery_durable.sql",
+      "path": "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql",
+      "purpose": "Make paid TICKET confirmation and initial delivery work atomic and recoverable",
+      "creates": [
+        "function:confirm_paid_ticket_order_core_20260722",
+        "function:ensure_paid_ticket_delivery_intents",
+        "function:mark_whatsapp_outbound_delivery_sent",
+        "function:mark_whatsapp_outbound_delivery_failed",
+        "function:list_due_paid_ticket_delivery_orders",
+        "function:get_paid_ticket_delivery_queue_counts",
+        "index:whatsapp_outbound_deliveries_paid_ticket_due_idx"
+      ],
+      "alters": [
+        "table:whatsapp_outbound_deliveries",
+        "function:confirm_paid_ticket_order",
+        "function:claim_whatsapp_outbound_delivery"
+      ],
+      "drops": [],
+      "depends_on": "migration.20260914000400_retire_legacy_admin_event_venue_rpc",
+      "reversal": "MANUAL_ONLY_NO_DOWN_MIGRATION",
+      "functional_impact": [
+        "confirm_paid_ticket_order_core_20260722",
+        "ensure_paid_ticket_delivery_intents",
+        "mark_whatsapp_outbound_delivery_sent",
+        "mark_whatsapp_outbound_delivery_failed",
+        "list_due_paid_ticket_delivery_orders",
+        "get_paid_ticket_delivery_queue_counts",
+        "whatsapp_outbound_deliveries_paid_ticket_due_idx",
+        "whatsapp_outbound_deliveries",
+        "confirm_paid_ticket_order",
+        "claim_whatsapp_outbound_delivery"
+      ],
+      "status_local": "LOCAL_DECLARED",
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "evidence_source": "REMOTE_MIGRATION_HISTORY_AND_POSTGRESQL_CI"
+    },
+    {
+      "id": "migration.20260915000200_make_paid_combo_delivery_durable",
+      "timestamp": "20260915000200",
+      "name": "20260915000200_make_paid_combo_delivery_durable.sql",
+      "path": "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql",
+      "purpose": "Make paid/versioned-ready COMBO delivery durable with deterministic HMAC QR recovery",
+      "creates": [
+        "function:ensure_paid_combo_delivery_intents",
+        "function:confirm_paid_combo_order",
+        "function:ensure_combo_ready_delivery_intents",
+        "function:prepare_combo_ready_delivery",
+        "function:complete_combo_ready_delivery",
+        "function:list_due_paid_combo_delivery_tasks",
+        "function:get_paid_combo_delivery_queue_counts",
+        "index:combo_payments_provider_payment_unique_idx",
+        "index:combo_payments_one_approved_per_order_idx",
+        "index:whatsapp_outbound_deliveries_paid_combo_due_idx"
+      ],
+      "alters": [
+        "table:combo_redemptions",
+        "table:whatsapp_outbound_deliveries",
+        "function:claim_whatsapp_outbound_delivery"
+      ],
+      "drops": [],
+      "depends_on": "migration.20260915000100_make_paid_ticket_delivery_durable",
+      "reversal": "MANUAL_ONLY_NO_DOWN_MIGRATION",
+      "functional_impact": [
+        "ensure_paid_combo_delivery_intents",
+        "confirm_paid_combo_order",
+        "ensure_combo_ready_delivery_intents",
+        "prepare_combo_ready_delivery",
+        "complete_combo_ready_delivery",
+        "list_due_paid_combo_delivery_tasks",
+        "get_paid_combo_delivery_queue_counts",
+        "combo_payments_provider_payment_unique_idx",
+        "combo_payments_one_approved_per_order_idx",
+        "whatsapp_outbound_deliveries_paid_combo_due_idx",
+        "combo_redemptions",
+        "whatsapp_outbound_deliveries",
+        "claim_whatsapp_outbound_delivery"
+      ],
+      "status_local": "LOCAL_DECLARED",
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "evidence_source": "REMOTE_MIGRATION_HISTORY_AND_POSTGRESQL_CI"
+    },
+    {
+      "id": "migration.20260915000300_make_combo_redemption_codes_collision_safe",
+      "timestamp": "20260915000300",
+      "name": "20260915000300_make_combo_redemption_codes_collision_safe.sql",
+      "path": "supabase/migrations/20260915000300_make_combo_redemption_codes_collision_safe.sql",
+      "purpose": "Allocate collision-safe human redemption codes from a database sequence without rewriting legacy codes",
+      "creates": [
+        "sequence:combo_redemption_code_seq"
+      ],
+      "alters": [
+        "function:confirm_paid_combo_order"
+      ],
+      "drops": [],
+      "depends_on": "migration.20260915000200_make_paid_combo_delivery_durable",
+      "reversal": "MANUAL_ONLY_NO_DOWN_MIGRATION",
+      "functional_impact": [
+        "combo_redemption_code_seq",
+        "confirm_paid_combo_order"
+      ],
+      "status_local": "LOCAL_DECLARED",
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "evidence_source": "REMOTE_MIGRATION_HISTORY_AND_POSTGRESQL_CI"
+    },
+    {
+      "id": "migration.20260915000400_minimize_combo_redemption_code_sequence_privileges",
+      "timestamp": "20260915000400",
+      "name": "20260915000400_minimize_combo_redemption_code_sequence_privileges.sql",
+      "path": "supabase/migrations/20260915000400_minimize_combo_redemption_code_sequence_privileges.sql",
+      "purpose": "Restrict redemption-code sequence privileges to the minimum service_role access",
+      "creates": [],
+      "alters": [
+        "sequence:combo_redemption_code_seq"
+      ],
+      "drops": [],
+      "depends_on": "migration.20260915000300_make_combo_redemption_codes_collision_safe",
+      "reversal": "MANUAL_ONLY_NO_DOWN_MIGRATION",
+      "functional_impact": [
+        "combo_redemption_code_seq"
+      ],
+      "status_local": "LOCAL_DECLARED",
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "evidence_source": "REMOTE_MIGRATION_HISTORY_AND_POSTGRESQL_CI"
     }
   ],
   "extensions": [
@@ -7105,5 +7694,33 @@
     "triggers": 36,
     "admin_event_operations": "PRESENT",
     "legacy_update_admin_event_venue": "ABSENT"
+  },
+  "sequences": [
+    {
+      "id": "sequence.combo_redemption_code_seq",
+      "name": "combo_redemption_code_seq",
+      "schema": "public",
+      "purpose": "Collision-safe allocation for new CMB-0000000001 style redemption codes",
+      "historical_rows_rewritten": false,
+      "privileges": {
+        "public": "NONE",
+        "anon": "NONE",
+        "authenticated": "NONE",
+        "service_role": [
+          "USAGE"
+        ]
+      },
+      "evidence": [
+        "supabase/migrations/20260915000300_make_combo_redemption_codes_collision_safe.sql",
+        "supabase/migrations/20260915000400_minimize_combo_redemption_code_sequence_privileges.sql"
+      ]
+    }
+  ],
+  "baseline_2_6_0": {
+    "migrations": 87,
+    "functions": 57,
+    "indexes": 159,
+    "sequences": 1,
+    "legacy_combo_codes_changed": false
   }
 }

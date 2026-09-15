@@ -1,6 +1,10 @@
-> **Current Baseline 2.5.3 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on unchanged repository source `e931d66d03a620d5e26588c8f6c8714c62ef5d1d` (fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`, 379 files, 83 migrations). Atomicity and admin location consistency remain **RESOLVED**. Findings and health are unchanged: 45 total, 13 RESOLVED, 21 ACTIVE, 6 POTENTIAL, 5 NOT_VALIDATED, 0 release blockers; PRODUCT_HEALTH and INFRASTRUCTURE_HEALTH are **DEGRADED**. Quality remains 257/257 Node, 2/2 PostgreSQL 16 and Quality Gate 34898804387 PASS. Production `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` remains on application source `148b8200a44f4eeb49e004af45060a302bac9f20`; no runtime, database, deployment or functional change occurred.
+> **Current Baseline 2.6.0 (2026-09-15):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `0a10618648fc3f873afffd8f60e60bd0396b62e7` (fingerprint `8ae8433d11de2ba5c137bd1aa99ee55d2fc85aecb80bbec89847904387c73dbf`, 390 files, 87 migrations, 57 SQL functions, 1 sequence). Paid TICKET/COMBO delivery work is durably persisted in the payment transaction; external delivery remains **AT_LEAST_ONCE**, never claimed exactly-once. Findings: 46 total, 14 RESOLVED, 22 ACTIVE, 5 POTENTIAL, 5 NOT_VALIDATED, 0 release blockers. Product and infrastructure health remain **DEGRADED**. Quality Gate 34984961888 passed 276/276 Node and 4/4 PostgreSQL 16 on the exact source. Baseline commit is `SELF_NOT_RECORDED`; no deployment or database mutation occurs in this documentary freeze.
 
-## Baseline 2.5.3 test state
+## Baseline 2.6.0 test state
+
+The catalog has 57 test artifacts. Quality Gate 34984961888 passed 276/276 default Node cases and 4/4 PostgreSQL integration cases on `0a10618648fc3f873afffd8f60e60bd0396b62e7`.
+
+## Historical snapshot — Baseline 2.5.3 test state
 
 The catalog contains 53 test artifacts. The default Node suite passes **257/257**; the separate PostgreSQL 16 integration passes **2/2**. Quality Gate 34898804387 passed on `e931d66d03a620d5e26588c8f6c8714c62ef5d1d`. Do not combine these as 259/259.
 
@@ -9,7 +13,7 @@ The catalog contains 53 test artifacts. The default Node suite passes **257/257*
 Baseline 2.2.0 runner evidence on source `3e2bdc2979301301b3f1566a2ac75a477ee4c169`: typecheck PASS; lint PASS with 0 errors and 23 warnings; build PASS; workspace default suite 207/214; canonical Git materialization after npm ci 207/214; same seven known failures; new regressions 0.
 
 
-The canonical inventory contains 53 records. The tracked runner is reproducible and the current default suite passes 257/257 with zero failures, skips, todos or regressions; the separate PostgreSQL integration passes 2/2 in Quality Gate 34898804387. Historical 207/214, 214/214 and 236/236 evidence is preserved below.
+Historical Baseline 2.5.x inventory: 53 records; default Node 257/257 and PostgreSQL 2/2 in Quality Gate 34898804387.
 
 # Inventário de testes e auditorias
 
@@ -143,7 +147,7 @@ Limitação comum: várias ferramentas usam Supabase real/service role, criam da
 | `npm run typecheck` | PASS | 0 diagnósticos após a correção mínima |
 | `npm run lint` | PASS | 0 erros; 23 warnings |
 | `npm run build` | PASS | compilação concluída; warning NFT/Turbopack preexistente no mapa |
-| `npm test` | PASS | 257/257 passed; 0 failures, skips, todos or regressions |
+| `npm test` | PASS | 276/276 passed; 0 failures, skips, todos or regressions |
 
 O lint sinalizou ainda imports, funções e variáveis sem uso, uso de `<img>` e uma dependência desnecessária de hook. Esses sinais foram inventariados como possíveis lacunas/legado; nenhum foi alterado.
 

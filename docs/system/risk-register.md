@@ -1,4 +1,10 @@
-> **Current Baseline 2.5.3 (2026-09-14):** `PATCH_DOCUMENTARY_CORRECTION` on unchanged repository source `e931d66d03a620d5e26588c8f6c8714c62ef5d1d` (fingerprint `6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954`, 379 files, 83 migrations). Atomicity and admin location consistency remain **RESOLVED**. Findings and health are unchanged: 45 total, 13 RESOLVED, 21 ACTIVE, 6 POTENTIAL, 5 NOT_VALIDATED, 0 release blockers; PRODUCT_HEALTH and INFRASTRUCTURE_HEALTH are **DEGRADED**. Quality remains 257/257 Node, 2/2 PostgreSQL 16 and Quality Gate 34898804387 PASS. Production `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` remains on application source `148b8200a44f4eeb49e004af45060a302bac9f20`; no runtime, database, deployment or functional change occurred.
+> **Current Baseline 2.6.0 (2026-09-15):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `0a10618648fc3f873afffd8f60e60bd0396b62e7` (fingerprint `8ae8433d11de2ba5c137bd1aa99ee55d2fc85aecb80bbec89847904387c73dbf`, 390 files, 87 migrations, 57 SQL functions, 1 sequence). Paid TICKET/COMBO delivery work is durably persisted in the payment transaction; external delivery remains **AT_LEAST_ONCE**, never claimed exactly-once. Findings: 46 total, 14 RESOLVED, 22 ACTIVE, 5 POTENTIAL, 5 NOT_VALIDATED, 0 release blockers. Product and infrastructure health remain **DEGRADED**. Quality Gate 34984961888 passed 276/276 Node and 4/4 PostgreSQL 16 on the exact source. Baseline commit is `SELF_NOT_RECORDED`; no deployment or database mutation occurs in this documentary freeze.
+
+## Baseline 2.6.0 paid-delivery risk reconciliation
+
+- `risk.payment-confirmed-before-external-delivery`: **RESOLVED**, historical MEDIUM/P1. Durable work is persisted transactionally for paid TICKET and COMBO.
+- `risk.paid-delivery-ambiguous-external-ack`: **ACTIVE**, MEDIUM/P2, non-blocking. A lost/ambiguous Z-API ACK can cause a duplicate external message or QR on retry.
+
 
 # Baseline 2.0.1 HIGH #1 final state
 
@@ -42,7 +48,7 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 | gap.critical-flow-correlation | OBSERVABILITY | MEDIUM | P2 | ACTIVE | CONFIRMED | Fluxos críticos não têm correlação ponta a ponta |
 | debt.router-responsibility-concentration | ARCHITECTURE | MEDIUM | P2 | ACTIVE | CONFIRMED | Roteador conversacional concentra coordenação de muitos domínios |
 | debt.zapi-webhook-responsibility-coupling | COUPLING | MEDIUM | P2 | ACTIVE | CONFIRMED | Handler Z-API acopla transporte, deduplicação, automação e entrega |
-| gap.default-test-suite-failing | TEST_GAP | HIGH | P1 | RESOLVED | CONFIRMED | RESOLVED — current default suite passes 257/257 |
+| gap.default-test-suite-failing | TEST_GAP | HIGH | P1 | RESOLVED | CONFIRMED | RESOLVED — current default suite passes 276/276 |
 | gap.critical-capability-and-flow-coverage | TEST_GAP | HIGH | P1 | RESOLVED | CONFIRMED | RESOLVED — 21/21 MUST and 2/2 high-risk flows covered |
 | gap.real-integration-tests-outside-default | TEST_GAP | MEDIUM | P2 | ACTIVE | CONFIRMED | Testes reais e de integração ficam fora da suíte padrão |
 | gap.source-contract-assertion-bias | TEST_GAP | MEDIUM | P2 | ACTIVE | CONFIRMED | Parte relevante dos testes valida texto-fonte e regex de implementação |
@@ -57,7 +63,8 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 | legacy.table-map-presentation-disabled | LEGACY | MEDIUM | P2 | ACTIVE | CONFIRMED | Mapa oficial e cortesia permanecem implementados, mas desativados na apresentação Rota5 |
 | debt.direct-supabase-access-spread | COUPLING | MEDIUM | P2 | ACTIVE | CONFIRMED | Acesso privilegiado ao Supabase está espalhado por services e routes |
 | debt.large-mixed-service-modules | MAINTAINABILITY | LOW | P3 | ACTIVE | CONFIRMED | Serviços grandes misturam consulta, regra, formatting e efeitos |
-| risk.payment-confirmed-before-external-delivery | DATA_INTEGRITY | MEDIUM | P1 | POTENTIAL | HIGH | Confirmação atômica e entrega externa formam fronteira de consistência eventual |
+| risk.payment-confirmed-before-external-delivery | DATA_INTEGRITY | MEDIUM | P1 | RESOLVED | HIGH | Durable paid TICKET/COMBO work is persisted atomically |
+| risk.paid-delivery-ambiguous-external-ack | IDEMPOTENCY | MEDIUM | P2 | ACTIVE | CONFIRMED | Ambiguous external ACK can duplicate message/QR |
 | risk.whatsapp-conversation-context-race | CONCURRENCY | MEDIUM | P2 | POTENTIAL | MEDIUM | Mensagens simultâneas podem competir pela atualização do contexto conversacional |
 | debt.payment-reconciliation-duplication-is-intentional | DUPLICATION | INFO | P4 | ACTIVE | CONFIRMED | Webhook e consulta de status repetem confirmação com guardas idempotentes |
 | risk.checkout-status-fixed-polling | PERFORMANCE | LOW | P3 | ACTIVE | CONFIRMED | Checkouts consultam status a cada cinco segundos sem backoff |
@@ -520,7 +527,7 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 - Direção: Separar responsabilidades em etapa futura guiada pelos flows.
 - Justificativa da prioridade: LOW com alcance MULTI_DOMAIN, considerando probabilidade, workaround e capacidade de detecção.
 
-### risk.payment-confirmed-before-external-delivery — Confirmação atômica e entrega externa formam fronteira de consistência eventual
+### Historical pre-resolution snapshot: risk.payment-confirmed-before-external-delivery
 
 - Tipo / severidade / prioridade: **DATA_INTEGRITY / MEDIUM / P1**
 - Status / confiança: **POTENTIAL / HIGH**

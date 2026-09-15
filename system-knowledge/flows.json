@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.3",
+  "generatedAt": "2026-09-15T23:30:00.000Z",
+  "stage": "2.6.0",
   "id": "rota5.flow-catalog.v1",
   "canonical": true,
   "count": 34,
@@ -606,7 +606,9 @@
           "Entrada inválida, autorização negada ou falha de persistência/integração termina sem afirmar sucesso."
         ],
         "timeout_expiration_paths": [],
-        "retry_reconciliation_paths": []
+        "retry_reconciliation_paths": [
+          "Worker reivindica intents vencidos com fencing/lease, retry limitado e dead-letter."
+        ]
       },
       "terminals": [
         "SUCCESS",
@@ -617,7 +619,7 @@
         "customer"
       ],
       "implementation_status": "CONFIRMADO",
-      "test_status": "PARTIAL",
+      "test_status": "COVERED",
       "domains": [
         "domain.whatsapp-conversations",
         "domain.ticketing-delivery"
@@ -642,7 +644,9 @@
       "database_functions": [
         "claim_whatsapp_outbound_delivery",
         "mark_buyer_ticket_qr_delivered",
-        "assign_participant_contacts_to_order_tickets"
+        "assign_participant_contacts_to_order_tickets",
+        "mark_whatsapp_outbound_delivery_sent",
+        "mark_whatsapp_outbound_delivery_failed"
       ],
       "database_triggers": [],
       "integrations": [
@@ -656,7 +660,9 @@
         "test-036",
         "test-037",
         "audit.mercado-pago-security",
-        "audit.seatmap-qr-image"
+        "audit.seatmap-qr-image",
+        "test-054",
+        "test-055"
       ],
       "failing_tests": [],
       "evidence": [
@@ -3175,7 +3181,8 @@
         ],
         "timeout_expiration_paths": [],
         "retry_reconciliation_paths": [
-          "Webhook e consulta de status são caminhos distintos de reconciliação quando catalogados."
+          "Webhook e consulta de status são caminhos distintos de reconciliação quando catalogados.",
+          "Worker reivindica intents vencidos com fencing/lease, retry limitado e dead-letter."
         ]
       },
       "terminals": [
@@ -3187,7 +3194,7 @@
         "Mercado Pago"
       ],
       "implementation_status": "CONFIRMADO",
-      "test_status": "PARTIAL",
+      "test_status": "COVERED",
       "domains": [
         "domain.platform-runtime",
         "domain.orders-payments",
@@ -3229,7 +3236,9 @@
         "confirm_paid_ticket_order",
         "mark_buyer_ticket_qr_delivered",
         "claim_whatsapp_outbound_delivery",
-        "sync_official_table_map_reservation_status"
+        "sync_official_table_map_reservation_status",
+        "ensure_paid_ticket_delivery_intents",
+        "list_due_paid_ticket_delivery_orders"
       ],
       "database_triggers": [
         "reservations_sync_official_table_map_status"
@@ -3247,7 +3256,9 @@
         "test-036",
         "test-037",
         "audit.seatmap-qr-image",
-        "test-041"
+        "test-041",
+        "test-054",
+        "test-055"
       ],
       "failing_tests": [],
       "evidence": [
@@ -3334,7 +3345,8 @@
         ],
         "timeout_expiration_paths": [],
         "retry_reconciliation_paths": [
-          "Webhook e consulta de status são caminhos distintos de reconciliação quando catalogados."
+          "Webhook e consulta de status são caminhos distintos de reconciliação quando catalogados.",
+          "Worker reivindica intents vencidos com fencing/lease, retry limitado e dead-letter."
         ]
       },
       "terminals": [
@@ -3346,7 +3358,7 @@
         "Mercado Pago"
       ],
       "implementation_status": "CONFIRMADO",
-      "test_status": "PARTIAL",
+      "test_status": "COVERED",
       "domains": [
         "domain.platform-runtime",
         "domain.combo-commerce-fulfillment",
@@ -3373,7 +3385,10 @@
       ],
       "database_functions": [
         "consume_rate_limit",
-        "claim_whatsapp_outbound_delivery"
+        "claim_whatsapp_outbound_delivery",
+        "confirm_paid_combo_order",
+        "ensure_paid_combo_delivery_intents",
+        "list_due_paid_combo_delivery_tasks"
       ],
       "database_triggers": [],
       "integrations": [
@@ -3386,7 +3401,9 @@
         "test-022",
         "test-027",
         "test-028",
-        "test-041"
+        "test-041",
+        "test-056",
+        "test-057"
       ],
       "failing_tests": [],
       "evidence": [
@@ -6229,5 +6246,11 @@
       "test-053"
     ],
     "claim": "Direct regression and PostgreSQL evidence added only to administrative event capabilities and flows exercised by those tests."
+  },
+  "baseline_2_6_0": {
+    "ticket_paid_delivery": "DURABLE",
+    "combo_paid_delivery": "DURABLE",
+    "combo_ready_versioned_delivery": "DURABLE",
+    "external_delivery_semantics": "AT_LEAST_ONCE"
   }
 }

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-14T22:50:20.174Z",
-  "stage": "2.5.3",
+  "generatedAt": "2026-09-15T23:30:00.000Z",
+  "stage": "2.6.0",
   "count": 4,
   "critical": 1,
   "records": [
@@ -40,7 +40,7 @@
     {
       "id": "drift.vercel-latest-deployment",
       "object": "latest production deployment of linked project",
-      "local": "repository source e931d66d03a620d5e26588c8f6c8714c62ef5d1d; application source 148b8200a44f4eeb49e004af45060a302bac9f20",
+      "local": "repository source 0a10618648fc3f873afffd8f60e60bd0396b62e7; application source 148b8200a44f4eeb49e004af45060a302bac9f20",
       "remote": "latest Production deployment dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf is READY and serves the canonical aliases",
       "runtime": "Application source differs from repository HEAD only by later migration/test files.",
       "result": "EXPECTED_NON_RUNTIME_DRIFT",
@@ -51,7 +51,7 @@
         "RUNTIME_OBSERVED"
       ],
       "expected": "Deployment de produção mais recente READY e associado ao alias público.",
-      "observed": "dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf is READY with application source 148b8200a44f4eeb49e004af45060a302bac9f20; repository source is e931d66d03a620d5e26588c8f6c8714c62ef5d1d.",
+      "observed": "dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf is READY with application source 148b8200a44f4eeb49e004af45060a302bac9f20; repository source is 0a10618648fc3f873afffd8f60e60bd0396b62e7.",
       "evidence": [
         "Vercel deployment metadata",
         "Vercel inspect dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf",
@@ -296,5 +296,10 @@
     "observed_at": "2026-09-14T22:50:20.174Z",
     "tables": 45,
     "rpc_routes": 42
+  },
+  "baseline_2_6_0": {
+    "canonical_functional_source": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+    "deployment_parity": "NOT_REVALIDATED",
+    "new_deployment": false
   }
 }

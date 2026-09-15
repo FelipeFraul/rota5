@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.3",
+  "generatedAt": "2026-09-15T23:30:00.000Z",
+  "stage": "2.6.0",
   "baseline_id": "rota5-baseline-v1",
-  "version": "2.5.3",
+  "version": "2.6.0",
   "status": "FROZEN",
   "domains": 17,
   "modules": 66,
@@ -11,31 +11,30 @@
   "capabilities": 140,
   "flows": 34,
   "flow_steps": 169,
-  "state_transitions": 68,
+  "state_transitions": 74,
   "tables": 45,
   "stateful_tables": 23,
   "stateful_entities": 24,
-  "migrations": 83,
-  "sql_functions": 44,
+  "migrations": 87,
+  "sql_functions": 57,
   "triggers": 36,
   "data_relations": 2257,
   "integrations": 6,
   "webhooks": 2,
   "crons": 2,
   "environment_variables": 43,
-  "tests": 53,
-  "findings": 45,
+  "tests": 57,
+  "findings": 46,
   "findings_by_severity": {
-    "CRITICAL": 0,
     "HIGH": 11,
-    "MEDIUM": 23,
+    "INFO": 2,
     "LOW": 9,
-    "INFO": 2
+    "MEDIUM": 24
   },
   "findings_by_priority": {
     "P0": 3,
     "P1": 11,
-    "P2": 20,
+    "P2": 21,
     "P3": 9,
     "P4": 2
   },
@@ -80,13 +79,13 @@
     "product_health": "DEGRADED",
     "npm_test": {
       "status": "PASS",
-      "cases": 257,
-      "passed": 257,
+      "cases": 276,
+      "passed": 276,
       "failed": 0,
       "known_failures": 0,
       "skipped": 0,
       "todo": 0,
-      "change": "ADMIN_EVENT_ATOMICITY_AND_LOCATION_REGRESSIONS_ADDED"
+      "change": "PAID_TICKET_AND_COMBO_DURABILITY_REGRESSIONS_ADDED"
     },
     "infrastructure_health": "DEGRADED",
     "release_gate": {
@@ -110,14 +109,15 @@
     "risk.latest-rota5-deployment-error",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
-    "gap.test-runner-depends-on-untracked-loader"
+    "gap.test-runner-depends-on-untracked-loader",
+    "risk.payment-confirmed-before-external-delivery"
   ],
   "finding_status_metrics": {
     "active_p0": 0,
     "active_high": 0,
     "potential_high": 0,
     "open_high": 0,
-    "resolved": 13
+    "resolved": 14
   },
   "high_1_rollout": {
     "source_implementation": "IMPLEMENTED_AND_VALIDATED",
@@ -469,28 +469,24 @@
     "runtime_changed": false
   },
   "quality_gate": {
-    "version": "2.5.0",
+    "version": "2.6.0",
     "type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
-    "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
-    "source_fingerprint": "3ead25584e6d48eb0a6b16acb101c0cfbeb0f990714e535330dc94e7e4cee430",
-    "source_file_count": 379,
-    "migration_count": 83,
-    "production_runtime_source": "148b8200a44f4eeb49e004af45060a302bac9f20",
-    "production_deployment": "dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf",
-    "current_head_deployed": false,
-    "default_node_suite": "257/257 PASS",
-    "postgres_integration_suite": "2/2 PASS",
+    "source_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+    "source_fingerprint": "8ae8433d11de2ba5c137bd1aa99ee55d2fc85aecb80bbec89847904387c73dbf",
+    "source_file_count": 390,
+    "migration_count": 87,
+    "default_node_suite": "276/276 PASS",
+    "postgres_integration_suite": "4/4 PASS",
     "postgres_version": 16,
-    "quality_gate_run": 34898804387,
+    "quality_gate_run": 34984961888,
     "quality_gate": "PASS",
     "skip": 0,
     "todo": 0,
     "regressions": 0,
-    "atomicity": "RESOLVED",
-    "admin_location_consistency": "RESOLVED",
+    "paid_delivery_atomicity": "RESOLVED",
+    "external_delivery_semantics": "AT_LEAST_ONCE",
     "product_health": "DEGRADED",
     "infrastructure_health": "DEGRADED",
-    "git_auto_deploy": "DISABLED",
     "new_deployment": false
   },
   "release_blocker_reconciliation": {
@@ -564,20 +560,21 @@
     "capabilities": 140,
     "flows": 34,
     "flow_steps": 169,
-    "state_transitions": 68,
+    "state_transitions": 74,
     "tables": 45,
     "stateful_tables": 23,
     "stateful_entities": 24,
-    "migrations": 83,
-    "sql_functions": 44,
+    "migrations": 87,
+    "sql_functions": 57,
     "triggers": 36,
+    "sequences": 1,
     "data_relations": 2257,
     "integrations": 6,
     "webhooks": 2,
     "crons": 2,
     "environment_variables": 43,
-    "tests": 53,
-    "findings": 45
+    "tests": 57,
+    "findings": 46
   },
   "active_high_findings": [],
   "potential_high_findings": [],
@@ -634,5 +631,14 @@
     "health_unchanged": true,
     "release_blockers_unchanged": true,
     "deployment_unchanged": true
+  },
+  "sequences": 1,
+  "baseline_2_6_0": {
+    "change_type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+    "previous_baseline": "2.5.3",
+    "previous_functional_source": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+    "canonical_functional_source": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+    "finding_resolution": "risk.payment-confirmed-before-external-delivery",
+    "residual_finding": "risk.paid-delivery-ambiguous-external-ack"
   }
 }

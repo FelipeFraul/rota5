@@ -1,6 +1,8 @@
+> **Current Baseline 2.6.0 (2026-09-15):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `0a10618648fc3f873afffd8f60e60bd0396b62e7` (fingerprint `8ae8433d11de2ba5c137bd1aa99ee55d2fc85aecb80bbec89847904387c73dbf`, 390 files, 87 migrations, 57 SQL functions, 1 sequence). Paid TICKET/COMBO delivery work is durably persisted in the payment transaction; external delivery remains **AT_LEAST_ONCE**, never claimed exactly-once. Findings: 46 total, 14 RESOLVED, 22 ACTIVE, 5 POTENTIAL, 5 NOT_VALIDATED, 0 release blockers. Product and infrastructure health remain **DEGRADED**. Quality Gate 34984961888 passed 276/276 Node and 4/4 PostgreSQL 16 on the exact source. Baseline commit is `SELF_NOT_RECORDED`; no deployment or database mutation occurs in this documentary freeze.
+
 # State Transitions — Etapa 4
 
-Foram catalogadas **68 transições** suportadas pelo código/migrations. Campo de origem ausente significa inserção de linha; o catálogo não inventa estado anterior não armazenado. Valores separados por `|` representam alternativas explicitamente aceitas.
+Foram catalogadas **74 transições** suportadas pelo código/migrations. Campo de origem ausente significa inserção de linha; o catálogo não inventa estado anterior não armazenado. Valores separados por `|` representam alternativas explicitamente aceitas.
 
 | ID | Entidade | De | Para | Capability | Flow | Trigger | Implementação/status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -88,4 +90,4 @@ Foram catalogadas **68 transições** suportadas pelo código/migrations. Campo 
 Quatro registros sem caminho executável no runtime atual foram substituídos por ramos observados dos mesmos lifecycles. Entidades, capabilities, verbos e evidências inexatas também foram reconciliados com o código-fonte. O total reproduzível permanece em **66**.
 # Baseline 2.0.1 HIGH #1 transitions
 
-The canonical catalog contains 68 transitions. `state.067` and `state.068` are OBSERVED on FINAL_DB: temporary pause and fixed revoke invalidated linked sessions, and subsequent use was rejected. Gates A-I and CONTRACT passed.
+The canonical catalog contains 74 transitions. `state.067` and `state.068` remain the FINAL_DB credential-revocation proof; `state.069` through `state.074` cover durable paid-delivery retry, dead-letter and superseded transitions for TICKET and COMBO.

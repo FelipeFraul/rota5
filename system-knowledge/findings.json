@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T22:50:20.174Z",
-  "stage": "2.5.3",
-  "sourceCommit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
-  "scope": "Canonical finding catalog for Baseline 2.5.3, including resolved stabilization history and post-freeze documentary corrections.",
+  "generatedAt": "2026-09-15T23:30:00.000Z",
+  "stage": "2.6.0",
+  "sourceCommit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+  "scope": "Canonical finding catalog for Baseline 2.6.0, with current lifecycle state separated from preserved historical evidence.",
   "method": "Reconciled machine-readable current state for Baseline 2.5.x against the canonical taxonomy, functional source, current behavioral catalogs and preserved historical evidence. Baseline 2.5.0 resolved the administrative atomicity finding and incorporated the resolved location-consistency finding.",
-  "count": 45,
+  "count": 46,
   "records": [
     {
       "id": "bug.create-event-invalid-jsx",
@@ -306,7 +306,7 @@
         },
         {
           "path": "package.json",
-          "claim": "Current default suite passes 257/257, including the direct duplication test.",
+          "claim": "Current default suite passes 276/276, including the direct duplication test.",
           "evidence_state": "CURRENT"
         }
       ],
@@ -387,7 +387,7 @@
           },
           {
             "path": "package.json",
-            "claim": "Current default suite passes 257/257, including the direct duplication test.",
+            "claim": "Current default suite passes 276/276, including the direct duplication test.",
             "evidence_state": "CURRENT"
           }
         ],
@@ -441,7 +441,7 @@
         },
         {
           "path": "package.json",
-          "claim": "Current default suite passes 257/257.",
+          "claim": "Current default suite passes 276/276.",
           "evidence_state": "CURRENT"
         }
       ],
@@ -543,7 +543,7 @@
           },
           {
             "path": "package.json",
-            "claim": "Current default suite passes 257/257.",
+            "claim": "Current default suite passes 276/276.",
             "evidence_state": "CURRENT"
           }
         ],
@@ -2281,7 +2281,7 @@
       "evidence": [
         {
           "path": "system-knowledge/tests.json",
-          "claim": "The current canonical default suite passes 257/257 with zero failures, skips, todos or regressions.",
+          "claim": "The current canonical default suite passes 276/276 with zero failures, skips, todos or regressions.",
           "evidence_state": "CURRENT"
         },
         {
@@ -2405,7 +2405,7 @@
         "current_evidence": [
           {
             "path": "system-knowledge/tests.json",
-            "claim": "The current canonical default suite passes 257/257 with zero failures, skips, todos or regressions.",
+            "claim": "The current canonical default suite passes 276/276 with zero failures, skips, todos or regressions.",
             "evidence_state": "CURRENT"
           },
           {
@@ -2460,7 +2460,7 @@
         },
         {
           "path": ".github/workflows/quality-gate.yml",
-          "claim": "Quality Gate run 34898804387 passed npm ci, 257/257 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
+          "claim": "Quality Gate run 34984961888 passed npm ci, 276/276 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
           "evidence_state": "CURRENT"
         },
         {
@@ -2614,7 +2614,7 @@
           },
           {
             "path": ".github/workflows/quality-gate.yml",
-            "claim": "Quality Gate run 34898804387 passed npm ci, 257/257 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
+            "claim": "Quality Gate run 34984961888 passed npm ci, 276/276 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
             "evidence_state": "CURRENT"
           },
           {
@@ -2750,7 +2750,7 @@
         },
         {
           "path": "package.json",
-          "claim": "The current default suite uses the tracked loader and passes 257/257.",
+          "claim": "The current default suite uses the tracked loader and passes 276/276.",
           "evidence_state": "CURRENT"
         }
       ],
@@ -2823,7 +2823,7 @@
           },
           {
             "path": "package.json",
-            "claim": "The current default suite uses the tracked loader and passes 257/257.",
+            "claim": "The current default suite uses the tracked loader and passes 276/276.",
             "evidence_state": "CURRENT"
           }
         ],
@@ -3240,31 +3240,36 @@
     },
     {
       "id": "risk.payment-confirmed-before-external-delivery",
-      "title": "Confirmação atômica e entrega externa formam fronteira de consistência eventual",
+      "title": "Trabalho de entrega paga é persistido atomicamente antes da execução externa",
       "type": "DATA_INTEGRITY",
       "severity": "MEDIUM",
       "priority": "P1",
-      "status": "POTENTIAL",
+      "status": "RESOLVED",
       "confidence": "HIGH",
-      "description": "A RPC confirma pedido/emite tickets; depois o handler chama entrega Z-API. Falha de entrega é registrada e não reverte pagamento/emissão, exigindo reaper/reenvio.",
+      "description": "TICKET e COMBO persistem intents duráveis de entrega na mesma transação que confirma o pagamento; workers recuperam falhas posteriores sem bypass canônico identificado.",
       "evidence": [
         {
-          "path": "src/app/api/webhook/payment/mercado-pago/route.ts",
-          "line": 497,
-          "claim": "Confirma pedido por confirm_paid_ticket_order."
+          "path": "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql",
+          "claim": "A confirmação paga de TICKET persiste os intents de entrega na mesma fronteira transacional.",
+          "evidence_state": "CURRENT"
         },
         {
-          "path": "src/app/api/webhook/payment/mercado-pago/route.ts",
-          "line": 538,
-          "claim": "Entrega ocorre depois da confirmação."
+          "path": "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql",
+          "claim": "A confirmação paga de COMBO persiste redemption e intents versionados na mesma fronteira transacional.",
+          "evidence_state": "CURRENT"
         },
         {
-          "path": "src/lib/tickets/services/whatsappOutboundDeliveries.ts",
-          "line": 14,
-          "claim": "Delivery persiste idempotency_key e estado."
+          "path": "scripts/test-paid-ticket-delivery-postgres.mjs",
+          "claim": "Integração PostgreSQL valida atomicidade, replay, claim fencing, retries e dead-letter de TICKET.",
+          "evidence_state": "CURRENT"
+        },
+        {
+          "path": "scripts/test-paid-combo-delivery-postgres.mjs",
+          "claim": "Integração PostgreSQL valida atomicidade, replay, colisão de códigos e entrega durável de COMBO.",
+          "evidence_state": "CURRENT"
         }
       ],
-      "impact": "Cliente pode ficar temporariamente pago e emitido sem receber o ingresso; a recuperação depende da fila/reaper e observabilidade.",
+      "impact": "O pagamento confirmado não fica sem trabalho local recuperável para a entrega inicial nos fluxos pagos TICKET e COMBO auditados.",
       "domains": [
         "domain.orders-payments",
         "domain.ticketing-delivery",
@@ -3298,9 +3303,64 @@
         "integration-supabase"
       ],
       "blast_radius": "MULTI_DOMAIN",
-      "workaround": "Idempotency key, estados de delivery, reenvio e reaper reduzem o risco e permitem recuperação.",
-      "direction": "Tratar a fronteira como saga observável com recuperação testada.",
-      "priority_justification": "P1 pelo vínculo com dinheiro/entrega, apesar das mitigações existentes."
+      "workaround": "Nenhum workaround operacional é exigido para a causa raiz resolvida; falhas posteriores são retomadas pelos workers duráveis.",
+      "direction": "Manter os testes PostgreSQL de atomicidade e a observabilidade de retry/dead-letter como gates permanentes.",
+      "priority_justification": "P1 histórico preservado por envolver dinheiro e entrega; lifecycle atual RESOLVED.",
+      "current_state": {
+        "lifecycle": "RESOLVED",
+        "operational_open": false,
+        "release_blocking": false,
+        "workaround_required": false,
+        "current_impact": "Trabalho de entrega inicial é persistido atomicamente; execução externa permanece at-least-once.",
+        "top_level_claims": "CURRENT_RESOLUTION_ONLY"
+      },
+      "resolution": {
+        "resolved_at": "2026-09-15",
+        "root_cause": "Pagamento podia ser confirmado sem prova de que todo o trabalho necessário à entrega inicial estivesse persistido atomicamente e recuperável.",
+        "current_resolution": "TICKET e COMBO persistem trabalho durável na transação de confirmação; workers usam lease, claim/fencing, retries limitados e dead-letter. Nenhum bypass canônico atual foi encontrado.",
+        "external_delivery_semantics": "AT_LEAST_ONCE",
+        "exactly_once_external_proven": false,
+        "migrations": [
+          "20260915000100_make_paid_ticket_delivery_durable.sql",
+          "20260915000200_make_paid_combo_delivery_durable.sql",
+          "20260915000300_make_combo_redemption_codes_collision_safe.sql",
+          "20260915000400_minimize_combo_redemption_code_sequence_privileges.sql"
+        ],
+        "quality_gate": {
+          "run": 34984961888,
+          "source_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+          "node": "276/276 PASS",
+          "postgresql": "4/4 PASS",
+          "typecheck": "PASS",
+          "lint": "PASS_WITH_23_PREEXISTING_WARNINGS",
+          "build": "PASS"
+        },
+        "historical_evidence": {
+          "title": "Confirmação atômica e entrega externa formam fronteira de consistência eventual",
+          "description": "A RPC confirma pedido/emite tickets; depois o handler chama entrega Z-API. Falha de entrega é registrada e não reverte pagamento/emissão, exigindo reaper/reenvio.",
+          "evidence": [
+            {
+              "path": "src/app/api/webhook/payment/mercado-pago/route.ts",
+              "line": 497,
+              "claim": "Confirma pedido por confirm_paid_ticket_order."
+            },
+            {
+              "path": "src/app/api/webhook/payment/mercado-pago/route.ts",
+              "line": 538,
+              "claim": "Entrega ocorre depois da confirmação."
+            },
+            {
+              "path": "src/lib/tickets/services/whatsappOutboundDeliveries.ts",
+              "line": 14,
+              "claim": "Delivery persiste idempotency_key e estado."
+            }
+          ],
+          "impact": "Cliente pode ficar temporariamente pago e emitido sem receber o ingresso; a recuperação depende da fila/reaper e observabilidade.",
+          "workaround": "Idempotency key, estados de delivery, reenvio e reaper reduzem o risco e permitem recuperação.",
+          "direction": "Tratar a fronteira como saga observável com recuperação testada.",
+          "priority_justification": "P1 pelo vínculo com dinheiro/entrega, apesar das mitigações existentes."
+        }
+      }
     },
     {
       "id": "risk.whatsapp-conversation-context-race",
@@ -3785,6 +3845,85 @@
       "workaround": "server-only, proxy, cookies, CSRF, tokens e schemas são usados nas rotas catalogadas.",
       "direction": "Manter uma matriz verificável de autorização por entrypoint e reduzir privilégios quando possível.",
       "priority_justification": "P2 por ser risco estrutural real com controles presentes e sem exploração confirmada."
+    },
+    {
+      "id": "risk.paid-delivery-ambiguous-external-ack",
+      "title": "Entrega externa pode duplicar após ACK ambíguo da Z-API",
+      "type": "IDEMPOTENCY",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "Os intents locais são duráveis e processados com semântica at-least-once. Se a Z-API aceitar a mensagem mas a aplicação perder a resposta ou falhar antes de persistir sent, o lease poderá expirar e o mesmo efeito externo ser tentado novamente; sendZapiText/sendZapiImage não fornecem chave de idempotência reconhecida pelo provedor.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/whatsappOutboundDeliveries.ts",
+          "claim": "Claim token, lease e fencing protegem concorrência local, mas não deduplicam um ACK externo perdido."
+        },
+        {
+          "path": "src/lib/tickets/services/paidTicketDeliveryWorker.ts",
+          "claim": "Paid TICKET delivery retenta intents duráveis após falha ou lease expirado."
+        },
+        {
+          "path": "src/lib/tickets/services/paidComboDeliveryWorker.ts",
+          "claim": "Paid/versioned-ready COMBO delivery retenta intents duráveis após falha ou lease expirado."
+        }
+      ],
+      "impact": "Possível mensagem ou QR duplicado sob ACK externo ambíguo; trabalho não é perdido e pagamento/estado interno não é duplicado por essa condição.",
+      "domains": [
+        "domain.ticketing-delivery",
+        "domain.combo-commerce-fulfillment",
+        "domain.whatsapp-conversations"
+      ],
+      "modules": [
+        "ticket.delivery",
+        "combo.offers",
+        "combo.redemption",
+        "messaging.outbound-deliveries"
+      ],
+      "capabilities": [
+        "ticket.deliver",
+        "combo.deliver_qr",
+        "combo.prepare",
+        "messaging.protect_delivery"
+      ],
+      "flows": [
+        "ticket.delivery",
+        "ticket.payment_confirmation",
+        "combo.payment_confirmation"
+      ],
+      "tables": [
+        "whatsapp_outbound_deliveries"
+      ],
+      "functions": [
+        "claim_whatsapp_outbound_delivery"
+      ],
+      "integrations": [
+        "integration-zapi",
+        "integration-supabase"
+      ],
+      "blast_radius": "SCOPED_MULTI_FLOW",
+      "scope": [
+        "paid TICKET delivery",
+        "paid COMBO delivery",
+        "versioned COMBO READY delivery"
+      ],
+      "exclusions": [
+        "Outros fluxos WhatsApp não foram generalizados sem auditoria específica."
+      ],
+      "workaround": "Outbox local, claim, fencing, lease, retry bounded e dead-letter reduzem perda e concorrência local, mas não fornecem exactly-once externo.",
+      "direction": "Investigar idempotency key, client reference ou reconciliação confiável por message ID antes de retry; se indisponível, formalizar semântica at-least-once.",
+      "priority_justification": "P2: risco residual de duplicação externa, sem perda do trabalho nem duplicação do pagamento/estado interno e sem evidência de release blocker.",
+      "current_state": {
+        "lifecycle": "ACTIVE",
+        "operational_open": true,
+        "release_blocking": false,
+        "workaround_required": true,
+        "current_impact": "Possível duplicação de mensagem/QR apenas sob ACK externo ambíguo.",
+        "top_level_claims": "CURRENT_RISK"
+      },
+      "delivery_semantics": "AT_LEAST_ONCE",
+      "exactly_once_external_proven": false
     }
   ],
   "finding_status_taxonomy": {
@@ -3914,5 +4053,15 @@
     "atomicity": "RESOLVED",
     "admin_location_consistency": "RESOLVED",
     "remote_openapi_revalidated": true
+  },
+  "baseline_2_6_0": {
+    "change_type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+    "resolved": [
+      "risk.payment-confirmed-before-external-delivery"
+    ],
+    "new_findings": [
+      "risk.paid-delivery-ambiguous-external-ack"
+    ],
+    "release_blockers": 0
   }
 }

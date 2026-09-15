@@ -1,3 +1,9 @@
+> **Current Baseline 2.6.0 (2026-09-15):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `0a10618648fc3f873afffd8f60e60bd0396b62e7` (fingerprint `8ae8433d11de2ba5c137bd1aa99ee55d2fc85aecb80bbec89847904387c73dbf`, 390 files, 87 migrations, 57 SQL functions, 1 sequence). Paid TICKET/COMBO delivery work is durably persisted in the payment transaction; external delivery remains **AT_LEAST_ONCE**, never claimed exactly-once. Findings: 46 total, 14 RESOLVED, 22 ACTIVE, 5 POTENTIAL, 5 NOT_VALIDATED, 0 release blockers. Product and infrastructure health remain **DEGRADED**. Quality Gate 34984961888 passed 276/276 Node and 4/4 PostgreSQL 16 on the exact source. Baseline commit is `SELF_NOT_RECORDED`; no deployment or database mutation occurs in this documentary freeze.
+
+## Current paid-delivery boundary — Baseline 2.6.0
+
+The original payment-before-durable-work risk is RESOLVED. The remaining `risk.paid-delivery-ambiguous-external-ack` is ACTIVE MEDIUM/P2 and non-blocking: local work is at-least-once and an ambiguous Z-API ACK can duplicate an external message/QR.
+
 # Riscos de integração
 
 Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb8442f95493de3ca4ec4d4c997b e o working tree descrito no machine-readable. Esta etapa registra fatos e riscos; não aplica correções.
@@ -41,7 +47,7 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 - Direção: Propagar um identificador comum nos registros e logs críticos.
 - Justificativa da prioridade: P2 porque reduz detecção e diagnóstico, mas não prova falha funcional.
 
-### risk.payment-confirmed-before-external-delivery — Confirmação atômica e entrega externa formam fronteira de consistência eventual
+### Historical pre-resolution snapshot: risk.payment-confirmed-before-external-delivery
 
 - Tipo / severidade / prioridade: **DATA_INTEGRITY / MEDIUM / P1**
 - Status / confiança: **POTENTIAL / HIGH**

@@ -1,27 +1,27 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.3",
+  "generatedAt": "2026-09-15T23:30:00.000Z",
+  "stage": "2.6.0",
   "baseline_id": "rota5-baseline-v1",
-  "version": "2.5.3",
+  "version": "2.6.0",
   "status": "FROZEN",
-  "frozen_at": "2026-09-14T22:14:45.242Z",
+  "frozen_at": "2026-09-15T23:30:00.000Z",
   "source_state": {
-    "base_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
-    "source_tree_fingerprint": "6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954",
-    "source_tree_file_count": 379,
+    "base_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+    "source_tree_fingerprint": "8ae8433d11de2ba5c137bd1aa99ee55d2fc85aecb80bbec89847904387c73dbf",
+    "source_tree_file_count": 390,
     "functional_changes_since_base": [],
     "generated_from_working_tree": false,
     "baseline_commit": "SELF_NOT_RECORDED",
     "baseline_commit_policy": "The Git commit containing this baseline is intentionally not embedded in its own content to avoid self-reference."
   },
   "git_observation_at_generation": {
-    "observed_at": "2026-09-14T22:14:45.242Z",
+    "observed_at": "2026-09-15T23:30:00.000Z",
     "branch": "production",
-    "head": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
-    "working_tree_clean": false,
+    "head": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+    "working_tree_clean": true,
     "validity_role": "INFORMATIONAL_ONLY",
-    "note": "Historical Git observation captured during the Baseline 2.5.0 freeze; functional source fingerprint is derived from the canonical repository source."
+    "note": "Git observation at Baseline 2.6.0 generation; the canonical functional source is reconstructed from the pure source commit."
   },
   "baseline_integrity": {
     "status": "PASS",
@@ -31,11 +31,11 @@
   "product_health": {
     "status": "DEGRADED",
     "reason": "Canonical release blockers are zero, but current operational and validation-queue findings remain; HEALTHY is not justified.",
-    "findings": 45,
+    "findings": 46,
     "active_p0": 0,
     "active_high": 0,
     "critical": 0,
-    "resolved": 13,
+    "resolved": 14,
     "potential_high": 0,
     "open_high": 0
   },
@@ -47,20 +47,21 @@
     "capabilities": 140,
     "flows": 34,
     "flow_steps": 169,
-    "state_transitions": 68,
+    "state_transitions": 74,
     "tables": 45,
     "stateful_tables": 23,
     "stateful_entities": 24,
-    "migrations": 83,
-    "sql_functions": 44,
+    "migrations": 87,
+    "sql_functions": 57,
     "triggers": 36,
+    "sequences": 1,
     "data_relations": 2257,
     "integrations": 6,
     "webhooks": 2,
     "crons": 2,
     "environment_variables": 43,
-    "tests": 53,
-    "findings": 45
+    "tests": 57,
+    "findings": 46
   },
   "artifact_counts": {
     "human_documents": 53,
@@ -255,7 +256,8 @@
     "Critical coverage resolution: 21/21 MUST capabilities and 2/2 high-risk flows covered; 0 MUST gaps, 0 high-risk flow gaps, 0 skip, 0 todo and 0 regressions. The gross uncovered-capability counter is not required to be zero.",
     "Quality Gate run 34867214724 passed on 67845326088eac47452224b00ef1e866036e86f1, including PostgreSQL 16 and real trigger sync_official_table_map_reservation_status. Earlier startup failures remain historical only.",
     "Baseline 2.4.1 is a PATCH_DOCUMENTARY_CORRECTION: two stale findings reconciled as RESOLVED and the still-confirmed heterogeneous E2E gap retained ACTIVE at P2 after per-flow assessment.",
-    "No new specific finding or P1 blocker is supported by current evidence. ticket.purchase is COMPONENT_BEHAVIOR_COVERED but not TRUE_END_TO_END_COVERED; the missing unified trace remains P2 hardening."
+    "No new specific finding or P1 blocker is supported by current evidence. ticket.purchase is COMPONENT_BEHAVIOR_COVERED but not TRUE_END_TO_END_COVERED; the missing unified trace remains P2 hardening.",
+    "Baseline 2.6.0: MINOR_COMPATIBLE_FUNCTIONAL_CHANGE for atomic durable paid TICKET/COMBO delivery, versioned COMBO QR recovery and collision-safe redemption codes; external effects remain at-least-once."
   ],
   "resolved_findings": [
     "bug.create-event-invalid-jsx",
@@ -270,7 +272,8 @@
     "risk.latest-rota5-deployment-error",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
-    "gap.test-runner-depends-on-untracked-loader"
+    "gap.test-runner-depends-on-untracked-loader",
+    "risk.payment-confirmed-before-external-delivery"
   ],
   "active_high_findings": [],
   "potential_high_findings": [],
@@ -753,5 +756,12 @@
     "health_unchanged": true,
     "release_blockers_unchanged": true,
     "deployment_unchanged": true
+  },
+  "baseline_2_6_0": {
+    "semver_class": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+    "source_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+    "quality_gate_run": 34984961888,
+    "quality_gate": "PASS",
+    "baseline_commit": "SELF_NOT_RECORDED"
   }
 }

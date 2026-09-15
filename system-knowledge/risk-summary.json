@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.3",
-  "sourceCommit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
-  "scope": "Current risk, coverage, validation and release-blocker projection for Baseline 2.5.3.",
+  "generatedAt": "2026-09-15T23:30:00.000Z",
+  "stage": "2.6.0",
+  "sourceCommit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+  "scope": "Current risk, coverage, validation and release-blocker projection for Baseline 2.6.0.",
   "method": "All current metrics are derived from canonical catalogs and finding_status_taxonomy; historical snapshots remain only in version-labelled fields.",
   "status": "PASS",
-  "total": 45,
+  "total": 46,
   "by_type": {
     "ARCHITECTURE": 1,
     "AUTHORIZATION": 1,
@@ -18,7 +18,7 @@
     "DATA_INTEGRITY": 3,
     "DEAD_CODE": 1,
     "DUPLICATION": 1,
-    "IDEMPOTENCY": 1,
+    "IDEMPOTENCY": 2,
     "INFRASTRUCTURE": 1,
     "INTEGRATION": 1,
     "LEGACY": 2,
@@ -34,23 +34,23 @@
   "by_severity": {
     "CRITICAL": 0,
     "HIGH": 11,
-    "MEDIUM": 23,
+    "INFO": 2,
     "LOW": 9,
-    "INFO": 2
+    "MEDIUM": 24
   },
   "by_priority": {
     "P0": 3,
     "P1": 11,
-    "P2": 20,
+    "P2": 21,
     "P3": 9,
     "P4": 2
   },
   "by_status": {
-    "ACTIVE": 21,
-    "POTENTIAL": 6,
+    "ACTIVE": 22,
+    "POTENTIAL": 5,
     "OPEN": 0,
     "MITIGATED": 0,
-    "RESOLVED": 13,
+    "RESOLVED": 14,
     "ACCEPTED": 0,
     "NOT_VALIDATED": 5
   },
@@ -90,22 +90,22 @@
     "capabilities": 140,
     "flows": 34,
     "flow_steps": 169,
-    "state_transitions": 68,
+    "state_transitions": 74,
     "tables": 45,
-    "sql_functions": 44,
+    "sql_functions": 57,
     "triggers": 36,
     "integrations": 6,
     "webhooks": 2,
     "crons": 2,
     "environment_variables": 43,
     "configuration_drifts": 4,
-    "catalogued_tests": 53,
-    "findings": 45
+    "catalogued_tests": 57,
+    "findings": 46
   },
   "validation": {
     "npm_test": {
-      "cases": 257,
-      "passed": 257,
+      "cases": 276,
+      "passed": 276,
       "failed": 0,
       "status": "PASS",
       "known_failures": 0,
@@ -285,8 +285,8 @@
     },
     "postgres_integration": {
       "postgres_version": 16,
-      "cases": 2,
-      "passed": 2,
+      "cases": 4,
+      "passed": 4,
       "failed": 0,
       "status": "PASS"
     }
@@ -306,25 +306,22 @@
     "risk.latest-rota5-deployment-error",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
-    "gap.test-runner-depends-on-untracked-loader"
+    "gap.test-runner-depends-on-untracked-loader",
+    "risk.payment-confirmed-before-external-delivery"
   ],
   "infrastructure_identity": "CORRECT",
   "current_head_deployed": false,
   "potential_high_critical": [],
   "open_high_critical": [],
-  "potential_p0_p1": [
-    "risk.payment-confirmed-before-external-delivery"
-  ],
-  "open_p0_p1": [
-    "risk.payment-confirmed-before-external-delivery"
-  ],
+  "potential_p0_p1": [],
+  "open_p0_p1": [],
   "metric_semantics": {
     "active": "status in {ACTIVE}",
     "potential": "status in {POTENTIAL}",
     "open": "status in {ACTIVE, POTENTIAL, OPEN, MITIGATED}",
     "release_blocking": "status in {ACTIVE, OPEN, MITIGATED} at applicable severity",
     "closed_for_operational_metrics": "status in {RESOLVED, ACCEPTED, NOT_VALIDATED}",
-    "current_projection": "Derived at Baseline 2.5.3 generation time from canonical catalogs and lifecycle taxonomy.",
+    "current_projection": "Derived at Baseline 2.6.0 generation time from canonical catalogs and lifecycle taxonomy.",
     "release_blocker_rule": "operational_open + status.release_blocking + P0/P1 or CRITICAL/HIGH",
     "historical_snapshots": "Only fields whose names explicitly contain a baseline version or historical marker are historical."
   },
@@ -697,8 +694,8 @@
     "resolved_semantic_contract_required": true
   },
   "resolved_semantic_invariants": {
-    "RESOLVED_FINDINGS_TOTAL": 13,
-    "RESOLVED_CURRENT_STATE_COMPLETE": 13,
+    "RESOLVED_FINDINGS_TOTAL": 14,
+    "RESOLVED_CURRENT_STATE_COMPLETE": 14,
     "RESOLVED_WITHOUT_CURRENT_STATE": 0,
     "RESOLVED_WITH_ACTIVE_TOP_LEVEL_CLAIMS": 0,
     "RESOLVED_WITH_NONCURRENT_TOP_LEVEL_EVIDENCE": 0,
@@ -727,5 +724,11 @@
     "change_type": "PATCH_DOCUMENTARY_CORRECTION",
     "metrics_unchanged": true,
     "release_blockers": 0
+  },
+  "baseline_2_6_0": {
+    "source_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+    "quality_gate_run": 34984961888,
+    "quality_gate": "PASS",
+    "external_delivery_semantics": "AT_LEAST_ONCE"
   }
 }

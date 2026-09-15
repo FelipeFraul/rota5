@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.3",
-  "count": 68,
+  "generatedAt": "2026-09-15T23:30:00.000Z",
+  "stage": "2.6.0",
+  "count": 74,
   "records": [
     {
       "id": "state.001",
@@ -1421,6 +1421,72 @@
       "status": "OBSERVED",
       "source_implementation_status": "IMPLEMENTED_AND_VALIDATED",
       "runtime_validation_status": "POST_CONTRACT_RUNTIME_PASS"
+    },
+    {
+      "id": "state.069",
+      "entity": "whatsapp_outbound_delivery",
+      "from": "failed",
+      "to": "sending",
+      "trigger": "DURABLE_WORKER",
+      "capability": "messaging.protect_delivery",
+      "flow": "ticket.delivery",
+      "status": "OBSERVED",
+      "evidence": "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql; supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
+    },
+    {
+      "id": "state.070",
+      "entity": "whatsapp_outbound_delivery",
+      "from": "sending",
+      "to": "dead_letter",
+      "trigger": "DURABLE_WORKER",
+      "capability": "ticket.deliver",
+      "flow": "ticket.delivery",
+      "status": "OBSERVED",
+      "evidence": "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql; supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
+    },
+    {
+      "id": "state.071",
+      "entity": "whatsapp_outbound_delivery",
+      "from": "pending",
+      "to": "superseded",
+      "trigger": "DURABLE_WORKER",
+      "capability": "ticket.deliver",
+      "flow": "ticket.delivery",
+      "status": "OBSERVED",
+      "evidence": "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql; supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
+    },
+    {
+      "id": "state.072",
+      "entity": "whatsapp_outbound_delivery",
+      "from": "failed",
+      "to": "sending",
+      "trigger": "DURABLE_WORKER",
+      "capability": "messaging.protect_delivery",
+      "flow": "combo.payment_confirmation",
+      "status": "OBSERVED",
+      "evidence": "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql; supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
+    },
+    {
+      "id": "state.073",
+      "entity": "whatsapp_outbound_delivery",
+      "from": "sending",
+      "to": "dead_letter",
+      "trigger": "DURABLE_WORKER",
+      "capability": "combo.deliver_qr",
+      "flow": "combo.payment_confirmation",
+      "status": "OBSERVED",
+      "evidence": "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql; supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
+    },
+    {
+      "id": "state.074",
+      "entity": "whatsapp_outbound_delivery",
+      "from": "pending",
+      "to": "superseded",
+      "trigger": "DURABLE_WORKER",
+      "capability": "combo.deliver_qr",
+      "flow": "combo.payment_confirmation",
+      "status": "OBSERVED",
+      "evidence": "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql; supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
     }
   ],
   "entities": [

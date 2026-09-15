@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T22:14:45.242Z",
+  "generatedAt": "2026-09-15T23:30:00.000Z",
   "count": 66,
   "records": [
     {
@@ -689,7 +689,7 @@
       "type": "module",
       "domain": "domain.whatsapp-conversations",
       "path": "src/lib/tickets/services/whatsappOutboundDeliveries.ts",
-      "responsibility": "Criar, reivindicar e finalizar tentativas de envio.",
+      "responsibility": "Persistir, reivindicar com fencing/lease e finalizar trabalho outbound com retry limitado e dead-letter.",
       "status": "CONFIRMADO",
       "exports": [
         "getOrCreateWhatsAppOutboundDelivery",
@@ -716,7 +716,9 @@
       ],
       "tests": [
         "test-paid-delivery-outbound-idempotency.mjs",
-        "test-whatsapp-outbound-delivery-security.mjs"
+        "test-whatsapp-outbound-delivery-security.mjs",
+        "test-paid-ticket-delivery-durable.mjs",
+        "test-paid-combo-delivery-durable.mjs"
       ],
       "evidence": [
         "src/lib/tickets/services/whatsappOutboundDeliveries.ts",
@@ -1421,7 +1423,7 @@
       "type": "module",
       "domain": "domain.orders-payments",
       "path": "src/app/api/webhook/payment/mercado-pago/route.ts",
-      "responsibility": "Validar webhook, registrar evento, consultar pagamento e confirmar pedido ticket/combo.",
+      "responsibility": "Validar webhook e confirmar pagamentos TICKET/COMBO por RPCs que persistem atomicamente o trabalho inicial de entrega.",
       "status": "CONFIRMADO",
       "exports": [
         "POST"
@@ -1455,7 +1457,9 @@
         "registra payment_event; confirma pedido; aciona entrega"
       ],
       "tests": [
-        "test-paid-delivery-outbound-idempotency.mjs"
+        "test-paid-delivery-outbound-idempotency.mjs",
+        "test-paid-ticket-delivery-durable.mjs",
+        "test-paid-combo-delivery-durable.mjs"
       ],
       "evidence": [
         "src/app/api/webhook/payment/mercado-pago/route.ts",
@@ -1550,7 +1554,7 @@
       "type": "module",
       "domain": "domain.ticketing-delivery",
       "path": "src/lib/tickets/services/ticketDelivery.ts",
-      "responsibility": "Montar preferência/payload e enviar ingressos ao comprador/participantes.",
+      "responsibility": "Executar intents duráveis de entrega de ingressos, com recuperação pelo worker.",
       "status": "CONFIRMADO",
       "exports": [
         "buildTicketDeliveryMessage",
@@ -1585,7 +1589,9 @@
       ],
       "tests": [
         "test-ticket-delivery-distribution.mjs",
-        "test-paid-delivery-conversation-fallback.mjs"
+        "test-paid-delivery-conversation-fallback.mjs",
+        "test-paid-ticket-delivery-durable.mjs",
+        "test-paid-ticket-delivery-postgres.mjs"
       ],
       "evidence": [
         "src/lib/tickets/services/ticketDelivery.ts",
@@ -2178,7 +2184,7 @@
       "type": "module",
       "domain": "domain.combo-commerce-fulfillment",
       "path": "src/lib/tickets/services/comboRedemptions.ts",
-      "responsibility": "Validate session/QR, release after admission, prepare, request delivery choice and redeem through atomic database authorization.",
+      "responsibility": "Preparar/resgatar combos; novas entregas READY versionadas usam recuperação HMAC/outbox, enquanto qr_token_version=NULL permanece compatibilidade histórica.",
       "status": "PARCIALMENTE CONFIRMADO",
       "exports": [
         "validateKitchenSessionToken",
@@ -2220,7 +2226,9 @@
         "audit_combo_redemption_security.mjs",
         "test-gate-credential-revocation-contract.mjs",
         "test-gate-credential-revocation-postgres.mjs",
-        "test-gate-credential-revocation-rollout-postgres.mjs"
+        "test-gate-credential-revocation-rollout-postgres.mjs",
+        "test-paid-combo-delivery-durable.mjs",
+        "test-paid-combo-delivery-postgres.mjs"
       ],
       "evidence": [
         "src/lib/tickets/services/comboRedemptions.ts",
@@ -2239,7 +2247,7 @@
       "type": "module",
       "domain": "domain.combo-commerce-fulfillment",
       "path": "src/lib/tickets/services/comboQrImage.ts",
-      "responsibility": "Compor QR e dados no template de combo.",
+      "responsibility": "Compor QR de combo e derivar tokens versionados determinísticos/HMAC para recuperação durável.",
       "status": "CONFIRMADO",
       "exports": [
         "generateComboQrImageBuffer",
@@ -2259,7 +2267,8 @@
         "lê template/fontes e gera imagem"
       ],
       "tests": [
-        "test-combo-qr-image-template.mjs"
+        "test-combo-qr-image-template.mjs",
+        "test-paid-combo-delivery-durable.mjs"
       ],
       "evidence": [
         "src/lib/tickets/services/comboQrImage.ts",
@@ -2792,5 +2801,13 @@
       ]
     }
   ],
-  "stage": "2.5.3"
+  "stage": "2.6.0",
+  "baseline_2_6_0": {
+    "paid_delivery": "DURABLE_AT_LEAST_ONCE",
+    "new_source_files": [
+      "src/lib/tickets/services/comboQrTokens.ts",
+      "src/lib/tickets/services/paidTicketDeliveryWorker.ts",
+      "src/lib/tickets/services/paidComboDeliveryWorker.ts"
+    ]
+  }
 }

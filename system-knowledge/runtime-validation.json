@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-15T02:12:29.906Z",
-  "stage": "2.5.3",
-  "count": 24,
+  "generatedAt": "2026-09-15T23:30:00.000Z",
+  "stage": "2.6.0",
+  "count": 25,
   "ok": 22,
   "records": [
     {
@@ -131,7 +131,7 @@
       "method": "CLI_READ",
       "evidence_source": "REMOTE_CONFIG",
       "status": "PASS",
-      "result": "Latest Production deployment dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf is READY and runs application source 148b8200a44f4eeb49e004af45060a302bac9f20; repository e931d66d03a620d5e26588c8f6c8714c62ef5d1d adds only migration/test evidence.",
+      "result": "HISTORICAL SNAPSHOT (Baseline 2.5.x): Latest Production deployment dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf is READY and runs application source 148b8200a44f4eeb49e004af45060a302bac9f20; repository e931d66d03a620d5e26588c8f6c8714c62ef5d1d adds only migration/test evidence.",
       "side_effect_free": true,
       "expected": "Identificar deployment mais recente e deployment servido.",
       "evidence": [
@@ -139,7 +139,8 @@
         "148b8200a44f4eeb49e004af45060a302bac9f20",
         "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
         "Vercel linked Production deployment"
-      ]
+      ],
+      "temporal_semantics": "HISTORICAL_SNAPSHOT"
     },
     {
       "id": "runtime.health-declared",
@@ -189,7 +190,7 @@
       "method": "DOCUMENTARY_POLICY",
       "evidence_source": "CANONICAL_SOURCE_POLICY",
       "status": "PASS",
-      "result": "Canonical functional source is e931d66d03a620d5e26588c8f6c8714c62ef5d1d; baseline commit is SELF_NOT_RECORDED; live branch tip is VOLATILE_NOT_EMBEDDED_IN_FROZEN_BASELINE.",
+      "result": "Canonical functional source is 0a10618648fc3f873afffd8f60e60bd0396b62e7; baseline commit is SELF_NOT_RECORDED; live branch tip is VOLATILE_NOT_EMBEDDED_IN_FROZEN_BASELINE.",
       "side_effect_free": true,
       "expected": "Represent canonical functional source without embedding a volatile live branch tip or a self-referential baseline commit.",
       "evidence": [
@@ -197,7 +198,7 @@
         "system-knowledge/baseline-manifest.json"
       ],
       "temporal_semantics": "CURRENT_CANONICAL_SEMANTICS",
-      "canonical_functional_source": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+      "canonical_functional_source": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
       "baseline_commit": "SELF_NOT_RECORDED",
       "live_branch_tip": "VOLATILE_NOT_EMBEDDED_IN_FROZEN_BASELINE",
       "historical_snapshot": {
@@ -347,13 +348,14 @@
       "id": "runtime.baseline-2-5-production-source",
       "kind": "REMOTE_DEPLOYMENT",
       "status": "PASS",
-      "result": "Production dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf runs application source 148b8200a44f4eeb49e004af45060a302bac9f20; repository source e931d66d03a620d5e26588c8f6c8714c62ef5d1d differs only by migration/test files after deployment.",
+      "result": "HISTORICAL SNAPSHOT (Baseline 2.5.x): Production dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf runs application source 148b8200a44f4eeb49e004af45060a302bac9f20; repository source e931d66d03a620d5e26588c8f6c8714c62ef5d1d differs only by migration/test files after deployment.",
       "evidence": [
         "dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf",
         "148b8200a44f4eeb49e004af45060a302bac9f20",
         "e931d66d03a620d5e26588c8f6c8714c62ef5d1d"
       ],
-      "observed_at": "2026-09-14T22:14:45.242Z"
+      "observed_at": "2026-09-14T22:14:45.242Z",
+      "temporal_semantics": "HISTORICAL_SNAPSHOT"
     },
     {
       "id": "runtime.baseline-2-5-location-audit",
@@ -364,6 +366,15 @@
         "scripts/test-admin-event-catalog-postgres.mjs"
       ],
       "observed_at": "2026-09-14T22:14:45.242Z"
+    },
+    {
+      "id": "runtime.paid-delivery-quality-gate",
+      "kind": "QUALITY_GATE",
+      "target": "Paid TICKET + COMBO durable delivery",
+      "evidence_source": "GitHub Actions run 34984961888",
+      "status": "PASS",
+      "result": "276/276 Node, 4/4 PostgreSQL 16, typecheck, lint (23 preexisting warnings) and build passed on 0a10618648fc3f873afffd8f60e60bd0396b62e7.",
+      "temporal_semantics": "CURRENT_CANONICAL_SEMANTICS"
     }
   ],
   "prohibited_actions_performed": false,
@@ -669,6 +680,15 @@
     "current_status_counts": {
       "PASS": 22,
       "PARTIAL": 2
+    }
+  },
+  "baseline_2_6_0": {
+    "change_type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+    "current_record_count": 25,
+    "current_status_counts": {
+      "PASS": 23,
+      "PARTIAL": 2,
+      "FAIL": 0
     }
   }
 }

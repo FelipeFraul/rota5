@@ -1,9 +1,18 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.3",
-  "count": 22,
+  "generatedAt": "2026-09-15T23:30:00.000Z",
+  "stage": "2.6.0",
+  "count": 23,
   "records": [
+    {
+      "version": "2.6.0",
+      "date": "2026-09-15",
+      "type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+      "source_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+      "summary": "Freeze durable paid TICKET/COMBO delivery state, resolve payment-before-delivery-work risk and register ambiguous external ACK as separate P2 ACTIVE.",
+      "quality_gate_run": 34984961888,
+      "external_delivery_semantics": "AT_LEAST_ONCE"
+    },
     {
       "version": "2.5.3",
       "type": "PATCH_DOCUMENTARY_CORRECTION",
@@ -894,5 +903,9 @@
     "change_type": "PATCH_DOCUMENTARY_CORRECTION",
     "runtime_git_self_reference": "REMOVED",
     "runtime_machine_human_match": "PASS"
+  },
+  "baseline_2_6_0": {
+    "status": "FROZEN",
+    "baseline_commit": "SELF_NOT_RECORDED"
   }
 }

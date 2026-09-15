@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.3",
+  "generatedAt": "2026-09-15T23:30:00.000Z",
+  "stage": "2.6.0",
   "count": 45,
   "evidence_policy": [
     "LOCAL_DECLARED",
@@ -3457,6 +3457,18 @@
           "unique": false,
           "definition": "(status)",
           "evidence": "supabase/migrations/20260624000200_create_combo_offers.sql"
+        },
+        {
+          "name": "combo_payments_provider_payment_unique_idx",
+          "unique": true,
+          "definition": "partial unique payment invariant",
+          "evidence": "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
+        },
+        {
+          "name": "combo_payments_one_approved_per_order_idx",
+          "unique": true,
+          "definition": "partial unique payment invariant",
+          "evidence": "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
         }
       ],
       "rls": {
@@ -3480,7 +3492,8 @@
         }
       ],
       "functions": [
-        "function.get_admin_intelligence_dashboard"
+        "function.get_admin_intelligence_dashboard",
+        "function.confirm_paid_combo_order"
       ],
       "modules": [
         "combo.offers"
@@ -3964,6 +3977,14 @@
           "type": "timestamptz",
           "nullable": false,
           "default": "now()"
+        },
+        {
+          "name": "qr_token_version",
+          "type": "integer",
+          "format": "integer",
+          "nullable": true,
+          "default": null,
+          "enum": []
         }
       ],
       "remote_columns": [
@@ -4195,6 +4216,11 @@
           "name": "combo_redemptions_status_check",
           "type": "CHECK",
           "definition": "check (status in ('issued', 'used', 'cancelled'))"
+        },
+        {
+          "name": "combo_redemptions_qr_token_version_check",
+          "type": "CHECK",
+          "definition": "check (qr_token_version is null or qr_token_version > 0)"
         }
       ],
       "indexes": [
@@ -4240,7 +4266,12 @@
       "functions": [
         "function.get_admin_general_dashboard_summary",
         "function.get_admin_intelligence_dashboard",
-        "function.validate_combo_redemption"
+        "function.validate_combo_redemption",
+        "function.ensure_paid_combo_delivery_intents",
+        "function.confirm_paid_combo_order",
+        "function.ensure_combo_ready_delivery_intents",
+        "function.prepare_combo_ready_delivery",
+        "function.complete_combo_ready_delivery"
       ],
       "modules": [
         "event-admin.api",
@@ -14923,6 +14954,38 @@
           "type": "timestamptz",
           "nullable": false,
           "default": "now()"
+        },
+        {
+          "name": "next_attempt_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "nullable": true,
+          "default": null,
+          "enum": []
+        },
+        {
+          "name": "lease_expires_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "nullable": true,
+          "default": null,
+          "enum": []
+        },
+        {
+          "name": "dead_letter_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "nullable": true,
+          "default": null,
+          "enum": []
+        },
+        {
+          "name": "claim_token",
+          "type": "string",
+          "format": "uuid",
+          "nullable": true,
+          "default": null,
+          "enum": []
         }
       ],
       "remote_columns": [
@@ -15104,7 +15167,7 @@
         {
           "name": "whatsapp_outbound_deliveries_status_check",
           "type": "CHECK",
-          "definition": "check ( status in ('pending', 'sending', 'sent', 'failed') )"
+          "definition": "check ( status in ('pending', 'sending', 'sent', 'failed', 'dead_letter', 'superseded') )"
         },
         {
           "name": "whatsapp_outbound_deliveries_attempt_count_check",
@@ -15157,6 +15220,18 @@
           "unique": false,
           "definition": "(created_at)",
           "evidence": "supabase/migrations/20260721000100_create_whatsapp_outbound_deliveries.sql"
+        },
+        {
+          "name": "whatsapp_outbound_deliveries_paid_ticket_due_idx",
+          "unique": false,
+          "definition": "partial due-work index",
+          "evidence": "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql"
+        },
+        {
+          "name": "whatsapp_outbound_deliveries_paid_combo_due_idx",
+          "unique": false,
+          "definition": "partial due-work index",
+          "evidence": "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
         }
       ],
       "rls": {
@@ -15183,7 +15258,17 @@
       "triggers": [],
       "functions": [
         "function.claim_whatsapp_outbound_delivery",
-        "function.get_admin_intelligence_dashboard"
+        "function.get_admin_intelligence_dashboard",
+        "function.ensure_paid_ticket_delivery_intents",
+        "function.mark_whatsapp_outbound_delivery_sent",
+        "function.mark_whatsapp_outbound_delivery_failed",
+        "function.list_due_paid_ticket_delivery_orders",
+        "function.get_paid_ticket_delivery_queue_counts",
+        "function.ensure_paid_combo_delivery_intents",
+        "function.confirm_paid_combo_order",
+        "function.ensure_combo_ready_delivery_intents",
+        "function.list_due_paid_combo_delivery_tasks",
+        "function.get_paid_combo_delivery_queue_counts"
       ],
       "modules": [
         "messaging.webhook",
@@ -15231,10 +15316,12 @@
               }
             ],
             "valid_states": [
+              "dead_letter",
               "failed",
               "pending",
               "sending",
-              "sent"
+              "sent",
+              "superseded"
             ],
             "creators": [
               "messaging.protect_delivery"
@@ -15674,5 +15761,10 @@
       "admin_event_operations"
     ],
     "remote_status": "VALIDATED"
+  },
+  "baseline_2_6_0": {
+    "legacy_combo_qr_token_version_null": "HISTORICAL_COMPATIBILITY",
+    "new_combo_confirmations": "VERSIONED",
+    "legacy_equivalent_hmac_outbox_reconstruction_claimed": false
   }
 }

@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.3",
-  "sourceCommit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
-  "scope": "Current health projection by system, domain and infrastructure for Baseline 2.5.3, with resolved history separated from operational risk.",
+  "generatedAt": "2026-09-15T23:30:00.000Z",
+  "stage": "2.6.0",
+  "sourceCommit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+  "scope": "Current health projection by system, domain and infrastructure for Baseline 2.6.0, with resolved history separated from operational risk.",
   "method": "Health is derived from canonical finding scopes and taxonomy. BROKEN requires a current release blocker; DEGRADED requires current operational or validation-queue risk; resolved findings are historical only.",
   "vocabulary": [
     "HEALTHY",
@@ -18,17 +18,16 @@
     "health": "DEGRADED",
     "reason": "Release blockers are zero, but 27 operational findings and 5 validation-queue findings remain; HEALTHY is not justified.",
     "finding_counts_by_severity": {
-      "CRITICAL": 0,
       "HIGH": 0,
-      "MEDIUM": 17,
+      "INFO": 2,
       "LOW": 8,
-      "INFO": 2
+      "MEDIUM": 17
     },
     "active_findings": {
       "P0": 0,
       "HIGH": 0,
       "CRITICAL": 0,
-      "RESOLVED": 13,
+      "RESOLVED": 14,
       "POTENTIAL_HIGH": 0,
       "OPEN_HIGH": 0
     },
@@ -51,7 +50,6 @@
       "legacy.table-map-presentation-disabled",
       "debt.direct-supabase-access-spread",
       "debt.large-mixed-service-modules",
-      "risk.payment-confirmed-before-external-delivery",
       "risk.whatsapp-conversation-context-race",
       "debt.payment-reconciliation-duplication-is-intentional",
       "risk.checkout-status-fixed-polling",
@@ -59,7 +57,8 @@
       "gap.partial-flows-lack-end-to-end-proof",
       "gap.client-errors-not-persisted",
       "debt.distributed-status-literals",
-      "risk.service-role-application-authorization-boundary"
+      "risk.service-role-application-authorization-boundary",
+      "risk.paid-delivery-ambiguous-external-ack"
     ],
     "historical_resolved_findings": [
       "bug.create-event-invalid-jsx",
@@ -74,7 +73,8 @@
       "risk.latest-rota5-deployment-error",
       "gap.default-test-suite-failing",
       "gap.critical-capability-and-flow-coverage",
-      "gap.test-runner-depends-on-untracked-loader"
+      "gap.test-runner-depends-on-untracked-loader",
+      "risk.payment-confirmed-before-external-delivery"
     ],
     "validation_queue_findings": [
       "risk.remote-database-controls-unvalidated",
@@ -1710,7 +1710,8 @@
     "risk.latest-rota5-deployment-error",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
-    "gap.test-runner-depends-on-untracked-loader"
+    "gap.test-runner-depends-on-untracked-loader",
+    "risk.payment-confirmed-before-external-delivery"
   ],
   "infrastructure_health": "DEGRADED",
   "high_1": {
@@ -1923,70 +1924,16 @@
     }
   },
   "quality_gate": {
-    "version": "2.4.0",
-    "reason": "MINOR_COMPATIBLE_TOOLING_CHANGE",
-    "source_commit": "67845326088eac47452224b00ef1e866036e86f1",
-    "source_fingerprint": "df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0",
-    "source_file_count": 368,
-    "migration_count": 79,
-    "production_runtime_source": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
-    "production_deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
-    "current_head_deployed": false,
-    "default_node_suite": "236/236 PASS",
-    "postgres_integration_suite": "1/1 PASS",
-    "postgres_version": 16,
-    "actual_trigger_executed_in_ci": true,
-    "trigger": "sync_official_table_map_reservation_status",
-    "quality_gate_run": 34867214724,
-    "quality_gate": "PASS",
-    "skip": 0,
-    "todo": 0,
-    "regressions": 0,
-    "finding_transition": "gap.critical-capability-and-flow-coverage: ACTIVE -> RESOLVED",
-    "active_high": 0,
-    "potential_high": 1,
-    "open_high": 1,
-    "resolved": 9,
-    "product_health": "BROKEN",
-    "infrastructure_health": "DEGRADED",
-    "supabase": "UNCHANGED",
-    "ticketeira": "UNTOUCHED",
-    "git_auto_deploy": "DISABLED",
-    "new_deployment": false
+    "run": 34984961888,
+    "source_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+    "status": "PASS",
+    "node": "276/276 PASS",
+    "postgresql": "4/4 PASS"
   },
   "release_blocker_reconciliation": {
-    "version": "2.4.1",
-    "reason": "PATCH_DOCUMENTARY_CORRECTION",
-    "canonical_source": "67845326088eac47452224b00ef1e866036e86f1",
-    "source_fingerprint": "df6e8976738d2c05dd13d4ea988af12c05531e533f9b8b0feb456084ad82d6c0",
-    "source_file_count": 368,
-    "migration_count": 79,
-    "stale_findings_resolved": 2,
-    "aggregate_e2e_finding": {
-      "status": "ACTIVE",
-      "priority_before": "P1",
-      "priority_after": "P2"
-    },
-    "new_specific_findings": 0,
-    "new_p1_findings": [],
-    "release_blocker_count": 0,
-    "release_blockers": [],
-    "active_high": 0,
-    "potential_high": 1,
-    "open_high": 1,
-    "resolved": 11,
-    "product_health": "DEGRADED",
-    "infrastructure_health": "DEGRADED",
-    "default_node_suite": "236/236 PASS",
-    "postgres_integration": "1/1 PASS",
-    "quality_gate_run": 34867214724,
-    "quality_gate": "PASS",
-    "production_runtime_source": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
-    "production_deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
-    "current_head_deployed": false,
-    "new_deployment": false,
-    "supabase": "UNCHANGED",
-    "ticketeira": "UNTOUCHED"
+    "status": "PASS",
+    "blocking_count": 0,
+    "blocking_findings": []
   },
   "semantic_consistency": {
     "baseline": "2.4.4",
@@ -2030,5 +1977,10 @@
     "health_unchanged": true,
     "product_health": "DEGRADED",
     "infrastructure_health": "DEGRADED"
+  },
+  "baseline_2_6_0": {
+    "product_health": "DEGRADED",
+    "infrastructure_health": "DEGRADED",
+    "residual_p2": "risk.paid-delivery-ambiguous-external-ack"
   }
 }

@@ -1,25 +1,25 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.3",
-  "base_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+  "generatedAt": "2026-09-15T23:30:00.000Z",
+  "stage": "2.6.0",
+  "base_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
   "functional_changes_since_base": [],
   "baseline_commit": "SELF_NOT_RECORDED",
   "git_observation_at_generation": {
-    "observed_at": "2026-09-14T22:14:45.242Z",
+    "observed_at": "2026-09-15T23:30:00.000Z",
     "branch": "production",
-    "head": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
-    "working_tree_clean": false,
+    "head": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+    "working_tree_clean": true,
     "validity_role": "INFORMATIONAL_ONLY",
-    "note": "Historical Git observation captured during the Baseline 2.5.0 freeze; functional source fingerprint is derived from the canonical repository source."
+    "note": "Git observation at Baseline 2.6.0 generation; canonical source is the pure functional commit."
   },
   "package_lock_sha256": "2e2c187914e8a6f554462787a4c5d2f2315ddb59dd06bf85330a9073bd9f529c",
-  "migrations_aggregate_hash": "420706af613a83a2686d08c9e9768cf43db7b219e396cd4e27a06e7daaf1f2c3",
-  "migrations_count": 83,
-  "source_tree_fingerprint": "6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954",
-  "source_tree_file_count": 379,
+  "migrations_aggregate_hash": "28d35c686d92ab114e7be4fd22abaad0e22400e3050fd14f8699c66fd25e4b03",
+  "migrations_count": 87,
+  "source_tree_fingerprint": "8ae8433d11de2ba5c137bd1aa99ee55d2fc85aecb80bbec89847904387c73dbf",
+  "source_tree_file_count": 390,
   "source_tree_strategy": "Run git ls-files -z; normalize paths to forward slashes; exclude docs/system/**, system-knowledge/**, .tools/baseline/** and any path segment beginning with .stage; sort remaining paths lexicographically; SHA-256 each tracked file in its canonical Git representation (index blob for staged/clean content, current working-tree bytes for an unstaged functional change); concatenate path + NUL + sha256 + LF; SHA-256 the UTF-8 concatenation. Reconstruct commits from their raw Git blob bytes with the same path and aggregation rules.",
-  "freeze_timestamp": "2026-09-14T22:14:45.242Z",
+  "freeze_timestamp": "2026-09-15T23:30:00.000Z",
   "secrets_included": false,
   "source_tree_strategy_version": 3,
   "source_tree_exclusions": [
@@ -30,5 +30,19 @@
   ],
   "source_tree_temporary_audit_rule": "Exclude any path containing a segment whose basename starts with .stage, regardless of tracked state.",
   "source_tree_scope": "Functional product source and configuration only. Baseline knowledge artifacts, baseline tooling and temporary audit files are permanently excluded whether tracked or untracked.",
-  "source_tree_pair_format": "path + NUL + sha256 + LF"
+  "source_tree_pair_format": "path + NUL + sha256 + LF",
+  "source_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+  "file_count": 390,
+  "fingerprint": "8ae8433d11de2ba5c137bd1aa99ee55d2fc85aecb80bbec89847904387c73dbf",
+  "generated_from_working_tree": false,
+  "exclusions": [
+    "docs/system/**",
+    "system-knowledge/**",
+    ".tools/baseline/**",
+    "**/.stage*"
+  ],
+  "baseline_2_6_0": {
+    "previous_fingerprint": "6483294a8c2a4e758fdb965f2f9dc41bef5c539b064b9d727239a3ccd6059954",
+    "previous_file_count": 379
+  }
 }

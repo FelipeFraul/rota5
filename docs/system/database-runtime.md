@@ -1,8 +1,14 @@
+> **Current Baseline 2.6.0 (2026-09-15):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `0a10618648fc3f873afffd8f60e60bd0396b62e7` (fingerprint `8ae8433d11de2ba5c137bd1aa99ee55d2fc85aecb80bbec89847904387c73dbf`, 390 files, 87 migrations, 57 SQL functions, 1 sequence). Paid TICKET/COMBO delivery work is durably persisted in the payment transaction; external delivery remains **AT_LEAST_ONCE**, never claimed exactly-once. Findings: 46 total, 14 RESOLVED, 22 ACTIVE, 5 POTENTIAL, 5 NOT_VALIDATED, 0 release blockers. Product and infrastructure health remain **DEGRADED**. Quality Gate 34984961888 passed 276/276 Node and 4/4 PostgreSQL 16 on the exact source. Baseline commit is `SELF_NOT_RECORDED`; no deployment or database mutation occurs in this documentary freeze.
+
+## Baseline 2.6.0 paid-delivery database state
+
+The catalog now contains 87 migrations, 57 SQL functions and one dedicated `combo_redemption_code_seq`. Four 20260915 migrations add atomic durable intents, bounded recovery/dead-letter, versioned COMBO QR recovery, collision-safe codes and minimum sequence privilege. Historical redemption codes are unchanged.
+
 # Baseline 2.0.1 HIGH #1 final database runtime
 
-## Baseline 2.5.3 database state
+## Historical snapshot — Baseline 2.5.3 database state
 
-Canonical local/validated state: 83 migrations, 45 tables, 44 SQL functions and 36 triggers. `admin_event_operations` is present. Current administrative RPCs are `create_admin_event_catalog`, `update_admin_event_catalog` and `update_admin_event_location`; historical `update_admin_event_venue` is absent after migration 004.
+Historical Baseline 2.5.3 state: 83 migrations, 45 tables, 44 SQL functions and 36 triggers. `admin_event_operations` was present; the administrative RPCs were `create_admin_event_catalog`, `update_admin_event_catalog` and `update_admin_event_location`, with historical `update_admin_event_venue` absent after migration 004.
 
 EXPAND and CONTRACT are APPLIED_AND_VALIDATED. Remote history ends at `20260913000100_gate_credential_session_revocation_contract` with no pending migration. FINAL_DB is strict-only; `source_kind` is NOT NULL and immutable. OLD_APP is incompatible by design and is not a safe rollback target.
 

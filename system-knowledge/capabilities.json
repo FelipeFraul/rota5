@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.3",
+  "generatedAt": "2026-09-15T23:30:00.000Z",
+  "stage": "2.6.0",
   "id": "capability-catalog.v1",
   "canonical": true,
   "status": "PASS",
   "confidence": "MEDIA",
-  "sourceCommit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+  "sourceCommit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
   "sourceScope": "Working tree local, incluindo alteração preexistente em src/lib/tickets/messages.ts; não equivale ao commit puro nem ao deploy.",
   "count": 140,
   "methodology": {
@@ -1206,11 +1206,17 @@
         "whatsapp_outbound_deliveries"
       ],
       "database_functions": [
-        "claim_whatsapp_outbound_delivery"
+        "claim_whatsapp_outbound_delivery",
+        "mark_whatsapp_outbound_delivery_sent",
+        "mark_whatsapp_outbound_delivery_failed"
       ],
       "tests": [
         "test-028",
-        "test-041"
+        "test-041",
+        "test-054",
+        "test-055",
+        "test-056",
+        "test-057"
       ],
       "description": "Reivindicar cada entrega por chave idempotente e persistir sent/failed; nova tentativa depende de novo consumidor.",
       "evidence": [
@@ -1418,7 +1424,7 @@
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "PARTIAL",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -6496,10 +6502,13 @@
         "session_seats"
       ],
       "database_functions": [
-        "confirm_paid_ticket_order"
+        "confirm_paid_ticket_order",
+        "ensure_paid_ticket_delivery_intents"
       ],
       "tests": [
-        "audit.mercado-pago-security"
+        "audit.mercado-pago-security",
+        "test-054",
+        "test-055"
       ],
       "description": "Autenticar notificação, consultar provedor e confirmar com validação de referência/valor e RPC idempotente.",
       "evidence": [
@@ -6551,7 +6560,7 @@
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNKNOWN",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -6632,7 +6641,9 @@
         "test-036",
         "test-037",
         "audit.mercado-pago-security",
-        "audit.seatmap-qr-image"
+        "audit.seatmap-qr-image",
+        "test-054",
+        "test-055"
       ],
       "description": "Enviar resumo e imagem assinada; marcar primeiro QR somente após envio aceito.",
       "evidence": [
@@ -6719,7 +6730,7 @@
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "PARTIAL",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -6787,7 +6798,9 @@
       ],
       "database_functions": [],
       "tests": [
-        "test-036"
+        "test-036",
+        "test-054",
+        "test-055"
       ],
       "description": "Em compra múltipla, oferecer entrega ao comprador ou contatos de participantes.",
       "evidence": [
@@ -6839,7 +6852,7 @@
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "PARTIAL",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -12378,9 +12391,14 @@
         "combo_payments",
         "payment_events"
       ],
-      "database_functions": [],
+      "database_functions": [
+        "confirm_paid_combo_order",
+        "ensure_paid_combo_delivery_intents"
+      ],
       "tests": [
-        "scripts/test-checkout-status-and-combo-confirmation.mjs"
+        "scripts/test-checkout-status-and-combo-confirmation.mjs",
+        "test-056",
+        "test-057"
       ],
       "description": "Validar referência/valor/vínculo e persistir pedido pago e pagamento aprovado em operações separadas.",
       "evidence": [
@@ -12476,11 +12494,15 @@
         "whatsapp_messages",
         "whatsapp_outbound_deliveries"
       ],
-      "database_functions": [],
+      "database_functions": [
+        "ensure_paid_combo_delivery_intents"
+      ],
       "tests": [
         "test-022",
         "test-027",
-        "test-028"
+        "test-028",
+        "test-056",
+        "test-057"
       ],
       "description": "Criar credencial de resgate e enviar resumo/imagem com controle idempotente por entrega.",
       "evidence": [
@@ -13011,13 +13033,18 @@
         "conversations"
       ],
       "database_functions": [
-        "lock_authorized_gate_session"
+        "lock_authorized_gate_session",
+        "prepare_combo_ready_delivery",
+        "ensure_combo_ready_delivery_intents",
+        "complete_combo_ready_delivery"
       ],
       "tests": [
         "test-022",
         "test-044",
         "test-046",
-        "test-047"
+        "test-047",
+        "test-056",
+        "test-057"
       ],
       "description": "Mudar estado de cozinha, rotacionar token e notificar cliente sobre retirada.",
       "evidence": [
@@ -13054,7 +13081,7 @@
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "PARTIAL",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -21810,5 +21837,9 @@
       "test-053"
     ],
     "claim": "Direct regression and PostgreSQL evidence added only to administrative event capabilities and flows exercised by those tests."
+  },
+  "baseline_2_6_0": {
+    "paid_delivery_atomic_persistence": "CONFIRMED",
+    "external_delivery_semantics": "AT_LEAST_ONCE"
   }
 }

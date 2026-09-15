@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.3",
-  "sourceCommit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+  "generatedAt": "2026-09-15T23:30:00.000Z",
+  "stage": "2.6.0",
+  "sourceCommit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
   "application": {
     "framework": "Next.js 16.2.6",
     "runtime": "Node.js 24.x no projeto Vercel",
@@ -62,7 +62,7 @@
       "ready_deployment": "dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf",
       "latest_deployment_state": "READY",
       "evidence_source": "REMOTE_CONFIG",
-      "current_head": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+      "current_head": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
       "current_head_deployed": false,
       "new_deployment_during_separation": false,
       "production_source_commit": "148b8200a44f4eeb49e004af45060a302bac9f20",
@@ -73,8 +73,8 @@
       "production_runtime_source": "148b8200a44f4eeb49e004af45060a302bac9f20"
     },
     "published_commit": {
-      "status": "VALIDATED",
-      "reason": "Production deployment metadata proves the exact current functional source commit."
+      "status": "NOT_REVALIDATED_IN_DOCUMENTARY_FREEZE",
+      "reason": "Canonical functional source advanced to Baseline 2.6.0; this task neither deploys nor claims new deployment parity."
     },
     "crons": 2,
     "environment_variable_names": 24,
@@ -456,5 +456,10 @@
     "new_deployment_in_freeze": false,
     "supabase_changed_in_freeze": false,
     "ticketeira_touched": false
+  },
+  "baseline_2_6_0": {
+    "canonical_functional_source": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+    "deployment_performed": false,
+    "infrastructure_health": "DEGRADED"
   }
 }

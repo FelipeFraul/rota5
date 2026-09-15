@@ -62,7 +62,7 @@ for (const name of jsonFiles) {
     if (value.schemaVersion == null) add('MISSING_SCHEMA_VERSION', name);
     if (!value.generatedAt) add('MISSING_GENERATED_AT', name);
     if (Array.isArray(value.records) && Number.isInteger(value.count) && value.count !== value.records.length) add('COUNT_MISMATCH', `${name}: ${value.count} != ${value.records.length}`);
-    const groups = [value.records, value.nodes, value.edges, value.tables, value.functions, value.triggers, value.indexes, value.migrations].filter(Array.isArray);
+    const groups = [value.records, value.nodes, value.edges, value.tables, value.functions, value.triggers, value.indexes, value.sequences, value.migrations].filter(Array.isArray);
     for (const group of groups) {
       const ids = group.map((record) => typeof record === 'string' ? record : record?.id).filter(Boolean);
       const duplicates = [...new Set(ids.filter((id, index) => ids.indexOf(id) !== index))];
@@ -120,6 +120,7 @@ for (const [name, count] of Object.entries(expected)) if (getRecords(name).lengt
 if ((objects.migrations||[]).length !== baselineCounts.migrations) add('CANONICAL_COUNT_MISMATCH','migrations');
 if ((objects.functions||[]).length !== baselineCounts.sql_functions) add('CANONICAL_COUNT_MISMATCH','sql functions');
 if ((objects.triggers||[]).length !== baselineCounts.triggers) add('CANONICAL_COUNT_MISMATCH','triggers');
+if (Number.isInteger(baselineCounts.sequences) && (objects.sequences||[]).length !== baselineCounts.sequences) add('CANONICAL_COUNT_MISMATCH','sequences');
 const joinHumanList = (values) => values.length < 2 ? (values[0] || '') : `${values.slice(0, -1).join(', ')} e ${values.at(-1)}`;
 const priorityVocabulary = [...new Set(findings.map(finding => finding.priority).filter(Boolean))]
   .sort((left,right) => String(left).localeCompare(String(right),undefined,{numeric:true}));

@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T22:14:45.242Z",
-  "stage": "2.5.3",
+  "generatedAt": "2026-09-15T23:30:00.000Z",
+  "stage": "2.6.0",
   "status": "PASS",
-  "sourceCommit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+  "sourceCommit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
   "question": "Podemos confiar na BASELINE V1 como representação do Rota5 atual?",
-  "answer": "FINAL_JOINT_AUDIT: PASS. Baseline 2.5.3 is ready for documentary freeze.",
+  "answer": "BASELINE_2_6_0_RECONCILIATION: PASS. Paid delivery TICKET + COMBO is documented and ready for freeze.",
   "frozenScope": {
     "branch": "production",
     "head": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
@@ -457,8 +457,8 @@
     "RELEASE_BLOCKER_COUNT": 0
   },
   "resolved_semantic_invariants": {
-    "RESOLVED_FINDINGS_TOTAL": 13,
-    "RESOLVED_CURRENT_STATE_COMPLETE": 13,
+    "RESOLVED_FINDINGS_TOTAL": 14,
+    "RESOLVED_CURRENT_STATE_COMPLETE": 14,
     "RESOLVED_WITHOUT_CURRENT_STATE": 0,
     "RESOLVED_WITH_ACTIVE_TOP_LEVEL_CLAIMS": 0,
     "RESOLVED_WITH_NONCURRENT_TOP_LEVEL_EVIDENCE": 0,
@@ -499,5 +499,13 @@
     "unaccounted_findings": 0,
     "runtime_machine_human_match": "PASS",
     "volatile_git_head_embedded_as_current": false
+  },
+  "baseline_2_6_0": {
+    "status": "PASS",
+    "change_type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+    "contradictions": 0,
+    "stale_current_projections": 0,
+    "unaccounted_findings": 0,
+    "external_delivery_semantics": "AT_LEAST_ONCE"
   }
 }
