@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T21:15:39.403Z",
+  "generatedAt": "2026-09-15T21:39:26.713Z",
   "baseline": {
     "stage": "1/8",
     "name": "Reconhecimento total do sistema",
@@ -435,7 +435,7 @@
       "failed": 7
     }
   },
-  "stage": "2.7.3",
+  "stage": "2.7.4",
   "test_runner_reproducibility": {
     "finding": "gap.test-runner-depends-on-untracked-loader",
     "status": "RESOLVED",

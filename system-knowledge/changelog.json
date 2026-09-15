@@ -1,9 +1,25 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T21:15:39.403Z",
-  "stage": "2.7.3",
-  "count": 28,
+  "generatedAt": "2026-09-15T21:39:26.713Z",
+  "stage": "2.7.4",
+  "count": 29,
   "records": [
+    {
+      "id": "baseline-2.7.4",
+      "version": "2.7.4",
+      "date": "2026-09-15",
+      "type": "PATCH_DOCUMENTARY_CORRECTION",
+      "status": "FROZEN",
+      "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+      "source_fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee",
+      "summary": "Reconcile resolved-finding and per-domain health projections with the canonical finding lifecycle. No finding lifecycle, functional source, database, deployment or runtime behavior changed.",
+      "functional_source_changed": false,
+      "database_changed": false,
+      "deployment_changed": false,
+      "health_projection_changed": true,
+      "finding_lifecycle_changed": false,
+      "baseline_commit": "SELF_NOT_RECORDED"
+    },
     {
       "id": "baseline-2.7.2",
       "version": "2.7.2",
@@ -1111,6 +1127,22 @@
       "git_auto_deploy": "DISABLED"
     },
     "release_blockers": 0,
+    "baseline_commit": "SELF_NOT_RECORDED"
+  },
+  "baseline_2_7_4": {
+    "id": "baseline-2.7.4",
+    "version": "2.7.4",
+    "date": "2026-09-15",
+    "type": "PATCH_DOCUMENTARY_CORRECTION",
+    "status": "FROZEN",
+    "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "source_fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee",
+    "summary": "Reconcile resolved-finding and per-domain health projections with the canonical finding lifecycle. No finding lifecycle, functional source, database, deployment or runtime behavior changed.",
+    "functional_source_changed": false,
+    "database_changed": false,
+    "deployment_changed": false,
+    "health_projection_changed": true,
+    "finding_lifecycle_changed": false,
     "baseline_commit": "SELF_NOT_RECORDED"
   }
 }

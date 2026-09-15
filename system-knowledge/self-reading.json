@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T21:15:39.403Z",
-  "stage": "2.7.3",
+  "generatedAt": "2026-09-15T21:39:26.713Z",
+  "stage": "2.7.4",
   "id": "rota5-self-reading-v1",
   "baseline_id": "rota5-baseline-v1",
   "bootstrap_files": [

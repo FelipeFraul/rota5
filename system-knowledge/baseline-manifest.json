@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T21:15:39.403Z",
-  "stage": "2.7.3",
+  "generatedAt": "2026-09-15T21:39:26.713Z",
+  "stage": "2.7.4",
   "baseline_id": "rota5-baseline-v1",
-  "version": "2.7.3",
+  "version": "2.7.4",
   "status": "FROZEN",
-  "frozen_at": "2026-09-15T21:15:39.403Z",
+  "frozen_at": "2026-09-15T21:39:26.713Z",
   "source_state": {
     "base_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
     "source_tree_fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee",
@@ -34,7 +34,7 @@
     }
   },
   "git_observation_at_generation": {
-    "observed_at": "2026-09-15T21:15:39.403Z",
+    "observed_at": "2026-09-15T21:39:26.713Z",
     "branch": "production",
     "head": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
     "working_tree_clean": true,

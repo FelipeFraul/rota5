@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T21:15:39.403Z",
-  "stage": "2.7.3",
+  "generatedAt": "2026-09-15T21:39:26.713Z",
+  "stage": "2.7.4",
   "sourceCommit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-  "scope": "Current health projection by system, domain and infrastructure for Baseline 2.7.3, with resolved history separated from operational risk.",
+  "scope": "Current health projection by system, domain and infrastructure for Baseline 2.7.4, with resolved history separated from operational risk.",
   "method": "Health is derived from canonical finding scopes and taxonomy. BROKEN requires a current release blocker; DEGRADED requires current operational or validation-queue risk; resolved findings are historical only.",
   "vocabulary": [
     "HEALTHY",
@@ -109,9 +109,9 @@
         "legacy.active-brand-contamination",
         "risk.vercel-project-identity-drift",
         "risk.latest-rota5-deployment-error",
+        "risk.published-commit-unvalidated",
         "gap.default-test-suite-failing",
-        "gap.test-runner-depends-on-untracked-loader",
-        "risk.published-commit-unvalidated"
+        "gap.test-runner-depends-on-untracked-loader"
       ],
       "validation_queue_findings": [
         "risk.remote-database-controls-unvalidated"
@@ -141,15 +141,16 @@
         "gap.critical-flow-correlation",
         "debt.router-responsibility-concentration",
         "debt.zapi-webhook-responsibility-coupling",
-        "risk.payment-confirmed-before-external-delivery",
         "risk.whatsapp-conversation-context-race",
         "gap.partial-flows-lack-end-to-end-proof",
         "debt.distributed-status-literals",
+        "risk.paid-delivery-ambiguous-external-ack",
         "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
       ],
       "historical_resolved_findings": [
         "bug.user-visible-text-corruption",
-        "legacy.active-brand-contamination"
+        "legacy.active-brand-contamination",
+        "risk.payment-confirmed-before-external-delivery"
       ],
       "validation_queue_findings": [
         "risk.remote-webhook-registration-unvalidated"
@@ -170,7 +171,9 @@
       "id": "domain.event-catalog",
       "health": "HEALTHY",
       "current_findings": [],
-      "historical_resolved_findings": [],
+      "historical_resolved_findings": [
+        "bug.admin-event-location-consistency"
+      ],
       "validation_queue_findings": [],
       "release_blocking_causes": [],
       "reason": "0 current operational finding(s) and 0 validation-queue finding(s); resolved findings are historical only."
@@ -179,7 +182,6 @@
       "id": "domain.event-administration",
       "health": "DEGRADED",
       "current_findings": [
-        "risk.admin-event-multistep-partial-state",
         "debt.router-responsibility-concentration",
         "debt.direct-supabase-access-spread",
         "debt.large-mixed-service-modules",
@@ -190,28 +192,31 @@
       "historical_resolved_findings": [
         "bug.create-event-invalid-jsx",
         "bug.event-duplicate-artist-leak",
+        "risk.admin-event-multistep-partial-state",
+        "bug.admin-event-location-consistency",
         "gap.critical-capability-and-flow-coverage"
       ],
       "validation_queue_findings": [],
       "release_blocking_causes": [],
-      "reason": "7 current operational finding(s) and 0 validation-queue finding(s); resolved findings are historical only."
+      "reason": "6 current operational finding(s) and 0 validation-queue finding(s); resolved findings are historical only."
     },
     {
       "id": "domain.reservation-inventory",
       "health": "DEGRADED",
       "current_findings": [
-        "risk.admin-event-multistep-partial-state",
         "debt.router-responsibility-concentration",
         "gap.real-integration-tests-outside-default",
         "gap.partial-flows-lack-end-to-end-proof"
       ],
-      "historical_resolved_findings": [],
+      "historical_resolved_findings": [
+        "risk.admin-event-multistep-partial-state"
+      ],
       "validation_queue_findings": [
         "risk.remote-database-controls-unvalidated",
         "gap.remote-database-behavior-tests"
       ],
       "release_blocking_causes": [],
-      "reason": "4 current operational finding(s) and 2 validation-queue finding(s); resolved findings are historical only."
+      "reason": "3 current operational finding(s) and 2 validation-queue finding(s); resolved findings are historical only."
     },
     {
       "id": "domain.orders-payments",
@@ -220,7 +225,6 @@
         "gap.critical-flow-correlation",
         "debt.router-responsibility-concentration",
         "debt.direct-supabase-access-spread",
-        "risk.payment-confirmed-before-external-delivery",
         "debt.payment-reconciliation-duplication-is-intentional",
         "risk.checkout-status-fixed-polling",
         "gap.client-errors-not-persisted",
@@ -229,7 +233,8 @@
       "historical_resolved_findings": [
         "bug.user-visible-text-corruption",
         "legacy.active-brand-contamination",
-        "risk.vercel-project-identity-drift"
+        "risk.vercel-project-identity-drift",
+        "risk.payment-confirmed-before-external-delivery"
       ],
       "validation_queue_findings": [
         "risk.remote-database-controls-unvalidated",
@@ -237,7 +242,7 @@
         "gap.remote-database-behavior-tests"
       ],
       "release_blocking_causes": [],
-      "reason": "8 current operational finding(s) and 3 validation-queue finding(s); resolved findings are historical only."
+      "reason": "7 current operational finding(s) and 3 validation-queue finding(s); resolved findings are historical only."
     },
     {
       "id": "domain.ticketing-delivery",
@@ -246,9 +251,12 @@
         "gap.critical-flow-correlation",
         "orphan.ticket-validation-history",
         "debt.direct-supabase-access-spread",
+        "risk.paid-delivery-ambiguous-external-ack"
+      ],
+      "historical_resolved_findings": [
+        "bug.admin-event-location-consistency",
         "risk.payment-confirmed-before-external-delivery"
       ],
-      "historical_resolved_findings": [],
       "validation_queue_findings": [
         "risk.remote-database-controls-unvalidated",
         "gap.remote-database-behavior-tests"
@@ -313,6 +321,7 @@
         "gap.partial-flows-lack-end-to-end-proof",
         "gap.client-errors-not-persisted",
         "debt.distributed-status-literals",
+        "risk.paid-delivery-ambiguous-external-ack",
         "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
       ],
       "historical_resolved_findings": [
@@ -326,7 +335,7 @@
         "gap.remote-database-behavior-tests"
       ],
       "release_blocking_causes": [],
-      "reason": "10 current operational finding(s) and 1 validation-queue finding(s); resolved findings are historical only."
+      "reason": "11 current operational finding(s) and 1 validation-queue finding(s); resolved findings are historical only."
     },
     {
       "id": "domain.table-map",

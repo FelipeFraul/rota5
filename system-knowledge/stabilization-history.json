@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T21:15:39.403Z",
-  "stage": "2.7.3",
+  "generatedAt": "2026-09-15T21:39:26.713Z",
+  "stage": "2.7.4",
   "period": {
     "start": "2026-09-12",
     "end": "2026-09-15",
     "status": "CLOSED"
   },
   "baseline_start": "1.0.0",
-  "baseline_end": "2.7.2",
+  "baseline_end": "2.7.4",
   "source_start": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
   "source_end": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
   "days": [
@@ -392,7 +392,7 @@
     "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
   ],
   "final_state": {
-    "baseline": "2.7.3",
+    "baseline": "2.7.4",
     "repository_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
     "production_application_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
     "source_tree_fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee",
@@ -488,6 +488,18 @@
       "deployment_changed": false,
       "health_changed": false,
       "finding_lifecycle_changed": false
+    },
+    {
+      "version": "2.7.4",
+      "date": "2026-09-15",
+      "type": "PATCH_DOCUMENTARY_CORRECTION",
+      "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+      "reason": "Reconcile canonical RESOLVED and per-domain health projections without changing any finding lifecycle or runtime behavior.",
+      "functional_milestones_changed": false,
+      "database_changed": false,
+      "deployment_changed": false,
+      "health_projection_changed": true,
+      "finding_lifecycle_changed": false
     }
   ],
   "functional_releases": [
@@ -539,6 +551,14 @@
     "change_type": "PATCH_DOCUMENTARY_CORRECTION",
     "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
     "resolved": "risk.published-commit-unvalidated",
+    "baseline_commit": "SELF_NOT_RECORDED"
+  },
+  "baseline_2_7_4": {
+    "status": "DOCUMENTED_AND_CLOSED",
+    "change_type": "PATCH_DOCUMENTARY_CORRECTION",
+    "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "finding_lifecycle_changed": false,
+    "health_projection_reconciled": true,
     "baseline_commit": "SELF_NOT_RECORDED"
   }
 }

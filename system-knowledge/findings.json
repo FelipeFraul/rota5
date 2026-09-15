@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T21:15:39.403Z",
-  "stage": "2.7.3",
+  "generatedAt": "2026-09-15T21:39:26.713Z",
+  "stage": "2.7.4",
   "sourceCommit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-  "scope": "Canonical finding catalog for Baseline 2.7.3, with current lifecycle state separated from preserved historical evidence.",
-  "method": "Reconciled machine-readable current state for Baseline 2.7.3 against source 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27, current Quality Gate 34998744062, remote evidence captured by the completed 2.7.0 re-audit, and preserved historical evidence.",
+  "scope": "Canonical finding catalog for Baseline 2.7.4, with current lifecycle state separated from preserved historical evidence.",
+  "method": "Reconciled machine-readable current state for Baseline 2.7.4 against source 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27, current Quality Gate 34998744062, remote evidence captured by the completed 2.7.0 re-audit, and preserved historical evidence.",
   "count": 47,
   "records": [
     {

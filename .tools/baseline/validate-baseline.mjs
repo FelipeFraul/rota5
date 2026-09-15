@@ -482,6 +482,37 @@ for (const id of catalogs['baseline-v1']?.unresolved_evidence || []) {
   if (!record) add('BASELINE_UNRESOLVED_REFERENCE_UNKNOWN',id);
   else if (record.status !== 'NOT_VALIDATED') add('BASELINE_UNRESOLVED_REFERENCE_NOT_CURRENT',`${id}: ${record.status}`);
 }
+const sameIdSet = (actual, expected) => Array.isArray(actual) && actual.length===expected.length && new Set(actual).size===actual.length && actual.every(id => expected.includes(id));
+const canonicalResolvedFindingIds = findings.filter(isResolvedFinding).map(finding => finding.id);
+if (!sameIdSet(catalogs['baseline-v1']?.resolved_findings,canonicalResolvedFindingIds)) add('BASELINE_RESOLVED_FINDINGS_MISMATCH','baseline-v1.resolved_findings');
+const findingsById = new Map(findings.map(finding => [finding.id,finding]));
+const visitHealthProjections = (value, owner) => {
+  if (!value || typeof value !== 'object') return;
+  if (Array.isArray(value)) {
+    value.forEach((entry,index) => visitHealthProjections(entry,`${owner}[${index}]`));
+    return;
+  }
+  for (const id of Array.isArray(value.current_findings) ? value.current_findings : []) {
+    const finding = findingsById.get(id);
+    if (!finding || !hasTaxonomyFlag(finding,'operational_open')) add('HEALTH_CURRENT_FINDING_NOT_OPERATIONAL',`${owner}.current_findings -> ${id}`);
+  }
+  for (const id of Array.isArray(value.validation_queue_findings) ? value.validation_queue_findings : []) {
+    const finding = findingsById.get(id);
+    if (!finding || !hasTaxonomyFlag(finding,'validation_queue')) add('HEALTH_VALIDATION_FINDING_NOT_VALIDATION_QUEUE',`${owner}.validation_queue_findings -> ${id}`);
+  }
+  for (const id of Array.isArray(value.historical_resolved_findings) ? value.historical_resolved_findings : []) {
+    const finding = findingsById.get(id);
+    if (!finding || finding.status!=='RESOLVED') add('HEALTH_HISTORICAL_FINDING_NOT_RESOLVED',`${owner}.historical_resolved_findings -> ${id}`);
+  }
+  if (typeof value.id === 'string' && value.id.startsWith('domain.')) {
+    const expectedCurrent = findings.filter(finding => finding.domains?.includes(value.id) && hasTaxonomyFlag(finding,'operational_open')).map(finding => finding.id);
+    const expectedValidation = findings.filter(finding => finding.domains?.includes(value.id) && hasTaxonomyFlag(finding,'validation_queue')).map(finding => finding.id);
+    const expectedHistorical = findings.filter(finding => finding.domains?.includes(value.id) && finding.status==='RESOLVED').map(finding => finding.id);
+    if (!sameIds(value.current_findings,expectedCurrent) || !sameIds(value.validation_queue_findings,expectedValidation) || !sameIds(value.historical_resolved_findings,expectedHistorical)) add('HEALTH_DOMAIN_PROJECTION_MISMATCH',value.id);
+  }
+  for (const [key,child] of Object.entries(value)) visitHealthProjections(child,`${owner}.${key}`);
+};
+visitHealthProjections(catalogs.health,'health');
 const expectedValidationQueue = findings.filter(finding => hasTaxonomyFlag(finding,'validation_queue')).map(finding => finding.id);
 if (!sameIds(catalogs.health?.system?.validation_queue_findings,expectedValidationQueue)) add('HEALTH_VALIDATION_QUEUE_MISMATCH','health.system.validation_queue_findings');
 const currentProductionSources = [
