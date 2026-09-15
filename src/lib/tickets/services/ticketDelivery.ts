@@ -59,6 +59,7 @@ export type DeliverTicketsForOrderResult =
         | "missing_phone"
         | "tickets_not_found"
         | "zapi_failed"
+        | "qr_generation_failed"
         | "delivery_in_progress";
       ticketsCount?: number;
     }
@@ -842,37 +843,6 @@ export async function deliverTicketsForOrder(
   }
 
   for (const ticket of tickets) {
-    let qrImage: string;
-
-    try {
-      const ticketUrl = buildTicketUrl(ticket);
-      const ticketQrImage = await generateTicketQrImage({
-        ticketUrl,
-        ticketCode: ticket.ticketCode,
-        eventTitle: ticket.eventTitle,
-        venueName: ticket.venueName,
-        city: ticket.city,
-        state: ticket.state,
-        startsAt: ticket.startsAt,
-        holderName: ticket.holderName,
-        tableMapPlaceCode: ticket.tableMapPlaceCode,
-      });
-      qrImage = ticketQrImageToDataUrl(ticketQrImage.buffer);
-    } catch (error) {
-      logError("Failed to generate ticket QR Code image", {
-        orderId,
-        ticketId: ticket.ticketId,
-        error,
-      });
-
-      return {
-        ok: true,
-        sent: false,
-        reason: "zapi_failed",
-        ticketsCount: tickets.length,
-      };
-    }
-
     const imageBusinessContext = {
       order_id: orderId,
       ticket_id: ticket.ticketId,
@@ -939,6 +909,49 @@ export async function deliverTicketsForOrder(
         ok: true,
         sent: false,
         reason: "delivery_in_progress",
+        ticketsCount: tickets.length,
+      };
+    }
+
+    let qrImage: string;
+    try {
+      const ticketUrl = buildTicketUrl(ticket);
+      const ticketQrImage = await generateTicketQrImage({
+        ticketUrl,
+        ticketCode: ticket.ticketCode,
+        eventTitle: ticket.eventTitle,
+        venueName: ticket.venueName,
+        city: ticket.city,
+        state: ticket.state,
+        startsAt: ticket.startsAt,
+        holderName: ticket.holderName,
+        tableMapPlaceCode: ticket.tableMapPlaceCode,
+      });
+      qrImage = ticketQrImageToDataUrl(ticketQrImage.buffer);
+    } catch (error) {
+      const markFailedResult = await markWhatsAppOutboundDeliveryFailed({
+        deliveryId: imageDelivery.delivery.id,
+        claimToken: imageClaim.delivery.claim_token,
+        error: "ticket_qr_generation_failed",
+      });
+      if (!markFailedResult.ok) {
+        logError("Failed to mark ticket QR generation as failed", {
+          orderId,
+          ticketId: ticket.ticketId,
+          code: getDeliveryStateUpdateFailureCode(markFailedResult),
+        });
+        return { ok: false, reason: "internal_error" };
+      }
+
+      logError("Failed to generate ticket QR Code image", {
+        orderId,
+        ticketId: ticket.ticketId,
+        error,
+      });
+      return {
+        ok: true,
+        sent: false,
+        reason: "qr_generation_failed",
         ticketsCount: tickets.length,
       };
     }

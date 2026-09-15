@@ -11,7 +11,7 @@ alter table public.whatsapp_outbound_deliveries
 
 alter table public.whatsapp_outbound_deliveries
   add constraint whatsapp_outbound_deliveries_status_check check (
-    status in ('pending', 'sending', 'sent', 'failed', 'dead_letter')
+    status in ('pending', 'sending', 'sent', 'failed', 'dead_letter', 'superseded')
   );
 
 create index if not exists whatsapp_outbound_deliveries_paid_ticket_due_idx
@@ -88,6 +88,50 @@ begin
 
   if v_order.ticket_count = 0 then
     raise exception 'tickets_not_found';
+  end if;
+
+  if v_order.ticket_count > 1 and p_full_delivery then
+    select *
+    into v_existing
+    from public.whatsapp_outbound_deliveries
+    where idempotency_key = 'paid-ticket-order:' || p_order_id::text || ':delivery-choice:v1'
+    for update;
+
+    if v_existing.id is not null then
+      if v_existing.customer_id <> v_order.customer_id
+        or v_existing.reason <> 'paid_ticket_delivery_choice'
+        or v_existing.message_type <> 'text'
+        or coalesce(v_existing.business_context->>'order_id', '') <> p_order_id::text
+      then
+        raise exception 'paid_ticket_delivery_intent_collision:%', v_existing.idempotency_key;
+      end if;
+
+      if v_existing.status = 'sending'
+        and v_existing.lease_expires_at > pg_catalog.now()
+      then
+        raise exception 'paid_ticket_delivery_choice_in_progress';
+      end if;
+
+      if v_existing.status in ('pending', 'failed', 'dead_letter')
+        or (
+          v_existing.status = 'sending'
+          and (
+            v_existing.lease_expires_at is null
+            or v_existing.lease_expires_at <= pg_catalog.now()
+          )
+        )
+      then
+        update public.whatsapp_outbound_deliveries
+        set
+          status = 'superseded',
+          claim_token = null,
+          lease_expires_at = null,
+          next_attempt_at = null,
+          last_error = null,
+          updated_at = pg_catalog.now()
+        where id = v_existing.id;
+      end if;
+    end if;
   end if;
 
   for v_expected in
@@ -343,7 +387,10 @@ as $function$
           )
           or (
             delivery.status = 'sending'
-            and delivery.lease_expires_at <= pg_catalog.now()
+            and (
+              delivery.lease_expires_at is null
+              or delivery.lease_expires_at <= pg_catalog.now()
+            )
           )
         )
       )
@@ -430,21 +477,45 @@ language sql
 security invoker
 set search_path = ''
 as $function$
+  with ticket_deliveries as (
+    select
+      delivery.*,
+      (delivery.business_context->>'order_id')::uuid as intent_order_id,
+      case
+        when delivery.business_context->>'delivery_order' ~ '^[0-9]+$'
+          then (delivery.business_context->>'delivery_order')::integer
+        when delivery.reason in ('paid_ticket_delivery', 'paid_ticket_delivery_choice') then 1
+        when delivery.reason = 'paid_ticket_qr_instruction' then 2
+        else 3
+      end as intent_delivery_order
+    from public.whatsapp_outbound_deliveries delivery
+    where delivery.reason in (
+        'paid_ticket_delivery',
+        'paid_ticket_delivery_choice',
+        'paid_ticket_qr_instruction',
+        'paid_ticket_qr_delivery'
+      )
+      and delivery.business_context->>'order_id' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+  ),
+  first_incomplete as (
+    select distinct on (delivery.intent_order_id)
+      delivery.*
+    from ticket_deliveries delivery
+    where delivery.status not in ('sent', 'superseded')
+    order by
+      delivery.intent_order_id,
+      delivery.intent_delivery_order,
+      delivery.created_at,
+      delivery.id
+  )
   select
-    (delivery.business_context->>'order_id')::uuid as order_id,
+    delivery.intent_order_id as order_id,
     case
-      when pg_catalog.bool_or(delivery.reason <> 'paid_ticket_delivery_choice') then 'full'
-      else 'choice'
+      when delivery.reason = 'paid_ticket_delivery_choice' then 'choice'
+      else 'full'
     end as delivery_mode
-  from public.whatsapp_outbound_deliveries delivery
-  where delivery.reason in (
-      'paid_ticket_delivery',
-      'paid_ticket_delivery_choice',
-      'paid_ticket_qr_instruction',
-      'paid_ticket_qr_delivery'
-    )
-    and delivery.attempt_count < 5
-    and delivery.business_context->>'order_id' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+  from first_incomplete delivery
+  where delivery.attempt_count < 5
     and (
       (
         delivery.status in ('pending', 'failed')
@@ -452,12 +523,14 @@ as $function$
       )
       or (
         delivery.status = 'sending'
-        and delivery.lease_expires_at <= pg_catalog.now()
+        and (
+          delivery.lease_expires_at is null
+          or delivery.lease_expires_at <= pg_catalog.now()
+        )
       )
     )
-  group by delivery.business_context->>'order_id'
-  order by pg_catalog.min(coalesce(delivery.next_attempt_at, delivery.lease_expires_at, delivery.created_at))
-  limit pg_catalog.greatest(0, pg_catalog.least(coalesce(p_limit, 20), 100));
+  order by coalesce(delivery.next_attempt_at, delivery.lease_expires_at, delivery.created_at)
+  limit greatest(0, least(coalesce(p_limit, 20), 100));
 $function$;
 
 create or replace function public.get_paid_ticket_delivery_queue_counts()
@@ -478,7 +551,8 @@ as $function$
       where status = 'sending' and lease_expires_at > pg_catalog.now()
     ),
     'sending_expired', pg_catalog.count(*) filter (
-      where status = 'sending' and lease_expires_at <= pg_catalog.now()
+      where status = 'sending'
+        and (lease_expires_at is null or lease_expires_at <= pg_catalog.now())
     ),
     'dead_letter', pg_catalog.count(*) filter (where status = 'dead_letter'),
     'sent', pg_catalog.count(*) filter (where status = 'sent')

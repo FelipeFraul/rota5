@@ -20,7 +20,12 @@ function ticket(index) {
   };
 }
 
-async function createTicketDeliveryHarness({ tickets = [ticket(1)], failSends = 0, blockFirstSend = false } = {}) {
+async function createTicketDeliveryHarness({
+  tickets = [ticket(1)],
+  failSends = 0,
+  failQrGenerations = 0,
+  blockFirstSend = false,
+} = {}) {
   const db = new MemorySupabase({
     orders: [{ id: orderId, customer_id: customerId, customers: { whatsapp_phone: "5511999999999" } }],
     conversations: [],
@@ -28,6 +33,7 @@ async function createTicketDeliveryHarness({ tickets = [ticket(1)], failSends = 
   const deliveries = new Map();
   const effects = [];
   let failuresRemaining = failSends;
+  let qrFailuresRemaining = failQrGenerations;
   let tokenSequence = 0;
   let releaseFirstSend;
   let notifyFirstSendStarted;
@@ -56,6 +62,15 @@ async function createTicketDeliveryHarness({ tickets = [ticket(1)], failSends = 
     if (tickets.length > 1 && !fullDelivery) {
       put(`paid-ticket-order:${orderId}:delivery-choice:v1`, "text", "paid_ticket_delivery_choice");
       return { ok: true, intentsCount: 1 };
+    }
+    if (tickets.length > 1 && fullDelivery) {
+      const choice = deliveries.get(`paid-ticket-order:${orderId}:delivery-choice:v1`);
+      if (choice?.status === "sending") {
+        return { ok: false, error: { code: "paid_ticket_delivery_choice_in_progress" } };
+      }
+      if (choice && ["pending", "failed", "dead_letter"].includes(choice.status)) {
+        choice.status = "superseded";
+      }
     }
     put(`paid-ticket-order:${orderId}:text:v1`, "text", "paid_ticket_delivery");
     put(`paid-ticket-order:${orderId}:qr-instruction:v1`, "text", "paid_ticket_qr_instruction");
@@ -108,7 +123,14 @@ async function createTicketDeliveryHarness({ tickets = [ticket(1)], failSends = 
     createTicketUrl: (token) => `https://example.test/t/${token}`,
     getTicketsForOrder: async () => tickets,
     markBuyerTicketQrDelivered: async () => ({ ok: true }),
-    generateTicketQrImage: async () => ({ buffer: Buffer.from("qr") }),
+    generateTicketQrImage: async () => {
+      effects.push("qr-generate");
+      if (qrFailuresRemaining > 0) {
+        qrFailuresRemaining -= 1;
+        throw new Error("render failed");
+      }
+      return { buffer: Buffer.from("qr") };
+    },
     ticketQrImageToDataUrl: () => "data:image/png;base64,cXI=",
     getOfficialTableMapPlace: () => null,
     normalizeOfficialTableMapCode: (value) => value,
@@ -150,7 +172,15 @@ test("full delivery persists every intent before effects and sends text, instruc
   const result = await harness.service.deliverTicketsForOrder(orderId);
 
   assert.deepEqual(result, { ok: true, sent: true, ticketsCount: 2 });
-  assert.deepEqual(harness.effects, ["ensure", "payment-text", "qr-instruction", "qr-image", "qr-image"]);
+  assert.deepEqual(harness.effects, [
+    "ensure",
+    "payment-text",
+    "qr-instruction",
+    "qr-generate",
+    "qr-image",
+    "qr-generate",
+    "qr-image",
+  ]);
   assert.equal([...harness.deliveries.values()].filter((item) => item.status === "sent").length, 4);
 });
 
@@ -187,7 +217,25 @@ test("partial QR recovery sends only the unsent QR", async () => {
 
   const result = await harness.service.deliverTicketsForOrder(orderId);
   assert.equal(result.sent, true);
-  assert.deepEqual(harness.effects, ["ensure", "qr-image"]);
+  assert.deepEqual(harness.effects, ["ensure", "qr-generate", "qr-image"]);
+});
+
+test("QR generation failure consumes the winning claim and reaches dead letter", async () => {
+  const harness = await createTicketDeliveryHarness({ failQrGenerations: 10 });
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const result = await harness.service.deliverTicketsForOrder(orderId);
+    assert.equal(result.reason, "qr_generation_failed");
+  }
+
+  const qrDelivery = harness.deliveries.get(`paid-ticket:${ticket(1).ticketId}:qr:v1`);
+  assert.equal(qrDelivery.attempt_count, 5);
+  assert.equal(qrDelivery.status, "dead_letter");
+  assert.equal(harness.effects.filter((item) => item === "qr-generate").length, 5);
+  assert.equal(harness.effects.filter((item) => item === "qr-image").length, 0);
+
+  await harness.service.deliverTicketsForOrder(orderId);
+  assert.equal(harness.effects.filter((item) => item === "qr-generate").length, 5);
 });
 
 test("bounded failures reach dead letter and are no longer claimed", async () => {
@@ -221,6 +269,60 @@ test("failed multi-ticket prompt is retried through the same durable intention",
   assert.equal(second.sent, true);
   assert.equal(harness.deliveries.size, 1);
   assert.equal([...harness.deliveries.values()][0].attempt_count, 2);
+});
+
+test("explicit full delivery supersedes an unsent old choice without replaying it", async () => {
+  const harness = await createTicketDeliveryHarness({ tickets: [ticket(1), ticket(2)], failSends: 1 });
+  await harness.service.requestTicketDeliveryPreferenceForOrder(orderId);
+  const choice = harness.deliveries.get(`paid-ticket-order:${orderId}:delivery-choice:v1`);
+  assert.equal(choice.status, "failed");
+
+  const result = await harness.service.deliverTicketsForOrder(orderId);
+  assert.equal(result.sent, true);
+  assert.equal(choice.status, "superseded");
+  assert.equal(
+    harness.effects.filter((item) => item === "payment-text").length,
+    2,
+    "one failed choice plus one full-delivery text must be the only payment messages",
+  );
+});
+
+test("worker scheduling never lets a later delivery bypass its predecessor", async () => {
+  const now = Date.parse("2026-09-15T12:00:00.000Z");
+  const rows = [
+    { order: "future", orderIndex: 1, status: "failed", next: now + 60_000 },
+    { order: "future", orderIndex: 2, status: "pending" },
+    { order: "dead", orderIndex: 1, status: "dead_letter" },
+    { order: "dead", orderIndex: 2, status: "pending" },
+    { order: "instruction", orderIndex: 1, status: "sent" },
+    { order: "instruction", orderIndex: 2, status: "failed", next: now - 1 },
+    { order: "qr", orderIndex: 1, status: "sent" },
+    { order: "qr", orderIndex: 2, status: "sent" },
+    { order: "qr", orderIndex: 3, status: "failed", next: now - 1 },
+    { order: "complete", orderIndex: 1, status: "sent" },
+    { order: "complete", orderIndex: 2, status: "superseded" },
+  ];
+  const dueOrders = [...new Set(rows.map((row) => row.order))].flatMap((order) => {
+    const first = rows
+      .filter((row) => row.order === order && !["sent", "superseded"].includes(row.status))
+      .sort((left, right) => left.orderIndex - right.orderIndex)[0];
+    const executable = first && (
+      first.status === "pending" ||
+      (first.status === "failed" && first.next <= now)
+    );
+    return executable ? [{ order_id: order, delivery_mode: "full" }] : [];
+  });
+  const calls = [];
+  const worker = await loadProductionModule("src/lib/tickets/services/paidTicketDeliveryWorker.ts", {
+    logError: () => {}, logInfo: () => {},
+    deliverTicketsForOrder: async (id) => { calls.push(id); return { ok: true, sent: true, ticketsCount: 1 }; },
+    requestTicketDeliveryPreferenceForOrder: async () => ({ ok: true, sent: true }),
+    listDuePaidTicketDeliveryOrders: async () => ({ ok: true, orders: dueOrders }),
+    getPaidTicketDeliveryQueueCounts: async () => ({ ok: true, counts: {} }),
+  });
+
+  await worker.processDuePaidTicketDeliveries();
+  assert.deepEqual(calls, ["instruction", "qr"]);
 });
 
 test("worker groups orders by mode and exposes queue counters", async () => {

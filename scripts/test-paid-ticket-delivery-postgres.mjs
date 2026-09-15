@@ -22,10 +22,21 @@ async function psqlAsync(sql) {
   return stdout.trim();
 }
 
+function resetPublicSchema() {
+  psql(`
+    drop schema if exists public cascade;
+    create schema public authorization postgres;
+    grant usage on schema public to public;
+  `);
+}
+
 test("paid ticket delivery migration is atomic, leased, bounded and concurrent on PostgreSQL 16", async () => {
   assert.ok(databaseUrl, "DATABASE_URL must point to the disposable CI PostgreSQL 16 instance");
-  const serverVersion = Number(psql("show server_version_num;", ["-At"]).trim());
-  assert.ok(serverVersion >= 160000 && serverVersion < 170000, `PostgreSQL 16 is required; server_version_num=${serverVersion}`);
+  resetPublicSchema();
+
+  try {
+    const serverVersion = Number(psql("show server_version_num;", ["-At"]).trim());
+    assert.ok(serverVersion >= 160000 && serverVersion < 170000, `PostgreSQL 16 is required; server_version_num=${serverVersion}`);
 
   const originalConfirmMigration = readFileSync("supabase/migrations/20260522000400_create_confirm_paid_ticket_order_rpc.sql", "utf8");
   const outboundTableMigration = readFileSync("supabase/migrations/20260721000100_create_whatsapp_outbound_deliveries.sql", "utf8");
@@ -206,11 +217,75 @@ test("paid ticket delivery migration is atomic, leased, bounded and concurrent o
       if (select count(*) from public.whatsapp_outbound_deliveries where business_context->>'order_id' = '50000000-0000-4000-8000-000000000003') <> 1
         or (select reason from public.whatsapp_outbound_deliveries where business_context->>'order_id' = '50000000-0000-4000-8000-000000000003') <> 'paid_ticket_delivery_choice'
       then raise exception 'multi-ticket choice intent was not atomic'; end if;
+      update public.whatsapp_outbound_deliveries
+      set status = 'sending', lease_expires_at = now() + interval '5 minutes', claim_token = gen_random_uuid()
+      where idempotency_key = 'paid-ticket-order:50000000-0000-4000-8000-000000000003:delivery-choice:v1';
+      begin
+        perform public.ensure_paid_ticket_delivery_intents('50000000-0000-4000-8000-000000000003', true);
+        raise exception 'active choice lease was stolen';
+      exception when raise_exception then
+        if sqlerrm <> 'paid_ticket_delivery_choice_in_progress' then raise; end if;
+      end;
+      if (select count(*) from public.whatsapp_outbound_deliveries where business_context->>'order_id' = '50000000-0000-4000-8000-000000000003') <> 1 then
+        raise exception 'full intents were created behind an active choice claim';
+      end if;
+      update public.whatsapp_outbound_deliveries
+      set lease_expires_at = now() - interval '1 second'
+      where idempotency_key = 'paid-ticket-order:50000000-0000-4000-8000-000000000003:delivery-choice:v1';
       perform public.ensure_paid_ticket_delivery_intents('50000000-0000-4000-8000-000000000003', true);
       if (select count(*) from public.whatsapp_outbound_deliveries where business_context->>'order_id' = '50000000-0000-4000-8000-000000000003') <> 5 then
         raise exception 'full multi-ticket intents were not persisted together';
       end if;
+      if (select status from public.whatsapp_outbound_deliveries where idempotency_key = 'paid-ticket-order:50000000-0000-4000-8000-000000000003:delivery-choice:v1') <> 'superseded' then
+        raise exception 'old multi-ticket choice was not superseded';
+      end if;
+      if (select count(*) from public.claim_whatsapp_outbound_delivery((
+        select id from public.whatsapp_outbound_deliveries
+        where idempotency_key = 'paid-ticket-order:50000000-0000-4000-8000-000000000003:delivery-choice:v1'
+      ))) <> 0 then raise exception 'superseded choice was claimable'; end if;
     end $audit$;
+
+    insert into public.whatsapp_outbound_deliveries(
+      idempotency_key, customer_id, recipient_phone, message_type, reason,
+      business_context, status, attempt_count, next_attempt_at
+    ) values
+      ('schedule-a-text', '10000000-0000-4000-8000-000000000001', '5511999990001', 'text', 'paid_ticket_delivery', '{"order_id":"a0000000-0000-4000-8000-000000000001","delivery_order":1}', 'failed', 1, now() + interval '1 hour'),
+      ('schedule-a-instruction', '10000000-0000-4000-8000-000000000001', '5511999990001', 'text', 'paid_ticket_qr_instruction', '{"order_id":"a0000000-0000-4000-8000-000000000001","delivery_order":2}', 'pending', 0, null),
+      ('schedule-a-qr', '10000000-0000-4000-8000-000000000001', '5511999990001', 'image', 'paid_ticket_qr_delivery', '{"order_id":"a0000000-0000-4000-8000-000000000001","delivery_order":3}', 'pending', 0, null),
+      ('schedule-b-text', '10000000-0000-4000-8000-000000000001', '5511999990001', 'text', 'paid_ticket_delivery', '{"order_id":"b0000000-0000-4000-8000-000000000001","delivery_order":1}', 'dead_letter', 5, null),
+      ('schedule-b-instruction', '10000000-0000-4000-8000-000000000001', '5511999990001', 'text', 'paid_ticket_qr_instruction', '{"order_id":"b0000000-0000-4000-8000-000000000001","delivery_order":2}', 'pending', 0, null),
+      ('schedule-c-text', '10000000-0000-4000-8000-000000000001', '5511999990001', 'text', 'paid_ticket_delivery', '{"order_id":"c0000000-0000-4000-8000-000000000001","delivery_order":1}', 'sent', 1, null),
+      ('schedule-c-instruction', '10000000-0000-4000-8000-000000000001', '5511999990001', 'text', 'paid_ticket_qr_instruction', '{"order_id":"c0000000-0000-4000-8000-000000000001","delivery_order":2}', 'failed', 1, now() - interval '1 second'),
+      ('schedule-d-text', '10000000-0000-4000-8000-000000000001', '5511999990001', 'text', 'paid_ticket_delivery', '{"order_id":"d0000000-0000-4000-8000-000000000001","delivery_order":1}', 'sent', 1, null),
+      ('schedule-d-instruction', '10000000-0000-4000-8000-000000000001', '5511999990001', 'text', 'paid_ticket_qr_instruction', '{"order_id":"d0000000-0000-4000-8000-000000000001","delivery_order":2}', 'sent', 1, null),
+      ('schedule-d-qr', '10000000-0000-4000-8000-000000000001', '5511999990001', 'image', 'paid_ticket_qr_delivery', '{"order_id":"d0000000-0000-4000-8000-000000000001","delivery_order":3}', 'failed', 1, now() - interval '1 second'),
+      ('schedule-e-text', '10000000-0000-4000-8000-000000000001', '5511999990001', 'text', 'paid_ticket_delivery', '{"order_id":"e0000000-0000-4000-8000-000000000001","delivery_order":1}', 'sent', 1, null),
+      ('schedule-e-instruction', '10000000-0000-4000-8000-000000000001', '5511999990001', 'text', 'paid_ticket_qr_instruction', '{"order_id":"e0000000-0000-4000-8000-000000000001","delivery_order":2}', 'sent', 1, null);
+
+    do $scheduling$
+    begin
+      if exists (select 1 from public.list_due_paid_ticket_delivery_orders(100) where order_id = 'a0000000-0000-4000-8000-000000000001') then
+        raise exception 'future-backoff predecessor did not block downstream';
+      end if;
+      if exists (select 1 from public.list_due_paid_ticket_delivery_orders(100) where order_id = 'b0000000-0000-4000-8000-000000000001') then
+        raise exception 'dead-letter predecessor did not block downstream';
+      end if;
+      if not exists (select 1 from public.list_due_paid_ticket_delivery_orders(100) where order_id = 'c0000000-0000-4000-8000-000000000001') then
+        raise exception 'due instruction after sent text was not scheduled';
+      end if;
+      if not exists (select 1 from public.list_due_paid_ticket_delivery_orders(100) where order_id = 'd0000000-0000-4000-8000-000000000001') then
+        raise exception 'due QR after sent predecessors was not scheduled';
+      end if;
+      if exists (select 1 from public.list_due_paid_ticket_delivery_orders(100) where order_id = 'e0000000-0000-4000-8000-000000000001') then
+        raise exception 'fully sent order was scheduled';
+      end if;
+      update public.whatsapp_outbound_deliveries
+      set status = 'sent', next_attempt_at = null
+      where idempotency_key = 'schedule-a-text';
+      if not exists (select 1 from public.list_due_paid_ticket_delivery_orders(100) where order_id = 'a0000000-0000-4000-8000-000000000001') then
+        raise exception 'downstream did not become eligible after predecessor sent';
+      end if;
+    end $scheduling$;
 
     insert into public.whatsapp_outbound_deliveries(
       idempotency_key, customer_id, recipient_phone, message_type, reason, business_context,
@@ -281,5 +356,8 @@ test("paid ticket delivery migration is atomic, leased, bounded and concurrent o
 
   const concurrencySql = `select count(*) from public.claim_whatsapp_outbound_delivery((select id from public.whatsapp_outbound_deliveries where idempotency_key='matrix-concurrent'));`;
   const results = await Promise.all([psqlAsync(concurrencySql), psqlAsync(concurrencySql)]);
-  assert.deepEqual(results.map(Number).sort(), [0, 1], "exactly one concurrent claimant must win");
+    assert.deepEqual(results.map(Number).sort(), [0, 1], "exactly one concurrent claimant must win");
+  } finally {
+    resetPublicSchema();
+  }
 });
