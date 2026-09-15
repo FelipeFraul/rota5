@@ -81,11 +81,11 @@ test("paid combo confirmation, versioned QR and delivery queue are transactional
       insert into public.event_sessions values ('30000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001');
       insert into public.combo_offers values ('40000000-0000-4000-8000-000000000001','Combo');
       insert into public.combo_orders
-      select ('50000000-0000-4000-8000-'||lpad(i::text,12,'0'))::uuid,'40000000-0000-4000-8000-000000000001',
+      select ('5000000'||(i-1)::text||'-0000-4000-8000-'||lpad(i::text,12,'0'))::uuid,'40000000-0000-4000-8000-000000000001',
         ('10000000-0000-4000-8000-'||lpad(i::text,12,'0'))::uuid,'20000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001','pending_payment',1,1000,null
       from generate_series(1,4) i;
       insert into public.combo_redemptions(id,combo_order_id,customer_id,event_id,session_id,offer_name,quantity,qr_token_hash,redemption_code,status)
-      values ('60000000-0000-4000-8000-000000000099','50000000-0000-4000-8000-000000000003','10000000-0000-4000-8000-000000000003','20000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001','Legacy',1,'legacy-hash','LEGACY','issued');
+      values ('60000000-0000-4000-8000-000000000099','50000002-0000-4000-8000-000000000003','10000000-0000-4000-8000-000000000003','20000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001','Legacy',1,'legacy-hash','LEGACY','issued');
       ${migration}
     `);
 
@@ -105,15 +105,15 @@ test("paid combo confirmation, versioned QR and delivery queue are transactional
         begin perform public.confirm_paid_combo_order('50000000-0000-4000-8000-000000000001','mercado_pago','mp-1',999,'BRL',now(),'{}','x',1); raise exception 'underpayment accepted'; exception when raise_exception then if sqlerrm<>'combo_payment_amount_mismatch' then raise; end if; end;
         begin perform public.confirm_paid_combo_order('50000000-0000-4000-8000-000000000001','mercado_pago','mp-1',1001,'BRL',now(),'{}','x',1); raise exception 'overpayment accepted'; exception when raise_exception then if sqlerrm<>'combo_payment_amount_mismatch' then raise; end if; end;
         begin perform public.confirm_paid_combo_order('50000000-0000-4000-8000-000000000001','mercado_pago','mp-1',1000,'USD',now(),'{}','x',1); raise exception 'currency accepted'; exception when raise_exception then if sqlerrm<>'combo_payment_currency_mismatch' then raise; end if; end;
-        begin insert into public.combo_payments(combo_order_id,provider,provider_payment_id,status,amount_cents,currency) values('50000000-0000-4000-8000-000000000003','mercado_pago','mp-1','pending',1000,'BRL'); raise exception 'duplicate provider payment accepted'; exception when unique_violation then null; end;
+        begin insert into public.combo_payments(combo_order_id,provider,provider_payment_id,status,amount_cents,currency) values('50000002-0000-4000-8000-000000000003','mercado_pago','mp-1','pending',1000,'BRL'); raise exception 'duplicate provider payment accepted'; exception when unique_violation then null; end;
         begin insert into public.combo_payments(combo_order_id,provider,provider_payment_id,status,amount_cents,currency) values('50000000-0000-4000-8000-000000000001','mercado_pago','mp-second-approved','approved',1000,'BRL'); raise exception 'second approved payment accepted'; exception when unique_violation then null; end;
 
         insert into public.whatsapp_outbound_deliveries(idempotency_key,customer_id,recipient_phone,message_type,reason,business_context,status)
-        values('paid-combo-order:50000000-0000-4000-8000-000000000002:text:v1','10000000-0000-4000-8000-000000000002','5511999990002','image','wrong','{}','pending');
-        begin perform public.confirm_paid_combo_order('50000000-0000-4000-8000-000000000002','mercado_pago','mp-collision',1000,'BRL',now(),'{}','hash',1); raise exception 'collision accepted'; exception when raise_exception then if sqlerrm<>'combo_delivery_intent_collision' then raise; end if; end;
-        if (select status from public.combo_orders where id='50000000-0000-4000-8000-000000000002')<>'pending_payment'
-          or exists(select 1 from public.combo_payments where combo_order_id='50000000-0000-4000-8000-000000000002')
-          or exists(select 1 from public.combo_redemptions where combo_order_id='50000000-0000-4000-8000-000000000002')
+        values('paid-combo-order:50000001-0000-4000-8000-000000000002:text:v1','10000000-0000-4000-8000-000000000002','5511999990002','image','wrong','{}','pending');
+        begin perform public.confirm_paid_combo_order('50000001-0000-4000-8000-000000000002','mercado_pago','mp-collision',1000,'BRL',now(),'{}','hash',1); raise exception 'collision accepted'; exception when raise_exception then if sqlerrm<>'combo_delivery_intent_collision' then raise; end if; end;
+        if (select status from public.combo_orders where id='50000001-0000-4000-8000-000000000002')<>'pending_payment'
+          or exists(select 1 from public.combo_payments where combo_order_id='50000001-0000-4000-8000-000000000002')
+          or exists(select 1 from public.combo_redemptions where combo_order_id='50000001-0000-4000-8000-000000000002')
         then raise exception 'collision did not roll back'; end if;
         if (select qr_token_version from public.combo_redemptions where id='60000000-0000-4000-8000-000000000099') is not null
           or (select qr_token_hash from public.combo_redemptions where id='60000000-0000-4000-8000-000000000099')<>'legacy-hash'
@@ -150,8 +150,8 @@ test("paid combo confirmation, versioned QR and delivery queue are transactional
       end $audit$;
     `);
 
-    const raceOrder = "50000000-0000-4000-8000-000000000002";
-    psql("delete from public.whatsapp_outbound_deliveries where idempotency_key='paid-combo-order:50000000-0000-4000-8000-000000000002:text:v1';");
+    const raceOrder = "50000001-0000-4000-8000-000000000002";
+    psql("delete from public.whatsapp_outbound_deliveries where idempotency_key='paid-combo-order:50000001-0000-4000-8000-000000000002:text:v1';");
     const calls = await Promise.allSettled([
       psqlAsync(`select public.confirm_paid_combo_order('${raceOrder}','mercado_pago','race-a',1000,'BRL',now(),'{}','race-hash',1);`),
       psqlAsync(`select public.confirm_paid_combo_order('${raceOrder}','mercado_pago','race-b',1000,'BRL',now(),'{}','race-hash',1);`),
@@ -160,7 +160,7 @@ test("paid combo confirmation, versioned QR and delivery queue are transactional
     assert.equal(calls.filter((x) => x.status === "rejected").length, 1);
     assert.equal(psql(`select count(*) from public.combo_payments where combo_order_id='${raceOrder}' and status='approved';`, ["-At"]).trim(), "1");
 
-    const samePaymentOrder = "50000000-0000-4000-8000-000000000004";
+    const samePaymentOrder = "50000003-0000-4000-8000-000000000004";
     const samePaymentCalls = await Promise.all([
       psqlAsync(`select public.confirm_paid_combo_order('${samePaymentOrder}','mercado_pago','race-same',1000,'BRL',now(),'{}','same-hash',1);`),
       psqlAsync(`select public.confirm_paid_combo_order('${samePaymentOrder}','mercado_pago','race-same',1000,'BRL',now(),'{}','same-hash',1);`),
