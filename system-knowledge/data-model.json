@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-15T15:55:59.919Z",
-  "stage": "2.6.1",
+  "generatedAt": "2026-09-15T17:41:19.103Z",
+  "stage": "2.7.0",
   "count": 45,
   "evidence_policy": [
     "LOCAL_DECLARED",
@@ -4271,7 +4271,13 @@
         "function.confirm_paid_combo_order",
         "function.ensure_combo_ready_delivery_intents",
         "function.prepare_combo_ready_delivery",
-        "function.complete_combo_ready_delivery"
+        "function.complete_combo_ready_delivery",
+        "function.confirm_combo_delivery_choice",
+        "function.record_combo_gate_arrival",
+        "function.start_combo_kitchen_preparation",
+        "function.record_combo_delivery_choice_prompt",
+        "function.record_combo_awaiting_preparation",
+        "function.complete_legacy_combo_ready_recovery"
       ],
       "modules": [
         "event-admin.api",
@@ -4309,7 +4315,8 @@
         {
           "source": "Supabase PostgREST OpenAPI",
           "type": "REMOTE_SCHEMA"
-        }
+        },
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
       ],
       "lifecycle": {
         "explicit": true,
@@ -4364,6 +4371,14 @@
           }
         ],
         "consistency": "MATCH"
+      },
+      "metadata_transition_contract": {
+        "source_of_truth": "POSTGRESQL_CURRENT_ROW",
+        "serialization": "SELECT_FOR_UPDATE",
+        "write_strategy": "CURRENT_STATE_JSONB_MERGE",
+        "client_side_current_snapshot_replacement": false,
+        "consumption_and_delivery_metadata_atomic": true,
+        "remote_status": "APPLIED_AND_VALIDATED"
       }
     },
     {
@@ -15766,5 +15781,13 @@
     "legacy_combo_qr_token_version_null": "HISTORICAL_COMPATIBILITY",
     "new_combo_confirmations": "VERSIONED",
     "legacy_equivalent_hmac_outbox_reconstruction_claimed": false
+  },
+  "baseline_2_7_0": {
+    "tables": 45,
+    "affected_tables": [
+      "combo_redemptions",
+      "combo_redemption_events"
+    ],
+    "migration": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
   }
 }

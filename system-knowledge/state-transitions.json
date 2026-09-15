@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-15T15:55:59.919Z",
-  "stage": "2.6.1",
+  "generatedAt": "2026-09-15T17:41:19.103Z",
+  "stage": "2.7.0",
   "count": 74,
   "records": [
     {
@@ -1519,7 +1519,8 @@
     "A pipe in a state denotes multiple explicitly allowed source/target states, not an intermediate state.",
     "state.052 is implemented in SQL but blocked in the current reader path.",
     "Gate Etapa 4: quatro transições sem caminho executável foram substituídas por ramos observados dos mesmos lifecycles; evidências e entidades inexatas foram corrigidas.",
-    "Baseline 2.0.0: state.067/state.068 are observed remotely; FINAL_DB requires immutable source attribution and strict-only authorization."
+    "Baseline 2.0.0: state.067/state.068 are observed remotely; FINAL_DB requires immutable source attribution and strict-only authorization.",
+    "Baseline 2.7.0 keeps the 74 primary lifecycle transitions unchanged; internal combo raw_metadata substate transitions are serialized by migration 20260915000500."
   ],
   "validation": {
     "status": "PASS",
@@ -1527,5 +1528,9 @@
     "capability_references": true,
     "unique_ids": true,
     "executable_transition_audit": true
+  },
+  "baseline_2_7_0": {
+    "primary_transition_count_unchanged": true,
+    "combo_metadata_transitions_serialized": true
   }
 }

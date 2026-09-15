@@ -1,4 +1,13 @@
-> **Current Baseline 2.6.2 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` over unchanged functional Baseline 2.6.0/source `0a10618648fc3f873afffd8f60e60bd0396b62e7` and documentary Baseline 2.6.1. This surgical patch corrects only the NEXT-ACTIONS priority placement and stale current Node evidence. Fingerprint remains `8ae8433d11de2ba5c137bd1aa99ee55d2fc85aecb80bbec89847904387c73dbf`; counts remain 390 source files, 87 migrations, 45 tables, 57 SQL functions, 1 sequence, 57 tests and 46 findings. Lifecycle, release blockers (0), health, database and deployment are unchanged.
+> **Current Baseline 2.7.0 (2026-09-15):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`. Fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`; 391 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 57 test files and 47 findings. `risk.combo-metadata-read-modify-write-race` is RESOLVED; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is ACTIVE MEDIUM/P2 and non-release-blocking. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+
+## Baseline 2.7.0 — serialized combo metadata transitions
+
+- Type: `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE`; canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`; fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`.
+- Migration `20260915000500_serialize_combo_metadata_transitions.sql` is already applied and validated; 88 migrations and 63 SQL functions are catalogued.
+- `risk.combo-metadata-read-modify-write-race` moved to RESOLVED with complete history; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` was added as ACTIVE MEDIUM/P2, non-release-blocking and semantically separate from ambiguous external ACK.
+- Findings: 47 total, 15 RESOLVED, 23 ACTIVE, 4 POTENTIAL, 5 NOT_VALIDATED; release blockers 0. Product and Infrastructure remain DEGRADED.
+- Functional Quality Gate 34998744062: 280/280 Node, 4/4 PostgreSQL, typecheck, lint without errors and build PASS.
+- Existing functional deployment `dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g` serves `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`; no documentary deployment or remote change occurred during reconciliation. Baseline commit: `SELF_NOT_RECORDED`.
 
 ## Baseline 2.6.2 — NEXT-ACTIONS projection correction
 

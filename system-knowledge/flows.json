@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-15T15:55:59.919Z",
-  "stage": "2.6.1",
+  "generatedAt": "2026-09-15T17:41:19.103Z",
+  "stage": "2.7.0",
   "id": "rota5.flow-catalog.v1",
   "canonical": true,
   "count": 34,
@@ -1066,7 +1066,8 @@
         "orders"
       ],
       "database_functions": [
-        "reserve_official_table_map_place"
+        "reserve_official_table_map_place",
+        "confirm_combo_delivery_choice"
       ],
       "database_triggers": [],
       "integrations": [
@@ -1094,6 +1095,12 @@
           "end_line": 220,
           "symbol": "reserveOfficialTableMapPlace",
           "claim": "Reservar lugar compatível com quantidade e sessão; entrada normal está desabilitada pela flag Rota5."
+        },
+        {
+          "kind": "database_definition",
+          "path": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+          "symbol": "confirm_combo_delivery_choice",
+          "claim": "Database-serialized combo metadata transition."
         }
       ]
     },
@@ -2766,7 +2773,10 @@
         "whatsapp_messages",
         "conversations"
       ],
-      "database_functions": [],
+      "database_functions": [
+        "start_combo_kitchen_preparation",
+        "complete_legacy_combo_ready_recovery"
+      ],
       "database_triggers": [],
       "integrations": [
         "integration-supabase",
@@ -2792,6 +2802,12 @@
           "end_line": 933,
           "symbol": "startKitchenOrderPreparation",
           "claim": "Mudar estado de cozinha, rotacionar token e notificar cliente sobre retirada."
+        },
+        {
+          "kind": "database_definition",
+          "path": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+          "symbol": "start_combo_kitchen_preparation, complete_legacy_combo_ready_recovery",
+          "claim": "Database-serialized combo metadata transition."
         }
       ]
     },
@@ -2838,7 +2854,6 @@
         "FAILURE"
       ],
       "notes": [
-        "PARCIAL: caminho local de consumo e replay coberto por testes comportamentais; aplicação e comportamento da RPC no banco remoto não foram validados.",
         "HIGH #1 EXPAND and NEW_APP Production runtime passed; flow classification remains conservative until gates A-I and CONTRACT complete."
       ],
       "actors": [
@@ -2862,7 +2877,10 @@
       ],
       "database_functions": [
         "validate_combo_redemption",
-        "lock_authorized_gate_session"
+        "lock_authorized_gate_session",
+        "record_combo_delivery_choice_prompt",
+        "record_combo_awaiting_preparation",
+        "complete_legacy_combo_ready_recovery"
       ],
       "database_triggers": [],
       "integrations": [
@@ -2893,6 +2911,12 @@
           "end_line": 1513,
           "symbol": "validateComboRedemptionScan",
           "claim": "A guarda de escolha limita o retorno antecipado a delivery_choice_confirmed_at ausente, permitindo que resgates confirmados e prontos alcancem validate_combo_redemption."
+        },
+        {
+          "kind": "database_definition",
+          "path": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+          "symbol": "record_combo_delivery_choice_prompt, record_combo_awaiting_preparation, complete_legacy_combo_ready_recovery, validate_combo_redemption",
+          "claim": "Database-serialized combo metadata transition."
         }
       ],
       "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
@@ -3923,7 +3947,8 @@
         "conversations"
       ],
       "database_functions": [
-        "validate_ticket_entry"
+        "validate_ticket_entry",
+        "record_combo_gate_arrival"
       ],
       "database_triggers": [],
       "integrations": [
@@ -3950,6 +3975,12 @@
           "end_line": 639,
           "symbol": "releaseComboOrdersForKitchenAfterGateEntry",
           "claim": "Após entrada autorizada, tornar combos visíveis à cozinha e avisar comprador."
+        },
+        {
+          "kind": "database_definition",
+          "path": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+          "symbol": "record_combo_gate_arrival",
+          "claim": "Database-serialized combo metadata transition."
         }
       ]
     },
@@ -6252,5 +6283,15 @@
     "combo_paid_delivery": "DURABLE",
     "combo_ready_versioned_delivery": "DURABLE",
     "external_delivery_semantics": "AT_LEAST_ONCE"
+  },
+  "baseline_2_7_0": {
+    "affected_flows": [
+      "combo.delivery_choice",
+      "kitchen.session_prepare",
+      "kitchen.combo_redemption",
+      "gate.combo_release"
+    ],
+    "primary_state_transition_count_unchanged": true,
+    "residual_external_notification_concurrency": "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
   }
 }

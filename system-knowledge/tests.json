@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T15:55:59.919Z",
+  "generatedAt": "2026-09-15T17:41:19.103Z",
   "count": 57,
   "defaultSuite": {
     "command": "npm test",
     "fileCount": 25,
-    "observedCases": 276,
-    "passed": 276,
+    "observedCases": 280,
+    "passed": 280,
     "failed": 0,
     "status": "PASS",
     "failingFiles": [],
-    "evidence": "Quality Gate run 34984961888 passed 276/276 on 0a10618648fc3f873afffd8f60e60bd0396b62e7.",
+    "evidence": "Quality Gate run 34998744062 passed 280/280 on 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27.",
     "previousSnapshot": {
       "date": "2026-09-11",
       "observedCases": 210,
@@ -18,8 +18,8 @@
       "failed": 6,
       "note": "Resultado histórico preservado; não representa o HEAD observado em 2026-09-12."
     },
-    "cases": 276,
-    "change": "PAID_TICKET_AND_COMBO_DURABILITY_REGRESSIONS_ADDED",
+    "cases": 280,
+    "change": "COMBO_METADATA_SERIALIZATION_CONCURRENCY_REGRESSIONS_ADDED",
     "runner": "scripts/test-support/typescript-alias-loader.mjs",
     "runner_reproducible_from_git": true,
     "known_failures": 0,
@@ -1426,7 +1426,7 @@
     "safeLocalExecution": true,
     "note": "stage3Validation permanece histórico e não foi reinterpretado."
   },
-  "stage": "2.6.1",
+  "stage": "2.7.0",
   "high_1_validation": {
     "focused_new_app": {
       "passed": 96,
@@ -1556,5 +1556,27 @@
     "postgresql": "4/4 PASS",
     "quality_gate_run": 34984961888,
     "source_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7"
+  },
+  "baseline_2_7_0": {
+    "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "default_node_suite": "280/280 PASS",
+    "postgres_integration": "4/4 PASS",
+    "quality_gate_run": 34998744062,
+    "quality_gate": "PASS",
+    "changed_test_files": [
+      "scripts/test-combo-critical-lifecycle.mjs",
+      "scripts/test-paid-combo-delivery-durable.mjs",
+      "scripts/test-paid-combo-delivery-postgres.mjs",
+      "scripts/test-ticket-delivery-distribution.mjs"
+    ],
+    "race_matrix": [
+      "choice_vs_choice",
+      "choice_vs_preparation",
+      "scan_vs_preparation",
+      "scan_vs_ready",
+      "arrival_vs_consumption",
+      "validation_atomic_metadata"
+    ],
+    "versioned_ready_scan_bypass_removed": true
   }
 }

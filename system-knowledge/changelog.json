@@ -1,9 +1,49 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T16:12:38.008Z",
-  "stage": "2.6.2",
-  "count": 25,
+  "generatedAt": "2026-09-15T17:41:19.103Z",
+  "stage": "2.7.0",
+  "count": 26,
   "records": [
+    {
+      "id": "baseline-2.7.0",
+      "version": "2.7.0",
+      "date": "2026-09-15",
+      "type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+      "status": "FROZEN",
+      "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+      "source_fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee",
+      "source_file_count": 391,
+      "migration_count": 88,
+      "table_count": 45,
+      "sql_function_count": 63,
+      "sequence_count": 1,
+      "test_file_count": 57,
+      "changes": [
+        "Migration 20260915000500 serializes critical combo raw_metadata transitions with row locks and current-state JSONB merge.",
+        "risk.combo-metadata-read-modify-write-race is RESOLVED with historical evidence preserved.",
+        "risk.combo-direct-notification-concurrency-can-duplicate-or-stale is ACTIVE MEDIUM/P2 and non-release-blocking."
+      ],
+      "validation": {
+        "default_node_suite": "280/280 PASS",
+        "postgres_integration": "4/4 PASS",
+        "typecheck": "PASS",
+        "lint": "PASS_WITH_EXISTING_WARNINGS_NO_ERRORS",
+        "build": "PASS",
+        "quality_gate_run": 34998744062,
+        "quality_gate": "PASS"
+      },
+      "runtime": {
+        "remote_migration_already_applied": true,
+        "remote_changed_during_reconciliation": false,
+        "production_deployment": "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g",
+        "production_source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+        "new_documentary_deployment": false,
+        "git_auto_deploy": "DISABLED",
+        "ticketeira": "UNTOUCHED"
+      },
+      "release_blockers": 0,
+      "baseline_commit": "SELF_NOT_RECORDED"
+    },
     {
       "version": "2.6.2",
       "date": "2026-09-15",
@@ -942,6 +982,46 @@
   },
   "baseline_2_6_2": {
     "status": "FROZEN",
+    "baseline_commit": "SELF_NOT_RECORDED"
+  },
+  "baseline_2_7_0": {
+    "id": "baseline-2.7.0",
+    "version": "2.7.0",
+    "date": "2026-09-15",
+    "type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+    "status": "FROZEN",
+    "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "source_fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee",
+    "source_file_count": 391,
+    "migration_count": 88,
+    "table_count": 45,
+    "sql_function_count": 63,
+    "sequence_count": 1,
+    "test_file_count": 57,
+    "changes": [
+      "Migration 20260915000500 serializes critical combo raw_metadata transitions with row locks and current-state JSONB merge.",
+      "risk.combo-metadata-read-modify-write-race is RESOLVED with historical evidence preserved.",
+      "risk.combo-direct-notification-concurrency-can-duplicate-or-stale is ACTIVE MEDIUM/P2 and non-release-blocking."
+    ],
+    "validation": {
+      "default_node_suite": "280/280 PASS",
+      "postgres_integration": "4/4 PASS",
+      "typecheck": "PASS",
+      "lint": "PASS_WITH_EXISTING_WARNINGS_NO_ERRORS",
+      "build": "PASS",
+      "quality_gate_run": 34998744062,
+      "quality_gate": "PASS"
+    },
+    "runtime": {
+      "remote_migration_already_applied": true,
+      "remote_changed_during_reconciliation": false,
+      "production_deployment": "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g",
+      "production_source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+      "new_documentary_deployment": false,
+      "git_auto_deploy": "DISABLED",
+      "ticketeira": "UNTOUCHED"
+    },
+    "release_blockers": 0,
     "baseline_commit": "SELF_NOT_RECORDED"
   }
 }

@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T16:12:38.008Z",
-  "stage": "2.6.2",
+  "generatedAt": "2026-09-15T17:41:19.103Z",
+  "stage": "2.7.0",
   "status": "PASS",
-  "sourceCommit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+  "sourceCommit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
   "question": "Podemos confiar na BASELINE V1 como representação do Rota5 atual?",
   "answer": "BASELINE_2_6_2_DOCUMENTARY_CORRECTION: PASS. NEXT-ACTIONS priorities and current test evidence match canonical findings and test catalogs.",
   "frozenScope": {
@@ -457,8 +457,8 @@
     "RELEASE_BLOCKER_COUNT": 0
   },
   "resolved_semantic_invariants": {
-    "RESOLVED_FINDINGS_TOTAL": 14,
-    "RESOLVED_CURRENT_STATE_COMPLETE": 14,
+    "RESOLVED_FINDINGS_TOTAL": 15,
+    "RESOLVED_CURRENT_STATE_COMPLETE": 15,
     "RESOLVED_WITHOUT_CURRENT_STATE": 0,
     "RESOLVED_WITH_ACTIVE_TOP_LEVEL_CLAIMS": 0,
     "RESOLVED_WITH_NONCURRENT_TOP_LEVEL_EVIDENCE": 0,
@@ -521,5 +521,15 @@
     "priority_mismatches": 0,
     "current_stale_test_counts": 0,
     "human_machine_contradictions": 0
+  },
+  "baseline_2_7_0": {
+    "status": "PASS",
+    "change_type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+    "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "contradictions": 0,
+    "unaccounted_findings": 0,
+    "release_blockers": 0,
+    "old_finding_resolved": true,
+    "residual_finding_separate": true
   }
 }

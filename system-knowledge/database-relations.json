@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-15T15:55:59.919Z",
-  "stage": "2.6.1",
-  "count": 2257,
+  "generatedAt": "2026-09-15T17:41:19.103Z",
+  "stage": "2.7.0",
+  "count": 2272,
   "types": [
     "MODULE_ACCESSES_TABLE",
     "CAPABILITY_ACCESSES_TABLE",
@@ -33877,6 +33877,231 @@
         "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql"
       ],
       "id": "datarel.2257"
+    },
+    {
+      "from": "function.confirm_combo_delivery_choice",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.combo_redemptions",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "id": "datarel.2258"
+    },
+    {
+      "from": "function.confirm_combo_delivery_choice",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.combo_redemptions",
+      "operation": "UPDATE",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "id": "datarel.2259"
+    },
+    {
+      "from": "function.confirm_combo_delivery_choice",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.combo_redemption_events",
+      "operation": "INSERT",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "id": "datarel.2260"
+    },
+    {
+      "from": "function.record_combo_gate_arrival",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.combo_redemptions",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "id": "datarel.2261"
+    },
+    {
+      "from": "function.record_combo_gate_arrival",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.combo_redemptions",
+      "operation": "UPDATE",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "id": "datarel.2262"
+    },
+    {
+      "from": "function.start_combo_kitchen_preparation",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.combo_redemptions",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "id": "datarel.2263"
+    },
+    {
+      "from": "function.start_combo_kitchen_preparation",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.combo_redemptions",
+      "operation": "UPDATE",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "id": "datarel.2264"
+    },
+    {
+      "from": "function.record_combo_delivery_choice_prompt",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.combo_redemptions",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "id": "datarel.2265"
+    },
+    {
+      "from": "function.record_combo_delivery_choice_prompt",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.combo_redemptions",
+      "operation": "UPDATE",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "id": "datarel.2266"
+    },
+    {
+      "from": "function.record_combo_delivery_choice_prompt",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.combo_redemption_events",
+      "operation": "INSERT",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "id": "datarel.2267"
+    },
+    {
+      "from": "function.record_combo_awaiting_preparation",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.combo_redemptions",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "id": "datarel.2268"
+    },
+    {
+      "from": "function.record_combo_awaiting_preparation",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.combo_redemptions",
+      "operation": "UPDATE",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "id": "datarel.2269"
+    },
+    {
+      "from": "function.record_combo_awaiting_preparation",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.combo_redemption_events",
+      "operation": "INSERT",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "id": "datarel.2270"
+    },
+    {
+      "from": "function.complete_legacy_combo_ready_recovery",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.combo_redemptions",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "id": "datarel.2271"
+    },
+    {
+      "from": "function.complete_legacy_combo_ready_recovery",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.combo_redemptions",
+      "operation": "UPDATE",
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ],
+      "id": "datarel.2272"
     }
   ],
   "validation": {
@@ -33887,5 +34112,9 @@
     "non_not_inferred_without_evidence": 0,
     "derived_operations_are_labeled": true,
     "high_1_rollout": "EXPAND and CONTRACT APPLIED_AND_VALIDATED; FINAL_DB strict-only; dual-mode ended; source attribution non-null and immutable."
+  },
+  "baseline_2_7_0": {
+    "new_function_table_relations": 15,
+    "migration": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
   }
 }

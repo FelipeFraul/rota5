@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T16:12:38.008Z",
-  "stage": "2.6.2",
-  "sourceCommit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
-  "scope": "Current risk, coverage, validation and release-blocker projection for Baseline 2.6.2.",
+  "generatedAt": "2026-09-15T17:41:19.103Z",
+  "stage": "2.7.0",
+  "sourceCommit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+  "scope": "Current risk, coverage, validation and release-blocker projection for Baseline 2.7.0.",
   "method": "All current metrics are derived from canonical catalogs and finding_status_taxonomy; historical snapshots remain only in version-labelled fields.",
   "status": "PASS",
-  "total": 46,
+  "total": 47,
   "by_type": {
     "ARCHITECTURE": 1,
     "AUTHORIZATION": 1,
     "BROKEN_FLOW": 1,
     "BUG": 3,
-    "CONCURRENCY": 2,
+    "CONCURRENCY": 3,
     "CONFIGURATION_DRIFT": 3,
     "COUPLING": 2,
     "DATA_INTEGRITY": 3,
@@ -32,27 +32,26 @@
     "UNKNOWN": 1
   },
   "by_severity": {
-    "CRITICAL": 0,
     "HIGH": 11,
     "INFO": 2,
     "LOW": 9,
-    "MEDIUM": 24
+    "MEDIUM": 25
   },
   "by_priority": {
     "P0": 3,
     "P1": 11,
-    "P2": 21,
+    "P2": 22,
     "P3": 9,
     "P4": 2
   },
   "by_status": {
-    "ACTIVE": 22,
-    "POTENTIAL": 5,
+    "ACTIVE": 23,
+    "NOT_VALIDATED": 5,
+    "POTENTIAL": 4,
+    "RESOLVED": 15,
     "OPEN": 0,
     "MITIGATED": 0,
-    "RESOLVED": 14,
-    "ACCEPTED": 0,
-    "NOT_VALIDATED": 5
+    "ACCEPTED": 0
   },
   "high_critical": [
     "bug.create-event-invalid-jsx",
@@ -104,8 +103,8 @@
   },
   "validation": {
     "npm_test": {
-      "cases": 276,
-      "passed": 276,
+      "cases": 280,
+      "passed": 280,
       "failed": 0,
       "status": "PASS",
       "known_failures": 0,
@@ -302,6 +301,7 @@
     "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.admin-event-multistep-partial-state",
     "bug.admin-event-location-consistency",
+    "risk.combo-metadata-read-modify-write-race",
     "risk.vercel-project-identity-drift",
     "risk.latest-rota5-deployment-error",
     "gap.default-test-suite-failing",
@@ -321,7 +321,7 @@
     "open": "status in {ACTIVE, POTENTIAL, OPEN, MITIGATED}",
     "release_blocking": "status in {ACTIVE, OPEN, MITIGATED} at applicable severity",
     "closed_for_operational_metrics": "status in {RESOLVED, ACCEPTED, NOT_VALIDATED}",
-    "current_projection": "Derived at Baseline 2.6.2 generation time from canonical catalogs and lifecycle taxonomy.",
+    "current_projection": "Derived at Baseline 2.7.0 generation time from canonical catalogs and lifecycle taxonomy.",
     "release_blocker_rule": "operational_open + status.release_blocking + P0/P1 or CRITICAL/HIGH",
     "historical_snapshots": "Only fields whose names explicitly contain a baseline version or historical marker are historical."
   },
@@ -579,11 +579,11 @@
   },
   "next_active_high": null,
   "current_runtime": {
-    "production_deployment": "dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa",
-    "production_source_commit": "c726902505fd69c2cfef2dec8013ffe0cf0adba3",
-    "current_head_deployed": false,
+    "production_deployment": "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g",
+    "production_source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "current_head_deployed": true,
     "status": "READY",
-    "supabase": "UNCHANGED",
+    "supabase": "MIGRATION_20260915000500_ALREADY_APPLIED_BEFORE_RECONCILIATION",
     "ticketeira": "UNTOUCHED",
     "git_auto_deploy": "DISABLED"
   },
@@ -694,8 +694,8 @@
     "resolved_semantic_contract_required": true
   },
   "resolved_semantic_invariants": {
-    "RESOLVED_FINDINGS_TOTAL": 14,
-    "RESOLVED_CURRENT_STATE_COMPLETE": 14,
+    "RESOLVED_FINDINGS_TOTAL": 15,
+    "RESOLVED_CURRENT_STATE_COMPLETE": 15,
     "RESOLVED_WITHOUT_CURRENT_STATE": 0,
     "RESOLVED_WITH_ACTIVE_TOP_LEVEL_CLAIMS": 0,
     "RESOLVED_WITH_NONCURRENT_TOP_LEVEL_EVIDENCE": 0,
@@ -739,6 +739,14 @@
   "baseline_2_6_2": {
     "change_type": "PATCH_DOCUMENTARY_CORRECTION",
     "finding_counts_unchanged": true,
+    "release_blockers": 0
+  },
+  "baseline_2_7_0": {
+    "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "quality_gate_run": 34998744062,
+    "quality_gate": "PASS",
+    "resolved_finding": "risk.combo-metadata-read-modify-write-race",
+    "new_active_finding": "risk.combo-direct-notification-concurrency-can-duplicate-or-stale",
     "release_blockers": 0
   }
 }

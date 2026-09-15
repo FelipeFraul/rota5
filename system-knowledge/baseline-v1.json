@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T16:12:38.008Z",
-  "stage": "2.6.2",
+  "generatedAt": "2026-09-15T17:41:19.103Z",
+  "stage": "2.7.0",
   "baseline_id": "rota5-baseline-v1",
-  "version": "2.6.2",
+  "version": "2.7.0",
   "status": "FROZEN",
   "domains": 17,
   "modules": 66,
@@ -15,26 +15,26 @@
   "tables": 45,
   "stateful_tables": 23,
   "stateful_entities": 24,
-  "migrations": 87,
-  "sql_functions": 57,
+  "migrations": 88,
+  "sql_functions": 63,
   "triggers": 36,
-  "data_relations": 2257,
+  "data_relations": 2272,
   "integrations": 6,
   "webhooks": 2,
   "crons": 2,
   "environment_variables": 43,
   "tests": 57,
-  "findings": 46,
+  "findings": 47,
   "findings_by_severity": {
     "HIGH": 11,
     "INFO": 2,
     "LOW": 9,
-    "MEDIUM": 24
+    "MEDIUM": 25
   },
   "findings_by_priority": {
     "P0": 3,
     "P1": 11,
-    "P2": 21,
+    "P2": 22,
     "P3": 9,
     "P4": 2
   },
@@ -105,6 +105,7 @@
     "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.admin-event-multistep-partial-state",
     "bug.admin-event-location-consistency",
+    "risk.combo-metadata-read-modify-write-race",
     "risk.vercel-project-identity-drift",
     "risk.latest-rota5-deployment-error",
     "gap.default-test-suite-failing",
@@ -117,7 +118,7 @@
     "active_high": 0,
     "potential_high": 0,
     "open_high": 0,
-    "resolved": 14
+    "resolved": 15
   },
   "high_1_rollout": {
     "source_implementation": "IMPLEMENTED_AND_VALIDATED",
@@ -383,15 +384,15 @@
     ]
   },
   "current_runtime": {
-    "production_deployment": "dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf",
-    "production_source_commit": "148b8200a44f4eeb49e004af45060a302bac9f20",
-    "repository_source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+    "production_deployment": "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g",
+    "production_source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "repository_source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
     "production_status": "READY",
-    "current_head_deployed": false,
+    "current_head_deployed": true,
     "app_runtime_diff_after_deploy": "NAO",
-    "source_difference": "EXPECTED_NON_RUNTIME_DRIFT",
+    "source_difference": "NONE_AT_FUNCTIONAL_FREEZE",
     "relevant_log_errors": 0,
-    "supabase": "UNCHANGED_IN_FREEZE",
+    "supabase": "MIGRATION_20260915000500_ALREADY_APPLIED",
     "ticketeira": "UNTOUCHED",
     "git_auto_deploy": "DISABLED",
     "new_deployment": false
@@ -469,22 +470,22 @@
     "runtime_changed": false
   },
   "quality_gate": {
-    "version": "2.6.0",
+    "version": "2.7.0",
     "type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
-    "source_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
-    "source_fingerprint": "8ae8433d11de2ba5c137bd1aa99ee55d2fc85aecb80bbec89847904387c73dbf",
-    "source_file_count": 390,
-    "migration_count": 87,
-    "default_node_suite": "276/276 PASS",
+    "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "source_fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee",
+    "source_file_count": 391,
+    "migration_count": 88,
+    "default_node_suite": "280/280 PASS",
     "postgres_integration_suite": "4/4 PASS",
     "postgres_version": 16,
-    "quality_gate_run": 34984961888,
+    "quality_gate_run": 34998744062,
     "quality_gate": "PASS",
     "skip": 0,
     "todo": 0,
     "regressions": 0,
-    "paid_delivery_atomicity": "RESOLVED",
-    "external_delivery_semantics": "AT_LEAST_ONCE",
+    "combo_metadata_race": "RESOLVED",
+    "direct_notification_concurrency": "ACTIVE_P2_NON_BLOCKING",
     "product_health": "DEGRADED",
     "infrastructure_health": "DEGRADED",
     "new_deployment": false
@@ -544,8 +545,8 @@
     "RELEASE_BLOCKER_COUNT": 0
   },
   "resolved_semantic_invariants": {
-    "RESOLVED_FINDINGS_TOTAL": 13,
-    "RESOLVED_CURRENT_STATE_COMPLETE": 13,
+    "RESOLVED_FINDINGS_TOTAL": 15,
+    "RESOLVED_CURRENT_STATE_COMPLETE": 15,
     "RESOLVED_WITHOUT_CURRENT_STATE": 0,
     "RESOLVED_WITH_ACTIVE_TOP_LEVEL_CLAIMS": 0,
     "RESOLVED_WITH_NONCURRENT_TOP_LEVEL_EVIDENCE": 0,
@@ -564,17 +565,17 @@
     "tables": 45,
     "stateful_tables": 23,
     "stateful_entities": 24,
-    "migrations": 87,
-    "sql_functions": 57,
+    "migrations": 88,
+    "sql_functions": 63,
     "triggers": 36,
     "sequences": 1,
-    "data_relations": 2257,
+    "data_relations": 2272,
     "integrations": 6,
     "webhooks": 2,
     "crons": 2,
     "environment_variables": 43,
     "tests": 57,
-    "findings": 46
+    "findings": 47
   },
   "active_high_findings": [],
   "potential_high_findings": [],
@@ -658,5 +659,14 @@
     "canonical_functional_source": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
     "counts_unchanged": true,
     "release_blockers": 0
+  },
+  "baseline_2_7_0": {
+    "change_type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+    "previous_baseline": "2.6.2",
+    "canonical_functional_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "finding_resolution": "risk.combo-metadata-read-modify-write-race",
+    "residual_finding": "risk.combo-direct-notification-concurrency-can-duplicate-or-stale",
+    "release_blockers": 0,
+    "baseline_commit": "SELF_NOT_RECORDED"
   }
 }

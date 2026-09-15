@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-15T15:55:59.919Z",
-  "stage": "2.6.1",
-  "count": 25,
-  "ok": 22,
+  "generatedAt": "2026-09-15T17:41:19.103Z",
+  "stage": "2.7.0",
+  "count": 27,
+  "ok": true,
   "records": [
     {
       "id": "runtime.supabase-openapi",
@@ -190,7 +190,7 @@
       "method": "DOCUMENTARY_POLICY",
       "evidence_source": "CANONICAL_SOURCE_POLICY",
       "status": "PASS",
-      "result": "Canonical functional source is 0a10618648fc3f873afffd8f60e60bd0396b62e7; baseline commit is SELF_NOT_RECORDED; live branch tip is VOLATILE_NOT_EMBEDDED_IN_FROZEN_BASELINE.",
+      "result": "Canonical functional source is 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27; baseline commit is SELF_NOT_RECORDED; live branch tip is VOLATILE_NOT_EMBEDDED_IN_FROZEN_BASELINE.",
       "side_effect_free": true,
       "expected": "Represent canonical functional source without embedding a volatile live branch tip or a self-referential baseline commit.",
       "evidence": [
@@ -198,7 +198,7 @@
         "system-knowledge/baseline-manifest.json"
       ],
       "temporal_semantics": "CURRENT_CANONICAL_SEMANTICS",
-      "canonical_functional_source": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+      "canonical_functional_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
       "baseline_commit": "SELF_NOT_RECORDED",
       "live_branch_tip": "VOLATILE_NOT_EMBEDDED_IN_FROZEN_BASELINE",
       "historical_snapshot": {
@@ -375,6 +375,39 @@
       "status": "PASS",
       "result": "276/276 Node, 4/4 PostgreSQL 16, typecheck, lint (23 preexisting warnings) and build passed on 0a10618648fc3f873afffd8f60e60bd0396b62e7.",
       "temporal_semantics": "CURRENT_CANONICAL_SEMANTICS"
+    },
+    {
+      "id": "runtime.baseline-2-7-combo-metadata-remote",
+      "target": "Supabase Rota5 combo metadata transition contract",
+      "method": "PRIOR_COMPLETED_REAUDIT_READ_ONLY_EVIDENCE",
+      "evidence_source": "REMOTE_RUNTIME_OBSERVED_BEFORE_DOCUMENTARY_RECONCILIATION",
+      "status": "PASS",
+      "result": "Migration 20260915000500 was already applied; 7 functions, minimal grants, row locks and JSONB merge passed. Two legacy issued redemptions retained raw_metadata={}; invalid invariants=0; combo outbox orphans=0. No remote query or mutation occurred during this reconciliation.",
+      "side_effect_free": true,
+      "expected": "Record prior re-audit evidence without pretending a new remote observation.",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+        "Quality Gate 34998744062"
+      ],
+      "temporal_semantics": "HISTORICAL_SNAPSHOT",
+      "observed_at": "2026-09-15T14:06:19-03:00"
+    },
+    {
+      "id": "runtime.baseline-2-7-functional-production",
+      "target": "Vercel Production functional source",
+      "method": "PRIOR_COMPLETED_MANUAL_DEPLOYMENT_AND_HEALTH_CHECK",
+      "evidence_source": "RUNTIME_OBSERVED_BEFORE_DOCUMENTARY_RECONCILIATION",
+      "status": "PASS",
+      "result": "Production deployment dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g serves exact functional source 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27; /api/health returned HTTP 200. No documentary deployment was created.",
+      "side_effect_free": true,
+      "expected": "Record the existing functional deployment without deploying baseline documentation.",
+      "evidence": [
+        "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g",
+        "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+        "GET /api/health HTTP 200"
+      ],
+      "temporal_semantics": "HISTORICAL_SNAPSHOT",
+      "observed_at": "2026-09-15T14:08:14-03:00"
     }
   ],
   "prohibited_actions_performed": false,
@@ -571,12 +604,12 @@
     "ticketeira": "UNTOUCHED"
   },
   "current_production": {
-    "deployment": "dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf",
-    "application_source": "148b8200a44f4eeb49e004af45060a302bac9f20",
-    "repository_source": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+    "deployment": "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g",
+    "application_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "repository_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
     "status": "READY",
     "app_runtime_diff_after_deploy": "NAO",
-    "deployment_sha_difference": "EXPECTED_NON_RUNTIME_DRIFT",
+    "deployment_sha_difference": "NONE_AT_FUNCTIONAL_FREEZE",
     "git_auto_deploy": "DISABLED",
     "new_deployment_in_freeze": false
   },
@@ -695,5 +728,17 @@
     "change_type": "PATCH_DOCUMENTARY_CORRECTION",
     "functional_source_changed": false,
     "current_metadata_corrected": true
+  },
+  "baseline_2_7_0": {
+    "change_type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+    "current_record_count": 27,
+    "current_status_counts": {
+      "PASS": 25,
+      "PARTIAL": 2,
+      "FAIL": 0
+    },
+    "functional_quality_gate": "34998744062 PASS",
+    "remote_changed_during_reconciliation": false,
+    "new_deployment": false
   }
 }

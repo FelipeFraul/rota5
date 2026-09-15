@@ -1,19 +1,23 @@
-> **Current Baseline 2.6.2 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` over unchanged functional Baseline 2.6.0/source `0a10618648fc3f873afffd8f60e60bd0396b62e7` and documentary Baseline 2.6.1. This surgical patch corrects only the NEXT-ACTIONS priority placement and stale current Node evidence. Fingerprint remains `8ae8433d11de2ba5c137bd1aa99ee55d2fc85aecb80bbec89847904387c73dbf`; counts remain 390 source files, 87 migrations, 45 tables, 57 SQL functions, 1 sequence, 57 tests and 46 findings. Lifecycle, release blockers (0), health, database and deployment are unchanged.
+> **Current Baseline 2.7.0 (2026-09-15):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`. Fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`; 391 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 57 test files and 47 findings. `risk.combo-metadata-read-modify-write-race` is RESOLVED; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is ACTIVE MEDIUM/P2 and non-release-blocking. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+
+## Baseline 2.7.0 — combo metadata serialization
+
+Canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27` is deployed as `dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g`. Migration `20260915000500_serialize_combo_metadata_transitions.sql` was already applied and validated before this documentary reconciliation. Current quality is 280/280 Node, 4/4 PostgreSQL, typecheck, lint without errors and build PASS in Quality Gate 34998744062. The metadata lost-update finding is RESOLVED; direct-notification concurrency is a separate ACTIVE MEDIUM/P2 residual. No remote mutation or deployment occurred during this freeze.
 
 
 # Rota5 Baseline V1
 
-**Identity:** `rota5-baseline-v1`, version **2.6.2**, status **FROZEN**. Canonical functional source is `0a10618648fc3f873afffd8f60e60bd0396b62e7`, with 390 files and fingerprint `8ae8433d11de2ba5c137bd1aa99ee55d2fc85aecb80bbec89847904387c73dbf`. The baseline commit is `SELF_NOT_RECORDED` to avoid self-reference.
+**Identity:** `rota5-baseline-v1`, version **2.7.0**, status **FROZEN**. Canonical functional source is `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`, with 391 files and fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`. The baseline commit is `SELF_NOT_RECORDED` to avoid self-reference.
 
-Rota5 is a Next.js application backed by Supabase/PostgreSQL. The canonical catalog contains 17 domains, 66 modules, 56 entrypoints, 140 capabilities, 34 flows, 169 steps and 74 state transitions. The data catalog contains 45 tables, 87 migrations, 57 SQL functions, 1 sequence, 36 triggers and 2,257 currently catalogued typed relations.
+Rota5 is a Next.js application backed by Supabase/PostgreSQL. The canonical catalog contains 17 domains, 66 modules, 56 entrypoints, 140 capabilities, 34 flows, 169 steps and 74 state transitions. The data catalog contains 45 tables, 88 migrations, 63 SQL functions, 1 sequence, 36 triggers and 2,272 currently catalogued typed relations.
 
 ## PRODUCT HEALTH AT FREEZE
 
 **DEGRADED.** Baseline integrity is PASS and the canonical release-blocker set is empty, while independent operational and validation-queue findings remain open.
 
-- Findings: 46; active P0: 0; active HIGH: 0; potential HIGH: 0; open HIGH: 0; resolved: 14; release blockers: 0.
+- Findings: 47; active P0: 0; active HIGH: 0; potential HIGH: 0; open HIGH: 0; resolved: 15; release blockers: 0.
 - Broken flows: 0; partial flows: 9.
-- Current quality: default Node 276/276 PASS; PostgreSQL 4/4 PASS; Quality Gate 34984961888 PASS; 0 skip, 0 todo and 0 regressions.
+- Current quality: default Node 280/280 PASS; PostgreSQL 4/4 PASS; Quality Gate 34998744062 PASS; 0 skip, 0 todo and 0 regressions.
 - Infrastructure health: **DEGRADED** because independent findings remain open. Git auto-deploy is DISABLED.
 
 ## HISTORICAL HIGH #1 FINAL STATE — BASELINE 2.0.0

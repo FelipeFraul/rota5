@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T15:55:59.919Z",
+  "generatedAt": "2026-09-15T17:41:19.103Z",
   "count": 66,
   "records": [
     {
@@ -2184,7 +2184,7 @@
       "type": "module",
       "domain": "domain.combo-commerce-fulfillment",
       "path": "src/lib/tickets/services/comboRedemptions.ts",
-      "responsibility": "Preparar/resgatar combos; novas entregas READY versionadas usam recuperação HMAC/outbox, enquanto qr_token_version=NULL permanece compatibilidade histórica.",
+      "responsibility": "Preparar/resgatar combos com transições críticas de metadata serializadas no PostgreSQL; entregas READY versionadas usam recuperação HMAC/outbox e qr_token_version=NULL permanece compatibilidade histórica.",
       "status": "PARCIALMENTE CONFIRMADO",
       "exports": [
         "validateKitchenSessionToken",
@@ -2228,16 +2228,19 @@
         "test-gate-credential-revocation-postgres.mjs",
         "test-gate-credential-revocation-rollout-postgres.mjs",
         "test-paid-combo-delivery-durable.mjs",
-        "test-paid-combo-delivery-postgres.mjs"
+        "test-paid-combo-delivery-postgres.mjs",
+        "test-ticket-delivery-distribution.mjs"
       ],
       "evidence": [
         "src/lib/tickets/services/comboRedemptions.ts",
         "export validateKitchenSessionToken",
         "export releaseComboOrdersForKitchenAfterGateEntry",
         "export startKitchenOrderPreparation",
-        "src/lib/tickets/services/comboRedemptions.ts:1035-1231;1462"
+        "src/lib/tickets/services/comboRedemptions.ts:1035-1231;1462",
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+        "Quality Gate 34998744062: Node 280/280 and PostgreSQL 4/4 PASS"
       ],
-      "notes": "HIGH #1 uses credential -> session -> combo lock ordering; PostgreSQL and remote FINAL_DB runtime passed. EXPAND/CONTRACT and gates A-I are complete.",
+      "notes": "CURRENT metadata writers use database RPCs with row locks and JSONB merge. Direct Z-API notifications that precede state serialization retain a separate concurrency limitation.",
       "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
       "high_1_runtime_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
@@ -2801,7 +2804,7 @@
       ]
     }
   ],
-  "stage": "2.6.1",
+  "stage": "2.7.0",
   "baseline_2_6_0": {
     "paid_delivery": "DURABLE_AT_LEAST_ONCE",
     "new_source_files": [
@@ -2809,5 +2812,10 @@
       "src/lib/tickets/services/paidTicketDeliveryWorker.ts",
       "src/lib/tickets/services/paidComboDeliveryWorker.ts"
     ]
+  },
+  "baseline_2_7_0": {
+    "changed_module": "combo.redemption",
+    "functional_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "metadata_serialization": "DATABASE_RPC"
   }
 }

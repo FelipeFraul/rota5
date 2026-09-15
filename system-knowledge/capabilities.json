@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T15:55:59.919Z",
-  "stage": "2.6.1",
+  "generatedAt": "2026-09-15T17:41:19.103Z",
+  "stage": "2.7.0",
   "id": "capability-catalog.v1",
   "canonical": true,
   "status": "PASS",
   "confidence": "MEDIA",
-  "sourceCommit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+  "sourceCommit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
   "sourceScope": "Working tree local, incluindo alteração preexistente em src/lib/tickets/messages.ts; não equivale ao commit puro nem ao deploy.",
   "count": 140,
   "methodology": {
@@ -12912,7 +12912,9 @@
         "whatsapp_messages",
         "conversations"
       ],
-      "database_functions": [],
+      "database_functions": [
+        "record_combo_gate_arrival"
+      ],
       "tests": [
         "scripts/test-combo-critical-lifecycle.mjs"
       ],
@@ -12967,6 +12969,12 @@
           "path": "scripts/test-combo-critical-lifecycle.mjs",
           "line": 1,
           "claim": "Baseline 2.4.0 executes production code for combo.kitchen_release; evidence is behavioral, not a source-regex-only assertion."
+        },
+        {
+          "kind": "database_definition",
+          "path": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+          "symbol": "record_combo_gate_arrival",
+          "claim": "Critical combo metadata transition is serialized with a row lock and current-state JSONB merge."
         }
       ],
       "status": "CONFIRMADA",
@@ -12997,7 +13005,9 @@
             "whatsapp_messages",
             "conversations"
           ],
-          "functions": [],
+          "functions": [
+            "record_combo_gate_arrival"
+          ],
           "triggers": [],
           "integrations": [
             "integration-supabase",
@@ -13036,7 +13046,9 @@
         "lock_authorized_gate_session",
         "prepare_combo_ready_delivery",
         "ensure_combo_ready_delivery_intents",
-        "complete_combo_ready_delivery"
+        "complete_combo_ready_delivery",
+        "start_combo_kitchen_preparation",
+        "complete_legacy_combo_ready_recovery"
       ],
       "tests": [
         "test-022",
@@ -13076,6 +13088,12 @@
           "line": 1,
           "entrypoint": "page-kitchen-session",
           "claim": "Scanner de cozinha."
+        },
+        {
+          "kind": "database_definition",
+          "path": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+          "symbol": "start_combo_kitchen_preparation, complete_legacy_combo_ready_recovery",
+          "claim": "Critical combo metadata transition is serialized with a row lock and current-state JSONB merge."
         }
       ],
       "status": "CONFIRMADA",
@@ -13108,7 +13126,9 @@
             "conversations"
           ],
           "functions": [
-            "lock_authorized_gate_session"
+            "lock_authorized_gate_session",
+            "start_combo_kitchen_preparation",
+            "complete_legacy_combo_ready_recovery"
           ],
           "triggers": [],
           "integrations": [
@@ -13149,7 +13169,11 @@
         "whatsapp_messages",
         "combo_redemption_events"
       ],
-      "database_functions": [],
+      "database_functions": [
+        "record_combo_delivery_choice_prompt",
+        "record_combo_awaiting_preparation",
+        "complete_legacy_combo_ready_recovery"
+      ],
       "tests": [
         "test-036"
       ],
@@ -13183,6 +13207,12 @@
           "line": 1,
           "entrypoint": "page-offer-reader",
           "claim": "Leitor de oferta/combo."
+        },
+        {
+          "kind": "database_definition",
+          "path": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+          "symbol": "record_combo_delivery_choice_prompt, record_combo_awaiting_preparation, complete_legacy_combo_ready_recovery",
+          "claim": "Critical combo metadata transition is serialized with a row lock and current-state JSONB merge."
         }
       ],
       "status": "PARCIAL",
@@ -13216,7 +13246,11 @@
             "whatsapp_messages",
             "combo_redemption_events"
           ],
-          "functions": [],
+          "functions": [
+            "record_combo_delivery_choice_prompt",
+            "record_combo_awaiting_preparation",
+            "complete_legacy_combo_ready_recovery"
+          ],
           "triggers": [],
           "integrations": [
             "integration-supabase",
@@ -13252,7 +13286,9 @@
         "official_table_map_reservations",
         "combo_redemption_events"
       ],
-      "database_functions": [],
+      "database_functions": [
+        "confirm_combo_delivery_choice"
+      ],
       "tests": [
         "test-036"
       ],
@@ -13294,6 +13330,12 @@
           "line": 12232,
           "symbol": "handleComboDeliveryConfirmation",
           "claim": "Consumidor no mesmo módulo; ler guardas e notas para disponibilidade efetiva."
+        },
+        {
+          "kind": "database_definition",
+          "path": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+          "symbol": "confirm_combo_delivery_choice",
+          "claim": "Critical combo metadata transition is serialized with a row lock and current-state JSONB merge."
         }
       ],
       "status": "PARCIAL",
@@ -13325,7 +13367,9 @@
             "official_table_map_reservations",
             "combo_redemption_events"
           ],
-          "functions": [],
+          "functions": [
+            "confirm_combo_delivery_choice"
+          ],
           "triggers": [],
           "integrations": [
             "integration-supabase",
@@ -13371,7 +13415,7 @@
         "test-046",
         "test-047"
       ],
-      "description": "O leitor encaminha resgates issued com escolha confirmada à RPC atômica validate_combo_redemption; a equivalência do banco remoto não foi validada.",
+      "description": "O leitor encaminha resgates issued com escolha confirmada à RPC atômica validate_combo_redemption; consumo e metadata de entrega são persistidos na mesma transação.",
       "evidence": [
         {
           "kind": "implementation",
@@ -13408,6 +13452,12 @@
           "line": 1,
           "entrypoint": "page-offer-reader",
           "claim": "Leitor de oferta/combo."
+        },
+        {
+          "kind": "database_definition",
+          "path": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+          "symbol": "validate_combo_redemption",
+          "claim": "Critical combo metadata transition is serialized with a row lock and current-state JSONB merge."
         }
       ],
       "status": "PARCIAL",
@@ -13421,7 +13471,6 @@
       ],
       "database_triggers": [],
       "notes": [
-        "PARCIAL: testes locais cobrem consumo único, replay, QR inválido, escopo incorreto e escolha ainda pendente. A RPC local usa bloqueio de linha e transição issued→used; nenhum teste mutante remoto foi executado e risk.combo-metadata-read-modify-write-race permanece ativo.",
         "HIGH #1 FINAL_DB is validated: EXPAND/CONTRACT and gates A-I passed; strict-only runtime passed and the finding is RESOLVED."
       ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
@@ -13447,11 +13496,9 @@
             "integration-supabase"
           ]
         },
-        "result": "O leitor encaminha resgates issued com escolha confirmada à RPC atômica validate_combo_redemption; a equivalência do banco remoto não foi validada.",
+        "result": "O leitor encaminha resgates issued com escolha confirmada à RPC atômica validate_combo_redemption; consumo e metadata de entrega são persistidos na mesma transação.",
         "validation": "LOCAL_BEHAVIOR_TEST",
-        "limitations": [
-          "PARCIAL: testes locais cobrem consumo único, replay, QR inválido, escopo incorreto e escolha ainda pendente. A RPC local usa bloqueio de linha e transição issued→used; nenhum teste mutante remoto foi executado e risk.combo-metadata-read-modify-write-race permanece ativo."
-        ]
+        "limitations": []
       },
       "dependencies": [
         "combo.prepare"
@@ -21841,5 +21888,17 @@
   "baseline_2_6_0": {
     "paid_delivery_atomic_persistence": "CONFIRMED",
     "external_delivery_semantics": "AT_LEAST_ONCE"
+  },
+  "baseline_2_7_0": {
+    "affected_capabilities": [
+      "combo.kitchen_release",
+      "combo.prepare",
+      "combo.delivery_prompt",
+      "combo.delivery_choose",
+      "combo.redeem"
+    ],
+    "node_cases": 280,
+    "postgres_cases": 4,
+    "quality_gate_run": 34998744062
   }
 }

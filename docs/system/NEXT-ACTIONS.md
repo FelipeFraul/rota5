@@ -1,4 +1,4 @@
-> **Current Baseline 2.6.2 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` over unchanged functional Baseline 2.6.0/source `0a10618648fc3f873afffd8f60e60bd0396b62e7` and documentary Baseline 2.6.1. This surgical patch corrects only the NEXT-ACTIONS priority placement and stale current Node evidence. Fingerprint remains `8ae8433d11de2ba5c137bd1aa99ee55d2fc85aecb80bbec89847904387c73dbf`; counts remain 390 source files, 87 migrations, 45 tables, 57 SQL functions, 1 sequence, 57 tests and 46 findings. Lifecycle, release blockers (0), health, database and deployment are unchanged.
+> **Current Baseline 2.7.0 (2026-09-15):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`. Fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`; 391 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 57 test files and 47 findings. `risk.combo-metadata-read-modify-write-race` is RESOLVED; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is ACTIVE MEDIUM/P2 and non-release-blocking. Release blockers: 0; Product and Infrastructure remain DEGRADED.
 
 ## Historical snapshot — Baseline 2.5.3 update
 
@@ -17,22 +17,23 @@ This document orders current findings; it does not introduce features or patches
 Nenhum finding P0 ativo.
 
 ## RESOLVED
+- `risk.combo-metadata-read-modify-write-race` — transições CURRENT de raw_metadata serializadas no PostgreSQL; histórico preservado e limitação de notificação direta separada.
 - `legacy.active-brand-contamination` - scoped active surfaces passed Preview and Production validation on `d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8`; historical strings outside the audited scope are not covered.
 - `risk.gate-credential-revocation-does-not-revoke-session` — EXPAND/CONTRACT complete; gates A-I and strict runtime passed.
 - `bug.create-event-invalid-jsx` — JSX corrigido; typecheck, lint e build passam.
 - `bug.combo-redemption-unreachable-consume` — caminho atômico restaurado localmente; equivalência remota continua não validada.
 - `risk.vercel-project-identity-drift` — cadeia canônica separada como `FelipeFraul/rota5` `production` → Vercel `rota5`; nenhum deployment realizado.
 - `risk.latest-rota5-deployment-error` — deployment Production mais recente está READY, serve os aliases canônicos e passou os probes de runtime.
-- `bug.event-duplicate-artist-leak` — payload corrente não herda o artista da origem; prova comportamental e suíte 276/276 passam.
-- `bug.user-visible-text-corruption` — superfícies documentadas foram corrigidas; provas direcionadas e suíte 276/276 passam.
-- `gap.default-test-suite-failing` — suíte padrão corrente passa 276/276, sem skip, todo ou regressão.
+- `bug.event-duplicate-artist-leak` — payload corrente não herda o artista da origem; prova comportamental e suíte 280/280 passam.
+- `bug.user-visible-text-corruption` — superfícies documentadas foram corrigidas; provas direcionadas e suíte 280/280 passam.
+- `gap.default-test-suite-failing` — suíte padrão corrente passa 280/280, sem skip, todo ou regressão.
 - `gap.critical-capability-and-flow-coverage` — 21/21 MUST e 2/2 flows de alto risco possuem cobertura comportamental (métrica de cobertura, não contagem da suíte PostgreSQL).
 
 ## P1 — STABILIZATION
 Nenhum finding P1 operacionalmente aberto.
 
 ## P2 — STRUCTURAL DEBT
-- `risk.combo-metadata-read-modify-write-race` — Atualizações concorrentes podem sobrescrever metadados do combo
+- `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` — Notificações diretas de combo podem duplicar ou ficar stale sob concorrência
 - `risk.github-issue-create-replay` — Criação de issue não possui chave de idempotência
 - `risk.rate-limit-fails-open` — Falha do rate limiter libera a requisição
 - `risk.remote-database-controls-unvalidated` — Controles remotos de banco além do schema visível não foram validados
@@ -66,4 +67,4 @@ Nenhum finding P1 operacionalmente aberto.
 - `debt.distributed-status-literals` (P4) — Estados e mensagens de negócio estão distribuídos em arquivos extensos
 
 ## RESOLVED STABILIZATION ITEMS
-- `gap.test-runner-depends-on-untracked-loader` — loader byte-identical permanece versionado; o runner corrente é reproduzível e a suíte passa 276/276.
+- `gap.test-runner-depends-on-untracked-loader` — loader byte-identical permanece versionado; o runner corrente é reproduzível e a suíte passa 280/280.

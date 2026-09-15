@@ -1,4 +1,4 @@
-> **Current Baseline 2.6.2 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` over unchanged functional Baseline 2.6.0/source `0a10618648fc3f873afffd8f60e60bd0396b62e7` and documentary Baseline 2.6.1. This surgical patch corrects only the NEXT-ACTIONS priority placement and stale current Node evidence. Fingerprint remains `8ae8433d11de2ba5c137bd1aa99ee55d2fc85aecb80bbec89847904387c73dbf`; counts remain 390 source files, 87 migrations, 45 tables, 57 SQL functions, 1 sequence, 57 tests and 46 findings. Lifecycle, release blockers (0), health, database and deployment are unchanged.
+> **Current Baseline 2.7.0 (2026-09-15):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`. Fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`; 391 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 57 test files and 47 findings. `risk.combo-metadata-read-modify-write-race` is RESOLVED; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is ACTIVE MEDIUM/P2 and non-release-blocking. Release blockers: 0; Product and Infrastructure remain DEGRADED.
 
 ## Baseline 2.6.0 paid-delivery risk reconciliation
 
@@ -35,7 +35,8 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 | risk.gate-credential-revocation-does-not-revoke-session | AUTHORIZATION | HIGH | P1 | RESOLVED | CONFIRMED | Source attribution and strict credential/session authorization completed |
 | risk.admin-event-multistep-partial-state | DATA_INTEGRITY | HIGH | P1 | RESOLVED | CONFIRMED | RESOLVED — transactional administrative event mutations |
 | bug.admin-event-location-consistency | DATA_INTEGRITY | HIGH | P1 | RESOLVED | CONFIRMED | RESOLVED — coherent admin event/session location |
-| risk.combo-metadata-read-modify-write-race | CONCURRENCY | MEDIUM | P2 | POTENTIAL | HIGH | Atualizações concorrentes podem sobrescrever metadados do combo |
+| risk.combo-metadata-read-modify-write-race | CONCURRENCY | MEDIUM | P2 | RESOLVED | HIGH | Transições concorrentes de metadata são serializadas no PostgreSQL |
+| risk.combo-direct-notification-concurrency-can-duplicate-or-stale | CONCURRENCY | MEDIUM | P2 | ACTIVE | CONFIRMED | Notificações diretas podem duplicar ou ficar stale sob concorrência |
 | risk.github-issue-create-replay | IDEMPOTENCY | MEDIUM | P2 | POTENTIAL | HIGH | Criação de issue não possui chave de idempotência |
 | risk.rate-limit-fails-open | SECURITY | MEDIUM | P2 | ACTIVE | CONFIRMED | Falha do rate limiter libera a requisição |
 | risk.remote-database-controls-unvalidated | UNKNOWN | MEDIUM | P2 | NOT_VALIDATED | CONFIRMED | Controles remotos de banco além do schema visível não foram validados |
@@ -48,7 +49,7 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 | gap.critical-flow-correlation | OBSERVABILITY | MEDIUM | P2 | ACTIVE | CONFIRMED | Fluxos críticos não têm correlação ponta a ponta |
 | debt.router-responsibility-concentration | ARCHITECTURE | MEDIUM | P2 | ACTIVE | CONFIRMED | Roteador conversacional concentra coordenação de muitos domínios |
 | debt.zapi-webhook-responsibility-coupling | COUPLING | MEDIUM | P2 | ACTIVE | CONFIRMED | Handler Z-API acopla transporte, deduplicação, automação e entrega |
-| gap.default-test-suite-failing | TEST_GAP | HIGH | P1 | RESOLVED | CONFIRMED | RESOLVED — current default suite passes 276/276 |
+| gap.default-test-suite-failing | TEST_GAP | HIGH | P1 | RESOLVED | CONFIRMED | RESOLVED — current default suite passes 280/280 |
 | gap.critical-capability-and-flow-coverage | TEST_GAP | HIGH | P1 | RESOLVED | CONFIRMED | RESOLVED — 21/21 MUST and 2/2 high-risk flows covered |
 | gap.real-integration-tests-outside-default | TEST_GAP | MEDIUM | P2 | ACTIVE | CONFIRMED | Testes reais e de integração ficam fora da suíte padrão |
 | gap.source-contract-assertion-bias | TEST_GAP | MEDIUM | P2 | ACTIVE | CONFIRMED | Parte relevante dos testes valida texto-fonte e regex de implementação |
@@ -166,18 +167,21 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 - Current evidence: migrations `20260914000300_enforce_admin_event_location_consistency.sql` and `20260914000400_retire_legacy_admin_event_venue_rpc.sql`, session-first reader code, PostgreSQL integration and final remote audit with zero divergences.
 - Historical evidence, including the superseded migration 002 bypass, is preserved under `resolution.historical_evidence`.
 
-### risk.combo-metadata-read-modify-write-race — Atualizações concorrentes podem sobrescrever metadados do combo
+### risk.combo-metadata-read-modify-write-race — Transições concorrentes de metadata do combo são serializadas no PostgreSQL
 
 - Tipo / severidade / prioridade: **CONCURRENCY / MEDIUM / P2**
-- Status / confiança: **POTENTIAL / HIGH**
-- Problema: O scan lê raw_metadata e depois grava um objeto mesclado em atualização separada; scans, cozinha e confirmação do cliente podem atualizar o mesmo JSON sem lock ou versão observável.
-- Evidência: `src/lib/tickets/services/comboRedemptions.ts`:1025 — Lê metadata do resgate.; `src/lib/tickets/services/comboRedemptions.ts`:1113 — Relê e atualiza raw_metadata por read-modify-write.; `src/lib/tickets/services/comboRedemptions.ts`:1300 — Outro ramo também atualiza metadados do mesmo registro.
-- Impacto: Campos de entrega, preparo ou notificação podem se perder sob operações simultâneas, prejudicando a recuperação operacional.
-- Escopo: domains domain.combo-commerce-fulfillment; capabilities combo.delivery_prompt, combo.delivery_choose, combo.kitchen_release; flows combo.delivery_choice, kitchen.combo_redemption.
-- Blast radius: **DOMAIN**
-- Workaround: Alguns ramos releem metadados imediatamente antes do update, reduzindo mas não eliminando a janela.
-- Direção: Serializar ou versionar atualizações de estado do resgate.
-- Justificativa da prioridade: P2 porque depende de concorrência, mas afeta estado operacional persistido.
+- Status / confiança: **RESOLVED / HIGH**
+- Estado atual: writers CURRENT usam row lock, merge JSONB no estado corrente e consumo/metadata atômicos; workaround e release block estão desativados.
+- Evidência: `comboRedemptions.ts`, migration `20260915000500`, quatro arquivos de regressão, Quality Gate 34998744062, Node 280/280, PostgreSQL 4/4 e reauditoria final PASS.
+- Histórico: a antiga leitura e substituição client-side do snapshot integral permanece preservada em `resolution.historical_evidence`.
+
+### risk.combo-direct-notification-concurrency-can-duplicate-or-stale — Notificações diretas de combo podem duplicar ou ficar stale sob concorrência
+
+- Tipo / severidade / prioridade: **CONCURRENCY / MEDIUM / P2**
+- Status / confiança: **ACTIVE / CONFIRMED**; release blocking: **false**.
+- Causa: arrival, delivery-choice prompt, awaiting-preparation e legacy READY executam sendZapi* antes da respectiva transição serializada.
+- Impacto: duas operações concorrentes podem alcançar o provedor; não há evidência de novo lost update de raw_metadata.
+- Distinção: não é o ACK ambíguo de um único efeito coberto por `risk.paid-delivery-ambiguous-external-ack`.
 
 ### risk.github-issue-create-replay — Criação de issue não possui chave de idempotência
 

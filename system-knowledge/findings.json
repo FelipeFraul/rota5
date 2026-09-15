@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T16:12:38.008Z",
-  "stage": "2.6.2",
-  "sourceCommit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
-  "scope": "Canonical finding catalog for Baseline 2.6.2, with current lifecycle state separated from preserved historical evidence.",
-  "method": "Reconciled machine-readable current state for Baseline 2.6.2 against the canonical taxonomy, unchanged functional source, current behavioral catalogs and preserved historical evidence. Baseline 2.6.0 remains the functional MINOR baseline; 2.6.1 is a metadata-only documentary correction.",
-  "count": 46,
+  "generatedAt": "2026-09-15T17:41:19.103Z",
+  "stage": "2.7.0",
+  "sourceCommit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+  "scope": "Canonical finding catalog for Baseline 2.7.0, with current lifecycle state separated from preserved historical evidence.",
+  "method": "Reconciled machine-readable current state for Baseline 2.7.0 against source 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27, migration 20260915000500, Quality Gate 34998744062, remote evidence captured by the completed re-audit, and preserved historical evidence.",
+  "count": 47,
   "records": [
     {
       "id": "bug.create-event-invalid-jsx",
@@ -306,7 +306,7 @@
         },
         {
           "path": "package.json",
-          "claim": "Current default suite passes 276/276, including the direct duplication test.",
+          "claim": "Current default suite passes 280/280, including the direct duplication test.",
           "evidence_state": "CURRENT"
         }
       ],
@@ -441,7 +441,7 @@
         },
         {
           "path": "package.json",
-          "claim": "Current default suite passes 276/276.",
+          "claim": "Current default suite passes 280/280.",
           "evidence_state": "CURRENT"
         }
       ],
@@ -1519,31 +1519,51 @@
     },
     {
       "id": "risk.combo-metadata-read-modify-write-race",
-      "title": "Atualizações concorrentes podem sobrescrever metadados do combo",
+      "title": "Transições concorrentes de metadata do combo são serializadas no PostgreSQL",
       "type": "CONCURRENCY",
       "severity": "MEDIUM",
       "priority": "P2",
-      "status": "POTENTIAL",
+      "status": "RESOLVED",
       "confidence": "HIGH",
-      "description": "O scan lê raw_metadata e depois grava um objeto mesclado em atualização separada; scans, cozinha e confirmação do cliente podem atualizar o mesmo JSON sem lock ou versão observável.",
+      "description": "Os writers CURRENT relevantes usam RPCs com row lock e merge JSONB sobre o estado corrente; consumo e metadata de entrega são atômicos, escolha concorrente é idempotente/conflitante e READY versionado não contorna mais o scan.",
       "evidence": [
         {
           "path": "src/lib/tickets/services/comboRedemptions.ts",
-          "line": 1025,
-          "claim": "Lê metadata do resgate."
+          "claim": "Os writers CURRENT deixaram de substituir snapshots completos de raw_metadata no cliente.",
+          "evidence_state": "CURRENT"
         },
         {
-          "path": "src/lib/tickets/services/comboRedemptions.ts",
-          "line": 1113,
-          "claim": "Relê e atualiza raw_metadata por read-modify-write."
+          "path": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+          "claim": "Sete funções serializam transições com row locks e merge JSONB; validate_combo_redemption grava consumo e delivered_at atomicamente.",
+          "evidence_state": "CURRENT"
         },
         {
-          "path": "src/lib/tickets/services/comboRedemptions.ts",
-          "line": 1300,
-          "claim": "Outro ramo também atualiza metadados do mesmo registro."
+          "path": "scripts/test-combo-critical-lifecycle.mjs",
+          "claim": "Cobre o lifecycle crítico após a substituição dos writers.",
+          "evidence_state": "CURRENT"
+        },
+        {
+          "path": "scripts/test-paid-combo-delivery-durable.mjs",
+          "claim": "Cobre READY versionado sem bypass direto de scan.",
+          "evidence_state": "CURRENT"
+        },
+        {
+          "path": "scripts/test-paid-combo-delivery-postgres.mjs",
+          "claim": "PostgreSQL real cobre corridas e atomicidade.",
+          "evidence_state": "CURRENT"
+        },
+        {
+          "path": "scripts/test-ticket-delivery-distribution.mjs",
+          "claim": "Distribuição e source contracts permanecem verdes.",
+          "evidence_state": "CURRENT"
+        },
+        {
+          "path": "Quality Gate 34998744062",
+          "claim": "Node 280/280, PostgreSQL 4/4, typecheck, lint and build PASS; final re-audit PASS.",
+          "evidence_state": "CURRENT"
         }
       ],
-      "impact": "Campos de entrega, preparo ou notificação podem se perder sob operações simultâneas, prejudicando a recuperação operacional.",
+      "impact": "Não há lost update CURRENT conhecido de raw_metadata nos caminhos auditados; as transições críticas preservam o estado concorrente no banco.",
       "domains": [
         "domain.combo-commerce-fulfillment"
       ],
@@ -1563,9 +1583,68 @@
         "combo_redemptions"
       ],
       "blast_radius": "DOMAIN",
-      "workaround": "Alguns ramos releem metadados imediatamente antes do update, reduzindo mas não eliminando a janela.",
-      "direction": "Serializar ou versionar atualizações de estado do resgate.",
-      "priority_justification": "P2 porque depende de concorrência, mas afeta estado operacional persistido."
+      "workaround": "Nenhum workaround operacional é exigido para a causa raiz resolvida.",
+      "direction": "Manter as RPCs serializadas e a matriz PostgreSQL de concorrência como gates permanentes.",
+      "priority_justification": "P2 histórico preservado; lifecycle atual RESOLVED.",
+      "current_state": {
+        "lifecycle": "RESOLVED",
+        "operational_open": false,
+        "release_blocking": false,
+        "active_metric": false,
+        "workaround_required": false,
+        "current_impact": "Writers CURRENT não substituem snapshots inteiros; row locks, merge no estado corrente e atomicidade de consumo removem a causa raiz auditada.",
+        "top_level_claims": "CURRENT_RESOLUTION_ONLY"
+      },
+      "resolution": {
+        "resolved_at": "2026-09-15",
+        "root_cause": "Writers concorrentes liam raw_metadata no cliente e substituíam o objeto inteiro sem serialização, permitindo lost update.",
+        "current_resolution": "As transições críticas são RPCs service-role-only, com search_path seguro, row locks e merge JSONB sobre a linha corrente; validate_combo_redemption inclui delivered_at na transação de consumo.",
+        "migration": "20260915000500_serialize_combo_metadata_transitions.sql",
+        "quality_gate": {
+          "run": 34998744062,
+          "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+          "node": "280/280 PASS",
+          "postgresql": "4/4 PASS",
+          "typecheck": "PASS",
+          "lint": "PASS_WITH_EXISTING_WARNINGS_NO_ERRORS",
+          "build": "PASS"
+        },
+        "remote_reaudit": {
+          "status": "PASS",
+          "functions_verified": 7,
+          "grants": "MINIMAL_SERVICE_ROLE_ONLY",
+          "legacy_redemptions": 2,
+          "legacy_raw_metadata": {},
+          "invalid_invariants": 0,
+          "combo_outbox_orphans": 0,
+          "remote_mutation": false
+        },
+        "historical_evidence": {
+          "title": "Atualizações concorrentes podem sobrescrever metadados do combo",
+          "description": "O scan lê raw_metadata e depois grava um objeto mesclado em atualização separada; scans, cozinha e confirmação do cliente podem atualizar o mesmo JSON sem lock ou versão observável.",
+          "evidence": [
+            {
+              "path": "src/lib/tickets/services/comboRedemptions.ts",
+              "line": 1025,
+              "claim": "Lê metadata do resgate."
+            },
+            {
+              "path": "src/lib/tickets/services/comboRedemptions.ts",
+              "line": 1113,
+              "claim": "Relê e atualiza raw_metadata por read-modify-write."
+            },
+            {
+              "path": "src/lib/tickets/services/comboRedemptions.ts",
+              "line": 1300,
+              "claim": "Outro ramo também atualiza metadados do mesmo registro."
+            }
+          ],
+          "impact": "Campos de entrega, preparo ou notificação podem se perder sob operações simultâneas, prejudicando a recuperação operacional.",
+          "workaround": "Alguns ramos releem metadados imediatamente antes do update, reduzindo mas não eliminando a janela.",
+          "direction": "Serializar ou versionar atualizações de estado do resgate.",
+          "priority_justification": "P2 porque depende de concorrência, mas afeta estado operacional persistido."
+        }
+      }
     },
     {
       "id": "risk.github-issue-create-replay",
@@ -2281,7 +2360,7 @@
       "evidence": [
         {
           "path": "system-knowledge/tests.json",
-          "claim": "The current canonical default suite passes 276/276 with zero failures, skips, todos or regressions.",
+          "claim": "The current canonical default suite passes 280/280 with zero failures, skips, todos or regressions.",
           "evidence_state": "CURRENT"
         },
         {
@@ -2460,7 +2539,7 @@
         },
         {
           "path": ".github/workflows/quality-gate.yml",
-          "claim": "Quality Gate run 34984961888 passed npm ci, 276/276 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
+          "claim": "Quality Gate run 34984961888 passed npm ci, 280/280 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
           "evidence_state": "CURRENT"
         },
         {
@@ -2750,7 +2829,7 @@
         },
         {
           "path": "package.json",
-          "claim": "The current default suite uses the tracked loader and passes 276/276.",
+          "claim": "The current default suite uses the tracked loader and passes 280/280.",
           "evidence_state": "CURRENT"
         }
       ],
@@ -3924,6 +4003,81 @@
       },
       "delivery_semantics": "AT_LEAST_ONCE",
       "exactly_once_external_proven": false
+    },
+    {
+      "id": "risk.combo-direct-notification-concurrency-can-duplicate-or-stale",
+      "title": "Notificações diretas de combo podem duplicar ou ficar stale sob concorrência",
+      "type": "CONCURRENCY",
+      "severity": "MEDIUM",
+      "priority": "P2",
+      "status": "ACTIVE",
+      "confidence": "CONFIRMED",
+      "description": "Alguns fluxos chamam sendZapi* antes de adquirir ou observar a transição serializada do estado; duas operações concorrentes legítimas podem alcançar o provedor antes de uma delas observar o estado consolidado.",
+      "evidence": [
+        {
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "symbol": "releaseComboOrdersForKitchenAfterGateEntry -> sendZapiText -> record_combo_gate_arrival",
+          "claim": "O efeito externo de chegada precede a transição serializada."
+        },
+        {
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "symbol": "delivery-choice scan -> sendZapiText -> record_combo_delivery_choice_prompt",
+          "claim": "O prompt externo precede a transição serializada."
+        },
+        {
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "symbol": "awaiting-preparation scan -> sendZapiText -> record_combo_awaiting_preparation",
+          "claim": "A notificação externa precede a transição serializada."
+        },
+        {
+          "path": "src/lib/tickets/services/comboRedemptions.ts",
+          "symbol": "legacy READY recovery -> sendZapiText/sendZapiImage -> complete_legacy_combo_ready_recovery",
+          "claim": "A recuperação legacy envia antes de consolidar o estado."
+        }
+      ],
+      "impact": "Operações concorrentes podem produzir mensagem externa duplicada ou baseada em estado que mudou; não há evidência de novo lost update de raw_metadata.",
+      "domains": [
+        "domain.combo-commerce-fulfillment",
+        "domain.whatsapp-conversations"
+      ],
+      "modules": [
+        "combo.redemption"
+      ],
+      "capabilities": [
+        "combo.kitchen_release",
+        "combo.prepare",
+        "combo.delivery_prompt"
+      ],
+      "flows": [
+        "gate.combo_release",
+        "kitchen.session_prepare",
+        "kitchen.combo_redemption"
+      ],
+      "tables": [
+        "combo_redemptions"
+      ],
+      "integrations": [
+        "integration-zapi",
+        "integration-supabase"
+      ],
+      "blast_radius": "SCOPED_MULTI_FLOW",
+      "distinction": {
+        "from": "risk.paid-delivery-ambiguous-external-ack",
+        "this_finding": "Duas operações concorrentes legítimas alcançam o efeito externo antes da serialização local.",
+        "other_finding": "Um único efeito pode ser aceito pelo provedor enquanto o ACK local permanece ambíguo."
+      },
+      "workaround": "Monitorar duplicações e revalidar o estado antes de reenvios manuais; a serialização posterior limita o estado persistido, mas não desfaz efeitos externos já aceitos.",
+      "direction": "Reservar/claimar a transição antes do envio ou mover esses efeitos para uma outbox durável com deduplicação e fencing adequados.",
+      "priority_justification": "P2: defeito confirmado e operacional, porém restrito a concorrência nas notificações diretas e sem evidência de release blocker.",
+      "current_state": {
+        "lifecycle": "ACTIVE",
+        "operational_open": true,
+        "release_blocking": false,
+        "active_metric": true,
+        "workaround_required": true,
+        "current_impact": "Possível mensagem direta duplicada ou stale sob concorrência.",
+        "top_level_claims": "CURRENT_RISK"
+      }
     }
   ],
   "finding_status_taxonomy": {
@@ -4073,5 +4227,11 @@
   "baseline_2_6_2": {
     "change_type": "PATCH_DOCUMENTARY_CORRECTION",
     "lifecycle_changes": 0
+  },
+  "baseline_2_7_0": {
+    "change_type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+    "resolved": "risk.combo-metadata-read-modify-write-race",
+    "new_active_p2": "risk.combo-direct-notification-concurrency-can-duplicate-or-stale",
+    "release_blockers": 0
   }
 }

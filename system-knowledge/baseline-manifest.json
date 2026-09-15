@@ -1,27 +1,45 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T16:12:38.008Z",
-  "stage": "2.6.2",
+  "generatedAt": "2026-09-15T17:41:19.103Z",
+  "stage": "2.7.0",
   "baseline_id": "rota5-baseline-v1",
-  "version": "2.6.2",
+  "version": "2.7.0",
   "status": "FROZEN",
-  "frozen_at": "2026-09-15T16:12:38.008Z",
+  "frozen_at": "2026-09-15T17:41:19.103Z",
   "source_state": {
-    "base_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
-    "source_tree_fingerprint": "8ae8433d11de2ba5c137bd1aa99ee55d2fc85aecb80bbec89847904387c73dbf",
-    "source_tree_file_count": 390,
+    "base_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "source_tree_fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee",
+    "source_tree_file_count": 391,
     "functional_changes_since_base": [],
     "generated_from_working_tree": false,
     "baseline_commit": "SELF_NOT_RECORDED",
-    "baseline_commit_policy": "The Git commit containing this baseline is intentionally not embedded in its own content to avoid self-reference."
+    "baseline_commit_policy": "The Git commit containing this baseline is intentionally not embedded in its own content to avoid self-reference.",
+    "reconciled_functional_diff": {
+      "from": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+      "to": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+      "functional_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+      "documentary_commits_excluded": [
+        "aef470dd4ae728ce2e9a3d79085c7233f1f12caa",
+        "1434db880ea24a8a05f680e65570ba069b90325e",
+        "e5870d9864914b990274e3a99342d53c2810c710"
+      ],
+      "changed_paths": [
+        "scripts/test-combo-critical-lifecycle.mjs",
+        "scripts/test-paid-combo-delivery-durable.mjs",
+        "scripts/test-paid-combo-delivery-postgres.mjs",
+        "scripts/test-ticket-delivery-distribution.mjs",
+        "src/lib/tickets/services/comboRedemptions.ts",
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      ]
+    }
   },
   "git_observation_at_generation": {
-    "observed_at": "2026-09-15T16:12:38.008Z",
+    "observed_at": "2026-09-15T17:41:19.103Z",
     "branch": "production",
-    "head": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+    "head": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
     "working_tree_clean": true,
     "validity_role": "INFORMATIONAL_ONLY",
-    "note": "Canonical functional source was reconstructed from the pure functional commit during the Baseline 2.6.1 documentary correction; live documentary HEAD is intentionally not embedded."
+    "note": "Canonical functional-source observation; documentary commit remains SELF_NOT_RECORDED and live post-push tip is not embedded."
   },
   "baseline_integrity": {
     "status": "PASS",
@@ -31,11 +49,11 @@
   "product_health": {
     "status": "DEGRADED",
     "reason": "Canonical release blockers are zero, but current operational and validation-queue findings remain; HEALTHY is not justified.",
-    "findings": 46,
+    "findings": 47,
     "active_p0": 0,
     "active_high": 0,
     "critical": 0,
-    "resolved": 14,
+    "resolved": 15,
     "potential_high": 0,
     "open_high": 0
   },
@@ -51,17 +69,17 @@
     "tables": 45,
     "stateful_tables": 23,
     "stateful_entities": 24,
-    "migrations": 87,
-    "sql_functions": 57,
+    "migrations": 88,
+    "sql_functions": 63,
     "triggers": 36,
     "sequences": 1,
-    "data_relations": 2257,
+    "data_relations": 2272,
     "integrations": 6,
     "webhooks": 2,
     "crons": 2,
     "environment_variables": 43,
     "tests": 57,
-    "findings": 46
+    "findings": 47
   },
   "artifact_counts": {
     "human_documents": 53,
@@ -257,7 +275,8 @@
     "Quality Gate run 34867214724 passed on 67845326088eac47452224b00ef1e866036e86f1, including PostgreSQL 16 and real trigger sync_official_table_map_reservation_status. Earlier startup failures remain historical only.",
     "Baseline 2.4.1 is a PATCH_DOCUMENTARY_CORRECTION: two stale findings reconciled as RESOLVED and the still-confirmed heterogeneous E2E gap retained ACTIVE at P2 after per-flow assessment.",
     "No new specific finding or P1 blocker is supported by current evidence. ticket.purchase is COMPONENT_BEHAVIOR_COVERED but not TRUE_END_TO_END_COVERED; the missing unified trace remains P2 hardening.",
-    "Baseline 2.6.0: MINOR_COMPATIBLE_FUNCTIONAL_CHANGE for atomic durable paid TICKET/COMBO delivery, versioned COMBO QR recovery and collision-safe redemption codes; external effects remain at-least-once."
+    "Baseline 2.6.0: MINOR_COMPATIBLE_FUNCTIONAL_CHANGE for atomic durable paid TICKET/COMBO delivery, versioned COMBO QR recovery and collision-safe redemption codes; external effects remain at-least-once.",
+    "Baseline 2.7.0: combo raw_metadata transitions are PostgreSQL-serialized; risk.combo-metadata-read-modify-write-race is RESOLVED and risk.combo-direct-notification-concurrency-can-duplicate-or-stale is a separate ACTIVE MEDIUM/P2 non-blocking residual."
   ],
   "resolved_findings": [
     "bug.create-event-invalid-jsx",
@@ -268,6 +287,7 @@
     "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.admin-event-multistep-partial-state",
     "bug.admin-event-location-consistency",
+    "risk.combo-metadata-read-modify-write-race",
     "risk.vercel-project-identity-drift",
     "risk.latest-rota5-deployment-error",
     "gap.default-test-suite-failing",
@@ -531,15 +551,15 @@
     ]
   },
   "current_runtime": {
-    "production_deployment": "dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf",
-    "production_source_commit": "148b8200a44f4eeb49e004af45060a302bac9f20",
-    "repository_source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+    "production_deployment": "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g",
+    "production_source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "repository_source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
     "production_status": "READY",
-    "current_head_deployed": false,
+    "current_head_deployed": true,
     "app_runtime_diff_after_deploy": "NAO",
-    "source_difference": "EXPECTED_NON_RUNTIME_DRIFT",
+    "source_difference": "NONE_AT_FUNCTIONAL_FREEZE",
     "relevant_log_errors": 0,
-    "supabase": "UNCHANGED_IN_FREEZE",
+    "supabase": "MIGRATION_20260915000500_ALREADY_APPLIED",
     "ticketeira": "UNTOUCHED",
     "git_auto_deploy": "DISABLED",
     "new_deployment": false
@@ -617,28 +637,24 @@
     "runtime_changed": false
   },
   "quality_gate": {
-    "version": "2.5.0",
+    "version": "2.7.0",
     "type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
-    "source_commit": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
-    "source_fingerprint": "3ead25584e6d48eb0a6b16acb101c0cfbeb0f990714e535330dc94e7e4cee430",
-    "source_file_count": 379,
-    "migration_count": 83,
-    "production_runtime_source": "148b8200a44f4eeb49e004af45060a302bac9f20",
-    "production_deployment": "dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf",
-    "current_head_deployed": false,
-    "default_node_suite": "257/257 PASS",
-    "postgres_integration_suite": "2/2 PASS",
+    "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "source_fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee",
+    "source_file_count": 391,
+    "migration_count": 88,
+    "default_node_suite": "280/280 PASS",
+    "postgres_integration_suite": "4/4 PASS",
     "postgres_version": 16,
-    "quality_gate_run": 34898804387,
+    "quality_gate_run": 34998744062,
     "quality_gate": "PASS",
     "skip": 0,
     "todo": 0,
     "regressions": 0,
-    "atomicity": "RESOLVED",
-    "admin_location_consistency": "RESOLVED",
+    "combo_metadata_race": "RESOLVED",
+    "direct_notification_concurrency": "ACTIVE_P2_NON_BLOCKING",
     "product_health": "DEGRADED",
     "infrastructure_health": "DEGRADED",
-    "git_auto_deploy": "DISABLED",
     "new_deployment": false
   },
   "release_blocker_reconciliation": {
@@ -788,6 +804,15 @@
     "canonical_functional_source": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
     "functional_change": false,
     "correction": "NEXT-ACTIONS human-readable priority and current test-count projection",
+    "baseline_commit": "SELF_NOT_RECORDED"
+  },
+  "baseline_2_7_0": {
+    "change_type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+    "previous_baseline": "2.6.2",
+    "canonical_functional_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "finding_resolution": "risk.combo-metadata-read-modify-write-race",
+    "residual_finding": "risk.combo-direct-notification-concurrency-can-duplicate-or-stale",
+    "release_blockers": 0,
     "baseline_commit": "SELF_NOT_RECORDED"
   }
 }

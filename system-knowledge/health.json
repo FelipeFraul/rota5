@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T16:12:38.008Z",
-  "stage": "2.6.2",
-  "sourceCommit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
-  "scope": "Current health projection by system, domain and infrastructure for Baseline 2.6.2, with resolved history separated from operational risk.",
+  "generatedAt": "2026-09-15T17:41:19.103Z",
+  "stage": "2.7.0",
+  "sourceCommit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+  "scope": "Current health projection by system, domain and infrastructure for Baseline 2.7.0, with resolved history separated from operational risk.",
   "method": "Health is derived from canonical finding scopes and taxonomy. BROKEN requires a current release blocker; DEGRADED requires current operational or validation-queue risk; resolved findings are historical only.",
   "vocabulary": [
     "HEALTHY",
@@ -16,7 +16,7 @@
   "system": {
     "id": "system.rota5",
     "health": "DEGRADED",
-    "reason": "Release blockers are zero, but 27 operational findings and 5 validation-queue findings remain; HEALTHY is not justified.",
+    "reason": "27 operational findings and 5 validation-queue findings remain; release blockers are zero and HEALTHY is not justified.",
     "finding_counts_by_severity": {
       "HIGH": 0,
       "INFO": 2,
@@ -27,12 +27,11 @@
       "P0": 0,
       "HIGH": 0,
       "CRITICAL": 0,
-      "RESOLVED": 14,
+      "RESOLVED": 15,
       "POTENTIAL_HIGH": 0,
       "OPEN_HIGH": 0
     },
     "current_findings": [
-      "risk.combo-metadata-read-modify-write-race",
       "risk.github-issue-create-replay",
       "risk.rate-limit-fails-open",
       "risk.local-runtime-env-incomplete",
@@ -58,7 +57,8 @@
       "gap.client-errors-not-persisted",
       "debt.distributed-status-literals",
       "risk.service-role-application-authorization-boundary",
-      "risk.paid-delivery-ambiguous-external-ack"
+      "risk.paid-delivery-ambiguous-external-ack",
+      "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
     ],
     "historical_resolved_findings": [
       "bug.create-event-invalid-jsx",
@@ -74,7 +74,8 @@
       "gap.default-test-suite-failing",
       "gap.critical-capability-and-flow-coverage",
       "gap.test-runner-depends-on-untracked-loader",
-      "risk.payment-confirmed-before-external-delivery"
+      "risk.payment-confirmed-before-external-delivery",
+      "risk.combo-metadata-read-modify-write-race"
     ],
     "validation_queue_findings": [
       "risk.remote-database-controls-unvalidated",
@@ -144,7 +145,8 @@
         "risk.payment-confirmed-before-external-delivery",
         "risk.whatsapp-conversation-context-race",
         "gap.partial-flows-lack-end-to-end-proof",
-        "debt.distributed-status-literals"
+        "debt.distributed-status-literals",
+        "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
       ],
       "historical_resolved_findings": [
         "bug.user-visible-text-corruption",
@@ -154,7 +156,7 @@
         "risk.remote-webhook-registration-unvalidated"
       ],
       "release_blocking_causes": [],
-      "reason": "8 current operational finding(s) and 1 validation-queue finding(s); resolved findings are historical only."
+      "reason": "9 current operational finding(s) and 1 validation-queue finding(s); resolved findings are historical only."
     },
     {
       "id": "domain.customer-risk",
@@ -163,7 +165,7 @@
       "historical_resolved_findings": [],
       "validation_queue_findings": [],
       "release_blocking_causes": [],
-      "reason": "No current operational, validation-queue or release-blocking finding is scoped to this domain."
+      "reason": "0 current operational finding(s) and 0 validation-queue finding(s); resolved findings are historical only."
     },
     {
       "id": "domain.event-catalog",
@@ -172,7 +174,7 @@
       "historical_resolved_findings": [],
       "validation_queue_findings": [],
       "release_blocking_causes": [],
-      "reason": "No current operational, validation-queue or release-blocking finding is scoped to this domain."
+      "reason": "0 current operational finding(s) and 0 validation-queue finding(s); resolved findings are historical only."
     },
     {
       "id": "domain.event-administration",
@@ -303,7 +305,6 @@
       "id": "domain.combo-commerce-fulfillment",
       "health": "DEGRADED",
       "current_findings": [
-        "risk.combo-metadata-read-modify-write-race",
         "gap.critical-flow-correlation",
         "debt.router-responsibility-concentration",
         "gap.real-integration-tests-outside-default",
@@ -312,13 +313,15 @@
         "risk.checkout-status-fixed-polling",
         "gap.partial-flows-lack-end-to-end-proof",
         "gap.client-errors-not-persisted",
-        "debt.distributed-status-literals"
+        "debt.distributed-status-literals",
+        "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
       ],
       "historical_resolved_findings": [
         "bug.create-event-invalid-jsx",
         "bug.combo-redemption-unreachable-consume",
         "bug.user-visible-text-corruption",
-        "risk.gate-credential-revocation-does-not-revoke-session"
+        "risk.gate-credential-revocation-does-not-revoke-session",
+        "risk.combo-metadata-read-modify-write-race"
       ],
       "validation_queue_findings": [
         "gap.remote-database-behavior-tests"
@@ -1592,7 +1595,8 @@
         "debt.payment-reconciliation-duplication-is-intentional",
         "risk.checkout-status-fixed-polling",
         "risk.production-capable-scripts-outside-test-isolation",
-        "risk.service-role-application-authorization-boundary"
+        "risk.service-role-application-authorization-boundary",
+        "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
       ]
     },
     {
@@ -1606,7 +1610,8 @@
         "gap.critical-flow-correlation",
         "debt.zapi-webhook-responsibility-coupling",
         "risk.payment-confirmed-before-external-delivery",
-        "risk.whatsapp-conversation-context-race"
+        "risk.whatsapp-conversation-context-race",
+        "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
       ]
     },
     {
@@ -1690,7 +1695,7 @@
     {
       "id": "infrastructure.runtime-health",
       "health": "HEALTHY",
-      "reason": "No current scoped operational or validation-queue finding.",
+      "reason": "0 current operational finding(s) and 0 validation-queue finding(s); resolved findings are historical only.",
       "current_findings": [],
       "historical_resolved_findings": [],
       "validation_queue_findings": [],
@@ -1706,6 +1711,7 @@
     "risk.gate-credential-revocation-does-not-revoke-session",
     "risk.admin-event-multistep-partial-state",
     "bug.admin-event-location-consistency",
+    "risk.combo-metadata-read-modify-write-race",
     "risk.vercel-project-identity-drift",
     "risk.latest-rota5-deployment-error",
     "gap.default-test-suite-failing",
@@ -1991,5 +1997,12 @@
   "baseline_2_6_2": {
     "change_type": "PATCH_DOCUMENTARY_CORRECTION",
     "health_change": false
+  },
+  "baseline_2_7_0": {
+    "product_health": "DEGRADED",
+    "infrastructure_health": "DEGRADED",
+    "release_blockers": 0,
+    "resolved": "risk.combo-metadata-read-modify-write-race",
+    "residual": "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
   }
 }

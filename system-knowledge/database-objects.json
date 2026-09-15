@@ -1,17 +1,17 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-15T15:55:59.919Z",
-  "stage": "2.6.1",
-  "sourceCommit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+  "generatedAt": "2026-09-15T17:41:19.103Z",
+  "stage": "2.7.0",
+  "sourceCommit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
   "counts": {
     "tables": 45,
-    "migrations": 87,
-    "functions": 57,
+    "migrations": 88,
+    "functions": 63,
     "triggers": 36,
     "indexes": 159,
     "rls_enabled": 44,
     "policies": 0,
-    "function_table_accesses": 227,
+    "function_table_accesses": 242,
     "sequences": 1
   },
   "tables": [
@@ -1623,11 +1623,9 @@
         "combo_redemption_events",
         "combo_redemptions"
       ],
-      "evidence_source": "LOCAL_DECLARED",
+      "evidence_source": "LOCAL_DECLARED_REMOTE_VALIDATED_AND_POSTGRESQL_CI",
       "evidence": [
-        "supabase/migrations/20260629000300_require_combo_preparation_before_redemption.sql",
-        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
-        "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql"
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
       ],
       "table_operations": [
         {
@@ -1645,7 +1643,8 @@
         }
       ],
       "remote_status": "APPLIED_AND_VALIDATED",
-      "remote_evidence": "POST_CONTRACT_RUNTIME_VALIDATED"
+      "remote_evidence": "BASELINE_2_7_0_REAUDIT_7_FUNCTIONS_LOCKS_JSONB_MERGE_AND_MINIMAL_GRANTS",
+      "atomic_metadata_update": true
     },
     {
       "id": "function.validate_ticket_entry",
@@ -2665,6 +2664,201 @@
           ]
         }
       ]
+    },
+    {
+      "id": "function.confirm_combo_delivery_choice",
+      "name": "confirm_combo_delivery_choice",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_redemptions",
+        "combo_redemption_events"
+      ],
+      "evidence_source": "LOCAL_DECLARED_REMOTE_VALIDATED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+        "Quality Gate 34998744062"
+      ],
+      "table_operations": [
+        {
+          "table": "combo_redemptions",
+          "operations": [
+            "READ",
+            "UPDATE"
+          ]
+        },
+        {
+          "table": "combo_redemption_events",
+          "operations": [
+            "INSERT"
+          ]
+        }
+      ],
+      "security": {
+        "execution": "SECURITY_INVOKER",
+        "search_path": "",
+        "execute_grantee": "service_role",
+        "public_execute": false
+      },
+      "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
+      "id": "function.record_combo_gate_arrival",
+      "name": "record_combo_gate_arrival",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_redemptions"
+      ],
+      "evidence_source": "LOCAL_DECLARED_REMOTE_VALIDATED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+        "Quality Gate 34998744062"
+      ],
+      "table_operations": [
+        {
+          "table": "combo_redemptions",
+          "operations": [
+            "READ",
+            "UPDATE"
+          ]
+        }
+      ],
+      "security": {
+        "execution": "SECURITY_INVOKER",
+        "search_path": "",
+        "execute_grantee": "service_role",
+        "public_execute": false
+      },
+      "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
+      "id": "function.start_combo_kitchen_preparation",
+      "name": "start_combo_kitchen_preparation",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_redemptions"
+      ],
+      "evidence_source": "LOCAL_DECLARED_REMOTE_VALIDATED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+        "Quality Gate 34998744062"
+      ],
+      "table_operations": [
+        {
+          "table": "combo_redemptions",
+          "operations": [
+            "READ",
+            "UPDATE"
+          ]
+        }
+      ],
+      "security": {
+        "execution": "SECURITY_INVOKER",
+        "search_path": "",
+        "execute_grantee": "service_role",
+        "public_execute": false
+      },
+      "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
+      "id": "function.record_combo_delivery_choice_prompt",
+      "name": "record_combo_delivery_choice_prompt",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_redemptions",
+        "combo_redemption_events"
+      ],
+      "evidence_source": "LOCAL_DECLARED_REMOTE_VALIDATED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+        "Quality Gate 34998744062"
+      ],
+      "table_operations": [
+        {
+          "table": "combo_redemptions",
+          "operations": [
+            "READ",
+            "UPDATE"
+          ]
+        },
+        {
+          "table": "combo_redemption_events",
+          "operations": [
+            "INSERT"
+          ]
+        }
+      ],
+      "security": {
+        "execution": "SECURITY_INVOKER",
+        "search_path": "",
+        "execute_grantee": "service_role",
+        "public_execute": false
+      },
+      "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
+      "id": "function.record_combo_awaiting_preparation",
+      "name": "record_combo_awaiting_preparation",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_redemptions",
+        "combo_redemption_events"
+      ],
+      "evidence_source": "LOCAL_DECLARED_REMOTE_VALIDATED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+        "Quality Gate 34998744062"
+      ],
+      "table_operations": [
+        {
+          "table": "combo_redemptions",
+          "operations": [
+            "READ",
+            "UPDATE"
+          ]
+        },
+        {
+          "table": "combo_redemption_events",
+          "operations": [
+            "INSERT"
+          ]
+        }
+      ],
+      "security": {
+        "execution": "SECURITY_INVOKER",
+        "search_path": "",
+        "execute_grantee": "service_role",
+        "public_execute": false
+      },
+      "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
+      "id": "function.complete_legacy_combo_ready_recovery",
+      "name": "complete_legacy_combo_ready_recovery",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_redemptions"
+      ],
+      "evidence_source": "LOCAL_DECLARED_REMOTE_VALIDATED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+        "Quality Gate 34998744062"
+      ],
+      "table_operations": [
+        {
+          "table": "combo_redemptions",
+          "operations": [
+            "READ",
+            "UPDATE"
+          ]
+        }
+      ],
+      "security": {
+        "execution": "SECURITY_INVOKER",
+        "search_path": "",
+        "execute_grantee": "service_role",
+        "public_execute": false
+      },
+      "remote_status": "APPLIED_AND_VALIDATED"
     }
   ],
   "triggers": [
@@ -7218,6 +7412,41 @@
       "status_local": "LOCAL_DECLARED",
       "remote_status": "APPLIED_AND_VALIDATED",
       "evidence_source": "REMOTE_MIGRATION_HISTORY_AND_POSTGRESQL_CI"
+    },
+    {
+      "id": "migration.20260915000500_serialize_combo_metadata_transitions",
+      "timestamp": "20260915000500",
+      "name": "20260915000500_serialize_combo_metadata_transitions.sql",
+      "path": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+      "purpose": "Serialize critical combo redemption metadata transitions with row locks, current-state JSONB merge and atomic event/consumption writes",
+      "creates": [
+        "function:confirm_combo_delivery_choice",
+        "function:record_combo_gate_arrival",
+        "function:start_combo_kitchen_preparation",
+        "function:record_combo_delivery_choice_prompt",
+        "function:record_combo_awaiting_preparation",
+        "function:complete_legacy_combo_ready_recovery"
+      ],
+      "alters": [
+        "function:validate_combo_redemption"
+      ],
+      "drops": [],
+      "depends_on": "migration.20260915000400_minimize_combo_redemption_code_sequence_privileges",
+      "reversal": "MANUAL_ONLY_NO_DOWN_MIGRATION",
+      "functional_impact": [
+        "confirm_combo_delivery_choice",
+        "record_combo_gate_arrival",
+        "start_combo_kitchen_preparation",
+        "record_combo_delivery_choice_prompt",
+        "record_combo_awaiting_preparation",
+        "complete_legacy_combo_ready_recovery",
+        "validate_combo_redemption",
+        "combo_redemptions",
+        "combo_redemption_events"
+      ],
+      "status_local": "LOCAL_DECLARED",
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "evidence_source": "REMOTE_READ_ONLY_REAUDIT_AND_POSTGRESQL_CI"
     }
   ],
   "extensions": [
@@ -7722,5 +7951,13 @@
     "indexes": 159,
     "sequences": 1,
     "legacy_combo_codes_changed": false
+  },
+  "baseline_2_7_0": {
+    "migration": "20260915000500_serialize_combo_metadata_transitions.sql",
+    "remote_status": "APPLIED_AND_VALIDATED",
+    "functions_verified_remotely": 7,
+    "grants": "SERVICE_ROLE_ONLY_MINIMAL",
+    "locks_and_current_state_jsonb_merge": "PASS",
+    "remote_mutation_during_reconciliation": false
   }
 }

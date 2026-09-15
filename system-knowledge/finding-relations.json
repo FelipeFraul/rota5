@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T16:12:38.008Z",
-  "stage": "2.6.2",
-  "sourceCommit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
-  "scope": "Current finding relationship projection for Baseline 2.6.2.",
+  "generatedAt": "2026-09-15T17:41:19.103Z",
+  "stage": "2.7.0",
+  "sourceCommit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+  "scope": "Current finding relationship projection for Baseline 2.7.0.",
   "method": "Derived from canonical current finding records and explicit historical resolution data.",
-  "count": 8,
+  "count": 9,
   "relation_types": [
     "CAUSES",
     "AMPLIFIES",
@@ -62,6 +62,13 @@
       "type": "AMPLIFIES",
       "to": "debt.seat-map-storage-contract-drift",
       "evidence": "Feature parcial e storage sem consumidor pertencem à mesma fronteira de mapa, mas são problemas distintos."
+    },
+    {
+      "from": "risk.combo-direct-notification-concurrency-can-duplicate-or-stale",
+      "type": "DEPENDS_ON",
+      "to": "risk.paid-delivery-ambiguous-external-ack",
+      "evidence": "Semantics are explicitly distinct: concurrent legitimate sends before local serialization versus one accepted external effect with ambiguous local ACK.",
+      "relation_scope": "DISTINCT_EXTERNAL_DUPLICATION_MECHANISMS_NOT_DUPLICATES"
     }
   ],
   "resolved_relations": [
@@ -89,6 +96,12 @@
       "status": "RESOLVED",
       "resolved_at": "2026-09-14T01:52:43.483Z",
       "reason": "The loader is tracked in scripts/test-support and npm ci plus npm test started from canonical Git content without .tmp."
+    },
+    {
+      "finding": "risk.combo-metadata-read-modify-write-race",
+      "status": "RESOLVED",
+      "resolved_at": "2026-09-15",
+      "reason": "Migration 20260915000500 and final re-audit removed the client-side CURRENT raw_metadata lost-update cause."
     }
   ],
   "high_1_rollout_dependency": {
@@ -202,5 +215,10 @@
     "new_deployment": false,
     "supabase": "UNCHANGED",
     "ticketeira": "UNTOUCHED"
+  },
+  "baseline_2_7_0": {
+    "resolved": "risk.combo-metadata-read-modify-write-race",
+    "added": "risk.combo-direct-notification-concurrency-can-duplicate-or-stale",
+    "semantic_separation_from_ambiguous_ack": true
   }
 }

@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T16:12:38.008Z",
-  "stage": "2.6.2",
+  "generatedAt": "2026-09-15T17:41:19.103Z",
+  "stage": "2.7.0",
   "period": {
     "start": "2026-09-12",
     "end": "2026-09-15",
     "status": "CLOSED"
   },
   "baseline_start": "1.0.0",
-  "baseline_end": "2.6.2",
+  "baseline_end": "2.7.0",
   "source_start": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
-  "source_end": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+  "source_end": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
   "days": [
     {
       "date": "2026-09-12",
@@ -266,6 +266,17 @@
       "source_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
       "node": "276/276",
       "postgresql": "4/4"
+    },
+    {
+      "run": 34998744062,
+      "date": "2026-09-15",
+      "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+      "status": "PASS",
+      "node": "280/280",
+      "postgresql": "4/4",
+      "typecheck": "PASS",
+      "lint": "PASS_WITH_EXISTING_WARNINGS_NO_ERRORS",
+      "build": "PASS"
     }
   ],
   "deployments": [
@@ -275,6 +286,14 @@
       "application_source": "148b8200a44f4eeb49e004af45060a302bac9f20",
       "status": "READY",
       "created_during_freeze": false
+    },
+    {
+      "id": "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g",
+      "date": "2026-09-15",
+      "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+      "status": "READY",
+      "health": "HTTP_200",
+      "created_during_baseline_reconciliation": false
     }
   ],
   "migrations": [
@@ -317,16 +336,25 @@
       "name": "20260915000400_minimize_combo_redemption_code_sequence_privileges.sql",
       "status": "APPLIED_AND_VALIDATED",
       "final_role": "CURRENT"
+    },
+    {
+      "id": "migration.20260915000500",
+      "date": "2026-09-15",
+      "name": "20260915000500_serialize_combo_metadata_transitions.sql",
+      "status": "APPLIED_AND_VALIDATED",
+      "remote_changed_during_reconciliation": false
     }
   ],
   "findings_resolved": [
     "risk.admin-event-multistep-partial-state",
     "bug.admin-event-location-consistency",
-    "risk.payment-confirmed-before-external-delivery"
+    "risk.payment-confirmed-before-external-delivery",
+    "risk.combo-metadata-read-modify-write-race"
   ],
   "new_findings_documented": [
     "bug.admin-event-location-consistency",
-    "risk.paid-delivery-ambiguous-external-ack"
+    "risk.paid-delivery-ambiguous-external-ack",
+    "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
   ],
   "remaining_risks": [
     "risk.rate-limit-fails-open",
@@ -360,28 +388,30 @@
     "risk.published-commit-unvalidated",
     "gap.remote-database-behavior-tests",
     "orphan.seat-map-renders-table",
-    "risk.paid-delivery-ambiguous-external-ack"
+    "risk.paid-delivery-ambiguous-external-ack",
+    "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
   ],
   "final_state": {
-    "baseline": "2.6.2",
-    "repository_source": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
-    "production_application_source": "148b8200a44f4eeb49e004af45060a302bac9f20",
-    "source_tree_fingerprint": "8ae8433d11de2ba5c137bd1aa99ee55d2fc85aecb80bbec89847904387c73dbf",
-    "default_node_suite": "276/276 PASS",
+    "baseline": "2.7.0",
+    "repository_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "production_application_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "source_tree_fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee",
+    "default_node_suite": "280/280 PASS",
     "postgres_integration": "4/4 PASS",
-    "quality_gate": "34984961888 PASS",
+    "quality_gate": "34998744062 PASS",
     "atomicity": "RESOLVED",
     "admin_location_consistency": "RESOLVED",
+    "combo_metadata_race": "RESOLVED",
+    "combo_direct_notification_concurrency": "ACTIVE_P2_NON_BLOCKING",
     "product_health": "DEGRADED",
     "infrastructure_health": "DEGRADED",
     "release_blockers": 0,
-    "admin_event_operations_retention": "SEPARATE_HARDENING_CANDIDATE",
     "cycle": "DOCUMENTED_AND_CLOSED",
-    "functional_baseline": "2.6.0",
+    "functional_baseline": "2.7.0",
     "paid_delivery_atomicity": "RESOLVED",
     "external_delivery_semantics": "AT_LEAST_ONCE"
   },
-  "functional_baseline_end": "2.6.0",
+  "functional_baseline_end": "2.7.0",
   "documentary_patches": [
     {
       "version": "2.5.1",
@@ -442,6 +472,13 @@
       "type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
       "source_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
       "reason": "Durable paid TICKET/COMBO delivery stabilization and proven resolution of payment-confirmed-before-delivery-work risk."
+    },
+    {
+      "version": "2.7.0",
+      "date": "2026-09-15",
+      "type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+      "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+      "reason": "Serialize CURRENT combo metadata transitions in PostgreSQL and preserve the separate direct-notification concurrency residual."
     }
   ],
   "baseline_2_6_1": {
@@ -453,5 +490,11 @@
     "status": "DOCUMENTED_AND_CLOSED",
     "next_actions_priority_mismatches": 0,
     "current_stale_test_counts": 0
+  },
+  "baseline_2_7_0": {
+    "status": "DOCUMENTED_AND_CLOSED",
+    "change_type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+    "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "baseline_commit": "SELF_NOT_RECORDED"
   }
 }

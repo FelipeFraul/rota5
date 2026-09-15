@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-15T15:55:59.919Z",
-  "stage": "2.6.1",
+  "generatedAt": "2026-09-15T17:41:19.103Z",
+  "stage": "2.7.0",
   "count": 169,
   "flow_catalog": "rota5.flow-catalog.v1",
   "records": [
@@ -1929,7 +1929,11 @@
       "integrations": [
         "integration-supabase",
         "integration-zapi"
-      ]
+      ],
+      "baseline_2_7_0": {
+        "database_serialization": true,
+        "migration": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      }
     },
     {
       "id": "combo.delivery_choice.step_02",
@@ -6192,7 +6196,11 @@
       "integrations": [
         "integration-supabase",
         "integration-zapi"
-      ]
+      ],
+      "baseline_2_7_0": {
+        "database_serialization": true,
+        "migration": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      }
     },
     {
       "id": "kitchen.session_prepare.step_02",
@@ -6241,7 +6249,11 @@
       "integrations": [
         "integration-supabase",
         "integration-zapi"
-      ]
+      ],
+      "baseline_2_7_0": {
+        "database_serialization": true,
+        "migration": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      }
     },
     {
       "id": "kitchen.combo_redemption.step_01",
@@ -6291,7 +6303,11 @@
       "integrations": [
         "integration-supabase",
         "integration-zapi"
-      ]
+      ],
+      "baseline_2_7_0": {
+        "database_serialization": true,
+        "migration": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      }
     },
     {
       "id": "kitchen.combo_redemption.step_02",
@@ -6347,7 +6363,11 @@
       "state_before": "issued",
       "state_after": "used",
       "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
-      "high_1_runtime_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
+      "high_1_runtime_status": "PRODUCTION_DEPLOYED_AND_HEALTHY",
+      "baseline_2_7_0": {
+        "database_serialization": true,
+        "migration": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      }
     },
     {
       "id": "table_map.calibration.step_01",
@@ -7923,7 +7943,11 @@
       "integrations": [
         "integration-supabase",
         "integration-zapi"
-      ]
+      ],
+      "baseline_2_7_0": {
+        "database_serialization": true,
+        "migration": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+      }
     },
     {
       "id": "event.program_import.step_01",

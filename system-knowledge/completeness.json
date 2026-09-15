@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T15:55:59.919Z",
-  "stage": "2.6.1",
+  "generatedAt": "2026-09-15T17:41:19.103Z",
+  "stage": "2.7.0",
   "globalConfidence": "HIGH",
   "count": 10,
   "records": [
@@ -36,7 +36,7 @@
     {
       "area": "DATA",
       "status": "MEDIUM_CONFIDENCE",
-      "justification": "45 tabelas locais e remotas coincidem por nome no OpenAPI read-only; 87 migrations e definições finais locais foram recontadas.",
+      "justification": "45 tabelas locais e remotas coincidem por nome no OpenAPI read-only; 88 migrations e definições finais locais foram recontadas.",
       "missingEvidence": "Internos PostgreSQL e histórico remoto.",
       "higherConfidenceRequires": "Catálogo PostgreSQL remoto read-only."
     },
@@ -57,21 +57,21 @@
     {
       "area": "TESTS",
       "status": "MEDIUM_CONFIDENCE",
-      "justification": "57 test artifacts are catalogued; the current default suite passes 276/276 and PostgreSQL integration passes 4/4.",
+      "justification": "57 test artifacts are catalogued; the current default suite passes 280/280 and PostgreSQL integration passes 4/4.",
       "missingEvidence": "36 arquivos de teste ficam fora do comando padrão; testes reais mutáveis exigem ambiente isolado.",
       "higherConfidenceRequires": "Ambiente isolado para a suíte ampliada e testes reais."
     },
     {
       "area": "RISKS",
       "status": "HIGH_CONFIDENCE",
-      "justification": "46 findings foram contabilizados integralmente: P0 3, P1 11, P2 21, P3 9 e P4 2; as somas por type, severity, priority e status fecham em 46, sem record ausente.",
+      "justification": "47 findings foram contabilizados integralmente: P0 3, P1 11, P2 22, P3 9 e P4 2; as somas por type, severity, priority e status fecham em 47, sem record ausente.",
       "missingEvidence": "Riscos dependentes de estado remoto não exposto.",
       "higherConfidenceRequires": "Evidência remota dos itens NOT_VALIDATED."
     },
     {
       "area": "RUNTIME",
       "status": "MEDIUM_CONFIDENCE",
-      "justification": "25 checks foram revisados; a distribuição canônica atual é 23 PASS, 2 PARTIAL e 0 FAIL.",
+      "justification": "27 checks foram revisados; a distribuição canônica atual é 25 PASS, 2 PARTIAL e 0 FAIL.",
       "missingEvidence": "Execuções mutáveis, cron/webhook history e logs completos.",
       "higherConfidenceRequires": "Observação read-only adicional ou ambiente isolado."
     }
@@ -96,5 +96,10 @@
     "change_type": "PATCH_DOCUMENTARY_CORRECTION",
     "functional_source_changed": false,
     "current_metadata_corrected": true
+  },
+  "baseline_2_7_0": {
+    "status": "PASS",
+    "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "release_blockers": 0
   }
 }
