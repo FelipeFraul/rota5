@@ -1,13 +1,25 @@
-> **Current Baseline 2.7.1 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`. Fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`; 391 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 57 test files and 47 findings. `risk.combo-metadata-read-modify-write-race` is RESOLVED; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is ACTIVE MEDIUM/P2 and non-release-blocking. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.7.2 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`. Fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`; 391 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 57 test files and 47 findings. `risk.combo-metadata-read-modify-write-race` is RESOLVED; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is ACTIVE MEDIUM/P2 and non-release-blocking. Release blockers: 0; Product and Infrastructure remain DEGRADED.
 
-## Baseline 2.7.1 — factual CURRENT projection correction
+## Baseline 2.7.2 — historical integrity correction
+
+This `PATCH_DOCUMENTARY_CORRECTION` restores historical baseline attribution accidentally relabeled during 2.7.1 and reconciles current freeze/generation timestamps. No functional source, database, deployment, health or finding lifecycle changed.
+
+| Audited historical mutation | 2.7.1 classification | 2.7.2 result |
+| --- | --- | --- |
+| 17 functional Baseline 2.7.0 headings relabeled as 2.7.1 | ACCIDENTAL | Restored to 2.7.0 |
+| Baseline 2.1.0 SemVer relabeled as documentary patch | ACCIDENTAL | Restored to `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` |
+| Four functional Quality Gate identity fields relabeled as 2.7.1/PATCH | ACCIDENTAL | Restored to 2.7.0/MINOR |
+| `resolved_semantic_contract.baseline` relabeled from its 2.4.4 origin | ACCIDENTAL | Restored to 2.4.4 |
+| CURRENT corrections, new 2.7.1 entries and generated metadata | CORRECT | Preserved or advanced to 2.7.2 as applicable |
+
+## Baseline 2.7.0 — combo metadata serialization
 
 Canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27` is deployed as `dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g`. Migration `20260915000500_serialize_combo_metadata_transitions.sql` was already applied and validated before this documentary reconciliation. Current quality is 280/280 Node, 4/4 PostgreSQL, typecheck, lint without errors and build PASS in Quality Gate 34998744062. The metadata lost-update finding is RESOLVED; direct-notification concurrency is a separate ACTIVE MEDIUM/P2 residual. No remote mutation or deployment occurred during this freeze.
 
 
 # Rota5 Baseline V1
 
-**Identity:** `rota5-baseline-v1`, version **2.7.1**, status **FROZEN**. Canonical functional source is `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`, with 391 files and fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`. The baseline commit is `SELF_NOT_RECORDED` to avoid self-reference.
+**Identity:** `rota5-baseline-v1`, version **2.7.2**, status **FROZEN**. Canonical functional source is `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`, with 391 files and fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`. The baseline commit is `SELF_NOT_RECORDED` to avoid self-reference.
 
 Rota5 is a Next.js application backed by Supabase/PostgreSQL. The canonical catalog contains 17 domains, 66 modules, 56 entrypoints, 140 capabilities, 34 flows, 169 steps and 74 state transitions. The data catalog contains 45 tables, 88 migrations, 63 SQL functions, 1 sequence, 36 triggers and 2,272 currently catalogued typed relations.
 
@@ -31,7 +43,7 @@ Rota5 is a Next.js application backed by Supabase/PostgreSQL. The canonical cata
 
 ## BASELINE 2.1.0 SCOPED ACTIVE-BRAND RESOLUTION
 
-- SemVer reason: **PATCH_DOCUMENTARY_CORRECTION**.
+- SemVer reason: **MINOR_COMPATIBLE_FUNCTIONAL_CHANGE**.
 - `legacy.active-brand-contamination`: **RESOLVED / HIGH / P1** for `DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES`.
 - All active surfaces documented and revalidated for the finding were corrected and passed Preview `dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW` and Production `dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo` on source `d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8`.
 - Checkout pending/success, five public-help topics, scoped router prompts, CSS assets and static CORS contain zero scoped legacy-brand references; `rota5.webp` and `rota5_mb.webp` return HTTP 200; relevant Production log errors are 0.

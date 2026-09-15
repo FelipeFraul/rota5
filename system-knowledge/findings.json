@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T18:43:54.683Z",
-  "stage": "2.7.1",
+  "generatedAt": "2026-09-15T19:16:24.946Z",
+  "stage": "2.7.2",
   "sourceCommit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-  "scope": "Canonical finding catalog for Baseline 2.7.1, with current lifecycle state separated from preserved historical evidence.",
-  "method": "Reconciled machine-readable current state for Baseline 2.7.1 against source 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27, current Quality Gate 34998744062, remote evidence captured by the completed 2.7.0 re-audit, and preserved historical evidence.",
+  "scope": "Canonical finding catalog for Baseline 2.7.2, with current lifecycle state separated from preserved historical evidence.",
+  "method": "Reconciled machine-readable current state for Baseline 2.7.2 against source 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27, current Quality Gate 34998744062, remote evidence captured by the completed 2.7.0 re-audit, and preserved historical evidence.",
   "count": 47,
   "records": [
     {
@@ -4176,7 +4176,7 @@
     }
   },
   "resolved_semantic_contract": {
-    "baseline": "2.7.1",
+    "baseline": "2.4.4",
     "top_level": "CURRENT_STATE_ONLY",
     "historical_location": "resolution.historical_evidence",
     "current_evidence_marker": "evidence_state=CURRENT",
@@ -4240,5 +4240,11 @@
     "resolved_semantic_invariants_reconciled": true,
     "current_evidence_reconciled": true,
     "combo_unreachable_current_projection_reconciled": true
+  },
+  "baseline_2_7_2": {
+    "change_type": "PATCH_DOCUMENTARY_CORRECTION",
+    "lifecycle_changes": 0,
+    "valid_2_7_1_current_corrections_preserved": true,
+    "historical_contract_attribution_restored": true
   }
 }

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T18:43:54.683Z",
-  "stage": "2.7.1",
+  "generatedAt": "2026-09-15T19:16:24.946Z",
+  "stage": "2.7.2",
   "count": 38,
   "capability_catalog": "system-knowledge/capabilities.json",
   "direction_convention": "REQUIRES: origem depende do destino; TRIGGERS: origem aciona destino sob condição; EXTENDS: origem estende destino; ALTERNATIVE_TO: alternativa funcional. dependencies contém somente alvos REQUIRES, dependent_capabilities é o inverso.",
