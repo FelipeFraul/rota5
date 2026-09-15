@@ -435,7 +435,7 @@
       "failed": 7
     }
   },
-  "stage": "2.5.2",
+  "stage": "2.5.3",
   "test_runner_reproducibility": {
     "finding": "gap.test-runner-depends-on-untracked-loader",
     "status": "RESOLVED",

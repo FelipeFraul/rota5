@@ -1,6 +1,6 @@
 # Inventário do repositório
 
-> **HISTORICAL SNAPSHOT:** preserved original-stage inventory; current values are projected by the Baseline 2.5.2 bannered documents and canonical machine-readable catalogs.
+> **HISTORICAL SNAPSHOT:** preserved original-stage inventory; current values are projected by the Baseline 2.5.3 bannered documents and canonical machine-readable catalogs.
 
 Baseline: 11/09/2026, commit-base `a141c6004421fb8442f95493de3ca4ec4d4c997b`.
 

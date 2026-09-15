@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-14T22:50:20.174Z",
-  "stage": "2.5.2",
+  "generatedAt": "2026-09-15T02:12:29.906Z",
+  "stage": "2.5.3",
   "count": 24,
   "ok": 22,
   "records": [
@@ -185,17 +185,28 @@
     },
     {
       "id": "runtime.git-production",
-      "target": "Git production branch",
-      "method": "GIT_READ",
-      "evidence_source": "REMOTE_CONFIG",
+      "target": "Git canonical source and baseline commit policy",
+      "method": "DOCUMENTARY_POLICY",
+      "evidence_source": "CANONICAL_SOURCE_POLICY",
       "status": "PASS",
-      "result": "HEAD and origin/production point to e931d66d03a620d5e26588c8f6c8714c62ef5d1d.",
+      "result": "Canonical functional source is e931d66d03a620d5e26588c8f6c8714c62ef5d1d; baseline commit is SELF_NOT_RECORDED; live branch tip is VOLATILE_NOT_EMBEDDED_IN_FROZEN_BASELINE.",
       "side_effect_free": true,
-      "expected": "Comparar HEAD e origin/production sem inferir deploy.",
+      "expected": "Represent canonical functional source without embedding a volatile live branch tip or a self-referential baseline commit.",
       "evidence": [
-        "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
-        "Git production branch"
-      ]
+        "system-knowledge/source-fingerprint.json",
+        "system-knowledge/baseline-manifest.json"
+      ],
+      "temporal_semantics": "CURRENT_CANONICAL_SEMANTICS",
+      "canonical_functional_source": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+      "baseline_commit": "SELF_NOT_RECORDED",
+      "live_branch_tip": "VOLATILE_NOT_EMBEDDED_IN_FROZEN_BASELINE",
+      "historical_snapshot": {
+        "classification": "HISTORICAL_SNAPSHOT",
+        "observed_at": "2026-09-14T22:14:45.242Z",
+        "branch": "production",
+        "head": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+        "role": "FUNCTIONAL_FREEZE_OBSERVATION_ONLY"
+      }
     },
     {
       "id": "runtime.codex-version",
@@ -644,5 +655,20 @@
     "tables": 45,
     "rpc_routes": 42,
     "side_effect_free": true
+  },
+  "git_state_semantics": {
+    "canonical_functional_source": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+    "baseline_commit": "SELF_NOT_RECORDED",
+    "live_branch_tip": "VOLATILE_NOT_EMBEDDED_IN_FROZEN_BASELINE"
+  },
+  "baseline_2_5_3": {
+    "change_type": "PATCH_DOCUMENTARY_CORRECTION",
+    "runtime_git_self_reference": "REMOVED",
+    "runtime_machine_human_match": "PASS",
+    "current_record_count": 24,
+    "current_status_counts": {
+      "PASS": 22,
+      "PARTIAL": 2
+    }
   }
 }

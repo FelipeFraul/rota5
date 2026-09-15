@@ -1,6 +1,6 @@
 # Baseline 2.0.1 HIGH #1 final database runtime
 
-## Baseline 2.5.2 database state
+## Baseline 2.5.3 database state
 
 Canonical local/validated state: 83 migrations, 45 tables, 44 SQL functions and 36 triggers. `admin_event_operations` is present. Current administrative RPCs are `create_admin_event_catalog`, `update_admin_event_catalog` and `update_admin_event_location`; historical `update_admin_event_venue` is absent after migration 004.
 

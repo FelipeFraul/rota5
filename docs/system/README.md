@@ -1,6 +1,6 @@
 # ROTA5 SYSTEM KNOWLEDGE
 
-**Current baseline:** v2.5.2 — FROZEN
+**Current baseline:** v2.5.3 — FROZEN
 
 **Start here:** [AI-READ-ME.md](AI-READ-ME.md) · [BASELINE-V1.md](BASELINE-V1.md) · [CANONICAL-INDEX.md](CANONICAL-INDEX.md)
 

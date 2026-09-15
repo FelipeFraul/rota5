@@ -143,6 +143,38 @@ for (const [area,expectedJustification] of Object.entries(canonicalScorecardJust
   if (completenessRecords.get(area)?.justification !== expectedJustification) add('COMPLETENESS_CANONICAL_COUNT_MISMATCH',`completeness.json:${area}`);
   if (scorecardRows.get(area) !== expectedJustification) add('COMPLETENESS_SCORECARD_PROJECTION_MISMATCH',`completeness-scorecard.md:${area}`);
 }
+const runtimeManifest = catalogs['baseline-manifest'];
+const runtimeGitRecord = runtimeRecords.find(record => record.id==='runtime.git-production');
+const volatileGitHeadPattern = /(?:\bHEAD\b|origin\/[A-Za-z0-9._/-]+|live branch tip)[^\r\n]{0,160}\b[0-9a-f]{40}\b/i;
+for (const record of runtimeRecords) {
+  if (record.temporal_semantics!=='HISTORICAL_SNAPSHOT' && volatileGitHeadPattern.test(`${record.target || ''} ${record.result || ''}`)) add('VOLATILE_GIT_HEAD_EMBEDDED_AS_CURRENT',record.id);
+}
+if (!runtimeGitRecord) add('RUNTIME_GIT_POLICY_RECORD_MISSING','runtime.git-production');
+else {
+  if (runtimeGitRecord.temporal_semantics!=='CURRENT_CANONICAL_SEMANTICS') add('RUNTIME_GIT_TEMPORAL_SEMANTICS_INVALID',runtimeGitRecord.id);
+  if (runtimeGitRecord.canonical_functional_source!==runtimeManifest?.source_state?.base_commit) add('RUNTIME_GIT_CANONICAL_SOURCE_MISMATCH',runtimeGitRecord.id);
+  if (runtimeGitRecord.baseline_commit!==runtimeManifest?.source_state?.baseline_commit || runtimeGitRecord.baseline_commit!=='SELF_NOT_RECORDED') add('RUNTIME_GIT_BASELINE_COMMIT_POLICY_INVALID',runtimeGitRecord.id);
+  if (runtimeGitRecord.live_branch_tip!=='VOLATILE_NOT_EMBEDDED_IN_FROZEN_BASELINE') add('RUNTIME_GIT_LIVE_TIP_POLICY_INVALID',runtimeGitRecord.id);
+  if (runtimeGitRecord.historical_snapshot?.classification!=='HISTORICAL_SNAPSHOT') add('RUNTIME_GIT_HISTORICAL_SNAPSHOT_INVALID',runtimeGitRecord.id);
+}
+const runtimeMarkdown = fs.readFileSync(path.join(docsDir,'runtime-validation.md'),'utf8');
+const runtimeTableStart = '<!-- RUNTIME_CURRENT_TABLE_START -->';
+const runtimeTableEnd = '<!-- RUNTIME_CURRENT_TABLE_END -->';
+const runtimeMarkdownCell = (value) => String(value ?? '').replaceAll('|','\\|').replaceAll(/\r?\n/g,' ');
+const expectedRuntimeTable = [
+  '| ID | Target | Evidence | Status | Result |',
+  '| --- | --- | --- | --- | --- |',
+  ...runtimeRecords.map(record => `| \`${runtimeMarkdownCell(record.id)}\` | ${runtimeMarkdownCell(record.target || record.kind)} | ${runtimeMarkdownCell(record.evidence_source || record.kind)} | ${runtimeMarkdownCell(record.status)} | ${runtimeMarkdownCell(record.result)} |`)
+].join('\n');
+const runtimeTableStartIndex = runtimeMarkdown.indexOf(runtimeTableStart);
+const runtimeTableEndIndex = runtimeMarkdown.indexOf(runtimeTableEnd);
+if (runtimeTableStartIndex<0 || runtimeTableEndIndex<=runtimeTableStartIndex) add('RUNTIME_CURRENT_TABLE_MARKERS_INVALID','docs/system/runtime-validation.md');
+else {
+  const actualRuntimeTable = runtimeMarkdown.slice(runtimeTableStartIndex+runtimeTableStart.length,runtimeTableEndIndex).trim();
+  if (actualRuntimeTable!==expectedRuntimeTable) add('RUNTIME_MACHINE_HUMAN_MISMATCH','docs/system/runtime-validation.md');
+}
+const expectedRuntimeSummary = `Current catalog: **${runtimeRecords.length} checks — ${runtimeRecords.filter(record=>record.status==='PASS').length} PASS, ${runtimeRecords.filter(record=>record.status==='PARTIAL').length} PARTIAL, ${runtimeRecords.filter(record=>record.status==='FAIL').length} FAIL.**`;
+if (!runtimeMarkdown.includes(expectedRuntimeSummary)) add('RUNTIME_MACHINE_HUMAN_SUMMARY_MISMATCH','docs/system/runtime-validation.md');
 if ((catalogs.capabilities?.metrics?.by_status?.DESCONHECIDA || 0) !== 0) add('UNCLASSIFIED_CAPABILITY','capabilities.metrics.by_status.DESCONHECIDA');
 if ((catalogs.flows?.metrics?.capabilities_unclassified || 0) !== 0) add('UNCLASSIFIED_CAPABILITY','flows.metrics.capabilities_unclassified');
 if ((catalogs.flows?.metrics?.functional_entrypoints_unclassified || 0) !== 0) add('UNCLASSIFIED_ENTRYPOINT','flows.metrics.functional_entrypoints_unclassified');

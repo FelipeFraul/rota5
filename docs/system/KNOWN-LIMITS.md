@@ -1,6 +1,6 @@
 # Known limits
 
-## Baseline 2.5.2 clarification
+## Baseline 2.5.3 clarification
 
 The 5 NOT_VALIDATED findings and other current risks remain governed by their canonical lifecycle. Retention/cleanup for `admin_event_operations` is a separate hardening candidate, not a claim that the resolved atomicity or location defects are active.
 

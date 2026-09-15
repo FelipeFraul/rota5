@@ -1,6 +1,6 @@
 # Desconhecidos, contradições e validações futuras
 
-> **HISTORICAL SNAPSHOT:** preserved original-stage inventory; current values are projected by the Baseline 2.5.2 bannered documents and canonical machine-readable catalogs.
+> **HISTORICAL SNAPSHOT:** preserved original-stage inventory; current values are projected by the Baseline 2.5.3 bannered documents and canonical machine-readable catalogs.
 
 Esta lista contém **18 registros**. Ela evita transformar ausência de evidência em conclusão. Não foram encontrados diretórios dedicados `fixtures/` ou `mocks/`; testes e auditorias criam fixtures/mocks dentro dos próprios scripts. Também não foi encontrado SDK dedicado de observabilidade.
 

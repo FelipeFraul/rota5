@@ -1,6 +1,6 @@
 # Evidências ainda não validáveis — Etapa 7
 
-> **HISTORICAL SNAPSHOT:** preserved original-stage inventory; current values are projected by the Baseline 2.5.2 bannered documents and canonical machine-readable catalogs.
+> **HISTORICAL SNAPSHOT:** preserved original-stage inventory; current values are projected by the Baseline 2.5.3 bannered documents and canonical machine-readable catalogs.
 
 Os nove grupos abaixo foram revisitados. Continuam sem evidência suficiente; nenhum permaneceu NOT_VALIDATED por esquecimento. A antiga lacuna sobre o deployment em ERROR foi encerrada pelo deployment Production READY atual.
 
