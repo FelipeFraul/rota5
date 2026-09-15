@@ -26,6 +26,10 @@ function checkoutMocks(db, overrides = {}) {
 }
 
 function comboMocks(db) {
+  const createComboRedemptionToken = (orderId, version) =>
+    createHmac("sha256", "combo-test-ticket-secret-00000001")
+      .update(`combo-redemption:v1:${orderId}:${version}`)
+      .digest("base64url");
   return {
     createHash, randomBytes, timingSafeEqual, QRCode: {}, createMercadoPagoPayment: async () => ({ ok: false }),
     getEnv: () => ({ CHECKOUT_INTERNAL_SECRET: secret, MERCADO_PAGO_ACCESS_TOKEN: "fake", APP_BASE_URL: "http://local" }),
@@ -37,6 +41,11 @@ function comboMocks(db) {
     centsToDecimalAmount: (value) => value / 100, decimalAmountToCents: (value) => Math.round(Number(value) * 100),
     getPublicEventVisibilityQueryFloorIso: () => "2000-01-01T00:00:00.000Z", getPublicVisibleSessionStatuses: () => [],
     isPublicEventVisible: () => true, PUBLIC_VISIBLE_EVENT_STATUSES: ["published"],
+    createComboRedemptionToken,
+    hashComboRedemptionToken: (token) => createHash("sha256").update(token).digest("hex"),
+    comboRedemptionTokenMatchesHash: (token, hash) => createHash("sha256").update(token).digest("hex") === hash,
+    ensurePaidComboDeliveryIntents: async () => ({ ok: true, intentsCount: 2 }),
+    getWhatsAppOutboundDeliveryByIdempotencyKey: async () => ({ ok: true, delivery: null }),
     claimWhatsAppOutboundDelivery: async () => ({ ok: false }), getOrCreateWhatsAppOutboundDelivery: async () => ({ ok: false }),
     markWhatsAppOutboundDeliveryFailed: async () => ({ ok: true }), markWhatsAppOutboundDeliverySent: async () => ({ ok: true }),
     sendZapiImage: async () => ({ ok: true }), sendZapiText: async () => ({ ok: true }),
@@ -110,23 +119,30 @@ test("combo.status authenticates the token without exposing another order", asyn
 });
 
 test("combo.confirm validates amount/link and confirms one order idempotently", async () => {
+  let confirmed = false;
   const db = new MemorySupabase({
     combo_orders: [
       { id: "combo-a", status: "pending_payment", total_amount_cents: 5000 },
       { id: "combo-b", status: "pending_payment", total_amount_cents: 6000 },
     ],
     combo_payments: [],
+  }, {
+    confirm_paid_combo_order: async (args) => {
+      assert.equal(args.p_currency, "BRL");
+      assert.equal(args.p_qr_token_version, 1);
+      assert.match(args.p_qr_token_hash, /^[0-9a-f]{64}$/);
+      if (args.p_amount_cents !== 5000) return { data: null, error: { message: "combo_payment_amount_mismatch" } };
+      const idempotent = confirmed;
+      confirmed = true;
+      return { data: { idempotent, redemption_id: "redemption-a", qr_token_version: 1, legacy_redemption: false }, error: null };
+    },
   });
   const service = await loadProductionModule("src/lib/tickets/services/comboOffers.ts", comboMocks(db));
-  const input = { orderId: "combo-a", providerPaymentId: "mp-a", amountCents: 5000, paidAt: "2026-01-02T00:00:00.000Z", rawMetadata: { safe: true } };
+  const input = { orderId: "combo-a", providerPaymentId: "mp-a", amountCents: 5000, currency: "BRL", paidAt: "2026-01-02T00:00:00.000Z", rawMetadata: { safe: true } };
 
   assert.equal((await service.confirmPaidComboOrder(input)).idempotent, false);
-  assert.equal(db.tables.combo_orders.find((row) => row.id === "combo-a").status, "paid");
-  assert.equal(db.tables.combo_orders.find((row) => row.id === "combo-b").status, "pending_payment");
-  assert.equal(db.tables.combo_payments.length, 1);
   assert.equal((await service.confirmPaidComboOrder(input)).idempotent, true);
-  assert.equal(db.tables.combo_payments.length, 1);
-  assert.equal((await service.confirmPaidComboOrder({ ...input, orderId: "combo-b", amountCents: 100 })).reason, "payment_amount_too_low");
+  assert.equal((await service.confirmPaidComboOrder({ ...input, amountCents: 100 })).reason, "combo_payment_amount_mismatch");
 });
 
 test("analytics.track_click increments metadata without changing order state", async () => {

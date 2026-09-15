@@ -42,6 +42,11 @@ export type PaidTicketDeliveryQueueCounts = {
   sent: number;
 };
 
+export type PaidComboDeliveryTask = {
+  entity_id: string;
+  delivery_kind: "paid" | "ready";
+};
+
 type GetOrCreateWhatsAppOutboundDeliveryInput = {
   idempotencyKey: string;
   customerId: string;
@@ -54,6 +59,29 @@ type GetOrCreateWhatsAppOutboundDeliveryInput = {
 
 const DELIVERY_SELECT =
   "id, idempotency_key, customer_id, conversation_id, recipient_phone, message_type, reason, business_context, status, attempt_count, provider_message_id, last_error, claimed_at, next_attempt_at, lease_expires_at, dead_letter_at, claim_token, sent_at";
+
+export async function getWhatsAppOutboundDeliveryByIdempotencyKey(
+  idempotencyKey: string,
+) {
+  const { data, error } = await getSupabaseAdmin()
+    .from("whatsapp_outbound_deliveries")
+    .select(DELIVERY_SELECT)
+    .eq("idempotency_key", idempotencyKey)
+    .maybeSingle<WhatsAppOutboundDelivery>();
+
+  if (error) return { ok: false as const, error };
+  return { ok: true as const, delivery: data };
+}
+
+export async function ensurePaidComboDeliveryIntents(orderId: string) {
+  const { data, error } = await getSupabaseAdmin().rpc(
+    "ensure_paid_combo_delivery_intents",
+    { p_order_id: orderId },
+  );
+
+  if (error) return { ok: false as const, error };
+  return { ok: true as const, intentsCount: Number(data ?? 0) };
+}
 
 export async function ensurePaidTicketDeliveryIntents({
   orderId,
@@ -292,6 +320,29 @@ export async function listDuePaidTicketDeliveryOrders({
 export async function getPaidTicketDeliveryQueueCounts() {
   const { data, error } = await getSupabaseAdmin().rpc(
     "get_paid_ticket_delivery_queue_counts",
+  );
+
+  if (error) return { ok: false as const, error };
+  return { ok: true as const, counts: data as PaidTicketDeliveryQueueCounts };
+}
+
+export async function listDuePaidComboDeliveryTasks({
+  limit = 20,
+}: {
+  limit?: number;
+} = {}) {
+  const { data, error } = await getSupabaseAdmin().rpc(
+    "list_due_paid_combo_delivery_tasks",
+    { p_limit: limit },
+  );
+
+  if (error) return { ok: false as const, error };
+  return { ok: true as const, tasks: (data ?? []) as PaidComboDeliveryTask[] };
+}
+
+export async function getPaidComboDeliveryQueueCounts() {
+  const { data, error } = await getSupabaseAdmin().rpc(
+    "get_paid_combo_delivery_queue_counts",
   );
 
   if (error) return { ok: false as const, error };

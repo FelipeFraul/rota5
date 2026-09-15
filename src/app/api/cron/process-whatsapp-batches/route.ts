@@ -11,6 +11,7 @@ import {
 } from "@/lib/security/rateLimit";
 import { finalizeInactiveWhatsAppConversations } from "@/lib/tickets/services/conversationFinalizer";
 import { processDuePaidTicketDeliveries } from "@/lib/tickets/services/paidTicketDeliveryWorker";
+import { processDuePaidComboDeliveries } from "@/lib/tickets/services/paidComboDeliveryWorker";
 import {
   claimDueWhatsAppMessageBatches,
   finishWhatsAppMessageBatch,
@@ -214,10 +215,14 @@ async function handleProcessWhatsAppBatchesCron(request: Request) {
   let paidTicketDeliveries: Awaited<
     ReturnType<typeof processDuePaidTicketDeliveries>
   >;
+  let paidComboDeliveries: Awaited<
+    ReturnType<typeof processDuePaidComboDeliveries>
+  >;
 
   try {
     responseBody = await processDueWhatsAppMessageBatches();
     paidTicketDeliveries = await processDuePaidTicketDeliveries();
+    paidComboDeliveries = await processDuePaidComboDeliveries();
   } catch (error) {
     logError("Failed to process durable WhatsApp queues", {
       error,
@@ -235,6 +240,7 @@ async function handleProcessWhatsAppBatchesCron(request: Request) {
     ok: true,
     ...responseBody,
     paidTicketDeliveries,
+    paidComboDeliveries,
   };
 
   return hasOnlyFailures

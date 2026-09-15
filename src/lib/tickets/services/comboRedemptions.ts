@@ -15,9 +15,20 @@ import { saveWhatsAppMessage } from "@/lib/tickets/services/messages";
 import { buildWhatsAppOutboundMetadata } from "@/lib/tickets/services/outboundMessages";
 import { sendZapiImage, sendZapiText } from "@/lib/zapi/client";
 import { generateComboQrImage } from "@/lib/tickets/services/comboQrImage";
+import {
+  comboRedemptionTokenMatchesHash,
+  createComboRedemptionToken,
+  hashComboRedemptionToken,
+} from "@/lib/tickets/services/comboQrTokens";
 import { formatComboDescription } from "@/lib/tickets/services/comboOffers";
 import { getOfficialTableMapPlace } from "@/lib/tickets/tableMap/officialPlaces";
 import { isPublicEventVisible } from "@/lib/tickets/services/publicEventVisibility";
+import {
+  claimWhatsAppOutboundDelivery,
+  getWhatsAppOutboundDeliveryByIdempotencyKey,
+  markWhatsAppOutboundDeliveryFailed,
+  markWhatsAppOutboundDeliverySent,
+} from "@/lib/tickets/services/whatsappOutboundDeliveries";
 
 export type KitchenSessionValidation =
   | {
@@ -642,6 +653,149 @@ export async function releaseComboOrdersForKitchenAfterGateEntry(input: {
   return { ok: true as const, releasedCount };
 }
 
+export async function deliverComboReadyNotification(redemptionId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data: redemption, error } = await supabase
+    .from("combo_redemptions")
+    .select("id, combo_order_id, customer_id, event_id, session_id, redemption_code, offer_name, quantity, status, qr_token_hash, qr_token_version, raw_metadata, customers(id, whatsapp_phone, name), events(title), event_sessions(starts_at, timezone), combo_orders!inner(status, source_order_id, combo_offers(description))")
+    .eq("id", redemptionId)
+    .maybeSingle<{
+      id: string;
+      combo_order_id: string;
+      customer_id: string;
+      event_id: string;
+      session_id: string;
+      redemption_code: string;
+      offer_name: string;
+      quantity: number;
+      status: "issued" | "used" | "cancelled";
+      qr_token_hash: string;
+      qr_token_version: number | null;
+      raw_metadata: Record<string, unknown> | null;
+      customers: { id: string; whatsapp_phone: string | null; name: string | null } | Array<{ id: string; whatsapp_phone: string | null; name: string | null }> | null;
+      events: { title: string } | Array<{ title: string }> | null;
+      event_sessions: { starts_at: string; timezone?: string | null } | Array<{ starts_at: string; timezone?: string | null }> | null;
+      combo_orders: { status: string; source_order_id: string | null; combo_offers: { description: string } | Array<{ description: string }> | null } | Array<{ status: string; source_order_id: string | null; combo_offers: { description: string } | Array<{ description: string }> | null }> | null;
+    }>();
+
+  const order = redemption ? firstJoin(redemption.combo_orders) : null;
+  const customer = redemption ? firstJoin(redemption.customers) : null;
+  const event = redemption ? firstJoin(redemption.events) : null;
+  const eventSession = redemption ? firstJoin(redemption.event_sessions) : null;
+  const offer = order ? firstJoin(order.combo_offers) : null;
+  if (error || !redemption || !order || order.status !== "paid" || redemption.status !== "issued") {
+    return { ok: false as const, reason: "not_found" as const, error };
+  }
+  if (redemption.qr_token_version == null) {
+    return { ok: true as const, sent: false as const, reason: "legacy_token_not_reconstructable" as const };
+  }
+  const preparedVersion = Number(redemption.raw_metadata?.ready_delivery_version);
+  if (preparedVersion !== redemption.qr_token_version || !customer?.whatsapp_phone) {
+    return { ok: false as const, reason: "ready_delivery_not_prepared" as const };
+  }
+
+  const conversation = await getOrCreateOpenConversation({ customerId: customer.id });
+  const conversationId = conversation.ok ? conversation.conversation.id : null;
+  const itemLines = formatComboDescription(offer?.description ?? "").split("\n").filter(Boolean);
+  const message = [
+    "*SEU PEDIDO ESTÁ PRONTO. APRESENTE O QRCODE ABAIXO NO BAR PARA RETIRADA*",
+    "",
+    `Pedido: ${redemption.redemption_code}`,
+    `Item: ${redemption.offer_name}`,
+    `Quantidade: ${redemption.quantity}`,
+    ...(itemLines.length ? ["", "*ITENS DO PEDIDO*", ...itemLines.map((item) => `- ${item}`)] : []),
+    ...(event?.title ? [`Evento: ${event.title}`] : []),
+  ].join("\n");
+  const context = {
+    combo_order_id: redemption.combo_order_id,
+    combo_redemption_id: redemption.id,
+    qr_token_version: preparedVersion,
+  };
+  const textKey = `combo-ready-redemption:${redemption.id}:text:v${preparedVersion}`;
+  const qrKey = `combo-ready-redemption:${redemption.id}:qr:v${preparedVersion}`;
+  const textDelivery = await getWhatsAppOutboundDeliveryByIdempotencyKey(textKey);
+  if (!textDelivery.ok || !textDelivery.delivery) return { ok: false as const, reason: "text_intent_missing" as const };
+
+  if (textDelivery.delivery.status !== "sent") {
+    const claim = await claimWhatsAppOutboundDelivery(textDelivery.delivery.id);
+    if (!claim.ok) return { ok: false as const, reason: "database_error" as const, error: claim.error };
+    if (!claim.claimed) return { ok: true as const, sent: false as const, reason: "delivery_in_progress" as const };
+    const send = await sendZapiText({ phone: customer.whatsapp_phone, message });
+    const saved = await saveWhatsAppMessage({
+      conversationId,
+      customerId: customer.id,
+      direction: "outbound",
+      messageType: "text",
+      body: message,
+      providerMessageId: send.ok ? send.providerMessageId : null,
+      rawMetadata: buildWhatsAppOutboundMetadata({ sendResult: send, messageType: "text", reason: "combo_ready_at_bar", businessContext: context }),
+    });
+    if (!send.ok || !saved.ok) {
+      await markWhatsAppOutboundDeliveryFailed({ deliveryId: textDelivery.delivery.id, claimToken: claim.delivery.claim_token, error: !send.ok ? send.error : saved.error?.code ?? "whatsapp_message_persist_failed" });
+      return { ok: true as const, sent: false as const, reason: !send.ok ? "zapi_failed" as const : "message_persist_failed" as const };
+    }
+    const marked = await markWhatsAppOutboundDeliverySent({ deliveryId: textDelivery.delivery.id, claimToken: claim.delivery.claim_token, providerMessageId: send.providerMessageId });
+    if (!marked.ok) return { ok: false as const, reason: "database_error" as const };
+    if (conversation.ok) await updateConversationAfterMessage({ conversationId: conversation.conversation.id });
+  }
+
+  const qrDelivery = await getWhatsAppOutboundDeliveryByIdempotencyKey(qrKey);
+  if (!qrDelivery.ok || !qrDelivery.delivery) return { ok: false as const, reason: "qr_intent_missing" as const };
+  if (qrDelivery.delivery.status === "sent") {
+    const completed = await supabase.rpc("complete_combo_ready_delivery", { p_redemption_id: redemption.id, p_qr_token_version: preparedVersion });
+    if (completed.error || completed.data !== true) return { ok: false as const, reason: "ready_completion_failed" as const, error: completed.error };
+    return { ok: true as const, sent: true as const };
+  }
+  const claim = await claimWhatsAppOutboundDelivery(qrDelivery.delivery.id);
+  if (!claim.ok) return { ok: false as const, reason: "database_error" as const, error: claim.error };
+  if (!claim.claimed) return { ok: true as const, sent: false as const, reason: "delivery_in_progress" as const };
+
+  const token = createComboRedemptionToken(redemption.combo_order_id, preparedVersion);
+  if (!comboRedemptionTokenMatchesHash(token, redemption.qr_token_hash)) {
+    await markWhatsAppOutboundDeliveryFailed({ deliveryId: qrDelivery.delivery.id, claimToken: claim.delivery.claim_token, error: "combo_qr_token_hash_mismatch" });
+    return { ok: false as const, reason: "qr_token_hash_mismatch" as const };
+  }
+  let image: Awaited<ReturnType<typeof generateComboQrImage>>;
+  try {
+    const tableMapPlaceCode = await getComboRedemptionTableMapPlaceCode({ sourceOrderId: order.source_order_id, customerId: redemption.customer_id, eventId: redemption.event_id, sessionId: redemption.session_id });
+    image = await generateComboQrImage({
+      qrPayload: `combo:${redemption.id}:${token}`,
+      comboName: redemption.offer_name,
+      comboItems: offer?.description ?? null,
+      eventTitle: event?.title ?? null,
+      startsAt: eventSession?.starts_at ?? null,
+      timezone: eventSession?.timezone ?? null,
+      buyerName: customer.name,
+      redemptionCode: redemption.redemption_code,
+      tableMapPlaceCode,
+    });
+  } catch {
+    await markWhatsAppOutboundDeliveryFailed({ deliveryId: qrDelivery.delivery.id, claimToken: claim.delivery.claim_token, error: "combo_qr_generation_failed" });
+    return { ok: true as const, sent: false as const, reason: "qr_generation_failed" as const };
+  }
+  const caption = ["*QRCODE DO COMBO*", `Pedido: ${redemption.redemption_code}`, "", "Apresente este QR Code vermelho no bar para retirada."].join("\n");
+  const send = await sendZapiImage({ phone: customer.whatsapp_phone, image, caption });
+  const saved = await saveWhatsAppMessage({
+    conversationId,
+    customerId: customer.id,
+    direction: "outbound",
+    messageType: "image",
+    body: caption,
+    providerMessageId: send.ok ? send.providerMessageId : null,
+    rawMetadata: buildWhatsAppOutboundMetadata({ sendResult: send, messageType: "image", reason: "combo_ready_qr", businessContext: context }),
+  });
+  if (!send.ok || !saved.ok) {
+    await markWhatsAppOutboundDeliveryFailed({ deliveryId: qrDelivery.delivery.id, claimToken: claim.delivery.claim_token, error: !send.ok ? send.error : saved.error?.code ?? "whatsapp_message_persist_failed" });
+    return { ok: true as const, sent: false as const, reason: !send.ok ? "zapi_failed" as const : "message_persist_failed" as const };
+  }
+  const marked = await markWhatsAppOutboundDeliverySent({ deliveryId: qrDelivery.delivery.id, claimToken: claim.delivery.claim_token, providerMessageId: send.providerMessageId });
+  if (!marked.ok) return { ok: false as const, reason: "database_error" as const };
+  if (conversation.ok) await updateConversationAfterMessage({ conversationId: conversation.conversation.id });
+  const completed = await supabase.rpc("complete_combo_ready_delivery", { p_redemption_id: redemption.id, p_qr_token_version: preparedVersion });
+  if (completed.error || completed.data !== true) return { ok: false as const, reason: "ready_completion_failed" as const, error: completed.error };
+  return { ok: true as const, sent: true as const };
+}
+
 export async function startKitchenOrderPreparation(input: {
   token: string;
   redemptionId: string;
@@ -660,7 +814,7 @@ export async function startKitchenOrderPreparation(input: {
   let query = supabase
     .from("combo_redemptions")
     .select(
-      "id, combo_order_id, customer_id, event_id, session_id, redemption_code, offer_name, quantity, status, qr_token_hash, raw_metadata, customers(id, whatsapp_phone, name), events(title, city, state, venues(name)), event_sessions(starts_at, timezone, status, events(status)), combo_orders!inner(status, source_order_id, combo_offers(description))",
+      "id, combo_order_id, customer_id, event_id, session_id, redemption_code, offer_name, quantity, status, qr_token_hash, qr_token_version, raw_metadata, customers(id, whatsapp_phone, name), events(title, city, state, venues(name)), event_sessions(starts_at, timezone, status, events(status)), combo_orders!inner(status, source_order_id, combo_offers(description))",
     )
     .eq("id", input.redemptionId);
 
@@ -682,6 +836,7 @@ export async function startKitchenOrderPreparation(input: {
     quantity: number;
     status: "issued" | "used" | "cancelled";
     qr_token_hash: string;
+    qr_token_version: number | null;
     raw_metadata: Record<string, unknown> | null;
     customers:
       | { id: string; whatsapp_phone: string | null; name: string | null }
@@ -749,6 +904,40 @@ export async function startKitchenOrderPreparation(input: {
     return { ok: false as const, reason: "already_delivered" as const };
   }
 
+  const shouldNotifyReady =
+    !readyNotifiedAt &&
+    Boolean(customer?.whatsapp_phone) &&
+    isPublicEventVisible({
+      startsAt: eventSession?.starts_at,
+      timezone: eventSession?.timezone,
+      sessionStatus: eventSession?.status,
+      eventStatus: firstJoin(eventSession?.events)?.status,
+      purpose: "issued_access",
+    });
+
+  if (shouldNotifyReady && redemption.qr_token_version != null) {
+    const nextVersion = redemption.qr_token_version + 1;
+    const nextToken = createComboRedemptionToken(
+      redemption.combo_order_id,
+      nextVersion,
+    );
+    const prepared = await supabase.rpc("prepare_combo_ready_delivery", {
+      p_redemption_id: redemption.id,
+      p_expected_version: redemption.qr_token_version,
+      p_next_version: nextVersion,
+      p_next_qr_token_hash: hashComboRedemptionToken(nextToken),
+    });
+    if (prepared.error) {
+      return { ok: false as const, reason: "update_failed" as const };
+    }
+    const delivery = await deliverComboReadyNotification(redemption.id);
+    return {
+      ok: delivery.ok,
+      notificationSent: delivery.ok && delivery.sent,
+      ...(!delivery.ok ? { reason: delivery.reason } : {}),
+    };
+  }
+
   if (kitchenStatus === "pending") {
     const preparingAt = new Date().toISOString();
     const { error: updateError } = await supabase
@@ -768,17 +957,7 @@ export async function startKitchenOrderPreparation(input: {
     }
   }
 
-  if (
-    !readyNotifiedAt &&
-    customer?.whatsapp_phone &&
-    isPublicEventVisible({
-      startsAt: eventSession?.starts_at,
-      timezone: eventSession?.timezone,
-      sessionStatus: eventSession?.status,
-      eventStatus: firstJoin(eventSession?.events)?.status,
-      purpose: "issued_access",
-    })
-  ) {
+  if (shouldNotifyReady && customer?.whatsapp_phone) {
     const message = [
       "*SEU PEDIDO ESTÁ PRONTO. APRESENTE O QRCODE ABAIXO NO BAR PARA RETIRADA*",
       "",

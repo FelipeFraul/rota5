@@ -9,6 +9,11 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getComboOfferDelayMinutes } from "@/lib/tickets/config";
 import { normalizeWhatsAppPhone } from "@/lib/tickets/phones";
 import { generateComboQrImage } from "@/lib/tickets/services/comboQrImage";
+import {
+  comboRedemptionTokenMatchesHash,
+  createComboRedemptionToken,
+  hashComboRedemptionToken,
+} from "@/lib/tickets/services/comboQrTokens";
 import { getOrCreateOpenConversation, updateConversationAfterMessage } from "@/lib/tickets/services/conversations";
 import { upsertCustomerFromWhatsApp } from "@/lib/tickets/services/customers";
 import { saveWhatsAppMessage } from "@/lib/tickets/services/messages";
@@ -22,7 +27,8 @@ import {
 } from "@/lib/tickets/services/publicEventVisibility";
 import {
   claimWhatsAppOutboundDelivery,
-  getOrCreateWhatsAppOutboundDelivery,
+  ensurePaidComboDeliveryIntents,
+  getWhatsAppOutboundDeliveryByIdempotencyKey,
   markWhatsAppOutboundDeliveryFailed,
   markWhatsAppOutboundDeliverySent,
 } from "@/lib/tickets/services/whatsappOutboundDeliveries";
@@ -1364,36 +1370,56 @@ export async function deliverComboOrder(orderId: string) {
 
   const existing = await supabase
     .from("combo_redemptions")
-    .select("id")
+    .select("id, qr_token_hash, qr_token_version")
     .eq("combo_order_id", order.id)
-    .maybeSingle<{ id: string }>();
+    .maybeSingle<{
+      id: string;
+      qr_token_hash: string;
+      qr_token_version: number | null;
+    }>();
 
   if (existing.error) return { ok: false as const, reason: "database_error" as const, error: existing.error };
+  if (!existing.data) {
+    return { ok: false as const, reason: "delivery_state_not_prepared" as const };
+  }
 
-  const token = randomBytes(32).toString("base64url");
   const redemptionCode = `CMB-${order.id.slice(0, 8).toUpperCase()}`;
   const offer = firstJoin(order.combo_offers);
-  let redemptionId = existing.data?.id ?? null;
+  const redemptionId = existing.data.id;
 
-  if (!redemptionId) {
-    const { data: redemption, error } = await supabase
-      .from("combo_redemptions")
-      .insert({
-        combo_order_id: order.id,
-        customer_id: order.customer_id,
-        event_id: order.event_id,
-        session_id: order.session_id,
-        offer_name: offer?.name ?? "Combo",
-        quantity: order.quantity,
-        qr_token_hash: hashSecret(token),
-        redemption_code: redemptionCode,
-      })
-      .select("id")
-      .single<{ id: string }>();
-
-    if (error) return { ok: false as const, reason: "database_error" as const, error };
-    redemptionId = redemption.id;
+  if (existing.data.qr_token_version == null) {
+    const [legacyText, legacyQr] = await Promise.all([
+      getWhatsAppOutboundDeliveryByIdempotencyKey(
+        `paid-combo-order:${order.id}:text:v1`,
+      ),
+      getWhatsAppOutboundDeliveryByIdempotencyKey(
+        `paid-combo-redemption:${redemptionId}:qr:v1`,
+      ),
+    ]);
+    if (
+      legacyText.ok &&
+      legacyQr.ok &&
+      legacyText.delivery?.status === "sent" &&
+      legacyQr.delivery?.status === "sent"
+    ) {
+      return { ok: true as const, sent: true as const, legacy: true as const };
+    }
+    return {
+      ok: true as const,
+      sent: false as const,
+      reason: "legacy_token_not_reconstructable" as const,
+    };
   }
+
+  const ensureResult = await ensurePaidComboDeliveryIntents(order.id);
+  if (!ensureResult.ok) {
+    return { ok: false as const, reason: "database_error" as const, error: ensureResult.error };
+  }
+
+  const token = createComboRedemptionToken(
+    order.id,
+    existing.data.qr_token_version,
+  );
 
   const phone = order.customers.whatsapp_phone;
 
@@ -1436,21 +1462,15 @@ export async function deliverComboOrder(orderId: string) {
     session_id: order.session_id,
     ...conversationFallbackMetadata,
   };
-  const textDelivery = await getOrCreateWhatsAppOutboundDelivery({
-    idempotencyKey: `paid-combo-order:${order.id}:text:v1`,
-    customerId: order.customer_id,
-    conversationId,
-    recipientPhone: phone,
-    messageType: "text",
-    reason: "paid_combo_delivery",
-    businessContext: textBusinessContext,
-  });
+  const textDelivery = await getWhatsAppOutboundDeliveryByIdempotencyKey(
+    `paid-combo-order:${order.id}:text:v1`,
+  );
 
-  if (!textDelivery.ok) {
+  if (!textDelivery.ok || !textDelivery.delivery) {
     return {
       ok: false as const,
       reason: "database_error" as const,
-      error: textDelivery.error,
+      error: textDelivery.ok ? { code: "combo_text_intent_missing" } : textDelivery.error,
     };
   }
 
@@ -1493,6 +1513,7 @@ export async function deliverComboOrder(orderId: string) {
     if (!textSaveResult.ok) {
       const markFailedResult = await markWhatsAppOutboundDeliveryFailed({
         deliveryId: textDelivery.delivery.id,
+        claimToken: textClaim.delivery.claim_token,
         error: textSaveResult.error?.code ?? "whatsapp_message_persist_failed",
       });
       if (!markFailedResult.ok) {
@@ -1515,6 +1536,7 @@ export async function deliverComboOrder(orderId: string) {
     if (!textResult.ok) {
       const markFailedResult = await markWhatsAppOutboundDeliveryFailed({
         deliveryId: textDelivery.delivery.id,
+        claimToken: textClaim.delivery.claim_token,
         error: textResult.error,
       });
       if (!markFailedResult.ok) {
@@ -1530,6 +1552,7 @@ export async function deliverComboOrder(orderId: string) {
 
     const markSentResult = await markWhatsAppOutboundDeliverySent({
       deliveryId: textDelivery.delivery.id,
+      claimToken: textClaim.delivery.claim_token,
       providerMessageId: textResult.providerMessageId,
     });
     if (!markSentResult.ok) {
@@ -1550,18 +1573,6 @@ export async function deliverComboOrder(orderId: string) {
     "",
     "Apresente no bar. Este QR Code é separado do ingresso da portaria.",
   ].join("\n");
-  const qrPayload = `combo:${redemptionId}:${token}`;
-  const image = await generateComboQrImage({
-    qrPayload,
-    comboName: offer?.name ?? "Combo",
-    comboItems: offer?.description ?? null,
-    eventTitle: event.title,
-    startsAt: order.event_sessions.starts_at,
-    timezone: order.event_sessions.timezone,
-    buyerName: order.customers.name,
-    redemptionCode,
-    tableMapPlaceCode,
-  });
   const imageBusinessContext = {
     combo_order_id: order.id,
     combo_redemption_id: redemptionId,
@@ -1570,21 +1581,15 @@ export async function deliverComboOrder(orderId: string) {
     session_id: order.session_id,
     ...conversationFallbackMetadata,
   };
-  const imageDelivery = await getOrCreateWhatsAppOutboundDelivery({
-    idempotencyKey: `paid-combo-redemption:${redemptionId}:qr:v1`,
-    customerId: order.customer_id,
-    conversationId,
-    recipientPhone: phone,
-    messageType: "image",
-    reason: "paid_combo_qr_delivery",
-    businessContext: imageBusinessContext,
-  });
+  const imageDelivery = await getWhatsAppOutboundDeliveryByIdempotencyKey(
+    `paid-combo-redemption:${redemptionId}:qr:v1`,
+  );
 
-  if (!imageDelivery.ok) {
+  if (!imageDelivery.ok || !imageDelivery.delivery) {
     return {
       ok: false as const,
       reason: "database_error" as const,
-      error: imageDelivery.error,
+      error: imageDelivery.ok ? { code: "combo_qr_intent_missing" } : imageDelivery.error,
     };
   }
 
@@ -1614,6 +1619,52 @@ export async function deliverComboOrder(orderId: string) {
     return { ok: true as const, sent: false as const, reason: "delivery_in_progress" as const };
   }
 
+  if (!comboRedemptionTokenMatchesHash(token, existing.data.qr_token_hash)) {
+    const markFailedResult = await markWhatsAppOutboundDeliveryFailed({
+      deliveryId: imageDelivery.delivery.id,
+      claimToken: imageClaim.delivery.claim_token,
+      error: "combo_qr_token_hash_mismatch",
+    });
+    if (!markFailedResult.ok) {
+      logError("Failed to persist combo QR token integrity failure", {
+        comboOrderId: order.id,
+        comboRedemptionId: redemptionId,
+        code: getDeliveryStateUpdateFailureCode(markFailedResult),
+      });
+    }
+    return { ok: false as const, reason: "qr_token_hash_mismatch" as const };
+  }
+
+  let image: Awaited<ReturnType<typeof generateComboQrImage>>;
+  try {
+    image = await generateComboQrImage({
+      qrPayload: `combo:${redemptionId}:${token}`,
+      comboName: offer?.name ?? "Combo",
+      comboItems: offer?.description ?? null,
+      eventTitle: event.title,
+      startsAt: order.event_sessions.starts_at,
+      timezone: order.event_sessions.timezone,
+      buyerName: order.customers.name,
+      redemptionCode,
+      tableMapPlaceCode,
+    });
+  } catch (error) {
+    const markFailedResult = await markWhatsAppOutboundDeliveryFailed({
+      deliveryId: imageDelivery.delivery.id,
+      claimToken: imageClaim.delivery.claim_token,
+      error: "combo_qr_generation_failed",
+    });
+    if (!markFailedResult.ok) {
+      logError("Failed to mark combo QR generation as failed", {
+        comboOrderId: order.id,
+        comboRedemptionId: redemptionId,
+        code: getDeliveryStateUpdateFailureCode(markFailedResult),
+      });
+    }
+    logError("Failed to generate paid combo QR", { comboOrderId: order.id, error });
+    return { ok: true as const, sent: false as const, reason: "qr_generation_failed" as const };
+  }
+
   const imageResult = await sendZapiImage({
     phone,
     image,
@@ -1635,9 +1686,10 @@ export async function deliverComboOrder(orderId: string) {
   });
 
   if (!imageSaveResult.ok) {
-    const markFailedResult = await markWhatsAppOutboundDeliveryFailed({
-      deliveryId: imageDelivery.delivery.id,
-      error: imageSaveResult.error?.code ?? "whatsapp_message_persist_failed",
+      const markFailedResult = await markWhatsAppOutboundDeliveryFailed({
+        deliveryId: imageDelivery.delivery.id,
+        claimToken: imageClaim.delivery.claim_token,
+        error: imageSaveResult.error?.code ?? "whatsapp_message_persist_failed",
     });
     if (!markFailedResult.ok) {
       logError("Failed to mark combo QR WhatsApp delivery as failed", {
@@ -1660,6 +1712,7 @@ export async function deliverComboOrder(orderId: string) {
   if (!imageResult.ok) {
     const markFailedResult = await markWhatsAppOutboundDeliveryFailed({
       deliveryId: imageDelivery.delivery.id,
+      claimToken: imageClaim.delivery.claim_token,
       error: imageResult.error,
     });
     if (!markFailedResult.ok) {
@@ -1676,6 +1729,7 @@ export async function deliverComboOrder(orderId: string) {
 
   const markSentResult = await markWhatsAppOutboundDeliverySent({
     deliveryId: imageDelivery.delivery.id,
+    claimToken: imageClaim.delivery.claim_token,
     providerMessageId: imageResult.providerMessageId,
   });
   if (!markSentResult.ok) {
@@ -1698,70 +1752,54 @@ export async function confirmPaidComboOrder({
   orderId,
   providerPaymentId,
   amountCents,
+  currency,
   paidAt,
   rawMetadata,
 }: {
   orderId: string;
   providerPaymentId: string;
   amountCents: number;
+  currency: string;
   paidAt: string;
   rawMetadata: Record<string, unknown>;
 }) {
-  const supabase = getSupabaseAdmin();
-  const { data: order, error } = await supabase
-    .from("combo_orders")
-    .select("id, status, total_amount_cents")
-    .eq("id", orderId)
-    .maybeSingle<{ id: string; status: string; total_amount_cents: number }>();
+  const tokenVersion = 1;
+  const token = createComboRedemptionToken(orderId, tokenVersion);
+  const { data, error } = await getSupabaseAdmin().rpc(
+    "confirm_paid_combo_order",
+    {
+      p_order_id: orderId,
+      p_provider: PROVIDER,
+      p_provider_payment_id: providerPaymentId,
+      p_amount_cents: amountCents,
+      p_currency: currency,
+      p_paid_at: paidAt,
+      p_raw_metadata: rawMetadata,
+      p_qr_token_hash: hashComboRedemptionToken(token),
+      p_qr_token_version: tokenVersion,
+    },
+  );
 
-  if (error || !order) return { ok: false as const, reason: "order_not_found" as const, error };
-  if (order.status === "paid") return { ok: true as const, idempotent: true as const };
-  if (order.status !== "pending_payment") return { ok: false as const, reason: "order_not_payable" as const };
-  if (amountCents < order.total_amount_cents) return { ok: false as const, reason: "payment_amount_too_low" as const };
-
-  const existingPayment = await supabase
-    .from("combo_payments")
-    .select("id, combo_order_id")
-    .eq("provider", PROVIDER)
-    .eq("provider_payment_id", providerPaymentId)
-    .maybeSingle<{ id: string; combo_order_id: string }>();
-
-  if (existingPayment.error) return { ok: false as const, reason: "database_error" as const, error: existingPayment.error };
-  if (existingPayment.data && existingPayment.data.combo_order_id !== orderId) {
-    return { ok: false as const, reason: "payment_already_linked" as const };
+  if (error) {
+    const knownReasons = [
+      "order_not_found",
+      "order_not_payable",
+      "payment_already_linked",
+      "combo_payment_amount_mismatch",
+      "combo_payment_currency_mismatch",
+      "combo_paid_payment_replay_mismatch",
+    ] as const;
+    const reason = knownReasons.find((value) => error.message.includes(value));
+    return { ok: false as const, reason: reason ?? "database_error", error };
   }
 
-  const orderUpdate = await supabase
-    .from("combo_orders")
-    .update({ status: "paid", paid_at: paidAt })
-    .eq("id", orderId)
-    .eq("status", "pending_payment");
-
-  if (orderUpdate.error) return { ok: false as const, reason: "database_error" as const, error: orderUpdate.error };
-
-  const paymentRow = existingPayment.data
-    ? await supabase
-        .from("combo_payments")
-        .update({
-          provider_payment_id: providerPaymentId,
-          status: "approved",
-          amount_cents: amountCents,
-          raw_metadata: rawMetadata,
-        })
-        .eq("id", existingPayment.data.id)
-    : await supabase.from("combo_payments").insert({
-        combo_order_id: orderId,
-        provider: PROVIDER,
-        provider_payment_id: providerPaymentId,
-        status: "approved",
-        amount_cents: amountCents,
-        currency: "BRL",
-        raw_metadata: rawMetadata,
-      });
-
-  if (paymentRow.error) return { ok: false as const, reason: "database_error" as const, error: paymentRow.error };
-
-  return { ok: true as const, idempotent: false as const };
+  const result = data as {
+    idempotent: boolean;
+    redemption_id: string;
+    qr_token_version: number | null;
+    legacy_redemption: boolean;
+  };
+  return { ok: true as const, ...result };
 }
 
 export async function expireComboOrders(limit = 100) {

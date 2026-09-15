@@ -134,8 +134,8 @@ test("combo QR image truncates long combo buyer and event text", () => {
 
 test("combo delivery preserves the QR payload and uses buyer data", () => {
   assert.match(comboOffersSource, /customers\(whatsapp_phone,\s*name\)/);
-  assert.match(comboOffersSource, /const qrPayload = `combo:\$\{redemptionId\}:\$\{token\}`/);
-  assert.match(comboOffersSource, /qrPayload,\s*\n\s*comboName:/);
+  assert.match(comboOffersSource, /qrPayload:\s*`combo:\$\{redemptionId\}:\$\{token\}`/);
+  assert.match(comboOffersSource, /comboRedemptionTokenMatchesHash\(token, existing\.data\.qr_token_hash\)/);
   assert.match(comboOffersSource, /buyerName:\s*order\.customers\.name/);
   assert.match(comboOffersSource, /tableMapPlaceCode/);
 });

@@ -155,6 +155,9 @@ const DEFINITIVE_CONFIRMATION_ERRORS = new Set([
   "payment_already_linked",
   "order_already_paid_with_different_payment",
   "payment_replay_amount_mismatch",
+  "combo_payment_amount_mismatch",
+  "combo_payment_currency_mismatch",
+  "combo_paid_payment_replay_mismatch",
 ]);
 
 function getDefinitiveConfirmationReason(error: { message?: string } | null | undefined) {
@@ -383,6 +386,7 @@ export async function POST(request: Request) {
       orderId: comboOrderId,
       providerPaymentId: String(payment.id),
       amountCents,
+      currency: payment.currency_id ?? "",
       paidAt: payment.date_approved ?? new Date().toISOString(),
       rawMetadata: buildPaymentRawMetadata(payment),
     });
@@ -391,8 +395,10 @@ export async function POST(request: Request) {
       if (
         confirmation.reason === "order_not_found" ||
         confirmation.reason === "order_not_payable" ||
-        confirmation.reason === "payment_amount_too_low" ||
-        confirmation.reason === "payment_already_linked"
+        confirmation.reason === "payment_already_linked" ||
+        confirmation.reason === "combo_payment_amount_mismatch" ||
+        confirmation.reason === "combo_payment_currency_mismatch" ||
+        confirmation.reason === "combo_paid_payment_replay_mismatch"
       ) {
         await markPaymentEventProcessed(eventInsert.id);
         logWarn("Ignored definitive combo payment confirmation failure", {
@@ -415,7 +421,7 @@ export async function POST(request: Request) {
       return jsonError("Internal Server Error", 500);
     }
 
-    const deliveryResult = confirmation.idempotent
+    const deliveryResult = confirmation.legacy_redemption
       ? null
       : await deliverComboOrder(comboOrderId);
 
