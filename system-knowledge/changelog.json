@@ -1,9 +1,24 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T23:30:00.000Z",
-  "stage": "2.6.0",
-  "count": 23,
+  "generatedAt": "2026-09-15T15:55:59.919Z",
+  "stage": "2.6.1",
+  "count": 24,
   "records": [
+    {
+      "version": "2.6.1",
+      "date": "2026-09-15",
+      "type": "PATCH_DOCUMENTARY_CORRECTION",
+      "canonical_functional_source": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+      "previous_documentary_commit": "e5870d9864914b990274e3a99342d53c2810c710",
+      "previous_documentary_commit_timestamp": "2026-09-15T12:45:09-03:00",
+      "summary": "Correct impossible future CURRENT generation timestamps and stale current findings methodology metadata.",
+      "functional_source_changed": false,
+      "database_changed": false,
+      "deployment_changed": false,
+      "finding_lifecycle_changed": false,
+      "release_gate_changed": false,
+      "health_changed": false
+    },
     {
       "version": "2.6.0",
       "date": "2026-09-15",
@@ -907,5 +922,10 @@
   "baseline_2_6_0": {
     "status": "FROZEN",
     "baseline_commit": "SELF_NOT_RECORDED"
+  },
+  "baseline_2_6_1": {
+    "status": "FROZEN",
+    "baseline_commit": "SELF_NOT_RECORDED",
+    "timestamp_source": "EXECUTION_CLOCK_FOR_CURRENT_AND_GIT_FOR_PREVIOUS_FREEZE"
   }
 }

@@ -74,6 +74,26 @@ for (const name of jsonFiles) {
 }
 
 const getRecords = (name) => catalogs[name]?.records || [];
+const futureTimestampToleranceMs = 5 * 60 * 1000;
+const validationNowMs = Date.now();
+const checkCurrentTimestamp = (owner, value) => {
+  if (typeof value !== 'string') { add('CURRENT_TIMESTAMP_MISSING_OR_INVALID', owner); return; }
+  const timestampMs = Date.parse(value);
+  if (!Number.isFinite(timestampMs)) { add('CURRENT_TIMESTAMP_MISSING_OR_INVALID', `${owner}: ${value}`); return; }
+  if (timestampMs > validationNowMs + futureTimestampToleranceMs) add('CURRENT_TIMESTAMP_IN_FUTURE', `${owner}: ${value}`);
+};
+for (const [name,catalog] of Object.entries(catalogs)) checkCurrentTimestamp(`${name}.generatedAt`, catalog.generatedAt);
+checkCurrentTimestamp('baseline-manifest.frozen_at', catalogs['baseline-manifest']?.frozen_at);
+checkCurrentTimestamp('baseline-manifest.git_observation_at_generation.observed_at', catalogs['baseline-manifest']?.git_observation_at_generation?.observed_at);
+checkCurrentTimestamp('source-fingerprint.freeze_timestamp', catalogs['source-fingerprint']?.freeze_timestamp);
+checkCurrentTimestamp('source-fingerprint.git_observation_at_generation.observed_at', catalogs['source-fingerprint']?.git_observation_at_generation?.observed_at);
+const currentBaselineVersion = catalogs['baseline-manifest']?.version;
+const explicitCurrentBaselinePattern = /(?:current\s+(?:state\s+for\s+)?baseline|current[^.\n]{0,80}\sbaseline)\s+(\d+\.\d+\.\d+)/ig;
+for (const [name,catalog] of Object.entries(catalogs)) for (const field of ['method','scope']) {
+  const text = catalog?.[field];
+  if (typeof text !== 'string') continue;
+  for (const match of text.matchAll(explicitCurrentBaselinePattern)) if (match[1] !== currentBaselineVersion) add('CURRENT_BASELINE_METADATA_MISMATCH', `${name}.${field}: ${match[1]} != ${currentBaselineVersion}`);
+}
 const domains = getRecords('domains');
 const modules = getRecords('modules');
 const entrypoints = getRecords('entrypoints');

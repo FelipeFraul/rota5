@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-15T23:30:00.000Z",
-  "stage": "2.6.0",
+  "generatedAt": "2026-09-15T15:55:59.919Z",
+  "stage": "2.6.1",
   "count": 25,
   "ok": 22,
   "records": [
@@ -690,5 +690,10 @@
       "PARTIAL": 2,
       "FAIL": 0
     }
+  },
+  "baseline_2_6_1": {
+    "change_type": "PATCH_DOCUMENTARY_CORRECTION",
+    "functional_source_changed": false,
+    "current_metadata_corrected": true
   }
 }

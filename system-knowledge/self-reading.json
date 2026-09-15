@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T23:30:00.000Z",
-  "stage": "2.6.0",
+  "generatedAt": "2026-09-15T15:55:59.919Z",
+  "stage": "2.6.1",
   "id": "rota5-self-reading-v1",
   "baseline_id": "rota5-baseline-v1",
   "bootstrap_files": [
@@ -263,7 +263,7 @@
     "high_1": "RESOLVED: EXPAND and CONTRACT are APPLIED_AND_VALIDATED, gates A-I passed, authorization is strict-only and source attribution is non-null and immutable.",
     "legacy_brand": "RESOLVED for DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES on Preview dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW and Production dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo; this is not a repository-wide assertion about historical strings.",
     "test_runner": "RESOLVED on source 3e2bdc2979301301b3f1566a2ac75a477ee4c169: npm test uses scripts/test-support/typescript-alias-loader.mjs, and npm ci plus 207/214 was proven from canonical Git blobs without .tmp.",
-    "current_baseline": "2.6.0",
+    "current_baseline": "2.6.1",
     "functional_source": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
     "default_suite": "276/276_PASS",
     "next_active_high": "NONE",
@@ -380,5 +380,10 @@
     "source_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
     "external_delivery_semantics": "AT_LEAST_ONCE",
     "next_risk": "risk.paid-delivery-ambiguous-external-ack"
+  },
+  "baseline_2_6_1": {
+    "change_type": "PATCH_DOCUMENTARY_CORRECTION",
+    "canonical_functional_source": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+    "timestamp_policy": "REAL_EXECUTION_CLOCK"
   }
 }

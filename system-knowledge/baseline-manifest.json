@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T23:30:00.000Z",
-  "stage": "2.6.0",
+  "generatedAt": "2026-09-15T15:55:59.919Z",
+  "stage": "2.6.1",
   "baseline_id": "rota5-baseline-v1",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "status": "FROZEN",
-  "frozen_at": "2026-09-15T23:30:00.000Z",
+  "frozen_at": "2026-09-15T15:55:59.919Z",
   "source_state": {
     "base_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
     "source_tree_fingerprint": "8ae8433d11de2ba5c137bd1aa99ee55d2fc85aecb80bbec89847904387c73dbf",
@@ -16,12 +16,12 @@
     "baseline_commit_policy": "The Git commit containing this baseline is intentionally not embedded in its own content to avoid self-reference."
   },
   "git_observation_at_generation": {
-    "observed_at": "2026-09-15T23:30:00.000Z",
+    "observed_at": "2026-09-15T15:55:59.919Z",
     "branch": "production",
     "head": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
     "working_tree_clean": true,
     "validity_role": "INFORMATIONAL_ONLY",
-    "note": "Git observation at Baseline 2.6.0 generation; the canonical functional source is reconstructed from the pure source commit."
+    "note": "Canonical functional source was reconstructed from the pure functional commit during the Baseline 2.6.1 documentary correction; live documentary HEAD is intentionally not embedded."
   },
   "baseline_integrity": {
     "status": "PASS",
@@ -762,6 +762,24 @@
     "source_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
     "quality_gate_run": 34984961888,
     "quality_gate": "PASS",
-    "baseline_commit": "SELF_NOT_RECORDED"
+    "baseline_commit": "SELF_NOT_RECORDED",
+    "classification": "HISTORICAL_FUNCTIONAL_BASELINE",
+    "documentary_commit": "e5870d9864914b990274e3a99342d53c2810c710",
+    "documentary_commit_timestamp": "2026-09-15T12:45:09-03:00"
+  },
+  "baseline_2_6_1": {
+    "semver_class": "PATCH_DOCUMENTARY_CORRECTION",
+    "canonical_functional_source": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
+    "functional_change": false,
+    "database_change": false,
+    "deployment_change": false,
+    "finding_lifecycle_change": false,
+    "release_gate_change": false,
+    "health_change": false,
+    "baseline_commit": "SELF_NOT_RECORDED",
+    "corrections": [
+      "Impossible future CURRENT generation timestamps",
+      "Stale findings CURRENT methodology metadata"
+    ]
   }
 }

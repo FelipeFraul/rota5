@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T23:30:00.000Z",
-  "stage": "2.6.0",
+  "generatedAt": "2026-09-15T15:55:59.919Z",
+  "stage": "2.6.1",
   "status": "PASS",
   "sourceCommit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
   "question": "Podemos confiar na BASELINE V1 como representação do Rota5 atual?",
-  "answer": "BASELINE_2_6_0_RECONCILIATION: PASS. Paid delivery TICKET + COMBO is documented and ready for freeze.",
+  "answer": "BASELINE_2_6_1_DOCUMENTARY_CORRECTION: PASS. Current timestamps and findings methodology metadata are temporally and version-semantically coherent.",
   "frozenScope": {
     "branch": "production",
     "head": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
@@ -507,5 +507,13 @@
     "stale_current_projections": 0,
     "unaccounted_findings": 0,
     "external_delivery_semantics": "AT_LEAST_ONCE"
+  },
+  "baseline_2_6_1": {
+    "status": "PASS",
+    "change_type": "PATCH_DOCUMENTARY_CORRECTION",
+    "current_future_timestamps": 0,
+    "current_stale_projections": 0,
+    "human_machine_contradictions": 0,
+    "functional_source_changed": false
   }
 }
