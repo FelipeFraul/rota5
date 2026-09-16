@@ -1160,7 +1160,7 @@ export async function validateComboRedemptionScan(input: {
         message: "O preparo deste pedido iniciou durante a leitura. Aguarde a notificacao READY.",
       };
     }
-    if (transition?.applied !== true) {
+    if (transition?.applied !== true && transition?.idempotent !== true) {
       return {
         allowed: false,
         result: "denied",

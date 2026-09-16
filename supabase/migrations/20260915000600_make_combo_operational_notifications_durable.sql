@@ -79,6 +79,9 @@ declare
   v_conversation_id uuid;
   v_now timestamptz := pg_catalog.now();
   v_intent_id uuid;
+  v_existing_intent public.whatsapp_outbound_deliveries%rowtype;
+  v_place_code text;
+  v_place_label text;
 begin
   select * into v_redemption from public.combo_redemptions where id=p_redemption_id for update;
   if not found then return pg_catalog.jsonb_build_object('applied',false,'reason','not_found'); end if;
@@ -88,7 +91,32 @@ begin
       'place_label',coalesce(v_redemption.raw_metadata->>'delivery_place_label',p_place_label));
   end if;
   if nullif(v_redemption.raw_metadata->>'delivery_choice_requested_at','') is not null then
-    return pg_catalog.jsonb_build_object('applied',false,'idempotent',true,'reason','already_prompted');
+    if coalesce(v_redemption.raw_metadata->'delivery_choice_prompt_sent'='true'::jsonb,false) then
+      return pg_catalog.jsonb_build_object('applied',false,'idempotent',true,'reason','already_prompted');
+    end if;
+    v_place_code:=coalesce(nullif(v_redemption.raw_metadata->>'delivery_place_code',''),nullif(p_place_code,''));
+    v_place_label:=coalesce(nullif(v_redemption.raw_metadata->>'delivery_place_label',''),nullif(p_place_label,''));
+    if v_place_code is null or v_place_label is null then raise exception 'combo_prompt_place_missing'; end if;
+    select * into v_existing_intent from public.whatsapp_outbound_deliveries
+      where idempotency_key='combo-delivery-choice:'||p_redemption_id||':prompt:v1';
+    if found then
+      v_conversation_id:=v_existing_intent.conversation_id;
+      if not exists(select 1 from public.conversations
+        where id=v_conversation_id and customer_id=v_redemption.customer_id and status='open')
+      then raise exception 'combo_prompt_conversation_unavailable'; end if;
+    else
+      select id into v_conversation_id from public.conversations
+        where customer_id=v_redemption.customer_id and status='open'
+        order by last_message_at desc nulls last,created_at desc limit 1;
+      if v_conversation_id is null then raise exception 'combo_prompt_conversation_missing'; end if;
+    end if;
+    v_intent_id:=public.insert_combo_operational_intent(p_redemption_id,
+      'combo-delivery-choice:'||p_redemption_id||':prompt:v1','combo_delivery_choice_requested','text',
+      pg_catalog.jsonb_build_object('combo_order_id',v_redemption.combo_order_id,
+        'combo_redemption_id',v_redemption.id,'place_code',v_place_code,'place_label',v_place_label,
+        'offer_name',v_redemption.offer_name,'delivery_order',40),v_conversation_id);
+    return pg_catalog.jsonb_build_object('applied',false,'idempotent',true,
+      'reason','prompt_intent_recovered','intent_id',v_intent_id);
   end if;
   select id into v_conversation_id from public.conversations
     where customer_id=v_redemption.customer_id and status='open'
@@ -138,7 +166,16 @@ begin
     return pg_catalog.jsonb_build_object('applied',false,'reason','preparation_started');
   end if;
   if nullif(v_redemption.raw_metadata->>'awaiting_preparation_requested_at','') is not null then
-    return pg_catalog.jsonb_build_object('applied',false,'idempotent',true,'reason','already_requested');
+    if nullif(v_redemption.raw_metadata->>'awaiting_preparation_notified_at','') is null
+      and coalesce(p_notification_sent,false) then
+      v_intent_id:=public.insert_combo_operational_intent(p_redemption_id,
+        'combo-awaiting-preparation:'||p_redemption_id||':text:v1','combo_awaiting_preparation','text',
+        pg_catalog.jsonb_build_object('combo_order_id',v_redemption.combo_order_id,
+          'combo_redemption_id',v_redemption.id,'redemption_code',v_redemption.redemption_code,
+          'offer_name',v_redemption.offer_name,'quantity',v_redemption.quantity,'delivery_order',40));
+    end if;
+    return pg_catalog.jsonb_build_object('applied',false,'idempotent',true,
+      'reason','already_requested','intent_id',v_intent_id);
   end if;
   update public.combo_redemptions set raw_metadata=coalesce(raw_metadata,'{}'::jsonb)||pg_catalog.jsonb_build_object(
     'kitchen_visible',true,'kitchen_released_at',coalesce(raw_metadata->>'kitchen_released_at',pg_catalog.now()::text),
@@ -374,7 +411,17 @@ begin
         'combo_delivery_choice_requested','combo_awaiting_preparation','combo_ready_at_bar','combo_ready_qr')
       and d.status not in ('sent','superseded')
       and not (d.status='dead_letter' and d.reason in (
+        'paid_combo_delivery','paid_combo_qr_delivery',
         'offer_preparation_started_on_arrival','combo_delivery_choice_requested','combo_awaiting_preparation'))
+      -- A terminal paid text does not authorize its pending QR, and neither
+      -- can hold the later operational/READY phases forever.
+      and not (d.reason='paid_combo_qr_delivery' and d.status in ('pending','failed')
+        and exists (
+          select 1 from public.whatsapp_outbound_deliveries paid_text
+          where paid_text.reason='paid_combo_delivery'
+            and paid_text.business_context->>'combo_redemption_id'=v_redemption_id::text
+            and paid_text.status='dead_letter'
+        ))
     order by
       case d.reason
         when 'paid_combo_delivery' then 1 when 'paid_combo_qr_delivery' then 2
@@ -541,7 +588,15 @@ language sql security invoker set search_path = '' as $function$
     select distinct on (redemption_id) * from combo
     where status not in ('sent','superseded')
       and not (status='dead_letter' and reason in (
+        'paid_combo_delivery','paid_combo_qr_delivery',
         'offer_preparation_started_on_arrival','combo_delivery_choice_requested','combo_awaiting_preparation'))
+      and not (reason='paid_combo_qr_delivery' and status in ('pending','failed')
+        and exists (
+          select 1 from combo paid_text
+          where paid_text.redemption_id=combo.redemption_id
+            and paid_text.reason='paid_combo_delivery'
+            and paid_text.status='dead_letter'
+        ))
     order by redemption_id,intent_order,created_at,id
   ), due as (
     select case when reason in ('paid_combo_delivery','paid_combo_qr_delivery')

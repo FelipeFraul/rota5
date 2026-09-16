@@ -130,7 +130,7 @@ function createComboRedemptionScanScenario(overrides = {}) {
     combo_orders: { id: "combo-order-1", status: "paid", source_order_id: "source-order-1", combo_offers: { description: "" } },
     ...overrides.row,
   };
-  const state = { row, reservation: overrides.reservation ?? { place_code: "01", status: "paid" }, rpcCalls: [], consumptionCount: 0, events: [], updates: [], externalTexts: 0, readyDispatches: 0 };
+  const state = { row, reservation: overrides.reservation ?? { place_code: "01", status: "paid" }, rpcCalls: [], consumptionCount: 0, events: [], updates: [], externalTexts: 0, readyDispatches: 0, intents: new Set() };
 
   class Query {
     constructor(table) { this.table = table; this.operation = "select"; this.filters = []; }
@@ -210,11 +210,18 @@ function createComboRedemptionScanScenario(overrides = {}) {
       if (name === "record_combo_awaiting_preparation") {
         if (state.row.status !== "issued") return { data: { applied: false, reason: "status_incompatible", status: state.row.status }, error: null };
         if (state.row.raw_metadata?.kitchen_status === "preparing") return { data: { applied: false, reason: "preparation_started", status: state.row.status }, error: null };
+        if (state.row.raw_metadata?.awaiting_preparation_requested_at) {
+          if (!state.row.raw_metadata.awaiting_preparation_notified_at && args.p_notification_sent) {
+            state.intents.add("combo-awaiting-preparation:" + state.row.id + ":text:v1");
+          }
+          return { data: { applied: false, idempotent: true, reason: "already_requested" }, error: null };
+        }
         state.row.raw_metadata = {
           ...(state.row.raw_metadata ?? {}),
           kitchen_visible: true,
-          ...(args.p_notification_sent ? { awaiting_preparation_notified_at: "2026-09-12T10:00:00.000Z" } : {}),
+          awaiting_preparation_requested_at: "2026-09-12T10:00:00.000Z",
         };
+        if (args.p_notification_sent) state.intents.add("combo-awaiting-preparation:" + state.row.id + ":text:v1");
         state.events.push({ result: "denied", source: "awaiting_preparation" });
         return { data: { applied: true, reason: "applied", status: state.row.status }, error: null };
       }
@@ -1210,6 +1217,34 @@ test("combo redemption delivery and preparation branches preserve their prerequi
   assert.equal(awaiting.state.rpcCalls[0].name, "record_combo_awaiting_preparation");
   assert.equal(awaiting.state.consumptionCount, 0);
   assert.equal(awaiting.state.row.status, "issued");
+});
+
+test("AWAITING_REPEAT_IS_IDEMPOTENT returns the same product result", async () => {
+  const scenario = createComboRedemptionScanScenario({
+    row: { raw_metadata: { delivery_choice_confirmed_at: "2026-09-12T10:00:00.000Z", kitchen_status: "pending" } },
+  });
+  const first = await scanCombo(scenario);
+  const repeat = await scanCombo(scenario);
+  assert.equal(first.result, "awaiting_preparation");
+  assert.equal(repeat.result, "awaiting_preparation");
+  assert.equal(scenario.state.events.filter((event) => event.source === "awaiting_preparation").length, 1);
+  assert.equal(scenario.state.intents.size, 1);
+  assert.equal(scenario.state.externalTexts, 0);
+});
+
+test("AWAITING_REQUESTED_WITHOUT_INTENT_CAN_RECOVER without another event", async () => {
+  const scenario = createComboRedemptionScanScenario({
+    row: { raw_metadata: {
+      delivery_choice_confirmed_at: "2026-09-12T10:00:00.000Z",
+      kitchen_status: "pending",
+      awaiting_preparation_requested_at: "2026-09-12T10:01:00.000Z",
+    } },
+  });
+  const result = await scanCombo(scenario);
+  assert.equal(result.result, "awaiting_preparation");
+  assert.equal(scenario.state.events.filter((event) => event.source === "awaiting_preparation").length, 0);
+  assert.equal(scenario.state.intents.size, 1);
+  assert.equal(scenario.state.row.raw_metadata.awaiting_preparation_notified_at, undefined);
 });
 
 test("versioned READY scan dispatches the queued intent without manufacturing ready_notified_at", async () => {
