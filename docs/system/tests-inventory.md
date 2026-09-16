@@ -1,6 +1,6 @@
-> **Current Baseline 2.8.0 (2026-09-16):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.8.1 (2026-09-16):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
 
-## Baseline 2.8.0 current test evidence
+## Baseline 2.8.1 current test evidence
 
 There are 59 catalogued test artifacts. Quality Gate 35049217326 on `c48405e41df3d1cd69eb3d383b7c6dd17257155e` passed 285/285 default Node cases and 4/4 PostgreSQL integration groups, plus typecheck, lint without errors and build. `scripts/test-rate-limit-outage.mjs` is a 5/5 focused behavioral contract and participates in the default suite; `scripts/type-tests/rate-limit-contract.ts` is compile-time evidence and is not counted as a runtime behavioral test.
 

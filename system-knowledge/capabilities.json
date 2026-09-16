@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-16T03:35:55.187Z",
-  "stage": "2.8.0",
+  "generatedAt": "2026-09-16T14:37:33.140Z",
+  "stage": "2.8.1",
   "id": "capability-catalog.v1",
   "canonical": true,
   "status": "PASS",
   "confidence": "MEDIA",
   "sourceCommit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
-  "sourceScope": "Working tree local, incluindo alteração preexistente em src/lib/tickets/messages.ts; não equivale ao commit puro nem ao deploy.",
+  "sourceScope": "CURRENT canonical functional source is the pure Git commit c48405e41df3d1cd69eb3d383b7c6dd17257155e; its source tree fingerprint is ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91. Production deployment dpl_2bitbdQynYB6QdMiEkB1em65HsAy identifies the same source commit.",
   "count": 140,
   "methodology": {
     "bottom_up": "Leitura de implementações src/ (handlers, router, serviços e UI), comandos operacionais, chamadas de banco e migrations, antes da comparação com os documentos anteriores.",
@@ -17,8 +17,7 @@
     "test_policy": "COVERED exige assertiva direta sobre comportamento principal; contratos de fonte/helpers são PARTIAL. Auditorias reais não executadas são UNKNOWN. FAILING é atribuído ao comportamento do caso com falha, não a todas as capabilities citadas no arquivo.",
     "test_metric_policy": "Com teste = pelo menos uma referência de teste/auditoria diretamente relacionada, executada ou não. Sem teste = array tests vazio. NÃO_TESTADA não é atribuído automaticamente a implementação confirmada; ausência de proteção fica em test_status.",
     "relation_policy": "REQUIRES: origem depende do destino; TRIGGERS: origem aciona destino sob condição; EXTENDS: origem estende destino; ALTERNATIVE_TO: alternativa funcional. dependencies contém somente alvos REQUIRES, dependent_capabilities é o inverso.",
-    "brand_policy": "COMMON indica ausência de ramificação de marca no caminho; não afirma tenancy. Textos/filtros explicitamente Rota5/Black House são anotados.",
-    "scope_exclusions": "Sem alterações em código/testes/migrations/dependências, sem banco remoto, execução operacional, commit/push/deploy ou catálogo de fluxos. Fixtures em .tmp e cópias de deploy não são fontes canônicas de produção."
+    "brand_policy": "COMMON indica ausência de ramificação de marca no caminho; não afirma tenancy. Textos/filtros explicitamente Rota5/Black House são anotados."
   },
   "metrics": {
     "total": 140,
@@ -21907,5 +21906,18 @@
     "node_cases": 280,
     "postgres_cases": 4,
     "quality_gate_run": 34998744062
+  },
+  "historicalSourceScope": {
+    "classification": "METHODOLOGY_HISTORICAL",
+    "original": "Working tree local, incluindo alteração preexistente em src/lib/tickets/messages.ts; não equivale ao commit puro nem ao deploy.",
+    "context": "Original local working-tree inventory methodology; superseded by the pure canonical source commit for CURRENT Baseline 2.8.1."
+  },
+  "baseline_2_8_1": {
+    "source_scope_corrected": true,
+    "canonical_functional_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e"
+  },
+  "historicalMethodology": {
+    "classification": "METHODOLOGY_HISTORICAL",
+    "scope_exclusions": "Sem alterações em código/testes/migrations/dependências, sem banco remoto, execução operacional, commit/push/deploy ou catálogo de fluxos. Fixtures em .tmp e cópias de deploy não são fontes canônicas de produção."
   }
 }

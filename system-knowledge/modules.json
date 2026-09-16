@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-16T03:35:55.187Z",
+  "generatedAt": "2026-09-16T14:37:33.140Z",
   "count": 66,
   "records": [
     {
@@ -102,6 +102,7 @@
         "jsonError",
         "unauthorized",
         "tooManyRequests",
+        "serviceUnavailable",
         "badRequest",
         "methodNotAllowed"
       ],
@@ -119,7 +120,8 @@
         "src/lib/http/responses.ts",
         "export jsonOk",
         "export jsonError",
-        "export unauthorized"
+        "export unauthorized",
+        "export serviceUnavailable"
       ]
     },
     {
@@ -131,15 +133,19 @@
       "responsibility": "Expose allowed | rate_limited | unavailable, enforce a cancelable 2s timeout and apply explicit outage policy at each boundary.",
       "status": "CONFIRMADO",
       "exports": [
-        "consumeRateLimit",
-        "rateLimitResponse",
         "hashRateLimitScope",
-        "RATE_LIMIT_UNAVAILABLE_TIMEOUT_MS",
+        "getRequestSourceIdentifier",
+        "consumeRateLimit",
+        "consumeRateLimitWithAdapter",
+        "rateLimitResponse",
+        "rateLimitFailureResponse",
+        "unavailableRateLimitResult",
+        "parseRateLimitRpcResponse",
         "applyRateLimitPolicy",
-        "rateLimitUnavailableResponse"
+        "RATE_LIMIT_TIMEOUT_MS"
       ],
       "calledBy": [
-        "19 audited HTTP/proxy boundaries"
+        "19 audited HTTP/proxy boundaries, including platform.edge-proxy"
       ],
       "calls": [
         "platform.supabase-client",
@@ -165,7 +171,8 @@
         "export hashRateLimitScope",
         "src/lib/security/rateLimitContract.ts",
         "scripts/test-rate-limit-outage.mjs",
-        "scripts/type-tests/rate-limit-contract.ts"
+        "scripts/type-tests/rate-limit-contract.ts",
+        "src/proxy.ts imports @/lib/security/rateLimitContract"
       ]
     },
     {
@@ -174,7 +181,7 @@
       "type": "module",
       "domain": "domain.platform-runtime",
       "path": "src/proxy.ts",
-      "responsibility": "Aplicar Content Security Policy e rate limit de páginas por chamada REST direta ao Supabase.",
+      "responsibility": "Apply Content Security Policy and page rate limiting through a proxy-compatible REST adapter using the shared rate-limit contract and outage policy.",
       "status": "CONFIRMADO",
       "exports": [
         "proxy",
@@ -184,7 +191,8 @@
         "proxy"
       ],
       "calls": [
-        "database.function.consume_rate_limit"
+        "database.function.consume_rate_limit",
+        "platform.rate-limit"
       ],
       "tables": [],
       "integrations": [
@@ -194,14 +202,18 @@
         "define headers CSP e nonce",
         "consome rate limit por REST RPC"
       ],
-      "tests": [],
+      "tests": [
+        "test-rate-limit-outage.mjs",
+        "rate-limit-contract.ts"
+      ],
       "evidence": [
         "src/proxy.ts",
         "export proxy",
         "export config",
-        "fetch /rest/v1/rpc/consume_rate_limit"
+        "fetch /rest/v1/rpc/consume_rate_limit",
+        "src/proxy.ts imports @/lib/security/rateLimitContract"
       ],
-      "notes": "Implementa rate limit próprio no runtime de proxy em vez de importar platform.rate-limit."
+      "notes": "Maintains a REST adapter for proxy runtime compatibility while reusing the pure rate-limit contract and outage policy from platform.rate-limit."
     },
     {
       "id": "integration.zapi",
@@ -508,9 +520,9 @@
       "responsibility": "Definir passos/contexto e expiração do estado persistido.",
       "status": "CONFIRMADO",
       "exports": [
-        "TicketConversationState",
-        "TicketConversationStep",
-        "buildInitialConversationState"
+        "resolveConversationContextForInbound",
+        "buildInitialConversationState",
+        "DEFAULT_CONVERSATION_INACTIVITY_TTL_MINUTES"
       ],
       "calledBy": [
         "messaging.router",
@@ -527,9 +539,9 @@
       ],
       "evidence": [
         "src/lib/tickets/conversationState.ts",
-        "export TicketConversationState",
-        "export TicketConversationStep",
-        "export buildInitialConversationState"
+        "export buildInitialConversationState",
+        "export buildInitialConversationState",
+        "export resolveConversationContextForInbound"
       ]
     },
     {
@@ -583,7 +595,7 @@
       "responsibility": "Criar/localizar cliente por telefone WhatsApp.",
       "status": "CONFIRMADO",
       "exports": [
-        "getOrCreateCustomer",
+        "upsertCustomerFromWhatsApp",
         "getCustomerById"
       ],
       "calledBy": [
@@ -606,8 +618,8 @@
       "tests": [],
       "evidence": [
         "src/lib/tickets/services/customers.ts",
-        "export getOrCreateCustomer",
-        "export getCustomerById"
+        "export getCustomerById",
+        "export upsertCustomerFromWhatsApp"
       ]
     },
     {
@@ -620,8 +632,9 @@
       "status": "CONFIRMADO",
       "exports": [
         "getOrCreateOpenConversation",
-        "updateConversationContext",
-        "closeConversation"
+        "getOpenConversationById",
+        "updateConversationAfterMessage",
+        "reconcileConversationDelivery"
       ],
       "calledBy": [
         "messaging.webhook",
@@ -643,8 +656,9 @@
       "evidence": [
         "src/lib/tickets/services/conversations.ts",
         "export getOrCreateOpenConversation",
-        "export updateConversationContext",
-        "export closeConversation"
+        "export getOpenConversationById",
+        "export updateConversationAfterMessage",
+        "export reconcileConversationDelivery"
       ]
     },
     {
@@ -1649,7 +1663,7 @@
       "responsibility": "Resolver token e mostrar dados do ingresso.",
       "status": "CONFIRMADO",
       "exports": [
-        "default page"
+        "default"
       ],
       "calledBy": [
         "page-ticket"
@@ -2469,7 +2483,7 @@
       "status": "CONFIRMADO",
       "exports": [
         "AdminTableMapCalibrator",
-        "EventTableMapTab",
+        "default",
         "GET",
         "PUT",
         "persistOfficialTableMapPlaces"
@@ -2498,7 +2512,7 @@
       "evidence": [
         "src/app/admin/AdminTableMapCalibrator.tsx; src/app/admin/eventos/event-editor/EventTableMapTab.tsx; src/app/api/admin/table-map/route.ts; src/lib/tickets/tableMap/persistOfficialPlaces.ts",
         "export AdminTableMapCalibrator",
-        "export EventTableMapTab",
+        "export default EventTableMapTab",
         "export GET"
       ]
     },
@@ -2753,8 +2767,25 @@
       "responsibility": "Restringir telefone autorizado e detectar pedido Codex no contexto.",
       "status": "CONFIRMADO",
       "exports": [
-        "isCodexRequest",
-        "getCodexAllowedPhones"
+        "CODEX_AUTH_REDACTED_BODY",
+        "CODEX_APPROVED_PREFIX",
+        "isAllowedCodexRequestPhone",
+        "parseCodexRequestCommand",
+        "isCodexRequestAuthPending",
+        "isCodexRequestCollecting",
+        "getCodexRequestContext",
+        "withCodexRequestAuthPending",
+        "withCodexRequestCollecting",
+        "clearCodexRequestContext",
+        "buildCodexAuthPrompt",
+        "buildCodexAuthInvalidReply",
+        "buildCodexCollectPrompt",
+        "buildApprovedCodexRequestBody",
+        "getDeploymentReference",
+        "formatDeploymentReference",
+        "buildCodexGitHubIssueTitle",
+        "buildCodexGitHubIssueBody",
+        "buildCodexRequestAck"
       ],
       "calledBy": [
         "messaging.webhook",
@@ -2769,8 +2800,9 @@
       "tests": [],
       "evidence": [
         "src/lib/tickets/codexRequests.ts",
-        "export isCodexRequest",
-        "export getCodexAllowedPhones"
+        "export isAllowedCodexRequestPhone",
+        "export parseCodexRequestCommand",
+        "export buildCodexRequestAck"
       ]
     },
     {
@@ -2812,7 +2844,7 @@
       ]
     }
   ],
-  "stage": "2.8.0",
+  "stage": "2.8.1",
   "baseline_2_6_0": {
     "paid_delivery": "DURABLE_AT_LEAST_ONCE",
     "new_source_files": [
@@ -2830,5 +2862,21 @@
     "logical_module_count_unchanged": true,
     "module": "platform.rate-limit",
     "contract_file": "src/lib/security/rateLimitContract.ts"
+  },
+  "baseline_2_8_1": {
+    "corrected_runtime_exports": [
+      "platform.rate-limit",
+      "platform.http",
+      "messaging.state",
+      "messaging.customers",
+      "messaging.conversations",
+      "ticket.public-page",
+      "table-map.admin-ui-api",
+      "automation.codex-requests",
+      "ticket.public-page",
+      "table-map.admin-ui-api",
+      "automation.codex-requests"
+    ],
+    "corrected_proxy_dependency": true
   }
 }

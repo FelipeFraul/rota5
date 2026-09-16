@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-16T03:35:55.187Z",
-  "stage": "2.8.0",
+  "generatedAt": "2026-09-16T14:37:33.140Z",
+  "stage": "2.8.1",
   "globalConfidence": "HIGH",
   "count": 10,
   "records": [
@@ -15,7 +15,7 @@
     {
       "area": "ARCHITECTURE",
       "status": "HIGH_CONFIDENCE",
-      "justification": "17 domains, 66 modules e grafo de 817 dependências foram reconciliados com código e catálogos.",
+      "justification": "17 domains, 66 modules e grafo de 818 dependências foram reconciliados com código e catálogos.",
       "missingEvidence": "Comportamento carregado dinamicamente fora do repo.",
       "higherConfidenceRequires": "Telemetria/import graph de runtime."
     },

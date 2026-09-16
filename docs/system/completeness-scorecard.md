@@ -1,11 +1,11 @@
-> **Current Baseline 2.8.0 (2026-09-16):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.8.1 (2026-09-16):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
 
 # Completeness scorecard — Etapa 7
 
 | Área | Confiança | Justificativa | Evidência faltante para confiança maior |
 | --- | --- | --- | --- |
 | REPOSITORY | HIGH_CONFIDENCE | Branch, HEAD, origin, working tree e inventários físicos foram recontados; paths catalogados existem. | Inventário externo de consumidores e artefatos publicados. |
-| ARCHITECTURE | HIGH_CONFIDENCE | 17 domains, 66 modules e grafo de 817 dependências foram reconciliados com código e catálogos. | Telemetria/import graph de runtime. |
+| ARCHITECTURE | HIGH_CONFIDENCE | 17 domains, 66 modules e grafo de 818 dependências foram reconciliados com código e catálogos. | Telemetria/import graph de runtime. |
 | CAPABILITIES | HIGH_CONFIDENCE | 140 registros possuem cadeia ENTRY → IMPLEMENTATION → DATA/INTEGRATION → RESULT ou limitação explícita; zero sem classificação. | Evidência E2E segura para capacidades críticas. |
 | FLOWS | HIGH_CONFIDENCE | 34 flows, 169 steps e 68 transitions têm referências válidas; branches e terminais foram rechecados. | Traces E2E controlados. |
 | DATA | MEDIUM_CONFIDENCE | 45 tabelas locais e remotas coincidem por nome no OpenAPI read-only; 88 migrations e definições finais locais foram recontadas. | Catálogo PostgreSQL remoto read-only. |

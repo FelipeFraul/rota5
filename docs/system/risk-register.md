@@ -1,4 +1,4 @@
-> **Current Baseline 2.8.0 (2026-09-16):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.8.1 (2026-09-16):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
 
 ## Baseline 2.6.0 paid-delivery risk reconciliation
 
@@ -501,7 +501,7 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 - Tipo / severidade / prioridade: **COUPLING / MEDIUM / P2**
 - Status / confiança: **ACTIVE / CONFIRMED**
 - Problema: getSupabaseAdmin e chamadas .from/.rpc aparecem transversalmente em módulos de domínio e handlers, ligando regra, persistência e service role.
-- Evidência: `src/lib/supabase/admin.ts` — Cliente administrativo central.; `docs/system/architecture-hotspots.md` — Supabase admin tem fan-in 44.; `system-knowledge/dependencies.json` — 817 dependências catalogadas mostram o acesso transversal.
+- Evidência: `src/lib/supabase/admin.ts` — Cliente administrativo central.; `docs/system/architecture-hotspots.md` — Supabase admin tem fan-in 44.; `system-knowledge/dependencies.json` — 818 dependências catalogadas mostram o acesso transversal.
 - Impacto: Mudanças de schema, política de erro ou autorização exigem revisão ampla e um erro de boundary pode operar com privilégios elevados.
 - Escopo: domains domain.platform-runtime, domain.event-administration, domain.orders-payments, domain.ticketing-delivery, domain.combo-commerce-fulfillment; capabilities —; flows —.
 - Blast radius: **SYSTEM_WIDE**

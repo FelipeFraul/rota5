@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-16T03:35:55.187Z",
-  "stage": "2.8.0",
+  "generatedAt": "2026-09-16T14:37:33.140Z",
+  "stage": "2.8.1",
   "sourceCommit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
-  "scope": "Current health projection by system, domain and infrastructure for Baseline 2.8.0, with resolved history separated from operational risk.",
+  "scope": "Current health projection by system, domain and infrastructure for Baseline 2.8.1, with resolved history separated from operational risk.",
   "method": "Health is derived from canonical finding scopes and taxonomy. BROKEN requires a current release blocker; DEGRADED requires current operational or validation-queue risk; resolved findings are historical only.",
   "vocabulary": [
     "HEALTHY",

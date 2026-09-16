@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-16T03:35:55.187Z",
+  "generatedAt": "2026-09-16T14:37:33.140Z",
   "baseline": {
     "stage": "1/8",
     "name": "Reconhecimento total do sistema",
@@ -435,7 +435,7 @@
       "failed": 7
     }
   },
-  "stage": "2.8.0",
+  "stage": "2.8.1",
   "test_runner_reproducibility": {
     "finding": "gap.test-runner-depends-on-untracked-loader",
     "status": "RESOLVED",
@@ -584,5 +584,22 @@
     "entrypoint_count": 56,
     "capability_count": 140,
     "flow_count": 34
+  },
+  "baseline_2_8_1": {
+    "source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "source_fingerprint": "ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91",
+    "source_file_count": 394,
+    "migration_count": 88,
+    "table_count": 45,
+    "sql_function_count": 63,
+    "sequence_count": 1,
+    "test_file_count": 59,
+    "module_count": 66,
+    "dependency_count": 818,
+    "entrypoint_count": 56,
+    "capability_count": 140,
+    "flow_count": 34,
+    "change_type": "PATCH_DOCUMENTARY_CORRECTION",
+    "previous_baseline": "2.8.0"
   }
 }

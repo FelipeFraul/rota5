@@ -1,4 +1,8 @@
-> **Current Baseline 2.8.0 (2026-09-16):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.8.1 (2026-09-16):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+
+## Baseline 2.8.1 module correction
+
+The runtime export inventory now matches the TypeScript compiler's value exports. `platform.edge-proxy` uses the pure contract in `platform.rate-limit` while retaining its REST adapter.
 
 ## Baseline 2.8.0 rate-limit module reconciliation
 
@@ -24,7 +28,7 @@ Foram identificados **66 modules principais**. Um module pode representar um arq
 | `platform.supabase-client` | `domain.platform-runtime` | src/lib/supabase/admin.ts | Criar e reutilizar cliente service-role. | CONFIRMADO |
 | `platform.logging` | `domain.platform-runtime` | src/lib/logger.ts | Emitir JSON e mascarar dados sensíveis. | CONFIRMADO |
 | `platform.http` | `domain.platform-runtime` | src/lib/http/responses.ts | Padronizar respostas JSON e erros HTTP. | CONFIRMADO |
-| `platform.rate-limit` | `domain.platform-runtime` | src/lib/security/rateLimit.ts | Calcular escopo, consumir limite por RPC e construir resposta 429. | CONFIRMADO |
+| `platform.rate-limit` | `domain.platform-runtime` | src/lib/security/rateLimit.ts; src/lib/security/rateLimitContract.ts | Aplicar contrato de rate limit e política de indisponibilidade. | CONFIRMADO |
 | `platform.edge-proxy` | `domain.platform-runtime` | src/proxy.ts | Aplicar Content Security Policy e rate limit de páginas por chamada REST direta ao Supabase. | CONFIRMADO |
 | `integration.zapi` | `domain.platform-runtime` | src/lib/zapi/client.ts; src/lib/zapi/format.ts; src/lib/zapi/textEncoding.ts | Enviar texto/imagem e normalizar formato/encoding WhatsApp. | CONFIRMADO |
 | `integration.mercado-pago` | `domain.platform-runtime` | src/lib/mercado-pago/client.ts; src/lib/mercado-pago/webhook.ts | Criar/consultar pagamentos e validar/interpretar webhook. | CONFIRMADO |

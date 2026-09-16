@@ -1,8 +1,12 @@
-> **Current Baseline 2.8.0 (2026-09-16):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.8.1 (2026-09-16):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+
+## Baseline 2.8.1 dependency correction
+
+The proxy keeps its REST adapter for runtime compatibility and reuses the pure rate-limit policy from the logical module.
 
 ## Baseline 2.8.0 dependency reconciliation
 
-The new contract file is incorporated into `platform.rate-limit`; its 19 callers already depended on that logical module. The canonical dependency graph remains 255 nodes and 817 edges.
+The contract file belongs to `platform.rate-limit`. The current proxy imports its pure contract, adding direct CALLS edge `dependency-0818` from `platform.edge-proxy` to `platform.rate-limit`. The catalog now has 255 nodes and 818 edges.
 
 # Dependências arquiteturais as-is
 
@@ -12,11 +16,11 @@ The new contract file is incorporated into `platform.rate-limit`; its 19 callers
 
 ## Critério de contagem
 
-O catálogo possui **817 arestas** entre **255 nós**. O gate da Etapa 3 incluiu os nós de toolchain `npm-lint` e `npm-typecheck`, já catalogados em `entrypoints.json`, sem acrescentar dependências funcionais. As arestas estão classificadas como:
+O catálogo possui **818 arestas** entre **255 nós**. O gate da Etapa 3 incluiu os nós de toolchain `npm-lint` e `npm-typecheck`, já catalogados em `entrypoints.json`, sem acrescentar dependências funcionais. As arestas estão classificadas como:
 
 | Tipo | Quantidade | Significado |
 |---|---:|---|
-| DIRETA | 615 | Import, chamada, acesso a tabela/RPC, chave estrangeira, chamada SQL ou execução de trigger comprovada. |
+| DIRETA | 616 | Import, chamada, acesso a tabela/RPC, chave estrangeira, chamada SQL ou execução de trigger comprovada. |
 | INDIRETA | 138 | Dependência agregada por domínio, pertencimento arquitetural ou relação derivada de módulos já comprovados. |
 | EXTERNA | 64 | Uso de Supabase, Z-API, Mercado Pago, GitHub, Vercel ou Codex CLI. |
 

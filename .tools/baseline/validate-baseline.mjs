@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import childProcess from 'node:child_process';
+import ts from 'typescript';
 
 const root = process.cwd();
 const docsDir = path.join(root, 'docs', 'system');
@@ -119,6 +120,43 @@ const checkRefs = (owner, field, values, set) => {
 };
 for (const x of domains) { checkRefs(x.id,'modules',x.modules,sets.module); checkRefs(x.id,'entrypoints',x.entrypoints,sets.entrypoint); checkRefs(x.id,'tables',x.tables,sets.table); checkRefs(x.id,'integrations',x.integrations,sets.integration); }
 for (const x of modules) { checkRefs(x.id,'domain',[x.domain],sets.domain); checkRefs(x.id,'tables',x.tables,sets.table); checkRefs(x.id,'integrations',x.integrations,sets.integration); checkRefs(x.id,'tests',(x.tests||[]).filter(v=>v.startsWith('test-')),sets.testName); }
+// The module export inventory lists runtime values. Resolve only explicit file paths;
+// directory, glob and descriptive paths do not have a safe single-file meaning.
+for (const module of modules) {
+  const files = typeof module.path === 'string' ? module.path.split(';').map(value => value.trim()) : [];
+  if (!files.length || !files.every(value => /\.[jt]sx?$/.test(value) && fs.existsSync(path.join(root,value)) && fs.statSync(path.join(root,value)).isFile())) continue;
+  const program = ts.createProgram(files.map(value => path.join(root,value)), { allowJs:true, noResolve:true, skipLibCheck:true });
+  const checker = program.getTypeChecker();
+  const runtimeExports = new Set();
+  for (const file of files) {
+    const source = program.getSourceFile(path.join(root,file));
+    const symbol = source && checker.getSymbolAtLocation(source);
+    if (symbol) for (const exported of checker.getExportsOfModule(symbol)) {
+      const target = exported.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(exported) : exported;
+      const typeOnly = exported.declarations?.length && exported.declarations.every(declaration => declaration.isTypeOnly || declaration.parent?.isTypeOnly || declaration.parent?.parent?.isTypeOnly);
+      if (!typeOnly && target.flags & ts.SymbolFlags.Value) runtimeExports.add(exported.name);
+    }
+  }
+  for (const claimed of module.exports || []) if (!runtimeExports.has(claimed)) add('MODULE_DECLARED_EXPORT_NOT_FOUND',`${module.id}: ${claimed}`);
+}
+const dependencyEdges = catalogs.dependencies?.edges || [];
+const dependencyCounts = catalogs.dependencies?.counts;
+for (const [key,expectedCount] of Object.entries({
+  total:dependencyEdges.length,
+  direct:dependencyEdges.filter(edge => edge.dependencyType === 'DIRETA').length,
+  indirect:dependencyEdges.filter(edge => edge.dependencyType === 'INDIRETA').length,
+  external:dependencyEdges.filter(edge => edge.dependencyType === 'EXTERNA').length
+})) if (dependencyCounts?.[key] !== expectedCount) add('DEPENDENCY_COUNT_MISMATCH',`${key}: ${dependencyCounts?.[key]} != ${expectedCount}`);
+const currentBaselineKey = `baseline_${String(currentBaselineVersion).replaceAll('.','_')}`;
+for (const [owner,value] of [
+  ['architecture.counts.dependencies',catalogs.architecture?.counts?.dependencies],
+  [`repository.${currentBaselineKey}.dependency_count`,catalogs.repository?.[currentBaselineKey]?.dependency_count],
+  [`baseline-v1.${currentBaselineKey}.dependency_count`,catalogs['baseline-v1']?.[currentBaselineKey]?.dependency_count],
+  [`baseline-manifest.${currentBaselineKey}.dependency_count`,catalogs['baseline-manifest']?.[currentBaselineKey]?.dependency_count]
+]) if (Number.isInteger(value) && value !== dependencyEdges.length) add('DEPENDENCY_PROJECTION_COUNT_MISMATCH',`${owner}: ${value} != ${dependencyEdges.length}`);
+const callsEdges = new Set(dependencyEdges.filter(edge => edge.relation === 'CALLS' && sets.module.has(edge.source) && sets.module.has(edge.target)).map(edge => `${edge.source}\0${edge.target}`));
+for (const module of modules) for (const target of module.calls || []) if (sets.module.has(target) && !callsEdges.has(`${module.id}\0${target}`)) add('MODULE_DEPENDENCY_PROJECTION_MISMATCH',`${module.id} calls ${target} without CALLS edge`);
+for (const edge of dependencyEdges) if (edge.relation === 'CALLS' && sets.module.has(edge.source) && sets.module.has(edge.target) && !modules.find(module => module.id === edge.source)?.calls?.includes(edge.target)) add('MODULE_DEPENDENCY_PROJECTION_MISMATCH',`${edge.source} -> ${edge.target} missing in modules.calls`);
 for (const x of capabilities) { checkRefs(x.id,'domain',[x.domain],sets.domain); checkRefs(x.id,'entrypoints',x.entrypoints,sets.entrypoint); checkRefs(x.id,'modules',x.modules,sets.module); checkRefs(x.id,'tables',x.database_tables,sets.table); checkRefs(x.id,'functions',x.database_functions,sets.function); checkRefs(x.id,'triggers',x.database_triggers,sets.trigger); checkRefs(x.id,'integrations',x.integrations,sets.integration); checkRefs(x.id,'tests',(x.tests||[]).filter(v=>v.startsWith('test-')),sets.test); }
 for (const x of flows) { checkRefs(x.id,'domains',x.domains,sets.domain); checkRefs(x.id,'modules',x.modules,sets.module); checkRefs(x.id,'entrypoints',x.entrypoints,sets.entrypoint); checkRefs(x.id,'capabilities',x.capabilities,sets.capability); checkRefs(x.id,'tables',x.tables,sets.table); checkRefs(x.id,'functions',x.database_functions,sets.function); checkRefs(x.id,'triggers',x.database_triggers,sets.trigger); checkRefs(x.id,'integrations',x.integrations,sets.integration); checkRefs(x.id,'tests',(x.tests||[]).filter(v=>v.startsWith('test-')),sets.test); }
 for (const x of steps) { checkRefs(x.id,'flow',[x.flow],sets.flow); checkRefs(x.id,'capability',[x.capability],sets.capability); checkRefs(x.id,'entrypoint',x.entrypoint?[x.entrypoint]:[],sets.entrypoint); checkRefs(x.id,'module',x.module?[x.module]:[],sets.module); checkRefs(x.id,'next',(x.possible_next_steps||[]).filter(v=>v.includes('.step_')),sets.step); }

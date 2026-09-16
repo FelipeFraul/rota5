@@ -1,6 +1,6 @@
-> **Current Baseline 2.8.0 (2026-09-16):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.8.1 (2026-09-16):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
 
-## Baseline 2.8.0 current runtime
+## Baseline 2.8.1 current runtime
 
 Production `dpl_2bitbdQynYB6QdMiEkB1em65HsAy` is READY on exact canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e` by Vercel REST metadata; target is production, source is CLI, ref is `production`, repository is `FelipeFraul/rota5`, alias parity is MATCH and health returned HTTP 200. Git auto-deploy remains disabled.
 
@@ -8,7 +8,7 @@ Production `dpl_2bitbdQynYB6QdMiEkB1em65HsAy` is READY on exact canonical functi
 
 Production deployment `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` runs application source `148b8200a44f4eeb49e004af45060a302bac9f20`. Repository source is `e931d66d03a620d5e26588c8f6c8714c62ef5d1d`; post-deployment differences are migrations/tests only and `APP_RUNTIME_DIFF_AFTER_DEPLOY=NAO`. Remote audit: events=7, sessions=7, event/session venue divergences=0, city/state divergences=0, legacy `update_admin_event_venue`=ABSENT.
 
-## Current runtime catalog - Baseline 2.8.0
+## Current runtime catalog - Baseline 2.8.1
 
 Current catalog: **27 checks — 25 PASS, 2 PARTIAL, 0 FAIL.**
 
