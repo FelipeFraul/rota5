@@ -3,7 +3,7 @@ import { jsonError, jsonOk, unauthorized } from "@/lib/http/responses";
 import { logError, logWarn } from "@/lib/logger";
 import {
   consumeRateLimit,
-  rateLimitResponse,
+  rateLimitFailureResponse,
 } from "@/lib/security/rateLimit";
 import { expireReservationsAndNotify } from "@/lib/tickets/services/reservationExpiry";
 
@@ -46,14 +46,18 @@ async function handleExpireReservationsCron(request: Request) {
     limit: 10,
     windowSeconds: 60,
     request,
+    unavailablePolicy: "fail_open_after_strong_auth",
   });
 
-  if (!rateLimit.allowed) {
-    logWarn("Rate limited reservation expiry cron", {
-      sourceHash: rateLimit.sourceHash,
-      count: rateLimit.count,
-    });
-    return rateLimitResponse(rateLimit);
+  const rateLimitFailure = rateLimitFailureResponse(rateLimit);
+  if (rateLimitFailure) {
+    if (rateLimit.status === "rate_limited") {
+      logWarn("Rate limited reservation expiry cron", {
+        sourceHash: rateLimit.sourceHash,
+        count: rateLimit.count,
+      });
+    }
+    return rateLimitFailure;
   }
 
   try {

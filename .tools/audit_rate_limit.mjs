@@ -11,6 +11,7 @@ const APP_BASE_URL = `http://127.0.0.1:${PORT}`;
 const MP_BASE_URL = `http://127.0.0.1:${MP_PORT}`;
 const TEMP_ENV_FILE = ".env.test.local";
 const RUN_ID = randomBytes(6).toString("hex");
+const ZAPI_LIMIT_PHONE = "5599999999999";
 
 const SOURCES = {
   zapiInvalid: "198.51.100.11",
@@ -115,16 +116,22 @@ function removeTemporaryNextEnv() {
   rmSync(TEMP_ENV_FILE, { force: true });
 }
 
-async function cleanup() {
+function syntheticRateLimitHashes() {
   const hashes = new Set(Object.values(SOURCES).map((source) => sha256(source)));
   const gateToken = `${PREFIX}_gate_${RUN_ID}`;
   hashes.add(sha256(`${SOURCES.gateFlood}|gate:${sha256(gateToken)}`));
   hashes.add(sha256(`${SOURCES.gateNormal}|gate:${sha256(gateToken)}`));
+  hashes.add(
+    sha256(`${SOURCES.zapiLegit}|phone:${sha256(ZAPI_LIMIT_PHONE)}`),
+  );
+  return Array.from(hashes);
+}
 
+async function cleanup() {
   await service
     .from("rate_limit_events")
     .delete()
-    .in("source_hash", Array.from(hashes));
+    .in("source_hash", syntheticRateLimitHashes());
 
   await service
     .from("payment_events")
@@ -152,6 +159,43 @@ async function assertRateLimitSchema() {
     .from("rate_limit_events")
     .delete()
     .eq("route_key", `${PREFIX}:schema`);
+}
+
+async function waitForStableRateLimitWindow(windowSeconds) {
+  const secondsIntoWindow = (Date.now() / 1000) % windowSeconds;
+  const remainingSeconds = windowSeconds - secondsIntoWindow;
+  if (remainingSeconds >= 15) return;
+  await new Promise((resolve) =>
+    setTimeout(resolve, Math.ceil((remainingSeconds + 1) * 1000)),
+  );
+}
+
+async function preconsumeRateLimit({
+  routeKey,
+  sourceHash,
+  limit,
+  windowSeconds,
+  label,
+}) {
+  await waitForStableRateLimitWindow(windowSeconds);
+  const results = await Promise.all(
+    Array.from({ length: limit }, () =>
+      service.rpc("consume_rate_limit", {
+        p_route_key: routeKey,
+        p_source_hash: sourceHash,
+        p_limit: limit,
+        p_window_seconds: windowSeconds,
+      }),
+    ),
+  );
+  const failed = results.find(({ error }) => error);
+  if (failed?.error) {
+    throw new Error(`${label}: ${failed.error.message}`);
+  }
+  assert(
+    Math.max(...results.map(({ data }) => data?.count ?? 0)) === limit,
+    `${label} in one active window`,
+  );
 }
 
 async function startMpMock() {
@@ -193,10 +237,17 @@ async function waitForHealth() {
   throw new Error("Next dev server did not become healthy");
 }
 
-function startNextDev() {
+function startNextServer() {
   const child = spawn(
-    "npx",
-    ["next", "dev", "--hostname", "127.0.0.1", "--port", String(PORT)],
+    process.execPath,
+    [
+      "node_modules/next/dist/bin/next",
+      "start",
+      "--hostname",
+      "127.0.0.1",
+      "--port",
+      String(PORT),
+    ],
     {
       env: testEnv,
       stdio: ["ignore", "pipe", "pipe"],
@@ -204,6 +255,9 @@ function startNextDev() {
   );
   child.stdout.on("data", (chunk) => process.stdout.write(chunk));
   child.stderr.on("data", (chunk) => process.stderr.write(chunk));
+  child.on("error", (error) =>
+    console.error(`Next server process error: ${error.message}`),
+  );
   return child;
 }
 
@@ -243,7 +297,7 @@ async function main() {
   await assertRateLimitSchema();
 
   const mpMock = await startMpMock();
-  const nextDev = startNextDev();
+  const nextServer = startNextServer();
 
   try {
     await waitForHealth();
@@ -287,15 +341,13 @@ async function main() {
       `received ${normalGate.status}`,
     );
 
-    for (let index = 0; index < 120; index += 1) {
-      const { error } = await service.rpc("consume_rate_limit", {
-        p_route_key: "gate:session:scan",
-        p_source_hash: sha256(`${SOURCES.gateFlood}|gate:${sha256(gateToken)}`),
-        p_limit: 120,
-        p_window_seconds: 60,
-      });
-      if (error) throw new Error(`preconsume gate scan rate limit: ${error.message}`);
-    }
+    await preconsumeRateLimit({
+      routeKey: "gate:session:scan",
+      sourceHash: sha256(`${SOURCES.gateFlood}|gate:${sha256(gateToken)}`),
+      limit: 120,
+      windowSeconds: 60,
+      label: "F) gate scan limiter bucket preconsumed",
+    });
     const floodGate = await postJson(
       "/api/gate/session/scan",
       SOURCES.gateFlood,
@@ -307,15 +359,13 @@ async function main() {
       "F) gate scan blocks excess with 429",
     );
 
-    for (let index = 0; index < 60; index += 1) {
-      const { error } = await service.rpc("consume_rate_limit", {
-        p_route_key: "page:tickets",
-        p_source_hash: sha256(SOURCES.ticketFlood),
-        p_limit: 60,
-        p_window_seconds: 60,
-      });
-      if (error) throw new Error(`preconsume ticket rate limit: ${error.message}`);
-    }
+    await preconsumeRateLimit({
+      routeKey: "page:tickets",
+      sourceHash: sha256(SOURCES.ticketFlood),
+      limit: 60,
+      windowSeconds: 60,
+      label: "G) ticket page limiter bucket preconsumed",
+    });
     const ticketFlood = await fetch(`${APP_BASE_URL}/tickets/${PREFIX}_${RUN_ID}`, {
       headers: withSource(SOURCES.ticketFlood),
     });
@@ -339,16 +389,35 @@ async function main() {
       `received ${mpLegit.status}`,
     );
 
-    const zapiLegit = await postJson(
+    await preconsumeRateLimit({
+      routeKey: "webhook:zapi:phone",
+      sourceHash: sha256(
+        `${SOURCES.zapiLegit}|phone:${sha256(ZAPI_LIMIT_PHONE)}`,
+      ),
+      limit: 30,
+      windowSeconds: 60,
+      label: "I) Z-API limiter bucket preconsumed",
+    });
+    const zapiLimited = await postJson(
       "/api/webhook/zapi",
       SOURCES.zapiLegit,
-      { fromMe: true, phone: "5599999999999", messageId: `${PREFIX}_${RUN_ID}` },
+      {
+        fromMe: false,
+        phone: ZAPI_LIMIT_PHONE,
+        text: `${PREFIX} limiter path ${RUN_ID}`,
+      },
       { "x-zapi-webhook-secret": testEnv.ZAPI_WEBHOOK_SECRET },
     );
+    assertStatus(
+      zapiLimited,
+      200,
+      "I) authenticated Z-API path preserves 200 for confirmed excess",
+    );
+    const zapiLimitedBody = await zapiLimited.json();
     assert(
-      zapiLegit.status !== 429,
-      "I) legitimate Z-API webhook inside limit is not blocked",
-      `received ${zapiLegit.status}`,
+      zapiLimitedBody?.ignored === true &&
+        zapiLimitedBody?.reason === "phone_rate_limited",
+      "I) authenticated Z-API request reached the limiter",
     );
 
     const { data: stored, error } = await service
@@ -358,6 +427,7 @@ async function main() {
         sha256(SOURCES.gateFlood),
         sha256(`${SOURCES.gateFlood}|gate:${sha256(gateToken)}`),
         sha256(SOURCES.ticketFlood),
+        sha256(`${SOURCES.zapiLegit}|phone:${sha256(ZAPI_LIMIT_PHONE)}`),
       ]);
     if (error) throw new Error(`read rate_limit_events: ${error.message}`);
 
@@ -372,14 +442,24 @@ async function main() {
     const { data: remaining } = await service
       .from("rate_limit_events")
       .select("source_hash")
-      .in("source_hash", [
-        sha256(SOURCES.gateFlood),
-        sha256(`${SOURCES.gateFlood}|gate:${sha256(gateToken)}`),
-        sha256(SOURCES.ticketFlood),
-      ]);
+      .in("source_hash", syntheticRateLimitHashes());
     assert((remaining ?? []).length === 0, "L) cleanup removed rate-limit data");
+    const { data: remainingPayments, error: remainingPaymentsError } =
+      await service
+        .from("payment_events")
+        .select("event_key")
+        .like("event_key", `${PREFIX}_${RUN_ID}%`);
+    if (remainingPaymentsError) {
+      throw new Error(
+        `read payment_events after cleanup: ${remainingPaymentsError.message}`,
+      );
+    }
+    assert(
+      (remainingPayments ?? []).length === 0,
+      "L) cleanup removed synthetic payment data",
+    );
   } finally {
-    nextDev.kill("SIGTERM");
+    nextServer.kill("SIGTERM");
     mpMock.close();
     removeTemporaryNextEnv();
   }

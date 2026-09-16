@@ -7,7 +7,7 @@ import {
 import { logWarn } from "@/lib/logger";
 import {
   consumeRateLimit,
-  rateLimitResponse,
+  rateLimitFailureResponse,
 } from "@/lib/security/rateLimit";
 import { payComboCheckout } from "@/lib/tickets/services/comboOffers";
 
@@ -55,14 +55,18 @@ export async function POST(request: Request) {
     limit: 20,
     windowSeconds: 60,
     request,
+    unavailablePolicy: "fail_closed_503",
   });
 
-  if (!rateLimit.allowed) {
-    logWarn("Rate limited Black House combo payment request", {
-      sourceHash: rateLimit.sourceHash,
-      count: rateLimit.count,
-    });
-    return rateLimitResponse(rateLimit);
+  const rateLimitFailure = rateLimitFailureResponse(rateLimit);
+  if (rateLimitFailure) {
+    if (rateLimit.status === "rate_limited") {
+      logWarn("Rate limited Black House combo payment request", {
+        sourceHash: rateLimit.sourceHash,
+        count: rateLimit.count,
+      });
+    }
+    return rateLimitFailure;
   }
 
   const bodyResult = await readPaymentBody(request);

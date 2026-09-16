@@ -1,15 +1,19 @@
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  applyRateLimitPolicy,
+  parseRateLimitRpcResponse,
+  RATE_LIMIT_TIMEOUT_MS,
+  type RateLimitResult,
+  type RateLimitUnavailablePolicy,
+  unavailableRateLimitResult,
+} from "@/lib/security/rateLimitContract";
 
 type RateLimitConfig = {
   routeKey: string;
   limit: number;
   windowSeconds: number;
   scope?: string | null;
-};
-
-type RateLimitResponse = {
-  allowed?: unknown;
-  retry_after_seconds?: unknown;
+  unavailablePolicy: RateLimitUnavailablePolicy;
 };
 
 function createNonce() {
@@ -89,17 +93,38 @@ async function sha256(value: string) {
 async function consumePageRateLimit(
   request: NextRequest,
   config: RateLimitConfig,
-) {
+): Promise<RateLimitResult> {
   const supabaseUrl = process.env.SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    return { allowed: true, retryAfterSeconds: 0 };
-  }
-
   const source = getRequestSourceIdentifier(request);
   const scope = config.scope?.trim();
   const sourceHash = await sha256(scope ? `${source}|${scope}` : source);
+  const context = {
+    sourceHash,
+    limit: config.limit,
+    windowSeconds: config.windowSeconds,
+    unavailablePolicy: config.unavailablePolicy,
+  };
+
+  function unavailable(
+    reason: Parameters<typeof unavailableRateLimitResult>[1],
+    details: Record<string, unknown> = {},
+  ) {
+    console.warn("Rate limit unavailable", {
+      routeKey: config.routeKey,
+      reason,
+      policy: config.unavailablePolicy,
+      ...details,
+    });
+    return unavailableRateLimitResult(context, reason);
+  }
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    return unavailable("configuration");
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), RATE_LIMIT_TIMEOUT_MS);
 
   try {
     const response = await fetch(`${supabaseUrl}/rest/v1/rpc/consume_rate_limit`, {
@@ -115,22 +140,35 @@ async function consumePageRateLimit(
         p_limit: config.limit,
         p_window_seconds: config.windowSeconds,
       }),
+      signal: controller.signal,
     });
 
     if (!response.ok) {
-      return { allowed: true, retryAfterSeconds: 0 };
+      return unavailable("http_error", { status: response.status });
     }
 
-    const result = (await response.json()) as RateLimitResponse;
-    const allowed = result.allowed === true;
-    const retryAfterSeconds =
-      typeof result.retry_after_seconds === "number"
-        ? result.retry_after_seconds
-        : config.windowSeconds;
+    let data: unknown;
+    try {
+      data = await response.json();
+    } catch {
+      return unavailable("invalid_response");
+    }
 
-    return { allowed, retryAfterSeconds };
-  } catch {
-    return { allowed: true, retryAfterSeconds: 0 };
+    const result = parseRateLimitRpcResponse(data, context);
+    if (result.status === "unavailable") {
+      console.warn("Rate limit unavailable", {
+        routeKey: config.routeKey,
+        reason: result.unavailableReason,
+        policy: config.unavailablePolicy,
+      });
+    }
+    return result;
+  } catch (error) {
+    return unavailable(controller.signal.aborted ? "timeout" : "exception", {
+      errorName: error instanceof Error ? error.name : typeof error,
+    });
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -150,6 +188,24 @@ function tooManyRequests(retryAfterSeconds: number) {
   );
 }
 
+function serviceUnavailable() {
+  return NextResponse.json(
+    { error: { message: "Service unavailable" } },
+    { status: 503 },
+  );
+}
+
+function pageRateLimitResponse(result: RateLimitResult) {
+  const decision = applyRateLimitPolicy(result);
+  if (decision.action === "rate_limited") {
+    return tooManyRequests(decision.result.retryAfterSeconds);
+  }
+  if (decision.action === "service_unavailable") {
+    return serviceUnavailable();
+  }
+  return null;
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -162,11 +218,11 @@ export async function proxy(request: NextRequest) {
       routeKey: "page:tickets",
       limit: 60,
       windowSeconds: 60,
+      unavailablePolicy: "fail_closed_503",
     });
 
-    if (!result.allowed) {
-      return tooManyRequests(result.retryAfterSeconds);
-    }
+    const response = pageRateLimitResponse(result);
+    if (response) return response;
   }
 
   if (pathname.startsWith("/gate/session/")) {
@@ -176,11 +232,11 @@ export async function proxy(request: NextRequest) {
       limit: 60,
       windowSeconds: 60,
       scope: `gate:${await sha256(token)}`,
+      unavailablePolicy: "fail_closed_503",
     });
 
-    if (!result.allowed) {
-      return tooManyRequests(result.retryAfterSeconds);
-    }
+    const response = pageRateLimitResponse(result);
+    if (response) return response;
   }
 
   if (pathname.startsWith("/admin/login/")) {
@@ -190,11 +246,11 @@ export async function proxy(request: NextRequest) {
       limit: 30,
       windowSeconds: 60,
       scope: `admin-login:${await sha256(token)}`,
+      unavailablePolicy: "fail_closed_503",
     });
 
-    if (!result.allowed) {
-      return tooManyRequests(result.retryAfterSeconds);
-    }
+    const response = pageRateLimitResponse(result);
+    if (response) return response;
   }
 
   return nextWithContentSecurityPolicy(request);

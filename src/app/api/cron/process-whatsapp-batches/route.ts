@@ -7,7 +7,7 @@ import {
 import { logError, logWarn } from "@/lib/logger";
 import {
   consumeRateLimit,
-  rateLimitResponse,
+  rateLimitFailureResponse,
 } from "@/lib/security/rateLimit";
 import { finalizeInactiveWhatsAppConversations } from "@/lib/tickets/services/conversationFinalizer";
 import { processDuePaidTicketDeliveries } from "@/lib/tickets/services/paidTicketDeliveryWorker";
@@ -201,14 +201,18 @@ async function handleProcessWhatsAppBatchesCron(request: Request) {
     limit: 30,
     windowSeconds: 60,
     request,
+    unavailablePolicy: "fail_open_after_strong_auth",
   });
 
-  if (!rateLimit.allowed) {
-    logWarn("Rate limited WhatsApp batch cron", {
-      sourceHash: rateLimit.sourceHash,
-      count: rateLimit.count,
-    });
-    return rateLimitResponse(rateLimit);
+  const rateLimitFailure = rateLimitFailureResponse(rateLimit);
+  if (rateLimitFailure) {
+    if (rateLimit.status === "rate_limited") {
+      logWarn("Rate limited WhatsApp batch cron", {
+        sourceHash: rateLimit.sourceHash,
+        count: rateLimit.count,
+      });
+    }
+    return rateLimitFailure;
   }
 
   let responseBody: Awaited<ReturnType<typeof processDueWhatsAppMessageBatches>>;

@@ -6,7 +6,7 @@ import {
 import {
   consumeRateLimit,
   hashRateLimitScope,
-  rateLimitResponse,
+  rateLimitFailureResponse,
 } from "@/lib/security/rateLimit";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
@@ -32,11 +32,11 @@ export async function GET(request: Request) {
     windowSeconds: 60,
     request,
     scope: `order:${hashRateLimitScope(orderId)}`,
+    unavailablePolicy: "fail_closed_503",
   });
 
-  if (!rateLimit.allowed) {
-    return rateLimitResponse(rateLimit);
-  }
+  const rateLimitFailure = rateLimitFailureResponse(rateLimit);
+  if (rateLimitFailure) return rateLimitFailure;
 
   if (!(await verifyPublicCheckoutAccess(orderId, checkoutToken))) {
     return badRequest("Pedido inválido.");

@@ -2,7 +2,7 @@ import { badRequest, jsonOk, methodNotAllowed } from "@/lib/http/responses";
 import {
   consumeRateLimit,
   hashRateLimitScope,
-  rateLimitResponse,
+  rateLimitFailureResponse,
 } from "@/lib/security/rateLimit";
 import { consultGateTicket } from "@/lib/tickets/services/gateTicketConsultation";
 
@@ -34,8 +34,10 @@ export async function POST(request: Request) {
     windowSeconds: 60,
     request,
     scope: `gate:${hashRateLimitScope(gateSessionToken)}`,
+    unavailablePolicy: "fail_closed_503",
   });
-  if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
+  const rateLimitFailure = rateLimitFailureResponse(rateLimit);
+  if (rateLimitFailure) return rateLimitFailure;
 
   return jsonOk(
     await consultGateTicket({

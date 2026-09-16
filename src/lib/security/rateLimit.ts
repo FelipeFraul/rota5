@@ -1,9 +1,26 @@
 import "server-only";
 
 import { createHash } from "crypto";
-import { tooManyRequests } from "@/lib/http/responses";
+import { serviceUnavailable, tooManyRequests } from "@/lib/http/responses";
 import { logWarn } from "@/lib/logger";
+import {
+  applyRateLimitPolicy,
+  parseRateLimitRpcResponse,
+  RATE_LIMIT_TIMEOUT_MS,
+  type RateLimitExceededResult,
+  type RateLimitResult,
+  type RateLimitUnavailablePolicy,
+  unavailableRateLimitResult,
+} from "@/lib/security/rateLimitContract";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+
+export type {
+  RateLimitAllowedResult,
+  RateLimitExceededResult,
+  RateLimitResult,
+  RateLimitUnavailablePolicy,
+  RateLimitUnavailableResult,
+} from "@/lib/security/rateLimitContract";
 
 type HeadersLike = Pick<Headers, "get">;
 
@@ -14,26 +31,20 @@ export type RateLimitConfig = {
   request?: Request;
   headers?: HeadersLike;
   scope?: string | null;
+  unavailablePolicy: RateLimitUnavailablePolicy;
 };
 
-export type RateLimitResult = {
-  allowed: boolean;
-  retryAfterSeconds: number;
-  reason: "ok" | "rate_limited" | "unavailable";
-  sourceHash: string;
-  count?: number;
-  limit: number;
-  windowSeconds: number;
-};
+type RateLimitRpcError = { code?: string };
 
-type ConsumeRateLimitResponse = {
-  allowed?: unknown;
-  retry_after_seconds?: unknown;
-  reason?: unknown;
-  count?: unknown;
-  limit?: unknown;
-  window_seconds?: unknown;
-};
+export type RateLimitRpcAdapter = (
+  input: {
+    routeKey: string;
+    sourceHash: string;
+    limit: number;
+    windowSeconds: number;
+  },
+  signal: AbortSignal,
+) => Promise<{ data: unknown; error: RateLimitRpcError | null }>;
 
 function hashValue(value: string) {
   return createHash("sha256").update(value).digest("hex");
@@ -68,6 +79,47 @@ function buildSourceHash({
 export async function consumeRateLimit(
   config: RateLimitConfig,
 ): Promise<RateLimitResult> {
+  return consumeRateLimitWithAdapter(config, consumeRateLimitRpc);
+}
+
+async function consumeRateLimitRpc(
+  input: Parameters<RateLimitRpcAdapter>[0],
+  signal: AbortSignal,
+) {
+  const supabase = getSupabaseAdmin();
+  const result = await supabase
+    .rpc("consume_rate_limit", {
+      p_route_key: input.routeKey,
+      p_source_hash: input.sourceHash,
+      p_limit: input.limit,
+      p_window_seconds: input.windowSeconds,
+    })
+    .abortSignal(signal);
+
+  return {
+    data: result.data,
+    error: result.error ? { code: result.error.code } : null,
+  };
+}
+
+function logUnavailable(
+  config: RateLimitConfig,
+  result: Extract<RateLimitResult, { status: "unavailable" }>,
+  details: Record<string, unknown> = {},
+) {
+  logWarn("Rate limit unavailable", {
+    routeKey: config.routeKey,
+    reason: result.unavailableReason,
+    policy: config.unavailablePolicy,
+    ...details,
+  });
+}
+
+export async function consumeRateLimitWithAdapter(
+  config: RateLimitConfig,
+  adapter: RateLimitRpcAdapter,
+  timeoutMs = RATE_LIMIT_TIMEOUT_MS,
+): Promise<RateLimitResult> {
   const headers = config.headers ?? config.request?.headers;
 
   if (!headers) {
@@ -78,69 +130,62 @@ export async function consumeRateLimit(
     headers,
     scope: config.scope,
   });
+  const context = {
+    sourceHash,
+    limit: config.limit,
+    windowSeconds: config.windowSeconds,
+    unavailablePolicy: config.unavailablePolicy,
+  };
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const supabase = getSupabaseAdmin();
-    const { data, error } = await supabase.rpc("consume_rate_limit", {
-      p_route_key: config.routeKey,
-      p_source_hash: sourceHash,
-      p_limit: config.limit,
-      p_window_seconds: config.windowSeconds,
-    });
-
-    if (error) {
-      logWarn("Rate limit check failed open", {
+    const { data, error } = await adapter(
+      {
         routeKey: config.routeKey,
-        code: error.code,
-      });
-
-      return {
-        allowed: true,
-        retryAfterSeconds: 0,
-        reason: "unavailable",
         sourceHash,
         limit: config.limit,
         windowSeconds: config.windowSeconds,
-      };
+      },
+      controller.signal,
+    );
+
+    if (error) {
+      const unavailable = unavailableRateLimitResult(context, "rpc_error");
+      logUnavailable(config, unavailable, { code: error.code });
+      return unavailable;
     }
 
-    const result = data as ConsumeRateLimitResponse | null;
-    const allowed = result?.allowed === true;
-    const retryAfterSeconds =
-      typeof result?.retry_after_seconds === "number"
-        ? result.retry_after_seconds
-        : config.windowSeconds;
-
-    return {
-      allowed,
-      retryAfterSeconds,
-      reason: allowed ? "ok" : "rate_limited",
-      sourceHash,
-      count: typeof result?.count === "number" ? result.count : undefined,
-      limit:
-        typeof result?.limit === "number" ? result.limit : config.limit,
-      windowSeconds:
-        typeof result?.window_seconds === "number"
-          ? result.window_seconds
-          : config.windowSeconds,
-    };
+    const result = parseRateLimitRpcResponse(data, context);
+    if (result.status === "unavailable") {
+      logUnavailable(config, result);
+    }
+    return result;
   } catch (error) {
-    logWarn("Rate limit check failed open", {
-      routeKey: config.routeKey,
-      error,
+    const unavailable = unavailableRateLimitResult(
+      context,
+      controller.signal.aborted ? "timeout" : "exception",
+    );
+    logUnavailable(config, unavailable, {
+      errorName: error instanceof Error ? error.name : typeof error,
     });
-
-    return {
-      allowed: true,
-      retryAfterSeconds: 0,
-      reason: "unavailable",
-      sourceHash,
-      limit: config.limit,
-      windowSeconds: config.windowSeconds,
-    };
+    return unavailable;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
-export function rateLimitResponse(result: RateLimitResult) {
+export function rateLimitResponse(result: RateLimitExceededResult) {
   return tooManyRequests(result.retryAfterSeconds);
+}
+
+export function rateLimitFailureResponse(result: RateLimitResult) {
+  const decision = applyRateLimitPolicy(result);
+  if (decision.action === "rate_limited") {
+    return rateLimitResponse(decision.result);
+  }
+  if (decision.action === "service_unavailable") {
+    return serviceUnavailable();
+  }
+  return null;
 }

@@ -6,7 +6,7 @@ import {
 import {
   consumeRateLimit,
   hashRateLimitScope,
-  rateLimitResponse,
+  rateLimitFailureResponse,
 } from "@/lib/security/rateLimit";
 import { buildPublicGateScanResponseDto } from "@/lib/tickets/services/publicDtos";
 import {
@@ -73,11 +73,11 @@ export async function POST(request: Request) {
     windowSeconds: 60,
     request,
     scope: `gate:${hashRateLimitScope(payload.gateSessionToken)}`,
+    unavailablePolicy: "fail_closed_503",
   });
 
-  if (!rateLimit.allowed) {
-    return rateLimitResponse(rateLimit);
-  }
+  const rateLimitFailure = rateLimitFailureResponse(rateLimit);
+  if (rateLimitFailure) return rateLimitFailure;
 
   const result =
     "ticketCode" in payload

@@ -6,7 +6,7 @@ import {
 import {
   consumeRateLimit,
   hashRateLimitScope,
-  rateLimitResponse,
+  rateLimitFailureResponse,
 } from "@/lib/security/rateLimit";
 import { getComboCheckoutStatus } from "@/lib/tickets/services/comboOffers";
 
@@ -28,11 +28,11 @@ export async function GET(request: Request) {
     windowSeconds: 60,
     request,
     scope: `combo:${hashRateLimitScope(orderId)}`,
+    unavailablePolicy: "fail_closed_503",
   });
 
-  if (!rateLimit.allowed) {
-    return rateLimitResponse(rateLimit);
-  }
+  const rateLimitFailure = rateLimitFailureResponse(rateLimit);
+  if (rateLimitFailure) return rateLimitFailure;
 
   const status = await getComboCheckoutStatus(orderId, checkoutToken);
 

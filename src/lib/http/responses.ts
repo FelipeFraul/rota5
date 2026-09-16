@@ -38,6 +38,10 @@ export function tooManyRequests(retryAfterSeconds = 60) {
   );
 }
 
+export function serviceUnavailable(message = "Service unavailable") {
+  return jsonError(message, 503);
+}
+
 export function badRequest(message = "Bad request", details?: JsonBody) {
   return jsonError(message, 400, details);
 }

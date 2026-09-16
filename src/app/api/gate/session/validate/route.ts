@@ -5,7 +5,7 @@ import {
 } from "@/lib/http/responses";
 import {
   consumeRateLimit,
-  rateLimitResponse,
+  rateLimitFailureResponse,
 } from "@/lib/security/rateLimit";
 import { buildPublicGateSessionDtoWithSummary } from "@/lib/tickets/services/publicDtos";
 import { validateGateSessionToken } from "@/lib/tickets/services/gateSessions";
@@ -36,11 +36,11 @@ export async function POST(request: Request) {
     limit: 60,
     windowSeconds: 60,
     request,
+    unavailablePolicy: "fail_closed_503",
   });
 
-  if (!rateLimit.allowed) {
-    return rateLimitResponse(rateLimit);
-  }
+  const rateLimitFailure = rateLimitFailureResponse(rateLimit);
+  if (rateLimitFailure) return rateLimitFailure;
 
   const token = await readToken(request);
 

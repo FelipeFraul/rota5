@@ -18,7 +18,7 @@ import {
 } from "@/lib/mercado-pago/webhook";
 import {
   consumeRateLimit,
-  rateLimitResponse,
+  rateLimitFailureResponse,
 } from "@/lib/security/rateLimit";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
@@ -273,14 +273,18 @@ export async function POST(request: Request) {
     limit: 120,
     windowSeconds: 60,
     request,
+    unavailablePolicy: "fail_open_after_strong_auth",
   });
 
-  if (!rateLimit.allowed) {
-    logWarn("Rate limited Black House webhook", {
-      sourceHash: rateLimit.sourceHash,
-      count: rateLimit.count,
-    });
-    return rateLimitResponse(rateLimit);
+  const rateLimitFailure = rateLimitFailureResponse(rateLimit);
+  if (rateLimitFailure) {
+    if (rateLimit.status === "rate_limited") {
+      logWarn("Rate limited Black House webhook", {
+        sourceHash: rateLimit.sourceHash,
+        count: rateLimit.count,
+      });
+    }
+    return rateLimitFailure;
   }
 
   const eventType = extractMercadoPagoEventType(payload);

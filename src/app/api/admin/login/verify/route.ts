@@ -3,7 +3,7 @@ import {
   consumeRateLimit,
   hashRateLimitScope,
   getRequestSourceIdentifier,
-  rateLimitResponse,
+  rateLimitFailureResponse,
 } from "@/lib/security/rateLimit";
 import { logError, logWarn } from "@/lib/logger";
 import {
@@ -47,14 +47,18 @@ async function handlePost(request: Request) {
     windowSeconds: 60,
     request,
     scope: `token:${hashRateLimitScope(token)}`,
+    unavailablePolicy: "fail_closed_503",
   });
 
-  if (!rateLimit.allowed) {
-    logWarn("Rate limited admin web login verification", {
-      sourceHash: rateLimit.sourceHash,
-      count: rateLimit.count,
-    });
-    return rateLimitResponse(rateLimit);
+  const rateLimitFailure = rateLimitFailureResponse(rateLimit);
+  if (rateLimitFailure) {
+    if (rateLimit.status === "rate_limited") {
+      logWarn("Rate limited admin web login verification", {
+        sourceHash: rateLimit.sourceHash,
+        count: rateLimit.count,
+      });
+    }
+    return rateLimitFailure;
   }
 
   const result = await verifyAdminLoginChallengePassphrase({

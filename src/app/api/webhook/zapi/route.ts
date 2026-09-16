@@ -3,6 +3,7 @@ import {
   jsonError,
   jsonOk,
   methodNotAllowed,
+  serviceUnavailable,
   unauthorized,
 } from "@/lib/http/responses";
 import { createGitHubIssue } from "@/lib/github/issues";
@@ -11,6 +12,7 @@ import {
   consumeRateLimit,
   hashRateLimitScope,
 } from "@/lib/security/rateLimit";
+import { applyRateLimitPolicy } from "@/lib/security/rateLimitContract";
 import {
   getOrCreateOpenConversation,
   reconcileConversationDelivery,
@@ -1005,15 +1007,21 @@ export async function POST(request: Request) {
     windowSeconds: PHONE_RATE_LIMIT_WINDOW_SECONDS,
     request,
     scope: `phone:${hashRateLimitScope(incoming.phone)}`,
+    unavailablePolicy: "fail_open_after_strong_auth",
   });
+  const phoneRateLimitDecision = applyRateLimitPolicy(phoneRateLimit);
 
-  if (!phoneRateLimit.allowed) {
+  if (phoneRateLimitDecision.action === "rate_limited") {
     logWarn("Rate limited Z-API webhook by phone", {
-      sourceHash: phoneRateLimit.sourceHash,
-      count: phoneRateLimit.count,
+      sourceHash: phoneRateLimitDecision.result.sourceHash,
+      count: phoneRateLimitDecision.result.count,
       phoneLast4: incoming.phone.slice(-4),
     });
     return jsonOk({ received: true, ignored: true, reason: "phone_rate_limited" });
+  }
+
+  if (phoneRateLimitDecision.action === "service_unavailable") {
+    return serviceUnavailable();
   }
 
   const customerResult = await upsertCustomerFromWhatsApp({
