@@ -6,12 +6,12 @@
   "algorithm": "SHA-256",
   "count": 97,
   "aggregate_strategy": "Sort records by path; concatenate path + NUL + sha256 + LF; SHA-256 the UTF-8 concatenation.",
-  "aggregate_hash": "0998ffb62a6dbc2ee612ee13d4b3f9322758a111b7d06580e4d32bc19d9af99d",
+  "aggregate_hash": "62a6f8d77d3d687b953e5905343a6a3b61e4a1b788b8c7f80073707317cd2f1e",
   "records": [
     {
       "path": ".tools/baseline/validate-baseline.mjs",
-      "size": 62026,
-      "sha256": "67c63fa8f5702ea3ae019e9b1494d8af058dc418345eacbe4ff9010a355a7a62"
+      "size": 62092,
+      "sha256": "077807b9e5201687a3cf3b3b7b5d32b54215b1df3392678fdf831d8a9c7a8dc8"
     },
     {
       "path": "docs/system/AI-READ-ME.md",
