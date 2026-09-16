@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-15T21:39:26.713Z",
-  "stage": "2.7.4",
+  "generatedAt": "2026-09-16T03:35:55.187Z",
+  "stage": "2.8.0",
   "id": "rota5.flow-catalog.v1",
   "canonical": true,
   "count": 34,
@@ -3121,7 +3121,8 @@
         "test-016",
         "audit.admin-profiles-permissions",
         "audit.gate-phone-checkin",
-        "audit.system-closure"
+        "audit.system-closure",
+        "test-058"
       ],
       "failing_tests": [],
       "evidence": [
@@ -3282,7 +3283,8 @@
         "audit.seatmap-qr-image",
         "test-041",
         "test-054",
-        "test-055"
+        "test-055",
+        "test-058"
       ],
       "failing_tests": [],
       "evidence": [
@@ -3427,7 +3429,8 @@
         "test-028",
         "test-041",
         "test-056",
-        "test-057"
+        "test-057",
+        "test-058"
       ],
       "failing_tests": [],
       "evidence": [
@@ -4302,14 +4305,15 @@
           "Matcher seleciona as páginas cobertas."
         ],
         "error_paths": [
-          "Limite excedido termina em 429."
+          "Limit exceeded terminates in 429; limiter unavailable terminates public boundaries in 503."
         ],
         "timeout_expiration_paths": [],
         "retry_reconciliation_paths": []
       },
       "terminals": [
         "CONTINUE",
-        "RATE_LIMITED"
+        "RATE_LIMITED",
+        "UNAVAILABLE"
       ],
       "notes": [],
       "actors": [
@@ -4336,7 +4340,8 @@
         "integration-zapi"
       ],
       "tests": [
-        "audit.rate-limit"
+        "audit.rate-limit",
+        "test-058"
       ],
       "failing_tests": [],
       "evidence": [

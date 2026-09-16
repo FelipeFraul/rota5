@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T21:39:26.713Z",
-  "stage": "2.7.4",
+  "generatedAt": "2026-09-16T03:35:55.187Z",
+  "stage": "2.8.0",
   "period": {
     "start": "2026-09-12",
     "end": "2026-09-15",
     "status": "CLOSED"
   },
   "baseline_start": "1.0.0",
-  "baseline_end": "2.7.4",
+  "baseline_end": "2.8.0",
   "source_start": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
-  "source_end": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+  "source_end": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
   "days": [
     {
       "date": "2026-09-12",
@@ -277,6 +277,15 @@
       "typecheck": "PASS",
       "lint": "PASS_WITH_EXISTING_WARNINGS_NO_ERRORS",
       "build": "PASS"
+    },
+    {
+      "id": "quality-gate-35049217326",
+      "run": 35049217326,
+      "source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+      "status": "SUCCESS",
+      "node": "285/285",
+      "postgres": "4/4",
+      "classification": "FUNCTIONAL"
     }
   ],
   "deployments": [
@@ -294,6 +303,14 @@
       "status": "READY",
       "health": "HTTP_200",
       "created_during_baseline_reconciliation": false
+    },
+    {
+      "id": "dpl_2bitbdQynYB6QdMiEkB1em65HsAy",
+      "target": "production",
+      "status": "READY",
+      "source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+      "source_evidence": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA",
+      "health": "HTTP_200"
     }
   ],
   "migrations": [
@@ -350,7 +367,8 @@
     "bug.admin-event-location-consistency",
     "risk.payment-confirmed-before-external-delivery",
     "risk.combo-metadata-read-modify-write-race",
-    "risk.published-commit-unvalidated"
+    "risk.published-commit-unvalidated",
+    "risk.rate-limit-fails-open"
   ],
   "new_findings_documented": [
     "bug.admin-event-location-consistency",
@@ -358,7 +376,6 @@
     "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
   ],
   "remaining_risks": [
-    "risk.rate-limit-fails-open",
     "risk.local-runtime-env-incomplete",
     "debt.seat-map-storage-contract-drift",
     "gap.critical-flow-correlation",
@@ -392,13 +409,13 @@
     "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
   ],
   "final_state": {
-    "baseline": "2.7.4",
-    "repository_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-    "production_application_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-    "source_tree_fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee",
-    "default_node_suite": "280/280 PASS",
+    "baseline": "2.8.0",
+    "repository_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "production_application_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "source_tree_fingerprint": "ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91",
+    "default_node_suite": "285/285 PASS",
     "postgres_integration": "4/4 PASS",
-    "quality_gate": "34998744062 PASS",
+    "quality_gate": "35049217326 PASS",
     "atomicity": "RESOLVED",
     "admin_location_consistency": "RESOLVED",
     "combo_metadata_race": "RESOLVED",
@@ -407,12 +424,13 @@
     "infrastructure_health": "DEGRADED",
     "release_blockers": 0,
     "cycle": "DOCUMENTED_AND_CLOSED",
-    "functional_baseline": "2.7.0",
+    "functional_baseline": "2.8.0",
     "paid_delivery_atomicity": "RESOLVED",
     "external_delivery_semantics": "AT_LEAST_ONCE",
-    "published_commit_parity": "RESOLVED_EXACT_SOURCE_PROVEN"
+    "published_commit_parity": "RESOLVED_EXACT_SOURCE_PROVEN",
+    "rate_limit_outage_policy": "RESOLVED"
   },
-  "functional_baseline_end": "2.7.0",
+  "functional_baseline_end": "2.8.0",
   "documentary_patches": [
     {
       "version": "2.5.1",
@@ -516,7 +534,8 @@
       "type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
       "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
       "reason": "Serialize CURRENT combo metadata transitions in PostgreSQL and preserve the separate direct-notification concurrency residual."
-    }
+    },
+    "2.8.0"
   ],
   "baseline_2_6_1": {
     "status": "DOCUMENTED_AND_CLOSED",
@@ -560,5 +579,13 @@
     "finding_lifecycle_changed": false,
     "health_projection_reconciled": true,
     "baseline_commit": "SELF_NOT_RECORDED"
+  },
+  "baseline_2_8_0": {
+    "change_type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+    "source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "quality_gate_run": 35049217326,
+    "production_deployment": "dpl_2bitbdQynYB6QdMiEkB1em65HsAy",
+    "finding_resolved": "risk.rate-limit-fails-open",
+    "migration": false
   }
 }

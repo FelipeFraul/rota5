@@ -1,4 +1,4 @@
-> **Current Baseline 2.7.4 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`. Fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`; 391 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 57 test files and 47 findings. `risk.combo-metadata-read-modify-write-race` is RESOLVED; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is ACTIVE MEDIUM/P2 and non-release-blocking. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.8.0 (2026-09-16):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
 
 # Riscos de infraestrutura e configuração
 
@@ -30,7 +30,7 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 
 - Tipo / severidade / prioridade histórica: **OPERATIONAL / MEDIUM / P2**
 - Status / confiança: **RESOLVED / CONFIRMED**
-- Evidência atual: GET Vercel REST v13 para `dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g` retornou HTTP 200, target Production READY e `meta.githubCommitSha=1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`, `meta.githubCommitRef=production`, repositório `FelipeFraul/rota5`.
+- Current evidence: GET Vercel REST v13 for `dpl_2bitbdQynYB6QdMiEkB1em65HsAy` returned HTTP 200, target Production READY, `meta.githubCommitSha=c48405e41df3d1cd69eb3d383b7c6dd17257155e`, `meta.githubCommitRef=production`, repository `FelipeFraul/rota5`.
 - Impacto atual: o artefato Production servido está reconciliado com a fotografia funcional canônica. Health HTTP 200 permanece evidência suplementar, não a prova de identidade.
 - Histórico preservado: a inspeção CLI anterior não expunha metadata Git/source suficiente.
 - Direção: preservar a metadata da plataforma como prova e reabrir somente diante de evidência contrária.
@@ -76,4 +76,4 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 
 ## Estado remoto observado
 
-Os aliases consultados responderam 200. O domínio declarado pertence a **site**, o workspace está ligado a **rota5** e o deployment Production mais recente de `rota5` está READY e atende os aliases canônicos. A paridade do baseline HEAD publicado continua tratada separadamente como NOT_VALIDATED. Nenhuma configuração remota foi alterada nesta auditoria semântica.
+Os aliases consultados responderam 200. O domínio declarado pertence a **site**, o workspace está ligado a **rota5** e o deployment Production mais recente de `rota5` está READY e atende os aliases canônicos. Canonical functional source and Production artifact parity is proven by authoritative metadata; the later documentary HEAD is not an application source. Nenhuma configuração remota foi alterada nesta auditoria semântica.

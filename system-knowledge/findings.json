@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T21:39:26.713Z",
-  "stage": "2.7.4",
-  "sourceCommit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-  "scope": "Canonical finding catalog for Baseline 2.7.4, with current lifecycle state separated from preserved historical evidence.",
-  "method": "Reconciled machine-readable current state for Baseline 2.7.4 against source 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27, current Quality Gate 34998744062, remote evidence captured by the completed 2.7.0 re-audit, and preserved historical evidence.",
+  "generatedAt": "2026-09-16T03:35:55.187Z",
+  "stage": "2.8.0",
+  "sourceCommit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+  "scope": "Canonical finding catalog for Baseline 2.8.0, with current lifecycle state separated from preserved historical evidence.",
+  "method": "Baseline 2.8.0 reconciliation from canonical functional source, Quality Gate, independent re-audit and authoritative Production metadata.",
   "count": 47,
   "records": [
     {
@@ -306,7 +306,7 @@
         },
         {
           "path": "package.json",
-          "claim": "Current default suite passes 280/280, including the direct duplication test.",
+          "claim": "Current default suite passes 285/285, including the direct duplication test.",
           "evidence_state": "CURRENT"
         }
       ],
@@ -387,7 +387,7 @@
           },
           {
             "path": "package.json",
-            "claim": "Current default suite passes 280/280, including the direct duplication test.",
+            "claim": "Current default suite passes 285/285, including the direct duplication test.",
             "evidence_state": "CURRENT"
           }
         ],
@@ -441,7 +441,7 @@
         },
         {
           "path": "package.json",
-          "claim": "Current default suite passes 280/280.",
+          "claim": "Current default suite passes 285/285.",
           "evidence_state": "CURRENT"
         }
       ],
@@ -543,7 +543,7 @@
           },
           {
             "path": "package.json",
-            "claim": "Current default suite passes 280/280.",
+            "claim": "Current default suite passes 285/285.",
             "evidence_state": "CURRENT"
           }
         ],
@@ -1558,8 +1558,8 @@
           "evidence_state": "CURRENT"
         },
         {
-          "path": "Quality Gate 34998744062",
-          "claim": "Node 280/280, PostgreSQL 4/4, typecheck, lint and build PASS; final re-audit PASS.",
+          "path": "Quality Gate 35049217326",
+          "claim": "Node 285/285, PostgreSQL 4/4, typecheck, lint and build PASS; final re-audit PASS.",
           "evidence_state": "CURRENT"
         }
       ],
@@ -1693,21 +1693,36 @@
     },
     {
       "id": "risk.rate-limit-fails-open",
-      "title": "Falha do rate limiter libera a requisição",
+      "title": "RESOLVED — indisponibilidade do rate limiter possui estado e política explícitos",
       "type": "SECURITY",
       "severity": "MEDIUM",
       "priority": "P2",
-      "status": "ACTIVE",
+      "status": "RESOLVED",
       "confidence": "CONFIRMED",
-      "description": "consumeRateLimit registra warning e retorna allowed em exceção, deixando endpoints públicos sem proteção durante indisponibilidade do banco/RPC.",
+      "description": "O contrato retorna allowed, rate_limited ou unavailable; indisponibilidade não vira autorização silenciosa nem 429 falso, e cada boundary aplica uma política explícita.",
       "evidence": [
         {
-          "path": "src/lib/security/rateLimit.ts",
-          "line": 127,
-          "claim": "Catch explicitamente registra “failed open”."
+          "path": "src/lib/security/rateLimitContract.ts",
+          "claim": "Contrato explícito allowed | rate_limited | unavailable, políticas fail_closed_503 e fail_open_after_strong_auth e timeout cancelável de 2000 ms.",
+          "evidence_state": "CURRENT"
+        },
+        {
+          "path": "scripts/test-rate-limit-outage.mjs",
+          "claim": "5/5 testes focados cobrem timeout, resposta malformada, 503 fail-closed, continuidade pós-strong-auth e ausência de 429 falso.",
+          "evidence_state": "CURRENT"
+        },
+        {
+          "path": "GitHub Actions run 35049217326",
+          "claim": "Quality Gate SUCCESS on c48405e41df3d1cd69eb3d383b7c6dd17257155e: 285/285 Node, 4/4 PostgreSQL, typecheck, lint without errors and build PASS.",
+          "evidence_state": "CURRENT"
+        },
+        {
+          "path": "Vercel REST GET /v13/deployments",
+          "claim": "Production dpl_2bitbdQynYB6QdMiEkB1em65HsAy is READY and authoritative meta.githubCommitSha=c48405e41df3d1cd69eb3d383b7c6dd17257155e; canonical aliases resolve to it and /api/health returned HTTP 200.",
+          "evidence_state": "CURRENT"
         }
       ],
-      "impact": "Ataques de volume ou abuso não são contidos justamente durante falha da dependência de rate limit.",
+      "impact": "Outage handling is deliberate per trust boundary: 14 public boundaries fail closed with 503 and 5 authenticated boundaries may continue only after strong authentication.",
       "domains": [
         "domain.platform-runtime"
       ],
@@ -1728,9 +1743,61 @@
         "integration-supabase"
       ],
       "blast_radius": "SYSTEM_WIDE",
-      "workaround": "Autenticação/assinatura e validações específicas continuam aplicáveis onde existem.",
-      "direction": "Definir política de degradação por criticidade de endpoint.",
-      "priority_justification": "P2 porque é uma escolha ativa de disponibilidade com condição específica, sem exploração observada."
+      "workaround": "No workaround is required for the resolved application-policy defect.",
+      "direction": "Preserve the explicit tri-state contract and per-boundary policy; audit rate-limit event retention separately before creating any adjacent finding.",
+      "priority_justification": "MEDIUM/P2 are preserved as historical classification metadata; the RESOLVED lifecycle is non-operational and non-release-blocking.",
+      "current_state": {
+        "lifecycle": "RESOLVED",
+        "operational_open": false,
+        "release_blocking": false,
+        "active_metric": false,
+        "potential_metric": false,
+        "validation_queue": false,
+        "closed": true,
+        "workaround_required": false,
+        "current_impact": "Indisponibilidade is explicit and policy-controlled at all 19 audited boundaries.",
+        "top_level_claims": "CURRENT_RESOLUTION_ONLY",
+        "top_level_evidence": "CURRENT"
+      },
+      "resolution": {
+        "resolved_at": "2026-09-16T03:35:55.187Z",
+        "root_cause": "APPLICATION_UNAVAILABLE_POLICY",
+        "current_resolution": "consumeRateLimit exposes allowed | rate_limited | unavailable. Fourteen public boundaries use fail_closed_503; five strong-auth boundaries use fail_open_after_strong_auth only after authentication. AbortController enforces a 2000 ms timeout. Malformed responses map to unavailable; unavailable never maps to 429. Audited caller mismatches: 0.",
+        "source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+        "commit": "fix: harden rate limit outage handling",
+        "boundaries": 19,
+        "fail_closed_503": 14,
+        "fail_open_after_strong_auth": 5,
+        "caller_mismatches": 0,
+        "timeout_ms": 2000,
+        "focused_tests": "5/5 PASS",
+        "default_node_suite": "285/285 PASS",
+        "postgres_integration": "4/4 PASS",
+        "quality_gate_run": 35049217326,
+        "independent_final_reaudit": "PASS",
+        "production_deployment": "dpl_2bitbdQynYB6QdMiEkB1em65HsAy",
+        "production_source_evidence": "meta.githubCommitSha=c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+        "production_aliases": [
+          "rota5-khaki.vercel.app",
+          "rota5-fraulproenca-gmailcoms-projects.vercel.app"
+        ],
+        "production_health": "HTTP 200 status=ok service=whatsapp-ticketing",
+        "historical_evidence": {
+          "title": "Falha do rate limiter libera a requisição",
+          "description": "consumeRateLimit registra warning e retorna allowed em exceção, deixando endpoints públicos sem proteção durante indisponibilidade do banco/RPC.",
+          "evidence": [
+            {
+              "path": "src/lib/security/rateLimit.ts",
+              "line": 127,
+              "claim": "Catch explicitamente registra “failed open”."
+            }
+          ],
+          "impact": "Ataques de volume ou abuso não são contidos justamente durante falha da dependência de rate limit.",
+          "workaround": "Autenticação/assinatura e validações específicas continuam aplicáveis onde existem.",
+          "direction": "Definir política de degradação por criticidade de endpoint.",
+          "priority_justification": "P2 porque é uma escolha ativa de disponibilidade com condição específica, sem exploração observada."
+        }
+      }
     },
     {
       "id": "risk.remote-database-controls-unvalidated",
@@ -2086,21 +2153,21 @@
       "priority": "P2",
       "status": "RESOLVED",
       "confidence": "CONFIRMED",
-      "description": "A metadata autoritativa da Vercel liga o deployment Production READY dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g ao Git SHA 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27, exatamente o canonical functional source da Baseline.",
+      "description": "A metadata autoritativa da Vercel liga o deployment Production READY dpl_2bitbdQynYB6QdMiEkB1em65HsAy ao Git SHA c48405e41df3d1cd69eb3d383b7c6dd17257155e, exatamente o canonical functional source da Baseline 2.8.0.",
       "evidence": [
         {
           "path": "Vercel REST GET /v13/deployments",
-          "claim": "HTTP 200 for dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g; meta.githubCommitSha is 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27.",
+          "claim": "HTTP 200 for dpl_2bitbdQynYB6QdMiEkB1em65HsAy; meta.githubCommitSha is c48405e41df3d1cd69eb3d383b7c6dd17257155e.",
           "evidence_state": "CURRENT"
         },
         {
           "path": "Vercel REST deployment metadata",
-          "claim": "meta.githubCommitRef=production and meta.githubCommitOrg/githubCommitRepo=FelipeFraul/rota5.",
+          "claim": "meta.githubCommitRef=production and meta.githubCommitOrg/githubCommitRepo=FelipeFraul/rota5; source=cli.",
           "evidence_state": "CURRENT"
         },
         {
           "path": "system-knowledge/baseline-manifest.json",
-          "claim": "Canonical functional source is 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27; documentary HEAD is deliberately not embedded.",
+          "claim": "Canonical functional source is c48405e41df3d1cd69eb3d383b7c6dd17257155e; documentary HEAD is deliberately not embedded.",
           "evidence_state": "CURRENT"
         }
       ],
@@ -2135,7 +2202,7 @@
       "resolution": {
         "resolved_at": "2026-09-15T21:15:39.403Z",
         "root_cause": "The deployment metadata available to the prior CLI inspection did not expose a source SHA sufficient to reconcile the served artifact.",
-        "current_resolution": "Vercel REST v13 returns authoritative metadata for dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g: target=production, readyState=READY, source=cli, meta.githubCommitSha=1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27, meta.githubCommitRef=production and repository=FelipeFraul/rota5. Filtered read-only deployment listing by githubCommitSha returned the same READY Production deployment.",
+        "current_resolution": "Vercel REST v13 returns authoritative metadata for dpl_2bitbdQynYB6QdMiEkB1em65HsAy: target=production, readyState=READY, source=cli, meta.githubCommitSha=c48405e41df3d1cd69eb3d383b7c6dd17257155e, meta.githubCommitRef=production and repository=FelipeFraul/rota5. Filtered read-only deployment listing by githubCommitSha returned the same READY Production deployment.",
         "source_evidence_type": "AUTHORITATIVE_PLATFORM_METADATA",
         "canonical_source_parity": "MATCH",
         "documentary_head_policy": "Documentary commits after the canonical functional source are intentionally excluded from runtime parity because Git auto-deploy is disabled and the frozen baseline does not embed a volatile branch tip.",
@@ -2156,7 +2223,10 @@
           "workaround": "Health e identidades de deployment foram observados separadamente.",
           "direction": "Registrar SHA de origem nos deployments e reconciliar com a baseline.",
           "priority_justification": "P2 por limitar a confiança operacional sem provar divergência funcional."
-        }
+        },
+        "previous_current_evidence": [
+          "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g -> 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27 (Baseline 2.7.x authoritative Production proof)"
+        ]
       }
     },
     {
@@ -2406,7 +2476,7 @@
       "evidence": [
         {
           "path": "system-knowledge/tests.json",
-          "claim": "The current canonical default suite passes 280/280 with zero failures, skips, todos or regressions.",
+          "claim": "The current canonical default suite passes 285/285 with zero failures, skips, todos or regressions.",
           "evidence_state": "CURRENT"
         },
         {
@@ -2530,7 +2600,7 @@
         "current_evidence": [
           {
             "path": "system-knowledge/tests.json",
-            "claim": "The current canonical default suite passes 280/280 with zero failures, skips, todos or regressions.",
+            "claim": "The current canonical default suite passes 285/285 with zero failures, skips, todos or regressions.",
             "evidence_state": "CURRENT"
           },
           {
@@ -2585,7 +2655,7 @@
         },
         {
           "path": ".github/workflows/quality-gate.yml",
-          "claim": "Quality Gate run 34998744062 passed npm ci, 280/280 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
+          "claim": "Quality Gate run 35049217326 passed npm ci, 285/285 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
           "evidence_state": "CURRENT"
         },
         {
@@ -2739,7 +2809,7 @@
           },
           {
             "path": ".github/workflows/quality-gate.yml",
-            "claim": "Quality Gate run 34998744062 passed npm ci, 280/280 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
+            "claim": "Quality Gate run 35049217326 passed npm ci, 285/285 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
             "evidence_state": "CURRENT"
           },
           {
@@ -2875,7 +2945,7 @@
         },
         {
           "path": "package.json",
-          "claim": "The current default suite uses the tracked loader and passes 280/280.",
+          "claim": "The current default suite uses the tracked loader and passes 285/285.",
           "evidence_state": "CURRENT"
         }
       ],
@@ -2948,7 +3018,7 @@
           },
           {
             "path": "package.json",
-            "claim": "The current default suite uses the tracked loader and passes 280/280.",
+            "claim": "The current default suite uses the tracked loader and passes 285/285.",
             "evidence_state": "CURRENT"
           }
         ],
@@ -4228,8 +4298,8 @@
     "current_evidence_marker": "evidence_state=CURRENT",
     "validator": ".tools/baseline/validate-baseline.mjs",
     "invariants": {
-      "RESOLVED_FINDINGS_TOTAL": 16,
-      "RESOLVED_CURRENT_STATE_COMPLETE": 16,
+      "RESOLVED_FINDINGS_TOTAL": 17,
+      "RESOLVED_CURRENT_STATE_COMPLETE": 17,
       "RESOLVED_WITHOUT_CURRENT_STATE": 0,
       "RESOLVED_WITH_ACTIVE_TOP_LEVEL_CLAIMS": 0,
       "RESOLVED_WITH_NONCURRENT_TOP_LEVEL_EVIDENCE": 0,
@@ -4298,5 +4368,13 @@
     "lifecycle_changes": 1,
     "resolved": "risk.published-commit-unvalidated",
     "source_evidence": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA"
+  },
+  "baseline_2_8_0": {
+    "finding": "risk.rate-limit-fails-open",
+    "before": "ACTIVE",
+    "after": "RESOLVED",
+    "original_root_cause": "APPLICATION_UNAVAILABLE_POLICY",
+    "release_blocking": false,
+    "historical_classification": "SECURITY/MEDIUM/P2/CONFIRMED"
   }
 }

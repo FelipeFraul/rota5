@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T21:39:26.713Z",
-  "count": 57,
+  "generatedAt": "2026-09-16T03:35:55.187Z",
+  "count": 59,
   "defaultSuite": {
     "command": "npm test",
-    "fileCount": 25,
-    "observedCases": 280,
-    "passed": 280,
+    "fileCount": 26,
+    "observedCases": 285,
+    "passed": 285,
     "failed": 0,
     "status": "PASS",
     "failingFiles": [],
-    "evidence": "Quality Gate run 34998744062 passed 280/280 on 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27.",
+    "evidence": "Quality Gate run 35049217326 passed 285/285 on c48405e41df3d1cd69eb3d383b7c6dd17257155e.",
     "previousSnapshot": {
       "date": "2026-09-11",
       "observedCases": 210,
@@ -18,8 +18,8 @@
       "failed": 6,
       "note": "Resultado histórico preservado; não representa o HEAD observado em 2026-09-12."
     },
-    "cases": 280,
-    "change": "COMBO_METADATA_SERIALIZATION_CONCURRENCY_REGRESSIONS_ADDED",
+    "cases": 285,
+    "change": "RATE_LIMIT_OUTAGE_POLICY_REGRESSIONS_ADDED",
     "runner": "scripts/test-support/typescript-alias-loader.mjs",
     "runner_reproducible_from_git": true,
     "known_failures": 0,
@@ -41,7 +41,7 @@
       "status": "FAIL"
     }
   },
-  "nonDefaultTestFileCount": 32,
+  "nonDefaultTestFileCount": 33,
   "auditScriptCount": 3,
   "auditToolCount": 21,
   "records": [
@@ -1089,6 +1089,44 @@
         "postgres:16-alpine"
       ],
       "lastObservedResult": "PASS_POSTGRES16"
+    },
+    {
+      "id": "test-058",
+      "name": "test-rate-limit-outage.mjs",
+      "type": "behavioral-contract",
+      "path": "scripts/test-rate-limit-outage.mjs",
+      "purpose": "Tri-state rate-limit outage contract and per-boundary degradation policy",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "focused suite 5/5 PASS",
+        "default Node suite 285/285 PASS",
+        "Quality Gate 35049217326 PASS"
+      ],
+      "dependencies": [
+        "node",
+        "node:test",
+        "scripts/test-support/typescript-alias-loader.mjs"
+      ],
+      "lastObservedResult": "PASS_DEFAULT_SUITE",
+      "notes": "Behavioral and source-contract coverage with hermetic dependency failure; no Production outage was induced."
+    },
+    {
+      "id": "test-059",
+      "name": "rate-limit-contract.ts",
+      "type": "type-contract",
+      "path": "scripts/type-tests/rate-limit-contract.ts",
+      "purpose": "Compile-time exhaustiveness for allowed | rate_limited | unavailable",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "typecheck PASS",
+        "Quality Gate 35049217326 PASS"
+      ],
+      "dependencies": [
+        "typescript",
+        "src/lib/security/rateLimitContract.ts"
+      ],
+      "lastObservedResult": "PASS_TYPECHECK",
+      "notes": "Compile-time contract only; it is not classified as a runtime behavioral test."
     }
   ],
   "stage3Validation": {
@@ -1426,7 +1464,7 @@
     "safeLocalExecution": true,
     "note": "stage3Validation permanece histórico e não foi reinterpretado."
   },
-  "stage": "2.7.4",
+  "stage": "2.8.0",
   "high_1_validation": {
     "focused_new_app": {
       "passed": 96,
@@ -1578,5 +1616,14 @@
       "validation_atomic_metadata"
     ],
     "versioned_ready_scan_bypass_removed": true
+  },
+  "baseline_2_8_0": {
+    "source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "default_node_suite": "285/285 PASS",
+    "postgres_integration": "4/4 PASS",
+    "focused_rate_limit": "5/5 PASS",
+    "quality_gate_run": 35049217326,
+    "behavioral_test": "scripts/test-rate-limit-outage.mjs",
+    "type_contract": "scripts/type-tests/rate-limit-contract.ts"
   }
 }

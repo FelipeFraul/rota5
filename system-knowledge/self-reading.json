@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T21:39:26.713Z",
-  "stage": "2.7.4",
+  "generatedAt": "2026-09-16T03:35:55.187Z",
+  "stage": "2.8.0",
   "id": "rota5-self-reading-v1",
   "baseline_id": "rota5-baseline-v1",
   "bootstrap_files": [
@@ -255,7 +255,7 @@
       "findings.json"
     ],
     "remote_database_not_validated": "HIGH #1 migration history, FINAL_DB constraints/functions/triggers and runtime behavior were validated. Other remote PostgreSQL internals, RLS, policies, grants and Supabase Auth configuration remain NOT_VALIDATED.",
-    "infrastructure_state": "Canonical functional source is 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27; existing deployment dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g is READY, no deployment or remote mutation occurred during the documentary freeze, and infrastructure health remains DEGRADED.",
+    "infrastructure_state": "Canonical functional source is c48405e41df3d1cd69eb3d383b7c6dd17257155e; existing deployment dpl_2bitbdQynYB6QdMiEkB1em65HsAy is READY, no deployment or remote mutation occurred during the documentary freeze, and infrastructure health remains DEGRADED.",
     "p0_findings": [],
     "add_capability": "Assign canonical ID, domain, type, description, modules, entrypoints, data/integrations, flow placement, tests and evidence; update capability and related flow/data/test catalogs, validate, then version the baseline.",
     "after_change": "Follow CHANGE-PROTOCOL.md and update every affected JSON plus its Markdown projection; regenerate fingerprint and baseline-integrity.json and run the validator.",
@@ -263,16 +263,16 @@
     "high_1": "RESOLVED: EXPAND and CONTRACT are APPLIED_AND_VALIDATED, gates A-I passed, authorization is strict-only and source attribution is non-null and immutable.",
     "legacy_brand": "RESOLVED for DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES on Preview dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW and Production dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo; this is not a repository-wide assertion about historical strings.",
     "test_runner": "RESOLVED on source 3e2bdc2979301301b3f1566a2ac75a477ee4c169: npm test uses scripts/test-support/typescript-alias-loader.mjs, and npm ci plus 207/214 was proven from canonical Git blobs without .tmp.",
-    "current_baseline": "2.7.2",
-    "functional_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-    "default_suite": "280/280_PASS",
+    "current_baseline": "2.8.0",
+    "functional_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "default_suite": "285/285_PASS",
     "next_active_high": "NONE",
     "product_health": "DEGRADED",
     "infrastructure_health": "DEGRADED",
-    "production": "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g READY on 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "production": "dpl_2bitbdQynYB6QdMiEkB1em65HsAy READY on c48405e41df3d1cd69eb3d383b7c6dd17257155e",
     "preview": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6",
-    "canonical_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-    "production_runtime_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27"
+    "canonical_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "production_runtime_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e"
   },
   "baseline_2_3_0": {
     "version": "2.3.0",

@@ -1,4 +1,10 @@
-> **Current Baseline 2.7.4 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`. Fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`; 391 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 57 test files and 47 findings. `risk.combo-metadata-read-modify-write-race` is RESOLVED; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is ACTIVE MEDIUM/P2 and non-release-blocking. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.8.0 (2026-09-16):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+
+## Baseline 2.8.0 — explicit rate-limit outage policy
+
+**Identity:** `rota5-baseline-v1`, version **2.8.0**, status **FROZEN**. Canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e` has 394 files and fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; baseline commit is `SELF_NOT_RECORDED`.
+
+The compatible functional change replaces implicit fail-open behavior with `allowed | rate_limited | unavailable`: 14 public boundaries fail closed with 503, 5 strong-auth boundaries may continue only after authentication, timeout is cancelable at 2000 ms, malformed responses become unavailable and unavailable never becomes 429. Quality Gate 35049217326 passed 285/285 Node and 4/4 PostgreSQL plus typecheck, lint and build. Production `dpl_2bitbdQynYB6QdMiEkB1em65HsAy` is READY and Vercel REST proves `meta.githubCommitSha=c48405e41df3d1cd69eb3d383b7c6dd17257155e`; canonical aliases and health HTTP 200 passed. `risk.rate-limit-fails-open` is RESOLVED. No migration or remote mutation occurred during this freeze.
 
 ## Baseline 2.7.2 — historical integrity correction
 
@@ -14,12 +20,12 @@ This `PATCH_DOCUMENTARY_CORRECTION` restores historical baseline attribution acc
 
 ## Baseline 2.7.0 — combo metadata serialization
 
-Canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27` is deployed as `dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g`. Migration `20260915000500_serialize_combo_metadata_transitions.sql` was already applied and validated before this documentary reconciliation. Current quality is 280/280 Node, 4/4 PostgreSQL, typecheck, lint without errors and build PASS in Quality Gate 34998744062. The metadata lost-update finding is RESOLVED; direct-notification concurrency is a separate ACTIVE MEDIUM/P2 residual. No remote mutation or deployment occurred during this freeze.
+Canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27` was deployed as `dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g`. Migration `20260915000500_serialize_combo_metadata_transitions.sql` was already applied and validated before that documentary reconciliation. Historical quality was 280/280 Node, 4/4 PostgreSQL, typecheck, lint without errors and build PASS in Quality Gate 34998744062. The metadata lost-update finding was RESOLVED; direct-notification concurrency remained a separate ACTIVE MEDIUM/P2 residual. No remote mutation or deployment occurred during that freeze.
 
 
 # Rota5 Baseline V1
 
-**Identity:** `rota5-baseline-v1`, version **2.7.4**, status **FROZEN**. Canonical functional source is `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`, with 391 files and fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`. The baseline commit is `SELF_NOT_RECORDED` to avoid self-reference.
+**Identity:** `rota5-baseline-v1`, version **2.8.0**, status **FROZEN**. Canonical functional source is `c48405e41df3d1cd69eb3d383b7c6dd17257155e`, with 394 files and fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`. The baseline commit is `SELF_NOT_RECORDED` to avoid self-reference.
 
 Rota5 is a Next.js application backed by Supabase/PostgreSQL. The canonical catalog contains 17 domains, 66 modules, 56 entrypoints, 140 capabilities, 34 flows, 169 steps and 74 state transitions. The data catalog contains 45 tables, 88 migrations, 63 SQL functions, 1 sequence, 36 triggers and 2,272 currently catalogued typed relations.
 
@@ -27,9 +33,9 @@ Rota5 is a Next.js application backed by Supabase/PostgreSQL. The canonical cata
 
 **DEGRADED.** Baseline integrity is PASS and the canonical release-blocker set is empty, while independent operational and validation-queue findings remain open.
 
-- Findings: 47; active P0: 0; active HIGH: 0; potential HIGH: 0; open HIGH: 0; resolved: 16; release blockers: 0.
+- Findings: 47; active P0: 0; active HIGH: 0; potential HIGH: 0; open HIGH: 0; resolved: 17; release blockers: 0.
 - Broken flows: 0; partial flows: 9.
-- Current quality: default Node 280/280 PASS; PostgreSQL 4/4 PASS; Quality Gate 34998744062 PASS; 0 skip, 0 todo and 0 regressions.
+- Current quality: default Node 285/285 PASS; PostgreSQL 4/4 PASS; Quality Gate 35049217326 PASS; 0 skip, 0 todo and 0 regressions.
 - Infrastructure health: **DEGRADED** because independent findings remain open. Git auto-deploy is DISABLED.
 
 ## HISTORICAL HIGH #1 FINAL STATE — BASELINE 2.0.0

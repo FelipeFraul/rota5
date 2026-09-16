@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T21:39:26.713Z",
-  "stage": "2.7.4",
-  "sourceCommit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-  "scope": "Current health projection by system, domain and infrastructure for Baseline 2.7.4, with resolved history separated from operational risk.",
+  "generatedAt": "2026-09-16T03:35:55.187Z",
+  "stage": "2.8.0",
+  "sourceCommit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+  "scope": "Current health projection by system, domain and infrastructure for Baseline 2.8.0, with resolved history separated from operational risk.",
   "method": "Health is derived from canonical finding scopes and taxonomy. BROKEN requires a current release blocker; DEGRADED requires current operational or validation-queue risk; resolved findings are historical only.",
   "vocabulary": [
     "HEALTHY",
@@ -16,23 +16,22 @@
   "system": {
     "id": "system.rota5",
     "health": "DEGRADED",
-    "reason": "27 operational findings and 4 validation-queue findings remain; release blockers are zero and HEALTHY is not justified.",
+    "reason": "26 operational findings and 4 validation-queue findings remain; release blockers are zero and HEALTHY is not justified.",
     "finding_counts_by_severity": {
       "INFO": 2,
       "LOW": 8,
-      "MEDIUM": 17
+      "MEDIUM": 16
     },
     "active_findings": {
       "P0": 0,
       "HIGH": 0,
       "CRITICAL": 0,
-      "RESOLVED": 16,
+      "RESOLVED": 17,
       "POTENTIAL_HIGH": 0,
       "OPEN_HIGH": 0
     },
     "current_findings": [
       "risk.github-issue-create-replay",
-      "risk.rate-limit-fails-open",
       "risk.local-runtime-env-incomplete",
       "debt.seat-map-storage-contract-drift",
       "gap.critical-flow-correlation",
@@ -69,6 +68,7 @@
       "risk.admin-event-multistep-partial-state",
       "bug.admin-event-location-consistency",
       "risk.combo-metadata-read-modify-write-race",
+      "risk.rate-limit-fails-open",
       "risk.vercel-project-identity-drift",
       "risk.latest-rota5-deployment-error",
       "risk.published-commit-unvalidated",
@@ -84,7 +84,7 @@
       "orphan.seat-map-renders-table"
     ],
     "release_blockers": [],
-    "current_findings_count": 27,
+    "current_findings_count": 26,
     "current_aggregation_invariants": {
       "FINDINGS_TOTAL_MATCH": "SIM",
       "BY_SEVERITY_SUM_MATCH": "SIM",
@@ -96,7 +96,6 @@
       "id": "domain.platform-runtime",
       "health": "DEGRADED",
       "current_findings": [
-        "risk.rate-limit-fails-open",
         "risk.local-runtime-env-incomplete",
         "debt.seat-map-storage-contract-drift",
         "gap.real-integration-tests-outside-default",
@@ -107,6 +106,7 @@
       ],
       "historical_resolved_findings": [
         "legacy.active-brand-contamination",
+        "risk.rate-limit-fails-open",
         "risk.vercel-project-identity-drift",
         "risk.latest-rota5-deployment-error",
         "risk.published-commit-unvalidated",
@@ -117,7 +117,7 @@
         "risk.remote-database-controls-unvalidated"
       ],
       "release_blocking_causes": [],
-      "reason": "8 current operational finding(s) and 1 validation-queue finding(s); resolved findings are historical only."
+      "reason": "7 current operational finding(s) and 1 validation-queue finding(s); resolved findings are historical only."
     },
     {
       "id": "domain.brand-presentation",
@@ -1720,6 +1720,7 @@
     "risk.admin-event-multistep-partial-state",
     "bug.admin-event-location-consistency",
     "risk.combo-metadata-read-modify-write-race",
+    "risk.rate-limit-fails-open",
     "risk.vercel-project-identity-drift",
     "risk.latest-rota5-deployment-error",
     "risk.published-commit-unvalidated",
@@ -1939,10 +1940,10 @@
     }
   },
   "quality_gate": {
-    "run": 34998744062,
-    "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "run": 35049217326,
+    "source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
     "status": "PASS",
-    "node": "280/280 PASS",
+    "node": "285/285 PASS",
     "postgresql": "4/4 PASS"
   },
   "release_blocker_reconciliation": {
@@ -2020,5 +2021,12 @@
     "resolved": "risk.published-commit-unvalidated",
     "validation_queue_findings": 4,
     "release_blockers": 0
+  },
+  "baseline_2_8_0": {
+    "product_health": "DEGRADED",
+    "infrastructure_health": "DEGRADED",
+    "resolved_finding": "risk.rate-limit-fails-open",
+    "operational_findings": 26,
+    "validation_queue_findings": 4
   }
 }

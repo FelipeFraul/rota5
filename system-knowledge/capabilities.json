@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T21:39:26.713Z",
-  "stage": "2.7.4",
+  "generatedAt": "2026-09-16T03:35:55.187Z",
+  "stage": "2.8.0",
   "id": "capability-catalog.v1",
   "canonical": true,
   "status": "PASS",
   "confidence": "MEDIA",
-  "sourceCommit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+  "sourceCommit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
   "sourceScope": "Working tree local, incluindo alteração preexistente em src/lib/tickets/messages.ts; não equivale ao commit puro nem ao deploy.",
   "count": 140,
   "methodology": {
@@ -98,10 +98,17 @@
         "consume_rate_limit"
       ],
       "tests": [
-        "audit.rate-limit"
+        "audit.rate-limit",
+        "test-058"
       ],
-      "description": "Aplicar janela de requisições e responder 429 quando excedida.",
+      "description": "Apply rate limits with explicit allowed, rate_limited and unavailable outcomes; unavailable is handled by boundary policy and never becomes a false 429.",
       "evidence": [
+        {
+          "kind": "contract",
+          "path": "src/lib/security/rateLimitContract.ts",
+          "symbol": "applyRateLimitPolicy",
+          "claim": "Define fail_closed_503 and fail_open_after_strong_auth semantics."
+        },
         {
           "kind": "implementation",
           "path": "src/lib/security/rateLimit.ts",
@@ -199,7 +206,7 @@
       "status": "CONFIRMADA",
       "implementation_status": "CONFIRMADA",
       "failing_tests": [],
-      "test_status": "UNKNOWN",
+      "test_status": "COVERED",
       "brand_scope": "COMMON",
       "brand_evidence": "Sem discriminação de marca na lógica catalogada; COMMON não afirma multi-tenancy.",
       "integrations": [
@@ -208,7 +215,7 @@
       ],
       "database_triggers": [],
       "notes": [
-        "Dois caminhos técnicos: service via RPC e proxy via REST; mesma capacidade de limitar requisições."
+        "Nineteen audited boundaries: 14 fail_closed_503 and 5 fail_open_after_strong_auth after authentication; caller mismatches 0."
       ],
       "entrypoint_status": "STRUCTURALLY_REACHABLE",
       "execution_chain": {

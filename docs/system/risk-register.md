@@ -1,4 +1,4 @@
-> **Current Baseline 2.7.4 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`. Fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`; 391 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 57 test files and 47 findings. `risk.combo-metadata-read-modify-write-race` is RESOLVED; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is ACTIVE MEDIUM/P2 and non-release-blocking. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.8.0 (2026-09-16):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
 
 ## Baseline 2.6.0 paid-delivery risk reconciliation
 
@@ -38,7 +38,7 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 | risk.combo-metadata-read-modify-write-race | CONCURRENCY | MEDIUM | P2 | RESOLVED | HIGH | Transições concorrentes de metadata são serializadas no PostgreSQL |
 | risk.combo-direct-notification-concurrency-can-duplicate-or-stale | CONCURRENCY | MEDIUM | P2 | ACTIVE | CONFIRMED | Notificações diretas podem duplicar ou ficar stale sob concorrência |
 | risk.github-issue-create-replay | IDEMPOTENCY | MEDIUM | P2 | POTENTIAL | HIGH | Criação de issue não possui chave de idempotência |
-| risk.rate-limit-fails-open | SECURITY | MEDIUM | P2 | ACTIVE | CONFIRMED | Falha do rate limiter libera a requisição |
+| risk.rate-limit-fails-open | SECURITY | MEDIUM | P2 | RESOLVED | CONFIRMED | RESOLVED — indisponibilidade possui estado e política explícitos |
 | risk.remote-database-controls-unvalidated | UNKNOWN | MEDIUM | P2 | NOT_VALIDATED | CONFIRMED | Controles remotos de banco além do schema visível não foram validados |
 | risk.remote-webhook-registration-unvalidated | INTEGRATION | MEDIUM | P2 | NOT_VALIDATED | HIGH | Registro remoto dos dois webhooks não foi confirmado |
 | risk.vercel-project-identity-drift | CONFIGURATION_DRIFT | HIGH | P0 | RESOLVED | CONFIRMED | Identidade Git/Vercel do Rota5 separada da Ticketeira |
@@ -49,7 +49,7 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 | gap.critical-flow-correlation | OBSERVABILITY | MEDIUM | P2 | ACTIVE | CONFIRMED | Fluxos críticos não têm correlação ponta a ponta |
 | debt.router-responsibility-concentration | ARCHITECTURE | MEDIUM | P2 | ACTIVE | CONFIRMED | Roteador conversacional concentra coordenação de muitos domínios |
 | debt.zapi-webhook-responsibility-coupling | COUPLING | MEDIUM | P2 | ACTIVE | CONFIRMED | Handler Z-API acopla transporte, deduplicação, automação e entrega |
-| gap.default-test-suite-failing | TEST_GAP | HIGH | P1 | RESOLVED | CONFIRMED | RESOLVED — current default suite passes 280/280 |
+| gap.default-test-suite-failing | TEST_GAP | HIGH | P1 | RESOLVED | CONFIRMED | RESOLVED — current default suite passes 285/285 |
 | gap.critical-capability-and-flow-coverage | TEST_GAP | HIGH | P1 | RESOLVED | CONFIRMED | RESOLVED — 21/21 MUST and 2/2 high-risk flows covered |
 | gap.real-integration-tests-outside-default | TEST_GAP | MEDIUM | P2 | ACTIVE | CONFIRMED | Testes reais e de integração ficam fora da suíte padrão |
 | gap.source-contract-assertion-bias | TEST_GAP | MEDIUM | P2 | ACTIVE | CONFIRMED | Parte relevante dos testes valida texto-fonte e regex de implementação |
@@ -196,19 +196,14 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 - Direção: Persistir uma chave/vínculo antes ou durante a operação externa.
 - Justificativa da prioridade: P2 porque exige replay/timeout e o impacto externo é reversível, mas gera duplicação operacional.
 
-### risk.rate-limit-fails-open — Falha do rate limiter libera a requisição
+### risk.rate-limit-fails-open — RESOLVED: política explícita para indisponibilidade
 
-- Tipo / severidade / prioridade: **SECURITY / MEDIUM / P2**
-- Status / confiança: **ACTIVE / CONFIRMED**
-- Problema: consumeRateLimit registra warning e retorna allowed em exceção, deixando endpoints públicos sem proteção durante indisponibilidade do banco/RPC.
-- Evidência: `src/lib/security/rateLimit.ts`:127 — Catch explicitamente registra “failed open”.
-- Impacto: Ataques de volume ou abuso não são contidos justamente durante falha da dependência de rate limit.
-- Escopo: domains domain.platform-runtime; capabilities platform.limit_requests; flows —.
-- Blast radius: **SYSTEM_WIDE**
-- Workaround: Autenticação/assinatura e validações específicas continuam aplicáveis onde existem.
-- Direção: Definir política de degradação por criticidade de endpoint.
-- Justificativa da prioridade: P2 porque é uma escolha ativa de disponibilidade com condição específica, sem exploração observada.
-
+- Tipo / severidade / prioridade: **SECURITY / MEDIUM / P2**.
+- Status / confiança: **RESOLVED / CONFIRMED**; não operacional, não release-blocking e sem workaround.
+- Causa original: `APPLICATION_UNAVAILABLE_POLICY`.
+- Resolução: `allowed | rate_limited | unavailable`; 14 boundaries públicos em `fail_closed_503`, 5 boundaries pós-strong-auth em `fail_open_after_strong_auth`, timeout cancelável de 2000 ms, respostas malformadas em `unavailable`, zero caller mismatches e indisponibilidade nunca convertida em 429.
+- Evidência CURRENT: `scripts/test-rate-limit-outage.mjs` 5/5; Node 285/285; PostgreSQL 4/4; Quality Gate 35049217326 SUCCESS; reauditoria final PASS; Production `dpl_2bitbdQynYB6QdMiEkB1em65HsAy` serve `c48405e41df3d1cd69eb3d383b7c6dd17257155e` por metadata Vercel REST e health HTTP 200.
+- Histórico ACTIVE original preservado em `system-knowledge/findings.json`.
 ### risk.remote-database-controls-unvalidated — Controles remotos de banco além do schema visível não foram validados
 
 - Tipo / severidade / prioridade: **UNKNOWN / MEDIUM / P2**
@@ -261,7 +256,7 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 
 - Tipo / severidade / prioridade histórica: **OPERATIONAL / MEDIUM / P2**
 - Status / confiança: **RESOLVED / CONFIRMED**
-- Evidência atual: GET Vercel REST v13 para `dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g` retornou HTTP 200 com `meta.githubCommitSha=1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`, ref `production` e repo `FelipeFraul/rota5`.
+- Current evidence: GET Vercel REST v13 for `dpl_2bitbdQynYB6QdMiEkB1em65HsAy` returned HTTP 200 with `meta.githubCommitSha=c48405e41df3d1cd69eb3d383b7c6dd17257155e`, ref `production` and repo `FelipeFraul/rota5`.
 - Impacto atual: a identidade do artefato Production e a fonte funcional canônica coincidem.
 - Histórico preservado: a ausência de metadata no inspect CLI anterior mantinha a condição NOT_VALIDATED.
 - Direção: manter a prova de plataforma e reabrir somente em caso de divergência atual.

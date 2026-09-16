@@ -1,4 +1,4 @@
-> **Current Baseline 2.7.4 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`. Fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`; 391 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 57 test files and 47 findings. `risk.combo-metadata-read-modify-write-race` is RESOLVED; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is ACTIVE MEDIUM/P2 and non-release-blocking. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.8.0 (2026-09-16):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
 
 # Completeness scorecard — Etapa 7
 
@@ -11,7 +11,7 @@
 | DATA | MEDIUM_CONFIDENCE | 45 tabelas locais e remotas coincidem por nome no OpenAPI read-only; 88 migrations e definições finais locais foram recontadas. | Catálogo PostgreSQL remoto read-only. |
 | INTEGRATIONS | MEDIUM_CONFIDENCE | As 6 integrações e suas dependências foram reencontradas; superfícies seguras responderam. | Configuração e logs read-only dos provedores. |
 | INFRASTRUCTURE | MEDIUM_CONFIDENCE | Projetos, aliases, healthchecks, crons e drift site × rota5 foram revalidados. | Metadados e logs completos do deployment. |
-| TESTS | MEDIUM_CONFIDENCE | 57 records in the canonical test inventory; current default suite: 280/280 PASS, plus separate PostgreSQL integration 4/4 PASS. | Ambiente isolado para a suíte ampliada e testes reais. |
+| TESTS | MEDIUM_CONFIDENCE | 59 records in the canonical test inventory; current default suite: 285/285 PASS, plus separate PostgreSQL integration 4/4 PASS. | Ambiente isolado para a suíte ampliada e testes reais. |
 | RISKS | HIGH_CONFIDENCE | 47 findings foram contabilizados integralmente: P0 3, P1 11, P2 22, P3 9 e P4 2; as somas por type, severity, priority e status fecham em 47, sem record ausente. | Evidência remota dos itens NOT_VALIDATED. |
 | RUNTIME | MEDIUM_CONFIDENCE | 27 checks foram revisados; a distribuição canônica atual é 25 PASS, 2 PARTIAL e 0 FAIL. | Observação read-only adicional ou ambiente isolado. |
 

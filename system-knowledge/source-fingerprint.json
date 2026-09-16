@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T21:39:26.713Z",
-  "stage": "2.7.4",
-  "base_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+  "generatedAt": "2026-09-16T03:35:55.187Z",
+  "stage": "2.8.0",
+  "base_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
   "functional_changes_since_base": [],
   "baseline_commit": "SELF_NOT_RECORDED",
   "git_observation_at_generation": {
-    "observed_at": "2026-09-15T21:39:26.713Z",
+    "observed_at": "2026-09-16T03:35:55.187Z",
     "branch": "production",
-    "head": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "head": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
     "working_tree_clean": true,
     "validity_role": "INFORMATIONAL_ONLY",
     "note": "Canonical functional source reconstructed from the pure functional commit; documentary working-tree changes are excluded by policy."
@@ -16,10 +16,10 @@
   "package_lock_sha256": "a8b041c08ae27909dd319ba888c0e34494598b6889f10f92e28129ac5a55ee95",
   "migrations_aggregate_hash": "eeb575a2b1d709b91c28ad4a788646587dc8f1476a927610f926a83072e2526b",
   "migrations_count": 88,
-  "source_tree_fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee",
-  "source_tree_file_count": 391,
+  "source_tree_fingerprint": "ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91",
+  "source_tree_file_count": 394,
   "source_tree_strategy": "Run git ls-files -z; normalize paths to forward slashes; exclude docs/system/**, system-knowledge/**, .tools/baseline/** and any path segment beginning with .stage; sort remaining paths lexicographically; SHA-256 each tracked file in its canonical Git representation (index blob for staged/clean content, current working-tree bytes for an unstaged functional change); concatenate path + NUL + sha256 + LF; SHA-256 the UTF-8 concatenation. Reconstruct commits from their raw Git blob bytes with the same path and aggregation rules.",
-  "freeze_timestamp": "2026-09-15T21:39:26.713Z",
+  "freeze_timestamp": "2026-09-16T03:35:55.187Z",
   "secrets_included": false,
   "source_tree_strategy_version": 3,
   "source_tree_exclusions": [
@@ -31,9 +31,9 @@
   "source_tree_temporary_audit_rule": "Exclude any path containing a segment whose basename starts with .stage, regardless of tracked state.",
   "source_tree_scope": "Functional product source and configuration only. Baseline knowledge artifacts, baseline tooling and temporary audit files are permanently excluded whether tracked or untracked.",
   "source_tree_pair_format": "path + NUL + sha256 + LF",
-  "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-  "file_count": 391,
-  "fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee",
+  "source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+  "file_count": 394,
+  "fingerprint": "ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91",
   "generated_from_working_tree": false,
   "exclusions": [
     "docs/system/**",
@@ -84,6 +84,16 @@
     "functional_source_unchanged": true,
     "historical_attribution_restored": true,
     "current_timestamps_reconciled": true,
+    "baseline_commit": "SELF_NOT_RECORDED"
+  },
+  "baseline_2_8_0": {
+    "change_type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+    "previous_baseline": "2.7.4",
+    "previous_fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee",
+    "canonical_functional_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "source_file_count": 394,
+    "migration_count": 88,
+    "fingerprint": "ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91",
     "baseline_commit": "SELF_NOT_RECORDED"
   }
 }

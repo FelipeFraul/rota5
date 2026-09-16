@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-15T21:39:26.713Z",
-  "stage": "2.7.4",
+  "generatedAt": "2026-09-16T03:35:55.187Z",
+  "stage": "2.8.0",
   "count": 27,
   "ok": true,
   "records": [
@@ -190,7 +190,7 @@
       "method": "DOCUMENTARY_POLICY",
       "evidence_source": "CANONICAL_SOURCE_POLICY",
       "status": "PASS",
-      "result": "Canonical functional source is 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27; baseline commit is SELF_NOT_RECORDED; live branch tip is VOLATILE_NOT_EMBEDDED_IN_FROZEN_BASELINE.",
+      "result": "Canonical functional source is c48405e41df3d1cd69eb3d383b7c6dd17257155e; baseline commit is SELF_NOT_RECORDED; live branch tip is VOLATILE_NOT_EMBEDDED_IN_FROZEN_BASELINE.",
       "side_effect_free": true,
       "expected": "Represent canonical functional source without embedding a volatile live branch tip or a self-referential baseline commit.",
       "evidence": [
@@ -198,14 +198,14 @@
         "system-knowledge/baseline-manifest.json"
       ],
       "temporal_semantics": "CURRENT_CANONICAL_SEMANTICS",
-      "canonical_functional_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+      "canonical_functional_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
       "baseline_commit": "SELF_NOT_RECORDED",
       "live_branch_tip": "VOLATILE_NOT_EMBEDDED_IN_FROZEN_BASELINE",
       "historical_snapshot": {
         "classification": "HISTORICAL_SNAPSHOT",
-        "observed_at": "2026-09-14T22:14:45.242Z",
+        "observed_at": "2026-09-16T03:35:55.187Z",
         "branch": "production",
-        "head": "e931d66d03a620d5e26588c8f6c8714c62ef5d1d",
+        "head": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
         "role": "FUNCTIONAL_FREEZE_OBSERVATION_ONLY"
       }
     },
@@ -371,10 +371,16 @@
       "id": "runtime.paid-delivery-quality-gate",
       "kind": "QUALITY_GATE",
       "target": "Current canonical functional Quality Gate",
-      "evidence_source": "GitHub Actions run 34998744062",
+      "evidence_source": "GitHub Actions run 35049217326",
       "status": "PASS",
-      "result": "280/280 Node, 4/4 PostgreSQL 16, typecheck, lint without errors and build passed on 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27.",
-      "temporal_semantics": "CURRENT_CANONICAL_SEMANTICS"
+      "result": "285/285 Node, 4/4 PostgreSQL 16, typecheck, lint without errors and build passed on c48405e41df3d1cd69eb3d383b7c6dd17257155e.",
+      "temporal_semantics": "CURRENT_CANONICAL_SEMANTICS",
+      "evidence": [
+        "GitHub Actions run 35049217326",
+        "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+        "npm test 285/285",
+        "PostgreSQL 4/4"
+      ]
     },
     {
       "id": "runtime.baseline-2-7-combo-metadata-remote",
@@ -393,21 +399,20 @@
       "observed_at": "2026-09-15T14:06:19-03:00"
     },
     {
-      "id": "runtime.baseline-2-7-functional-production",
-      "target": "Vercel Production functional source",
+      "id": "runtime.baseline-2-8-functional-production",
+      "target": "Vercel Production Baseline 2.8.0 functional source",
       "method": "VERCEL_REST_V13_DEPLOYMENT_METADATA",
       "evidence_source": "AUTHORITATIVE_PLATFORM_METADATA",
       "status": "PASS",
-      "result": "GET /v13/deployments/dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g returned HTTP 200: target=production, readyState=READY, source=cli, meta.githubCommitSha=1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27, meta.githubCommitRef=production and repository=FelipeFraul/rota5. Filtered githubCommitSha listing returned the same deployment; health remains supplementary only.",
+      "result": "GET /v13/deployments/dpl_2bitbdQynYB6QdMiEkB1em65HsAy returned HTTP 200: target=production, readyState=READY, source=cli, meta.githubCommitSha=c48405e41df3d1cd69eb3d383b7c6dd17257155e, meta.githubCommitRef=production and repository=FelipeFraul/rota5. Filtered githubCommitSha listing returned the same deployment; both canonical aliases resolve to it; /api/health returned HTTP 200.",
       "side_effect_free": true,
       "expected": "Record the existing functional deployment without deploying baseline documentation.",
       "evidence": [
-        "GET /v13/deployments/dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g",
-        "HTTP 200",
-        "meta.githubCommitSha=1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-        "meta.githubCommitRef=production",
-        "meta.githubCommitOrg/githubCommitRepo=FelipeFraul/rota5",
-        "filtered githubCommitSha=1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27 -> dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g"
+        "dpl_2bitbdQynYB6QdMiEkB1em65HsAy",
+        "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+        "Vercel REST v13 deployment metadata",
+        "vercel ls -m githubCommitSha",
+        "GET /api/health HTTP 200"
       ],
       "temporal_semantics": "CURRENT_CANONICAL_SEMANTICS",
       "observed_at": "2026-09-15T21:15:39.403Z"
@@ -420,7 +425,7 @@
     "current_head_deployed": true,
     "deployment_performed": true,
     "deployment_performed_during_baseline_update": false,
-    "canonical_functional_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "canonical_functional_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
     "source_evidence": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA",
     "documentary_head_policy": "VOLATILE_NOT_EMBEDDED"
   },
@@ -610,17 +615,25 @@
     "ticketeira": "UNTOUCHED"
   },
   "current_production": {
-    "deployment": "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g",
-    "application_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-    "repository_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "deployment": "dpl_2bitbdQynYB6QdMiEkB1em65HsAy",
+    "application_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "repository_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
     "status": "READY",
+    "target": "production",
+    "deployment_source": "cli",
+    "github_commit_ref": "production",
+    "repository": "FelipeFraul/rota5",
+    "project": "rota5",
+    "project_id": "prj_dl7tt8fZbw88ZQV0GhklY0akEwbf",
+    "team_id": "team_2QafwMMb84HsX2d2KIpD2bvO",
     "app_runtime_diff_after_deploy": "NAO",
     "deployment_sha_difference": "NONE_AT_FUNCTIONAL_FREEZE",
     "git_auto_deploy": "DISABLED",
     "new_deployment_in_freeze": false,
     "source_evidence": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA",
     "canonical_source_parity": "MATCH",
-    "documentary_head_policy": "VOLATILE_NOT_EMBEDDED"
+    "documentary_head_policy": "VOLATILE_NOT_EMBEDDED",
+    "health": "HTTP_200_STATUS_OK_WHATSAPP_TICKETING"
   },
   "baseline_2_4_0": {
     "version": "2.4.0",
@@ -756,6 +769,15 @@
     "deployment": "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g",
     "canonical_functional_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
     "deployment_changed": false,
+    "baseline_commit": "SELF_NOT_RECORDED"
+  },
+  "baseline_2_8_0": {
+    "change_type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+    "source_identity_proof": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA",
+    "deployment": "dpl_2bitbdQynYB6QdMiEkB1em65HsAy",
+    "canonical_functional_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "deployment_changed_before_freeze": true,
+    "deployment_changed_during_freeze": false,
     "baseline_commit": "SELF_NOT_RECORDED"
   }
 }

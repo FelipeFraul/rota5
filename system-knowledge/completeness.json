@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T21:39:26.713Z",
-  "stage": "2.7.4",
+  "generatedAt": "2026-09-16T03:35:55.187Z",
+  "stage": "2.8.0",
   "globalConfidence": "HIGH",
   "count": 10,
   "records": [
@@ -57,7 +57,7 @@
     {
       "area": "TESTS",
       "status": "MEDIUM_CONFIDENCE",
-      "justification": "57 test artifacts are catalogued; the current default suite passes 280/280 and PostgreSQL integration passes 4/4.",
+      "justification": "59 test artifacts are catalogued; the current default suite passes 285/285 and PostgreSQL integration passes 4/4.",
       "missingEvidence": "36 arquivos de teste ficam fora do comando padrão; testes reais mutáveis exigem ambiente isolado.",
       "higherConfidenceRequires": "Ambiente isolado para a suíte ampliada e testes reais."
     },

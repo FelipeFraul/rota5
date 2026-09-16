@@ -1,6 +1,10 @@
-> **Current Baseline 2.7.4 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`. Fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`; 391 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 57 test files and 47 findings. `risk.combo-metadata-read-modify-write-race` is RESOLVED; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is ACTIVE MEDIUM/P2 and non-release-blocking. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.8.0 (2026-09-16):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
 
-## Baseline 2.7.0 runtime evidence
+## Baseline 2.8.0 runtime evidence
+
+Vercel project `rota5` (`prj_dl7tt8fZbw88ZQV0GhklY0akEwbf`, team `team_2QafwMMb84HsX2d2KIpD2bvO`) is linked to `FelipeFraul/rota5`; Git auto-deploy is disabled. Production `dpl_2bitbdQynYB6QdMiEkB1em65HsAy` is READY and authoritative metadata proves source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`; both canonical aliases resolve to it and `/api/health` returned HTTP 200.
+
+## Historical snapshot - Baseline 2.7.0 runtime evidence
 
 Existing Production deployment `dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g` serves exact functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27` and previously returned HTTP 200 at `/api/health`. Git auto-deploy remains disabled. This documentary reconciliation did not deploy or change Supabase.
 
@@ -17,7 +21,7 @@ A aplicação é Next.js 16.2.6. A cadeia operacional canônica é GitHub `Felip
 
 - **local:** `.env` e `.env.example`; configuração incompleta para o schema central de `getEnv()`.
 - **preview:** target e URLs de preview existem na Vercel; banco e modo de integrações dependem de env e seus valores não foram lidos.
-- **production:** variáveis e deployments existem no projeto Vercel `rota5`. O source funcional atual está publicado como `dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa` e o auto-deploy Git permanece desabilitado.
+- **production:** Vercel project `rota5` serves current functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e` through `dpl_2bitbdQynYB6QdMiEkB1em65HsAy`; Git auto-deploy remains disabled.
 
 ## Configuração funcional
 

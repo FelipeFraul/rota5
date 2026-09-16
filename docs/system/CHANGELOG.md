@@ -1,5 +1,13 @@
-> **Current Baseline 2.7.4 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`. Fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`; 391 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 57 test files and 47 findings. `risk.combo-metadata-read-modify-write-race` is RESOLVED; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is ACTIVE MEDIUM/P2 and non-release-blocking. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.8.0 (2026-09-16):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
 
+## Baseline 2.8.0 — MINOR_COMPATIBLE_FUNCTIONAL_CHANGE
+
+- Hardened rate-limit outage handling with explicit `allowed | rate_limited | unavailable`.
+- 14 public boundaries fail closed with 503; 5 strong-auth boundaries degrade explicitly after authentication.
+- Cancelable 2s timeout; malformed responses no longer become false 429.
+- Source `c48405e41df3d1cd69eb3d383b7c6dd17257155e` passed Quality Gate 35049217326: 285/285 Node, 4/4 PostgreSQL, typecheck, lint and build.
+- Production `dpl_2bitbdQynYB6QdMiEkB1em65HsAy` serves the exact source by authoritative Vercel metadata; health is HTTP 200.
+- `risk.rate-limit-fails-open` is RESOLVED; no database migration.
 
 ## Baseline 2.7.4 — resolved-finding and health projection reconciliation
 

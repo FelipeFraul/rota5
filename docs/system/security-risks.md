@@ -1,4 +1,8 @@
-> **Current Baseline 2.7.4 (2026-09-15):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27`. Fingerprint `9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee`; 391 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 57 test files and 47 findings. `risk.combo-metadata-read-modify-write-race` is RESOLVED; `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is ACTIVE MEDIUM/P2 and non-release-blocking. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.8.0 (2026-09-16):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+
+## Baseline 2.8.0 rate-limit resolution
+
+`risk.rate-limit-fails-open` is **RESOLVED / SECURITY / MEDIUM / P2 / CONFIRMED**. The original root cause was `APPLICATION_UNAVAILABLE_POLICY`: outage now has an explicit `unavailable` state and boundary policy, rather than silent authorization or false 429.
 
 # Riscos de segurança e autorização
 
@@ -8,19 +12,13 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 
 - Current Baseline 2.0.1 status: **RESOLVED / HIGH / P1**. EXPAND and CONTRACT are applied and validated; gates A-I, strict runtime, credential revocation, legacy rejection, source-null rejection and source immutability passed. Historical Stage 6 evidence is preserved in findings.json.
 
-### risk.rate-limit-fails-open — Falha do rate limiter libera a requisição
+### risk.rate-limit-fails-open — RESOLVED
 
-- Tipo / severidade / prioridade: **SECURITY / MEDIUM / P2**
-- Status / confiança: **ACTIVE / CONFIRMED**
-- Problema: consumeRateLimit registra warning e retorna allowed em exceção, deixando endpoints públicos sem proteção durante indisponibilidade do banco/RPC.
-- Evidência: `src/lib/security/rateLimit.ts`:127 — Catch explicitamente registra “failed open”.
-- Impacto: Ataques de volume ou abuso não são contidos justamente durante falha da dependência de rate limit.
-- Escopo: domains domain.platform-runtime; capabilities platform.limit_requests; flows —.
-- Blast radius: **SYSTEM_WIDE**
-- Workaround: Autenticação/assinatura e validações específicas continuam aplicáveis onde existem.
-- Direção: Definir política de degradação por criticidade de endpoint.
-- Justificativa da prioridade: P2 porque é uma escolha ativa de disponibilidade com condição específica, sem exploração observada.
-
+- Tipo / severidade / prioridade: **SECURITY / MEDIUM / P2**.
+- Status / confiança: **RESOLVED / CONFIRMED**.
+- Contrato CURRENT: `allowed | rate_limited | unavailable`; 14 fail-closed 503, 5 explicit post-auth degradation boundaries, timeout cancelável de 2s, malformed → unavailable e unavailable nunca → 429.
+- Prova: focused 5/5, Node 285/285, PostgreSQL 4/4, Quality Gate 35049217326, reauditoria PASS e Production exato `dpl_2bitbdQynYB6QdMiEkB1em65HsAy` → `c48405e41df3d1cd69eb3d383b7c6dd17257155e`.
+- A classificação e a descrição ACTIVE originais permanecem no histórico machine-readable.
 ### risk.remote-database-controls-unvalidated — Controles remotos de banco além do schema visível não foram validados
 
 - Tipo / severidade / prioridade: **UNKNOWN / MEDIUM / P2**

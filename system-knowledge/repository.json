@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T21:39:26.713Z",
+  "generatedAt": "2026-09-16T03:35:55.187Z",
   "baseline": {
     "stage": "1/8",
     "name": "Reconhecimento total do sistema",
@@ -182,16 +182,16 @@
       "purpose": "Proteger contratos de fonte/SQL, módulos isolados, renderização e alguns fluxos reais.",
       "status": "PARCIALMENTE CONFIRMADO",
       "evidence": [
-        "53 test files",
-        "package.json executes 23",
-        "current npm test: 280/280 PASS",
-        "Quality Gate 34998744062: npm ci and all functional gates PASS"
+        "59 catalogued test artifacts",
+        "package.json executes 26 default Node test files",
+        "current npm test: 285/285 PASS",
+        "Quality Gate 35049217326: npm ci and all functional gates PASS"
       ],
       "dependencies": [
         "node:test",
         "scripts/test-support/typescript-alias-loader.mjs"
       ],
-      "notes": "Current default suite passes 280/280 with zero failures, skips, todos or regressions; PostgreSQL integration remains a separate 4/4 suite. The default runner is reproducible from tracked Git content."
+      "notes": "Current default suite passes 285/285 with zero failures, skips, todos or regressions; PostgreSQL integration remains a separate 4/4 suite. The new type-contract is compile-time evidence, not a runtime behavioral test."
     },
     {
       "id": "repo-audit-tools",
@@ -435,7 +435,7 @@
       "failed": 7
     }
   },
-  "stage": "2.7.4",
+  "stage": "2.8.0",
   "test_runner_reproducibility": {
     "finding": "gap.test-runner-depends-on-untracked-loader",
     "status": "RESOLVED",
@@ -471,13 +471,13 @@
     "ticketeira": "UNTOUCHED"
   },
   "current_test_gate": {
-    "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-    "default_node_suite": "280/280 PASS",
+    "source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "default_node_suite": "285/285 PASS",
     "postgres_integration": "4/4 PASS",
     "typecheck": "PASS",
-    "lint": "PASS_WITH_23_EXISTING_WARNINGS_NO_ERRORS",
+    "lint": "PASS_WITHOUT_ERRORS",
     "build": "PASS",
-    "quality_gate_run": 34998744062,
+    "quality_gate_run": 35049217326,
     "status": "PASS"
   },
   "baseline_2_4_0": {
@@ -569,5 +569,20 @@
     "sequence_count": 1,
     "test_file_count": 57,
     "source_fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee"
+  },
+  "baseline_2_8_0": {
+    "source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "source_fingerprint": "ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91",
+    "source_file_count": 394,
+    "migration_count": 88,
+    "table_count": 45,
+    "sql_function_count": 63,
+    "sequence_count": 1,
+    "test_file_count": 59,
+    "module_count": 66,
+    "dependency_count": 817,
+    "entrypoint_count": 56,
+    "capability_count": 140,
+    "flow_count": 34
   }
 }

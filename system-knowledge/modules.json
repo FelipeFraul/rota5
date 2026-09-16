@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T21:39:26.713Z",
+  "generatedAt": "2026-09-16T03:35:55.187Z",
   "count": 66,
   "records": [
     {
@@ -127,16 +127,19 @@
       "name": "Rate limit compartilhado",
       "type": "module",
       "domain": "domain.platform-runtime",
-      "path": "src/lib/security/rateLimit.ts",
-      "responsibility": "Calcular escopo, consumir limite por RPC e construir resposta 429.",
+      "path": "src/lib/security/rateLimit.ts; src/lib/security/rateLimitContract.ts",
+      "responsibility": "Expose allowed | rate_limited | unavailable, enforce a cancelable 2s timeout and apply explicit outage policy at each boundary.",
       "status": "CONFIRMADO",
       "exports": [
         "consumeRateLimit",
         "rateLimitResponse",
-        "hashRateLimitScope"
+        "hashRateLimitScope",
+        "RATE_LIMIT_UNAVAILABLE_TIMEOUT_MS",
+        "applyRateLimitPolicy",
+        "rateLimitUnavailableResponse"
       ],
       "calledBy": [
-        "16 arquivos de src"
+        "19 audited HTTP/proxy boundaries"
       ],
       "calls": [
         "platform.supabase-client",
@@ -151,13 +154,18 @@
         "grava/atualiza rate_limit_events via RPC"
       ],
       "tests": [
-        "test-function-search-path-hardening.mjs"
+        "test-function-search-path-hardening.mjs",
+        "test-rate-limit-outage.mjs",
+        "rate-limit-contract.ts"
       ],
       "evidence": [
         "src/lib/security/rateLimit.ts",
         "export consumeRateLimit",
         "export rateLimitResponse",
-        "export hashRateLimitScope"
+        "export hashRateLimitScope",
+        "src/lib/security/rateLimitContract.ts",
+        "scripts/test-rate-limit-outage.mjs",
+        "scripts/type-tests/rate-limit-contract.ts"
       ]
     },
     {
@@ -2804,7 +2812,7 @@
       ]
     }
   ],
-  "stage": "2.7.4",
+  "stage": "2.8.0",
   "baseline_2_6_0": {
     "paid_delivery": "DURABLE_AT_LEAST_ONCE",
     "new_source_files": [
@@ -2817,5 +2825,10 @@
     "changed_module": "combo.redemption",
     "functional_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
     "metadata_serialization": "DATABASE_RPC"
+  },
+  "baseline_2_8_0": {
+    "logical_module_count_unchanged": true,
+    "module": "platform.rate-limit",
+    "contract_file": "src/lib/security/rateLimitContract.ts"
   }
 }

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T21:39:26.713Z",
-  "stage": "2.7.4",
+  "generatedAt": "2026-09-16T03:35:55.187Z",
+  "stage": "2.8.0",
   "count": 10,
   "status": "EXPLICITLY_PRESERVED_WITH_RESOLVED_HISTORY",
   "records": [
@@ -64,12 +64,13 @@
       "category": "INFRASTRUCTURE",
       "question": "Commit/source SHA efetivamente publicado nos deployments observados",
       "status": "RESOLVED",
-      "currentEvidence": "Vercel REST GET /v13/deployments/dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g returned HTTP 200 with authoritative meta.githubCommitSha=1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27, meta.githubCommitRef=production and meta.githubCommitOrg/githubCommitRepo=FelipeFraul/rota5; filtered deployment lookup by githubCommitSha returned the same READY Production deployment.",
+      "currentEvidence": "Vercel REST GET /v13/deployments/dpl_2bitbdQynYB6QdMiEkB1em65HsAy returned HTTP 200 with authoritative meta.githubCommitSha=c48405e41df3d1cd69eb3d383b7c6dd17257155e, meta.githubCommitRef=production and meta.githubCommitOrg/githubCommitRepo=FelipeFraul/rota5; filtered deployment lookup by githubCommitSha returned the same READY Production deployment and both canonical aliases resolve to it.",
       "neededEvidence": "NONE_FOR_CURRENT_STATE",
-      "lastReviewedAt": "2026-09-15T21:15:39.403Z",
+      "lastReviewedAt": "2026-09-16T03:35:55.187Z",
       "historical_evidence": {
         "currentEvidence": "Production deployment dpl_4koAv277hsZ7Z1yCjT5TLPDVgBSa was proven to serve exact source commit c726902505fd69c2cfef2dec8013ffe0cf0adba3.",
-        "lastReviewedAt": "2026-09-13"
+        "lastReviewedAt": "2026-09-13",
+        "previous_resolved_proof": "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g -> 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27"
       }
     },
     {

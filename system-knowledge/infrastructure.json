@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-15T21:39:26.713Z",
-  "stage": "2.7.4",
-  "sourceCommit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+  "generatedAt": "2026-09-16T03:35:55.187Z",
+  "stage": "2.8.0",
+  "sourceCommit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
   "application": {
     "framework": "Next.js 16.2.6",
     "runtime": "Node.js 24.x no projeto Vercel",
@@ -45,7 +45,7 @@
       "domain": [
         "rota5-khaki.vercel.app"
       ],
-      "deployment": "Vercel rota5 Production dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g; READY; canonical functional source 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27 proven by Vercel REST v13 metadata; Git auto-deploy disabled."
+      "deployment": "Vercel rota5 Production dpl_2bitbdQynYB6QdMiEkB1em65HsAy; READY; canonical functional source c48405e41df3d1cd69eb3d383b7c6dd17257155e proven by Vercel REST v13 metadata; Git auto-deploy disabled."
     }
   ],
   "vercel": {
@@ -59,33 +59,45 @@
     },
     "linked_project_production": {
       "alias": "rota5-khaki.vercel.app",
-      "ready_deployment": "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g",
+      "ready_deployment": "dpl_2bitbdQynYB6QdMiEkB1em65HsAy",
       "latest_deployment_state": "READY",
       "evidence_source": "REMOTE_CONFIG",
-      "current_head": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+      "current_head": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
       "current_head_deployed": true,
       "new_deployment_during_separation": false,
-      "production_source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+      "production_source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
       "production_cutover_at": "2026-09-13T16:19:42.340Z",
-      "current_deployment_created_at": "2026-09-15T14:06:20-03:00",
+      "current_deployment_created_at": "2026-09-16T03:08:02.010Z",
       "branding_preview_deployment": "dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW",
       "test_remediation_preview_deployment": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6",
-      "production_runtime_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-      "canonical_functional_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+      "production_runtime_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+      "canonical_functional_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
       "source_evidence": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA",
       "canonical_source_parity": "MATCH",
       "git_auto_deploy": "DISABLED",
-      "documentary_head_policy": "VOLATILE_NOT_EMBEDDED"
+      "documentary_head_policy": "VOLATILE_NOT_EMBEDDED",
+      "aliases": [
+        "rota5-khaki.vercel.app",
+        "rota5-fraulproenca-gmailcoms-projects.vercel.app"
+      ],
+      "health": "HTTP_200_STATUS_OK_WHATSAPP_TICKETING",
+      "previous_production": {
+        "deployment": "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g",
+        "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+        "status": "READY",
+        "classification": "HISTORICAL"
+      }
     },
     "published_commit": {
       "status": "RESOLVED_EXACT_SOURCE_PROVEN",
       "evidence_type": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA",
-      "deployment": "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g",
-      "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+      "deployment": "dpl_2bitbdQynYB6QdMiEkB1em65HsAy",
+      "source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
       "source_ref": "production",
       "repository": "FelipeFraul/rota5",
       "canonical_source_parity": "MATCH",
-      "health_is_source_identity_proof": false
+      "health_is_source_identity_proof": false,
+      "previous_proof": "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g -> 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27"
     },
     "crons": 2,
     "environment_variable_names": 24,
@@ -95,7 +107,7 @@
       "classification": "TICKETEIRA_INFRASTRUCTURE_NOT_ROTA5_OPERATIONAL_INFRASTRUCTURE",
       "note": "Preserved only as historical evidence of the identity-drift root cause."
     },
-    "production_runtime_app_artifact": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "production_runtime_app_artifact": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
     "post_contract_runtime": "PASS",
     "relevant_log_errors": 0
   },
@@ -109,7 +121,7 @@
       "remote": "ticketeira-old",
       "classification": "TICKETEIRA_HISTORY_ONLY"
     },
-    "canonical_functional_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "canonical_functional_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
     "documentary_head_policy": "VOLATILE_NOT_EMBEDDED"
   },
   "configuration_files": [
@@ -227,10 +239,10 @@
     "finding": "risk.vercel-project-identity-drift",
     "current_head_deployed_to_production": true,
     "remote_changes_during_baseline_update": "NONE",
-    "repository_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-    "production_application_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "repository_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "production_application_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
     "app_runtime_diff_after_deploy": "NAO",
-    "canonical_functional_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "canonical_functional_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
     "documentary_head_policy": "VOLATILE_NOT_EMBEDDED",
     "source_evidence": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA"
   },
@@ -494,5 +506,16 @@
     "canonical_source_parity": "MATCH",
     "deployment_changed": false,
     "baseline_commit": "SELF_NOT_RECORDED"
+  },
+  "baseline_2_8_0": {
+    "project": "rota5",
+    "project_id": "prj_dl7tt8fZbw88ZQV0GhklY0akEwbf",
+    "team_id": "team_2QafwMMb84HsX2d2KIpD2bvO",
+    "git_repository": "FelipeFraul/rota5",
+    "git_auto_deploy": "DISABLED",
+    "production_deployment": "dpl_2bitbdQynYB6QdMiEkB1em65HsAy",
+    "production_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "source_parity": "MATCH",
+    "health": "HTTP_200"
   }
 }

@@ -1,45 +1,66 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T21:39:26.713Z",
-  "stage": "2.7.4",
+  "generatedAt": "2026-09-16T03:35:55.187Z",
+  "stage": "2.8.0",
   "baseline_id": "rota5-baseline-v1",
-  "version": "2.7.4",
+  "version": "2.8.0",
   "status": "FROZEN",
-  "frozen_at": "2026-09-15T21:39:26.713Z",
+  "frozen_at": "2026-09-16T03:35:55.187Z",
   "source_state": {
-    "base_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-    "source_tree_fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee",
-    "source_tree_file_count": 391,
+    "base_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "source_tree_fingerprint": "ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91",
+    "source_tree_file_count": 394,
     "functional_changes_since_base": [],
     "generated_from_working_tree": false,
     "baseline_commit": "SELF_NOT_RECORDED",
     "baseline_commit_policy": "The Git commit containing this baseline is intentionally not embedded in its own content to avoid self-reference.",
     "reconciled_functional_diff": {
-      "from": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
-      "to": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-      "functional_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+      "from": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+      "to": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+      "functional_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
       "documentary_commits_excluded": [
-        "aef470dd4ae728ce2e9a3d79085c7233f1f12caa",
-        "1434db880ea24a8a05f680e65570ba069b90325e",
-        "e5870d9864914b990274e3a99342d53c2810c710"
+        "03fdb0f4b53acaa65d8fbb301f793b7482f933e8",
+        "cd169a50af359b9811041e5eafd27300c1dee9e6",
+        "f63ea004f256eae937aefae0fdb9afae40998048",
+        "b6810d62d16df70cceabce302662e79f3dbf09a3",
+        "51af9f05cc8c808ca562e32b7f0f297902a7a73c"
       ],
       "changed_paths": [
-        "scripts/test-combo-critical-lifecycle.mjs",
-        "scripts/test-paid-combo-delivery-durable.mjs",
-        "scripts/test-paid-combo-delivery-postgres.mjs",
-        "scripts/test-ticket-delivery-distribution.mjs",
-        "src/lib/tickets/services/comboRedemptions.ts",
-        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
+        ".tools/audit_rate_limit.mjs",
+        "package.json",
+        "scripts/test-rate-limit-outage.mjs",
+        "scripts/test-support/typescript-alias-loader.mjs",
+        "scripts/type-tests/rate-limit-contract.ts",
+        "src/app/api/admin/login/verify/route.ts",
+        "src/app/api/checkout/mercado-pago/pay/route.ts",
+        "src/app/api/checkout/mercado-pago/route.ts",
+        "src/app/api/checkout/status/route.ts",
+        "src/app/api/combo-checkout/mercado-pago/pay/route.ts",
+        "src/app/api/combo-checkout/status/route.ts",
+        "src/app/api/cron/expire-reservations/route.ts",
+        "src/app/api/cron/process-whatsapp-batches/route.ts",
+        "src/app/api/gate/session/consult/route.ts",
+        "src/app/api/gate/session/scan/route.ts",
+        "src/app/api/gate/session/validate/route.ts",
+        "src/app/api/kitchen/session/prepare/route.ts",
+        "src/app/api/kitchen/session/scan/route.ts",
+        "src/app/api/kitchen/session/validate/route.ts",
+        "src/app/api/webhook/payment/mercado-pago/route.ts",
+        "src/app/api/webhook/zapi/route.ts",
+        "src/lib/http/responses.ts",
+        "src/lib/security/rateLimit.ts",
+        "src/lib/security/rateLimitContract.ts",
+        "src/proxy.ts"
       ]
     }
   },
   "git_observation_at_generation": {
-    "observed_at": "2026-09-15T21:39:26.713Z",
+    "observed_at": "2026-09-16T03:35:55.187Z",
     "branch": "production",
-    "head": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "head": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
     "working_tree_clean": true,
     "validity_role": "INFORMATIONAL_ONLY",
-    "note": "Canonical functional-source observation; documentary commit remains SELF_NOT_RECORDED and live post-push tip is not embedded."
+    "note": "Canonical functional-source observation at the pure functional commit; this documentary freeze remains SELF_NOT_RECORDED."
   },
   "baseline_integrity": {
     "status": "PASS",
@@ -53,7 +74,7 @@
     "active_p0": 0,
     "active_high": 0,
     "critical": 0,
-    "resolved": 16,
+    "resolved": 17,
     "potential_high": 0,
     "open_high": 0
   },
@@ -78,7 +99,7 @@
     "webhooks": 2,
     "crons": 2,
     "environment_variables": 43,
-    "tests": 57,
+    "tests": 59,
     "findings": 47
   },
   "artifact_counts": {
@@ -276,7 +297,8 @@
     "Baseline 2.4.1 is a PATCH_DOCUMENTARY_CORRECTION: two stale findings reconciled as RESOLVED and the still-confirmed heterogeneous E2E gap retained ACTIVE at P2 after per-flow assessment.",
     "No new specific finding or P1 blocker is supported by current evidence. ticket.purchase is COMPONENT_BEHAVIOR_COVERED but not TRUE_END_TO_END_COVERED; the missing unified trace remains P2 hardening.",
     "Baseline 2.6.0: MINOR_COMPATIBLE_FUNCTIONAL_CHANGE for atomic durable paid TICKET/COMBO delivery, versioned COMBO QR recovery and collision-safe redemption codes; external effects remain at-least-once.",
-    "Baseline 2.7.0: combo raw_metadata transitions are PostgreSQL-serialized; risk.combo-metadata-read-modify-write-race is RESOLVED and risk.combo-direct-notification-concurrency-can-duplicate-or-stale is a separate ACTIVE MEDIUM/P2 non-blocking residual."
+    "Baseline 2.7.0: combo raw_metadata transitions are PostgreSQL-serialized; risk.combo-metadata-read-modify-write-race is RESOLVED and risk.combo-direct-notification-concurrency-can-duplicate-or-stale is a separate ACTIVE MEDIUM/P2 non-blocking residual.",
+    "Baseline 2.8.0: explicit rate-limit outage policies resolve risk.rate-limit-fails-open; 14 public boundaries fail closed with 503 and 5 strong-auth boundaries degrade explicitly after authentication."
   ],
   "resolved_findings": [
     "bug.create-event-invalid-jsx",
@@ -288,8 +310,10 @@
     "risk.admin-event-multistep-partial-state",
     "bug.admin-event-location-consistency",
     "risk.combo-metadata-read-modify-write-race",
+    "risk.rate-limit-fails-open",
     "risk.vercel-project-identity-drift",
     "risk.latest-rota5-deployment-error",
+    "risk.published-commit-unvalidated",
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
     "gap.test-runner-depends-on-untracked-loader",
@@ -551,21 +575,22 @@
     ]
   },
   "current_runtime": {
-    "production_deployment": "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g",
-    "production_source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-    "repository_source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "production_deployment": "dpl_2bitbdQynYB6QdMiEkB1em65HsAy",
+    "production_source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "repository_source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
     "production_status": "READY",
     "current_head_deployed": true,
     "app_runtime_diff_after_deploy": "NAO",
     "source_difference": "NONE_AT_FUNCTIONAL_FREEZE",
     "relevant_log_errors": 0,
-    "supabase": "MIGRATION_20260915000500_ALREADY_APPLIED",
+    "supabase": "UNCHANGED_NO_MIGRATION",
     "ticketeira": "UNTOUCHED",
     "git_auto_deploy": "DISABLED",
     "new_deployment": false,
     "source_evidence": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA",
     "canonical_source_parity": "MATCH",
-    "documentary_head_policy": "VOLATILE_NOT_EMBEDDED"
+    "documentary_head_policy": "VOLATILE_NOT_EMBEDDED",
+    "health": "HTTP_200_STATUS_OK_WHATSAPP_TICKETING"
   },
   "critical_coverage_resolution": {
     "baseline": "2.4.0",
@@ -640,16 +665,16 @@
     "runtime_changed": false
   },
   "quality_gate": {
-    "version": "2.7.0",
+    "version": "2.8.0",
     "type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
-    "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-    "source_fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee",
-    "source_file_count": 391,
+    "source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "source_fingerprint": "ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91",
+    "source_file_count": 394,
     "migration_count": 88,
-    "default_node_suite": "280/280 PASS",
+    "default_node_suite": "285/285 PASS",
     "postgres_integration_suite": "4/4 PASS",
     "postgres_version": 16,
-    "quality_gate_run": 34998744062,
+    "quality_gate_run": 35049217326,
     "quality_gate": "PASS",
     "skip": 0,
     "todo": 0,
@@ -658,7 +683,9 @@
     "direct_notification_concurrency": "ACTIVE_P2_NON_BLOCKING",
     "product_health": "DEGRADED",
     "infrastructure_health": "DEGRADED",
-    "new_deployment": false
+    "new_deployment": true,
+    "rate_limit_outage_policy": "RESOLVED",
+    "deployment_during_freeze": false
   },
   "release_blocker_reconciliation": {
     "version": "2.4.1",
@@ -858,6 +885,22 @@
     "functional_source_changed": false,
     "database_changed": false,
     "deployment_changed": false,
+    "baseline_commit": "SELF_NOT_RECORDED"
+  },
+  "baseline_2_8_0": {
+    "change_type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+    "previous_baseline": "2.7.4",
+    "canonical_functional_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "source_fingerprint": "ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91",
+    "source_file_count": 394,
+    "test_file_count": 59,
+    "default_node_suite": "285/285 PASS",
+    "postgres_integration": "4/4 PASS",
+    "quality_gate_run": 35049217326,
+    "production_deployment": "dpl_2bitbdQynYB6QdMiEkB1em65HsAy",
+    "production_source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "finding_resolved": "risk.rate-limit-fails-open",
+    "database_migration": false,
     "baseline_commit": "SELF_NOT_RECORDED"
   }
 }

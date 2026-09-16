@@ -525,6 +525,71 @@ const currentProductionSources = [
   catalogs['runtime-validation']?.current_production?.repository_source
 ].filter(value => typeof value === 'string' && value);
 if (new Set(currentProductionSources).size > 1) add('CURRENT_INFRA_PRODUCTION_SOURCE_MISMATCH',[...new Set(currentProductionSources)].join(', '));
+const canonicalFunctionalSource = manifest?.source_state?.base_commit;
+for (const value of currentProductionSources) {
+  if (canonicalFunctionalSource && value !== canonicalFunctionalSource) add('CURRENT_PRODUCTION_CANONICAL_SOURCE_MISMATCH',`${value} != ${canonicalFunctionalSource}`);
+}
+const currentCanonicalSourceProjections = [
+  manifest?.quality_gate?.source_commit,
+  catalogs.health?.quality_gate?.source_commit,
+  catalogs.infrastructure?.github?.canonical_functional_source,
+  catalogs.infrastructure?.identity_reaudit?.repository_source,
+  catalogs.infrastructure?.identity_reaudit?.production_application_source,
+  catalogs.infrastructure?.identity_reaudit?.canonical_functional_source,
+  catalogs['runtime-validation']?.identity_reaudit?.canonical_functional_source,
+  catalogs['self-reading']?.bootstrap_answers?.functional_source,
+  catalogs['self-reading']?.bootstrap_answers?.canonical_source,
+  catalogs['self-reading']?.bootstrap_answers?.production_runtime_source,
+  catalogs['stabilization-history']?.final_state?.repository_source,
+  catalogs['stabilization-history']?.final_state?.production_application_source
+].filter(value => typeof value === 'string' && value);
+for (const value of currentCanonicalSourceProjections) {
+  if (canonicalFunctionalSource && value !== canonicalFunctionalSource) add('CURRENT_CANONICAL_SOURCE_PROJECTION_STALE',`${value} != ${canonicalFunctionalSource}`);
+}
+const canonicalDefaultSuiteCases = catalogs['baseline-v1']?.product_gate_status?.npm_test?.cases;
+const canonicalDefaultSuiteProjection = Number.isInteger(canonicalDefaultSuiteCases) ? `${canonicalDefaultSuiteCases}/${canonicalDefaultSuiteCases}` : null;
+for (const [owner,value] of [
+  ['baseline-manifest.quality_gate.default_node_suite',manifest?.quality_gate?.default_node_suite],
+  ['health.quality_gate.node',catalogs.health?.quality_gate?.node],
+  ['self-reading.bootstrap_answers.default_suite',catalogs['self-reading']?.bootstrap_answers?.default_suite],
+  ['stabilization-history.final_state.default_node_suite',catalogs['stabilization-history']?.final_state?.default_node_suite],
+  ['test-gaps.method',catalogs['test-gaps']?.method]
+]) {
+  if (typeof value === 'string' && canonicalDefaultSuiteProjection && !value.includes(canonicalDefaultSuiteProjection)) add('CURRENT_DEFAULT_SUITE_PROJECTION_STALE',`${owner}: ${value} != ${canonicalDefaultSuiteProjection}`);
+}
+const completenessTestJustification = catalogs.completeness?.records?.find?.(entry => entry.area === 'TESTS')?.justification;
+if (typeof completenessTestJustification === 'string') {
+  if (canonicalDefaultSuiteProjection && !completenessTestJustification.includes(canonicalDefaultSuiteProjection)) add('COMPLETENESS_TEST_SUITE_PROJECTION_STALE','completeness.dimensions.TESTS.justification');
+  if (!completenessTestJustification.includes(`${expected.tests} test artifacts`)) add('COMPLETENESS_TEST_COUNT_PROJECTION_STALE','completeness.dimensions.TESTS.justification');
+}
+const canonicalQualityGateProjection = manifest?.baseline_2_8_0?.quality_gate_run;
+for (const [owner,value] of [
+  ['baseline-manifest.quality_gate.quality_gate_run',manifest?.quality_gate?.quality_gate_run],
+  ['health.quality_gate.run',catalogs.health?.quality_gate?.run]
+]) {
+  if (Number.isInteger(canonicalQualityGateProjection) && value !== canonicalQualityGateProjection) add('CURRENT_QUALITY_GATE_PROJECTION_STALE',`${owner}: ${value} != ${canonicalQualityGateProjection}`);
+}
+const currentProductionDeployments = [
+  catalogs['baseline-manifest']?.current_runtime?.production_deployment,
+  catalogs['baseline-v1']?.current_runtime?.production_deployment,
+  catalogs['risk-summary']?.current_runtime?.production_deployment,
+  catalogs.infrastructure?.vercel?.linked_project_production?.ready_deployment,
+  catalogs.infrastructure?.vercel?.published_commit?.deployment,
+  catalogs['runtime-validation']?.current_production?.deployment
+].filter(value => typeof value === 'string' && value);
+if (new Set(currentProductionDeployments).size > 1) add('CURRENT_PRODUCTION_DEPLOYMENT_MISMATCH',[...new Set(currentProductionDeployments)].join(', '));
+const canonicalProductionDeployment = currentProductionDeployments[0];
+const currentPublishedFinding = findingsById.get('risk.published-commit-unvalidated');
+const publishedFindingEvidence = JSON.stringify(currentPublishedFinding?.evidence || []);
+if (currentPublishedFinding?.status === 'RESOLVED' && canonicalProductionDeployment && canonicalFunctionalSource &&
+    (!publishedFindingEvidence.includes(canonicalProductionDeployment) || !publishedFindingEvidence.includes(canonicalFunctionalSource))) {
+  add('CURRENT_PUBLISHED_SOURCE_EVIDENCE_STALE','risk.published-commit-unvalidated');
+}
+const publishedSourceEvidence = unresolvedById.get('unresolved.published-source-commit');
+if (publishedSourceEvidence?.status === 'RESOLVED' && canonicalProductionDeployment && canonicalFunctionalSource) {
+  const evidence = String(publishedSourceEvidence.currentEvidence || '');
+  if (!evidence.includes(canonicalProductionDeployment) || !evidence.includes(canonicalFunctionalSource)) add('CURRENT_UNRESOLVED_SOURCE_EVIDENCE_STALE','unresolved.published-source-commit');
+}
 const currentEvidenceStrings = [];
 const visitCurrentEvidence = (value, owner, insideCurrent = false) => {
   if (typeof value === 'string') {

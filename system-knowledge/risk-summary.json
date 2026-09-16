@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-15T21:39:26.713Z",
-  "stage": "2.7.4",
-  "sourceCommit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
-  "scope": "Current risk, coverage, validation and release-blocker projection for Baseline 2.7.4.",
+  "generatedAt": "2026-09-16T03:35:55.187Z",
+  "stage": "2.8.0",
+  "sourceCommit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+  "scope": "Current risk, coverage, validation and release-blocker projection for Baseline 2.8.0.",
   "method": "All current metrics are derived from canonical catalogs and finding_status_taxonomy; historical snapshots remain only in version-labelled fields.",
   "status": "PASS",
   "total": 47,
@@ -45,10 +45,10 @@
     "P4": 2
   },
   "by_status": {
-    "ACTIVE": 23,
+    "ACTIVE": 22,
     "NOT_VALIDATED": 4,
     "POTENTIAL": 4,
-    "RESOLVED": 16,
+    "RESOLVED": 17,
     "OPEN": 0,
     "MITIGATED": 0,
     "ACCEPTED": 0
@@ -302,6 +302,7 @@
     "risk.admin-event-multistep-partial-state",
     "bug.admin-event-location-consistency",
     "risk.combo-metadata-read-modify-write-race",
+    "risk.rate-limit-fails-open",
     "risk.vercel-project-identity-drift",
     "risk.latest-rota5-deployment-error",
     "risk.published-commit-unvalidated",
@@ -580,17 +581,22 @@
   },
   "next_active_high": null,
   "current_runtime": {
-    "production_deployment": "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g",
-    "production_source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "production_deployment": "dpl_2bitbdQynYB6QdMiEkB1em65HsAy",
+    "production_source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "repository_source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "production_status": "READY",
     "current_head_deployed": true,
-    "status": "READY",
-    "supabase": "MIGRATION_20260915000500_ALREADY_APPLIED_BEFORE_RECONCILIATION",
+    "app_runtime_diff_after_deploy": "NAO",
+    "source_difference": "NONE_AT_FUNCTIONAL_FREEZE",
+    "relevant_log_errors": 0,
+    "supabase": "UNCHANGED_NO_MIGRATION",
     "ticketeira": "UNTOUCHED",
     "git_auto_deploy": "DISABLED",
-    "repository_source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
+    "new_deployment": false,
     "source_evidence": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA",
     "canonical_source_parity": "MATCH",
-    "documentary_head_policy": "VOLATILE_NOT_EMBEDDED"
+    "documentary_head_policy": "VOLATILE_NOT_EMBEDDED",
+    "health": "HTTP_200_STATUS_OK_WHATSAPP_TICKETING"
   },
   "baseline_2_4_0": {
     "version": "2.4.0",
@@ -699,8 +705,8 @@
     "resolved_semantic_contract_required": true
   },
   "resolved_semantic_invariants": {
-    "RESOLVED_FINDINGS_TOTAL": 16,
-    "RESOLVED_CURRENT_STATE_COMPLETE": 16,
+    "RESOLVED_FINDINGS_TOTAL": 17,
+    "RESOLVED_CURRENT_STATE_COMPLETE": 17,
     "RESOLVED_WITHOUT_CURRENT_STATE": 0,
     "RESOLVED_WITH_ACTIVE_TOP_LEVEL_CLAIMS": 0,
     "RESOLVED_WITH_NONCURRENT_TOP_LEVEL_EVIDENCE": 0,
@@ -758,6 +764,14 @@
     "change_type": "PATCH_DOCUMENTARY_CORRECTION",
     "resolved": "risk.published-commit-unvalidated",
     "canonical_source_parity": "MATCH",
+    "release_blockers": 0
+  },
+  "baseline_2_8_0": {
+    "finding": "risk.rate-limit-fails-open",
+    "status": "RESOLVED",
+    "findings_total": 47,
+    "findings_resolved": 17,
+    "findings_active": 22,
     "release_blockers": 0
   }
 }
