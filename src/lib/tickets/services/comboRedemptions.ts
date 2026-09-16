@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createHash, randomBytes } from "crypto";
+import { createHash } from "crypto";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { validateGateSessionToken } from "@/lib/tickets/services/gateSessions";
 import {
@@ -285,22 +285,6 @@ async function getComboRedemptionTableMapPlaceCode(input: {
   return data?.place_code ?? null;
 }
 
-function buildComboDeliveryChoiceMessage(input: {
-  product: string;
-  placeLabel: string;
-}) {
-  return [
-    "*ENTREGA DE BEBIDA*",
-    "",
-    `*Produto:* ${input.product}`,
-    "",
-    `Digite *OK* para receber na sua ${input.placeLabel}`,
-    "Digite *1* para solicitar um garçom.",
-    "",
-    "Mantenha o QR Code vermelho aberto para apresentar na entrega.",
-  ].join("\n");
-}
-
 export async function validateKitchenSessionToken(
   token: string,
   deviceToken?: string | null,
@@ -566,62 +550,7 @@ export async function releaseComboOrdersForKitchenAfterGateEntry(input: {
   await Promise.all(
     (redemptions ?? []).map(async (redemption) => {
       const metadata = redemption.raw_metadata ?? {};
-      if (typeof metadata.kitchen_arrived_at === "string") {
-        return;
-      }
       const customer = firstJoin(redemption.customers);
-      const message = [
-        "*PEDIDO EM PREPARO*",
-        "",
-        `Pedido: ${redemption.redemption_code}`,
-        `Oferta: ${redemption.offer_name}`,
-        `Quantidade: ${redemption.quantity}`,
-        "",
-        "Seu pedido já está sendo preparado.",
-        "Em breve você receberá uma mensagem avisando quando estiver disponível para retirada.",
-      ].join("\n");
-      let notificationSent = false;
-
-      if (
-        canNotifyCustomer &&
-        typeof metadata.arrival_preparation_notified_at !== "string" &&
-        customer?.whatsapp_phone
-      ) {
-        const conversation = await getOrCreateOpenConversation({
-          customerId: customer.id,
-        });
-        if (conversation.ok) {
-          const sendResult = await sendZapiText({
-            phone: customer.whatsapp_phone,
-            message,
-          });
-          notificationSent = sendResult.ok;
-
-          await saveWhatsAppMessage({
-            conversationId: conversation.conversation.id,
-            customerId: customer.id,
-            direction: "outbound",
-            messageType: "text",
-            body: message,
-            providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
-            rawMetadata: buildWhatsAppOutboundMetadata({
-              sendResult,
-              messageType: "text",
-              reason: "offer_preparation_started_on_arrival",
-              businessContext: {
-                combo_order_id: redemption.combo_order_id,
-                combo_redemption_id: redemption.id,
-              },
-            }),
-          });
-          if (sendResult.ok) {
-            await updateConversationAfterMessage({
-              conversationId: conversation.conversation.id,
-            });
-          }
-        }
-      }
-
       const { data: transition, error: updateError } = await supabase.rpc(
         "record_combo_gate_arrival",
         {
@@ -630,7 +559,9 @@ export async function releaseComboOrdersForKitchenAfterGateEntry(input: {
           p_gate_session_id: input.gateSessionId,
           p_gate_label: input.gateLabel,
           p_validator_identifier: input.validatorIdentifier,
-          p_notification_sent: notificationSent,
+          p_notification_sent: canNotifyCustomer &&
+            typeof metadata.arrival_preparation_notified_at !== "string" &&
+            Boolean(customer?.whatsapp_phone),
         },
       );
 
@@ -860,12 +791,7 @@ export async function startKitchenOrderPreparation(input: {
 
   const order = redemption ? firstJoin(redemption.combo_orders) : null;
   const customer = redemption ? firstJoin(redemption.customers) : null;
-  const event = redemption ? firstJoin(redemption.events) : null;
   const eventSession = redemption ? firstJoin(redemption.event_sessions) : null;
-  const offer = order ? firstJoin(order.combo_offers) : null;
-  const itemLines = formatComboDescription(offer?.description ?? "")
-    .split("\n")
-    .filter(Boolean);
   const metadata = redemption?.raw_metadata ?? {};
   const kitchenStatus =
     redemption?.status === "used"
@@ -922,6 +848,7 @@ export async function startKitchenOrderPreparation(input: {
     return {
       ok: delivery.ok,
       notificationSent: delivery.ok && delivery.sent,
+      notificationQueued: delivery.ok && !delivery.sent,
       ...(!delivery.ok ? { reason: delivery.reason } : {}),
     };
   }
@@ -938,145 +865,20 @@ export async function startKitchenOrderPreparation(input: {
   }
 
   if (shouldNotifyReady && customer?.whatsapp_phone) {
-    const message = [
-      "*SEU PEDIDO ESTÁ PRONTO. APRESENTE O QRCODE ABAIXO NO BAR PARA RETIRADA*",
-      "",
-      `Pedido: ${redemption.redemption_code}`,
-      `Item: ${redemption.offer_name}`,
-      `Quantidade: ${redemption.quantity}`,
-      ...(itemLines.length
-        ? ["", "*ITENS DO PEDIDO*", ...itemLines.map((item) => `- ${item}`)]
-        : []),
-      ...(event?.title ? [`Evento: ${event.title}`] : []),
-    ].join("\n");
-    const conversation = await getOrCreateOpenConversation({
-      customerId: customer.id,
+    const token = createComboRedemptionToken(redemption.combo_order_id, 1);
+    const prepared = await supabase.rpc("prepare_legacy_combo_ready_delivery", {
+      p_redemption_id: redemption.id,
+      p_qr_token_hash: hashComboRedemptionToken(token),
     });
-    let textResult: Awaited<ReturnType<typeof sendZapiText>> = {
-      ok: false,
-      error: "conversation_not_available",
-    };
-    let qrResult: Awaited<ReturnType<typeof sendZapiImage>> = {
-      ok: false,
-      error: "qr_not_sent",
-    };
-    const newQrToken = randomBytes(32).toString("base64url");
-    const newQrTokenHash = hashSecret(newQrToken);
-
-    if (conversation.ok) {
-      textResult = await sendZapiText({
-        phone: customer.whatsapp_phone,
-        message,
-      });
-      await saveWhatsAppMessage({
-        conversationId: conversation.conversation.id,
-        customerId: customer.id,
-        direction: "outbound",
-        messageType: "text",
-        body: message,
-        providerMessageId: textResult.ok ? textResult.providerMessageId : null,
-        rawMetadata: buildWhatsAppOutboundMetadata({
-          sendResult: textResult,
-          messageType: "text",
-          reason: "combo_ready_at_bar",
-          businessContext: {
-            combo_order_id: redemption.combo_order_id,
-            combo_redemption_id: redemption.id,
-          },
-        }),
-      });
+    if (prepared.error) {
+      return { ok: false as const, reason: "update_failed" as const };
     }
-
-    if (textResult.ok) {
-      if (conversation.ok) {
-        await updateConversationAfterMessage({
-          conversationId: conversation.conversation.id,
-        });
-      }
-
-      const { error: rotateError } = await supabase
-        .from("combo_redemptions")
-        .update({
-          qr_token_hash: newQrTokenHash,
-        })
-        .eq("id", redemption.id)
-        .eq("status", "issued");
-
-      if (!rotateError) {
-        const tableMapPlaceCode = await getComboRedemptionTableMapPlaceCode({
-          sourceOrderId: order.source_order_id,
-          customerId: redemption.customer_id,
-          eventId: redemption.event_id,
-          sessionId: redemption.session_id,
-        });
-        const image = await generateComboQrImage({
-          qrPayload: `combo:${redemption.id}:${newQrToken}`,
-          comboName: redemption.offer_name,
-          comboItems: offer?.description ?? null,
-          eventTitle: event?.title ?? null,
-          startsAt: eventSession?.starts_at ?? null,
-          timezone: eventSession?.timezone ?? null,
-          buyerName: customer.name,
-          redemptionCode: redemption.redemption_code,
-          tableMapPlaceCode,
-        });
-        const caption = [
-          "*QRCODE DO COMBO*",
-          `Pedido: ${redemption.redemption_code}`,
-          "",
-          "Apresente este QR Code vermelho no bar para retirada.",
-        ].join("\n");
-        qrResult = await sendZapiImage({
-          phone: customer.whatsapp_phone,
-          image,
-          caption,
-        });
-
-        if (conversation.ok) {
-          await saveWhatsAppMessage({
-            conversationId: conversation.conversation.id,
-            customerId: customer.id,
-            direction: "outbound",
-            messageType: "image",
-            body: caption,
-            providerMessageId: qrResult.ok ? qrResult.providerMessageId : null,
-            rawMetadata: buildWhatsAppOutboundMetadata({
-              sendResult: qrResult,
-              messageType: "image",
-              reason: "combo_ready_qr",
-              businessContext: {
-                combo_order_id: redemption.combo_order_id,
-                combo_redemption_id: redemption.id,
-              },
-            }),
-          });
-          if (qrResult.ok) {
-            await updateConversationAfterMessage({
-              conversationId: conversation.conversation.id,
-            });
-          }
-        }
-
-        if (!qrResult.ok) {
-          await supabase
-            .from("combo_redemptions")
-            .update({ qr_token_hash: redemption.qr_token_hash })
-            .eq("id", redemption.id)
-            .eq("status", "issued")
-            .eq("qr_token_hash", newQrTokenHash);
-        }
-      }
-    }
-
-    if (textResult.ok && qrResult.ok) {
-      await supabase.rpc("complete_legacy_combo_ready_recovery", {
-        p_redemption_id: redemption.id,
-      });
-    }
-
+    const delivery = await deliverComboReadyNotification(redemption.id);
     return {
-      ok: true as const,
-      notificationSent: textResult.ok && qrResult.ok,
+      ok: delivery.ok,
+      notificationSent: delivery.ok && delivery.sent,
+      notificationQueued: delivery.ok && !delivery.sent,
+      ...(!delivery.ok ? { reason: delivery.reason } : {}),
     };
   }
 
@@ -1192,7 +994,6 @@ export async function validateComboRedemptionScan(input: {
     !wrongSession &&
     typeof scannedRedemption.raw_metadata?.delivery_choice_confirmed_at !== "string"
   ) {
-    const existingMetadata = scannedRedemption.raw_metadata ?? {};
     const customer = firstJoin(scannedRedemption.customers);
     const sourceOrderId =
       typeof scannedOrder.source_order_id === "string"
@@ -1227,87 +1028,16 @@ export async function validateComboRedemptionScan(input: {
       };
     }
 
-    const now = new Date().toISOString();
     const placeLabel = formatComboDeliveryPlace(reservation.place_code);
-    if (typeof existingMetadata.delivery_choice_confirmed_at === "string") {
+    const conversation = await getOrCreateOpenConversation({
+      customerId: customer.id,
+    });
+    if (!conversation.ok) {
       return {
-        allowed: true,
-        result: "allowed",
-        message: `A forma de entrega desse combo ja foi escolhida para ${String(existingMetadata.delivery_place_label ?? placeLabel)}. Mantenha o QR Code vermelho aberto para apresentar na entrega.`,
-        redemption: {
-          redemptionId: scannedRedemption.id,
-          redemptionCode: scannedRedemption.redemption_code,
-          offerName: scannedRedemption.offer_name,
-          quantity: scannedRedemption.quantity,
-          status: scannedRedemption.status,
-        },
+        allowed: false,
+        result: "denied",
+        message: "Combo valido, mas nao foi possivel abrir a conversa do cliente. A entrega nao foi concluida.",
       };
-    }
-
-    const alreadyPrompted =
-      typeof existingMetadata.delivery_choice_requested_at === "string";
-    let promptSent = alreadyPrompted;
-
-    if (!alreadyPrompted) {
-      const conversation = await getOrCreateOpenConversation({
-        customerId: customer.id,
-      });
-
-      if (!conversation.ok) {
-        return {
-          allowed: false,
-          result: "denied",
-          message:
-            "Combo valido, mas nao foi possivel abrir a conversa do cliente. A entrega nao foi concluida.",
-        };
-      }
-
-      const message = buildComboDeliveryChoiceMessage({
-        product: scannedRedemption.offer_name,
-        placeLabel,
-      });
-      const sendResult = await sendZapiText({
-        phone: customer.whatsapp_phone,
-        message,
-      });
-      promptSent = sendResult.ok;
-
-      await saveWhatsAppMessage({
-        conversationId: conversation.conversation.id,
-        customerId: customer.id,
-        direction: "outbound",
-        messageType: "text",
-        body: message,
-        providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
-        rawMetadata: buildWhatsAppOutboundMetadata({
-          sendResult,
-          messageType: "text",
-          reason: "combo_delivery_choice_requested",
-          businessContext: {
-            combo_order_id: scannedRedemption.combo_order_id,
-            combo_redemption_id: scannedRedemption.id,
-            place_code: reservation.place_code,
-          },
-        }),
-      });
-
-      if (sendResult.ok) {
-        await updateConversationAfterMessage({
-          conversationId: conversation.conversation.id,
-          context: {
-            state: "combo_delivery_confirming",
-            step: "combo_delivery_confirming",
-            comboDeliveryConfirmation: {
-              redemptionId: scannedRedemption.id,
-              comboOrderId: scannedRedemption.combo_order_id,
-              placeCode: reservation.place_code,
-              placeLabel,
-              offerName: scannedRedemption.offer_name,
-              createdAt: now,
-            },
-          },
-        });
-      }
     }
 
     const { data: transition, error: transitionError } = await supabase.rpc(
@@ -1316,7 +1046,7 @@ export async function validateComboRedemptionScan(input: {
         p_redemption_id: scannedRedemption.id,
         p_place_code: reservation.place_code,
         p_place_label: placeLabel,
-        p_prompt_sent: promptSent,
+        p_prompt_sent: false,
         p_kitchen_session_id: kitchenSession.gateSession.id,
         p_kitchen_label: kitchenSession.gateSession.gateLabel,
         p_validator_identifier: kitchenSession.gateSession.validatorIdentifier,
@@ -1343,7 +1073,7 @@ export async function validateComboRedemptionScan(input: {
         },
       };
     }
-    if (transition?.applied !== true) {
+    if (transition?.applied !== true && transition?.idempotent !== true) {
       return {
         allowed: false,
         result: "denied",
@@ -1375,103 +1105,26 @@ export async function validateComboRedemptionScan(input: {
     scannedRedemption.raw_metadata?.kitchen_status === "preparing" &&
     typeof scannedRedemption.raw_metadata?.ready_notified_at !== "string"
   ) {
-    const customer = firstJoin(scannedRedemption.customers);
-    const event = firstJoin(scannedRedemption.events);
-    const offer = firstJoin(scannedOrder.combo_offers);
-    const itemLines = formatComboDescription(offer?.description ?? "")
-      .split("\n")
-      .filter(Boolean);
-
-    if (scannedRedemption.qr_token_version != null) {
-      return {
-        allowed: false,
-        result: "denied",
-        message:
-          "PEDIDO EM PREPARO. A notificacao READY e o QR Code ainda estao sendo processados pela fila de entrega.",
-      };
-    }
-
-    if (!customer?.whatsapp_phone) {
-      return {
-        allowed: false,
-        result: "denied",
-        message:
-          "PEDIDO EM PREPARO, MAS O CLIENTE AINDA NAO FOI AVISADO. Telefone nao encontrado; nao foi possivel concluir a entrega.",
-      };
-    }
-
-    const message = [
-      "*SEU PEDIDO ESTÁ PRONTO PARA RETIRADA NO BAR*",
-      "",
-      `Pedido: ${scannedRedemption.redemption_code}`,
-      `Item: ${scannedRedemption.offer_name}`,
-      `Quantidade: ${scannedRedemption.quantity}`,
-      ...(itemLines.length
-        ? ["", "*ITENS PRONTOS*", ...itemLines.map((item) => `- ${item}`)]
-        : []),
-      ...(event?.title ? [`Evento: ${event.title}`] : []),
-    ].join("\n");
-    const conversation = await getOrCreateOpenConversation({
-      customerId: customer.id,
-    });
-    if (!conversation.ok) {
-      return {
-        allowed: false,
-        result: "denied",
-        message:
-          "PEDIDO EM PREPARO, MAS O AVISO AO CLIENTE FALHOU. A entrega nao foi concluida; reenvie o aviso pela cozinha.",
-      };
-    }
-
-    const sendResult = await sendZapiText({
-      phone: customer.whatsapp_phone,
-      message,
-    });
-    await saveWhatsAppMessage({
-      conversationId: conversation.conversation.id,
-      customerId: customer.id,
-      direction: "outbound",
-      messageType: "text",
-      body: message,
-      providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
-      rawMetadata: buildWhatsAppOutboundMetadata({
-        sendResult,
-        messageType: "text",
-        reason: "combo_ready_notification_recovered_at_scan",
-        businessContext: {
-          combo_order_id: scannedRedemption.combo_order_id,
-          combo_redemption_id: scannedRedemption.id,
-        },
-      }),
-    });
-    if (sendResult.ok) {
-      await updateConversationAfterMessage({
-        conversationId: conversation.conversation.id,
+    if (scannedRedemption.qr_token_version == null) {
+      const token = createComboRedemptionToken(scannedRedemption.combo_order_id, 1);
+      const prepared = await supabase.rpc("prepare_legacy_combo_ready_delivery", {
+        p_redemption_id: scannedRedemption.id,
+        p_qr_token_hash: hashComboRedemptionToken(token),
       });
+      if (prepared.error) {
+        return {
+          allowed: false,
+          result: "denied",
+          message: "Nao foi possivel preparar o aviso READY. Tente novamente pela cozinha.",
+        };
+      }
     }
-
-    if (!sendResult.ok) {
-      return {
-        allowed: false,
-        result: "denied",
-        message:
-          "PEDIDO EM PREPARO, MAS O AVISO AO CLIENTE FALHOU. A entrega nao foi concluida; reenvie o aviso pela cozinha.",
-      };
-    }
-
-    const { data: transition, error: notificationUpdateError } = await supabase.rpc(
-      "complete_legacy_combo_ready_recovery",
-      { p_redemption_id: scannedRedemption.id },
-    );
-
-    if (notificationUpdateError || (!transition?.applied && !transition?.idempotent)) {
-      return {
-        allowed: false,
-        result: "denied",
-        message:
-          "Cliente avisado, mas a confirmacao nao foi salva. Leia novamente antes de entregar.",
-      };
-    }
+    await deliverComboReadyNotification(scannedRedemption.id);
+    return {
+      allowed: false,
+      result: "denied",
+      message: "PEDIDO EM PREPARO. O aviso READY e o QR Code estao sendo processados para o cliente.",
+    };
   }
 
   if (
@@ -1482,63 +1135,12 @@ export async function validateComboRedemptionScan(input: {
     !wrongSession &&
     scannedRedemption.raw_metadata?.kitchen_status !== "preparing"
   ) {
-    const metadata = scannedRedemption.raw_metadata ?? {};
     const customer = firstJoin(scannedRedemption.customers);
-    const alreadyNotified =
-      typeof metadata.awaiting_preparation_notified_at === "string";
-    let notificationSent = alreadyNotified;
-
-    if (!alreadyNotified && customer?.whatsapp_phone) {
-      const message = [
-        "*PEDIDO RECEBIDO*",
-        "",
-        `Pedido: ${scannedRedemption.redemption_code}`,
-        `Item: ${scannedRedemption.offer_name}`,
-        `Quantidade: ${scannedRedemption.quantity}`,
-        "",
-        "Seu pedido ainda nao esta em preparo.",
-        "Em breve enviaremos uma mensagem avisando quando seus produtos estiverem disponiveis para retirada.",
-      ].join("\n");
-      const conversation = await getOrCreateOpenConversation({
-        customerId: customer.id,
-      });
-      if (conversation.ok) {
-        const sendResult = await sendZapiText({
-          phone: customer.whatsapp_phone,
-          message,
-        });
-        notificationSent = sendResult.ok;
-
-        await saveWhatsAppMessage({
-          conversationId: conversation.conversation.id,
-          customerId: customer.id,
-          direction: "outbound",
-          messageType: "text",
-          body: message,
-          providerMessageId: sendResult.ok ? sendResult.providerMessageId : null,
-          rawMetadata: buildWhatsAppOutboundMetadata({
-            sendResult,
-            messageType: "text",
-            reason: "combo_awaiting_preparation",
-            businessContext: {
-              combo_order_id: scannedRedemption.combo_order_id,
-              combo_redemption_id: scannedRedemption.id,
-            },
-          }),
-        });
-        if (sendResult.ok) {
-          await updateConversationAfterMessage({
-            conversationId: conversation.conversation.id,
-          });
-        }
-      }
-    }
-
     const { data: transition, error: transitionError } = await supabase.rpc(
       "record_combo_awaiting_preparation",
       {
         p_redemption_id: scannedRedemption.id,
-        p_notification_sent: notificationSent,
+        p_notification_sent: Boolean(customer?.whatsapp_phone),
         p_kitchen_session_id: kitchenSession.gateSession.id,
         p_kitchen_label: kitchenSession.gateSession.gateLabel,
         p_validator_identifier: kitchenSession.gateSession.validatorIdentifier,

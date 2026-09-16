@@ -288,6 +288,107 @@ test("paid combo confirmation, versioned QR and delivery queue are transactional
     assert.equal(transitionPrivileges, "7");
     const sequencePrivileges = psql("select has_sequence_privilege('service_role','public.combo_redemption_code_seq','USAGE'),has_sequence_privilege('service_role','public.combo_redemption_code_seq','SELECT'),has_sequence_privilege('service_role','public.combo_redemption_code_seq','UPDATE'),has_sequence_privilege('anon','public.combo_redemption_code_seq','USAGE'),has_sequence_privilege('authenticated','public.combo_redemption_code_seq','USAGE'),has_sequence_privilege('public','public.combo_redemption_code_seq','USAGE');", ["-At"]).trim();
     assert.equal(sequencePrivileges, "t|f|f|f|f|f");
+
+    // Apply the new migration only after the historical assertions above.
+    psql("alter table public.conversations add column status text not null default 'open', add column context jsonb not null default '{}', add column last_message_at timestamptz, add column created_at timestamptz not null default now();");
+    psql(readFileSync("supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql", "utf8"));
+    psql("update public.combo_orders set status='paid' where id='50000002-0000-4000-8000-000000000003';");
+    psql("insert into public.conversations(id,customer_id) values('90000000-0000-4000-8000-000000000003','10000000-0000-4000-8000-000000000003');");
+    psql("update public.combo_redemptions set status='issued',used_at=null,raw_metadata='{}' where id='" + transitionRedemption + "'; delete from public.combo_redemption_events where combo_redemption_id='" + transitionRedemption + "';");
+    const gateSql = "select public.record_combo_gate_arrival('" + transitionRedemption + "','70000000-0000-4000-8000-000000000001','31000000-0000-4000-8000-000000000001','Portaria','operator',true);";
+    const gateResults = await Promise.all([psqlAsync(gateSql),psqlAsync(gateSql)]);
+    assert.equal(gateResults.filter((value) => value.includes('"applied": true')).length,1);
+    assert.equal(gateResults.filter((value) => value.includes('"idempotent": true')).length,1);
+    assert.equal(psql("select count(*) from public.whatsapp_outbound_deliveries where idempotency_key='combo-gate-arrival:" + transitionRedemption + ":text:v1';",["-At"]).trim(),"1");
+    assert.equal(psql("select raw_metadata ? 'arrival_preparation_notified_at' from public.combo_redemptions where id='" + transitionRedemption + "';",["-At"]).trim(),"f");
+
+    const promptSql = "select public.record_combo_delivery_choice_prompt('" + transitionRedemption + "','01','mesa 1',false,'31000000-0000-4000-8000-000000000001','Bar','operator');";
+    const promptResults = await Promise.all([psqlAsync(promptSql),psqlAsync(promptSql)]);
+    assert.equal(promptResults.filter((value) => value.includes('"applied": true')).length,1);
+    assert.equal(promptResults.filter((value) => value.includes('"idempotent": true')).length,1);
+    assert.equal(psql("select count(*) from public.whatsapp_outbound_deliveries where idempotency_key='combo-delivery-choice:" + transitionRedemption + ":prompt:v1';",["-At"]).trim(),"1");
+    assert.equal(psql("select count(*) from public.combo_redemption_events where combo_redemption_id='" + transitionRedemption + "' and metadata->>'reason'='delivery_choice_requested';",["-At"]).trim(),"1");
+
+    const awaitingSql = "select public.record_combo_awaiting_preparation('" + transitionRedemption + "',true,'31000000-0000-4000-8000-000000000001','Bar','operator');";
+    const awaitingResults = await Promise.all([psqlAsync(awaitingSql),psqlAsync(awaitingSql)]);
+    assert.equal(awaitingResults.filter((value) => value.includes('"applied": true')).length,1);
+    assert.equal(awaitingResults.filter((value) => value.includes('"idempotent": true')).length,1);
+    assert.equal(psql("select count(*) from public.whatsapp_outbound_deliveries where idempotency_key='combo-awaiting-preparation:" + transitionRedemption + ":text:v1';",["-At"]).trim(),"1");
+    assert.equal(psql("select count(*) from public.combo_redemption_events where combo_redemption_id='" + transitionRedemption + "' and metadata->>'reason'='awaiting_preparation';",["-At"]).trim(),"1");
+    assert.equal(psql("select raw_metadata ? 'awaiting_preparation_notified_at' from public.combo_redemptions where id='" + transitionRedemption + "';",["-At"]).trim(),"f");
+
+    psql("select public.start_combo_kitchen_preparation('" + transitionRedemption + "');");
+    const legacySql = "select public.prepare_legacy_combo_ready_delivery('" + transitionRedemption + "','legacy-ready-hash-v1');";
+    const legacyResults = await Promise.all([psqlAsync(legacySql),psqlAsync(legacySql)]);
+    assert.equal(legacyResults.filter((value) => value.includes('"idempotent": false')).length,1);
+    assert.equal(legacyResults.filter((value) => value.includes('"idempotent": true')).length,1);
+    assert.equal(psql("select qr_token_version||'|'||(raw_metadata->>'legacy_ready_upgrade') from public.combo_redemptions where id='" + transitionRedemption + "';",["-At"]).trim(),"1|true");
+    assert.equal(psql("select count(*) from public.whatsapp_outbound_deliveries where reason in ('combo_ready_at_bar','combo_ready_qr') and business_context->>'combo_redemption_id'='" + transitionRedemption + "';",["-At"]).trim(),"2");
+    assert.equal(psql("select public.ensure_paid_combo_delivery_intents('50000002-0000-4000-8000-000000000003');",["-At"]).trim(),"0");
+    assert.equal(psql("select count(*) from public.whatsapp_outbound_deliveries where reason in ('paid_combo_delivery','paid_combo_qr_delivery') and business_context->>'combo_redemption_id'='" + transitionRedemption + "';",["-At"]).trim(),"0");
+
+    const gateId = psql("select id from public.whatsapp_outbound_deliveries where idempotency_key='combo-gate-arrival:" + transitionRedemption + ":text:v1';",["-At"]).trim();
+    assert.equal(psql("select count(*) from public.claim_whatsapp_outbound_delivery('" + gateId + "');",["-At"]).trim(),"0");
+    assert.equal(psql("select status from public.whatsapp_outbound_deliveries where id='" + gateId + "';",["-At"]).trim(),"superseded");
+    const promptId = psql("select id from public.whatsapp_outbound_deliveries where idempotency_key='combo-delivery-choice:" + transitionRedemption + ":prompt:v1';",["-At"]).trim();
+    psql("update public.combo_redemptions set raw_metadata=raw_metadata||'{\"delivery_choice_confirmed_at\":\"2026-09-16T00:00:00Z\"}'::jsonb where id='" + transitionRedemption + "';");
+    assert.equal(psql("select count(*) from public.claim_whatsapp_outbound_delivery('" + promptId + "');",["-At"]).trim(),"0");
+    assert.equal(psql("select status from public.whatsapp_outbound_deliveries where id='" + promptId + "';",["-At"]).trim(),"superseded");
+    const awaitingId = psql("select id from public.whatsapp_outbound_deliveries where idempotency_key='combo-awaiting-preparation:" + transitionRedemption + ":text:v1';",["-At"]).trim();
+    assert.equal(psql("select count(*) from public.claim_whatsapp_outbound_delivery('" + awaitingId + "');",["-At"]).trim(),"0");
+    assert.equal(psql("select status from public.whatsapp_outbound_deliveries where id='" + awaitingId + "';",["-At"]).trim(),"superseded");
+
+    const readyText = psql("select id from public.whatsapp_outbound_deliveries where idempotency_key='combo-ready-redemption:" + transitionRedemption + ":text:v1';",["-At"]).trim();
+    const readyQr = psql("select id from public.whatsapp_outbound_deliveries where idempotency_key='combo-ready-redemption:" + transitionRedemption + ":qr:v1';",["-At"]).trim();
+    const textClaims = await Promise.all([
+      psqlAsync("select count(*) from public.claim_whatsapp_outbound_delivery('" + readyText + "');"),
+      psqlAsync("select count(*) from public.claim_whatsapp_outbound_delivery('" + readyText + "');"),
+    ]);
+    assert.deepEqual(textClaims.sort(),["0","1"]);
+    assert.equal(psql("select count(*) from public.claim_whatsapp_outbound_delivery('" + readyQr + "');",["-At"]).trim(),"0");
+    const oldToken = psql("select claim_token from public.whatsapp_outbound_deliveries where id='" + readyText + "';",["-At"]).trim();
+    psql("update public.whatsapp_outbound_deliveries set lease_expires_at=now()-interval '1 second' where id='" + readyText + "';");
+    const newToken = psql("select claim_token from public.claim_whatsapp_outbound_delivery('" + readyText + "');",["-At"]).trim();
+    assert.notEqual(newToken,oldToken);
+    assert.equal(psql("select count(*) from public.mark_whatsapp_outbound_delivery_sent('" + readyText + "','" + oldToken + "','stale');",["-At"]).trim(),"0");
+    assert.equal(psql("select count(*) from public.mark_whatsapp_outbound_delivery_sent('" + readyText + "','" + newToken + "','text');",["-At"]).trim(),"1");
+    const qrToken = psql("select claim_token from public.claim_whatsapp_outbound_delivery('" + readyQr + "');",["-At"]).trim();
+    assert.ok(qrToken);
+    assert.equal(psql("select count(*) from public.mark_whatsapp_outbound_delivery_sent('" + readyQr + "','" + qrToken + "','qr');",["-At"]).trim(),"1");
+    assert.equal(psql("select raw_metadata ? 'ready_notified_at' from public.combo_redemptions where id='" + transitionRedemption + "';",["-At"]).trim(),"t");
+
+    const operationalOrder = "50000000-0000-4000-8000-000000000004";
+    const operationalRedemption = psql("select id from public.combo_redemptions where combo_order_id='" + operationalOrder + "';",["-At"]).trim();
+    psql("update public.whatsapp_outbound_deliveries set status='sent' where reason in ('paid_combo_delivery','paid_combo_qr_delivery') and business_context->>'combo_redemption_id'='" + operationalRedemption + "';");
+    psql("insert into public.conversations(id,customer_id) values('90000000-0000-4000-8000-000000000004','10000000-0000-4000-8000-000000000004');");
+    psql("update public.combo_redemptions set raw_metadata='{}' where id='" + operationalRedemption + "';");
+    const collisionKey = "combo-gate-arrival:" + operationalRedemption + ":text:v1";
+    psql("insert into public.whatsapp_outbound_deliveries(idempotency_key,customer_id,recipient_phone,message_type,reason,business_context,status) values('" + collisionKey + "','10000000-0000-4000-8000-000000000004','wrong','image','wrong','{}','pending');");
+    await assert.rejects(psqlAsync("select public.record_combo_gate_arrival('" + operationalRedemption + "','70000000-0000-4000-8000-000000000001','31000000-0000-4000-8000-000000000001','Portaria','operator',true);"),/combo_operational_intent_collision/);
+    assert.equal(psql("select raw_metadata ? 'kitchen_arrived_at' from public.combo_redemptions where id='" + operationalRedemption + "';",["-At"]).trim(),"f");
+    psql("delete from public.whatsapp_outbound_deliveries where idempotency_key='" + collisionKey + "';");
+    psql("select public.record_combo_gate_arrival('" + operationalRedemption + "','70000000-0000-4000-8000-000000000001','31000000-0000-4000-8000-000000000001','Portaria','operator',true);");
+    const operationalGate = psql("select id from public.whatsapp_outbound_deliveries where idempotency_key='" + collisionKey + "';",["-At"]).trim();
+    const gateToken = psql("select claim_token from public.claim_whatsapp_outbound_delivery('" + operationalGate + "');",["-At"]).trim();
+    assert.ok(gateToken);
+    assert.equal(psql("select raw_metadata ? 'arrival_preparation_notified_at' from public.combo_redemptions where id='" + operationalRedemption + "';",["-At"]).trim(),"f");
+    assert.equal(psql("select count(*) from public.mark_whatsapp_outbound_delivery_sent('" + operationalGate + "','" + gateToken + "','gate');",["-At"]).trim(),"1");
+    assert.equal(psql("select raw_metadata ? 'arrival_preparation_notified_at' from public.combo_redemptions where id='" + operationalRedemption + "';",["-At"]).trim(),"t");
+
+    psql("select public.record_combo_delivery_choice_prompt('" + operationalRedemption + "','01','mesa 1',false,'31000000-0000-4000-8000-000000000001','Bar','operator');");
+    const promptDelivery = psql("select id from public.whatsapp_outbound_deliveries where idempotency_key='combo-delivery-choice:" + operationalRedemption + ":prompt:v1';",["-At"]).trim();
+    for (let attempt=1;attempt<=5;attempt+=1) {
+      const token = psql("select claim_token from public.claim_whatsapp_outbound_delivery('" + promptDelivery + "');",["-At"]).trim();
+      assert.ok(token);
+      assert.equal(psql("select context->>'state' from public.conversations where id='90000000-0000-4000-8000-000000000004';",["-At"]).trim(),"combo_delivery_confirming");
+      assert.equal(psql("select status from public.mark_whatsapp_outbound_delivery_failed('" + promptDelivery + "','" + token + "','provider_failure');",["-At"]).trim(),attempt===5?"dead_letter":"failed");
+      if (attempt<5) psql("update public.whatsapp_outbound_deliveries set next_attempt_at=now()-interval '1 second' where id='" + promptDelivery + "';");
+    }
+    assert.equal(psql("select context->>'state' from public.conversations where id='90000000-0000-4000-8000-000000000004';",["-At"]).trim(),"idle");
+    assert.equal(psql("select context ? 'comboDeliveryConfirmation' from public.conversations where id='90000000-0000-4000-8000-000000000004';",["-At"]).trim(),"f");
+    psql("select public.prepare_combo_ready_delivery('" + operationalRedemption + "',1,2,'operational-ready-hash');");
+    const afterDeadLetter = psql("select count(*) from public.list_due_paid_combo_delivery_tasks(100) where entity_id='" + operationalRedemption + "' and delivery_kind='ready';",["-At"]).trim();
+    assert.equal(afterDeadLetter,"1");
   } finally {
     psql("drop schema if exists public cascade; create schema public authorization postgres; grant usage on schema public to public;");
   }

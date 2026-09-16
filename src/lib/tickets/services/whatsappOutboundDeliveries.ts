@@ -44,7 +44,7 @@ export type PaidTicketDeliveryQueueCounts = {
 
 export type PaidComboDeliveryTask = {
   entity_id: string;
-  delivery_kind: "paid" | "ready";
+  delivery_kind: "paid" | "ready" | "operational";
 };
 
 type GetOrCreateWhatsAppOutboundDeliveryInput = {

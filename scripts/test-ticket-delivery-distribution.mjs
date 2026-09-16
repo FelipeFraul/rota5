@@ -53,6 +53,10 @@ const comboRedemptionsSource = readFileSync(
   new URL("../src/lib/tickets/services/comboRedemptions.ts", import.meta.url),
   "utf8",
 );
+const comboOperationalSource = readFileSync(
+  new URL("../src/lib/tickets/services/comboOperationalDelivery.ts", import.meta.url),
+  "utf8",
+);
 const comboMetadataTransitionMigration = readFileSync(
   new URL("../supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql", import.meta.url),
   "utf8",
@@ -61,9 +65,11 @@ let comboRedemptionModulePromise;
 
 async function loadComboRedemptionModule() {
   if (!comboRedemptionModulePromise) {
-    const source = comboRedemptionsSource
+    let source = comboRedemptionsSource
       .replace(/^import "server-only";\r?\n/m, "")
       .replace(/^import[\s\S]*?from "(?:crypto|@\/[^\"]+)";\r?\n/gm, "");
+    source = source.replace(/export async function deliverComboReadyNotification[\s\S]*?(?=export async function startKitchenOrderPreparation)/,
+      'export async function deliverComboReadyNotification() { globalThis.__comboRedemptionScanScenario.state.readyDispatches += 1; return { ok: true, sent: false, reason: "delivery_in_progress" }; }\n');
     globalThis.__comboRedemptionScanMocks = {
       createHash,
       randomBytes,
@@ -84,8 +90,10 @@ async function loadComboRedemptionModule() {
       formatComboDescription: () => "",
       getOfficialTableMapPlace: () => ({ type: "table" }),
       isPublicEventVisible: () => true,
+      createComboRedemptionToken: () => "versioned-token",
+      hashComboRedemptionToken: () => "versioned-hash",
     };
-    const prelude = `const { createHash, randomBytes, getSupabaseAdmin, validateGateSessionToken, hashGateSessionToken, hashKitchenDeviceToken, getOrCreateOpenConversation, updateConversationAfterMessage, saveWhatsAppMessage, buildWhatsAppOutboundMetadata, sendZapiImage, sendZapiText, generateComboQrImage, formatComboDescription, getOfficialTableMapPlace, isPublicEventVisible } = globalThis.__comboRedemptionScanMocks;\n`;
+    const prelude = `const { createHash, randomBytes, getSupabaseAdmin, validateGateSessionToken, hashGateSessionToken, hashKitchenDeviceToken, getOrCreateOpenConversation, updateConversationAfterMessage, saveWhatsAppMessage, buildWhatsAppOutboundMetadata, sendZapiImage, sendZapiText, generateComboQrImage, formatComboDescription, getOfficialTableMapPlace, isPublicEventVisible, createComboRedemptionToken, hashComboRedemptionToken } = globalThis.__comboRedemptionScanMocks;\n`;
     const transpiled = ts.transpileModule(prelude + source, {
       compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 },
     }).outputText;
@@ -122,7 +130,7 @@ function createComboRedemptionScanScenario(overrides = {}) {
     combo_orders: { id: "combo-order-1", status: "paid", source_order_id: "source-order-1", combo_offers: { description: "" } },
     ...overrides.row,
   };
-  const state = { row, reservation: overrides.reservation ?? { place_code: "01", status: "paid" }, rpcCalls: [], consumptionCount: 0, events: [], updates: [], externalTexts: 0 };
+  const state = { row, reservation: overrides.reservation ?? { place_code: "01", status: "paid" }, rpcCalls: [], consumptionCount: 0, events: [], updates: [], externalTexts: 0, readyDispatches: 0 };
 
   class Query {
     constructor(table) { this.table = table; this.operation = "select"; this.filters = []; }
@@ -210,10 +218,12 @@ function createComboRedemptionScanScenario(overrides = {}) {
         state.events.push({ result: "denied", source: "awaiting_preparation" });
         return { data: { applied: true, reason: "applied", status: state.row.status }, error: null };
       }
-      if (name === "complete_legacy_combo_ready_recovery") {
-        if (state.row.status !== "issued") return { data: { applied: false, idempotent: false, reason: "status_incompatible" }, error: null };
-        state.row.raw_metadata = { ...(state.row.raw_metadata ?? {}), ready_notified_at: "2026-09-12T10:10:00.000Z", ready_notification_recovered_at_scan: "2026-09-12T10:10:00.000Z" };
-        return { data: { applied: true, idempotent: false, reason: "applied" }, error: null };
+      if (name === "prepare_legacy_combo_ready_delivery") {
+        if (state.row.status !== "issued") return { data: null, error: { code: "invalid_state" } };
+        state.row.qr_token_version = 1;
+        state.row.qr_token_hash = args.p_qr_token_hash;
+        state.row.raw_metadata = { ...(state.row.raw_metadata ?? {}), legacy_ready_upgrade: true, ready_delivery_version: 1 };
+        return { data: { idempotent: false, qr_token_version: 1 }, error: null };
       }
       assert.equal(name, "validate_combo_redemption");
       let result;
@@ -1099,9 +1109,9 @@ test("fluxo do comprador permanece inalterado para oferta de combo", () => {
 });
 
 test("QR vermelho solicita escolha de entrega sem marcar usado", () => {
-  assert.match(comboRedemptionsSource, /\*ENTREGA DE BEBIDA\*/);
-  assert.match(comboRedemptionsSource, /Digite \*OK\* para receber na sua \$\{input\.placeLabel\}/);
-  assert.match(comboRedemptionsSource, /Digite \*1\* para solicitar um garçom/);
+  assert.match(comboOperationalSource, /\*ENTREGA DE BEBIDA\*/);
+  assert.match(comboOperationalSource, /Digite \*OK\* para receber na sua \$\{placeLabel\}/);
+  assert.match(comboOperationalSource, /Digite \*1\* para solicitar um garcom/);
   assert.match(comboRedemptionsSource, /record_combo_delivery_choice_prompt/);
   assert.match(comboMetadataTransitionMigration, /'delivery_choice_status', 'awaiting_customer'/);
   assert.match(comboMetadataTransitionMigration, /'reason', 'delivery_choice_requested'/);
@@ -1202,7 +1212,7 @@ test("combo redemption delivery and preparation branches preserve their prerequi
   assert.equal(awaiting.state.row.status, "issued");
 });
 
-test("versioned READY scan does not send recovery text or manufacture ready_notified_at", async () => {
+test("versioned READY scan dispatches the queued intent without manufacturing ready_notified_at", async () => {
   const scenario = createComboRedemptionScanScenario({
     row: {
       qr_token_version: 2,
@@ -1211,13 +1221,14 @@ test("versioned READY scan does not send recovery text or manufacture ready_noti
   });
   const result = await scanCombo(scenario);
   assert.equal(result.allowed, false);
-  assert.match(result.message, /fila de entrega/);
+  assert.match(result.message, /sendo processados/);
   assert.equal(scenario.state.externalTexts, 0);
+  assert.equal(scenario.state.readyDispatches, 1);
   assert.equal(scenario.state.row.raw_metadata.ready_notified_at, undefined);
   assert.equal(scenario.state.rpcCalls.length, 0);
 });
 
-test("legacy READY scan retains its direct recovery while completing metadata through the restricted RPC", async () => {
+test("legacy READY scan prepares versioned intents and defers completion", async () => {
   const scenario = createComboRedemptionScanScenario({
     row: {
       qr_token_version: null,
@@ -1225,9 +1236,10 @@ test("legacy READY scan retains its direct recovery while completing metadata th
     },
   });
   const result = await scanCombo(scenario);
-  assert.equal(result.allowed, true);
-  assert.equal(scenario.state.externalTexts, 1);
-  assert.equal(typeof scenario.state.row.raw_metadata.ready_notified_at, "string");
-  assert.deepEqual(scenario.state.rpcCalls.map((call) => call.name), ["complete_legacy_combo_ready_recovery", "validate_combo_redemption"]);
-  assert.equal(scenario.state.row.raw_metadata.kitchen_status, "delivered");
+  assert.equal(result.allowed, false);
+  assert.equal(scenario.state.externalTexts, 0);
+  assert.equal(scenario.state.readyDispatches, 1);
+  assert.equal(scenario.state.row.qr_token_version, 1);
+  assert.equal(scenario.state.row.raw_metadata.ready_notified_at, undefined);
+  assert.deepEqual(scenario.state.rpcCalls.map((call) => call.name), ["prepare_legacy_combo_ready_delivery"]);
 });

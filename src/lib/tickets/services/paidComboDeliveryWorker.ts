@@ -3,6 +3,7 @@ import "server-only";
 import { logError, logInfo } from "@/lib/logger";
 import { deliverComboOrder } from "@/lib/tickets/services/comboOffers";
 import { deliverComboReadyNotification } from "@/lib/tickets/services/comboRedemptions";
+import { deliverComboOperationalNotification } from "@/lib/tickets/services/comboOperationalDelivery";
 import {
   getPaidComboDeliveryQueueCounts,
   listDuePaidComboDeliveryTasks,
@@ -24,7 +25,9 @@ export async function processDuePaidComboDeliveries({
     try {
       const result = task.delivery_kind === "paid"
         ? await deliverComboOrder(task.entity_id)
-        : await deliverComboReadyNotification(task.entity_id);
+        : task.delivery_kind === "ready"
+          ? await deliverComboReadyNotification(task.entity_id)
+          : await deliverComboOperationalNotification(task.entity_id);
       if (result.ok && result.sent) delivered += 1;
       else if (result.ok && !result.sent && result.reason === "delivery_in_progress") deferred += 1;
       else {

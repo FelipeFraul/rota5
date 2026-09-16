@@ -268,11 +268,14 @@ export function KitchenSessionScanner({
       const result = (await response.json()) as {
         ok?: boolean;
         notificationSent?: boolean;
+        notificationQueued?: boolean;
       };
       if (!response.ok || !result.ok) throw new Error("prepare_failed");
       setNotice(
         result.notificationSent
           ? "Pedido em preparo. Cliente avisado com a lista de itens."
+          : result.notificationQueued
+            ? "Pedido em preparo. O aviso e o QR Code serao enviados ao cliente."
           : "Pedido em preparo, mas o aviso nao foi enviado.",
       );
       await refresh();

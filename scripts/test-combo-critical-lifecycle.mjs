@@ -59,6 +59,7 @@ test("combo.expire changes only elapsed pending orders and is repeatable", async
 
 test("combo.kitchen_release releases linked paid items once and does not notify unrelated items", async () => {
   let notifications = 0;
+  let intents = 0;
   const db = new MemorySupabase({
     tickets: [{
       id: "ticket-a", customer_id: "customer-a", session_id: "session-a",
@@ -83,6 +84,7 @@ test("combo.kitchen_release releases linked paid items once and does not notify 
       kitchen_arrived_at: "2026-09-15T12:00:00.000Z",
       kitchen_visible: true,
     };
+    if (args.p_notification_sent) intents += 1;
     return { data: { applied: true, idempotent: false, reason: "applied" }, error: null };
   };
   const service = await loadProductionModule("src/lib/tickets/services/comboRedemptions.ts", {
@@ -102,7 +104,9 @@ test("combo.kitchen_release releases linked paid items once and does not notify 
   assert.equal(db.tables.combo_redemptions[0].raw_metadata.delivery_choice, "table");
   assert.equal(db.tables.combo_redemptions[0].raw_metadata.ready_delivery_version, 2);
   assert.equal(db.tables.combo_redemptions[1].raw_metadata.kitchen_arrived_at, undefined);
-  assert.equal(notifications, 1);
+  assert.equal(notifications, 0);
+  assert.equal(intents, 1);
   assert.deepEqual(await service.releaseComboOrdersForKitchenAfterGateEntry(input), { ok: true, releasedCount: 0 });
-  assert.equal(notifications, 1);
+  assert.equal(notifications, 0);
+  assert.equal(intents, 1);
 });

@@ -160,7 +160,7 @@ test("versioned ready rotation is atomic, stable on retry and never rolls its ha
   assert.match(migration, /qr_token_version=p_next_version[\s\S]*qr_token_hash=p_next_qr_token_hash/i);
   assert.match(comboRedemptions, /prepare_combo_ready_delivery/);
   assert.match(comboRedemptions, /qr_token_version != null[\s\S]*prepare_combo_ready_delivery/);
-  assert.match(comboRedemptions, /complete_legacy_combo_ready_recovery/);
+  assert.match(comboRedemptions, /prepare_legacy_combo_ready_delivery/);
   assert.doesNotMatch(comboRedemptions, /raw_metadata:\s*\{/);
   assert.match(metadataTransitionMigration, /create or replace function public\.complete_legacy_combo_ready_recovery/i);
   assert.match(migration, /ready_completion as/i);

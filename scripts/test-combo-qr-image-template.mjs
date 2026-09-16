@@ -140,8 +140,8 @@ test("combo delivery preserves the QR payload and uses buyer data", () => {
   assert.match(comboOffersSource, /tableMapPlaceCode/);
 });
 
-test("operational combo resend uses the newly rotated token", () => {
-  assert.match(comboRedemptionsSource, /const newQrToken = randomBytes\(32\)\.toString\("base64url"\)/);
-  assert.match(comboRedemptionsSource, /qrPayload:\s*`combo:\$\{redemption\.id\}:\$\{newQrToken\}`/);
+test("operational combo resend reconstructs the prepared versioned token", () => {
+  assert.match(comboRedemptionsSource, /const token = createComboRedemptionToken\(redemption\.combo_order_id, preparedVersion\)/);
+  assert.match(comboRedemptionsSource, /qrPayload:\s*`combo:\$\{redemption\.id\}:\$\{token\}`/);
   assert.match(comboRedemptionsSource, /buyerName:\s*customer\.name/);
 });
