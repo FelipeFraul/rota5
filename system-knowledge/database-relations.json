@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-16T14:37:33.140Z",
-  "stage": "2.8.1",
-  "count": 2272,
+  "generatedAt": "2026-09-17T03:39:02Z",
+  "stage": "2.9.0",
+  "count": 2276,
   "types": [
     "MODULE_ACCESSES_TABLE",
     "CAPABILITY_ACCESSES_TABLE",
@@ -34102,13 +34102,73 @@
         "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql"
       ],
       "id": "datarel.2272"
+    },
+    {
+      "from": "function.insert_combo_operational_intent",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.whatsapp_outbound_deliveries",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED_AND_REMOTE_VALIDATED",
+      "evidence": [
+        "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql"
+      ],
+      "id": "datarel.2273",
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql"
+      ]
+    },
+    {
+      "from": "function.insert_combo_operational_intent",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.whatsapp_outbound_deliveries",
+      "operation": "INSERT",
+      "evidence_source": "LOCAL_DECLARED_AND_REMOTE_VALIDATED",
+      "evidence": [
+        "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql"
+      ],
+      "id": "datarel.2274",
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql"
+      ]
+    },
+    {
+      "from": "function.prepare_legacy_combo_ready_delivery",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.whatsapp_outbound_deliveries",
+      "operation": "READ",
+      "evidence_source": "LOCAL_DECLARED_AND_REMOTE_VALIDATED",
+      "evidence": [
+        "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql"
+      ],
+      "id": "datarel.2275",
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql"
+      ]
+    },
+    {
+      "from": "function.prepare_legacy_combo_ready_delivery",
+      "type": "FUNCTION_ACCESSES_TABLE",
+      "to": "table.whatsapp_outbound_deliveries",
+      "operation": "INSERT",
+      "evidence_source": "LOCAL_DECLARED_AND_REMOTE_VALIDATED",
+      "evidence": [
+        "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql"
+      ],
+      "id": "datarel.2276",
+      "operation_evidence_level": "DIRECT_STATIC",
+      "operation_evidence": [
+        "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql"
+      ]
     }
   ],
   "validation": {
     "status": "PASS",
     "references_resolved": true,
     "operations_inferred_only_with_static_evidence": true,
-    "non_not_inferred_relations": 2074,
+    "non_not_inferred_relations": 2125,
     "non_not_inferred_without_evidence": 0,
     "derived_operations_are_labeled": true,
     "high_1_rollout": "EXPAND and CONTRACT APPLIED_AND_VALIDATED; FINAL_DB strict-only; dual-mode ended; source attribution non-null and immutable."

@@ -1,4 +1,11 @@
-> **Current Baseline 2.8.1 (2026-09-16):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.9.0 (2026-09-17):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c7ed2c31eb9c322ef489e71bb59631c39928a1e0`. Fingerprint `889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6`; 397 source files, 89 local and remote ledger migrations, 45 tables, 65 SQL functions, 1 sequence, 60 test files and 47 findings. Combo operational notification concurrency is RESOLVED; external ambiguous ACK remains separate. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+
+## Baseline 2.9.0 — CURRENT
+
+Canonical functional source: `c7ed2c31eb9c322ef489e71bb59631c39928a1e0`; source fingerprint: `889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6` across 397 files. The functional delta consists of commits `bb582a60238193009c37cebc20aa79d2af7e0050` and `c7ed2c31eb9c322ef489e71bb59631c39928a1e0` after documentary HEAD `b2ddf8a57aa329fd25c277a91f8c4326f4b98b1c`. The documentary commit for this freeze is SELF_NOT_RECORDED. Production `dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc` is READY on this exact source; the later documentary HEAD is intentionally outside runtime parity because Git auto-deploy is disabled.
+
+Canonical counts: 17 domains, 67 modules, 830 dependencies, 56 entrypoints, 140 capabilities, 34 flows, 45 tables, 89 migrations, 65 SQL functions, 36 triggers, 1 sequence and 60 test files. Quality Gate 35141969033 passed Node 291/291, PostgreSQL 4/4, typecheck, lint and build. Product and Infrastructure are DEGRADED; release blockers: 0.
+
 
 ## Baseline 2.8.1 — architectural projection correction
 
@@ -29,17 +36,17 @@ Canonical functional source `1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27` was deplo
 
 # Rota5 Baseline V1
 
-**Identity:** `rota5-baseline-v1`, version **2.8.0**, status **FROZEN**. Canonical functional source is `c48405e41df3d1cd69eb3d383b7c6dd17257155e`, with 394 files and fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`. The baseline commit is `SELF_NOT_RECORDED` to avoid self-reference.
+**Identity:** `rota5-baseline-v1`, version **2.9.0**, status **FROZEN**. Canonical functional source is `c7ed2c31eb9c322ef489e71bb59631c39928a1e0`, with 397 files and fingerprint `889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6`. The baseline commit is `SELF_NOT_RECORDED` to avoid self-reference.
 
-Rota5 is a Next.js application backed by Supabase/PostgreSQL. The canonical catalog contains 17 domains, 66 modules, 56 entrypoints, 140 capabilities, 34 flows, 169 steps and 74 state transitions. The data catalog contains 45 tables, 88 migrations, 63 SQL functions, 1 sequence, 36 triggers and 2,272 currently catalogued typed relations.
+Rota5 is a Next.js application backed by Supabase/PostgreSQL. The canonical catalog contains 17 domains, 67 modules, 56 entrypoints, 140 capabilities, 34 flows, 169 steps and 74 state transitions. The data catalog contains 45 tables, 89 migrations, 65 SQL functions, 1 sequence, 36 triggers and 2,272 currently catalogued typed relations.
 
 ## PRODUCT HEALTH AT FREEZE
 
 **DEGRADED.** Baseline integrity is PASS and the canonical release-blocker set is empty, while independent operational and validation-queue findings remain open.
 
-- Findings: 47; active P0: 0; active HIGH: 0; potential HIGH: 0; open HIGH: 0; resolved: 17; release blockers: 0.
+- Findings: 47; active P0: 0; active HIGH: 0; potential HIGH: 0; open HIGH: 0; resolved: 18; release blockers: 0.
 - Broken flows: 0; partial flows: 9.
-- Current quality: default Node 285/285 PASS; PostgreSQL 4/4 PASS; Quality Gate 35049217326 PASS; 0 skip, 0 todo and 0 regressions.
+- Current quality: default Node 291/291 PASS; PostgreSQL 4/4 PASS; Quality Gate 35141969033 PASS; 0 skip, 0 todo and 0 regressions.
 - Infrastructure health: **DEGRADED** because independent findings remain open. Git auto-deploy is DISABLED.
 
 ## HISTORICAL HIGH #1 FINAL STATE — BASELINE 2.0.0

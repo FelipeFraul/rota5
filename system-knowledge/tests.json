@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-16T14:37:33.140Z",
-  "count": 59,
+  "generatedAt": "2026-09-17T03:39:02Z",
+  "count": 60,
   "defaultSuite": {
     "command": "npm test",
-    "fileCount": 26,
-    "observedCases": 285,
-    "passed": 285,
+    "fileCount": 27,
+    "observedCases": 291,
+    "passed": 291,
     "failed": 0,
     "status": "PASS",
     "failingFiles": [],
-    "evidence": "Quality Gate run 35049217326 passed 285/285 on c48405e41df3d1cd69eb3d383b7c6dd17257155e.",
+    "evidence": "Quality Gate run 35141969033 passed 291/291 on c7ed2c31eb9c322ef489e71bb59631c39928a1e0.",
     "previousSnapshot": {
       "date": "2026-09-11",
       "observedCases": 210,
@@ -18,8 +18,8 @@
       "failed": 6,
       "note": "Resultado histórico preservado; não representa o HEAD observado em 2026-09-12."
     },
-    "cases": 285,
-    "change": "RATE_LIMIT_OUTAGE_POLICY_REGRESSIONS_ADDED",
+    "cases": 291,
+    "change": "COMBO_OPERATIONAL_DURABLE_DELIVERY_REGRESSIONS_ADDED",
     "runner": "scripts/test-support/typescript-alias-loader.mjs",
     "runner_reproducible_from_git": true,
     "known_failures": 0,
@@ -1099,7 +1099,7 @@
       "status": "CONFIRMADO",
       "evidence": [
         "focused suite 5/5 PASS",
-        "default Node suite 285/285 PASS",
+        "default Node suite 291/291 PASS",
         "Quality Gate 35049217326 PASS"
       ],
       "dependencies": [
@@ -1127,6 +1127,23 @@
       ],
       "lastObservedResult": "PASS_TYPECHECK",
       "notes": "Compile-time contract only; it is not classified as a runtime behavioral test."
+    },
+    {
+      "id": "test-060",
+      "name": "test-combo-operational-delivery.mjs",
+      "type": "module-behavior",
+      "path": "scripts/test-combo-operational-delivery.mjs",
+      "purpose": "Provar claim obrigatório, roteamento durável de prompt, falhas retentáveis e impedimento de envio de intents inválidos.",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "Quality Gate 35141969033 Node 291/291 PASS",
+        "scripts/test-combo-operational-delivery.mjs"
+      ],
+      "dependencies": [
+        "node",
+        "src/lib/tickets/services/comboOperationalDelivery.ts"
+      ],
+      "lastObservedResult": "PASS"
     }
   ],
   "stage3Validation": {
@@ -1464,7 +1481,7 @@
     "safeLocalExecution": true,
     "note": "stage3Validation permanece histórico e não foi reinterpretado."
   },
-  "stage": "2.8.1",
+  "stage": "2.9.0",
   "high_1_validation": {
     "focused_new_app": {
       "passed": 96,
@@ -1625,5 +1642,14 @@
     "quality_gate_run": 35049217326,
     "behavioral_test": "scripts/test-rate-limit-outage.mjs",
     "type_contract": "scripts/type-tests/rate-limit-contract.ts"
+  },
+  "baseline_2_9_0": {
+    "test_file_count": 60,
+    "default_node_suite": "291/291 PASS",
+    "postgres_integration": "4/4 PASS",
+    "quality_gate_run": 35141969033,
+    "source": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+    "added_test": "scripts/test-combo-operational-delivery.mjs",
+    "postgres_note": "The paid combo integration subtest covers multiple internal concurrency and atomicity scenarios but remains one of four top-level integration tests."
   }
 }

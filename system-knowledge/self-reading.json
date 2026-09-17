@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-16T14:37:33.140Z",
-  "stage": "2.8.1",
+  "generatedAt": "2026-09-17T03:39:02Z",
+  "stage": "2.9.0",
   "id": "rota5-self-reading-v1",
   "baseline_id": "rota5-baseline-v1",
   "bootstrap_files": [
@@ -254,25 +254,25 @@
       "tests.json",
       "findings.json"
     ],
-    "remote_database_not_validated": "HIGH #1 migration history, FINAL_DB constraints/functions/triggers and runtime behavior were validated. Other remote PostgreSQL internals, RLS, policies, grants and Supabase Auth configuration remain NOT_VALIDATED.",
-    "infrastructure_state": "Canonical functional source is c48405e41df3d1cd69eb3d383b7c6dd17257155e; existing deployment dpl_2bitbdQynYB6QdMiEkB1em65HsAy is READY, no deployment or remote mutation occurred during the documentary freeze, and infrastructure health remains DEGRADED.",
+    "remote_database_not_validated": "Current migration ledger is aligned through 00600 and the affected RPCs/grants were validated read-only. Broader remote PostgreSQL behavior, RLS, policies and Supabase Auth configuration remain separately NOT_VALIDATED where their finding criteria are unmet.",
+    "infrastructure_state": "Canonical functional source is c7ed2c31eb9c322ef489e71bb59631c39928a1e0; Production dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc is READY. Git auto-deploy is disabled, so the documentary Baseline 2.9.0 commit is not the application runtime source. Infrastructure health remains DEGRADED.",
     "p0_findings": [],
     "add_capability": "Assign canonical ID, domain, type, description, modules, entrypoints, data/integrations, flow placement, tests and evidence; update capability and related flow/data/test catalogs, validate, then version the baseline.",
     "after_change": "Follow CHANGE-PROTOCOL.md and update every affected JSON plus its Markdown projection; regenerate fingerprint and baseline-integrity.json and run the validator.",
-    "product_health_update": "Release blockers are zero. risk.combo-metadata-read-modify-write-race is RESOLVED; risk.combo-direct-notification-concurrency-can-duplicate-or-stale remains ACTIVE/P2 and independent findings keep product health DEGRADED.",
+    "product_health_update": "Release blockers are zero. Combo direct notification concurrency is RESOLVED after the durable 00600 cutover; separate operational and validation findings keep Product DEGRADED.",
     "high_1": "RESOLVED: EXPAND and CONTRACT are APPLIED_AND_VALIDATED, gates A-I passed, authorization is strict-only and source attribution is non-null and immutable.",
     "legacy_brand": "RESOLVED for DOCUMENTED_AND_REAUDITED_ACTIVE_SURFACES on Preview dpl_4MAmzsQ6NVM36W1uie5VoVJas9zW and Production dpl_H3kDzmLYYfQn8hmcynMhPWYjm5Qo; this is not a repository-wide assertion about historical strings.",
     "test_runner": "RESOLVED on source 3e2bdc2979301301b3f1566a2ac75a477ee4c169: npm test uses scripts/test-support/typescript-alias-loader.mjs, and npm ci plus 207/214 was proven from canonical Git blobs without .tmp.",
-    "current_baseline": "2.8.1",
-    "functional_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
-    "default_suite": "285/285_PASS",
+    "current_baseline": "2.9.0",
+    "functional_source": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+    "default_suite": "291/291_PASS",
     "next_active_high": "NONE",
     "product_health": "DEGRADED",
     "infrastructure_health": "DEGRADED",
-    "production": "dpl_2bitbdQynYB6QdMiEkB1em65HsAy READY on c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "production": "dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc READY on c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
     "preview": "dpl_FyZdcGzqAmPXsghbkjVPxTBCoZG6",
-    "canonical_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
-    "production_runtime_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e"
+    "canonical_source": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+    "production_runtime_source": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0"
   },
   "baseline_2_3_0": {
     "version": "2.3.0",
@@ -407,6 +407,13 @@
     "change_type": "PATCH_DOCUMENTARY_CORRECTION",
     "functional_source": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
     "source_fingerprint": "9a9ab1a24c824a879213174a34ba1940eded2eeaf90fca26494a6eb24bc9dbee",
+    "baseline_commit": "SELF_NOT_RECORDED"
+  },
+  "baseline_2_9_0": {
+    "canonical_functional_source": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+    "source_fingerprint": "889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6",
+    "production_deployment": "dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc",
+    "migration_ledger": "ALIGNED",
     "baseline_commit": "SELF_NOT_RECORDED"
   }
 }

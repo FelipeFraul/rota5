@@ -1,14 +1,14 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-16T14:37:33.140Z",
-  "stage": "2.8.1",
-  "sourceCommit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+  "generatedAt": "2026-09-17T03:39:02Z",
+  "stage": "2.9.0",
+  "sourceCommit": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
   "counts": {
     "tables": 45,
-    "migrations": 88,
-    "functions": 63,
+    "migrations": 89,
+    "functions": 65,
     "triggers": 36,
-    "indexes": 159,
+    "indexes": 160,
     "rls_enabled": 44,
     "policies": 0,
     "function_table_accesses": 242,
@@ -202,6 +202,77 @@
   ],
   "functions": [
     {
+      "id": "function.admin_event_location_block_reason",
+      "name": "admin_event_location_block_reason",
+      "domain": "domain.event-administration",
+      "tables": [
+        "events",
+        "event_sessions",
+        "ticket_prices",
+        "session_seats",
+        "courtesy_section_limits",
+        "reservations",
+        "tickets"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_REMOTE_VALIDATED",
+      "evidence": [
+        "supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql",
+        "supabase/migrations/20260914000300_enforce_admin_event_location_consistency.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "events",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "event_sessions",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "ticket_prices",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "session_seats",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "courtesy_section_limits",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "reservations",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "tickets",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ],
+      "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
       "id": "function.append_whatsapp_message_batch",
       "name": "append_whatsapp_message_batch",
       "domain": "domain.whatsapp-conversations",
@@ -337,15 +408,159 @@
       "tables": [
         "whatsapp_outbound_deliveries"
       ],
-      "evidence_source": "LOCAL_DECLARED",
+      "evidence_source": "LOCAL_SQL_REMOTE_SCHEMA_LEDGER_AND_POSTGRESQL_CI",
       "evidence": [
-        "supabase/migrations/20260722000200_harden_whatsapp_outbound_delivery_rpc.sql"
+        "supabase/migrations/20260722000200_harden_whatsapp_outbound_delivery_rpc.sql",
+        "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql",
+        "Quality Gate 35141969033",
+        "Production read-only function and grants check 2026-09-17"
       ],
       "table_operations": [
         {
           "table": "whatsapp_outbound_deliveries",
           "operations": [
             "UPDATE"
+          ]
+        }
+      ],
+      "migration_00600_change": "REDEFINED_FUNCTION",
+      "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
+      "id": "function.complete_combo_ready_delivery",
+      "name": "complete_combo_ready_delivery",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_redemptions"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "combo_redemptions",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "function.complete_legacy_combo_ready_recovery",
+      "name": "complete_legacy_combo_ready_recovery",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_redemptions"
+      ],
+      "evidence_source": "LOCAL_DECLARED_REMOTE_VALIDATED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+        "Quality Gate 34998744062"
+      ],
+      "table_operations": [
+        {
+          "table": "combo_redemptions",
+          "operations": [
+            "READ",
+            "UPDATE"
+          ]
+        }
+      ],
+      "security": {
+        "execution": "SECURITY_INVOKER",
+        "search_path": "",
+        "execute_grantee": "service_role",
+        "public_execute": false
+      },
+      "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
+      "id": "function.confirm_combo_delivery_choice",
+      "name": "confirm_combo_delivery_choice",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_redemptions",
+        "combo_redemption_events"
+      ],
+      "evidence_source": "LOCAL_DECLARED_REMOTE_VALIDATED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+        "Quality Gate 34998744062"
+      ],
+      "table_operations": [
+        {
+          "table": "combo_redemptions",
+          "operations": [
+            "READ",
+            "UPDATE"
+          ]
+        },
+        {
+          "table": "combo_redemption_events",
+          "operations": [
+            "INSERT"
+          ]
+        }
+      ],
+      "security": {
+        "execution": "SECURITY_INVOKER",
+        "search_path": "",
+        "execute_grantee": "service_role",
+        "public_execute": false
+      },
+      "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
+      "id": "function.confirm_paid_combo_order",
+      "name": "confirm_paid_combo_order",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_orders",
+        "combo_payments",
+        "combo_redemptions",
+        "customers",
+        "whatsapp_outbound_deliveries"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000300_make_combo_redemption_codes_collision_safe.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "combo_orders",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "combo_payments",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "combo_redemptions",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "customers",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "whatsapp_outbound_deliveries",
+          "operations": [
+            "READ",
+            "WRITE"
           ]
         }
       ]
@@ -412,6 +627,67 @@
       ]
     },
     {
+      "id": "function.confirm_paid_ticket_order_core_20260722",
+      "name": "confirm_paid_ticket_order_core_20260722",
+      "domain": "domain.orders-payments",
+      "tables": [
+        "orders",
+        "payments",
+        "reservations",
+        "reservation_items",
+        "session_seats",
+        "tickets"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "orders",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "payments",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "reservations",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "reservation_items",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "session_seats",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "tickets",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ]
+    },
+    {
       "id": "function.consume_rate_limit",
       "name": "consume_rate_limit",
       "domain": "domain.platform-runtime",
@@ -432,6 +708,85 @@
       ]
     },
     {
+      "id": "function.create_admin_event_catalog",
+      "name": "create_admin_event_catalog",
+      "domain": "domain.event-administration",
+      "tables": [
+        "admin_event_operations",
+        "events",
+        "venues",
+        "event_sessions",
+        "venue_sections",
+        "seats",
+        "session_seats",
+        "ticket_prices"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_REMOTE_VALIDATED",
+      "evidence": [
+        "supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql",
+        "supabase/migrations/20260914000300_enforce_admin_event_location_consistency.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "admin_event_operations",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "events",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "venues",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "event_sessions",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "venue_sections",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "seats",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "session_seats",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "ticket_prices",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ],
+      "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
       "id": "function.enforce_one_active_reservation_per_customer",
       "name": "enforce_one_active_reservation_per_customer",
       "domain": "domain.reservation-inventory",
@@ -441,6 +796,167 @@
         "supabase/migrations/20260722000400_fully_qualify_hardened_function_references.sql"
       ],
       "table_operations": []
+    },
+    {
+      "id": "function.ensure_combo_ready_delivery_intents",
+      "name": "ensure_combo_ready_delivery_intents",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_redemptions",
+        "combo_orders",
+        "customers",
+        "whatsapp_outbound_deliveries"
+      ],
+      "evidence_source": "LOCAL_SQL_REMOTE_SCHEMA_LEDGER_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql",
+        "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql",
+        "Quality Gate 35141969033",
+        "Production read-only function and grants check 2026-09-17"
+      ],
+      "table_operations": [
+        {
+          "table": "combo_redemptions",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "combo_orders",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "customers",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "whatsapp_outbound_deliveries",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ],
+      "migration_00600_change": "REDEFINED_FUNCTION",
+      "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
+      "id": "function.ensure_paid_combo_delivery_intents",
+      "name": "ensure_paid_combo_delivery_intents",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_orders",
+        "combo_redemptions",
+        "customers",
+        "whatsapp_outbound_deliveries"
+      ],
+      "evidence_source": "LOCAL_SQL_REMOTE_SCHEMA_LEDGER_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql",
+        "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql",
+        "Quality Gate 35141969033",
+        "Production read-only function and grants check 2026-09-17"
+      ],
+      "table_operations": [
+        {
+          "table": "combo_orders",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "combo_redemptions",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "customers",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "whatsapp_outbound_deliveries",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ],
+      "migration_00600_change": "REDEFINED_FUNCTION",
+      "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
+      "id": "function.ensure_paid_ticket_delivery_intents",
+      "name": "ensure_paid_ticket_delivery_intents",
+      "domain": "domain.ticketing-delivery",
+      "tables": [
+        "orders",
+        "reservations",
+        "event_sessions",
+        "customers",
+        "tickets",
+        "whatsapp_outbound_deliveries"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "orders",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "reservations",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "event_sessions",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "customers",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "tickets",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "whatsapp_outbound_deliveries",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ]
     },
     {
       "id": "function.expire_reservations",
@@ -503,6 +1019,28 @@
           ]
         }
       ]
+    },
+    {
+      "id": "function.gate_session_source_rollout_status",
+      "name": "gate_session_source_rollout_status",
+      "domain": "domain.gate-admission",
+      "tables": [
+        "gate_sessions"
+      ],
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "gate_sessions",
+          "operations": [
+            "READ"
+          ]
+        }
+      ],
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "remote_evidence": "EXPAND_REMOTE_RUNTIME_VALIDATED"
     },
     {
       "id": "function.get_admin_event_editor_payload",
@@ -891,6 +1429,85 @@
       "table_operations": []
     },
     {
+      "id": "function.get_paid_combo_delivery_queue_counts",
+      "name": "get_paid_combo_delivery_queue_counts",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "whatsapp_outbound_deliveries"
+      ],
+      "evidence_source": "LOCAL_SQL_REMOTE_SCHEMA_LEDGER_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql",
+        "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql",
+        "Quality Gate 35141969033",
+        "Production read-only function and grants check 2026-09-17"
+      ],
+      "table_operations": [
+        {
+          "table": "whatsapp_outbound_deliveries",
+          "operations": [
+            "READ"
+          ]
+        }
+      ],
+      "migration_00600_change": "REDEFINED_FUNCTION",
+      "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
+      "id": "function.get_paid_ticket_delivery_queue_counts",
+      "name": "get_paid_ticket_delivery_queue_counts",
+      "domain": "domain.ticketing-delivery",
+      "tables": [
+        "whatsapp_outbound_deliveries"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "whatsapp_outbound_deliveries",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "function.insert_combo_operational_intent",
+      "name": "insert_combo_operational_intent",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_redemptions",
+        "whatsapp_outbound_deliveries"
+      ],
+      "evidence_source": "LOCAL_SQL_REMOTE_SCHEMA_LEDGER_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql",
+        "Production read-only catalog and grant validation 2026-09-17",
+        "Quality Gate 35141969033",
+        "Production read-only function and grants check 2026-09-17"
+      ],
+      "table_operations": [
+        {
+          "table": "whatsapp_outbound_deliveries",
+          "operations": [
+            "READ",
+            "INSERT"
+          ]
+        }
+      ],
+      "security": {
+        "execution": "SECURITY_INVOKER",
+        "search_path": "",
+        "execute_grantee": "service_role",
+        "public_execute": false
+      },
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "migration_00600_change": "NEW_FUNCTION"
+    },
+    {
       "id": "function.issue_admin_courtesy_order",
       "name": "issue_admin_courtesy_order",
       "domain": "domain.courtesy",
@@ -1141,6 +1758,52 @@
       ]
     },
     {
+      "id": "function.list_due_paid_combo_delivery_tasks",
+      "name": "list_due_paid_combo_delivery_tasks",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "whatsapp_outbound_deliveries"
+      ],
+      "evidence_source": "LOCAL_SQL_REMOTE_SCHEMA_LEDGER_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql",
+        "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql",
+        "Quality Gate 35141969033",
+        "Production read-only function and grants check 2026-09-17"
+      ],
+      "table_operations": [
+        {
+          "table": "whatsapp_outbound_deliveries",
+          "operations": [
+            "READ"
+          ]
+        }
+      ],
+      "migration_00600_change": "REDEFINED_FUNCTION",
+      "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
+      "id": "function.list_due_paid_ticket_delivery_orders",
+      "name": "list_due_paid_ticket_delivery_orders",
+      "domain": "domain.ticketing-delivery",
+      "tables": [
+        "whatsapp_outbound_deliveries"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "whatsapp_outbound_deliveries",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ]
+    },
+    {
       "id": "function.lock_and_validate_courtesy_limits",
       "name": "lock_and_validate_courtesy_limits",
       "domain": "domain.courtesy",
@@ -1173,6 +1836,57 @@
           ]
         }
       ]
+    },
+    {
+      "id": "function.lock_authorized_gate_session",
+      "name": "lock_authorized_gate_session",
+      "domain": "domain.gate-admission",
+      "tables": [
+        "gate_sessions",
+        "gate_accesses",
+        "fixed_gate_accesses",
+        "events",
+        "event_sessions"
+      ],
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
+        "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "gate_sessions",
+          "operations": [
+            "READ"
+          ]
+        },
+        {
+          "table": "gate_accesses",
+          "operations": [
+            "READ"
+          ]
+        },
+        {
+          "table": "fixed_gate_accesses",
+          "operations": [
+            "READ"
+          ]
+        },
+        {
+          "table": "events",
+          "operations": [
+            "READ"
+          ]
+        },
+        {
+          "table": "event_sessions",
+          "operations": [
+            "READ"
+          ]
+        }
+      ],
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "remote_evidence": "POST_CONTRACT_RUNTIME_VALIDATED"
     },
     {
       "id": "function.lock_customer_active_reservation_slot",
@@ -1250,6 +1964,58 @@
       ]
     },
     {
+      "id": "function.mark_whatsapp_outbound_delivery_failed",
+      "name": "mark_whatsapp_outbound_delivery_failed",
+      "domain": "domain.whatsapp-conversations",
+      "tables": [
+        "whatsapp_outbound_deliveries"
+      ],
+      "evidence_source": "LOCAL_SQL_REMOTE_SCHEMA_LEDGER_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql",
+        "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql",
+        "Quality Gate 35141969033",
+        "Production read-only function and grants check 2026-09-17"
+      ],
+      "table_operations": [
+        {
+          "table": "whatsapp_outbound_deliveries",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ],
+      "migration_00600_change": "REDEFINED_FUNCTION",
+      "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
+      "id": "function.mark_whatsapp_outbound_delivery_sent",
+      "name": "mark_whatsapp_outbound_delivery_sent",
+      "domain": "domain.whatsapp-conversations",
+      "tables": [
+        "whatsapp_outbound_deliveries"
+      ],
+      "evidence_source": "LOCAL_SQL_REMOTE_SCHEMA_LEDGER_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql",
+        "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql",
+        "Quality Gate 35141969033",
+        "Production read-only function and grants check 2026-09-17"
+      ],
+      "table_operations": [
+        {
+          "table": "whatsapp_outbound_deliveries",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ],
+      "migration_00600_change": "REDEFINED_FUNCTION",
+      "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
       "id": "function.normalize_event_search_text",
       "name": "normalize_event_search_text",
       "domain": "domain.event-catalog",
@@ -1259,6 +2025,218 @@
         "supabase/migrations/20260722000400_fully_qualify_hardened_function_references.sql"
       ],
       "table_operations": []
+    },
+    {
+      "id": "function.pause_gate_access_and_revoke_sessions",
+      "name": "pause_gate_access_and_revoke_sessions",
+      "domain": "domain.gate-admission",
+      "tables": [
+        "gate_accesses",
+        "gate_sessions"
+      ],
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
+        "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "gate_accesses",
+          "operations": [
+            "READ",
+            "UPDATE"
+          ]
+        },
+        {
+          "table": "gate_sessions",
+          "operations": [
+            "READ"
+          ]
+        }
+      ],
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "remote_evidence": "POST_CONTRACT_RUNTIME_VALIDATED"
+    },
+    {
+      "id": "function.prepare_combo_ready_delivery",
+      "name": "prepare_combo_ready_delivery",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_redemptions"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "combo_redemptions",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "function.prepare_legacy_combo_ready_delivery",
+      "name": "prepare_legacy_combo_ready_delivery",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_redemptions"
+      ],
+      "evidence_source": "LOCAL_SQL_REMOTE_SCHEMA_LEDGER_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql",
+        "Production read-only catalog and grant validation 2026-09-17",
+        "Quality Gate 35141969033",
+        "Production read-only function and grants check 2026-09-17"
+      ],
+      "table_operations": [
+        {
+          "table": "whatsapp_outbound_deliveries",
+          "operations": [
+            "READ",
+            "INSERT"
+          ]
+        }
+      ],
+      "security": {
+        "execution": "SECURITY_INVOKER",
+        "search_path": "",
+        "execute_grantee": "service_role",
+        "public_execute": false
+      },
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "migration_00600_change": "NEW_FUNCTION"
+    },
+    {
+      "id": "function.prevent_gate_session_source_change",
+      "name": "prevent_gate_session_source_change",
+      "domain": "domain.gate-admission",
+      "tables": [
+        "gate_sessions"
+      ],
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql"
+      ],
+      "table_operations": [],
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "remote_evidence": "POST_CONTRACT_RUNTIME_VALIDATED"
+    },
+    {
+      "id": "function.record_combo_awaiting_preparation",
+      "name": "record_combo_awaiting_preparation",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_redemptions",
+        "combo_redemption_events"
+      ],
+      "evidence_source": "LOCAL_SQL_REMOTE_SCHEMA_LEDGER_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+        "Quality Gate 34998744062",
+        "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql",
+        "Quality Gate 35141969033",
+        "Production read-only function and grants check 2026-09-17"
+      ],
+      "table_operations": [
+        {
+          "table": "combo_redemptions",
+          "operations": [
+            "READ",
+            "UPDATE"
+          ]
+        },
+        {
+          "table": "combo_redemption_events",
+          "operations": [
+            "INSERT"
+          ]
+        }
+      ],
+      "security": {
+        "execution": "SECURITY_INVOKER",
+        "search_path": "",
+        "execute_grantee": "service_role",
+        "public_execute": false
+      },
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "migration_00600_change": "REDEFINED_FUNCTION"
+    },
+    {
+      "id": "function.record_combo_delivery_choice_prompt",
+      "name": "record_combo_delivery_choice_prompt",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_redemptions",
+        "combo_redemption_events"
+      ],
+      "evidence_source": "LOCAL_SQL_REMOTE_SCHEMA_LEDGER_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+        "Quality Gate 34998744062",
+        "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql",
+        "Quality Gate 35141969033",
+        "Production read-only function and grants check 2026-09-17"
+      ],
+      "table_operations": [
+        {
+          "table": "combo_redemptions",
+          "operations": [
+            "READ",
+            "UPDATE"
+          ]
+        },
+        {
+          "table": "combo_redemption_events",
+          "operations": [
+            "INSERT"
+          ]
+        }
+      ],
+      "security": {
+        "execution": "SECURITY_INVOKER",
+        "search_path": "",
+        "execute_grantee": "service_role",
+        "public_execute": false
+      },
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "migration_00600_change": "REDEFINED_FUNCTION"
+    },
+    {
+      "id": "function.record_combo_gate_arrival",
+      "name": "record_combo_gate_arrival",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_redemptions"
+      ],
+      "evidence_source": "LOCAL_SQL_REMOTE_SCHEMA_LEDGER_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+        "Quality Gate 34998744062",
+        "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql",
+        "Quality Gate 35141969033",
+        "Production read-only function and grants check 2026-09-17"
+      ],
+      "table_operations": [
+        {
+          "table": "combo_redemptions",
+          "operations": [
+            "READ",
+            "UPDATE"
+          ]
+        }
+      ],
+      "security": {
+        "execution": "SECURITY_INVOKER",
+        "search_path": "",
+        "execute_grantee": "service_role",
+        "public_execute": false
+      },
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "migration_00600_change": "REDEFINED_FUNCTION"
     },
     {
       "id": "function.reschedule_whatsapp_message_batch",
@@ -1498,6 +2476,59 @@
       ]
     },
     {
+      "id": "function.revoke_fixed_gate_access_and_revoke_sessions",
+      "name": "revoke_fixed_gate_access_and_revoke_sessions",
+      "domain": "domain.gate-admission",
+      "tables": [
+        "fixed_gate_accesses",
+        "gate_sessions"
+      ],
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
+        "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "fixed_gate_accesses",
+          "operations": [
+            "READ",
+            "UPDATE"
+          ]
+        },
+        {
+          "table": "gate_sessions",
+          "operations": [
+            "READ"
+          ]
+        }
+      ],
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "remote_evidence": "POST_CONTRACT_RUNTIME_VALIDATED"
+    },
+    {
+      "id": "function.revoke_linked_gate_sessions_on_credential_change",
+      "name": "revoke_linked_gate_sessions_on_credential_change",
+      "domain": "domain.gate-admission",
+      "tables": [
+        "gate_sessions"
+      ],
+      "evidence_source": "LOCAL_DECLARED",
+      "evidence": [
+        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "gate_sessions",
+          "operations": [
+            "UPDATE"
+          ]
+        }
+      ],
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "remote_evidence": "EXPAND_REMOTE_RUNTIME_VALIDATED"
+    },
+    {
       "id": "function.search_public_events_ranked",
       "name": "search_public_events_ranked",
       "domain": "domain.event-catalog",
@@ -1550,6 +2581,35 @@
       "table_operations": []
     },
     {
+      "id": "function.start_combo_kitchen_preparation",
+      "name": "start_combo_kitchen_preparation",
+      "domain": "domain.combo-commerce-fulfillment",
+      "tables": [
+        "combo_redemptions"
+      ],
+      "evidence_source": "LOCAL_DECLARED_REMOTE_VALIDATED_AND_POSTGRESQL_CI",
+      "evidence": [
+        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
+        "Quality Gate 34998744062"
+      ],
+      "table_operations": [
+        {
+          "table": "combo_redemptions",
+          "operations": [
+            "READ",
+            "UPDATE"
+          ]
+        }
+      ],
+      "security": {
+        "execution": "SECURITY_INVOKER",
+        "search_path": "",
+        "execute_grantee": "service_role",
+        "public_execute": false
+      },
+      "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
       "id": "function.sync_official_table_map_reservation_status",
       "name": "sync_official_table_map_reservation_status",
       "domain": "domain.table-map",
@@ -1568,6 +2628,203 @@
           ]
         }
       ]
+    },
+    {
+      "id": "function.update_admin_event_catalog",
+      "name": "update_admin_event_catalog",
+      "domain": "domain.event-administration",
+      "tables": [
+        "events",
+        "venues",
+        "event_sessions",
+        "admin_event_operations"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_REMOTE_VALIDATED",
+      "evidence": [
+        "supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql",
+        "supabase/migrations/20260914000300_enforce_admin_event_location_consistency.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "events",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "venues",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "event_sessions",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "admin_event_operations",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ],
+      "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
+      "id": "function.update_admin_event_catalog_legacy",
+      "name": "update_admin_event_catalog_legacy",
+      "domain": "domain.event-administration",
+      "tables": [
+        "admin_event_operations",
+        "events",
+        "venues",
+        "event_sessions",
+        "venue_sections",
+        "seats",
+        "session_seats",
+        "ticket_prices",
+        "courtesy_section_limits",
+        "reservations",
+        "tickets"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_REMOTE_VALIDATED",
+      "evidence": [
+        "supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql",
+        "supabase/migrations/20260914000300_enforce_admin_event_location_consistency.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "admin_event_operations",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "events",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "venues",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "event_sessions",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "venue_sections",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "seats",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "session_seats",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "ticket_prices",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "courtesy_section_limits",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "reservations",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "tickets",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ],
+      "remote_status": "APPLIED_AND_VALIDATED"
+    },
+    {
+      "id": "function.update_admin_event_location",
+      "name": "update_admin_event_location",
+      "domain": "domain.event-administration",
+      "tables": [
+        "admin_event_operations",
+        "events",
+        "venues",
+        "event_sessions"
+      ],
+      "evidence_source": "LOCAL_DECLARED_AND_REMOTE_VALIDATED",
+      "evidence": [
+        "supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql",
+        "supabase/migrations/20260914000300_enforce_admin_event_location_consistency.sql"
+      ],
+      "table_operations": [
+        {
+          "table": "admin_event_operations",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "events",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "venues",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        },
+        {
+          "table": "event_sessions",
+          "operations": [
+            "READ",
+            "WRITE"
+          ]
+        }
+      ],
+      "remote_status": "APPLIED_AND_VALIDATED"
     },
     {
       "id": "function.update_admin_section_capacity",
@@ -1712,1153 +2969,6 @@
       ],
       "remote_status": "APPLIED_AND_VALIDATED",
       "remote_evidence": "POST_CONTRACT_RUNTIME_VALIDATED"
-    },
-    {
-      "id": "function.gate_session_source_rollout_status",
-      "name": "gate_session_source_rollout_status",
-      "domain": "domain.gate-admission",
-      "tables": [
-        "gate_sessions"
-      ],
-      "evidence_source": "LOCAL_DECLARED",
-      "evidence": [
-        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
-      ],
-      "table_operations": [
-        {
-          "table": "gate_sessions",
-          "operations": [
-            "READ"
-          ]
-        }
-      ],
-      "remote_status": "APPLIED_AND_VALIDATED",
-      "remote_evidence": "EXPAND_REMOTE_RUNTIME_VALIDATED"
-    },
-    {
-      "id": "function.revoke_linked_gate_sessions_on_credential_change",
-      "name": "revoke_linked_gate_sessions_on_credential_change",
-      "domain": "domain.gate-admission",
-      "tables": [
-        "gate_sessions"
-      ],
-      "evidence_source": "LOCAL_DECLARED",
-      "evidence": [
-        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql"
-      ],
-      "table_operations": [
-        {
-          "table": "gate_sessions",
-          "operations": [
-            "UPDATE"
-          ]
-        }
-      ],
-      "remote_status": "APPLIED_AND_VALIDATED",
-      "remote_evidence": "EXPAND_REMOTE_RUNTIME_VALIDATED"
-    },
-    {
-      "id": "function.lock_authorized_gate_session",
-      "name": "lock_authorized_gate_session",
-      "domain": "domain.gate-admission",
-      "tables": [
-        "gate_sessions",
-        "gate_accesses",
-        "fixed_gate_accesses",
-        "events",
-        "event_sessions"
-      ],
-      "evidence_source": "LOCAL_DECLARED",
-      "evidence": [
-        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
-        "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql"
-      ],
-      "table_operations": [
-        {
-          "table": "gate_sessions",
-          "operations": [
-            "READ"
-          ]
-        },
-        {
-          "table": "gate_accesses",
-          "operations": [
-            "READ"
-          ]
-        },
-        {
-          "table": "fixed_gate_accesses",
-          "operations": [
-            "READ"
-          ]
-        },
-        {
-          "table": "events",
-          "operations": [
-            "READ"
-          ]
-        },
-        {
-          "table": "event_sessions",
-          "operations": [
-            "READ"
-          ]
-        }
-      ],
-      "remote_status": "APPLIED_AND_VALIDATED",
-      "remote_evidence": "POST_CONTRACT_RUNTIME_VALIDATED"
-    },
-    {
-      "id": "function.pause_gate_access_and_revoke_sessions",
-      "name": "pause_gate_access_and_revoke_sessions",
-      "domain": "domain.gate-admission",
-      "tables": [
-        "gate_accesses",
-        "gate_sessions"
-      ],
-      "evidence_source": "LOCAL_DECLARED",
-      "evidence": [
-        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
-        "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql"
-      ],
-      "table_operations": [
-        {
-          "table": "gate_accesses",
-          "operations": [
-            "READ",
-            "UPDATE"
-          ]
-        },
-        {
-          "table": "gate_sessions",
-          "operations": [
-            "READ"
-          ]
-        }
-      ],
-      "remote_status": "APPLIED_AND_VALIDATED",
-      "remote_evidence": "POST_CONTRACT_RUNTIME_VALIDATED"
-    },
-    {
-      "id": "function.revoke_fixed_gate_access_and_revoke_sessions",
-      "name": "revoke_fixed_gate_access_and_revoke_sessions",
-      "domain": "domain.gate-admission",
-      "tables": [
-        "fixed_gate_accesses",
-        "gate_sessions"
-      ],
-      "evidence_source": "LOCAL_DECLARED",
-      "evidence": [
-        "supabase/migrations/20260912000100_gate_credential_session_revocation_expand.sql",
-        "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql"
-      ],
-      "table_operations": [
-        {
-          "table": "fixed_gate_accesses",
-          "operations": [
-            "READ",
-            "UPDATE"
-          ]
-        },
-        {
-          "table": "gate_sessions",
-          "operations": [
-            "READ"
-          ]
-        }
-      ],
-      "remote_status": "APPLIED_AND_VALIDATED",
-      "remote_evidence": "POST_CONTRACT_RUNTIME_VALIDATED"
-    },
-    {
-      "id": "function.prevent_gate_session_source_change",
-      "name": "prevent_gate_session_source_change",
-      "domain": "domain.gate-admission",
-      "tables": [
-        "gate_sessions"
-      ],
-      "evidence_source": "LOCAL_DECLARED",
-      "evidence": [
-        "supabase/migrations/20260913000100_gate_credential_session_revocation_contract.sql"
-      ],
-      "table_operations": [],
-      "remote_status": "APPLIED_AND_VALIDATED",
-      "remote_evidence": "POST_CONTRACT_RUNTIME_VALIDATED"
-    },
-    {
-      "id": "function.create_admin_event_catalog",
-      "name": "create_admin_event_catalog",
-      "domain": "domain.event-administration",
-      "tables": [
-        "admin_event_operations",
-        "events",
-        "venues",
-        "event_sessions",
-        "venue_sections",
-        "seats",
-        "session_seats",
-        "ticket_prices"
-      ],
-      "evidence_source": "LOCAL_DECLARED_AND_REMOTE_VALIDATED",
-      "evidence": [
-        "supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql",
-        "supabase/migrations/20260914000300_enforce_admin_event_location_consistency.sql"
-      ],
-      "table_operations": [
-        {
-          "table": "admin_event_operations",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "events",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "venues",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "event_sessions",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "venue_sections",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "seats",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "session_seats",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "ticket_prices",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        }
-      ],
-      "remote_status": "APPLIED_AND_VALIDATED"
-    },
-    {
-      "id": "function.update_admin_event_catalog_legacy",
-      "name": "update_admin_event_catalog_legacy",
-      "domain": "domain.event-administration",
-      "tables": [
-        "admin_event_operations",
-        "events",
-        "venues",
-        "event_sessions",
-        "venue_sections",
-        "seats",
-        "session_seats",
-        "ticket_prices",
-        "courtesy_section_limits",
-        "reservations",
-        "tickets"
-      ],
-      "evidence_source": "LOCAL_DECLARED_AND_REMOTE_VALIDATED",
-      "evidence": [
-        "supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql",
-        "supabase/migrations/20260914000300_enforce_admin_event_location_consistency.sql"
-      ],
-      "table_operations": [
-        {
-          "table": "admin_event_operations",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "events",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "venues",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "event_sessions",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "venue_sections",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "seats",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "session_seats",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "ticket_prices",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "courtesy_section_limits",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "reservations",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "tickets",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        }
-      ],
-      "remote_status": "APPLIED_AND_VALIDATED"
-    },
-    {
-      "id": "function.admin_event_location_block_reason",
-      "name": "admin_event_location_block_reason",
-      "domain": "domain.event-administration",
-      "tables": [
-        "events",
-        "event_sessions",
-        "ticket_prices",
-        "session_seats",
-        "courtesy_section_limits",
-        "reservations",
-        "tickets"
-      ],
-      "evidence_source": "LOCAL_DECLARED_AND_REMOTE_VALIDATED",
-      "evidence": [
-        "supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql",
-        "supabase/migrations/20260914000300_enforce_admin_event_location_consistency.sql"
-      ],
-      "table_operations": [
-        {
-          "table": "events",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "event_sessions",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "ticket_prices",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "session_seats",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "courtesy_section_limits",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "reservations",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "tickets",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        }
-      ],
-      "remote_status": "APPLIED_AND_VALIDATED"
-    },
-    {
-      "id": "function.update_admin_event_catalog",
-      "name": "update_admin_event_catalog",
-      "domain": "domain.event-administration",
-      "tables": [
-        "events",
-        "venues",
-        "event_sessions",
-        "admin_event_operations"
-      ],
-      "evidence_source": "LOCAL_DECLARED_AND_REMOTE_VALIDATED",
-      "evidence": [
-        "supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql",
-        "supabase/migrations/20260914000300_enforce_admin_event_location_consistency.sql"
-      ],
-      "table_operations": [
-        {
-          "table": "events",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "venues",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "event_sessions",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "admin_event_operations",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        }
-      ],
-      "remote_status": "APPLIED_AND_VALIDATED"
-    },
-    {
-      "id": "function.update_admin_event_location",
-      "name": "update_admin_event_location",
-      "domain": "domain.event-administration",
-      "tables": [
-        "admin_event_operations",
-        "events",
-        "venues",
-        "event_sessions"
-      ],
-      "evidence_source": "LOCAL_DECLARED_AND_REMOTE_VALIDATED",
-      "evidence": [
-        "supabase/migrations/20260914000100_create_admin_event_catalog_rpcs.sql",
-        "supabase/migrations/20260914000300_enforce_admin_event_location_consistency.sql"
-      ],
-      "table_operations": [
-        {
-          "table": "admin_event_operations",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "events",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "venues",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "event_sessions",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        }
-      ],
-      "remote_status": "APPLIED_AND_VALIDATED"
-    },
-    {
-      "id": "function.confirm_paid_ticket_order_core_20260722",
-      "name": "confirm_paid_ticket_order_core_20260722",
-      "domain": "domain.orders-payments",
-      "tables": [
-        "orders",
-        "payments",
-        "reservations",
-        "reservation_items",
-        "session_seats",
-        "tickets"
-      ],
-      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
-      "evidence": [
-        "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql"
-      ],
-      "table_operations": [
-        {
-          "table": "orders",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "payments",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "reservations",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "reservation_items",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "session_seats",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "tickets",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "function.ensure_paid_ticket_delivery_intents",
-      "name": "ensure_paid_ticket_delivery_intents",
-      "domain": "domain.ticketing-delivery",
-      "tables": [
-        "orders",
-        "reservations",
-        "event_sessions",
-        "customers",
-        "tickets",
-        "whatsapp_outbound_deliveries"
-      ],
-      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
-      "evidence": [
-        "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql"
-      ],
-      "table_operations": [
-        {
-          "table": "orders",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "reservations",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "event_sessions",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "customers",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "tickets",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "whatsapp_outbound_deliveries",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "function.mark_whatsapp_outbound_delivery_sent",
-      "name": "mark_whatsapp_outbound_delivery_sent",
-      "domain": "domain.whatsapp-conversations",
-      "tables": [
-        "whatsapp_outbound_deliveries"
-      ],
-      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
-      "evidence": [
-        "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql"
-      ],
-      "table_operations": [
-        {
-          "table": "whatsapp_outbound_deliveries",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "function.mark_whatsapp_outbound_delivery_failed",
-      "name": "mark_whatsapp_outbound_delivery_failed",
-      "domain": "domain.whatsapp-conversations",
-      "tables": [
-        "whatsapp_outbound_deliveries"
-      ],
-      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
-      "evidence": [
-        "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql"
-      ],
-      "table_operations": [
-        {
-          "table": "whatsapp_outbound_deliveries",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "function.list_due_paid_ticket_delivery_orders",
-      "name": "list_due_paid_ticket_delivery_orders",
-      "domain": "domain.ticketing-delivery",
-      "tables": [
-        "whatsapp_outbound_deliveries"
-      ],
-      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
-      "evidence": [
-        "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql"
-      ],
-      "table_operations": [
-        {
-          "table": "whatsapp_outbound_deliveries",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "function.get_paid_ticket_delivery_queue_counts",
-      "name": "get_paid_ticket_delivery_queue_counts",
-      "domain": "domain.ticketing-delivery",
-      "tables": [
-        "whatsapp_outbound_deliveries"
-      ],
-      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
-      "evidence": [
-        "supabase/migrations/20260915000100_make_paid_ticket_delivery_durable.sql"
-      ],
-      "table_operations": [
-        {
-          "table": "whatsapp_outbound_deliveries",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "function.ensure_paid_combo_delivery_intents",
-      "name": "ensure_paid_combo_delivery_intents",
-      "domain": "domain.combo-commerce-fulfillment",
-      "tables": [
-        "combo_orders",
-        "combo_redemptions",
-        "customers",
-        "whatsapp_outbound_deliveries"
-      ],
-      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
-      "evidence": [
-        "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
-      ],
-      "table_operations": [
-        {
-          "table": "combo_orders",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "combo_redemptions",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "customers",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "whatsapp_outbound_deliveries",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "function.confirm_paid_combo_order",
-      "name": "confirm_paid_combo_order",
-      "domain": "domain.combo-commerce-fulfillment",
-      "tables": [
-        "combo_orders",
-        "combo_payments",
-        "combo_redemptions",
-        "customers",
-        "whatsapp_outbound_deliveries"
-      ],
-      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
-      "evidence": [
-        "supabase/migrations/20260915000300_make_combo_redemption_codes_collision_safe.sql"
-      ],
-      "table_operations": [
-        {
-          "table": "combo_orders",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "combo_payments",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "combo_redemptions",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "customers",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "whatsapp_outbound_deliveries",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "function.ensure_combo_ready_delivery_intents",
-      "name": "ensure_combo_ready_delivery_intents",
-      "domain": "domain.combo-commerce-fulfillment",
-      "tables": [
-        "combo_redemptions",
-        "combo_orders",
-        "customers",
-        "whatsapp_outbound_deliveries"
-      ],
-      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
-      "evidence": [
-        "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
-      ],
-      "table_operations": [
-        {
-          "table": "combo_redemptions",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "combo_orders",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "customers",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        },
-        {
-          "table": "whatsapp_outbound_deliveries",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "function.prepare_combo_ready_delivery",
-      "name": "prepare_combo_ready_delivery",
-      "domain": "domain.combo-commerce-fulfillment",
-      "tables": [
-        "combo_redemptions"
-      ],
-      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
-      "evidence": [
-        "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
-      ],
-      "table_operations": [
-        {
-          "table": "combo_redemptions",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "function.complete_combo_ready_delivery",
-      "name": "complete_combo_ready_delivery",
-      "domain": "domain.combo-commerce-fulfillment",
-      "tables": [
-        "combo_redemptions"
-      ],
-      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
-      "evidence": [
-        "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
-      ],
-      "table_operations": [
-        {
-          "table": "combo_redemptions",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "function.list_due_paid_combo_delivery_tasks",
-      "name": "list_due_paid_combo_delivery_tasks",
-      "domain": "domain.combo-commerce-fulfillment",
-      "tables": [
-        "whatsapp_outbound_deliveries"
-      ],
-      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
-      "evidence": [
-        "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
-      ],
-      "table_operations": [
-        {
-          "table": "whatsapp_outbound_deliveries",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "function.get_paid_combo_delivery_queue_counts",
-      "name": "get_paid_combo_delivery_queue_counts",
-      "domain": "domain.combo-commerce-fulfillment",
-      "tables": [
-        "whatsapp_outbound_deliveries"
-      ],
-      "evidence_source": "LOCAL_DECLARED_AND_POSTGRESQL_CI",
-      "evidence": [
-        "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
-      ],
-      "table_operations": [
-        {
-          "table": "whatsapp_outbound_deliveries",
-          "operations": [
-            "READ",
-            "WRITE"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "function.confirm_combo_delivery_choice",
-      "name": "confirm_combo_delivery_choice",
-      "domain": "domain.combo-commerce-fulfillment",
-      "tables": [
-        "combo_redemptions",
-        "combo_redemption_events"
-      ],
-      "evidence_source": "LOCAL_DECLARED_REMOTE_VALIDATED_AND_POSTGRESQL_CI",
-      "evidence": [
-        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
-        "Quality Gate 34998744062"
-      ],
-      "table_operations": [
-        {
-          "table": "combo_redemptions",
-          "operations": [
-            "READ",
-            "UPDATE"
-          ]
-        },
-        {
-          "table": "combo_redemption_events",
-          "operations": [
-            "INSERT"
-          ]
-        }
-      ],
-      "security": {
-        "execution": "SECURITY_INVOKER",
-        "search_path": "",
-        "execute_grantee": "service_role",
-        "public_execute": false
-      },
-      "remote_status": "APPLIED_AND_VALIDATED"
-    },
-    {
-      "id": "function.record_combo_gate_arrival",
-      "name": "record_combo_gate_arrival",
-      "domain": "domain.combo-commerce-fulfillment",
-      "tables": [
-        "combo_redemptions"
-      ],
-      "evidence_source": "LOCAL_DECLARED_REMOTE_VALIDATED_AND_POSTGRESQL_CI",
-      "evidence": [
-        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
-        "Quality Gate 34998744062"
-      ],
-      "table_operations": [
-        {
-          "table": "combo_redemptions",
-          "operations": [
-            "READ",
-            "UPDATE"
-          ]
-        }
-      ],
-      "security": {
-        "execution": "SECURITY_INVOKER",
-        "search_path": "",
-        "execute_grantee": "service_role",
-        "public_execute": false
-      },
-      "remote_status": "APPLIED_AND_VALIDATED"
-    },
-    {
-      "id": "function.start_combo_kitchen_preparation",
-      "name": "start_combo_kitchen_preparation",
-      "domain": "domain.combo-commerce-fulfillment",
-      "tables": [
-        "combo_redemptions"
-      ],
-      "evidence_source": "LOCAL_DECLARED_REMOTE_VALIDATED_AND_POSTGRESQL_CI",
-      "evidence": [
-        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
-        "Quality Gate 34998744062"
-      ],
-      "table_operations": [
-        {
-          "table": "combo_redemptions",
-          "operations": [
-            "READ",
-            "UPDATE"
-          ]
-        }
-      ],
-      "security": {
-        "execution": "SECURITY_INVOKER",
-        "search_path": "",
-        "execute_grantee": "service_role",
-        "public_execute": false
-      },
-      "remote_status": "APPLIED_AND_VALIDATED"
-    },
-    {
-      "id": "function.record_combo_delivery_choice_prompt",
-      "name": "record_combo_delivery_choice_prompt",
-      "domain": "domain.combo-commerce-fulfillment",
-      "tables": [
-        "combo_redemptions",
-        "combo_redemption_events"
-      ],
-      "evidence_source": "LOCAL_DECLARED_REMOTE_VALIDATED_AND_POSTGRESQL_CI",
-      "evidence": [
-        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
-        "Quality Gate 34998744062"
-      ],
-      "table_operations": [
-        {
-          "table": "combo_redemptions",
-          "operations": [
-            "READ",
-            "UPDATE"
-          ]
-        },
-        {
-          "table": "combo_redemption_events",
-          "operations": [
-            "INSERT"
-          ]
-        }
-      ],
-      "security": {
-        "execution": "SECURITY_INVOKER",
-        "search_path": "",
-        "execute_grantee": "service_role",
-        "public_execute": false
-      },
-      "remote_status": "APPLIED_AND_VALIDATED"
-    },
-    {
-      "id": "function.record_combo_awaiting_preparation",
-      "name": "record_combo_awaiting_preparation",
-      "domain": "domain.combo-commerce-fulfillment",
-      "tables": [
-        "combo_redemptions",
-        "combo_redemption_events"
-      ],
-      "evidence_source": "LOCAL_DECLARED_REMOTE_VALIDATED_AND_POSTGRESQL_CI",
-      "evidence": [
-        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
-        "Quality Gate 34998744062"
-      ],
-      "table_operations": [
-        {
-          "table": "combo_redemptions",
-          "operations": [
-            "READ",
-            "UPDATE"
-          ]
-        },
-        {
-          "table": "combo_redemption_events",
-          "operations": [
-            "INSERT"
-          ]
-        }
-      ],
-      "security": {
-        "execution": "SECURITY_INVOKER",
-        "search_path": "",
-        "execute_grantee": "service_role",
-        "public_execute": false
-      },
-      "remote_status": "APPLIED_AND_VALIDATED"
-    },
-    {
-      "id": "function.complete_legacy_combo_ready_recovery",
-      "name": "complete_legacy_combo_ready_recovery",
-      "domain": "domain.combo-commerce-fulfillment",
-      "tables": [
-        "combo_redemptions"
-      ],
-      "evidence_source": "LOCAL_DECLARED_REMOTE_VALIDATED_AND_POSTGRESQL_CI",
-      "evidence": [
-        "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
-        "Quality Gate 34998744062"
-      ],
-      "table_operations": [
-        {
-          "table": "combo_redemptions",
-          "operations": [
-            "READ",
-            "UPDATE"
-          ]
-        }
-      ],
-      "security": {
-        "execution": "SECURITY_INVOKER",
-        "search_path": "",
-        "execute_grantee": "service_role",
-        "public_execute": false
-      },
-      "remote_status": "APPLIED_AND_VALIDATED"
     }
   ],
   "triggers": [
@@ -4962,6 +5072,15 @@
       "table": "whatsapp_outbound_deliveries",
       "unique": false,
       "evidence": "supabase/migrations/20260915000200_make_paid_combo_delivery_durable.sql"
+    },
+    {
+      "id": "index.whatsapp_outbound_deliveries_combo_operational_due_idx",
+      "name": "whatsapp_outbound_deliveries_combo_operational_due_idx",
+      "table": "whatsapp_outbound_deliveries",
+      "evidence": [
+        "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql"
+      ],
+      "remote_status": "PRESENT"
     }
   ],
   "migrations": [
@@ -7213,7 +7332,12 @@
       ],
       "status_local": "LOCAL_DECLARED",
       "remote_status": "APPLIED_AND_VALIDATED",
-      "evidence_source": "REMOTE_MIGRATION_HISTORY_AND_RUNTIME"
+      "evidence_source": "DIRECT_SQL_SCHEMA_RUNTIME_THEN_OFFICIAL_LEDGER_REPAIR",
+      "historical_application_method": "DIRECT_SQL_PG_CLIENT",
+      "schema_runtime_validation": "VALIDATED",
+      "migration_ledger_validation": "APPLIED_AFTER_REPAIR_2026_09_16",
+      "postgresql_ci_validation": "NOT_CLAIMED",
+      "historical_ledger_at_application": "ABSENT"
     },
     {
       "id": "migration.20260914000200_create_update_admin_event_venue_rpc",
@@ -7236,7 +7360,12 @@
       ],
       "status_local": "LOCAL_DECLARED",
       "remote_status": "APPLIED_AND_VALIDATED",
-      "evidence_source": "REMOTE_MIGRATION_HISTORY_AND_RUNTIME"
+      "evidence_source": "DIRECT_SQL_SCHEMA_RUNTIME_THEN_OFFICIAL_LEDGER_REPAIR",
+      "historical_application_method": "DIRECT_SQL_PG_CLIENT",
+      "schema_runtime_validation": "VALIDATED",
+      "migration_ledger_validation": "APPLIED_AFTER_REPAIR_2026_09_16",
+      "postgresql_ci_validation": "NOT_CLAIMED",
+      "historical_ledger_at_application": "ABSENT"
     },
     {
       "id": "migration.20260914000300_enforce_admin_event_location_consistency",
@@ -7264,7 +7393,12 @@
       ],
       "status_local": "LOCAL_DECLARED",
       "remote_status": "APPLIED_AND_VALIDATED",
-      "evidence_source": "REMOTE_MIGRATION_HISTORY_AND_RUNTIME"
+      "evidence_source": "DIRECT_SQL_SCHEMA_RUNTIME_THEN_OFFICIAL_LEDGER_REPAIR",
+      "historical_application_method": "DIRECT_SQL_PG_CLIENT",
+      "schema_runtime_validation": "VALIDATED",
+      "migration_ledger_validation": "APPLIED_AFTER_REPAIR_2026_09_16",
+      "postgresql_ci_validation": "NOT_CLAIMED",
+      "historical_ledger_at_application": "ABSENT"
     },
     {
       "id": "migration.20260914000400_retire_legacy_admin_event_venue_rpc",
@@ -7284,7 +7418,12 @@
       ],
       "status_local": "LOCAL_DECLARED",
       "remote_status": "APPLIED_AND_VALIDATED",
-      "evidence_source": "REMOTE_MIGRATION_HISTORY_AND_RUNTIME"
+      "evidence_source": "DIRECT_SQL_SCHEMA_RUNTIME_THEN_OFFICIAL_LEDGER_REPAIR",
+      "historical_application_method": "DIRECT_SQL_PG_CLIENT",
+      "schema_runtime_validation": "VALIDATED",
+      "migration_ledger_validation": "APPLIED_AFTER_REPAIR_2026_09_16",
+      "postgresql_ci_validation": "NOT_CLAIMED",
+      "historical_ledger_at_application": "ABSENT"
     },
     {
       "id": "migration.20260915000100_make_paid_ticket_delivery_durable",
@@ -7323,7 +7462,12 @@
       ],
       "status_local": "LOCAL_DECLARED",
       "remote_status": "APPLIED_AND_VALIDATED",
-      "evidence_source": "REMOTE_MIGRATION_HISTORY_AND_POSTGRESQL_CI"
+      "evidence_source": "DIRECT_SQL_SCHEMA_RUNTIME_THEN_OFFICIAL_LEDGER_REPAIR",
+      "historical_application_method": "DIRECT_SQL_PG_CLIENT",
+      "schema_runtime_validation": "VALIDATED",
+      "migration_ledger_validation": "APPLIED_AFTER_REPAIR_2026_09_16",
+      "postgresql_ci_validation": "PASS",
+      "historical_ledger_at_application": "ABSENT"
     },
     {
       "id": "migration.20260915000200_make_paid_combo_delivery_durable",
@@ -7368,7 +7512,12 @@
       ],
       "status_local": "LOCAL_DECLARED",
       "remote_status": "APPLIED_AND_VALIDATED",
-      "evidence_source": "REMOTE_MIGRATION_HISTORY_AND_POSTGRESQL_CI"
+      "evidence_source": "DIRECT_SQL_SCHEMA_RUNTIME_THEN_OFFICIAL_LEDGER_REPAIR",
+      "historical_application_method": "DIRECT_SQL_PG_CLIENT",
+      "schema_runtime_validation": "VALIDATED",
+      "migration_ledger_validation": "APPLIED_AFTER_REPAIR_2026_09_16",
+      "postgresql_ci_validation": "PASS",
+      "historical_ledger_at_application": "ABSENT"
     },
     {
       "id": "migration.20260915000300_make_combo_redemption_codes_collision_safe",
@@ -7391,7 +7540,12 @@
       ],
       "status_local": "LOCAL_DECLARED",
       "remote_status": "APPLIED_AND_VALIDATED",
-      "evidence_source": "REMOTE_MIGRATION_HISTORY_AND_POSTGRESQL_CI"
+      "evidence_source": "DIRECT_SQL_SCHEMA_RUNTIME_THEN_OFFICIAL_LEDGER_REPAIR",
+      "historical_application_method": "DIRECT_SQL_PG_CLIENT",
+      "schema_runtime_validation": "VALIDATED",
+      "migration_ledger_validation": "APPLIED_AFTER_REPAIR_2026_09_16",
+      "postgresql_ci_validation": "PASS",
+      "historical_ledger_at_application": "ABSENT"
     },
     {
       "id": "migration.20260915000400_minimize_combo_redemption_code_sequence_privileges",
@@ -7411,7 +7565,12 @@
       ],
       "status_local": "LOCAL_DECLARED",
       "remote_status": "APPLIED_AND_VALIDATED",
-      "evidence_source": "REMOTE_MIGRATION_HISTORY_AND_POSTGRESQL_CI"
+      "evidence_source": "DIRECT_SQL_SCHEMA_RUNTIME_THEN_OFFICIAL_LEDGER_REPAIR",
+      "historical_application_method": "DIRECT_SQL_PG_CLIENT",
+      "schema_runtime_validation": "VALIDATED",
+      "migration_ledger_validation": "APPLIED_AFTER_REPAIR_2026_09_16",
+      "postgresql_ci_validation": "PASS",
+      "historical_ledger_at_application": "ABSENT"
     },
     {
       "id": "migration.20260915000500_serialize_combo_metadata_transitions",
@@ -7446,7 +7605,57 @@
       ],
       "status_local": "LOCAL_DECLARED",
       "remote_status": "APPLIED_AND_VALIDATED",
-      "evidence_source": "REMOTE_READ_ONLY_REAUDIT_AND_POSTGRESQL_CI"
+      "evidence_source": "DIRECT_SQL_SCHEMA_RUNTIME_THEN_OFFICIAL_LEDGER_REPAIR",
+      "historical_application_method": "DIRECT_SQL_PG_CLIENT",
+      "schema_runtime_validation": "VALIDATED",
+      "migration_ledger_validation": "APPLIED_AFTER_REPAIR_2026_09_16",
+      "postgresql_ci_validation": "PASS",
+      "historical_ledger_at_application": "ABSENT"
+    },
+    {
+      "id": "migration.20260915000600_make_combo_operational_notifications_durable",
+      "timestamp": "20260915000600",
+      "name": "20260915000600_make_combo_operational_notifications_durable.sql",
+      "path": "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql",
+      "purpose": "Persist combo operational notification decisions atomically, route delivery through claimed outbox intents, and recover legacy READY states.",
+      "creates": [
+        "function:insert_combo_operational_intent",
+        "function:prepare_legacy_combo_ready_delivery",
+        "index:whatsapp_outbound_deliveries_combo_operational_due_idx"
+      ],
+      "alters": [
+        "function:record_combo_gate_arrival",
+        "function:record_combo_delivery_choice_prompt",
+        "function:record_combo_awaiting_preparation",
+        "function:ensure_paid_combo_delivery_intents",
+        "function:claim_whatsapp_outbound_delivery",
+        "function:mark_whatsapp_outbound_delivery_sent",
+        "function:mark_whatsapp_outbound_delivery_failed",
+        "function:list_due_paid_combo_delivery_tasks",
+        "function:get_paid_combo_delivery_queue_counts",
+        "function:ensure_combo_ready_delivery_intents"
+      ],
+      "drops": [],
+      "depends_on": "migration.20260915000500_serialize_combo_metadata_transitions",
+      "reversal": "MANUAL_ONLY_NO_DOWN_MIGRATION",
+      "functional_impact": [
+        "combo_redemptions",
+        "whatsapp_outbound_deliveries",
+        "combo operational delivery"
+      ],
+      "status_local": "LOCAL_DECLARED",
+      "remote_status": "APPLIED_AND_VALIDATED",
+      "historical_application_method": "OFFICIAL_SUPABASE_DB_PUSH",
+      "schema_runtime_validation": "VALIDATED_READ_ONLY",
+      "migration_ledger_validation": "APPLIED",
+      "postgresql_ci_validation": "4/4_PASS",
+      "supabase_cli_version": "2.117.0",
+      "cutover_gap": {
+        "started_at": "2026-09-17T03:17:37Z",
+        "ready_at": "2026-09-17T03:19:08Z",
+        "seconds": 91,
+        "operational_intents_created": 0
+      }
     }
   ],
   "extensions": [
@@ -7481,11 +7690,11 @@
       "show_trgm",
       "unaccent"
     ],
-    "migrations": "VALIDATED",
+    "migrations": "LEDGER_ALIGNED_AND_SCHEMA_VALIDATED",
     "triggers": "NOT_VALIDATED",
     "rls": "NOT_VALIDATED",
     "policies": "NOT_VALIDATED",
-    "grants": "NOT_VALIDATED",
+    "grants": "00600_FUNCTIONS_RESTRICTED_SERVICE_ROLE_ONLY",
     "application_rpc_matches": [
       "admin_event_location_block_reason",
       "append_whatsapp_message_batch",
@@ -7529,11 +7738,12 @@
     ],
     "function_equivalence": "NOT_VALIDATED",
     "migration_history": {
-      "status": "VALIDATED",
-      "latest": "20260913000100_gate_credential_session_revocation_contract",
-      "expand_count": 1,
-      "contract_count": 1,
-      "pending": 0
+      "status": "ALIGNED",
+      "latest": "20260915000600_make_combo_operational_notifications_durable",
+      "local_count": 89,
+      "remote_ledger_count": 89,
+      "pending": 0,
+      "proof": "Supabase CLI 2.117.0 migration list + db push --dry-run after cutover 2026-09-17"
     },
     "high_1_contract": {
       "status": "APPLIED_AND_VALIDATED",
@@ -7556,7 +7766,15 @@
       "public.update_admin_event_location"
     ],
     "openapi_observed_at": "2026-09-14T22:50:20.174Z",
-    "openapi_measurement_digest": "cee582981b49dcd230ec034ed1f027a73494fb0191c02591edec6abc3d38aea7"
+    "openapi_measurement_digest": "cee582981b49dcd230ec034ed1f027a73494fb0191c02591edec6abc3d38aea7",
+    "current_00600": {
+      "ledger": "APPLIED",
+      "schema": "VALIDATED_READ_ONLY",
+      "changed_functions_present": 12,
+      "index_present": true,
+      "service_role_execute": true,
+      "public_anon_authenticated_execute": false
+    }
   },
   "migration_analysis": {
     "ordering": "Ordem lexicográfica dos 79 nomes timestampados.",
@@ -7959,5 +8177,29 @@
     "grants": "SERVICE_ROLE_ONLY_MINIMAL",
     "locks_and_current_state_jsonb_merge": "PASS",
     "remote_mutation_during_reconciliation": false
+  },
+  "baseline_2_9_0": {
+    "local_migrations": 89,
+    "remote_ledger_migrations": 89,
+    "functions": 65,
+    "new_functions": [
+      "insert_combo_operational_intent",
+      "prepare_legacy_combo_ready_delivery"
+    ],
+    "redefined_functions": [
+      "record_combo_gate_arrival",
+      "record_combo_delivery_choice_prompt",
+      "record_combo_awaiting_preparation",
+      "ensure_paid_combo_delivery_intents",
+      "claim_whatsapp_outbound_delivery",
+      "mark_whatsapp_outbound_delivery_sent",
+      "mark_whatsapp_outbound_delivery_failed",
+      "list_due_paid_combo_delivery_tasks",
+      "get_paid_combo_delivery_queue_counts",
+      "ensure_combo_ready_delivery_intents"
+    ],
+    "index_added": "whatsapp_outbound_deliveries_combo_operational_due_idx",
+    "application_method": "OFFICIAL_SUPABASE_DB_PUSH",
+    "documentary_provenance_stale": "CLOSED_CURRENT"
   }
 }

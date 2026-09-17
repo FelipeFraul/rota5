@@ -1,8 +1,13 @@
-> **Current Baseline 2.8.1 (2026-09-16):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.9.0 (2026-09-17):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c7ed2c31eb9c322ef489e71bb59631c39928a1e0`. Fingerprint `889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6`; 397 source files, 89 local and remote ledger migrations, 45 tables, 65 SQL functions, 1 sequence, 60 test files and 47 findings. Combo operational notification concurrency is RESOLVED; external ambiguous ACK remains separate. Release blockers: 0; Product and Infrastructure remain DEGRADED.
 
-## Baseline 2.8.1 current test evidence
+## Baseline 2.9.0 test evidence
 
-There are 59 catalogued test artifacts. Quality Gate 35049217326 on `c48405e41df3d1cd69eb3d383b7c6dd17257155e` passed 285/285 default Node cases and 4/4 PostgreSQL integration groups, plus typecheck, lint without errors and build. `scripts/test-rate-limit-outage.mjs` is a 5/5 focused behavioral contract and participates in the default suite; `scripts/type-tests/rate-limit-contract.ts` is compile-time evidence and is not counted as a runtime behavioral test.
+The new `scripts/test-combo-operational-delivery.mjs` covers claimed operational delivery, prompt routing before provider send, malformed/unclaimed intent rejection, retry after provider failure and legacy READY behavior. Functional Quality Gate **35141969033** passed **291/291 Node** with zero failures/skips/todo and **4/4 top-level PostgreSQL integration tests**. The paid combo PostgreSQL test contains several internal atomicity and concurrency scenarios but remains one of those four top-level tests. Typecheck, lint and build passed. Current test file count: **60**.
+
+
+## Baseline 2.9.0 current test evidence
+
+There are 60 catalogued test artifacts. Quality Gate 35141969033 on `c7ed2c31eb9c322ef489e71bb59631c39928a1e0` passed 291/291 default Node cases and 4/4 PostgreSQL integration groups, plus typecheck, lint without errors and build. `scripts/test-rate-limit-outage.mjs` is a 5/5 focused behavioral contract and participates in the default suite; `scripts/type-tests/rate-limit-contract.ts` is compile-time evidence and is not counted as a runtime behavioral test.
 
 ## Historical snapshot - Baseline 2.7.0 test evidence
 
@@ -155,7 +160,7 @@ Limitação comum: várias ferramentas usam Supabase real/service role, criam da
 | `npm run typecheck` | PASS | 0 diagnósticos após a correção mínima |
 | `npm run lint` | PASS | 0 erros; 23 warnings |
 | `npm run build` | PASS | compilação concluída; warning NFT/Turbopack preexistente no mapa |
-| `npm test` | PASS | 285/285 passed; 0 failures, skips, todos or regressions |
+| `npm test` | PASS | 291/291 passed; 0 failures, skips, todos or regressions |
 
 O lint sinalizou ainda imports, funções e variáveis sem uso, uso de `<img>` e uma dependência desnecessária de hook. Esses sinais foram inventariados como possíveis lacunas/legado; nenhum foi alterado.
 

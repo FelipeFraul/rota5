@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-16T14:37:33.140Z",
-  "stage": "2.8.1",
+  "generatedAt": "2026-09-17T03:39:02Z",
+  "stage": "2.9.0",
   "baseline_id": "rota5-baseline-v1",
-  "version": "2.8.1",
+  "version": "2.9.0",
   "status": "FROZEN",
   "domains": 17,
-  "modules": 66,
+  "modules": 67,
   "entrypoints": 56,
   "capabilities": 140,
   "flows": 34,
@@ -15,15 +15,15 @@
   "tables": 45,
   "stateful_tables": 23,
   "stateful_entities": 24,
-  "migrations": 88,
-  "sql_functions": 63,
+  "migrations": 89,
+  "sql_functions": 65,
   "triggers": 36,
-  "data_relations": 2272,
+  "data_relations": 2276,
   "integrations": 6,
   "webhooks": 2,
   "crons": 2,
   "environment_variables": 43,
-  "tests": 59,
+  "tests": 60,
   "findings": 47,
   "findings_by_severity": {
     "HIGH": 11,
@@ -77,13 +77,13 @@
     "product_health": "DEGRADED",
     "npm_test": {
       "status": "PASS",
-      "cases": 285,
-      "passed": 285,
+      "cases": 291,
+      "passed": 291,
       "failed": 0,
       "known_failures": 0,
       "skipped": 0,
       "todo": 0,
-      "change": "RATE_LIMIT_OUTAGE_POLICY_REGRESSIONS_ADDED"
+      "change": "COMBO_OPERATIONAL_DURABLE_DELIVERY_REGRESSIONS_ADDED"
     },
     "infrastructure_health": "DEGRADED",
     "release_gate": {
@@ -111,14 +111,15 @@
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
     "gap.test-runner-depends-on-untracked-loader",
-    "risk.payment-confirmed-before-external-delivery"
+    "risk.payment-confirmed-before-external-delivery",
+    "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
   ],
   "finding_status_metrics": {
     "active_p0": 0,
     "active_high": 0,
     "potential_high": 0,
     "open_high": 0,
-    "resolved": 17
+    "resolved": 18
   },
   "high_1_rollout": {
     "source_implementation": "IMPLEMENTED_AND_VALIDATED",
@@ -384,15 +385,15 @@
     ]
   },
   "current_runtime": {
-    "production_deployment": "dpl_2bitbdQynYB6QdMiEkB1em65HsAy",
-    "production_source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
-    "repository_source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "production_deployment": "dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc",
+    "production_source_commit": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+    "repository_source_commit": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
     "production_status": "READY",
     "current_head_deployed": true,
     "app_runtime_diff_after_deploy": "NAO",
     "source_difference": "NONE_AT_FUNCTIONAL_FREEZE",
     "relevant_log_errors": 0,
-    "supabase": "UNCHANGED_NO_MIGRATION",
+    "supabase": "MIGRATION_LEDGER_ALIGNED_THROUGH_20260915000600",
     "ticketeira": "UNTOUCHED",
     "git_auto_deploy": "DISABLED",
     "new_deployment": false,
@@ -474,16 +475,16 @@
     "runtime_changed": false
   },
   "quality_gate": {
-    "version": "2.8.0",
+    "version": "2.9.0",
     "type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
-    "source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
-    "source_fingerprint": "ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91",
-    "source_file_count": 394,
-    "migration_count": 88,
-    "default_node_suite": "285/285 PASS",
+    "source_commit": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+    "source_fingerprint": "889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6",
+    "source_file_count": 397,
+    "migration_count": 89,
+    "default_node_suite": "291/291 PASS",
     "postgres_integration_suite": "4/4 PASS",
     "postgres_version": 16,
-    "quality_gate_run": 35049217326,
+    "quality_gate_run": 35141969033,
     "quality_gate": "PASS",
     "skip": 0,
     "todo": 0,
@@ -491,7 +492,10 @@
     "rate_limit_outage_policy": "RESOLVED",
     "product_health": "DEGRADED",
     "infrastructure_health": "DEGRADED",
-    "new_deployment": true
+    "new_deployment": true,
+    "direct_notification_concurrency": "RESOLVED",
+    "deployment_during_freeze": false,
+    "combo_metadata_race": "RESOLVED"
   },
   "release_blocker_reconciliation": {
     "version": "2.4.1",
@@ -509,7 +513,7 @@
     "new_specific_findings": 0,
     "new_p1_findings": [],
     "release_blocker_count": 0,
-    "release_blockers": [],
+    "release_blockers": 0,
     "active_high": 0,
     "potential_high": 1,
     "open_high": 1,
@@ -559,7 +563,7 @@
   },
   "canonical_counts": {
     "domains": 17,
-    "modules": 66,
+    "modules": 67,
     "entrypoints": 56,
     "capabilities": 140,
     "flows": 34,
@@ -568,8 +572,8 @@
     "tables": 45,
     "stateful_tables": 23,
     "stateful_entities": 24,
-    "migrations": 88,
-    "sql_functions": 63,
+    "migrations": 89,
+    "sql_functions": 65,
     "triggers": 36,
     "sequences": 1,
     "data_relations": 2272,
@@ -577,7 +581,7 @@
     "webhooks": 2,
     "crons": 2,
     "environment_variables": 43,
-    "tests": 59,
+    "tests": 60,
     "findings": 47
   },
   "active_high_findings": [],
@@ -743,5 +747,23 @@
     "baseline_commit": "SELF_NOT_RECORDED",
     "dependency_count": 818,
     "direct_dependency_count": 616
+  },
+  "baseline_2_9_0": {
+    "change_type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+    "previous_baseline": "2.8.1",
+    "canonical_functional_source": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+    "source_fingerprint": "889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6",
+    "production_deployment": "dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc",
+    "quality_gate_run": 35141969033,
+    "baseline_commit": "SELF_NOT_RECORDED"
+  },
+  "current_migration_history": {
+    "local_count": 89,
+    "remote_ledger_count": 89,
+    "latest_version": "20260915000600",
+    "pending": 0,
+    "status": "ALIGNED",
+    "direct_sql_history_reconciled": true,
+    "documentary_provenance_stale": "CLOSED_CURRENT"
   }
 }

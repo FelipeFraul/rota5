@@ -1,18 +1,23 @@
-> **Current Baseline 2.8.1 (2026-09-16):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.9.0 (2026-09-17):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c7ed2c31eb9c322ef489e71bb59631c39928a1e0`. Fingerprint `889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6`; 397 source files, 89 local and remote ledger migrations, 45 tables, 65 SQL functions, 1 sequence, 60 test files and 47 findings. Combo operational notification concurrency is RESOLVED; external ambiguous ACK remains separate. Release blockers: 0; Product and Infrastructure remain DEGRADED.
 
-## Baseline 2.8.1 current runtime
+## Baseline 2.9.0 runtime evidence
 
-Production `dpl_2bitbdQynYB6QdMiEkB1em65HsAy` is READY on exact canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e` by Vercel REST metadata; target is production, source is CLI, ref is `production`, repository is `FelipeFraul/rota5`, alias parity is MATCH and health returned HTTP 200. Git auto-deploy remains disabled.
+The coordinated gap ran from `2026-09-17T03:17:37Z` until Production READY at `2026-09-17T03:19:08Z` (91 seconds). Operational intents before and created during the gap were both zero. The 00600 schema and ledger aligned; the queue read-only snapshot returned zero due tasks, six sent, zero failed and zero pending due. Both aliases and health passed. No mutating Production RPC test was run.
+
+
+## Baseline 2.9.0 current runtime
+
+Production `dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc` is READY on exact canonical functional source `c7ed2c31eb9c322ef489e71bb59631c39928a1e0` by Vercel REST metadata; target is production, source is CLI, ref is `production`, repository is `FelipeFraul/rota5`, alias parity is MATCH and health returned HTTP 200. Git auto-deploy remains disabled.
 
 ## Historical snapshot — Baseline 2.5.3 runtime and remote evidence
 
 Production deployment `dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf` runs application source `148b8200a44f4eeb49e004af45060a302bac9f20`. Repository source is `e931d66d03a620d5e26588c8f6c8714c62ef5d1d`; post-deployment differences are migrations/tests only and `APP_RUNTIME_DIFF_AFTER_DEPLOY=NAO`. Remote audit: events=7, sessions=7, event/session venue divergences=0, city/state divergences=0, legacy `update_admin_event_venue`=ABSENT.
 
-## Current runtime catalog - Baseline 2.8.1
+## Current runtime catalog - Baseline 2.9.0
 
-Current catalog: **27 checks — 25 PASS, 2 PARTIAL, 0 FAIL.**
+Current catalog: **31 checks — 29 PASS, 2 PARTIAL, 0 FAIL.**
 
-Git semantics: canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`; baseline commit `SELF_NOT_RECORDED`; live branch tip `VOLATILE_NOT_EMBEDDED_IN_FROZEN_BASELINE`. The live `origin/production` tip is verified externally after commit and is not embedded here.
+Git semantics: canonical functional source `c7ed2c31eb9c322ef489e71bb59631c39928a1e0`; baseline commit `SELF_NOT_RECORDED`; live branch tip `VOLATILE_NOT_EMBEDDED_IN_FROZEN_BASELINE`. The live `origin/production` tip is verified externally after commit and is not embedded here.
 
 <!-- RUNTIME_CURRENT_TABLE_START -->
 | ID | Target | Evidence | Status | Result |
@@ -29,7 +34,7 @@ Git semantics: canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257
 | `runtime.health-declared` | Health declared domain | RUNTIME_OBSERVED | PASS | GET /api/health retornou HTTP 200 e status ok. |
 | `runtime.health-linked` | Health linked alias | RUNTIME_OBSERVED | PASS | GET /api/health retornou HTTP 200 e status ok. |
 | `runtime.github-repository` | GitHub repository metadata | REMOTE_CONFIG | PASS | Repositório privado FelipeFraul/rota5 existe; branch operacional production. |
-| `runtime.git-production` | Git canonical source and baseline commit policy | CANONICAL_SOURCE_POLICY | PASS | Canonical functional source is c48405e41df3d1cd69eb3d383b7c6dd17257155e; baseline commit is SELF_NOT_RECORDED; live branch tip is VOLATILE_NOT_EMBEDDED_IN_FROZEN_BASELINE. |
+| `runtime.git-production` | Git canonical source and baseline commit policy | CANONICAL_SOURCE_POLICY | PASS | Canonical functional source is c7ed2c31eb9c322ef489e71bb59631c39928a1e0; baseline commit is SELF_NOT_RECORDED; live branch tip is VOLATILE_NOT_EMBEDDED_IN_FROZEN_BASELINE. |
 | `runtime.codex-version` | Codex CLI version | RUNTIME_OBSERVED | PASS | codex-cli 0.147.0 observado localmente. |
 | `runtime.vercel-logs` | Vercel runtime logs | RUNTIME_OBSERVED | PARTIAL | 50 registros na janela consultada, com 1 entrada de erro; conteúdo sensível não persistido. |
 | `runtime.high-1-local-postgres` | HIGH #1 source artifact | RUNTIME_OBSERVED | PASS | 96/96 focused; rollout matrix PASS; ticket race 2/2; combo race 2/2. |
@@ -41,9 +46,13 @@ Git semantics: canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257
 | `runtime.legacy-brand-scoped-production` | Scoped active-brand surfaces in Preview and Production | RUNTIME_OBSERVED | PASS | Checkout pending/success, five public-help topics, scoped router points, CSS/assets and static CORS passed with zero legacy terms or broken assets; Production relevant log errors=0. |
 | `runtime.baseline-2-5-production-source` | REMOTE_DEPLOYMENT | REMOTE_DEPLOYMENT | PASS | HISTORICAL SNAPSHOT (Baseline 2.5.x): Production dpl_JKrBje3wTYvc1VBCcNKkVb8FV2mf runs application source 148b8200a44f4eeb49e004af45060a302bac9f20; repository source e931d66d03a620d5e26588c8f6c8714c62ef5d1d differs only by migration/test files after deployment. |
 | `runtime.baseline-2-5-location-audit` | REMOTE_DATABASE | REMOTE_DATABASE | PASS | 7 events, 7 sessions, 0 event/session venue divergences, 0 city/state divergences; update_admin_event_venue is absent. |
-| `runtime.paid-delivery-quality-gate` | Current canonical functional Quality Gate | GitHub Actions run 35049217326 | PASS | 285/285 Node, 4/4 PostgreSQL 16, typecheck, lint without errors and build passed on c48405e41df3d1cd69eb3d383b7c6dd17257155e. |
+| `runtime.paid-delivery-quality-gate` | Current canonical functional Quality Gate | GitHub Actions run 35141969033 | PASS | 291/291 Node, 4/4 PostgreSQL 16, typecheck, lint without errors and build passed on c7ed2c31eb9c322ef489e71bb59631c39928a1e0. |
 | `runtime.baseline-2-7-combo-metadata-remote` | Supabase Rota5 combo metadata transition contract | REMOTE_RUNTIME_OBSERVED_BEFORE_DOCUMENTARY_RECONCILIATION | PASS | Migration 20260915000500 was already applied; 7 functions, minimal grants, row locks and JSONB merge passed. Two legacy issued redemptions retained raw_metadata={}; invalid invariants=0; combo outbox orphans=0. No remote query or mutation occurred during this reconciliation. |
 | `runtime.baseline-2-8-functional-production` | Vercel Production Baseline 2.8.0 functional source | AUTHORITATIVE_PLATFORM_METADATA | PASS | GET /v13/deployments/dpl_2bitbdQynYB6QdMiEkB1em65HsAy returned HTTP 200: target=production, readyState=READY, source=cli, meta.githubCommitSha=c48405e41df3d1cd69eb3d383b7c6dd17257155e, meta.githubCommitRef=production and repository=FelipeFraul/rota5. Filtered githubCommitSha listing returned the same deployment; both canonical aliases resolve to it; /api/health returned HTTP 200. |
+| `runtime.baseline-2-9-production` | Vercel Rota5 Production source and aliases | AUTHORITATIVE_PLATFORM_METADATA | PASS | dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc is READY in production on c7ed2c31eb9c322ef489e71bb59631c39928a1e0, ref production and repository FelipeFraul/rota5; both canonical aliases resolve to this deployment; /api/health returned HTTP 200, status=ok, service=whatsapp-ticketing. |
+| `runtime.migration-ledger-2-9` | Supabase migration ledger through 20260915000600 | REMOTE_MIGRATION_LEDGER_READ_ONLY | PASS | 89 local migrations match 89 remote ledger versions; 20260914000100–20260915000600 aligned; db push --dry-run reports zero pending migrations. |
+| `runtime.combo-00600-schema` | 00600 remote schema objects and RPC privileges | REMOTE_SCHEMA_AND_GRANTS | PASS | 12 changed functions and the operational due index are present; service_role can execute the required RPCs while public, anon and authenticated cannot. |
+| `runtime.combo-queue-2-9` | Paid and operational combo outbound queue | PRODUCTION_QUEUE_SNAPSHOT | PASS | list_due_paid_combo_delivery_tasks: 0 due tasks; get_paid_combo_delivery_queue_counts: 6 sent, 0 failed, 0 pending due. Snapshot only; no claim or mutation. |
 <!-- RUNTIME_CURRENT_TABLE_END -->
 
 # Baseline 2.1.0 scoped active-brand runtime evidence

@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-16T14:37:33.140Z",
-  "stage": "2.8.1",
-  "sourceCommit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
-  "scope": "Current test-gap projection for Baseline 2.8.1.",
-  "method": "Reconciled with the 285/285 default suite, separate 4/4 PostgreSQL integration and current canonical coverage catalogs.",
+  "generatedAt": "2026-09-17T03:39:02Z",
+  "stage": "2.9.0",
+  "sourceCommit": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+  "scope": "Current test-gap projection for Baseline 2.9.0.",
+  "method": "Reconciled with the 291/291 default suite, separate 4/4 PostgreSQL integration and current canonical coverage catalogs.",
   "count": 7,
   "default_suite": {
     "cases": 280,

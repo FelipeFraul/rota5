@@ -1,4 +1,16 @@
-> **Current Baseline 2.8.1 (2026-09-16):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.9.0 (2026-09-17):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c7ed2c31eb9c322ef489e71bb59631c39928a1e0`. Fingerprint `889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6`; 397 source files, 89 local and remote ledger migrations, 45 tables, 65 SQL functions, 1 sequence, 60 test files and 47 findings. Combo operational notification concurrency is RESOLVED; external ambiguous ACK remains separate. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+
+## Baseline 2.9.0 — separate events
+
+1. **14–15 September:** nine migration SQL files 140001–150005 were executed directly with pg.Client; schema/runtime checks passed but the migration ledger was not updated.
+2. **16 September forensic audit:** confirmed `DIRECT_SQL_BYPASSED_LEDGER`.
+3. **16 September repair:** Supabase CLI 2.117.0 `migration repair --status applied` recorded those nine versions without replaying SQL or changing schema/business data.
+4. **17 September 00600:** official `db push` applied only 00600 and wrote the ledger.
+5. **17 September cutover:** database-to-app window ran 91 seconds (03:17:37Z–03:19:08Z), zero operational intents created; Production `dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc` became READY on `c7ed2c31eb9c322ef489e71bb59631c39928a1e0`.
+6. **Finding resolution:** combo direct notification concurrency moved ACTIVE → RESOLVED after source, PostgreSQL Quality Gate and read-only Production validation. The ACK ambiguity finding remains ACTIVE.
+
+**CURRENT migration policy:** canonical `supabase/migrations/**` files use official Supabase migration flow when the ledger is aligned. Exceptional direct pg.Client application requires explicit, audited migration-history reconciliation before completion. Historical direct-SQL provenance is retained; `DOCUMENTARY_PROVENANCE_STALE=CLOSED_CURRENT`.
+
 
 ## Baseline 2.8.0 closeout
 

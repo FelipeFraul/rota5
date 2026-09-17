@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-16T14:37:33.140Z",
+  "generatedAt": "2026-09-17T03:39:02Z",
   "counts": {
-    "total": 818,
-    "direct": 616,
-    "indirect": 138,
-    "external": 64
+    "total": 830,
+    "direct": 625,
+    "indirect": 139,
+    "external": 66
   },
   "nodes": [
     {
@@ -1791,6 +1791,13 @@
       "type": "entrypoint",
       "name": "npm run typecheck",
       "path": "package.json",
+      "status": "CONFIRMADO"
+    },
+    {
+      "id": "combo.operational-delivery",
+      "type": "module",
+      "name": "Entrega operacional durável de combo",
+      "path": "src/lib/tickets/services/comboOperationalDelivery.ts",
       "status": "CONFIRMADO"
     }
   ],
@@ -6098,7 +6105,7 @@
     },
     {
       "source": "combo.redemption",
-      "target": "integration.zapi",
+      "target": "combo.offers",
       "relation": "CALLS",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -6109,7 +6116,7 @@
     },
     {
       "source": "combo.redemption",
-      "target": "combo.offers",
+      "target": "combo.qr",
       "relation": "CALLS",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -6120,7 +6127,7 @@
     },
     {
       "source": "combo.redemption",
-      "target": "combo.qr",
+      "target": "gate.access-session",
       "relation": "CALLS",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -6131,7 +6138,7 @@
     },
     {
       "source": "combo.redemption",
-      "target": "gate.access-session",
+      "target": "messaging.messages",
       "relation": "CALLS",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -6142,7 +6149,7 @@
     },
     {
       "source": "combo.redemption",
-      "target": "messaging.messages",
+      "target": "catalog.visibility",
       "relation": "CALLS",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -6153,7 +6160,7 @@
     },
     {
       "source": "combo.redemption",
-      "target": "catalog.visibility",
+      "target": "table-map.catalog-render",
       "relation": "CALLS",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -6164,17 +6171,6 @@
     },
     {
       "source": "combo.redemption",
-      "target": "table-map.catalog-render",
-      "relation": "CALLS",
-      "dependencyType": "DIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "src/lib/tickets/services/comboRedemptions.ts"
-      ],
-      "id": "dependency-0398"
-    },
-    {
-      "source": "combo.redemption",
       "target": "database.table.combo_redemptions",
       "relation": "ACCESSES",
       "dependencyType": "DIRETA",
@@ -6182,7 +6178,7 @@
       "evidence": [
         "src/lib/tickets/services/comboRedemptions.ts"
       ],
-      "id": "dependency-0399"
+      "id": "dependency-0398"
     },
     {
       "source": "combo.redemption",
@@ -6193,7 +6189,7 @@
       "evidence": [
         "src/lib/tickets/services/comboRedemptions.ts"
       ],
-      "id": "dependency-0400"
+      "id": "dependency-0399"
     },
     {
       "source": "combo.redemption",
@@ -6204,11 +6200,22 @@
       "evidence": [
         "src/lib/tickets/services/comboRedemptions.ts"
       ],
-      "id": "dependency-0401"
+      "id": "dependency-0400"
     },
     {
       "source": "combo.redemption",
       "target": "database.table.official_table_map_reservations",
+      "relation": "ACCESSES",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "src/lib/tickets/services/comboRedemptions.ts"
+      ],
+      "id": "dependency-0401"
+    },
+    {
+      "source": "combo.redemption",
+      "target": "database.table.tickets",
       "relation": "ACCESSES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -6219,17 +6226,6 @@
     },
     {
       "source": "combo.redemption",
-      "target": "database.table.tickets",
-      "relation": "ACCESSES",
-      "dependencyType": "DIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "src/lib/tickets/services/comboRedemptions.ts"
-      ],
-      "id": "dependency-0403"
-    },
-    {
-      "source": "combo.redemption",
       "target": "integration-supabase",
       "relation": "USES",
       "dependencyType": "EXTERNA",
@@ -6237,7 +6233,7 @@
       "evidence": [
         "src/lib/tickets/services/comboRedemptions.ts"
       ],
-      "id": "dependency-0404"
+      "id": "dependency-0403"
     },
     {
       "source": "combo.redemption",
@@ -6248,7 +6244,7 @@
       "evidence": [
         "src/lib/tickets/services/comboRedemptions.ts"
       ],
-      "id": "dependency-0405"
+      "id": "dependency-0404"
     },
     {
       "source": "combo.qr",
@@ -6259,7 +6255,7 @@
       "evidence": [
         "src/lib/tickets/services/comboQrImage.ts"
       ],
-      "id": "dependency-0406"
+      "id": "dependency-0405"
     },
     {
       "source": "combo.qr",
@@ -6270,7 +6266,7 @@
       "evidence": [
         "src/lib/tickets/services/comboQrImage.ts"
       ],
-      "id": "dependency-0407"
+      "id": "dependency-0406"
     },
     {
       "source": "combo.kitchen-reader-ui-api",
@@ -6281,7 +6277,7 @@
       "evidence": [
         "src/app/kitchen; src/app/offer-reader; src/app/api/kitchen"
       ],
-      "id": "dependency-0408"
+      "id": "dependency-0407"
     },
     {
       "source": "combo.kitchen-reader-ui-api",
@@ -6292,7 +6288,7 @@
       "evidence": [
         "src/app/kitchen; src/app/offer-reader; src/app/api/kitchen"
       ],
-      "id": "dependency-0409"
+      "id": "dependency-0408"
     },
     {
       "source": "combo.kitchen-reader-ui-api",
@@ -6303,7 +6299,7 @@
       "evidence": [
         "src/app/kitchen; src/app/offer-reader; src/app/api/kitchen"
       ],
-      "id": "dependency-0410"
+      "id": "dependency-0409"
     },
     {
       "source": "combo.kitchen-reader-ui-api",
@@ -6314,7 +6310,7 @@
       "evidence": [
         "src/app/kitchen; src/app/offer-reader; src/app/api/kitchen"
       ],
-      "id": "dependency-0411"
+      "id": "dependency-0410"
     },
     {
       "source": "combo.kitchen-reader-ui-api",
@@ -6325,7 +6321,7 @@
       "evidence": [
         "src/app/kitchen; src/app/offer-reader; src/app/api/kitchen"
       ],
-      "id": "dependency-0412"
+      "id": "dependency-0411"
     },
     {
       "source": "page-kitchen-access",
@@ -6336,7 +6332,7 @@
       "evidence": [
         "src/app/kitchen; src/app/offer-reader; src/app/api/kitchen"
       ],
-      "id": "dependency-0413"
+      "id": "dependency-0412"
     },
     {
       "source": "page-kitchen-session",
@@ -6347,7 +6343,7 @@
       "evidence": [
         "src/app/kitchen; src/app/offer-reader; src/app/api/kitchen"
       ],
-      "id": "dependency-0414"
+      "id": "dependency-0413"
     },
     {
       "source": "page-offer-reader",
@@ -6358,7 +6354,7 @@
       "evidence": [
         "src/app/kitchen; src/app/offer-reader; src/app/api/kitchen"
       ],
-      "id": "dependency-0415"
+      "id": "dependency-0414"
     },
     {
       "source": "http-kitchen-open",
@@ -6369,7 +6365,7 @@
       "evidence": [
         "src/app/kitchen; src/app/offer-reader; src/app/api/kitchen"
       ],
-      "id": "dependency-0416"
+      "id": "dependency-0415"
     },
     {
       "source": "http-kitchen-prepare",
@@ -6380,7 +6376,7 @@
       "evidence": [
         "src/app/kitchen; src/app/offer-reader; src/app/api/kitchen"
       ],
-      "id": "dependency-0417"
+      "id": "dependency-0416"
     },
     {
       "source": "http-kitchen-scan",
@@ -6391,7 +6387,7 @@
       "evidence": [
         "src/app/kitchen; src/app/offer-reader; src/app/api/kitchen"
       ],
-      "id": "dependency-0418"
+      "id": "dependency-0417"
     },
     {
       "source": "http-kitchen-validate",
@@ -6402,7 +6398,7 @@
       "evidence": [
         "src/app/kitchen; src/app/offer-reader; src/app/api/kitchen"
       ],
-      "id": "dependency-0419"
+      "id": "dependency-0418"
     },
     {
       "source": "combo.admin-ui",
@@ -6413,7 +6409,7 @@
       "evidence": [
         "src/app/admin/eventos/combo-editor; src/app/admin/eventos/components/AdminComboOfferCard.tsx; src/app/admin/eventos/components/AdminComboOfferGrid.tsx; src/app/api/admin/combo-offers"
       ],
-      "id": "dependency-0420"
+      "id": "dependency-0419"
     },
     {
       "source": "combo.admin-ui",
@@ -6424,7 +6420,7 @@
       "evidence": [
         "src/app/admin/eventos/combo-editor; src/app/admin/eventos/components/AdminComboOfferCard.tsx; src/app/admin/eventos/components/AdminComboOfferGrid.tsx; src/app/api/admin/combo-offers"
       ],
-      "id": "dependency-0421"
+      "id": "dependency-0420"
     },
     {
       "source": "combo.admin-ui",
@@ -6435,7 +6431,7 @@
       "evidence": [
         "src/app/admin/eventos/combo-editor; src/app/admin/eventos/components/AdminComboOfferCard.tsx; src/app/admin/eventos/components/AdminComboOfferGrid.tsx; src/app/api/admin/combo-offers"
       ],
-      "id": "dependency-0422"
+      "id": "dependency-0421"
     },
     {
       "source": "combo.admin-ui",
@@ -6446,7 +6442,7 @@
       "evidence": [
         "src/app/admin/eventos/combo-editor; src/app/admin/eventos/components/AdminComboOfferCard.tsx; src/app/admin/eventos/components/AdminComboOfferGrid.tsx; src/app/api/admin/combo-offers"
       ],
-      "id": "dependency-0423"
+      "id": "dependency-0422"
     },
     {
       "source": "combo.admin-ui",
@@ -6457,7 +6453,7 @@
       "evidence": [
         "src/app/admin/eventos/combo-editor; src/app/admin/eventos/components/AdminComboOfferCard.tsx; src/app/admin/eventos/components/AdminComboOfferGrid.tsx; src/app/api/admin/combo-offers"
       ],
-      "id": "dependency-0424"
+      "id": "dependency-0423"
     },
     {
       "source": "combo.admin-ui",
@@ -6468,7 +6464,7 @@
       "evidence": [
         "src/app/admin/eventos/combo-editor; src/app/admin/eventos/components/AdminComboOfferCard.tsx; src/app/admin/eventos/components/AdminComboOfferGrid.tsx; src/app/api/admin/combo-offers"
       ],
-      "id": "dependency-0425"
+      "id": "dependency-0424"
     },
     {
       "source": "combo.admin-ui",
@@ -6479,7 +6475,7 @@
       "evidence": [
         "src/app/admin/eventos/combo-editor; src/app/admin/eventos/components/AdminComboOfferCard.tsx; src/app/admin/eventos/components/AdminComboOfferGrid.tsx; src/app/api/admin/combo-offers"
       ],
-      "id": "dependency-0426"
+      "id": "dependency-0425"
     },
     {
       "source": "combo.admin-ui",
@@ -6490,7 +6486,7 @@
       "evidence": [
         "src/app/admin/eventos/combo-editor; src/app/admin/eventos/components/AdminComboOfferCard.tsx; src/app/admin/eventos/components/AdminComboOfferGrid.tsx; src/app/api/admin/combo-offers"
       ],
-      "id": "dependency-0427"
+      "id": "dependency-0426"
     },
     {
       "source": "combo.admin-ui",
@@ -6501,7 +6497,7 @@
       "evidence": [
         "src/app/admin/eventos/combo-editor; src/app/admin/eventos/components/AdminComboOfferCard.tsx; src/app/admin/eventos/components/AdminComboOfferGrid.tsx; src/app/api/admin/combo-offers"
       ],
-      "id": "dependency-0428"
+      "id": "dependency-0427"
     },
     {
       "source": "http-admin-combos",
@@ -6512,7 +6508,7 @@
       "evidence": [
         "src/app/admin/eventos/combo-editor; src/app/admin/eventos/components/AdminComboOfferCard.tsx; src/app/admin/eventos/components/AdminComboOfferGrid.tsx; src/app/api/admin/combo-offers"
       ],
-      "id": "dependency-0429"
+      "id": "dependency-0428"
     },
     {
       "source": "http-admin-combo-id",
@@ -6523,7 +6519,7 @@
       "evidence": [
         "src/app/admin/eventos/combo-editor; src/app/admin/eventos/components/AdminComboOfferCard.tsx; src/app/admin/eventos/components/AdminComboOfferGrid.tsx; src/app/api/admin/combo-offers"
       ],
-      "id": "dependency-0430"
+      "id": "dependency-0429"
     },
     {
       "source": "table-map.catalog-render",
@@ -6534,7 +6530,7 @@
       "evidence": [
         "src/lib/tickets/tableMap; src/lib/tickets/services/seatMapImage.ts; src/lib/tickets/services/pngImage.ts"
       ],
-      "id": "dependency-0431"
+      "id": "dependency-0430"
     },
     {
       "source": "table-map.catalog-render",
@@ -6545,7 +6541,7 @@
       "evidence": [
         "src/lib/tickets/tableMap; src/lib/tickets/services/seatMapImage.ts; src/lib/tickets/services/pngImage.ts"
       ],
-      "id": "dependency-0432"
+      "id": "dependency-0431"
     },
     {
       "source": "table-map.catalog-render",
@@ -6556,7 +6552,7 @@
       "evidence": [
         "src/lib/tickets/tableMap; src/lib/tickets/services/seatMapImage.ts; src/lib/tickets/services/pngImage.ts"
       ],
-      "id": "dependency-0433"
+      "id": "dependency-0432"
     },
     {
       "source": "table-map.catalog-render",
@@ -6567,7 +6563,7 @@
       "evidence": [
         "src/lib/tickets/tableMap; src/lib/tickets/services/seatMapImage.ts; src/lib/tickets/services/pngImage.ts"
       ],
-      "id": "dependency-0434"
+      "id": "dependency-0433"
     },
     {
       "source": "table-map.catalog-render",
@@ -6578,7 +6574,7 @@
       "evidence": [
         "src/lib/tickets/tableMap; src/lib/tickets/services/seatMapImage.ts; src/lib/tickets/services/pngImage.ts"
       ],
-      "id": "dependency-0435"
+      "id": "dependency-0434"
     },
     {
       "source": "table-map.reservation",
@@ -6589,11 +6585,22 @@
       "evidence": [
         "src/lib/tickets/services/officialTableMapReservations.ts"
       ],
-      "id": "dependency-0436"
+      "id": "dependency-0435"
     },
     {
       "source": "table-map.reservation",
       "target": "platform.supabase-client",
+      "relation": "CALLS",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "src/lib/tickets/services/officialTableMapReservations.ts"
+      ],
+      "id": "dependency-0436"
+    },
+    {
+      "source": "table-map.reservation",
+      "target": "platform.logging",
       "relation": "CALLS",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -6604,7 +6611,7 @@
     },
     {
       "source": "table-map.reservation",
-      "target": "platform.logging",
+      "target": "table-map.catalog-render",
       "relation": "CALLS",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -6615,17 +6622,6 @@
     },
     {
       "source": "table-map.reservation",
-      "target": "table-map.catalog-render",
-      "relation": "CALLS",
-      "dependencyType": "DIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "src/lib/tickets/services/officialTableMapReservations.ts"
-      ],
-      "id": "dependency-0439"
-    },
-    {
-      "source": "table-map.reservation",
       "target": "database.table.official_table_map_reservations",
       "relation": "ACCESSES",
       "dependencyType": "DIRETA",
@@ -6633,7 +6629,7 @@
       "evidence": [
         "src/lib/tickets/services/officialTableMapReservations.ts"
       ],
-      "id": "dependency-0440"
+      "id": "dependency-0439"
     },
     {
       "source": "table-map.reservation",
@@ -6644,7 +6640,7 @@
       "evidence": [
         "src/lib/tickets/services/officialTableMapReservations.ts"
       ],
-      "id": "dependency-0441"
+      "id": "dependency-0440"
     },
     {
       "source": "table-map.admin-ui-api",
@@ -6655,7 +6651,7 @@
       "evidence": [
         "src/app/admin/AdminTableMapCalibrator.tsx; src/app/admin/eventos/event-editor/EventTableMapTab.tsx; src/app/api/admin/table-map/route.ts; src/lib/tickets/tableMap/persistOfficialPlaces.ts"
       ],
-      "id": "dependency-0442"
+      "id": "dependency-0441"
     },
     {
       "source": "table-map.admin-ui-api",
@@ -6666,7 +6662,7 @@
       "evidence": [
         "src/app/admin/AdminTableMapCalibrator.tsx; src/app/admin/eventos/event-editor/EventTableMapTab.tsx; src/app/api/admin/table-map/route.ts; src/lib/tickets/tableMap/persistOfficialPlaces.ts"
       ],
-      "id": "dependency-0443"
+      "id": "dependency-0442"
     },
     {
       "source": "table-map.admin-ui-api",
@@ -6677,7 +6673,7 @@
       "evidence": [
         "src/app/admin/AdminTableMapCalibrator.tsx; src/app/admin/eventos/event-editor/EventTableMapTab.tsx; src/app/api/admin/table-map/route.ts; src/lib/tickets/tableMap/persistOfficialPlaces.ts"
       ],
-      "id": "dependency-0444"
+      "id": "dependency-0443"
     },
     {
       "source": "table-map.admin-ui-api",
@@ -6688,7 +6684,7 @@
       "evidence": [
         "src/app/admin/AdminTableMapCalibrator.tsx; src/app/admin/eventos/event-editor/EventTableMapTab.tsx; src/app/api/admin/table-map/route.ts; src/lib/tickets/tableMap/persistOfficialPlaces.ts"
       ],
-      "id": "dependency-0445"
+      "id": "dependency-0444"
     },
     {
       "source": "table-map.admin-ui-api",
@@ -6699,7 +6695,7 @@
       "evidence": [
         "src/app/admin/AdminTableMapCalibrator.tsx; src/app/admin/eventos/event-editor/EventTableMapTab.tsx; src/app/api/admin/table-map/route.ts; src/lib/tickets/tableMap/persistOfficialPlaces.ts"
       ],
-      "id": "dependency-0446"
+      "id": "dependency-0445"
     },
     {
       "source": "table-map.admin-ui-api",
@@ -6710,7 +6706,7 @@
       "evidence": [
         "src/app/admin/AdminTableMapCalibrator.tsx; src/app/admin/eventos/event-editor/EventTableMapTab.tsx; src/app/api/admin/table-map/route.ts; src/lib/tickets/tableMap/persistOfficialPlaces.ts"
       ],
-      "id": "dependency-0447"
+      "id": "dependency-0446"
     },
     {
       "source": "http-admin-map",
@@ -6721,7 +6717,7 @@
       "evidence": [
         "src/app/admin/AdminTableMapCalibrator.tsx; src/app/admin/eventos/event-editor/EventTableMapTab.tsx; src/app/api/admin/table-map/route.ts; src/lib/tickets/tableMap/persistOfficialPlaces.ts"
       ],
-      "id": "dependency-0448"
+      "id": "dependency-0447"
     },
     {
       "source": "analytics.reports",
@@ -6732,11 +6728,22 @@
       "evidence": [
         "src/lib/tickets/services/adminReports.ts; src/lib/tickets/services/adminReportEvents.ts"
       ],
-      "id": "dependency-0449"
+      "id": "dependency-0448"
     },
     {
       "source": "analytics.reports",
       "target": "platform.supabase-client",
+      "relation": "CALLS",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "src/lib/tickets/services/adminReports.ts; src/lib/tickets/services/adminReportEvents.ts"
+      ],
+      "id": "dependency-0449"
+    },
+    {
+      "source": "analytics.reports",
+      "target": "admin.auth",
       "relation": "CALLS",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -6747,17 +6754,6 @@
     },
     {
       "source": "analytics.reports",
-      "target": "admin.auth",
-      "relation": "CALLS",
-      "dependencyType": "DIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "src/lib/tickets/services/adminReports.ts; src/lib/tickets/services/adminReportEvents.ts"
-      ],
-      "id": "dependency-0451"
-    },
-    {
-      "source": "analytics.reports",
       "target": "database.table.courtesies",
       "relation": "ACCESSES",
       "dependencyType": "DIRETA",
@@ -6765,7 +6761,7 @@
       "evidence": [
         "src/lib/tickets/services/adminReports.ts; src/lib/tickets/services/adminReportEvents.ts"
       ],
-      "id": "dependency-0452"
+      "id": "dependency-0451"
     },
     {
       "source": "analytics.reports",
@@ -6776,7 +6772,7 @@
       "evidence": [
         "src/lib/tickets/services/adminReports.ts; src/lib/tickets/services/adminReportEvents.ts"
       ],
-      "id": "dependency-0453"
+      "id": "dependency-0452"
     },
     {
       "source": "analytics.reports",
@@ -6787,7 +6783,7 @@
       "evidence": [
         "src/lib/tickets/services/adminReports.ts; src/lib/tickets/services/adminReportEvents.ts"
       ],
-      "id": "dependency-0454"
+      "id": "dependency-0453"
     },
     {
       "source": "analytics.reports",
@@ -6798,7 +6794,7 @@
       "evidence": [
         "src/lib/tickets/services/adminReports.ts; src/lib/tickets/services/adminReportEvents.ts"
       ],
-      "id": "dependency-0455"
+      "id": "dependency-0454"
     },
     {
       "source": "analytics.reports",
@@ -6809,7 +6805,7 @@
       "evidence": [
         "src/lib/tickets/services/adminReports.ts; src/lib/tickets/services/adminReportEvents.ts"
       ],
-      "id": "dependency-0456"
+      "id": "dependency-0455"
     },
     {
       "source": "analytics.reports",
@@ -6820,7 +6816,7 @@
       "evidence": [
         "src/lib/tickets/services/adminReports.ts; src/lib/tickets/services/adminReportEvents.ts"
       ],
-      "id": "dependency-0457"
+      "id": "dependency-0456"
     },
     {
       "source": "analytics.reports",
@@ -6831,7 +6827,7 @@
       "evidence": [
         "src/lib/tickets/services/adminReports.ts; src/lib/tickets/services/adminReportEvents.ts"
       ],
-      "id": "dependency-0458"
+      "id": "dependency-0457"
     },
     {
       "source": "analytics.reports",
@@ -6842,7 +6838,7 @@
       "evidence": [
         "src/lib/tickets/services/adminReports.ts; src/lib/tickets/services/adminReportEvents.ts"
       ],
-      "id": "dependency-0459"
+      "id": "dependency-0458"
     },
     {
       "source": "analytics.reports",
@@ -6853,7 +6849,7 @@
       "evidence": [
         "src/lib/tickets/services/adminReports.ts; src/lib/tickets/services/adminReportEvents.ts"
       ],
-      "id": "dependency-0460"
+      "id": "dependency-0459"
     },
     {
       "source": "analytics.reports",
@@ -6864,7 +6860,7 @@
       "evidence": [
         "src/lib/tickets/services/adminReports.ts; src/lib/tickets/services/adminReportEvents.ts"
       ],
-      "id": "dependency-0461"
+      "id": "dependency-0460"
     },
     {
       "source": "analytics.contacts",
@@ -6875,7 +6871,7 @@
       "evidence": [
         "src/lib/tickets/services/adminContactAnalytics.ts"
       ],
-      "id": "dependency-0462"
+      "id": "dependency-0461"
     },
     {
       "source": "analytics.contacts",
@@ -6886,7 +6882,7 @@
       "evidence": [
         "src/lib/tickets/services/adminContactAnalytics.ts"
       ],
-      "id": "dependency-0463"
+      "id": "dependency-0462"
     },
     {
       "source": "analytics.contacts",
@@ -6897,7 +6893,7 @@
       "evidence": [
         "src/lib/tickets/services/adminContactAnalytics.ts"
       ],
-      "id": "dependency-0464"
+      "id": "dependency-0463"
     },
     {
       "source": "analytics.contacts",
@@ -6908,7 +6904,7 @@
       "evidence": [
         "src/lib/tickets/services/adminContactAnalytics.ts"
       ],
-      "id": "dependency-0465"
+      "id": "dependency-0464"
     },
     {
       "source": "analytics.contacts",
@@ -6919,7 +6915,7 @@
       "evidence": [
         "src/lib/tickets/services/adminContactAnalytics.ts"
       ],
-      "id": "dependency-0466"
+      "id": "dependency-0465"
     },
     {
       "source": "analytics.contacts",
@@ -6930,7 +6926,7 @@
       "evidence": [
         "src/lib/tickets/services/adminContactAnalytics.ts"
       ],
-      "id": "dependency-0467"
+      "id": "dependency-0466"
     },
     {
       "source": "analytics.contacts",
@@ -6941,7 +6937,7 @@
       "evidence": [
         "src/lib/tickets/services/adminContactAnalytics.ts"
       ],
-      "id": "dependency-0468"
+      "id": "dependency-0467"
     },
     {
       "source": "analytics.contacts",
@@ -6952,7 +6948,7 @@
       "evidence": [
         "src/lib/tickets/services/adminContactAnalytics.ts"
       ],
-      "id": "dependency-0469"
+      "id": "dependency-0468"
     },
     {
       "source": "analytics.operational-dashboard",
@@ -6963,7 +6959,7 @@
       "evidence": [
         "src/app/admin/operacao; src/app/api/admin/operational-dashboard/route.ts; src/lib/tickets/services/operationalDashboardTypes.ts"
       ],
-      "id": "dependency-0470"
+      "id": "dependency-0469"
     },
     {
       "source": "analytics.operational-dashboard",
@@ -6974,7 +6970,7 @@
       "evidence": [
         "src/app/admin/operacao; src/app/api/admin/operational-dashboard/route.ts; src/lib/tickets/services/operationalDashboardTypes.ts"
       ],
-      "id": "dependency-0471"
+      "id": "dependency-0470"
     },
     {
       "source": "analytics.operational-dashboard",
@@ -6985,7 +6981,7 @@
       "evidence": [
         "src/app/admin/operacao; src/app/api/admin/operational-dashboard/route.ts; src/lib/tickets/services/operationalDashboardTypes.ts"
       ],
-      "id": "dependency-0472"
+      "id": "dependency-0471"
     },
     {
       "source": "analytics.operational-dashboard",
@@ -6996,7 +6992,7 @@
       "evidence": [
         "src/app/admin/operacao; src/app/api/admin/operational-dashboard/route.ts; src/lib/tickets/services/operationalDashboardTypes.ts"
       ],
-      "id": "dependency-0473"
+      "id": "dependency-0472"
     },
     {
       "source": "page-admin-ops",
@@ -7007,7 +7003,7 @@
       "evidence": [
         "src/app/admin/operacao; src/app/api/admin/operational-dashboard/route.ts; src/lib/tickets/services/operationalDashboardTypes.ts"
       ],
-      "id": "dependency-0474"
+      "id": "dependency-0473"
     },
     {
       "source": "http-admin-ops",
@@ -7018,7 +7014,7 @@
       "evidence": [
         "src/app/admin/operacao; src/app/api/admin/operational-dashboard/route.ts; src/lib/tickets/services/operationalDashboardTypes.ts"
       ],
-      "id": "dependency-0475"
+      "id": "dependency-0474"
     },
     {
       "source": "analytics.admin-dashboard-ui",
@@ -7029,7 +7025,7 @@
       "evidence": [
         "src/app/admin/eventos/dashboard; src/app/admin/eventos/contacts"
       ],
-      "id": "dependency-0476"
+      "id": "dependency-0475"
     },
     {
       "source": "analytics.admin-dashboard-ui",
@@ -7040,7 +7036,7 @@
       "evidence": [
         "src/app/admin/eventos/dashboard; src/app/admin/eventos/contacts"
       ],
-      "id": "dependency-0477"
+      "id": "dependency-0476"
     },
     {
       "source": "analytics.admin-dashboard-ui",
@@ -7051,7 +7047,7 @@
       "evidence": [
         "src/app/admin/eventos/dashboard; src/app/admin/eventos/contacts"
       ],
-      "id": "dependency-0478"
+      "id": "dependency-0477"
     },
     {
       "source": "background.expire-cron",
@@ -7062,11 +7058,22 @@
       "evidence": [
         "src/app/api/cron/expire-reservations/route.ts"
       ],
-      "id": "dependency-0479"
+      "id": "dependency-0478"
     },
     {
       "source": "background.expire-cron",
       "target": "platform.http",
+      "relation": "CALLS",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "src/app/api/cron/expire-reservations/route.ts"
+      ],
+      "id": "dependency-0479"
+    },
+    {
+      "source": "background.expire-cron",
+      "target": "platform.logging",
       "relation": "CALLS",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -7077,7 +7084,7 @@
     },
     {
       "source": "background.expire-cron",
-      "target": "platform.logging",
+      "target": "platform.rate-limit",
       "relation": "CALLS",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -7088,7 +7095,7 @@
     },
     {
       "source": "background.expire-cron",
-      "target": "platform.rate-limit",
+      "target": "reservation.expiry",
       "relation": "CALLS",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -7099,17 +7106,6 @@
     },
     {
       "source": "background.expire-cron",
-      "target": "reservation.expiry",
-      "relation": "CALLS",
-      "dependencyType": "DIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "src/app/api/cron/expire-reservations/route.ts"
-      ],
-      "id": "dependency-0483"
-    },
-    {
-      "source": "background.expire-cron",
       "target": "integration-vercel",
       "relation": "USES",
       "dependencyType": "EXTERNA",
@@ -7117,7 +7113,7 @@
       "evidence": [
         "src/app/api/cron/expire-reservations/route.ts"
       ],
-      "id": "dependency-0484"
+      "id": "dependency-0483"
     },
     {
       "source": "http-cron-expire",
@@ -7128,7 +7124,7 @@
       "evidence": [
         "src/app/api/cron/expire-reservations/route.ts"
       ],
-      "id": "dependency-0485"
+      "id": "dependency-0484"
     },
     {
       "source": "trigger-cron-expire",
@@ -7139,7 +7135,7 @@
       "evidence": [
         "src/app/api/cron/expire-reservations/route.ts"
       ],
-      "id": "dependency-0486"
+      "id": "dependency-0485"
     },
     {
       "source": "background.batch-cron",
@@ -7150,7 +7146,7 @@
       "evidence": [
         "src/app/api/cron/process-whatsapp-batches/route.ts"
       ],
-      "id": "dependency-0487"
+      "id": "dependency-0486"
     },
     {
       "source": "background.batch-cron",
@@ -7161,7 +7157,7 @@
       "evidence": [
         "src/app/api/cron/process-whatsapp-batches/route.ts"
       ],
-      "id": "dependency-0488"
+      "id": "dependency-0487"
     },
     {
       "source": "background.batch-cron",
@@ -7172,7 +7168,7 @@
       "evidence": [
         "src/app/api/cron/process-whatsapp-batches/route.ts"
       ],
-      "id": "dependency-0489"
+      "id": "dependency-0488"
     },
     {
       "source": "background.batch-cron",
@@ -7183,7 +7179,7 @@
       "evidence": [
         "src/app/api/cron/process-whatsapp-batches/route.ts"
       ],
-      "id": "dependency-0490"
+      "id": "dependency-0489"
     },
     {
       "source": "background.batch-cron",
@@ -7194,7 +7190,7 @@
       "evidence": [
         "src/app/api/cron/process-whatsapp-batches/route.ts"
       ],
-      "id": "dependency-0491"
+      "id": "dependency-0490"
     },
     {
       "source": "background.batch-cron",
@@ -7205,7 +7201,7 @@
       "evidence": [
         "src/app/api/cron/process-whatsapp-batches/route.ts"
       ],
-      "id": "dependency-0492"
+      "id": "dependency-0491"
     },
     {
       "source": "background.batch-cron",
@@ -7216,7 +7212,7 @@
       "evidence": [
         "src/app/api/cron/process-whatsapp-batches/route.ts"
       ],
-      "id": "dependency-0493"
+      "id": "dependency-0492"
     },
     {
       "source": "http-cron-batches",
@@ -7227,7 +7223,7 @@
       "evidence": [
         "src/app/api/cron/process-whatsapp-batches/route.ts"
       ],
-      "id": "dependency-0494"
+      "id": "dependency-0493"
     },
     {
       "source": "trigger-cron-batches",
@@ -7238,7 +7234,7 @@
       "evidence": [
         "src/app/api/cron/process-whatsapp-batches/route.ts"
       ],
-      "id": "dependency-0495"
+      "id": "dependency-0494"
     },
     {
       "source": "automation.codex-requests",
@@ -7249,7 +7245,7 @@
       "evidence": [
         "src/lib/tickets/codexRequests.ts"
       ],
-      "id": "dependency-0496"
+      "id": "dependency-0495"
     },
     {
       "source": "automation.codex-requests",
@@ -7260,7 +7256,7 @@
       "evidence": [
         "src/lib/tickets/codexRequests.ts"
       ],
-      "id": "dependency-0497"
+      "id": "dependency-0496"
     },
     {
       "source": "automation.local-runner",
@@ -7271,7 +7267,7 @@
       "evidence": [
         "scripts/codex-local-runner.mjs; scripts/list-codex-requests.mjs"
       ],
-      "id": "dependency-0498"
+      "id": "dependency-0497"
     },
     {
       "source": "automation.local-runner",
@@ -7282,7 +7278,7 @@
       "evidence": [
         "scripts/codex-local-runner.mjs; scripts/list-codex-requests.mjs"
       ],
-      "id": "dependency-0499"
+      "id": "dependency-0498"
     },
     {
       "source": "automation.local-runner",
@@ -7293,7 +7289,7 @@
       "evidence": [
         "scripts/codex-local-runner.mjs; scripts/list-codex-requests.mjs"
       ],
-      "id": "dependency-0500"
+      "id": "dependency-0499"
     },
     {
       "source": "automation.local-runner",
@@ -7304,7 +7300,7 @@
       "evidence": [
         "scripts/codex-local-runner.mjs; scripts/list-codex-requests.mjs"
       ],
-      "id": "dependency-0501"
+      "id": "dependency-0500"
     },
     {
       "source": "automation.local-runner",
@@ -7315,7 +7311,7 @@
       "evidence": [
         "scripts/codex-local-runner.mjs; scripts/list-codex-requests.mjs"
       ],
-      "id": "dependency-0502"
+      "id": "dependency-0501"
     },
     {
       "source": "automation.local-runner",
@@ -7326,7 +7322,7 @@
       "evidence": [
         "scripts/codex-local-runner.mjs; scripts/list-codex-requests.mjs"
       ],
-      "id": "dependency-0503"
+      "id": "dependency-0502"
     },
     {
       "source": "automation.local-runner",
@@ -7337,7 +7333,7 @@
       "evidence": [
         "scripts/codex-local-runner.mjs; scripts/list-codex-requests.mjs"
       ],
-      "id": "dependency-0504"
+      "id": "dependency-0503"
     },
     {
       "source": "npm-codex-runner",
@@ -7348,7 +7344,7 @@
       "evidence": [
         "scripts/codex-local-runner.mjs; scripts/list-codex-requests.mjs"
       ],
-      "id": "dependency-0505"
+      "id": "dependency-0504"
     },
     {
       "source": "npm-codex-requests",
@@ -7359,7 +7355,7 @@
       "evidence": [
         "scripts/codex-local-runner.mjs; scripts/list-codex-requests.mjs"
       ],
-      "id": "dependency-0506"
+      "id": "dependency-0505"
     },
     {
       "source": "script-codex-runner",
@@ -7370,7 +7366,7 @@
       "evidence": [
         "scripts/codex-local-runner.mjs; scripts/list-codex-requests.mjs"
       ],
-      "id": "dependency-0507"
+      "id": "dependency-0506"
     },
     {
       "source": "script-codex-list",
@@ -7381,7 +7377,7 @@
       "evidence": [
         "scripts/codex-local-runner.mjs; scripts/list-codex-requests.mjs"
       ],
-      "id": "dependency-0508"
+      "id": "dependency-0507"
     },
     {
       "source": "domain.brand-presentation",
@@ -7396,7 +7392,7 @@
         "referências RockBar/Black House"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0509"
+      "id": "dependency-0508"
     },
     {
       "source": "domain.brand-presentation",
@@ -7411,11 +7407,26 @@
         "referências RockBar/Black House"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0510"
+      "id": "dependency-0509"
     },
     {
       "source": "domain.whatsapp-conversations",
       "target": "domain.customer-risk",
+      "relation": "DEPENDS_ON",
+      "dependencyType": "INDIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "routeTicketMessage",
+        "src/app/api/webhook/zapi/route.ts",
+        "conversationState.ts",
+        "services/messages.ts"
+      ],
+      "notes": "Agregação de dependências diretas entre módulos.",
+      "id": "dependency-0510"
+    },
+    {
+      "source": "domain.whatsapp-conversations",
+      "target": "domain.event-catalog",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -7430,7 +7441,7 @@
     },
     {
       "source": "domain.whatsapp-conversations",
-      "target": "domain.event-catalog",
+      "target": "domain.reservation-inventory",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -7445,7 +7456,7 @@
     },
     {
       "source": "domain.whatsapp-conversations",
-      "target": "domain.reservation-inventory",
+      "target": "domain.orders-payments",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -7460,7 +7471,7 @@
     },
     {
       "source": "domain.whatsapp-conversations",
-      "target": "domain.orders-payments",
+      "target": "domain.ticketing-delivery",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -7475,7 +7486,7 @@
     },
     {
       "source": "domain.whatsapp-conversations",
-      "target": "domain.ticketing-delivery",
+      "target": "domain.admin-identity-access",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -7490,7 +7501,7 @@
     },
     {
       "source": "domain.whatsapp-conversations",
-      "target": "domain.admin-identity-access",
+      "target": "domain.gate-admission",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -7505,7 +7516,7 @@
     },
     {
       "source": "domain.whatsapp-conversations",
-      "target": "domain.gate-admission",
+      "target": "domain.courtesy",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -7520,7 +7531,7 @@
     },
     {
       "source": "domain.whatsapp-conversations",
-      "target": "domain.courtesy",
+      "target": "domain.combo-commerce-fulfillment",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -7535,7 +7546,7 @@
     },
     {
       "source": "domain.whatsapp-conversations",
-      "target": "domain.combo-commerce-fulfillment",
+      "target": "domain.analytics-reporting",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -7550,7 +7561,7 @@
     },
     {
       "source": "domain.whatsapp-conversations",
-      "target": "domain.analytics-reporting",
+      "target": "domain.codex-automation",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -7564,21 +7575,6 @@
       "id": "dependency-0520"
     },
     {
-      "source": "domain.whatsapp-conversations",
-      "target": "domain.codex-automation",
-      "relation": "DEPENDS_ON",
-      "dependencyType": "INDIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "routeTicketMessage",
-        "src/app/api/webhook/zapi/route.ts",
-        "conversationState.ts",
-        "services/messages.ts"
-      ],
-      "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0521"
-    },
-    {
       "source": "domain.customer-risk",
       "target": "domain.reservation-inventory",
       "relation": "DEPENDS_ON",
@@ -7590,7 +7586,7 @@
         "checkCheckoutRisk"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0522"
+      "id": "dependency-0521"
     },
     {
       "source": "domain.customer-risk",
@@ -7604,7 +7600,7 @@
         "checkCheckoutRisk"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0523"
+      "id": "dependency-0522"
     },
     {
       "source": "domain.event-catalog",
@@ -7619,7 +7615,7 @@
         "listAvailableSections"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0524"
+      "id": "dependency-0523"
     },
     {
       "source": "domain.event-catalog",
@@ -7634,7 +7630,7 @@
         "listAvailableSections"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0525"
+      "id": "dependency-0524"
     },
     {
       "source": "domain.event-administration",
@@ -7649,7 +7645,7 @@
         "/api/admin/events"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0526"
+      "id": "dependency-0525"
     },
     {
       "source": "domain.event-administration",
@@ -7664,7 +7660,7 @@
         "/api/admin/events"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0527"
+      "id": "dependency-0526"
     },
     {
       "source": "domain.event-administration",
@@ -7679,7 +7675,7 @@
         "/api/admin/events"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0528"
+      "id": "dependency-0527"
     },
     {
       "source": "domain.event-administration",
@@ -7694,7 +7690,7 @@
         "/api/admin/events"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0529"
+      "id": "dependency-0528"
     },
     {
       "source": "domain.event-administration",
@@ -7709,7 +7705,7 @@
         "/api/admin/events"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0530"
+      "id": "dependency-0529"
     },
     {
       "source": "domain.event-administration",
@@ -7724,7 +7720,7 @@
         "/api/admin/events"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0531"
+      "id": "dependency-0530"
     },
     {
       "source": "domain.event-administration",
@@ -7739,7 +7735,7 @@
         "/api/admin/events"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0532"
+      "id": "dependency-0531"
     },
     {
       "source": "domain.event-administration",
@@ -7754,11 +7750,27 @@
         "/api/admin/events"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0533"
+      "id": "dependency-0532"
     },
     {
       "source": "domain.reservation-inventory",
       "target": "domain.customer-risk",
+      "relation": "DEPENDS_ON",
+      "dependencyType": "INDIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "reserveTicketCart",
+        "cancelPendingReservationForCustomer",
+        "expireReservationsAndNotify",
+        "reserve_ticket_cart",
+        "expire_reservations"
+      ],
+      "notes": "Agregação de dependências diretas entre módulos.",
+      "id": "dependency-0533"
+    },
+    {
+      "source": "domain.reservation-inventory",
+      "target": "domain.event-catalog",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -7774,7 +7786,7 @@
     },
     {
       "source": "domain.reservation-inventory",
-      "target": "domain.event-catalog",
+      "target": "domain.orders-payments",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -7790,7 +7802,7 @@
     },
     {
       "source": "domain.reservation-inventory",
-      "target": "domain.orders-payments",
+      "target": "domain.table-map",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -7805,24 +7817,23 @@
       "id": "dependency-0536"
     },
     {
-      "source": "domain.reservation-inventory",
-      "target": "domain.table-map",
+      "source": "domain.orders-payments",
+      "target": "domain.customer-risk",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
       "evidence": [
-        "reserveTicketCart",
-        "cancelPendingReservationForCustomer",
-        "expireReservationsAndNotify",
-        "reserve_ticket_cart",
-        "expire_reservations"
+        "createCheckoutForReservation",
+        "paySelfHostedCheckout",
+        "confirm_paid_ticket_order",
+        "payment_events"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
       "id": "dependency-0537"
     },
     {
       "source": "domain.orders-payments",
-      "target": "domain.customer-risk",
+      "target": "domain.event-catalog",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -7837,7 +7848,7 @@
     },
     {
       "source": "domain.orders-payments",
-      "target": "domain.event-catalog",
+      "target": "domain.reservation-inventory",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -7852,7 +7863,7 @@
     },
     {
       "source": "domain.orders-payments",
-      "target": "domain.reservation-inventory",
+      "target": "domain.ticketing-delivery",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -7867,21 +7878,6 @@
     },
     {
       "source": "domain.orders-payments",
-      "target": "domain.ticketing-delivery",
-      "relation": "DEPENDS_ON",
-      "dependencyType": "INDIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "createCheckoutForReservation",
-        "paySelfHostedCheckout",
-        "confirm_paid_ticket_order",
-        "payment_events"
-      ],
-      "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0541"
-    },
-    {
-      "source": "domain.orders-payments",
       "target": "domain.combo-commerce-fulfillment",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
@@ -7893,7 +7889,7 @@
         "payment_events"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0542"
+      "id": "dependency-0541"
     },
     {
       "source": "domain.ticketing-delivery",
@@ -7908,7 +7904,7 @@
         "assign_participant_contacts_to_order_tickets"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0543"
+      "id": "dependency-0542"
     },
     {
       "source": "domain.ticketing-delivery",
@@ -7923,7 +7919,7 @@
         "assign_participant_contacts_to_order_tickets"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0544"
+      "id": "dependency-0543"
     },
     {
       "source": "domain.ticketing-delivery",
@@ -7938,7 +7934,7 @@
         "assign_participant_contacts_to_order_tickets"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0545"
+      "id": "dependency-0544"
     },
     {
       "source": "domain.ticketing-delivery",
@@ -7953,7 +7949,7 @@
         "assign_participant_contacts_to_order_tickets"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0546"
+      "id": "dependency-0545"
     },
     {
       "source": "domain.ticketing-delivery",
@@ -7968,7 +7964,7 @@
         "assign_participant_contacts_to_order_tickets"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0547"
+      "id": "dependency-0546"
     },
     {
       "source": "domain.admin-identity-access",
@@ -7983,11 +7979,26 @@
         "admin_login_challenges"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0548"
+      "id": "dependency-0547"
     },
     {
       "source": "domain.gate-admission",
       "target": "domain.admin-identity-access",
+      "relation": "DEPENDS_ON",
+      "dependencyType": "INDIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "createGateSession",
+        "validateGateScan",
+        "validate_ticket_entry",
+        "GateSessionScanner"
+      ],
+      "notes": "Agregação de dependências diretas entre módulos.",
+      "id": "dependency-0548"
+    },
+    {
+      "source": "domain.gate-admission",
+      "target": "domain.event-catalog",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -8002,7 +8013,7 @@
     },
     {
       "source": "domain.gate-admission",
-      "target": "domain.event-catalog",
+      "target": "domain.ticketing-delivery",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -8017,7 +8028,7 @@
     },
     {
       "source": "domain.gate-admission",
-      "target": "domain.ticketing-delivery",
+      "target": "domain.combo-commerce-fulfillment",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -8031,21 +8042,6 @@
       "id": "dependency-0551"
     },
     {
-      "source": "domain.gate-admission",
-      "target": "domain.combo-commerce-fulfillment",
-      "relation": "DEPENDS_ON",
-      "dependencyType": "INDIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "createGateSession",
-        "validateGateScan",
-        "validate_ticket_entry",
-        "GateSessionScanner"
-      ],
-      "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0552"
-    },
-    {
       "source": "domain.courtesy",
       "target": "domain.admin-identity-access",
       "relation": "DEPENDS_ON",
@@ -8057,7 +8053,7 @@
         "issue_public_free_ticket_order"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0553"
+      "id": "dependency-0552"
     },
     {
       "source": "domain.courtesy",
@@ -8071,7 +8067,7 @@
         "issue_public_free_ticket_order"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0554"
+      "id": "dependency-0553"
     },
     {
       "source": "domain.courtesy",
@@ -8085,7 +8081,7 @@
         "issue_public_free_ticket_order"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0555"
+      "id": "dependency-0554"
     },
     {
       "source": "domain.courtesy",
@@ -8099,11 +8095,27 @@
         "issue_public_free_ticket_order"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0556"
+      "id": "dependency-0555"
     },
     {
       "source": "domain.combo-commerce-fulfillment",
       "target": "domain.customer-risk",
+      "relation": "DEPENDS_ON",
+      "dependencyType": "INDIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "createComboOffer",
+        "payComboCheckout",
+        "deliverComboOrder",
+        "validateComboRedemptionScan",
+        "validate_combo_redemption"
+      ],
+      "notes": "Agregação de dependências diretas entre módulos.",
+      "id": "dependency-0556"
+    },
+    {
+      "source": "domain.combo-commerce-fulfillment",
+      "target": "domain.event-catalog",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -8119,7 +8131,7 @@
     },
     {
       "source": "domain.combo-commerce-fulfillment",
-      "target": "domain.event-catalog",
+      "target": "domain.orders-payments",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -8135,7 +8147,7 @@
     },
     {
       "source": "domain.combo-commerce-fulfillment",
-      "target": "domain.orders-payments",
+      "target": "domain.ticketing-delivery",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -8151,7 +8163,7 @@
     },
     {
       "source": "domain.combo-commerce-fulfillment",
-      "target": "domain.ticketing-delivery",
+      "target": "domain.gate-admission",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -8167,7 +8179,7 @@
     },
     {
       "source": "domain.combo-commerce-fulfillment",
-      "target": "domain.gate-admission",
+      "target": "domain.table-map",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -8183,7 +8195,7 @@
     },
     {
       "source": "domain.combo-commerce-fulfillment",
-      "target": "domain.table-map",
+      "target": "domain.whatsapp-conversations",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -8198,24 +8210,23 @@
       "id": "dependency-0562"
     },
     {
-      "source": "domain.combo-commerce-fulfillment",
-      "target": "domain.whatsapp-conversations",
+      "source": "domain.table-map",
+      "target": "domain.event-catalog",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
       "evidence": [
-        "createComboOffer",
-        "payComboCheckout",
-        "deliverComboOrder",
-        "validateComboRedemptionScan",
-        "validate_combo_redemption"
+        "OFFICIAL_TABLE_MAP_PLACES",
+        "persistOfficialTableMapPlaces",
+        "renderOfficialTableMap",
+        "reserve_official_table_map_place"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
       "id": "dependency-0563"
     },
     {
       "source": "domain.table-map",
-      "target": "domain.event-catalog",
+      "target": "domain.reservation-inventory",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -8230,7 +8241,7 @@
     },
     {
       "source": "domain.table-map",
-      "target": "domain.reservation-inventory",
+      "target": "domain.orders-payments",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
       "status": "CONFIRMADO",
@@ -8245,21 +8256,6 @@
     },
     {
       "source": "domain.table-map",
-      "target": "domain.orders-payments",
-      "relation": "DEPENDS_ON",
-      "dependencyType": "INDIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "OFFICIAL_TABLE_MAP_PLACES",
-        "persistOfficialTableMapPlaces",
-        "renderOfficialTableMap",
-        "reserve_official_table_map_place"
-      ],
-      "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0566"
-    },
-    {
-      "source": "domain.table-map",
       "target": "domain.ticketing-delivery",
       "relation": "DEPENDS_ON",
       "dependencyType": "INDIRETA",
@@ -8271,7 +8267,7 @@
         "reserve_official_table_map_place"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0567"
+      "id": "dependency-0566"
     },
     {
       "source": "domain.analytics-reporting",
@@ -8286,7 +8282,7 @@
         "get_admin_general_dashboard_summary"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0568"
+      "id": "dependency-0567"
     },
     {
       "source": "domain.analytics-reporting",
@@ -8301,7 +8297,7 @@
         "get_admin_general_dashboard_summary"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0569"
+      "id": "dependency-0568"
     },
     {
       "source": "domain.analytics-reporting",
@@ -8316,7 +8312,7 @@
         "get_admin_general_dashboard_summary"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0570"
+      "id": "dependency-0569"
     },
     {
       "source": "domain.analytics-reporting",
@@ -8331,7 +8327,7 @@
         "get_admin_general_dashboard_summary"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0571"
+      "id": "dependency-0570"
     },
     {
       "source": "domain.analytics-reporting",
@@ -8346,7 +8342,7 @@
         "get_admin_general_dashboard_summary"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0572"
+      "id": "dependency-0571"
     },
     {
       "source": "domain.analytics-reporting",
@@ -8361,7 +8357,7 @@
         "get_admin_general_dashboard_summary"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0573"
+      "id": "dependency-0572"
     },
     {
       "source": "domain.analytics-reporting",
@@ -8376,7 +8372,7 @@
         "get_admin_general_dashboard_summary"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0574"
+      "id": "dependency-0573"
     },
     {
       "source": "domain.analytics-reporting",
@@ -8391,7 +8387,7 @@
         "get_admin_general_dashboard_summary"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0575"
+      "id": "dependency-0574"
     },
     {
       "source": "domain.analytics-reporting",
@@ -8406,7 +8402,7 @@
         "get_admin_general_dashboard_summary"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0576"
+      "id": "dependency-0575"
     },
     {
       "source": "domain.background-processing",
@@ -8421,7 +8417,7 @@
         "finalizeInactiveWhatsAppConversations"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0577"
+      "id": "dependency-0576"
     },
     {
       "source": "domain.background-processing",
@@ -8436,7 +8432,7 @@
         "finalizeInactiveWhatsAppConversations"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0578"
+      "id": "dependency-0577"
     },
     {
       "source": "domain.codex-automation",
@@ -8450,7 +8446,7 @@
         "scripts/codex-local-runner.mjs"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0579"
+      "id": "dependency-0578"
     },
     {
       "source": "domain.codex-automation",
@@ -8464,10 +8460,21 @@
         "scripts/codex-local-runner.mjs"
       ],
       "notes": "Agregação de dependências diretas entre módulos.",
-      "id": "dependency-0580"
+      "id": "dependency-0579"
     },
     {
       "source": "database.table.conversations",
+      "target": "database.table.customers",
+      "relation": "REFERENCES",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "foreign key em supabase/migrations"
+      ],
+      "id": "dependency-0580"
+    },
+    {
+      "source": "database.table.whatsapp_messages",
       "target": "database.table.customers",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
@@ -8479,17 +8486,6 @@
     },
     {
       "source": "database.table.whatsapp_messages",
-      "target": "database.table.customers",
-      "relation": "REFERENCES",
-      "dependencyType": "DIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "foreign key em supabase/migrations"
-      ],
-      "id": "dependency-0582"
-    },
-    {
-      "source": "database.table.whatsapp_messages",
       "target": "database.table.conversations",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
@@ -8497,7 +8493,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0583"
+      "id": "dependency-0582"
     },
     {
       "source": "database.table.venue_sections",
@@ -8508,7 +8504,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0584"
+      "id": "dependency-0583"
     },
     {
       "source": "database.table.seats",
@@ -8519,7 +8515,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0585"
+      "id": "dependency-0584"
     },
     {
       "source": "database.table.events",
@@ -8530,7 +8526,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0586"
+      "id": "dependency-0585"
     },
     {
       "source": "database.table.events",
@@ -8541,7 +8537,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0587"
+      "id": "dependency-0586"
     },
     {
       "source": "database.table.event_sessions",
@@ -8552,7 +8548,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0588"
+      "id": "dependency-0587"
     },
     {
       "source": "database.table.session_seats",
@@ -8563,11 +8559,22 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0589"
+      "id": "dependency-0588"
     },
     {
       "source": "database.table.session_seats",
       "target": "database.table.seats",
+      "relation": "REFERENCES",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "foreign key em supabase/migrations"
+      ],
+      "id": "dependency-0589"
+    },
+    {
+      "source": "database.table.ticket_prices",
+      "target": "database.table.event_sessions",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -8578,7 +8585,7 @@
     },
     {
       "source": "database.table.ticket_prices",
-      "target": "database.table.event_sessions",
+      "target": "database.table.venue_sections",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -8588,8 +8595,8 @@
       "id": "dependency-0591"
     },
     {
-      "source": "database.table.ticket_prices",
-      "target": "database.table.venue_sections",
+      "source": "database.table.reservations",
+      "target": "database.table.customers",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -8600,7 +8607,7 @@
     },
     {
       "source": "database.table.reservations",
-      "target": "database.table.customers",
+      "target": "database.table.event_sessions",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -8610,8 +8617,8 @@
       "id": "dependency-0593"
     },
     {
-      "source": "database.table.reservations",
-      "target": "database.table.event_sessions",
+      "source": "database.table.reservation_items",
+      "target": "database.table.reservations",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -8622,7 +8629,7 @@
     },
     {
       "source": "database.table.reservation_items",
-      "target": "database.table.reservations",
+      "target": "database.table.session_seats",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -8633,7 +8640,7 @@
     },
     {
       "source": "database.table.reservation_items",
-      "target": "database.table.session_seats",
+      "target": "database.table.ticket_prices",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -8643,8 +8650,8 @@
       "id": "dependency-0596"
     },
     {
-      "source": "database.table.reservation_items",
-      "target": "database.table.ticket_prices",
+      "source": "database.table.orders",
+      "target": "database.table.customers",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -8655,17 +8662,6 @@
     },
     {
       "source": "database.table.orders",
-      "target": "database.table.customers",
-      "relation": "REFERENCES",
-      "dependencyType": "DIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "foreign key em supabase/migrations"
-      ],
-      "id": "dependency-0598"
-    },
-    {
-      "source": "database.table.orders",
       "target": "database.table.reservations",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
@@ -8673,7 +8669,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0599"
+      "id": "dependency-0598"
     },
     {
       "source": "database.table.payments",
@@ -8684,7 +8680,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0600"
+      "id": "dependency-0599"
     },
     {
       "source": "database.table.payment_events",
@@ -8695,7 +8691,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0601"
+      "id": "dependency-0600"
     },
     {
       "source": "database.table.tickets",
@@ -8706,7 +8702,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0602"
+      "id": "dependency-0601"
     },
     {
       "source": "database.table.tickets",
@@ -8717,11 +8713,22 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0603"
+      "id": "dependency-0602"
     },
     {
       "source": "database.table.tickets",
       "target": "database.table.event_sessions",
+      "relation": "REFERENCES",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "foreign key em supabase/migrations"
+      ],
+      "id": "dependency-0603"
+    },
+    {
+      "source": "database.table.tickets",
+      "target": "database.table.venue_sections",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -8732,17 +8739,6 @@
     },
     {
       "source": "database.table.tickets",
-      "target": "database.table.venue_sections",
-      "relation": "REFERENCES",
-      "dependencyType": "DIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "foreign key em supabase/migrations"
-      ],
-      "id": "dependency-0605"
-    },
-    {
-      "source": "database.table.tickets",
       "target": "database.table.seats",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
@@ -8750,7 +8746,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0606"
+      "id": "dependency-0605"
     },
     {
       "source": "database.table.ticket_validation_events",
@@ -8761,7 +8757,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0607"
+      "id": "dependency-0606"
     },
     {
       "source": "database.table.ticket_validation_events",
@@ -8772,7 +8768,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0608"
+      "id": "dependency-0607"
     },
     {
       "source": "database.table.seat_map_renders",
@@ -8783,7 +8779,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0609"
+      "id": "dependency-0608"
     },
     {
       "source": "database.table.seat_map_renders",
@@ -8794,7 +8790,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0610"
+      "id": "dependency-0609"
     },
     {
       "source": "database.table.admin_sessions",
@@ -8805,7 +8801,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0611"
+      "id": "dependency-0610"
     },
     {
       "source": "database.table.admin_login_challenges",
@@ -8816,10 +8812,21 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0612"
+      "id": "dependency-0611"
     },
     {
       "source": "database.table.courtesy_limits",
+      "target": "database.table.events",
+      "relation": "REFERENCES",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "foreign key em supabase/migrations"
+      ],
+      "id": "dependency-0612"
+    },
+    {
+      "source": "database.table.courtesies",
       "target": "database.table.events",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
@@ -8831,7 +8838,7 @@
     },
     {
       "source": "database.table.courtesies",
-      "target": "database.table.events",
+      "target": "database.table.event_sessions",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -8842,7 +8849,7 @@
     },
     {
       "source": "database.table.courtesies",
-      "target": "database.table.event_sessions",
+      "target": "database.table.tickets",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -8853,7 +8860,7 @@
     },
     {
       "source": "database.table.courtesies",
-      "target": "database.table.tickets",
+      "target": "database.table.orders",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -8864,7 +8871,7 @@
     },
     {
       "source": "database.table.courtesies",
-      "target": "database.table.orders",
+      "target": "database.table.customers",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -8875,7 +8882,7 @@
     },
     {
       "source": "database.table.courtesies",
-      "target": "database.table.customers",
+      "target": "database.table.admin_users",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -8885,8 +8892,8 @@
       "id": "dependency-0618"
     },
     {
-      "source": "database.table.courtesies",
-      "target": "database.table.admin_users",
+      "source": "database.table.courtesy_section_limits",
+      "target": "database.table.events",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -8897,7 +8904,7 @@
     },
     {
       "source": "database.table.courtesy_section_limits",
-      "target": "database.table.events",
+      "target": "database.table.venue_sections",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -8907,8 +8914,8 @@
       "id": "dependency-0620"
     },
     {
-      "source": "database.table.courtesy_section_limits",
-      "target": "database.table.venue_sections",
+      "source": "database.table.gate_sessions",
+      "target": "database.table.events",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -8919,7 +8926,7 @@
     },
     {
       "source": "database.table.gate_sessions",
-      "target": "database.table.events",
+      "target": "database.table.event_sessions",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -8929,8 +8936,8 @@
       "id": "dependency-0622"
     },
     {
-      "source": "database.table.gate_sessions",
-      "target": "database.table.event_sessions",
+      "source": "database.table.gate_accesses",
+      "target": "database.table.events",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -8941,17 +8948,6 @@
     },
     {
       "source": "database.table.gate_accesses",
-      "target": "database.table.events",
-      "relation": "REFERENCES",
-      "dependencyType": "DIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "foreign key em supabase/migrations"
-      ],
-      "id": "dependency-0624"
-    },
-    {
-      "source": "database.table.gate_accesses",
       "target": "database.table.event_sessions",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
@@ -8959,7 +8955,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0625"
+      "id": "dependency-0624"
     },
     {
       "source": "database.table.fixed_gate_accesses",
@@ -8970,11 +8966,22 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0626"
+      "id": "dependency-0625"
     },
     {
       "source": "database.table.buyer_risk_events",
       "target": "database.table.customers",
+      "relation": "REFERENCES",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "foreign key em supabase/migrations"
+      ],
+      "id": "dependency-0626"
+    },
+    {
+      "source": "database.table.buyer_risk_events",
+      "target": "database.table.events",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -8985,7 +8992,7 @@
     },
     {
       "source": "database.table.buyer_risk_events",
-      "target": "database.table.events",
+      "target": "database.table.event_sessions",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -8996,7 +9003,7 @@
     },
     {
       "source": "database.table.buyer_risk_events",
-      "target": "database.table.event_sessions",
+      "target": "database.table.reservations",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9007,17 +9014,6 @@
     },
     {
       "source": "database.table.buyer_risk_events",
-      "target": "database.table.reservations",
-      "relation": "REFERENCES",
-      "dependencyType": "DIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "foreign key em supabase/migrations"
-      ],
-      "id": "dependency-0630"
-    },
-    {
-      "source": "database.table.buyer_risk_events",
       "target": "database.table.orders",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
@@ -9025,7 +9021,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0631"
+      "id": "dependency-0630"
     },
     {
       "source": "database.table.division_settlements",
@@ -9036,7 +9032,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0632"
+      "id": "dependency-0631"
     },
     {
       "source": "database.table.combo_offer_scopes",
@@ -9047,11 +9043,22 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0633"
+      "id": "dependency-0632"
     },
     {
       "source": "database.table.combo_offer_scopes",
       "target": "database.table.events",
+      "relation": "REFERENCES",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "foreign key em supabase/migrations"
+      ],
+      "id": "dependency-0633"
+    },
+    {
+      "source": "database.table.combo_orders",
+      "target": "database.table.combo_offers",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9062,7 +9069,7 @@
     },
     {
       "source": "database.table.combo_orders",
-      "target": "database.table.combo_offers",
+      "target": "database.table.customers",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9073,7 +9080,7 @@
     },
     {
       "source": "database.table.combo_orders",
-      "target": "database.table.customers",
+      "target": "database.table.events",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9084,7 +9091,7 @@
     },
     {
       "source": "database.table.combo_orders",
-      "target": "database.table.events",
+      "target": "database.table.event_sessions",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9095,7 +9102,7 @@
     },
     {
       "source": "database.table.combo_orders",
-      "target": "database.table.event_sessions",
+      "target": "database.table.tickets",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9106,7 +9113,7 @@
     },
     {
       "source": "database.table.combo_orders",
-      "target": "database.table.tickets",
+      "target": "database.table.orders",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9116,8 +9123,8 @@
       "id": "dependency-0639"
     },
     {
-      "source": "database.table.combo_orders",
-      "target": "database.table.orders",
+      "source": "database.table.combo_payments",
+      "target": "database.table.combo_orders",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9127,7 +9134,7 @@
       "id": "dependency-0640"
     },
     {
-      "source": "database.table.combo_payments",
+      "source": "database.table.combo_redemptions",
       "target": "database.table.combo_orders",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
@@ -9139,7 +9146,7 @@
     },
     {
       "source": "database.table.combo_redemptions",
-      "target": "database.table.combo_orders",
+      "target": "database.table.customers",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9150,7 +9157,7 @@
     },
     {
       "source": "database.table.combo_redemptions",
-      "target": "database.table.customers",
+      "target": "database.table.events",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9161,17 +9168,6 @@
     },
     {
       "source": "database.table.combo_redemptions",
-      "target": "database.table.events",
-      "relation": "REFERENCES",
-      "dependencyType": "DIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "foreign key em supabase/migrations"
-      ],
-      "id": "dependency-0644"
-    },
-    {
-      "source": "database.table.combo_redemptions",
       "target": "database.table.event_sessions",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
@@ -9179,7 +9175,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0645"
+      "id": "dependency-0644"
     },
     {
       "source": "database.table.combo_redemption_events",
@@ -9190,7 +9186,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0646"
+      "id": "dependency-0645"
     },
     {
       "source": "database.table.combo_redemption_events",
@@ -9201,7 +9197,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0647"
+      "id": "dependency-0646"
     },
     {
       "source": "database.table.combo_redemption_events",
@@ -9212,7 +9208,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0648"
+      "id": "dependency-0647"
     },
     {
       "source": "database.table.combo_offer_event_locks",
@@ -9223,7 +9219,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0649"
+      "id": "dependency-0648"
     },
     {
       "source": "database.table.combo_offer_event_locks",
@@ -9234,7 +9230,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0650"
+      "id": "dependency-0649"
     },
     {
       "source": "database.table.whatsapp_message_batches",
@@ -9245,7 +9241,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0651"
+      "id": "dependency-0650"
     },
     {
       "source": "database.table.whatsapp_message_batch_messages",
@@ -9256,11 +9252,22 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0652"
+      "id": "dependency-0651"
     },
     {
       "source": "database.table.whatsapp_message_batch_messages",
       "target": "database.table.whatsapp_messages",
+      "relation": "REFERENCES",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "foreign key em supabase/migrations"
+      ],
+      "id": "dependency-0652"
+    },
+    {
+      "source": "database.table.whatsapp_outbound_deliveries",
+      "target": "database.table.customers",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9271,17 +9278,6 @@
     },
     {
       "source": "database.table.whatsapp_outbound_deliveries",
-      "target": "database.table.customers",
-      "relation": "REFERENCES",
-      "dependencyType": "DIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "foreign key em supabase/migrations"
-      ],
-      "id": "dependency-0654"
-    },
-    {
-      "source": "database.table.whatsapp_outbound_deliveries",
       "target": "database.table.conversations",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
@@ -9289,7 +9285,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0655"
+      "id": "dependency-0654"
     },
     {
       "source": "database.table.official_table_map_reservations",
@@ -9300,11 +9296,22 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0656"
+      "id": "dependency-0655"
     },
     {
       "source": "database.table.official_table_map_reservations",
       "target": "database.table.reservations",
+      "relation": "REFERENCES",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "foreign key em supabase/migrations"
+      ],
+      "id": "dependency-0656"
+    },
+    {
+      "source": "database.table.official_table_map_reservations",
+      "target": "database.table.orders",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9315,7 +9322,7 @@
     },
     {
       "source": "database.table.official_table_map_reservations",
-      "target": "database.table.orders",
+      "target": "database.table.customers",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9326,7 +9333,7 @@
     },
     {
       "source": "database.table.official_table_map_reservations",
-      "target": "database.table.customers",
+      "target": "database.table.events",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9337,17 +9344,6 @@
     },
     {
       "source": "database.table.official_table_map_reservations",
-      "target": "database.table.events",
-      "relation": "REFERENCES",
-      "dependencyType": "DIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "foreign key em supabase/migrations"
-      ],
-      "id": "dependency-0660"
-    },
-    {
-      "source": "database.table.official_table_map_reservations",
       "target": "database.table.event_sessions",
       "relation": "REFERENCES",
       "dependencyType": "DIRETA",
@@ -9355,7 +9351,7 @@
       "evidence": [
         "foreign key em supabase/migrations"
       ],
-      "id": "dependency-0661"
+      "id": "dependency-0660"
     },
     {
       "source": "database.function.append_whatsapp_message_batch",
@@ -9366,7 +9362,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0662"
+      "id": "dependency-0661"
     },
     {
       "source": "database.function.append_whatsapp_message_batch",
@@ -9377,7 +9373,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0663"
+      "id": "dependency-0662"
     },
     {
       "source": "database.function.append_whatsapp_message_batch",
@@ -9388,7 +9384,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0664"
+      "id": "dependency-0663"
     },
     {
       "source": "database.function.assign_participant_contacts_to_order_tickets",
@@ -9399,11 +9395,22 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0665"
+      "id": "dependency-0664"
     },
     {
       "source": "database.function.assign_participant_contacts_to_order_tickets",
       "target": "database.table.orders",
+      "relation": "READS_OR_WRITES",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "function SQL em supabase/migrations"
+      ],
+      "id": "dependency-0665"
+    },
+    {
+      "source": "database.function.cancel_pending_reservation",
+      "target": "database.table.reservations",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9414,7 +9421,7 @@
     },
     {
       "source": "database.function.cancel_pending_reservation",
-      "target": "database.table.reservations",
+      "target": "database.table.orders",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9425,17 +9432,6 @@
     },
     {
       "source": "database.function.cancel_pending_reservation",
-      "target": "database.table.orders",
-      "relation": "READS_OR_WRITES",
-      "dependencyType": "DIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "function SQL em supabase/migrations"
-      ],
-      "id": "dependency-0668"
-    },
-    {
-      "source": "database.function.cancel_pending_reservation",
       "target": "database.table.session_seats",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
@@ -9443,7 +9439,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0669"
+      "id": "dependency-0668"
     },
     {
       "source": "database.function.claim_due_whatsapp_message_batches",
@@ -9454,7 +9450,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0670"
+      "id": "dependency-0669"
     },
     {
       "source": "database.function.claim_whatsapp_outbound_delivery",
@@ -9465,7 +9461,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0671"
+      "id": "dependency-0670"
     },
     {
       "source": "database.function.confirm_paid_ticket_order",
@@ -9476,7 +9472,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0672"
+      "id": "dependency-0671"
     },
     {
       "source": "database.function.confirm_paid_ticket_order",
@@ -9487,7 +9483,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0673"
+      "id": "dependency-0672"
     },
     {
       "source": "database.function.confirm_paid_ticket_order",
@@ -9498,7 +9494,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0674"
+      "id": "dependency-0673"
     },
     {
       "source": "database.function.confirm_paid_ticket_order",
@@ -9509,7 +9505,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0675"
+      "id": "dependency-0674"
     },
     {
       "source": "database.function.confirm_paid_ticket_order",
@@ -9520,7 +9516,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0676"
+      "id": "dependency-0675"
     },
     {
       "source": "database.function.consume_rate_limit",
@@ -9531,10 +9527,21 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0677"
+      "id": "dependency-0676"
     },
     {
       "source": "database.function.enforce_one_active_reservation_per_customer",
+      "target": "database.table.reservations",
+      "relation": "READS_OR_WRITES",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "function SQL em supabase/migrations"
+      ],
+      "id": "dependency-0677"
+    },
+    {
+      "source": "database.function.expire_reservations",
       "target": "database.table.reservations",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
@@ -9546,7 +9553,7 @@
     },
     {
       "source": "database.function.expire_reservations",
-      "target": "database.table.reservations",
+      "target": "database.table.orders",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9557,17 +9564,6 @@
     },
     {
       "source": "database.function.expire_reservations",
-      "target": "database.table.orders",
-      "relation": "READS_OR_WRITES",
-      "dependencyType": "DIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "function SQL em supabase/migrations"
-      ],
-      "id": "dependency-0680"
-    },
-    {
-      "source": "database.function.expire_reservations",
       "target": "database.table.session_seats",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
@@ -9575,7 +9571,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0681"
+      "id": "dependency-0680"
     },
     {
       "source": "database.function.finish_whatsapp_message_batch",
@@ -9586,11 +9582,22 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0682"
+      "id": "dependency-0681"
     },
     {
       "source": "database.function.get_admin_event_editor_payload",
       "target": "database.table.events",
+      "relation": "READS_OR_WRITES",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "function SQL em supabase/migrations"
+      ],
+      "id": "dependency-0682"
+    },
+    {
+      "source": "database.function.get_admin_event_editor_payload",
+      "target": "database.table.event_sessions",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9601,7 +9608,7 @@
     },
     {
       "source": "database.function.get_admin_event_editor_payload",
-      "target": "database.table.event_sessions",
+      "target": "database.table.venue_sections",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9612,7 +9619,7 @@
     },
     {
       "source": "database.function.get_admin_event_editor_payload",
-      "target": "database.table.venue_sections",
+      "target": "database.table.session_seats",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9623,7 +9630,7 @@
     },
     {
       "source": "database.function.get_admin_event_editor_payload",
-      "target": "database.table.session_seats",
+      "target": "database.table.ticket_prices",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9633,8 +9640,8 @@
       "id": "dependency-0686"
     },
     {
-      "source": "database.function.get_admin_event_editor_payload",
-      "target": "database.table.ticket_prices",
+      "source": "database.function.get_admin_general_dashboard_summary",
+      "target": "database.table.events",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9645,7 +9652,7 @@
     },
     {
       "source": "database.function.get_admin_general_dashboard_summary",
-      "target": "database.table.events",
+      "target": "database.table.orders",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9656,7 +9663,7 @@
     },
     {
       "source": "database.function.get_admin_general_dashboard_summary",
-      "target": "database.table.orders",
+      "target": "database.table.payments",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9667,7 +9674,7 @@
     },
     {
       "source": "database.function.get_admin_general_dashboard_summary",
-      "target": "database.table.payments",
+      "target": "database.table.tickets",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9677,8 +9684,8 @@
       "id": "dependency-0690"
     },
     {
-      "source": "database.function.get_admin_general_dashboard_summary",
-      "target": "database.table.tickets",
+      "source": "database.function.get_admin_intelligence_dashboard",
+      "target": "database.table.events",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9689,7 +9696,7 @@
     },
     {
       "source": "database.function.get_admin_intelligence_dashboard",
-      "target": "database.table.events",
+      "target": "database.table.orders",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9700,7 +9707,7 @@
     },
     {
       "source": "database.function.get_admin_intelligence_dashboard",
-      "target": "database.table.orders",
+      "target": "database.table.payments",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9711,7 +9718,7 @@
     },
     {
       "source": "database.function.get_admin_intelligence_dashboard",
-      "target": "database.table.payments",
+      "target": "database.table.tickets",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9722,7 +9729,7 @@
     },
     {
       "source": "database.function.get_admin_intelligence_dashboard",
-      "target": "database.table.tickets",
+      "target": "database.table.ticket_validation_events",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9732,8 +9739,8 @@
       "id": "dependency-0695"
     },
     {
-      "source": "database.function.get_admin_intelligence_dashboard",
-      "target": "database.table.ticket_validation_events",
+      "source": "database.function.issue_admin_courtesy_order",
+      "target": "database.table.courtesies",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9744,7 +9751,7 @@
     },
     {
       "source": "database.function.issue_admin_courtesy_order",
-      "target": "database.table.courtesies",
+      "target": "database.table.courtesy_limits",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9755,7 +9762,7 @@
     },
     {
       "source": "database.function.issue_admin_courtesy_order",
-      "target": "database.table.courtesy_limits",
+      "target": "database.table.courtesy_section_limits",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9766,7 +9773,7 @@
     },
     {
       "source": "database.function.issue_admin_courtesy_order",
-      "target": "database.table.courtesy_section_limits",
+      "target": "database.table.orders",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9777,17 +9784,6 @@
     },
     {
       "source": "database.function.issue_admin_courtesy_order",
-      "target": "database.table.orders",
-      "relation": "READS_OR_WRITES",
-      "dependencyType": "DIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "function SQL em supabase/migrations"
-      ],
-      "id": "dependency-0700"
-    },
-    {
-      "source": "database.function.issue_admin_courtesy_order",
       "target": "database.table.tickets",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
@@ -9795,7 +9791,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0701"
+      "id": "dependency-0700"
     },
     {
       "source": "database.function.issue_courtesy_order",
@@ -9806,11 +9802,22 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0702"
+      "id": "dependency-0701"
     },
     {
       "source": "database.function.issue_courtesy_order",
       "target": "database.table.courtesy_limits",
+      "relation": "READS_OR_WRITES",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "function SQL em supabase/migrations"
+      ],
+      "id": "dependency-0702"
+    },
+    {
+      "source": "database.function.issue_courtesy_order",
+      "target": "database.table.orders",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9821,7 +9828,7 @@
     },
     {
       "source": "database.function.issue_courtesy_order",
-      "target": "database.table.orders",
+      "target": "database.table.tickets",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9831,8 +9838,8 @@
       "id": "dependency-0704"
     },
     {
-      "source": "database.function.issue_courtesy_order",
-      "target": "database.table.tickets",
+      "source": "database.function.issue_public_free_ticket_order",
+      "target": "database.table.courtesy_section_limits",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9843,7 +9850,7 @@
     },
     {
       "source": "database.function.issue_public_free_ticket_order",
-      "target": "database.table.courtesy_section_limits",
+      "target": "database.table.orders",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9854,7 +9861,7 @@
     },
     {
       "source": "database.function.issue_public_free_ticket_order",
-      "target": "database.table.orders",
+      "target": "database.table.reservations",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9865,7 +9872,7 @@
     },
     {
       "source": "database.function.issue_public_free_ticket_order",
-      "target": "database.table.reservations",
+      "target": "database.table.tickets",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9875,8 +9882,8 @@
       "id": "dependency-0708"
     },
     {
-      "source": "database.function.issue_public_free_ticket_order",
-      "target": "database.table.tickets",
+      "source": "database.function.list_admin_events_fast",
+      "target": "database.table.events",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9887,7 +9894,7 @@
     },
     {
       "source": "database.function.list_admin_events_fast",
-      "target": "database.table.events",
+      "target": "database.table.event_sessions",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9898,7 +9905,7 @@
     },
     {
       "source": "database.function.list_admin_events_fast",
-      "target": "database.table.event_sessions",
+      "target": "database.table.tickets",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -9909,17 +9916,6 @@
     },
     {
       "source": "database.function.list_admin_events_fast",
-      "target": "database.table.tickets",
-      "relation": "READS_OR_WRITES",
-      "dependencyType": "DIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "function SQL em supabase/migrations"
-      ],
-      "id": "dependency-0712"
-    },
-    {
-      "source": "database.function.list_admin_events_fast",
       "target": "database.table.payments",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
@@ -9927,7 +9923,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0713"
+      "id": "dependency-0712"
     },
     {
       "source": "database.function.lock_and_validate_courtesy_limits",
@@ -9938,7 +9934,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0714"
+      "id": "dependency-0713"
     },
     {
       "source": "database.function.lock_and_validate_courtesy_limits",
@@ -9949,7 +9945,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0715"
+      "id": "dependency-0714"
     },
     {
       "source": "database.function.lock_customer_active_reservation_slot",
@@ -9960,7 +9956,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0716"
+      "id": "dependency-0715"
     },
     {
       "source": "database.function.lock_customer_active_reservation_slot",
@@ -9971,7 +9967,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0717"
+      "id": "dependency-0716"
     },
     {
       "source": "database.function.lock_validate_and_record_reservation_buyer_risk",
@@ -9982,7 +9978,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0718"
+      "id": "dependency-0717"
     },
     {
       "source": "database.function.lock_validate_and_record_reservation_buyer_risk",
@@ -9993,7 +9989,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0719"
+      "id": "dependency-0718"
     },
     {
       "source": "database.function.lock_validate_and_record_reservation_buyer_risk",
@@ -10004,7 +10000,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0720"
+      "id": "dependency-0719"
     },
     {
       "source": "database.function.mark_buyer_ticket_qr_delivered",
@@ -10015,7 +10011,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0721"
+      "id": "dependency-0720"
     },
     {
       "source": "database.function.reserve_official_table_map_place",
@@ -10026,11 +10022,22 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0722"
+      "id": "dependency-0721"
     },
     {
       "source": "database.function.reserve_official_table_map_place",
       "target": "database.table.official_table_map_reservations",
+      "relation": "READS_OR_WRITES",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "function SQL em supabase/migrations"
+      ],
+      "id": "dependency-0722"
+    },
+    {
+      "source": "database.function.reserve_official_table_map_place",
+      "target": "database.table.reservations",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -10041,7 +10048,7 @@
     },
     {
       "source": "database.function.reserve_official_table_map_place",
-      "target": "database.table.reservations",
+      "target": "database.table.orders",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -10051,8 +10058,8 @@
       "id": "dependency-0724"
     },
     {
-      "source": "database.function.reserve_official_table_map_place",
-      "target": "database.table.orders",
+      "source": "database.function.reserve_seats",
+      "target": "database.table.reservations",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -10063,7 +10070,7 @@
     },
     {
       "source": "database.function.reserve_seats",
-      "target": "database.table.reservations",
+      "target": "database.table.reservation_items",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -10074,7 +10081,7 @@
     },
     {
       "source": "database.function.reserve_seats",
-      "target": "database.table.reservation_items",
+      "target": "database.table.session_seats",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -10084,8 +10091,8 @@
       "id": "dependency-0727"
     },
     {
-      "source": "database.function.reserve_seats",
-      "target": "database.table.session_seats",
+      "source": "database.function.reserve_ticket_cart",
+      "target": "database.table.reservations",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -10096,7 +10103,7 @@
     },
     {
       "source": "database.function.reserve_ticket_cart",
-      "target": "database.table.reservations",
+      "target": "database.table.reservation_items",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -10107,7 +10114,7 @@
     },
     {
       "source": "database.function.reserve_ticket_cart",
-      "target": "database.table.reservation_items",
+      "target": "database.table.session_seats",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -10118,7 +10125,7 @@
     },
     {
       "source": "database.function.reserve_ticket_cart",
-      "target": "database.table.session_seats",
+      "target": "database.table.orders",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -10129,17 +10136,6 @@
     },
     {
       "source": "database.function.reserve_ticket_cart",
-      "target": "database.table.orders",
-      "relation": "READS_OR_WRITES",
-      "dependencyType": "DIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "function SQL em supabase/migrations"
-      ],
-      "id": "dependency-0732"
-    },
-    {
-      "source": "database.function.reserve_ticket_cart",
       "target": "database.table.ticket_prices",
       "relation": "READS_OR_WRITES",
       "dependencyType": "DIRETA",
@@ -10147,7 +10143,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0733"
+      "id": "dependency-0732"
     },
     {
       "source": "database.function.reschedule_whatsapp_message_batch",
@@ -10158,7 +10154,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0734"
+      "id": "dependency-0733"
     },
     {
       "source": "database.function.search_public_events_ranked",
@@ -10169,7 +10165,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0735"
+      "id": "dependency-0734"
     },
     {
       "source": "database.function.search_public_events_ranked",
@@ -10180,7 +10176,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0736"
+      "id": "dependency-0735"
     },
     {
       "source": "database.function.search_public_events_ranked",
@@ -10191,7 +10187,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0737"
+      "id": "dependency-0736"
     },
     {
       "source": "database.function.sync_official_table_map_reservation_status",
@@ -10202,7 +10198,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0738"
+      "id": "dependency-0737"
     },
     {
       "source": "database.function.sync_official_table_map_reservation_status",
@@ -10213,7 +10209,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0739"
+      "id": "dependency-0738"
     },
     {
       "source": "database.function.update_admin_section_capacity",
@@ -10224,7 +10220,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0740"
+      "id": "dependency-0739"
     },
     {
       "source": "database.function.update_admin_section_capacity",
@@ -10235,7 +10231,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0741"
+      "id": "dependency-0740"
     },
     {
       "source": "database.function.update_admin_section_capacity",
@@ -10246,7 +10242,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0742"
+      "id": "dependency-0741"
     },
     {
       "source": "database.function.validate_combo_redemption",
@@ -10257,7 +10253,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0743"
+      "id": "dependency-0742"
     },
     {
       "source": "database.function.validate_combo_redemption",
@@ -10268,7 +10264,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0744"
+      "id": "dependency-0743"
     },
     {
       "source": "database.function.validate_combo_redemption",
@@ -10279,7 +10275,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0745"
+      "id": "dependency-0744"
     },
     {
       "source": "database.function.validate_combo_redemption",
@@ -10290,7 +10286,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0746"
+      "id": "dependency-0745"
     },
     {
       "source": "database.function.validate_ticket_entry",
@@ -10301,7 +10297,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0747"
+      "id": "dependency-0746"
     },
     {
       "source": "database.function.validate_ticket_entry",
@@ -10312,7 +10308,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0748"
+      "id": "dependency-0747"
     },
     {
       "source": "database.function.validate_ticket_entry",
@@ -10323,7 +10319,7 @@
       "evidence": [
         "function SQL em supabase/migrations"
       ],
-      "id": "dependency-0749"
+      "id": "dependency-0748"
     },
     {
       "source": "database.function.search_public_events_ranked",
@@ -10334,7 +10330,7 @@
       "evidence": [
         "corpo SQL em supabase/migrations"
       ],
-      "id": "dependency-0750"
+      "id": "dependency-0749"
     },
     {
       "source": "database.function.issue_admin_courtesy_order",
@@ -10345,7 +10341,7 @@
       "evidence": [
         "corpo SQL em supabase/migrations"
       ],
-      "id": "dependency-0751"
+      "id": "dependency-0750"
     },
     {
       "source": "database.function.issue_courtesy_order",
@@ -10356,10 +10352,21 @@
       "evidence": [
         "corpo SQL em supabase/migrations"
       ],
-      "id": "dependency-0752"
+      "id": "dependency-0751"
     },
     {
       "source": "database.function.reserve_seats",
+      "target": "database.function.lock_customer_active_reservation_slot",
+      "relation": "CALLS",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "corpo SQL em supabase/migrations"
+      ],
+      "id": "dependency-0752"
+    },
+    {
+      "source": "database.function.reserve_ticket_cart",
       "target": "database.function.lock_customer_active_reservation_slot",
       "relation": "CALLS",
       "dependencyType": "DIRETA",
@@ -10371,17 +10378,6 @@
     },
     {
       "source": "database.function.reserve_ticket_cart",
-      "target": "database.function.lock_customer_active_reservation_slot",
-      "relation": "CALLS",
-      "dependencyType": "DIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "corpo SQL em supabase/migrations"
-      ],
-      "id": "dependency-0754"
-    },
-    {
-      "source": "database.function.reserve_ticket_cart",
       "target": "database.function.lock_validate_and_record_reservation_buyer_risk",
       "relation": "CALLS",
       "dependencyType": "DIRETA",
@@ -10389,7 +10385,7 @@
       "evidence": [
         "corpo SQL em supabase/migrations"
       ],
-      "id": "dependency-0755"
+      "id": "dependency-0754"
     },
     {
       "source": "database.trigger.customers_set_updated_at",
@@ -10400,7 +10396,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0756"
+      "id": "dependency-0755"
     },
     {
       "source": "database.trigger.conversations_set_updated_at",
@@ -10411,7 +10407,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0757"
+      "id": "dependency-0756"
     },
     {
       "source": "database.trigger.venues_set_updated_at",
@@ -10422,7 +10418,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0758"
+      "id": "dependency-0757"
     },
     {
       "source": "database.trigger.venue_sections_set_updated_at",
@@ -10433,7 +10429,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0759"
+      "id": "dependency-0758"
     },
     {
       "source": "database.trigger.seats_set_updated_at",
@@ -10444,7 +10440,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0760"
+      "id": "dependency-0759"
     },
     {
       "source": "database.trigger.events_set_updated_at",
@@ -10455,7 +10451,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0761"
+      "id": "dependency-0760"
     },
     {
       "source": "database.trigger.event_sessions_set_updated_at",
@@ -10466,7 +10462,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0762"
+      "id": "dependency-0761"
     },
     {
       "source": "database.trigger.session_seats_set_updated_at",
@@ -10477,7 +10473,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0763"
+      "id": "dependency-0762"
     },
     {
       "source": "database.trigger.ticket_prices_set_updated_at",
@@ -10488,7 +10484,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0764"
+      "id": "dependency-0763"
     },
     {
       "source": "database.trigger.reservations_set_updated_at",
@@ -10499,7 +10495,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0765"
+      "id": "dependency-0764"
     },
     {
       "source": "database.trigger.orders_set_updated_at",
@@ -10510,7 +10506,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0766"
+      "id": "dependency-0765"
     },
     {
       "source": "database.trigger.payments_set_updated_at",
@@ -10521,7 +10517,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0767"
+      "id": "dependency-0766"
     },
     {
       "source": "database.trigger.tickets_set_updated_at",
@@ -10532,7 +10528,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0768"
+      "id": "dependency-0767"
     },
     {
       "source": "database.trigger.seat_map_renders_set_updated_at",
@@ -10543,7 +10539,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0769"
+      "id": "dependency-0768"
     },
     {
       "source": "database.trigger.set_admin_users_updated_at",
@@ -10554,7 +10550,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0770"
+      "id": "dependency-0769"
     },
     {
       "source": "database.trigger.set_gate_sessions_updated_at",
@@ -10565,7 +10561,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0771"
+      "id": "dependency-0770"
     },
     {
       "source": "database.trigger.courtesy_limits_set_updated_at",
@@ -10576,7 +10572,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0772"
+      "id": "dependency-0771"
     },
     {
       "source": "database.trigger.courtesies_set_updated_at",
@@ -10587,7 +10583,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0773"
+      "id": "dependency-0772"
     },
     {
       "source": "database.trigger.set_gate_accesses_updated_at",
@@ -10598,7 +10594,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0774"
+      "id": "dependency-0773"
     },
     {
       "source": "database.trigger.set_admin_auth_attempts_updated_at",
@@ -10609,7 +10605,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0775"
+      "id": "dependency-0774"
     },
     {
       "source": "database.trigger.set_rate_limit_events_updated_at",
@@ -10620,7 +10616,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0776"
+      "id": "dependency-0775"
     },
     {
       "source": "database.trigger.set_admin_login_challenges_updated_at",
@@ -10631,7 +10627,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0777"
+      "id": "dependency-0776"
     },
     {
       "source": "database.trigger.set_division_settlements_updated_at",
@@ -10642,7 +10638,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0778"
+      "id": "dependency-0777"
     },
     {
       "source": "database.trigger.set_combo_offers_updated_at",
@@ -10653,7 +10649,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0779"
+      "id": "dependency-0778"
     },
     {
       "source": "database.trigger.set_combo_orders_updated_at",
@@ -10664,7 +10660,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0780"
+      "id": "dependency-0779"
     },
     {
       "source": "database.trigger.set_combo_payments_updated_at",
@@ -10675,7 +10671,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0781"
+      "id": "dependency-0780"
     },
     {
       "source": "database.trigger.set_combo_redemptions_updated_at",
@@ -10686,7 +10682,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0782"
+      "id": "dependency-0781"
     },
     {
       "source": "database.trigger.courtesy_section_limits_set_updated_at",
@@ -10697,7 +10693,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0783"
+      "id": "dependency-0782"
     },
     {
       "source": "database.trigger.set_fixed_gate_accesses_updated_at",
@@ -10708,7 +10704,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0784"
+      "id": "dependency-0783"
     },
     {
       "source": "database.trigger.set_whatsapp_message_batches_updated_at",
@@ -10719,7 +10715,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0785"
+      "id": "dependency-0784"
     },
     {
       "source": "database.trigger.set_combo_offer_event_locks_updated_at",
@@ -10730,7 +10726,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0786"
+      "id": "dependency-0785"
     },
     {
       "source": "database.trigger.official_table_map_reservations_set_updated_at",
@@ -10741,7 +10737,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0787"
+      "id": "dependency-0786"
     },
     {
       "source": "database.trigger.reservations_sync_official_table_map_status",
@@ -10752,7 +10748,7 @@
       "evidence": [
         "CREATE TRIGGER em supabase/migrations"
       ],
-      "id": "dependency-0788"
+      "id": "dependency-0787"
     },
     {
       "source": "event-admin.program-importer",
@@ -10763,7 +10759,7 @@
       "evidence": [
         "scripts/import-programacao-events.mjs"
       ],
-      "id": "dependency-0789"
+      "id": "dependency-0788"
     },
     {
       "source": "script-import",
@@ -10774,7 +10770,7 @@
       "evidence": [
         "scripts/import-programacao-events.mjs"
       ],
-      "id": "dependency-0790"
+      "id": "dependency-0789"
     },
     {
       "source": "event-admin.program-importer",
@@ -10785,7 +10781,7 @@
       "evidence": [
         "scripts/import-programacao-events.mjs"
       ],
-      "id": "dependency-0791"
+      "id": "dependency-0790"
     },
     {
       "source": "event-admin.program-importer",
@@ -10796,7 +10792,7 @@
       "evidence": [
         "scripts/import-programacao-events.mjs"
       ],
-      "id": "dependency-0792"
+      "id": "dependency-0791"
     },
     {
       "source": "event-admin.program-importer",
@@ -10807,7 +10803,7 @@
       "evidence": [
         "scripts/import-programacao-events.mjs"
       ],
-      "id": "dependency-0793"
+      "id": "dependency-0792"
     },
     {
       "source": "event-admin.program-importer",
@@ -10818,7 +10814,7 @@
       "evidence": [
         "scripts/import-programacao-events.mjs"
       ],
-      "id": "dependency-0794"
+      "id": "dependency-0793"
     },
     {
       "source": "event-admin.program-importer",
@@ -10829,7 +10825,7 @@
       "evidence": [
         "scripts/import-programacao-events.mjs"
       ],
-      "id": "dependency-0795"
+      "id": "dependency-0794"
     },
     {
       "source": "event-admin.program-importer",
@@ -10840,7 +10836,7 @@
       "evidence": [
         "scripts/import-programacao-events.mjs"
       ],
-      "id": "dependency-0796"
+      "id": "dependency-0795"
     },
     {
       "source": "event-admin.program-importer",
@@ -10851,7 +10847,7 @@
       "evidence": [
         "scripts/import-programacao-events.mjs"
       ],
-      "id": "dependency-0797"
+      "id": "dependency-0796"
     },
     {
       "source": "event-admin.program-importer",
@@ -10862,7 +10858,7 @@
       "evidence": [
         "scripts/import-programacao-events.mjs"
       ],
-      "id": "dependency-0798"
+      "id": "dependency-0797"
     },
     {
       "source": "event-admin.program-importer",
@@ -10873,7 +10869,7 @@
       "evidence": [
         "scripts/import-programacao-events.mjs"
       ],
-      "id": "dependency-0799"
+      "id": "dependency-0798"
     },
     {
       "source": "platform.edge-proxy",
@@ -10884,7 +10880,7 @@
       "evidence": [
         "src/proxy.ts"
       ],
-      "id": "dependency-0800"
+      "id": "dependency-0799"
     },
     {
       "source": "proxy",
@@ -10895,7 +10891,7 @@
       "evidence": [
         "src/proxy.ts"
       ],
-      "id": "dependency-0801"
+      "id": "dependency-0800"
     },
     {
       "source": "platform.edge-proxy",
@@ -10906,7 +10902,7 @@
       "evidence": [
         "src/proxy.ts: fetch /rest/v1/rpc/consume_rate_limit"
       ],
-      "id": "dependency-0802"
+      "id": "dependency-0801"
     },
     {
       "source": "platform.edge-proxy",
@@ -10917,7 +10913,7 @@
       "evidence": [
         "src/proxy.ts"
       ],
-      "id": "dependency-0803"
+      "id": "dependency-0802"
     },
     {
       "source": "http-health",
@@ -10928,7 +10924,7 @@
       "evidence": [
         "src/app/api/health/route.ts imports jsonOk/methodNotAllowed"
       ],
-      "id": "dependency-0804"
+      "id": "dependency-0803"
     },
     {
       "source": "event-admin.black-house-maintenance",
@@ -10941,7 +10937,7 @@
         "scripts/split-black-house-special-items.mjs",
         "scripts/update-black-house-sectors.mjs"
       ],
-      "id": "dependency-0805"
+      "id": "dependency-0804"
     },
     {
       "source": "script-bh-rename",
@@ -10952,7 +10948,7 @@
       "evidence": [
         "scripts/rename-black-house-ticket-sections.mjs"
       ],
-      "id": "dependency-0806"
+      "id": "dependency-0805"
     },
     {
       "source": "script-bh-split",
@@ -10963,7 +10959,7 @@
       "evidence": [
         "scripts/split-black-house-special-items.mjs"
       ],
-      "id": "dependency-0807"
+      "id": "dependency-0806"
     },
     {
       "source": "script-bh-update",
@@ -10974,11 +10970,24 @@
       "evidence": [
         "scripts/update-black-house-sectors.mjs"
       ],
-      "id": "dependency-0808"
+      "id": "dependency-0807"
     },
     {
       "source": "event-admin.black-house-maintenance",
       "target": "database.table.venues",
+      "relation": "ACCESSES",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "scripts/rename-black-house-ticket-sections.mjs",
+        "scripts/split-black-house-special-items.mjs",
+        "scripts/update-black-house-sectors.mjs"
+      ],
+      "id": "dependency-0808"
+    },
+    {
+      "source": "event-admin.black-house-maintenance",
+      "target": "database.table.venue_sections",
       "relation": "ACCESSES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -10991,7 +11000,7 @@
     },
     {
       "source": "event-admin.black-house-maintenance",
-      "target": "database.table.venue_sections",
+      "target": "database.table.ticket_prices",
       "relation": "ACCESSES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -11004,7 +11013,7 @@
     },
     {
       "source": "event-admin.black-house-maintenance",
-      "target": "database.table.ticket_prices",
+      "target": "database.table.events",
       "relation": "ACCESSES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -11017,7 +11026,7 @@
     },
     {
       "source": "event-admin.black-house-maintenance",
-      "target": "database.table.events",
+      "target": "database.table.reservation_items",
       "relation": "ACCESSES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -11030,7 +11039,7 @@
     },
     {
       "source": "event-admin.black-house-maintenance",
-      "target": "database.table.reservation_items",
+      "target": "database.table.seats",
       "relation": "ACCESSES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -11043,7 +11052,7 @@
     },
     {
       "source": "event-admin.black-house-maintenance",
-      "target": "database.table.seats",
+      "target": "database.table.session_seats",
       "relation": "ACCESSES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -11056,7 +11065,7 @@
     },
     {
       "source": "event-admin.black-house-maintenance",
-      "target": "database.table.session_seats",
+      "target": "database.table.reservations",
       "relation": "ACCESSES",
       "dependencyType": "DIRETA",
       "status": "CONFIRMADO",
@@ -11069,19 +11078,6 @@
     },
     {
       "source": "event-admin.black-house-maintenance",
-      "target": "database.table.reservations",
-      "relation": "ACCESSES",
-      "dependencyType": "DIRETA",
-      "status": "CONFIRMADO",
-      "evidence": [
-        "scripts/rename-black-house-ticket-sections.mjs",
-        "scripts/split-black-house-special-items.mjs",
-        "scripts/update-black-house-sectors.mjs"
-      ],
-      "id": "dependency-0816"
-    },
-    {
-      "source": "event-admin.black-house-maintenance",
       "target": "integration-supabase",
       "relation": "USES",
       "dependencyType": "EXTERNA",
@@ -11091,7 +11087,7 @@
         "scripts/split-black-house-special-items.mjs",
         "scripts/update-black-house-sectors.mjs"
       ],
-      "id": "dependency-0817"
+      "id": "dependency-0816"
     },
     {
       "source": "platform.edge-proxy",
@@ -11102,7 +11098,150 @@
       "evidence": [
         "src/proxy.ts imports @/lib/security/rateLimitContract"
       ],
+      "id": "dependency-0817"
+    },
+    {
+      "source": "combo.offers",
+      "target": "combo.operational-delivery",
+      "relation": "CALLS",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "src/lib/tickets/services/paidComboDeliveryWorker.ts"
+      ],
       "id": "dependency-0818"
+    },
+    {
+      "source": "combo.redemption",
+      "target": "messaging.outbound-deliveries",
+      "relation": "CALLS",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "src/lib/tickets/services/comboRedemptions.ts"
+      ],
+      "id": "dependency-0819"
+    },
+    {
+      "source": "combo.operational-delivery",
+      "target": "domain.combo-commerce-fulfillment",
+      "relation": "BELONGS_TO",
+      "dependencyType": "INDIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "src/lib/tickets/services/comboOperationalDelivery.ts"
+      ],
+      "id": "dependency-0820"
+    },
+    {
+      "source": "combo.operational-delivery",
+      "target": "messaging.conversations",
+      "relation": "CALLS",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "src/lib/tickets/services/comboOperationalDelivery.ts"
+      ],
+      "id": "dependency-0821"
+    },
+    {
+      "source": "combo.operational-delivery",
+      "target": "messaging.messages",
+      "relation": "CALLS",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "src/lib/tickets/services/comboOperationalDelivery.ts"
+      ],
+      "id": "dependency-0822"
+    },
+    {
+      "source": "combo.operational-delivery",
+      "target": "messaging.outbound-deliveries",
+      "relation": "CALLS",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "src/lib/tickets/services/comboOperationalDelivery.ts"
+      ],
+      "id": "dependency-0823"
+    },
+    {
+      "source": "combo.operational-delivery",
+      "target": "integration.zapi",
+      "relation": "CALLS",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "src/lib/tickets/services/comboOperationalDelivery.ts"
+      ],
+      "id": "dependency-0824"
+    },
+    {
+      "source": "combo.operational-delivery",
+      "target": "database.table.whatsapp_outbound_deliveries",
+      "relation": "ACCESSES",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "src/lib/tickets/services/comboOperationalDelivery.ts"
+      ],
+      "id": "dependency-0825"
+    },
+    {
+      "source": "combo.operational-delivery",
+      "target": "database.table.conversations",
+      "relation": "ACCESSES",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "src/lib/tickets/services/comboOperationalDelivery.ts"
+      ],
+      "id": "dependency-0826"
+    },
+    {
+      "source": "combo.operational-delivery",
+      "target": "database.table.whatsapp_messages",
+      "relation": "ACCESSES",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "src/lib/tickets/services/comboOperationalDelivery.ts"
+      ],
+      "id": "dependency-0827"
+    },
+    {
+      "source": "combo.operational-delivery",
+      "target": "integration-supabase",
+      "relation": "USES",
+      "dependencyType": "EXTERNA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "src/lib/tickets/services/comboOperationalDelivery.ts"
+      ],
+      "id": "dependency-0828"
+    },
+    {
+      "source": "combo.operational-delivery",
+      "target": "integration-zapi",
+      "relation": "USES",
+      "dependencyType": "EXTERNA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "src/lib/tickets/services/comboOperationalDelivery.ts"
+      ],
+      "id": "dependency-0829"
+    },
+    {
+      "source": "combo.redemption",
+      "target": "integration.zapi",
+      "relation": "CALLS",
+      "dependencyType": "DIRETA",
+      "status": "CONFIRMADO",
+      "evidence": [
+        "src/lib/tickets/services/comboRedemptions.ts: READY text/QR delivery still invokes Z-API after durable decision"
+      ],
+      "id": "dependency-0830"
     }
   ],
   "circularDependencies": {
@@ -11134,7 +11273,7 @@
       "src/lib/tickets/tableMap/persistOfficialPlaces.ts"
     ]
   },
-  "stage": "2.8.1",
+  "stage": "2.9.0",
   "high_1_source_relationships": {
     "lock_order": [
       "credential",
@@ -11169,5 +11308,11 @@
       "dependency-0818"
     ],
     "source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e"
+  },
+  "baseline_2_9_0": {
+    "nodes": 256,
+    "edges": 830,
+    "source": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+    "new_module": "combo.operational-delivery"
   }
 }

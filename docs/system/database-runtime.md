@@ -1,4 +1,11 @@
-> **Current Baseline 2.8.1 (2026-09-16):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.9.0 (2026-09-17):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c7ed2c31eb9c322ef489e71bb59631c39928a1e0`. Fingerprint `889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6`; 397 source files, 89 local and remote ledger migrations, 45 tables, 65 SQL functions, 1 sequence, 60 test files and 47 findings. Combo operational notification concurrency is RESOLVED; external ambiguous ACK remains separate. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+
+## Baseline 2.9.0 remote database CURRENT
+
+Migration `20260915000600_make_combo_operational_notifications_durable.sql` is locally present and remotely APPLIED in `supabase_migrations.schema_migrations`, using official Supabase CLI 2.117.0 `db push` on 2026-09-17. The ledger has **89 local and 89 remote versions**; `migration list` is aligned and `db push --dry-run` has zero pending. Remote read-only checks found all 12 changed functions and the new operational-due index; `service_role` EXECUTE is present where required, while public/anon/authenticated EXECUTE is absent. Canonical local objects: **45 tables, 65 functions, 36 triggers, 1 sequence**.
+
+Historical provenance: SQL for 140001–150005 was applied directly with pg.Client on 14–15 September, validating schema/runtime but bypassing the ledger. A forensic audit on 16 September found the gap; `migration repair --status applied` then recorded nine versions without replaying SQL, changing schema or business data. The 00600 followed the official flow on 17 September. `DOCUMENTARY_PROVENANCE_STALE=CLOSED_CURRENT`.
+
 
 ## Baseline 2.7.0 combo metadata contract
 

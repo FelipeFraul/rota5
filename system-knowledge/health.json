@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-16T14:37:33.140Z",
-  "stage": "2.8.1",
-  "sourceCommit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
-  "scope": "Current health projection by system, domain and infrastructure for Baseline 2.8.1, with resolved history separated from operational risk.",
+  "generatedAt": "2026-09-17T03:39:02Z",
+  "stage": "2.9.0",
+  "sourceCommit": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+  "scope": "Current health projection by system, domain and infrastructure for Baseline 2.9.0, with resolved history separated from operational risk.",
   "method": "Health is derived from canonical finding scopes and taxonomy. BROKEN requires a current release blocker; DEGRADED requires current operational or validation-queue risk; resolved findings are historical only.",
   "vocabulary": [
     "HEALTHY",
@@ -20,13 +20,13 @@
     "finding_counts_by_severity": {
       "INFO": 2,
       "LOW": 8,
-      "MEDIUM": 16
+      "MEDIUM": 15
     },
     "active_findings": {
       "P0": 0,
       "HIGH": 0,
       "CRITICAL": 0,
-      "RESOLVED": 17,
+      "RESOLVED": 18,
       "POTENTIAL_HIGH": 0,
       "OPEN_HIGH": 0
     },
@@ -55,8 +55,7 @@
       "gap.client-errors-not-persisted",
       "debt.distributed-status-literals",
       "risk.service-role-application-authorization-boundary",
-      "risk.paid-delivery-ambiguous-external-ack",
-      "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
+      "risk.paid-delivery-ambiguous-external-ack"
     ],
     "historical_resolved_findings": [
       "bug.create-event-invalid-jsx",
@@ -144,13 +143,13 @@
         "risk.whatsapp-conversation-context-race",
         "gap.partial-flows-lack-end-to-end-proof",
         "debt.distributed-status-literals",
-        "risk.paid-delivery-ambiguous-external-ack",
-        "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
+        "risk.paid-delivery-ambiguous-external-ack"
       ],
       "historical_resolved_findings": [
         "bug.user-visible-text-corruption",
         "legacy.active-brand-contamination",
-        "risk.payment-confirmed-before-external-delivery"
+        "risk.payment-confirmed-before-external-delivery",
+        "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
       ],
       "validation_queue_findings": [
         "risk.remote-webhook-registration-unvalidated"
@@ -321,15 +320,15 @@
         "gap.partial-flows-lack-end-to-end-proof",
         "gap.client-errors-not-persisted",
         "debt.distributed-status-literals",
-        "risk.paid-delivery-ambiguous-external-ack",
-        "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
+        "risk.paid-delivery-ambiguous-external-ack"
       ],
       "historical_resolved_findings": [
         "bug.create-event-invalid-jsx",
         "bug.combo-redemption-unreachable-consume",
         "bug.user-visible-text-corruption",
         "risk.gate-credential-revocation-does-not-revoke-session",
-        "risk.combo-metadata-read-modify-write-race"
+        "risk.combo-metadata-read-modify-write-race",
+        "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
       ],
       "validation_queue_findings": [
         "gap.remote-database-behavior-tests"
@@ -1671,7 +1670,8 @@
       "reason": "0 current operational finding(s) and 0 validation-queue finding(s); resolved findings are historical only.",
       "current_findings": [],
       "historical_resolved_findings": [
-        "risk.published-commit-unvalidated"
+        "risk.published-commit-unvalidated",
+        "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
       ],
       "validation_queue_findings": [],
       "release_blocking_causes": []
@@ -1682,7 +1682,9 @@
       "current_findings": [
         "risk.local-runtime-env-incomplete"
       ],
-      "historical_resolved_findings": [],
+      "historical_resolved_findings": [
+        "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
+      ],
       "validation_queue_findings": [],
       "release_blocking_causes": [],
       "reason": "1 current operational finding(s) and 0 validation-queue finding(s); resolved findings are historical only."
@@ -1693,7 +1695,9 @@
       "current_findings": [
         "debt.seat-map-storage-contract-drift"
       ],
-      "historical_resolved_findings": [],
+      "historical_resolved_findings": [
+        "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
+      ],
       "validation_queue_findings": [
         "orphan.seat-map-renders-table"
       ],
@@ -1705,7 +1709,9 @@
       "health": "HEALTHY",
       "reason": "0 current operational finding(s) and 0 validation-queue finding(s); resolved findings are historical only.",
       "current_findings": [],
-      "historical_resolved_findings": [],
+      "historical_resolved_findings": [
+        "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
+      ],
       "validation_queue_findings": [],
       "release_blocking_causes": []
     }
@@ -1727,7 +1733,8 @@
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
     "gap.test-runner-depends-on-untracked-loader",
-    "risk.payment-confirmed-before-external-delivery"
+    "risk.payment-confirmed-before-external-delivery",
+    "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
   ],
   "infrastructure_health": "DEGRADED",
   "high_1": {
@@ -1887,12 +1894,7 @@
     "production_runtime_changed": false,
     "crlf_assertion_fragility_recorded": true
   },
-  "default_suite": {
-    "status": "PASS",
-    "result": "257/257",
-    "skipped": 0,
-    "todo": 0
-  },
+  "default_suite": "291/291 PASS",
   "next_active_high": null,
   "critical_coverage": {
     "baseline": "2.4.0",
@@ -1940,11 +1942,12 @@
     }
   },
   "quality_gate": {
-    "run": 35049217326,
-    "source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "run": 35141969033,
+    "source_commit": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
     "status": "PASS",
-    "node": "285/285 PASS",
-    "postgresql": "4/4 PASS"
+    "node": "291/291 PASS",
+    "postgresql": "4/4 PASS",
+    "postgres": "4/4 PASS"
   },
   "release_blocker_reconciliation": {
     "status": "PASS",

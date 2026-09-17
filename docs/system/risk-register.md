@@ -1,4 +1,9 @@
-> **Current Baseline 2.8.1 (2026-09-16):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.9.0 (2026-09-17):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c7ed2c31eb9c322ef489e71bb59631c39928a1e0`. Fingerprint `889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6`; 397 source files, 89 local and remote ledger migrations, 45 tables, 65 SQL functions, 1 sequence, 60 test files and 47 findings. Combo operational notification concurrency is RESOLVED; external ambiguous ACK remains separate. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+
+## Baseline 2.9.0 finding change
+
+`risk.combo-direct-notification-concurrency-can-duplicate-or-stale` is **RESOLVED** (CONCURRENCY / MEDIUM / P2 / CONFIRMED, release_blocking=false). The historical send-before-serialization cause is retained in the machine-readable resolution. PostgreSQL decisions now create durable intents atomically; delivery requires claim. Source, 00600, Quality Gate and Production exact-source evidence are linked in `findings.json`. `risk.paid-delivery-ambiguous-external-ack` stays **ACTIVE / MEDIUM / P2**, with at-least-once external semantics. Current finding counts: 47 total, 18 resolved, 21 active, 4 potential, 4 not validated; release blockers: 0.
+
 
 ## Baseline 2.6.0 paid-delivery risk reconciliation
 
@@ -36,7 +41,7 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 | risk.admin-event-multistep-partial-state | DATA_INTEGRITY | HIGH | P1 | RESOLVED | CONFIRMED | RESOLVED — transactional administrative event mutations |
 | bug.admin-event-location-consistency | DATA_INTEGRITY | HIGH | P1 | RESOLVED | CONFIRMED | RESOLVED — coherent admin event/session location |
 | risk.combo-metadata-read-modify-write-race | CONCURRENCY | MEDIUM | P2 | RESOLVED | HIGH | Transições concorrentes de metadata são serializadas no PostgreSQL |
-| risk.combo-direct-notification-concurrency-can-duplicate-or-stale | CONCURRENCY | MEDIUM | P2 | ACTIVE | CONFIRMED | Notificações diretas podem duplicar ou ficar stale sob concorrência |
+| risk.combo-direct-notification-concurrency-can-duplicate-or-stale | CONCURRENCY | MEDIUM | P2 | RESOLVED | CONFIRMED | Durable operational intents and claimed delivery remove the local concurrency cause |
 | risk.github-issue-create-replay | IDEMPOTENCY | MEDIUM | P2 | POTENTIAL | HIGH | Criação de issue não possui chave de idempotência |
 | risk.rate-limit-fails-open | SECURITY | MEDIUM | P2 | RESOLVED | CONFIRMED | RESOLVED — indisponibilidade possui estado e política explícitos |
 | risk.remote-database-controls-unvalidated | UNKNOWN | MEDIUM | P2 | NOT_VALIDATED | CONFIRMED | Controles remotos de banco além do schema visível não foram validados |
@@ -49,7 +54,7 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 | gap.critical-flow-correlation | OBSERVABILITY | MEDIUM | P2 | ACTIVE | CONFIRMED | Fluxos críticos não têm correlação ponta a ponta |
 | debt.router-responsibility-concentration | ARCHITECTURE | MEDIUM | P2 | ACTIVE | CONFIRMED | Roteador conversacional concentra coordenação de muitos domínios |
 | debt.zapi-webhook-responsibility-coupling | COUPLING | MEDIUM | P2 | ACTIVE | CONFIRMED | Handler Z-API acopla transporte, deduplicação, automação e entrega |
-| gap.default-test-suite-failing | TEST_GAP | HIGH | P1 | RESOLVED | CONFIRMED | RESOLVED — current default suite passes 285/285 |
+| gap.default-test-suite-failing | TEST_GAP | HIGH | P1 | RESOLVED | CONFIRMED | RESOLVED — current default suite passes 291/291 |
 | gap.critical-capability-and-flow-coverage | TEST_GAP | HIGH | P1 | RESOLVED | CONFIRMED | RESOLVED — 21/21 MUST and 2/2 high-risk flows covered |
 | gap.real-integration-tests-outside-default | TEST_GAP | MEDIUM | P2 | ACTIVE | CONFIRMED | Testes reais e de integração ficam fora da suíte padrão |
 | gap.source-contract-assertion-bias | TEST_GAP | MEDIUM | P2 | ACTIVE | CONFIRMED | Parte relevante dos testes valida texto-fonte e regex de implementação |
@@ -175,13 +180,14 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 - Evidência: `comboRedemptions.ts`, migration `20260915000500`, quatro arquivos de regressão, Quality Gate 34998744062, Node 280/280, PostgreSQL 4/4 e reauditoria final PASS.
 - Histórico: a antiga leitura e substituição client-side do snapshot integral permanece preservada em `resolution.historical_evidence`.
 
-### risk.combo-direct-notification-concurrency-can-duplicate-or-stale — Notificações diretas de combo podem duplicar ou ficar stale sob concorrência
+### risk.combo-direct-notification-concurrency-can-duplicate-or-stale — RESOLVED: durable operational delivery
 
-- Tipo / severidade / prioridade: **CONCURRENCY / MEDIUM / P2**
-- Status / confiança: **ACTIVE / CONFIRMED**; release blocking: **false**.
-- Causa: arrival, delivery-choice prompt, awaiting-preparation e legacy READY executam sendZapi* antes da respectiva transição serializada.
-- Impacto: duas operações concorrentes podem alcançar o provedor; não há evidência de novo lost update de raw_metadata.
-- Distinção: não é o ACK ambíguo de um único efeito coberto por `risk.paid-delivery-ambiguous-external-ack`.
+- Tipo / severidade / prioridade: **CONCURRENCY / MEDIUM / P2**.
+- Status / confiança: **RESOLVED / CONFIRMED**; release blocking: **false**.
+- Histórico: chegada, prompt, awaiting e legacy READY podiam enviar ao provedor antes da decisão serializada; duas operações concorrentes podiam produzir efeitos externos duplicados ou stale.
+- Resolução CURRENT: PostgreSQL serializa a decisão, persiste o intent na mesma transação e o worker exige claim/lease/fencing antes do envio. Recuperação legacy e READY versionado preservam ordering e supersession.
+- Evidência: `comboOperationalDelivery.ts`, `comboRedemptions.ts`, `paidComboDeliveryWorker.ts`, migration 00600, Quality Gate 35141969033 e Production `dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc` em `c7ed2c31eb9c322ef489e71bb59631c39928a1e0`.
+- Residual separado: `risk.paid-delivery-ambiguous-external-ack` continua ACTIVE; exactly-once externo não foi provado.
 
 ### risk.github-issue-create-replay — Criação de issue não possui chave de idempotência
 
@@ -202,7 +208,7 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 - Status / confiança: **RESOLVED / CONFIRMED**; não operacional, não release-blocking e sem workaround.
 - Causa original: `APPLICATION_UNAVAILABLE_POLICY`.
 - Resolução: `allowed | rate_limited | unavailable`; 14 boundaries públicos em `fail_closed_503`, 5 boundaries pós-strong-auth em `fail_open_after_strong_auth`, timeout cancelável de 2000 ms, respostas malformadas em `unavailable`, zero caller mismatches e indisponibilidade nunca convertida em 429.
-- Evidência CURRENT: `scripts/test-rate-limit-outage.mjs` 5/5; Node 285/285; PostgreSQL 4/4; Quality Gate 35049217326 SUCCESS; reauditoria final PASS; Production `dpl_2bitbdQynYB6QdMiEkB1em65HsAy` serve `c48405e41df3d1cd69eb3d383b7c6dd17257155e` por metadata Vercel REST e health HTTP 200.
+- Evidência CURRENT: `scripts/test-rate-limit-outage.mjs` 5/5; Node 291/291; PostgreSQL 4/4; Quality Gate 35141969033 SUCCESS; reauditoria final PASS; Production `dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc` serve `c7ed2c31eb9c322ef489e71bb59631c39928a1e0` por metadata Vercel REST e health HTTP 200.
 - Histórico ACTIVE original preservado em `system-knowledge/findings.json`.
 ### risk.remote-database-controls-unvalidated — Controles remotos de banco além do schema visível não foram validados
 
@@ -256,7 +262,7 @@ Cada finding tem evidência, impacto, status e confiança. Severidade mede impac
 
 - Tipo / severidade / prioridade histórica: **OPERATIONAL / MEDIUM / P2**
 - Status / confiança: **RESOLVED / CONFIRMED**
-- Current evidence: GET Vercel REST v13 for `dpl_2bitbdQynYB6QdMiEkB1em65HsAy` returned HTTP 200 with `meta.githubCommitSha=c48405e41df3d1cd69eb3d383b7c6dd17257155e`, ref `production` and repo `FelipeFraul/rota5`.
+- Current evidence: GET Vercel REST v13 for `dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc` returned HTTP 200 with `meta.githubCommitSha=c7ed2c31eb9c322ef489e71bb59631c39928a1e0`, ref `production` and repo `FelipeFraul/rota5`.
 - Impacto atual: a identidade do artefato Production e a fonte funcional canônica coincidem.
 - Histórico preservado: a ausência de metadata no inspect CLI anterior mantinha a condição NOT_VALIDATED.
 - Direção: manter a prova de plataforma e reabrir somente em caso de divergência atual.

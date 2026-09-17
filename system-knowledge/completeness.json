@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-16T14:37:33.140Z",
-  "stage": "2.8.1",
+  "generatedAt": "2026-09-17T03:39:02Z",
+  "stage": "2.9.0",
   "globalConfidence": "HIGH",
   "count": 10,
   "records": [
@@ -15,7 +15,7 @@
     {
       "area": "ARCHITECTURE",
       "status": "HIGH_CONFIDENCE",
-      "justification": "17 domains, 66 modules e grafo de 818 dependências foram reconciliados com código e catálogos.",
+      "justification": "17 domains, 67 modules and 830 dependencies are reconciled with source and catalogs.",
       "missingEvidence": "Comportamento carregado dinamicamente fora do repo.",
       "higherConfidenceRequires": "Telemetria/import graph de runtime."
     },
@@ -36,7 +36,7 @@
     {
       "area": "DATA",
       "status": "MEDIUM_CONFIDENCE",
-      "justification": "45 tabelas locais e remotas coincidem por nome no OpenAPI read-only; 88 migrations e definições finais locais foram recontadas.",
+      "justification": "45 tabelas locais e remotas coincidem por nome no OpenAPI read-only; 89 migrations e definições finais locais foram recontadas.",
       "missingEvidence": "Internos PostgreSQL e histórico remoto.",
       "higherConfidenceRequires": "Catálogo PostgreSQL remoto read-only."
     },
@@ -57,7 +57,7 @@
     {
       "area": "TESTS",
       "status": "MEDIUM_CONFIDENCE",
-      "justification": "59 test artifacts are catalogued; the current default suite passes 285/285 and PostgreSQL integration passes 4/4.",
+      "justification": "60 test artifacts in the canonical inventory; current default suite: 291/291 PASS, plus separate PostgreSQL integration 4/4 PASS.",
       "missingEvidence": "36 arquivos de teste ficam fora do comando padrão; testes reais mutáveis exigem ambiente isolado.",
       "higherConfidenceRequires": "Ambiente isolado para a suíte ampliada e testes reais."
     },
@@ -71,7 +71,7 @@
     {
       "area": "RUNTIME",
       "status": "MEDIUM_CONFIDENCE",
-      "justification": "27 checks foram revisados; a distribuição canônica atual é 25 PASS, 2 PARTIAL e 0 FAIL.",
+      "justification": "31 checks foram revisados; a distribuição canônica atual é 29 PASS, 2 PARTIAL e 0 FAIL.",
       "missingEvidence": "Execuções mutáveis, cron/webhook history e logs completos.",
       "higherConfidenceRequires": "Observação read-only adicional ou ambiente isolado."
     }
@@ -101,5 +101,32 @@
     "status": "PASS",
     "source_commit": "1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27",
     "release_blockers": 0
+  },
+  "baseline_2_9_0": {
+    "canonical_counts": {
+      "domains": 17,
+      "modules": 67,
+      "entrypoints": 56,
+      "capabilities": 140,
+      "flows": 34,
+      "flow_steps": 169,
+      "state_transitions": 74,
+      "tables": 45,
+      "stateful_tables": 23,
+      "stateful_entities": 24,
+      "migrations": 89,
+      "sql_functions": 65,
+      "triggers": 36,
+      "sequences": 1,
+      "data_relations": 2272,
+      "integrations": 6,
+      "webhooks": 2,
+      "crons": 2,
+      "environment_variables": 43,
+      "tests": 60,
+      "findings": 47
+    },
+    "dependency_count": 830,
+    "quality_gate_run": 35141969033
   }
 }

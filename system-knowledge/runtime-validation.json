@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-16T14:37:33.140Z",
-  "stage": "2.8.1",
-  "count": 27,
-  "ok": true,
+  "generatedAt": "2026-09-17T03:39:02Z",
+  "stage": "2.9.0",
+  "count": 31,
+  "ok": 29,
   "records": [
     {
       "id": "runtime.supabase-openapi",
@@ -190,7 +190,7 @@
       "method": "DOCUMENTARY_POLICY",
       "evidence_source": "CANONICAL_SOURCE_POLICY",
       "status": "PASS",
-      "result": "Canonical functional source is c48405e41df3d1cd69eb3d383b7c6dd17257155e; baseline commit is SELF_NOT_RECORDED; live branch tip is VOLATILE_NOT_EMBEDDED_IN_FROZEN_BASELINE.",
+      "result": "Canonical functional source is c7ed2c31eb9c322ef489e71bb59631c39928a1e0; baseline commit is SELF_NOT_RECORDED; live branch tip is VOLATILE_NOT_EMBEDDED_IN_FROZEN_BASELINE.",
       "side_effect_free": true,
       "expected": "Represent canonical functional source without embedding a volatile live branch tip or a self-referential baseline commit.",
       "evidence": [
@@ -198,7 +198,7 @@
         "system-knowledge/baseline-manifest.json"
       ],
       "temporal_semantics": "CURRENT_CANONICAL_SEMANTICS",
-      "canonical_functional_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+      "canonical_functional_source": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
       "baseline_commit": "SELF_NOT_RECORDED",
       "live_branch_tip": "VOLATILE_NOT_EMBEDDED_IN_FROZEN_BASELINE",
       "historical_snapshot": {
@@ -371,16 +371,27 @@
       "id": "runtime.paid-delivery-quality-gate",
       "kind": "QUALITY_GATE",
       "target": "Current canonical functional Quality Gate",
-      "evidence_source": "GitHub Actions run 35049217326",
+      "evidence_source": "GitHub Actions run 35141969033",
       "status": "PASS",
-      "result": "285/285 Node, 4/4 PostgreSQL 16, typecheck, lint without errors and build passed on c48405e41df3d1cd69eb3d383b7c6dd17257155e.",
+      "result": "291/291 Node, 4/4 PostgreSQL 16, typecheck, lint without errors and build passed on c7ed2c31eb9c322ef489e71bb59631c39928a1e0.",
       "temporal_semantics": "CURRENT_CANONICAL_SEMANTICS",
       "evidence": [
-        "GitHub Actions run 35049217326",
-        "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
-        "npm test 285/285",
+        "GitHub Actions run 35141969033",
+        "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+        "npm test 291/291",
         "PostgreSQL 4/4"
-      ]
+      ],
+      "historical_snapshot": {
+        "classification": "HISTORICAL_SNAPSHOT",
+        "evidence_source": "GitHub Actions run 35049217326",
+        "result": "285/285 Node, 4/4 PostgreSQL 16, typecheck, lint without errors and build passed on c48405e41df3d1cd69eb3d383b7c6dd17257155e.",
+        "evidence": [
+          "GitHub Actions run 35049217326",
+          "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+          "npm test 285/285",
+          "PostgreSQL 4/4"
+        ]
+      }
     },
     {
       "id": "runtime.baseline-2-7-combo-metadata-remote",
@@ -414,8 +425,74 @@
         "vercel ls -m githubCommitSha",
         "GET /api/health HTTP 200"
       ],
-      "temporal_semantics": "CURRENT_CANONICAL_SEMANTICS",
+      "temporal_semantics": "HISTORICAL_SNAPSHOT",
       "observed_at": "2026-09-15T21:15:39.403Z"
+    },
+    {
+      "id": "runtime.baseline-2-9-production",
+      "target": "Vercel Rota5 Production source and aliases",
+      "method": "VERCEL_REST_V13_DEPLOYMENT_METADATA_AND_ALIAS_LOOKUP",
+      "evidence_source": "AUTHORITATIVE_PLATFORM_METADATA",
+      "status": "PASS",
+      "result": "dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc is READY in production on c7ed2c31eb9c322ef489e71bb59631c39928a1e0, ref production and repository FelipeFraul/rota5; both canonical aliases resolve to this deployment; /api/health returned HTTP 200, status=ok, service=whatsapp-ticketing.",
+      "side_effect_free": true,
+      "expected": "Exact canonical functional source deployed before documentary freeze.",
+      "evidence": [
+        "dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc",
+        "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+        "Vercel REST v13 deployment metadata",
+        "GET /api/health HTTP 200"
+      ],
+      "temporal_semantics": "CURRENT_CANONICAL_SEMANTICS",
+      "observed_at": "2026-09-17T03:21:33Z"
+    },
+    {
+      "id": "runtime.migration-ledger-2-9",
+      "target": "Supabase migration ledger through 20260915000600",
+      "method": "SUPABASE_CLI_2_117_0_MIGRATION_LIST_AND_DB_PUSH_DRY_RUN",
+      "evidence_source": "REMOTE_MIGRATION_LEDGER_READ_ONLY",
+      "status": "PASS",
+      "result": "89 local migrations match 89 remote ledger versions; 20260914000100–20260915000600 aligned; db push --dry-run reports zero pending migrations.",
+      "side_effect_free": true,
+      "expected": "Local/remote ledger aligned, no pending migrations.",
+      "evidence": [
+        "Supabase CLI 2.117.0",
+        "migration list",
+        "db push --dry-run"
+      ],
+      "observed_at": "2026-09-17T03:21:00Z"
+    },
+    {
+      "id": "runtime.combo-00600-schema",
+      "target": "00600 remote schema objects and RPC privileges",
+      "method": "POSTGRES_CATALOG_READ_ONLY",
+      "evidence_source": "REMOTE_SCHEMA_AND_GRANTS",
+      "status": "PASS",
+      "result": "12 changed functions and the operational due index are present; service_role can execute the required RPCs while public, anon and authenticated cannot.",
+      "side_effect_free": true,
+      "expected": "Current 00600 schema and restricted EXECUTE grants.",
+      "evidence": [
+        "20260915000600 in migration ledger",
+        "pg_proc",
+        "pg_indexes",
+        "has_function_privilege"
+      ],
+      "observed_at": "2026-09-17T03:20:00Z"
+    },
+    {
+      "id": "runtime.combo-queue-2-9",
+      "target": "Paid and operational combo outbound queue",
+      "method": "READ_ONLY_LIST_AND_COUNTS_RPCS",
+      "evidence_source": "PRODUCTION_QUEUE_SNAPSHOT",
+      "status": "PASS",
+      "result": "list_due_paid_combo_delivery_tasks: 0 due tasks; get_paid_combo_delivery_queue_counts: 6 sent, 0 failed, 0 pending due. Snapshot only; no claim or mutation.",
+      "side_effect_free": true,
+      "expected": "Read-only queue calls return structurally valid results.",
+      "evidence": [
+        "list_due_paid_combo_delivery_tasks(100)",
+        "get_paid_combo_delivery_queue_counts()"
+      ],
+      "observed_at": "2026-09-17T03:21:00Z"
     }
   ],
   "prohibited_actions_performed": false,
@@ -425,7 +502,7 @@
     "current_head_deployed": true,
     "deployment_performed": true,
     "deployment_performed_during_baseline_update": false,
-    "canonical_functional_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "canonical_functional_source": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
     "source_evidence": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA",
     "documentary_head_policy": "VOLATILE_NOT_EMBEDDED"
   },
@@ -615,9 +692,9 @@
     "ticketeira": "UNTOUCHED"
   },
   "current_production": {
-    "deployment": "dpl_2bitbdQynYB6QdMiEkB1em65HsAy",
-    "application_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
-    "repository_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "deployment": "dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc",
+    "application_source": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+    "repository_source": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
     "status": "READY",
     "target": "production",
     "deployment_source": "cli",
@@ -633,7 +710,11 @@
     "source_evidence": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA",
     "canonical_source_parity": "MATCH",
     "documentary_head_policy": "VOLATILE_NOT_EMBEDDED",
-    "health": "HTTP_200_STATUS_OK_WHATSAPP_TICKETING"
+    "health": "HTTP_200_STATUS_OK_WHATSAPP_TICKETING",
+    "aliases": [
+      "rota5-khaki.vercel.app",
+      "rota5-fraulproenca-gmailcoms-projects.vercel.app"
+    ]
   },
   "baseline_2_4_0": {
     "version": "2.4.0",
@@ -779,5 +860,20 @@
     "deployment_changed_before_freeze": true,
     "deployment_changed_during_freeze": false,
     "baseline_commit": "SELF_NOT_RECORDED"
+  },
+  "baseline_2_9_0": {
+    "deployment": "dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc",
+    "source": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+    "migration_ledger": "ALIGNED_THROUGH_20260915000600",
+    "pending_migrations": 0,
+    "remote_schema_00600": "VALIDATED_READ_ONLY",
+    "queue_snapshot": {
+      "due": 0,
+      "sent": 6,
+      "failed": 0,
+      "pending_due": 0
+    },
+    "cutover_gap_seconds": 91,
+    "documentary_freeze_remote_mutations": false
   }
 }

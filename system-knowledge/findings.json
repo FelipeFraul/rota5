@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-16T14:37:33.140Z",
-  "stage": "2.8.1",
-  "sourceCommit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
-  "scope": "Canonical finding catalog for Baseline 2.8.1, with current lifecycle state separated from preserved historical evidence.",
-  "method": "Baseline 2.8.1 documentary reconciliation on canonical functional source; functional validation and Production metadata remain those of Baseline 2.8.0.",
+  "generatedAt": "2026-09-17T03:39:02Z",
+  "stage": "2.9.0",
+  "sourceCommit": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+  "scope": "Canonical finding catalog for Baseline 2.9.0, with current lifecycle state separated from preserved historical evidence.",
+  "method": "Baseline 2.9.0 documentary reconciliation on canonical functional source c7ed2c31eb9c322ef489e71bb59631c39928a1e0, Quality Gate 35141969033 and exact-source Production runtime.",
   "count": 47,
   "records": [
     {
@@ -306,7 +306,7 @@
         },
         {
           "path": "package.json",
-          "claim": "Current default suite passes 285/285, including the direct duplication test.",
+          "claim": "Current default suite passes 291/291, including the direct duplication test.",
           "evidence_state": "CURRENT"
         }
       ],
@@ -387,7 +387,7 @@
           },
           {
             "path": "package.json",
-            "claim": "Current default suite passes 285/285, including the direct duplication test.",
+            "claim": "Current default suite passes 291/291, including the direct duplication test.",
             "evidence_state": "CURRENT"
           }
         ],
@@ -441,7 +441,7 @@
         },
         {
           "path": "package.json",
-          "claim": "Current default suite passes 285/285.",
+          "claim": "Current default suite passes 291/291.",
           "evidence_state": "CURRENT"
         }
       ],
@@ -543,7 +543,7 @@
           },
           {
             "path": "package.json",
-            "claim": "Current default suite passes 285/285.",
+            "claim": "Current default suite passes 291/291.",
             "evidence_state": "CURRENT"
           }
         ],
@@ -1558,8 +1558,8 @@
           "evidence_state": "CURRENT"
         },
         {
-          "path": "Quality Gate 35049217326",
-          "claim": "Node 285/285, PostgreSQL 4/4, typecheck, lint and build PASS; final re-audit PASS.",
+          "path": "Quality Gate 35141969033",
+          "claim": "Node 291/291, PostgreSQL 4/4, typecheck, lint and build PASS; final re-audit PASS.",
           "evidence_state": "CURRENT"
         }
       ],
@@ -1712,13 +1712,13 @@
           "evidence_state": "CURRENT"
         },
         {
-          "path": "GitHub Actions run 35049217326",
-          "claim": "Quality Gate SUCCESS on c48405e41df3d1cd69eb3d383b7c6dd17257155e: 285/285 Node, 4/4 PostgreSQL, typecheck, lint without errors and build PASS.",
+          "path": "GitHub Actions run 35141969033",
+          "claim": "Quality Gate SUCCESS on c7ed2c31eb9c322ef489e71bb59631c39928a1e0: 291/291 Node, 4/4 PostgreSQL, typecheck, lint without errors and build PASS.",
           "evidence_state": "CURRENT"
         },
         {
           "path": "Vercel REST GET /v13/deployments",
-          "claim": "Production dpl_2bitbdQynYB6QdMiEkB1em65HsAy is READY and authoritative meta.githubCommitSha=c48405e41df3d1cd69eb3d383b7c6dd17257155e; canonical aliases resolve to it and /api/health returned HTTP 200.",
+          "claim": "Production dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc is READY and authoritative meta.githubCommitSha=c7ed2c31eb9c322ef489e71bb59631c39928a1e0; canonical aliases resolve to it and /api/health returned HTTP 200.",
           "evidence_state": "CURRENT"
         }
       ],
@@ -1763,7 +1763,6 @@
         "resolved_at": "2026-09-16T03:35:55.187Z",
         "root_cause": "APPLICATION_UNAVAILABLE_POLICY",
         "current_resolution": "consumeRateLimit exposes allowed | rate_limited | unavailable. Fourteen public boundaries use fail_closed_503; five strong-auth boundaries use fail_open_after_strong_auth only after authentication. AbortController enforces a 2000 ms timeout. Malformed responses map to unavailable; unavailable never maps to 429. Audited caller mismatches: 0.",
-        "source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
         "commit": "fix: harden rate limit outage handling",
         "boundaries": 19,
         "fail_closed_503": 14,
@@ -1771,17 +1770,7 @@
         "caller_mismatches": 0,
         "timeout_ms": 2000,
         "focused_tests": "5/5 PASS",
-        "default_node_suite": "285/285 PASS",
-        "postgres_integration": "4/4 PASS",
-        "quality_gate_run": 35049217326,
         "independent_final_reaudit": "PASS",
-        "production_deployment": "dpl_2bitbdQynYB6QdMiEkB1em65HsAy",
-        "production_source_evidence": "meta.githubCommitSha=c48405e41df3d1cd69eb3d383b7c6dd17257155e",
-        "production_aliases": [
-          "rota5-khaki.vercel.app",
-          "rota5-fraulproenca-gmailcoms-projects.vercel.app"
-        ],
-        "production_health": "HTTP 200 status=ok service=whatsapp-ticketing",
         "historical_evidence": {
           "title": "Falha do rate limiter libera a requisição",
           "description": "consumeRateLimit registra warning e retorna allowed em exceção, deixando endpoints públicos sem proteção durante indisponibilidade do banco/RPC.",
@@ -1796,6 +1785,27 @@
           "workaround": "Autenticação/assinatura e validações específicas continuam aplicáveis onde existem.",
           "direction": "Definir política de degradação por criticidade de endpoint.",
           "priority_justification": "P2 porque é uma escolha ativa de disponibilidade com condição específica, sem exploração observada."
+        },
+        "historical_resolution_proof": {
+          "source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+          "default_node_suite": "285/285 PASS",
+          "postgres_integration": "4/4 PASS",
+          "quality_gate_run": 35049217326,
+          "production_deployment": "dpl_2bitbdQynYB6QdMiEkB1em65HsAy",
+          "production_source_evidence": "meta.githubCommitSha=c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+          "production_aliases": [
+            "rota5-khaki.vercel.app",
+            "rota5-fraulproenca-gmailcoms-projects.vercel.app"
+          ],
+          "production_health": "HTTP 200 status=ok service=whatsapp-ticketing"
+        },
+        "current_production_proof": {
+          "source_commit": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+          "quality_gate_run": 35141969033,
+          "default_node_suite": "291/291 PASS",
+          "production_deployment": "dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc",
+          "production_source_evidence": "meta.githubCommitSha=c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+          "production_health": "HTTP 200 status=ok service=whatsapp-ticketing"
         }
       }
     },
@@ -2153,11 +2163,11 @@
       "priority": "P2",
       "status": "RESOLVED",
       "confidence": "CONFIRMED",
-      "description": "A metadata autoritativa da Vercel liga o deployment Production READY dpl_2bitbdQynYB6QdMiEkB1em65HsAy ao Git SHA c48405e41df3d1cd69eb3d383b7c6dd17257155e, exatamente o canonical functional source da Baseline 2.8.0.",
+      "description": "A metadata autoritativa da Vercel liga o deployment Production READY dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc ao Git SHA c7ed2c31eb9c322ef489e71bb59631c39928a1e0, exatamente o canonical functional source da Baseline 2.9.0.",
       "evidence": [
         {
           "path": "Vercel REST GET /v13/deployments",
-          "claim": "HTTP 200 for dpl_2bitbdQynYB6QdMiEkB1em65HsAy; meta.githubCommitSha is c48405e41df3d1cd69eb3d383b7c6dd17257155e.",
+          "claim": "HTTP 200 for dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc; meta.githubCommitSha is c7ed2c31eb9c322ef489e71bb59631c39928a1e0.",
           "evidence_state": "CURRENT"
         },
         {
@@ -2167,7 +2177,7 @@
         },
         {
           "path": "system-knowledge/baseline-manifest.json",
-          "claim": "Canonical functional source is c48405e41df3d1cd69eb3d383b7c6dd17257155e; documentary HEAD is deliberately not embedded.",
+          "claim": "Canonical functional source is c7ed2c31eb9c322ef489e71bb59631c39928a1e0; documentary HEAD is deliberately not embedded.",
           "evidence_state": "CURRENT"
         }
       ],
@@ -2202,7 +2212,7 @@
       "resolution": {
         "resolved_at": "2026-09-15T21:15:39.403Z",
         "root_cause": "The deployment metadata available to the prior CLI inspection did not expose a source SHA sufficient to reconcile the served artifact.",
-        "current_resolution": "Vercel REST v13 returns authoritative metadata for dpl_2bitbdQynYB6QdMiEkB1em65HsAy: target=production, readyState=READY, source=cli, meta.githubCommitSha=c48405e41df3d1cd69eb3d383b7c6dd17257155e, meta.githubCommitRef=production and repository=FelipeFraul/rota5. Filtered read-only deployment listing by githubCommitSha returned the same READY Production deployment.",
+        "current_resolution": "Vercel REST v13 returns authoritative metadata for dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc: target=production, readyState=READY, meta.githubCommitSha=c7ed2c31eb9c322ef489e71bb59631c39928a1e0, meta.githubCommitRef=production and repository=FelipeFraul/rota5. The official SHA-filtered Vercel listing matched its unique deployment URL; both canonical aliases resolve to the new deployment.",
         "source_evidence_type": "AUTHORITATIVE_PLATFORM_METADATA",
         "canonical_source_parity": "MATCH",
         "documentary_head_policy": "Documentary commits after the canonical functional source are intentionally excluded from runtime parity because Git auto-deploy is disabled and the frozen baseline does not embed a volatile branch tip.",
@@ -2225,7 +2235,8 @@
           "priority_justification": "P2 por limitar a confiança operacional sem provar divergência funcional."
         },
         "previous_current_evidence": [
-          "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g -> 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27 (Baseline 2.7.x authoritative Production proof)"
+          "dpl_4ZaUUZxWjjjL51jKejGfXA8Ho27g -> 1f504eb4e4a08ab8f8de3ff3a39e1803f625dc27 (Baseline 2.7.x authoritative Production proof)",
+          "dpl_2bitbdQynYB6QdMiEkB1em65HsAy -> c48405e41df3d1cd69eb3d383b7c6dd17257155e (Baseline 2.8.x Production proof)"
         ]
       }
     },
@@ -2476,7 +2487,7 @@
       "evidence": [
         {
           "path": "system-knowledge/tests.json",
-          "claim": "The current canonical default suite passes 285/285 with zero failures, skips, todos or regressions.",
+          "claim": "The current canonical default suite passes 291/291 with zero failures, skips, todos or regressions.",
           "evidence_state": "CURRENT"
         },
         {
@@ -2600,7 +2611,7 @@
         "current_evidence": [
           {
             "path": "system-knowledge/tests.json",
-            "claim": "The current canonical default suite passes 285/285 with zero failures, skips, todos or regressions.",
+            "claim": "The current canonical default suite passes 291/291 with zero failures, skips, todos or regressions.",
             "evidence_state": "CURRENT"
           },
           {
@@ -2655,7 +2666,7 @@
         },
         {
           "path": ".github/workflows/quality-gate.yml",
-          "claim": "Quality Gate run 35049217326 passed npm ci, 285/285 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
+          "claim": "Quality Gate run 35141969033 passed npm ci, 291/291 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
           "evidence_state": "CURRENT"
         },
         {
@@ -2809,7 +2820,7 @@
           },
           {
             "path": ".github/workflows/quality-gate.yml",
-            "claim": "Quality Gate run 35049217326 passed npm ci, 285/285 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
+            "claim": "Quality Gate run 35141969033 passed npm ci, 291/291 default tests, PostgreSQL 16 integration, typecheck, lint and build on the canonical HEAD.",
             "evidence_state": "CURRENT"
           },
           {
@@ -2945,7 +2956,7 @@
         },
         {
           "path": "package.json",
-          "claim": "The current default suite uses the tracked loader and passes 285/285.",
+          "claim": "The current default suite uses the tracked loader and passes 291/291.",
           "evidence_state": "CURRENT"
         }
       ],
@@ -3018,7 +3029,7 @@
           },
           {
             "path": "package.json",
-            "claim": "The current default suite uses the tracked loader and passes 285/285.",
+            "claim": "The current default suite uses the tracked loader and passes 291/291.",
             "evidence_state": "CURRENT"
           }
         ],
@@ -4122,42 +4133,53 @@
     },
     {
       "id": "risk.combo-direct-notification-concurrency-can-duplicate-or-stale",
-      "title": "Notificações diretas de combo podem duplicar ou ficar stale sob concorrência",
+      "title": "RESOLVED — notificações operacionais de combo serializadas e duráveis",
       "type": "CONCURRENCY",
       "severity": "MEDIUM",
       "priority": "P2",
-      "status": "ACTIVE",
+      "status": "RESOLVED",
       "confidence": "CONFIRMED",
-      "description": "Alguns fluxos chamam sendZapi* antes de adquirir ou observar a transição serializada do estado; duas operações concorrentes legítimas podem alcançar o provedor antes de uma delas observar o estado consolidado.",
+      "description": "Decisões operacionais de combo agora são serializadas no PostgreSQL e criam o outbound intent na mesma transação. O envio externo exige claim do intent; os fluxos de decisão vulneráveis não chamam o provedor diretamente.",
       "evidence": [
         {
-          "path": "src/lib/tickets/services/comboRedemptions.ts",
-          "symbol": "releaseComboOrdersForKitchenAfterGateEntry -> sendZapiText -> record_combo_gate_arrival",
-          "claim": "O efeito externo de chegada precede a transição serializada."
+          "path": "src/lib/tickets/services/comboOperationalDelivery.ts",
+          "claim": "Claim com fencing precede o envio; contexto e roteamento de conversa são validados antes do provedor.",
+          "evidence_state": "CURRENT"
         },
         {
           "path": "src/lib/tickets/services/comboRedemptions.ts",
-          "symbol": "delivery-choice scan -> sendZapiText -> record_combo_delivery_choice_prompt",
-          "claim": "O prompt externo precede a transição serializada."
+          "claim": "Chegada, prompt e awaiting são decisões de banco com intent durável, sem envio direto nesses cinco fluxos de decisão.",
+          "evidence_state": "CURRENT"
         },
         {
-          "path": "src/lib/tickets/services/comboRedemptions.ts",
-          "symbol": "awaiting-preparation scan -> sendZapiText -> record_combo_awaiting_preparation",
-          "claim": "A notificação externa precede a transição serializada."
+          "path": "src/lib/tickets/services/paidComboDeliveryWorker.ts",
+          "claim": "O worker processa intents operacionais junto com entregas pagas e READY mantendo ordenação.",
+          "evidence_state": "CURRENT"
         },
         {
-          "path": "src/lib/tickets/services/comboRedemptions.ts",
-          "symbol": "legacy READY recovery -> sendZapiText/sendZapiImage -> complete_legacy_combo_ready_recovery",
-          "claim": "A recuperação legacy envia antes de consolidar o estado."
+          "path": "src/lib/tickets/services/whatsappOutboundDeliveries.ts",
+          "claim": "Claim, lease, fencing, retry, dead-letter e supersession definem o contrato local de entrega.",
+          "evidence_state": "CURRENT"
+        },
+        {
+          "path": "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql",
+          "claim": "00600 entrou no ledger por Supabase db push 2.117.0; doze funções e o índice foram validados read-only em Production.",
+          "evidence_state": "CURRENT"
+        },
+        {
+          "path": "scripts/test-combo-operational-delivery.mjs",
+          "claim": "Quality Gate 35141969033: Node 291/291 e PostgreSQL 4/4; os casos operacionais provam claim obrigatório, recuperação e ausência de envio direto.",
+          "evidence_state": "CURRENT"
         }
       ],
-      "impact": "Operações concorrentes podem produzir mensagem externa duplicada ou baseada em estado que mudou; não há evidência de novo lost update de raw_metadata.",
+      "impact": "A causa local de notificações operacionais duplicadas ou stale sob concorrência foi removida no source, schema e Production.",
       "domains": [
         "domain.combo-commerce-fulfillment",
         "domain.whatsapp-conversations"
       ],
       "modules": [
-        "combo.redemption"
+        "combo.redemption",
+        "combo.operational-delivery"
       ],
       "capabilities": [
         "combo.kitchen_release",
@@ -4170,7 +4192,8 @@
         "kitchen.combo_redemption"
       ],
       "tables": [
-        "combo_redemptions"
+        "combo_redemptions",
+        "whatsapp_outbound_deliveries"
       ],
       "integrations": [
         "integration-zapi",
@@ -4182,18 +4205,68 @@
         "this_finding": "Duas operações concorrentes legítimas alcançam o efeito externo antes da serialização local.",
         "other_finding": "Um único efeito pode ser aceito pelo provedor enquanto o ACK local permanece ambíguo."
       },
-      "workaround": "Monitorar duplicações e revalidar o estado antes de reenvios manuais; a serialização posterior limita o estado persistido, mas não desfaz efeitos externos já aceitos.",
-      "direction": "Reservar/claimar a transição antes do envio ou mover esses efeitos para uma outbox durável com deduplicação e fencing adequados.",
-      "priority_justification": "P2: defeito confirmado e operacional, porém restrito a concorrência nas notificações diretas e sem evidência de release blocker.",
+      "workaround": "Nenhum workaround é requerido para a condição resolvida.",
+      "direction": "Manter regressões de concorrência, filas e metadata de deploy; o ACK externo ambíguo permanece um risco separado.",
+      "priority_justification": "MEDIUM/P2 preservados como classificação histórica; RESOLVED não é operacional nem release blocker.",
       "current_state": {
-        "lifecycle": "ACTIVE",
-        "operational_open": true,
+        "lifecycle": "RESOLVED",
+        "operational_open": false,
         "release_blocking": false,
-        "active_metric": true,
-        "workaround_required": true,
-        "current_impact": "Possível mensagem direta duplicada ou stale sob concorrência.",
-        "top_level_claims": "CURRENT_RISK"
-      }
+        "active_metric": false,
+        "potential_metric": false,
+        "validation_queue": false,
+        "closed": true,
+        "workaround_required": false,
+        "current_impact": "A causa local de notificações operacionais duplicadas ou stale sob concorrência foi removida no source, schema e Production.",
+        "top_level_claims": "CURRENT_RESOLUTION_ONLY",
+        "top_level_evidence": "CURRENT"
+      },
+      "resolution": {
+        "resolved_at": "2026-09-17T03:19:08Z",
+        "root_cause": "Business flows de combo podiam executar sendZapi* antes da decisão/transição serializada; operações concorrentes podiam alcançar o efeito externo antes de observar a transição da outra.",
+        "current_resolution": "Decisões e transições serializadas no PostgreSQL; intent criado atomicamente; efeitos externos somente após claim com lease/fencing/retry/dead-letter. Conversation routing antecede prompt. notified_at não representa enqueue. Recuperações legacy e READY versionado preservam texto→QR; intents stale podem ser superseded; paid dead-letter não bloqueia READY indefinidamente e paid delivery histórico não é recriado pelo upgrade legacy.",
+        "quality_gate_run": 35141969033,
+        "source_commit": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+        "production_deployment": "dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc",
+        "external_ack_residual": "risk.paid-delivery-ambiguous-external-ack",
+        "historical_evidence": {
+          "title": "Notificações diretas de combo podem duplicar ou ficar stale sob concorrência",
+          "description": "Alguns fluxos chamam sendZapi* antes de adquirir ou observar a transição serializada do estado; duas operações concorrentes legítimas podem alcançar o provedor antes de uma delas observar o estado consolidado.",
+          "evidence": [
+            {
+              "path": "src/lib/tickets/services/comboRedemptions.ts",
+              "symbol": "releaseComboOrdersForKitchenAfterGateEntry -> sendZapiText -> record_combo_gate_arrival",
+              "claim": "O efeito externo de chegada precede a transição serializada."
+            },
+            {
+              "path": "src/lib/tickets/services/comboRedemptions.ts",
+              "symbol": "delivery-choice scan -> sendZapiText -> record_combo_delivery_choice_prompt",
+              "claim": "O prompt externo precede a transição serializada."
+            },
+            {
+              "path": "src/lib/tickets/services/comboRedemptions.ts",
+              "symbol": "awaiting-preparation scan -> sendZapiText -> record_combo_awaiting_preparation",
+              "claim": "A notificação externa precede a transição serializada."
+            },
+            {
+              "path": "src/lib/tickets/services/comboRedemptions.ts",
+              "symbol": "legacy READY recovery -> sendZapiText/sendZapiImage -> complete_legacy_combo_ready_recovery",
+              "claim": "A recuperação legacy envia antes de consolidar o estado."
+            }
+          ],
+          "impact": "Operações concorrentes podem produzir mensagem externa duplicada ou baseada em estado que mudou; não há evidência de novo lost update de raw_metadata.",
+          "workaround": "Monitorar duplicações e revalidar o estado antes de reenvios manuais; a serialização posterior limita o estado persistido, mas não desfaz efeitos externos já aceitos.",
+          "direction": "Reservar/claimar a transição antes do envio ou mover esses efeitos para uma outbox durável com deduplicação e fencing adequados.",
+          "priority_justification": "P2: defeito confirmado e operacional, porém restrito a concorrência nas notificações diretas e sem evidência de release blocker."
+        }
+      },
+      "functions": [
+        "insert_combo_operational_intent",
+        "record_combo_gate_arrival",
+        "record_combo_delivery_choice_prompt",
+        "record_combo_awaiting_preparation",
+        "claim_whatsapp_outbound_delivery"
+      ]
     }
   ],
   "finding_status_taxonomy": {
@@ -4298,8 +4371,8 @@
     "current_evidence_marker": "evidence_state=CURRENT",
     "validator": ".tools/baseline/validate-baseline.mjs",
     "invariants": {
-      "RESOLVED_FINDINGS_TOTAL": 17,
-      "RESOLVED_CURRENT_STATE_COMPLETE": 17,
+      "RESOLVED_FINDINGS_TOTAL": 18,
+      "RESOLVED_CURRENT_STATE_COMPLETE": 18,
       "RESOLVED_WITHOUT_CURRENT_STATE": 0,
       "RESOLVED_WITH_ACTIVE_TOP_LEVEL_CLAIMS": 0,
       "RESOLVED_WITH_NONCURRENT_TOP_LEVEL_EVIDENCE": 0,
@@ -4376,5 +4449,14 @@
     "original_root_cause": "APPLICATION_UNAVAILABLE_POLICY",
     "release_blocking": false,
     "historical_classification": "SECURITY/MEDIUM/P2/CONFIRMED"
+  },
+  "baseline_2_9_0": {
+    "lifecycle_change": {
+      "id": "risk.combo-direct-notification-concurrency-can-duplicate-or-stale",
+      "before": "ACTIVE",
+      "after": "RESOLVED"
+    },
+    "historical_root_cause_preserved": true,
+    "external_ack_residual": "risk.paid-delivery-ambiguous-external-ack"
   }
 }

@@ -1,9 +1,28 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-16T14:37:33.140Z",
-  "stage": "2.8.1",
-  "count": 31,
+  "generatedAt": "2026-09-17T03:39:02Z",
+  "stage": "2.9.0",
+  "count": 32,
   "records": [
+    {
+      "id": "baseline-2.9.0",
+      "version": "2.9.0",
+      "date": "2026-09-17",
+      "type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+      "status": "FROZEN",
+      "source_commit": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+      "source_fingerprint": "889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6",
+      "summary": "Durable combo operational delivery, legacy recovery, official 00600 migration and coordinated Production cutover; historical direct-SQL migration-ledger provenance corrected.",
+      "functional_source_changed": true,
+      "database_changed": true,
+      "production_deployment": "dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc",
+      "quality_gate_run": 35141969033,
+      "node_suite": "291/291 PASS",
+      "postgres_integration": "4/4 PASS",
+      "finding_resolved": "risk.combo-direct-notification-concurrency-can-duplicate-or-stale",
+      "ambiguous_external_ack": "ACTIVE_SEPARATE_RESIDUAL",
+      "baseline_commit": "SELF_NOT_RECORDED"
+    },
     {
       "id": "baseline-2.8.1",
       "version": "2.8.1",
@@ -1232,5 +1251,17 @@
     "deployment_changed": false,
     "baseline_commit": "SELF_NOT_RECORDED",
     "dependency_count": 818
+  },
+  "baseline_2_9_0": {
+    "source_commit": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+    "source_fingerprint": "889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6",
+    "production_deployment": "dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc",
+    "migration": "20260915000600",
+    "migration_application_method": "OFFICIAL_SUPABASE_DB_PUSH",
+    "ledger_repair_historical_versions": 9,
+    "quality_gate_run": 35141969033,
+    "node": "291/291",
+    "postgres": "4/4",
+    "baseline_commit": "SELF_NOT_RECORDED"
   }
 }

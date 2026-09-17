@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-16T14:37:33.140Z",
-  "stage": "2.8.1",
-  "sourceCommit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
-  "scope": "Current risk, coverage, validation and release-blocker projection for Baseline 2.8.1.",
+  "generatedAt": "2026-09-17T03:39:02Z",
+  "stage": "2.9.0",
+  "sourceCommit": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+  "scope": "Current risk, coverage, validation and release-blocker projection for Baseline 2.9.0.",
   "method": "All current metrics are derived from canonical catalogs and finding_status_taxonomy; historical snapshots remain only in version-labelled fields.",
   "status": "PASS",
   "total": 47,
@@ -45,10 +45,10 @@
     "P4": 2
   },
   "by_status": {
-    "ACTIVE": 22,
+    "ACTIVE": 21,
     "NOT_VALIDATED": 4,
     "POTENTIAL": 4,
-    "RESOLVED": 17,
+    "RESOLVED": 18,
     "OPEN": 0,
     "MITIGATED": 0,
     "ACCEPTED": 0
@@ -309,7 +309,8 @@
     "gap.default-test-suite-failing",
     "gap.critical-capability-and-flow-coverage",
     "gap.test-runner-depends-on-untracked-loader",
-    "risk.payment-confirmed-before-external-delivery"
+    "risk.payment-confirmed-before-external-delivery",
+    "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
   ],
   "infrastructure_identity": "CORRECT",
   "current_head_deployed": false,
@@ -581,15 +582,15 @@
   },
   "next_active_high": null,
   "current_runtime": {
-    "production_deployment": "dpl_2bitbdQynYB6QdMiEkB1em65HsAy",
-    "production_source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
-    "repository_source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+    "production_deployment": "dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc",
+    "production_source_commit": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+    "repository_source_commit": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
     "production_status": "READY",
     "current_head_deployed": true,
     "app_runtime_diff_after_deploy": "NAO",
     "source_difference": "NONE_AT_FUNCTIONAL_FREEZE",
     "relevant_log_errors": 0,
-    "supabase": "UNCHANGED_NO_MIGRATION",
+    "supabase": "MIGRATION_LEDGER_ALIGNED_THROUGH_20260915000600",
     "ticketeira": "UNTOUCHED",
     "git_auto_deploy": "DISABLED",
     "new_deployment": false,
@@ -705,8 +706,8 @@
     "resolved_semantic_contract_required": true
   },
   "resolved_semantic_invariants": {
-    "RESOLVED_FINDINGS_TOTAL": 17,
-    "RESOLVED_CURRENT_STATE_COMPLETE": 17,
+    "RESOLVED_FINDINGS_TOTAL": 18,
+    "RESOLVED_CURRENT_STATE_COMPLETE": 18,
     "RESOLVED_WITHOUT_CURRENT_STATE": 0,
     "RESOLVED_WITH_ACTIVE_TOP_LEVEL_CLAIMS": 0,
     "RESOLVED_WITH_NONCURRENT_TOP_LEVEL_EVIDENCE": 0,
@@ -773,5 +774,18 @@
     "findings_resolved": 17,
     "findings_active": 22,
     "release_blockers": 0
+  },
+  "baseline_2_9_0": {
+    "source": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+    "findings_total": 47,
+    "by_status": {
+      "ACTIVE": 21,
+      "NOT_VALIDATED": 4,
+      "POTENTIAL": 4,
+      "RESOLVED": 18
+    },
+    "release_blockers": 0,
+    "combo_notification": "RESOLVED",
+    "ambiguous_external_ack": "ACTIVE"
   }
 }

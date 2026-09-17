@@ -1,4 +1,9 @@
-> **Current Baseline 2.8.1 (2026-09-16):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.9.0 (2026-09-17):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c7ed2c31eb9c322ef489e71bb59631c39928a1e0`. Fingerprint `889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6`; 397 source files, 89 local and remote ledger migrations, 45 tables, 65 SQL functions, 1 sequence, 60 test files and 47 findings. Combo operational notification concurrency is RESOLVED; external ambiguous ACK remains separate. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+
+## 2.9.0 — 2026-09-17
+
+**MINOR_COMPATIBLE_FUNCTIONAL_CHANGE.** Canonical functional source `c7ed2c31eb9c322ef489e71bb59631c39928a1e0` (commits `bb582a6` and `c7ed2c31`) adds durable combo operational delivery and legacy recovery. Migration `20260915000600` was applied by official Supabase CLI 2.117.0 db push after the separate 140001–150005 ledger reconciliation. Quality Gate 35141969033: Node 291/291, PostgreSQL 4/4, typecheck/lint/build PASS. Production `dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc` is READY on exact source, aliases and health PASS. The direct notification concurrency finding is RESOLVED; ambiguous external ACK remains ACTIVE separately. Documentary baseline commit: SELF_NOT_RECORDED.
+
 
 ## Baseline 2.8.1 — PATCH_DOCUMENTARY_CORRECTION
 

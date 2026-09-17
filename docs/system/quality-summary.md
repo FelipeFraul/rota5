@@ -1,4 +1,9 @@
-> **Current Baseline 2.8.1 (2026-09-16):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.9.0 (2026-09-17):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c7ed2c31eb9c322ef489e71bb59631c39928a1e0`. Fingerprint `889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6`; 397 source files, 89 local and remote ledger migrations, 45 tables, 65 SQL functions, 1 sequence, 60 test files and 47 findings. Combo operational notification concurrency is RESOLVED; external ambiguous ACK remains separate. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+
+## Baseline 2.9.0 quality and runtime
+
+Functional Quality Gate 35141969033 on `c7ed2c31eb9c322ef489e71bb59631c39928a1e0`: Node 291/291, PostgreSQL 4/4, typecheck PASS, lint PASS and build PASS. Production `dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc` is READY with exact source/ref/repository metadata, both aliases and health HTTP 200. Post-deploy database/queue validation was read-only. Product and Infrastructure remain DEGRADED because independent operational and validation findings remain.
+
 
 ## Baseline 2.8.1 documentary validation
 
@@ -6,7 +11,7 @@ The 2.8.0 documentary Quality Gate run 35107474719 succeeded. The functional Qua
 
 ## Baseline 2.8.0 quality gate
 
-Functional Quality Gate 35049217326 passed on `c48405e41df3d1cd69eb3d383b7c6dd17257155e`: Node 285/285, PostgreSQL 4/4, typecheck PASS, lint without errors and build PASS. Product and Infrastructure remain DEGRADED; release blockers remain zero.
+Functional Quality Gate 35141969033 passed on `c7ed2c31eb9c322ef489e71bb59631c39928a1e0`: Node 291/291, PostgreSQL 4/4, typecheck PASS, lint without errors and build PASS. Product and Infrastructure remain DEGRADED; release blockers remain zero.
 
 ## Baseline 2.7.0 quality gate
 

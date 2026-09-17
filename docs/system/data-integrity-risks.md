@@ -1,8 +1,8 @@
-> **Current Baseline 2.8.1 (2026-09-16):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.9.0 (2026-09-17):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c7ed2c31eb9c322ef489e71bb59631c39928a1e0`. Fingerprint `889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6`; 397 source files, 89 local and remote ledger migrations, 45 tables, 65 SQL functions, 1 sequence, 60 test files and 47 findings. Combo operational notification concurrency is RESOLVED; external ambiguous ACK remains separate. Release blockers: 0; Product and Infrastructure remain DEGRADED.
 
 ## Baseline 2.7.0 combo concurrency reconciliation
 
-`risk.combo-metadata-read-modify-write-race` is RESOLVED: CURRENT writers use row locks and merge JSONB over current database state, and consumption/delivery metadata are atomic. The separate `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` remains ACTIVE because external notifications can precede that serialization; it does not reintroduce raw_metadata lost updates.
+At Baseline 2.7.0, `risk.combo-metadata-read-modify-write-race` was RESOLVED: writers used row locks and merged JSONB over current database state. The separate `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` was then ACTIVE because external notifications could precede serialization. Baseline 2.9.0 resolves that local notification race through durable intents and claimed delivery. Ambiguous external provider ACK remains a separate ACTIVE finding.
 
 ## Current paid-delivery boundary — Baseline 2.6.0
 

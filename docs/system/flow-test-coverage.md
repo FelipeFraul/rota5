@@ -1,7 +1,9 @@
-> **Current Baseline 2.8.1 (2026-09-16):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.9.0 (2026-09-17):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c7ed2c31eb9c322ef489e71bb59631c39928a1e0`. Fingerprint `889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6`; 397 source files, 89 local and remote ledger migrations, 45 tables, 65 SQL functions, 1 sequence, 60 test files and 47 findings. Combo operational notification concurrency is RESOLVED; external ambiguous ACK remains separate. Release blockers: 0; Product and Infrastructure remain DEGRADED.
 
 
 # Flow behavioral test coverage
+
+Baseline 2.9.0 adds `test-060` (`scripts/test-combo-operational-delivery.mjs`) to `gate.combo_release`, `kitchen.session_prepare`, `kitchen.combo_redemption` and `combo.delivery_choice`. It proves the durable intent claim and retry path; existing flow classifications remain conservative for unrelated branches.
 
 The high-risk flows `event.auto_finish` and `codex.automation` are behaviorally covered. High-risk flows without coverage: **0**. The two gross uncovered flows (`event.program_import` and `blackhouse.maintenance`) are historical/operational and outside current high-risk scope.
 
@@ -14,7 +16,7 @@ The high-risk flows `event.auto_finish` and `codex.automation` are behaviorally 
 | `ticket.view` | USER_JOURNEY | PARTIAL | `test-031` |
 | `courtesy.public` | USER_JOURNEY | PARTIAL | `test-031` |
 | `combo.purchase` | USER_JOURNEY | PARTIAL | `test-031`<br>`test-018` |
-| `combo.delivery_choice` | USER_JOURNEY | PARTIAL | `test-036`<br>`test-026` |
+| `combo.delivery_choice` | USER_JOURNEY | PARTIAL | `test-036`<br>`test-026`<br>`test-060` |
 | `admin.whatsapp_session` | ADMIN_JOURNEY | PARTIAL | `test-011`<br>`audit.admin-navigation-flow`<br>`test-001`<br>`audit.admin-login-lockout`<br>`audit.admin-tokenized-login` |
 | `admin.web_session` | ADMIN_JOURNEY | PARTIAL | `test-001`<br>`audit.admin-login-lockout`<br>`audit.admin-tokenized-login`<br>`test-016` |
 | `admin.web_event_workspace` | ADMIN_JOURNEY | PARTIAL | `test-010`<br>`test-016`<br>`audit.admin-profiles-permissions`<br>`audit.gate-phone-checkin`<br>`audit.system-closure`<br>`test-003`<br>`test-008`<br>`test-009`<br>`audit.admin-event-creation-flow`<br>`test-006`<br>`test-014`<br>`test-002`<br>`audit.admin-event-edit-duplicate`<br>`test-004`<br>`test-005`<br>`test-017`<br>`test-040` |
@@ -26,8 +28,8 @@ The high-risk flows `event.auto_finish` and `codex.automation` are behaviorally 
 | `admin.operational_dashboard` | ADMIN_JOURNEY | PARTIAL | `test-016`<br>`audit.admin-tokenized-login`<br>`test-010`<br>`audit.admin-profiles-permissions`<br>`audit.gate-phone-checkin`<br>`audit.system-closure`<br>`test-012` |
 | `gate.access_management` | ADMIN_JOURNEY | PARTIAL | `test-010`<br>`test-016`<br>`audit.admin-profiles-permissions`<br>`audit.gate-phone-checkin`<br>`audit.system-closure`<br>`test-044`<br>`test-046`<br>`test-047` |
 | `gate.ticket_admission` | ADMIN_JOURNEY | PARTIAL | `audit.gate-phone-checkin`<br>`audit.gate-wrong-event`<br>`test-044`<br>`test-046`<br>`test-047` |
-| `kitchen.session_prepare` | ADMIN_JOURNEY | PARTIAL | `test-022` |
-| `kitchen.combo_redemption` | ADMIN_JOURNEY | PARTIAL | `test-036`<br>`audit.combo-redemption-security`<br>`test-044`<br>`test-046`<br>`test-047` |
+| `kitchen.session_prepare` | ADMIN_JOURNEY | PARTIAL | `test-022`<br>`test-060` |
+| `kitchen.combo_redemption` | ADMIN_JOURNEY | PARTIAL | `test-036`<br>`audit.combo-redemption-security`<br>`test-044`<br>`test-046`<br>`test-047`<br>`test-060` |
 | `table_map.calibration` | ADMIN_JOURNEY | PARTIAL | `test-010`<br>`test-016`<br>`audit.admin-profiles-permissions`<br>`audit.gate-phone-checkin`<br>`audit.system-closure`<br>`test-026` |
 | `whatsapp.inbound_dispatch` | SYSTEM_PROCESS | PARTIAL | `audit.rate-limit`<br>`test-033`<br>`test-039`<br>`test-025`<br>`test-042`<br>`test-043`<br>`test-010`<br>`test-016`<br>`audit.admin-profiles-permissions`<br>`audit.gate-phone-checkin`<br>`audit.system-closure` |
 | `ticket.payment_confirmation` | SYSTEM_PROCESS | PARTIAL | `audit.rate-limit`<br>`audit.mercado-pago-security`<br>`test-027`<br>`test-028`<br>`test-036`<br>`test-037`<br>`audit.seatmap-qr-image`<br>`test-041` |
@@ -36,7 +38,7 @@ The high-risk flows `event.auto_finish` and `codex.automation` are behaviorally 
 | `combo.offer_distribution` | SYSTEM_PROCESS | PARTIAL | `test-019`<br>`test-020`<br>`test-021`<br>`test-036` |
 | `whatsapp.batch_processing` | SYSTEM_PROCESS | PARTIAL | `test-038`<br>`test-023` |
 | `event.auto_finish` | SYSTEM_PROCESS | COVERED | `scripts/test-event-lifecycle-critical.mjs` |
-| `gate.combo_release` | SYSTEM_PROCESS | PARTIAL | `audit.gate-wrong-event` |
+| `gate.combo_release` | SYSTEM_PROCESS | PARTIAL | `audit.gate-wrong-event`<br>`test-060` |
 | `event.program_import` | OPERATIONAL_PROCESS | UNCOVERED | — |
 | `blackhouse.maintenance` | OPERATIONAL_PROCESS | UNCOVERED | — |
 | `codex.automation` | OPERATIONAL_PROCESS | COVERED | `scripts/test-codex-automation-contract.mjs` |

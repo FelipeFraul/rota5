@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-16T14:37:33.140Z",
-  "stage": "2.8.1",
+  "generatedAt": "2026-09-17T03:39:02Z",
+  "stage": "2.9.0",
   "id": "rota5.flow-catalog.v1",
   "canonical": true,
   "count": 34,
@@ -1056,18 +1056,21 @@
         "combo.redemption",
         "messaging.router",
         "table-map.reservation",
-        "table-map.catalog-render"
+        "table-map.catalog-render",
+        "combo.operational-delivery"
       ],
       "tables": [
         "combo_redemptions",
         "official_table_map_reservations",
         "combo_redemption_events",
         "reservations",
-        "orders"
+        "orders",
+        "whatsapp_outbound_deliveries"
       ],
       "database_functions": [
         "reserve_official_table_map_place",
-        "confirm_combo_delivery_choice"
+        "confirm_combo_delivery_choice",
+        "insert_combo_operational_intent"
       ],
       "database_triggers": [],
       "integrations": [
@@ -1076,7 +1079,8 @@
       ],
       "tests": [
         "test-036",
-        "test-026"
+        "test-026",
+        "test-060"
       ],
       "failing_tests": [],
       "evidence": [
@@ -1101,6 +1105,23 @@
           "path": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
           "symbol": "confirm_combo_delivery_choice",
           "claim": "Database-serialized combo metadata transition."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOperationalDelivery.ts",
+          "symbol": "sendComboOperationalDelivery",
+          "claim": "Claimed durable operational intent is required before a provider send."
+        },
+        {
+          "kind": "database_definition",
+          "path": "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql",
+          "symbol": "confirm_combo_delivery_choice",
+          "claim": "Combo state transition and operational delivery intent are committed atomically."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-combo-operational-delivery.mjs",
+          "claim": "Claim, retry, invalid intent rejection and routing are covered by the 291/291 Quality Gate."
         }
       ]
     },
@@ -2763,7 +2784,8 @@
         "combo.kitchen-reader-ui-api",
         "gate.access-session",
         "combo.redemption",
-        "combo.qr"
+        "combo.qr",
+        "combo.operational-delivery"
       ],
       "tables": [
         "gate_sessions",
@@ -2771,11 +2793,13 @@
         "combo_redemption_events",
         "event_sessions",
         "whatsapp_messages",
-        "conversations"
+        "conversations",
+        "whatsapp_outbound_deliveries"
       ],
       "database_functions": [
         "start_combo_kitchen_preparation",
-        "complete_legacy_combo_ready_recovery"
+        "complete_legacy_combo_ready_recovery",
+        "insert_combo_operational_intent"
       ],
       "database_triggers": [],
       "integrations": [
@@ -2783,7 +2807,8 @@
         "integration-zapi"
       ],
       "tests": [
-        "test-022"
+        "test-022",
+        "test-060"
       ],
       "failing_tests": [],
       "evidence": [
@@ -2808,6 +2833,23 @@
           "path": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
           "symbol": "start_combo_kitchen_preparation, complete_legacy_combo_ready_recovery",
           "claim": "Database-serialized combo metadata transition."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOperationalDelivery.ts",
+          "symbol": "sendComboOperationalDelivery",
+          "claim": "Claimed durable operational intent is required before a provider send."
+        },
+        {
+          "kind": "database_definition",
+          "path": "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql",
+          "symbol": "start_combo_kitchen_preparation, prepare_legacy_combo_ready_delivery",
+          "claim": "Combo state transition and operational delivery intent are committed atomically."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-combo-operational-delivery.mjs",
+          "claim": "Claim, retry, invalid intent rejection and routing are covered by the 291/291 Quality Gate."
         }
       ]
     },
@@ -2866,21 +2908,24 @@
       ],
       "modules": [
         "combo.redemption",
-        "combo.kitchen-reader-ui-api"
+        "combo.kitchen-reader-ui-api",
+        "combo.operational-delivery"
       ],
       "tables": [
         "combo_redemptions",
         "official_table_map_reservations",
         "conversations",
         "whatsapp_messages",
-        "combo_redemption_events"
+        "combo_redemption_events",
+        "whatsapp_outbound_deliveries"
       ],
       "database_functions": [
         "validate_combo_redemption",
         "lock_authorized_gate_session",
         "record_combo_delivery_choice_prompt",
         "record_combo_awaiting_preparation",
-        "complete_legacy_combo_ready_recovery"
+        "complete_legacy_combo_ready_recovery",
+        "insert_combo_operational_intent"
       ],
       "database_triggers": [],
       "integrations": [
@@ -2892,7 +2937,8 @@
         "audit.combo-redemption-security",
         "test-044",
         "test-046",
-        "test-047"
+        "test-047",
+        "test-060"
       ],
       "failing_tests": [],
       "evidence": [
@@ -2917,6 +2963,23 @@
           "path": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
           "symbol": "record_combo_delivery_choice_prompt, record_combo_awaiting_preparation, complete_legacy_combo_ready_recovery, validate_combo_redemption",
           "claim": "Database-serialized combo metadata transition."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOperationalDelivery.ts",
+          "symbol": "sendComboOperationalDelivery",
+          "claim": "Claimed durable operational intent is required before a provider send."
+        },
+        {
+          "kind": "database_definition",
+          "path": "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql",
+          "symbol": "record_combo_delivery_choice_prompt, record_combo_awaiting_preparation",
+          "claim": "Combo state transition and operational delivery intent are committed atomically."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-combo-operational-delivery.mjs",
+          "claim": "Claim, retry, invalid intent rejection and routing are covered by the 291/291 Quality Gate."
         }
       ],
       "source_implementation_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
@@ -3939,7 +4002,8 @@
         "gate.validation",
         "gate.ui-api",
         "gate.access-session",
-        "combo.redemption"
+        "combo.redemption",
+        "combo.operational-delivery"
       ],
       "tables": [
         "tickets",
@@ -3947,11 +4011,13 @@
         "gate_sessions",
         "combo_redemptions",
         "whatsapp_messages",
-        "conversations"
+        "conversations",
+        "whatsapp_outbound_deliveries"
       ],
       "database_functions": [
         "validate_ticket_entry",
-        "record_combo_gate_arrival"
+        "record_combo_gate_arrival",
+        "insert_combo_operational_intent"
       ],
       "database_triggers": [],
       "integrations": [
@@ -3959,7 +4025,8 @@
         "integration-zapi"
       ],
       "tests": [
-        "audit.gate-wrong-event"
+        "audit.gate-wrong-event",
+        "test-060"
       ],
       "failing_tests": [],
       "evidence": [
@@ -3984,6 +4051,23 @@
           "path": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
           "symbol": "record_combo_gate_arrival",
           "claim": "Database-serialized combo metadata transition."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOperationalDelivery.ts",
+          "symbol": "sendComboOperationalDelivery",
+          "claim": "Claimed durable operational intent is required before a provider send."
+        },
+        {
+          "kind": "database_definition",
+          "path": "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql",
+          "symbol": "record_combo_gate_arrival",
+          "claim": "Combo state transition and operational delivery intent are committed atomically."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-combo-operational-delivery.mjs",
+          "claim": "Claim, retry, invalid intent rejection and routing are covered by the 291/291 Quality Gate."
         }
       ]
     },

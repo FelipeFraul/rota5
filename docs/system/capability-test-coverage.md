@@ -1,7 +1,9 @@
-> **Current Baseline 2.8.1 (2026-09-16):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.9.0 (2026-09-17):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c7ed2c31eb9c322ef489e71bb59631c39928a1e0`. Fingerprint `889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6`; 397 source files, 89 local and remote ledger migrations, 45 tables, 65 SQL functions, 1 sequence, 60 test files and 47 findings. Combo operational notification concurrency is RESOLVED; external ambiguous ACK remains separate. Release blockers: 0; Product and Infrastructure remain DEGRADED.
 
 
 # Capability behavioral test coverage
+
+Baseline 2.9.0 adds `test-060` to `combo.kitchen_release`, `combo.prepare` and `combo.delivery_prompt`; operational delivery is represented by `combo.operational-delivery` and migration 00600. Existing capability statuses remain tied to their full behavior, including other branches.
 
 ## Current risk-based result
 
@@ -117,9 +119,9 @@
 | `combo.deliver_qr` | domain.combo-commerce-fulfillment | COVERED | `test-022`<br>`test-027`<br>`test-028` |
 | `combo.expire` | domain.combo-commerce-fulfillment | COVERED | `scripts/test-combo-critical-lifecycle.mjs` |
 | `combo.kitchen_open` | domain.combo-commerce-fulfillment | UNCOVERED | `test-044`<br>`test-046`<br>`test-047` |
-| `combo.kitchen_release` | domain.combo-commerce-fulfillment | COVERED | `scripts/test-combo-critical-lifecycle.mjs` |
-| `combo.prepare` | domain.combo-commerce-fulfillment | PARTIAL | `test-022`<br>`test-044`<br>`test-046`<br>`test-047` |
-| `combo.delivery_prompt` | domain.combo-commerce-fulfillment | PARTIAL | `test-036` |
+| `combo.kitchen_release` | domain.combo-commerce-fulfillment | COVERED | `scripts/test-combo-critical-lifecycle.mjs`<br>`test-060` |
+| `combo.prepare` | domain.combo-commerce-fulfillment | PARTIAL | `test-022`<br>`test-044`<br>`test-046`<br>`test-047`<br>`test-060` |
+| `combo.delivery_prompt` | domain.combo-commerce-fulfillment | PARTIAL | `test-036`<br>`test-060` |
 | `combo.delivery_choose` | domain.combo-commerce-fulfillment | PARTIAL | `test-036` |
 | `combo.redeem` | domain.combo-commerce-fulfillment | PARTIAL | `test-036`<br>`audit.combo-redemption-security`<br>`test-044`<br>`test-046`<br>`test-047` |
 | `table_map.preview` | domain.table-map | PARTIAL | `test-026` |

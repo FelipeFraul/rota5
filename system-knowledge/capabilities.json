@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-16T14:37:33.140Z",
-  "stage": "2.8.1",
+  "generatedAt": "2026-09-17T03:39:02Z",
+  "stage": "2.9.0",
   "id": "capability-catalog.v1",
   "canonical": true,
   "status": "PASS",
   "confidence": "MEDIA",
-  "sourceCommit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
-  "sourceScope": "CURRENT canonical functional source is the pure Git commit c48405e41df3d1cd69eb3d383b7c6dd17257155e; its source tree fingerprint is ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91. Production deployment dpl_2bitbdQynYB6QdMiEkB1em65HsAy identifies the same source commit.",
+  "sourceCommit": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+  "sourceScope": "CURRENT canonical functional source is the pure Git commit c7ed2c31eb9c322ef489e71bb59631c39928a1e0; its source tree fingerprint is 889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6. Production deployment dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc identifies the same source commit.",
   "count": 140,
   "methodology": {
     "bottom_up": "Leitura de implementações src/ (handlers, router, serviços e UI), comandos operacionais, chamadas de banco e migrations, antes da comparação com os documentos anteriores.",
@@ -12910,19 +12910,23 @@
       ],
       "modules": [
         "combo.redemption",
-        "gate.validation"
+        "gate.validation",
+        "combo.operational-delivery"
       ],
       "database_tables": [
         "tickets",
         "combo_redemptions",
         "whatsapp_messages",
-        "conversations"
+        "conversations",
+        "whatsapp_outbound_deliveries"
       ],
       "database_functions": [
-        "record_combo_gate_arrival"
+        "record_combo_gate_arrival",
+        "insert_combo_operational_intent"
       ],
       "tests": [
-        "scripts/test-combo-critical-lifecycle.mjs"
+        "scripts/test-combo-critical-lifecycle.mjs",
+        "test-060"
       ],
       "description": "Após entrada autorizada, tornar combos visíveis à cozinha e avisar comprador.",
       "evidence": [
@@ -12981,6 +12985,23 @@
           "path": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
           "symbol": "record_combo_gate_arrival",
           "claim": "Critical combo metadata transition is serialized with a row lock and current-state JSONB merge."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOperationalDelivery.ts",
+          "symbol": "sendComboOperationalDelivery",
+          "claim": "Operational notification delivery requires a claimed durable intent."
+        },
+        {
+          "kind": "database_definition",
+          "path": "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql",
+          "symbol": "insert_combo_operational_intent",
+          "claim": "Atomic state transition inserts the durable operational intent."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-combo-operational-delivery.mjs",
+          "claim": "Quality Gate 35141969033 passed 291/291 Node cases."
         }
       ],
       "status": "CONFIRMADA",
@@ -13041,12 +13062,14 @@
       "modules": [
         "combo.redemption",
         "combo.kitchen-reader-ui-api",
-        "combo.qr"
+        "combo.qr",
+        "combo.operational-delivery"
       ],
       "database_tables": [
         "combo_redemptions",
         "whatsapp_messages",
-        "conversations"
+        "conversations",
+        "whatsapp_outbound_deliveries"
       ],
       "database_functions": [
         "lock_authorized_gate_session",
@@ -13054,7 +13077,9 @@
         "ensure_combo_ready_delivery_intents",
         "complete_combo_ready_delivery",
         "start_combo_kitchen_preparation",
-        "complete_legacy_combo_ready_recovery"
+        "complete_legacy_combo_ready_recovery",
+        "insert_combo_operational_intent",
+        "prepare_legacy_combo_ready_delivery"
       ],
       "tests": [
         "test-022",
@@ -13062,7 +13087,8 @@
         "test-046",
         "test-047",
         "test-056",
-        "test-057"
+        "test-057",
+        "test-060"
       ],
       "description": "Mudar estado de cozinha, rotacionar token e notificar cliente sobre retirada.",
       "evidence": [
@@ -13100,6 +13126,23 @@
           "path": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
           "symbol": "start_combo_kitchen_preparation, complete_legacy_combo_ready_recovery",
           "claim": "Critical combo metadata transition is serialized with a row lock and current-state JSONB merge."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOperationalDelivery.ts",
+          "symbol": "sendComboOperationalDelivery",
+          "claim": "Operational notification delivery requires a claimed durable intent."
+        },
+        {
+          "kind": "database_definition",
+          "path": "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql",
+          "symbol": "insert_combo_operational_intent",
+          "claim": "Atomic state transition inserts the durable operational intent."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-combo-operational-delivery.mjs",
+          "claim": "Quality Gate 35141969033 passed 291/291 Node cases."
         }
       ],
       "status": "CONFIRMADA",
@@ -13166,22 +13209,26 @@
       ],
       "modules": [
         "combo.redemption",
-        "combo.kitchen-reader-ui-api"
+        "combo.kitchen-reader-ui-api",
+        "combo.operational-delivery"
       ],
       "database_tables": [
         "combo_redemptions",
         "official_table_map_reservations",
         "conversations",
         "whatsapp_messages",
-        "combo_redemption_events"
+        "combo_redemption_events",
+        "whatsapp_outbound_deliveries"
       ],
       "database_functions": [
         "record_combo_delivery_choice_prompt",
         "record_combo_awaiting_preparation",
-        "complete_legacy_combo_ready_recovery"
+        "complete_legacy_combo_ready_recovery",
+        "insert_combo_operational_intent"
       ],
       "tests": [
-        "test-036"
+        "test-036",
+        "test-060"
       ],
       "description": "QR válido com mesa paga solicita escolha no WhatsApp sem consumir resgate; ingresso individual sem mesa é negado.",
       "evidence": [
@@ -13219,6 +13266,23 @@
           "path": "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
           "symbol": "record_combo_delivery_choice_prompt, record_combo_awaiting_preparation, complete_legacy_combo_ready_recovery",
           "claim": "Critical combo metadata transition is serialized with a row lock and current-state JSONB merge."
+        },
+        {
+          "kind": "implementation",
+          "path": "src/lib/tickets/services/comboOperationalDelivery.ts",
+          "symbol": "sendComboOperationalDelivery",
+          "claim": "Operational notification delivery requires a claimed durable intent."
+        },
+        {
+          "kind": "database_definition",
+          "path": "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql",
+          "symbol": "insert_combo_operational_intent",
+          "claim": "Atomic state transition inserts the durable operational intent."
+        },
+        {
+          "kind": "behavioral_test",
+          "path": "scripts/test-combo-operational-delivery.mjs",
+          "claim": "Quality Gate 35141969033 passed 291/291 Node cases."
         }
       ],
       "status": "PARCIAL",

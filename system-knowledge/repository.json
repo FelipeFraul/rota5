@@ -1,21 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-16T14:37:33.140Z",
-  "baseline": {
-    "stage": "1/8",
-    "name": "Reconhecimento total do sistema",
-    "sourceCommit": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
-    "branch": "production",
-    "inspectedTrackedFiles": 344,
-    "evidencePolicy": [
-      "CONFIRMADO",
-      "PARCIALMENTE CONFIRMADO",
-      "NÃO VALIDADO",
-      "ÓRFÃO",
-      "POSSÍVEL LEGADO",
-      "DESCONHECIDO"
-    ]
-  },
+  "generatedAt": "2026-09-17T03:39:02Z",
+  "baseline": "2.9.0",
   "counts": {
     "trackedFilesAtStart": 344,
     "apiRouteModules": 25,
@@ -166,13 +152,15 @@
         "83 migrations SQL",
         "45 CREATE TABLE",
         "44 nomes de função",
-        "36 nomes de trigger"
+        "36 nomes de trigger",
+        "20260915000600_make_combo_operational_notifications_durable.sql"
       ],
       "dependencies": [
         "PostgreSQL",
         "Supabase"
       ],
-      "notes": "Estado local derivado do source canônico; a superfície OpenAPI remota foi revalidada read-only, enquanto internals e equivalência funcional permanecem limitados pela taxonomia."
+      "notes": "Estado local derivado do source canônico; a superfície OpenAPI remota foi revalidada read-only, enquanto internals e equivalência funcional permanecem limitados pela taxonomia.",
+      "current_migration_count": 89
     },
     {
       "id": "repo-tests",
@@ -184,14 +172,14 @@
       "evidence": [
         "59 catalogued test artifacts",
         "package.json executes 26 default Node test files",
-        "current npm test: 285/285 PASS",
+        "current npm test: 291/291 PASS",
         "Quality Gate 35049217326: npm ci and all functional gates PASS"
       ],
       "dependencies": [
         "node:test",
         "scripts/test-support/typescript-alias-loader.mjs"
       ],
-      "notes": "Current default suite passes 285/285 with zero failures, skips, todos or regressions; PostgreSQL integration remains a separate 4/4 suite. The new type-contract is compile-time evidence, not a runtime behavioral test."
+      "notes": "Current default suite passes 291/291 with zero failures, skips, todos or regressions; PostgreSQL integration remains a separate 4/4 suite. The new type-contract is compile-time evidence, not a runtime behavioral test."
     },
     {
       "id": "repo-audit-tools",
@@ -435,7 +423,7 @@
       "failed": 7
     }
   },
-  "stage": "2.8.1",
+  "stage": "2.9.0",
   "test_runner_reproducibility": {
     "finding": "gap.test-runner-depends-on-untracked-loader",
     "status": "RESOLVED",
@@ -471,13 +459,13 @@
     "ticketeira": "UNTOUCHED"
   },
   "current_test_gate": {
-    "source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
-    "default_node_suite": "285/285 PASS",
+    "source_commit": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+    "default_node_suite": "291/291 PASS",
     "postgres_integration": "4/4 PASS",
     "typecheck": "PASS",
-    "lint": "PASS_WITHOUT_ERRORS",
+    "lint": "PASS",
     "build": "PASS",
-    "quality_gate_run": 35049217326,
+    "quality_gate_run": 35141969033,
     "status": "PASS"
   },
   "baseline_2_4_0": {
@@ -601,5 +589,39 @@
     "flow_count": 34,
     "change_type": "PATCH_DOCUMENTARY_CORRECTION",
     "previous_baseline": "2.8.0"
+  },
+  "baseline_2_9_0": {
+    "source_commit": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+    "source_fingerprint": "889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6",
+    "source_file_count": 397,
+    "migration_count": 89,
+    "remote_migration_count": 89,
+    "table_count": 45,
+    "sql_function_count": 65,
+    "trigger_count": 36,
+    "sequence_count": 1,
+    "test_file_count": 60,
+    "module_count": 67,
+    "dependency_count": 830,
+    "entrypoint_count": 56,
+    "capability_count": 140,
+    "flow_count": 34,
+    "change_type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+    "previous_baseline": "2.8.1",
+    "changed_functional_paths": [
+      "package.json",
+      "scripts/test-combo-critical-lifecycle.mjs",
+      "scripts/test-combo-operational-delivery.mjs",
+      "scripts/test-combo-qr-image-template.mjs",
+      "scripts/test-paid-combo-delivery-durable.mjs",
+      "scripts/test-paid-combo-delivery-postgres.mjs",
+      "scripts/test-ticket-delivery-distribution.mjs",
+      "src/app/kitchen/session/[token]/KitchenSessionScanner.tsx",
+      "src/lib/tickets/services/comboOperationalDelivery.ts",
+      "src/lib/tickets/services/comboRedemptions.ts",
+      "src/lib/tickets/services/paidComboDeliveryWorker.ts",
+      "src/lib/tickets/services/whatsappOutboundDeliveries.ts",
+      "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql"
+    ]
   }
 }

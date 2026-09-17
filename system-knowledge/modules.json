@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-16T14:37:33.140Z",
-  "count": 66,
+  "generatedAt": "2026-09-17T03:39:02Z",
+  "count": 67,
   "records": [
     {
       "id": "platform.env",
@@ -722,7 +722,9 @@
       "calledBy": [
         "messaging.webhook",
         "ticket.delivery",
-        "combo.offers"
+        "combo.offers",
+        "combo.operational-delivery",
+        "combo.redemption"
       ],
       "calls": [
         "platform.supabase-client"
@@ -740,13 +742,15 @@
         "test-paid-delivery-outbound-idempotency.mjs",
         "test-whatsapp-outbound-delivery-security.mjs",
         "test-paid-ticket-delivery-durable.mjs",
-        "test-paid-combo-delivery-durable.mjs"
+        "test-paid-combo-delivery-durable.mjs",
+        "test-combo-operational-delivery.mjs"
       ],
       "evidence": [
         "src/lib/tickets/services/whatsappOutboundDeliveries.ts",
         "export getOrCreateWhatsAppOutboundDelivery",
         "export claimWhatsAppOutboundDelivery",
-        "export markWhatsAppOutboundDeliverySent"
+        "export markWhatsAppOutboundDeliverySent",
+        "src/lib/tickets/services/comboOperationalDelivery.ts"
       ]
     },
     {
@@ -2096,7 +2100,7 @@
       "name": "Serviço monolítico de ofertas/checkout/entrega",
       "type": "module",
       "domain": "domain.combo-commerce-fulfillment",
-      "path": "src/lib/tickets/services/comboOffers.ts; src/lib/tickets/comboOfferCron.ts",
+      "path": "src/lib/tickets/services/comboOffers.ts; src/lib/tickets/comboOfferCron.ts; src/lib/tickets/services/paidComboDeliveryWorker.ts",
       "responsibility": "CRUD de ofertas, pedido/checkout, Pix, confirmação, expiração, seleção agendada e entrega.",
       "status": "PARCIALMENTE CONFIRMADO",
       "exports": [
@@ -2127,7 +2131,8 @@
         "messaging.outbound-deliveries",
         "payment.primitives",
         "catalog.visibility",
-        "combo.qr"
+        "combo.qr",
+        "combo.operational-delivery"
       ],
       "tables": [
         "combo_offers",
@@ -2158,7 +2163,8 @@
         "src/lib/tickets/services/comboOffers.ts; src/lib/tickets/comboOfferCron.ts",
         "export createComboOffer",
         "export listComboOffers",
-        "export duplicateComboOffer"
+        "export duplicateComboOffer",
+        "src/lib/tickets/services/paidComboDeliveryWorker.ts imports comboOperationalDelivery.ts"
       ]
     },
     {
@@ -2206,7 +2212,7 @@
       "type": "module",
       "domain": "domain.combo-commerce-fulfillment",
       "path": "src/lib/tickets/services/comboRedemptions.ts",
-      "responsibility": "Preparar/resgatar combos com transições críticas de metadata serializadas no PostgreSQL; entregas READY versionadas usam recuperação HMAC/outbox e qr_token_version=NULL permanece compatibilidade histórica.",
+      "responsibility": "Serializar decisões de chegada, preparo, prompt e READY por RPCs PostgreSQL; criar intents duráveis antes da entrega operacional.",
       "status": "PARCIALMENTE CONFIRMADO",
       "exports": [
         "validateKitchenSessionToken",
@@ -2222,20 +2228,22 @@
       ],
       "calls": [
         "platform.supabase-client",
-        "integration.zapi",
         "combo.offers",
         "combo.qr",
         "gate.access-session",
         "messaging.messages",
         "catalog.visibility",
-        "table-map.catalog-render"
+        "table-map.catalog-render",
+        "messaging.outbound-deliveries",
+        "integration.zapi"
       ],
       "tables": [
         "combo_redemptions",
         "combo_redemption_events",
         "event_sessions",
         "official_table_map_reservations",
-        "tickets"
+        "tickets",
+        "whatsapp_outbound_deliveries"
       ],
       "integrations": [
         "integration-supabase",
@@ -2260,9 +2268,12 @@
         "export startKitchenOrderPreparation",
         "src/lib/tickets/services/comboRedemptions.ts:1035-1231;1462",
         "supabase/migrations/20260915000500_serialize_combo_metadata_transitions.sql",
-        "Quality Gate 34998744062: Node 280/280 and PostgreSQL 4/4 PASS"
+        "Quality Gate 34998744062: Node 280/280 and PostgreSQL 4/4 PASS",
+        "src/lib/tickets/services/comboOperationalDelivery.ts",
+        "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql",
+        "Quality Gate 35141969033: Node 291/291 and PostgreSQL 4/4 PASS"
       ],
-      "notes": "CURRENT metadata writers use database RPCs with row locks and JSONB merge. Direct Z-API notifications that precede state serialization retain a separate concurrency limitation.",
+      "notes": "As decisões operacionais de combo não enviam ao provedor antes da transição serializada; a entrega é feita por worker/claim. O ACK externo ambíguo permanece um residual separado.",
       "high_1_source_status": "IMPLEMENTED_AND_LOCALLY_VALIDATED",
       "high_1_runtime_status": "PRODUCTION_DEPLOYED_AND_HEALTHY"
     },
@@ -2842,9 +2853,51 @@
         "scripts/codex-local-runner.mjs; scripts/list-codex-requests.mjs",
         "export programas CLI"
       ]
+    },
+    {
+      "id": "combo.operational-delivery",
+      "name": "Entrega operacional durável de combo",
+      "type": "module",
+      "domain": "domain.combo-commerce-fulfillment",
+      "path": "src/lib/tickets/services/comboOperationalDelivery.ts",
+      "responsibility": "Buscar o intent operacional, reivindicá-lo com fencing, validar contexto, enviar pelo provedor e persistir o resultado para retry seguro.",
+      "status": "CONFIRMADO",
+      "exports": [
+        "deliverComboOperationalNotification"
+      ],
+      "calledBy": [
+        "combo.offers (paidComboDeliveryWorker.ts)"
+      ],
+      "calls": [
+        "messaging.conversations",
+        "messaging.messages",
+        "messaging.outbound-deliveries",
+        "integration.zapi"
+      ],
+      "tables": [
+        "whatsapp_outbound_deliveries",
+        "conversations",
+        "whatsapp_messages"
+      ],
+      "integrations": [
+        "integration-supabase",
+        "integration-zapi"
+      ],
+      "sideEffects": [
+        "claim e finalização do intent outbound; envio Z-API após claim"
+      ],
+      "tests": [
+        "test-combo-operational-delivery.mjs",
+        "test-paid-combo-delivery-postgres.mjs"
+      ],
+      "evidence": [
+        "src/lib/tickets/services/comboOperationalDelivery.ts",
+        "src/lib/tickets/services/paidComboDeliveryWorker.ts",
+        "supabase/migrations/20260915000600_make_combo_operational_notifications_durable.sql"
+      ]
     }
   ],
-  "stage": "2.8.1",
+  "stage": "2.9.0",
   "baseline_2_6_0": {
     "paid_delivery": "DURABLE_AT_LEAST_ONCE",
     "new_source_files": [
@@ -2878,5 +2931,10 @@
       "automation.codex-requests"
     ],
     "corrected_proxy_dependency": true
+  },
+  "baseline_2_9_0": {
+    "module_count": 67,
+    "new_module": "combo.operational-delivery",
+    "logical_boundary": "Claimed operational outbound delivery is distinct from redemption state transitions and the existing paid combo worker."
   }
 }

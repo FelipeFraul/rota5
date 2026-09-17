@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-16T14:37:33.140Z",
-  "stage": "2.8.1",
+  "generatedAt": "2026-09-17T03:39:02Z",
+  "stage": "2.9.0",
   "period": {
     "start": "2026-09-12",
-    "end": "2026-09-15",
+    "end": "2026-09-17",
     "status": "CLOSED"
   },
   "baseline_start": "1.0.0",
-  "baseline_end": "2.8.1",
+  "baseline_end": "2.9.0",
   "source_start": "a141c6004421fb8442f95493de3ca4ec4d4c997b",
-  "source_end": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+  "source_end": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
   "days": [
     {
       "date": "2026-09-12",
@@ -50,6 +50,23 @@
         "combo-code-collision-safe",
         "paid-delivery-joint-reaudit",
         "freeze-2-6-0"
+      ]
+    },
+    {
+      "date": "2026-09-16",
+      "milestone_ids": [
+        "migration-ledger-forensic",
+        "migration-ledger-repair",
+        "combo-operational-quality-gate"
+      ]
+    },
+    {
+      "date": "2026-09-17",
+      "milestone_ids": [
+        "combo-00600-official-push",
+        "combo-coordinated-cutover",
+        "combo-notification-resolution",
+        "freeze-2-9-0"
       ]
     }
   ],
@@ -210,6 +227,60 @@
       "classification": "DOCUMENTED",
       "source_commit": "0a10618648fc3f873afffd8f60e60bd0396b62e7",
       "result": "Baseline 2.6.0 documentary freeze over the stabilized functional source."
+    },
+    {
+      "id": "migration-ledger-forensic",
+      "date": "2026-09-16",
+      "classification": "FORENSIC",
+      "result": "Confirmed that nine migrations 140001–150005 were executed directly by .tmp/apply-sql-file.mjs using pg.Client on 14–15 September, leaving supabase_migrations.schema_migrations unchanged at the time."
+    },
+    {
+      "id": "migration-ledger-repair",
+      "date": "2026-09-16",
+      "classification": "LEDGER_RECONCILIATION",
+      "result": "Supabase CLI 2.117.0 migration repair --status applied reconciled nine versions without replaying SQL or changing schema/business data."
+    },
+    {
+      "id": "combo-operational-quality-gate",
+      "date": "2026-09-16",
+      "classification": "FUNCTIONAL_VALIDATION",
+      "source_commit": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+      "quality_gate_run": 35141969033,
+      "result": "291/291 Node, 4/4 top-level PostgreSQL integration, typecheck, lint and build passed."
+    },
+    {
+      "id": "combo-00600-official-push",
+      "date": "2026-09-17",
+      "classification": "OFFICIAL_MIGRATION",
+      "migration": "20260915000600_make_combo_operational_notifications_durable.sql",
+      "result": "Supabase CLI 2.117.0 db push applied only 00600 and recorded it in the remote ledger."
+    },
+    {
+      "id": "combo-coordinated-cutover",
+      "date": "2026-09-17",
+      "classification": "PRODUCTION_CUTOVER",
+      "source_commit": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+      "deployment": "dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc",
+      "started_at": "2026-09-17T03:17:37Z",
+      "ready_at": "2026-09-17T03:19:08Z",
+      "gap_seconds": 91,
+      "operational_intents_before": 0,
+      "operational_intents_during_gap": 0,
+      "result": "Production READY on exact source, aliases and health passed; post-deploy ledger/schema/queue checks were read-only."
+    },
+    {
+      "id": "combo-notification-resolution",
+      "date": "2026-09-17",
+      "classification": "FINDING_RESOLUTION",
+      "finding": "risk.combo-direct-notification-concurrency-can-duplicate-or-stale",
+      "result": "ACTIVE -> RESOLVED; ambiguous external ACK remains a separate ACTIVE P2 residual."
+    },
+    {
+      "id": "freeze-2-9-0",
+      "date": "2026-09-17",
+      "classification": "DOCUMENTARY_BASELINE_FREEZE",
+      "source_commit": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+      "result": "Baseline 2.9.0 records exact functional source and Production without deploying the documentary commit."
     }
   ],
   "remediations": [
@@ -225,7 +296,9 @@
     "admin-location",
     "paid-ticket-durable",
     "paid-combo-durable",
-    "combo-code-collision-safe"
+    "combo-code-collision-safe",
+    "combo-operational-durable-delivery",
+    "migration-ledger-repair"
   ],
   "audits": [
     {
@@ -286,6 +359,15 @@
       "node": "285/285",
       "postgres": "4/4",
       "classification": "FUNCTIONAL"
+    },
+    {
+      "id": "quality-gate-35141969033",
+      "run": 35141969033,
+      "source_commit": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+      "status": "SUCCESS",
+      "node": "291/291",
+      "postgres": "4/4",
+      "classification": "FUNCTIONAL"
     }
   ],
   "deployments": [
@@ -309,6 +391,14 @@
       "target": "production",
       "status": "READY",
       "source_commit": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
+      "source_evidence": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA",
+      "health": "HTTP_200"
+    },
+    {
+      "id": "dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc",
+      "target": "production",
+      "status": "READY",
+      "source_commit": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
       "source_evidence": "VERCEL_REST_AUTHORITATIVE_PLATFORM_METADATA",
       "health": "HTTP_200"
     }
@@ -360,6 +450,15 @@
       "name": "20260915000500_serialize_combo_metadata_transitions.sql",
       "status": "APPLIED_AND_VALIDATED",
       "remote_changed_during_reconciliation": false
+    },
+    {
+      "id": "migration.20260915000600",
+      "date": "2026-09-17",
+      "name": "20260915000600_make_combo_operational_notifications_durable.sql",
+      "status": "APPLIED_AND_VALIDATED",
+      "application_method": "OFFICIAL_SUPABASE_DB_PUSH",
+      "ledger": "APPLIED",
+      "schema": "VALIDATED_READ_ONLY"
     }
   ],
   "findings_resolved": [
@@ -368,7 +467,8 @@
     "risk.payment-confirmed-before-external-delivery",
     "risk.combo-metadata-read-modify-write-race",
     "risk.published-commit-unvalidated",
-    "risk.rate-limit-fails-open"
+    "risk.rate-limit-fails-open",
+    "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
   ],
   "new_findings_documented": [
     "bug.admin-event-location-consistency",
@@ -405,32 +505,35 @@
     "risk.remote-webhook-registration-unvalidated",
     "gap.remote-database-behavior-tests",
     "orphan.seat-map-renders-table",
-    "risk.paid-delivery-ambiguous-external-ack",
-    "risk.combo-direct-notification-concurrency-can-duplicate-or-stale"
+    "risk.paid-delivery-ambiguous-external-ack"
   ],
   "final_state": {
-    "baseline": "2.8.1",
-    "repository_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
-    "production_application_source": "c48405e41df3d1cd69eb3d383b7c6dd17257155e",
-    "source_tree_fingerprint": "ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91",
-    "default_node_suite": "285/285 PASS",
+    "baseline": "2.9.0",
+    "repository_source": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+    "production_application_source": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+    "source_tree_fingerprint": "889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6",
+    "default_node_suite": "291/291 PASS",
     "postgres_integration": "4/4 PASS",
-    "quality_gate": "35049217326 PASS",
+    "quality_gate": "35141969033 PASS",
     "atomicity": "RESOLVED",
     "admin_location_consistency": "RESOLVED",
     "combo_metadata_race": "RESOLVED",
-    "combo_direct_notification_concurrency": "ACTIVE_P2_NON_BLOCKING",
+    "combo_direct_notification_concurrency": "RESOLVED",
     "product_health": "DEGRADED",
     "infrastructure_health": "DEGRADED",
     "release_blockers": 0,
     "cycle": "DOCUMENTED_AND_CLOSED",
-    "functional_baseline": "2.8.0",
+    "functional_baseline": "2.9.0",
     "paid_delivery_atomicity": "RESOLVED",
     "external_delivery_semantics": "AT_LEAST_ONCE",
     "published_commit_parity": "RESOLVED_EXACT_SOURCE_PROVEN",
-    "rate_limit_outage_policy": "RESOLVED"
+    "rate_limit_outage_policy": "RESOLVED",
+    "migration_ledger": "ALIGNED_THROUGH_20260915000600",
+    "pending_migrations": 0,
+    "production_deployment": "dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc",
+    "documentary_provenance_stale": "CLOSED_CURRENT"
   },
-  "functional_baseline_end": "2.8.0",
+  "functional_baseline_end": "2.9.0",
   "documentary_patches": [
     {
       "version": "2.5.1",
@@ -611,5 +714,15 @@
     "deployment_changed": false,
     "baseline_commit": "SELF_NOT_RECORDED",
     "dependency_count": 818
+  },
+  "baseline_2_9_0": {
+    "change_type": "MINOR_COMPATIBLE_FUNCTIONAL_CHANGE",
+    "previous_baseline": "2.8.1",
+    "canonical_functional_source": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+    "source_fingerprint": "889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6",
+    "quality_gate_run": 35141969033,
+    "production_deployment": "dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc",
+    "documentary_provenance_corrected": true,
+    "baseline_commit": "SELF_NOT_RECORDED"
   }
 }

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-16T14:37:33.140Z",
-  "stage": "2.8.1",
+  "generatedAt": "2026-09-17T03:39:02Z",
+  "stage": "2.9.0",
   "count": 4,
   "critical": 1,
   "records": [
@@ -10,7 +10,7 @@
       "object": "production domain/project",
       "local": "origin FelipeFraul/rota5; branch production; projeto local Vercel rota5",
       "remote": "Vercel rota5 ligado a FelipeFraul/rota5; Production Branch production",
-      "runtime": "Production dpl_2bitbdQynYB6QdMiEkB1em65HsAy serves exact canonical functional source c48405e41df3d1cd69eb3d383b7c6dd17257155e; git.deploymentEnabled=false.",
+      "runtime": "Production dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc serves exact canonical functional source c7ed2c31eb9c322ef489e71bb59631c39928a1e0; git.deploymentEnabled=false.",
       "result": "MATCH",
       "severity": "CRITICAL",
       "impact": "Canonical project, repository and exact Production source are reconciled; documentary HEAD remains outside runtime parity by policy.",
@@ -34,7 +34,9 @@
       "resolution": {
         "date": "2026-09-12T15:29:26.315Z",
         "finding": "risk.vercel-project-identity-drift",
-        "current_head_deployed": true
+        "current_head_deployed": true,
+        "current_deployment": "dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc",
+        "current_source": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0"
       }
     },
     {
@@ -312,5 +314,11 @@
     "source_parity": "MATCH",
     "git_auto_deploy": "DISABLED",
     "documentary_head_is_runtime_source": false
+  },
+  "baseline_2_9_0": {
+    "production_deployment": "dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc",
+    "production_source": "c7ed2c31eb9c322ef489e71bb59631c39928a1e0",
+    "git_auto_deploy": "DISABLED",
+    "documentary_commit_is_runtime_drift": false
   }
 }

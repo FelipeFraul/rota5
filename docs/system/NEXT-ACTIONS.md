@@ -1,4 +1,4 @@
-> **Current Baseline 2.8.1 (2026-09-16):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.9.0 (2026-09-17):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c7ed2c31eb9c322ef489e71bb59631c39928a1e0`. Fingerprint `889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6`; 397 source files, 89 local and remote ledger migrations, 45 tables, 65 SQL functions, 1 sequence, 60 test files and 47 findings. Combo operational notification concurrency is RESOLVED; external ambiguous ACK remains separate. Release blockers: 0; Product and Infrastructure remain DEGRADED.
 
 ## Historical snapshot — Baseline 2.5.3 update
 
@@ -17,8 +17,9 @@ This document orders current findings; it does not introduce features or patches
 Nenhum finding P0 ativo.
 
 ## RESOLVED
+- `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` — decisões serializadas e intents duráveis; 00600 e Production exato validados; ACK externo ambíguo permanece separado.
 - `risk.rate-limit-fails-open` — contrato tri-state, políticas explícitas em 19 boundaries, timeout cancelável de 2s e Production exato validados; histórico SECURITY/MEDIUM/P2 preservado.
-- `risk.published-commit-unvalidated` — Vercel REST v13 metadata proves Production `dpl_2bitbdQynYB6QdMiEkB1em65HsAy` serves canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`; documentary HEAD remains intentionally outside runtime parity.
+- `risk.published-commit-unvalidated` — Vercel REST v13 metadata proves Production `dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc` serves canonical functional source `c7ed2c31eb9c322ef489e71bb59631c39928a1e0`; documentary HEAD remains intentionally outside runtime parity.
 - `risk.combo-metadata-read-modify-write-race` — transições CURRENT de raw_metadata serializadas no PostgreSQL; histórico preservado e limitação de notificação direta separada.
 - `legacy.active-brand-contamination` - scoped active surfaces passed Preview and Production validation on `d2b2857c2ccf4023bfd4dc926b7b46b8acf836b8`; historical strings outside the audited scope are not covered.
 - `risk.gate-credential-revocation-does-not-revoke-session` — EXPAND/CONTRACT complete; gates A-I and strict runtime passed.
@@ -26,8 +27,8 @@ Nenhum finding P0 ativo.
 - `bug.combo-redemption-unreachable-consume` — a resolução específica permanece comprovada; `validate_combo_redemption` e o contrato remoto combo relevante foram revalidados no ciclo 2.7.0. Incertezas remotas gerais permanecem nos findings P2 específicos.
 - `risk.vercel-project-identity-drift` — cadeia canônica separada como `FelipeFraul/rota5` `production` → Vercel `rota5`; nenhum deployment realizado.
 - `risk.latest-rota5-deployment-error` — deployment Production mais recente está READY, serve os aliases canônicos e passou os probes de runtime.
-- `bug.event-duplicate-artist-leak` — payload corrente não herda o artista da origem; prova comportamental e suíte 285/285 passa.
-- `bug.user-visible-text-corruption` — superfícies documentadas foram corrigidas; provas direcionadas e suíte 285/285 passa.
+- `bug.event-duplicate-artist-leak` — payload corrente não herda o artista da origem; prova comportamental e suíte 291/291 passa.
+- `bug.user-visible-text-corruption` — superfícies documentadas foram corrigidas; provas direcionadas e suíte 291/291 passa.
 - `gap.default-test-suite-failing` — suíte padrão corrente passa 280/280, sem skip, todo ou regressão.
 - `gap.critical-capability-and-flow-coverage` — 21/21 MUST e 2/2 flows de alto risco possuem cobertura comportamental (métrica de cobertura, não contagem da suíte PostgreSQL).
 
@@ -35,7 +36,6 @@ Nenhum finding P0 ativo.
 Nenhum finding P1 operacionalmente aberto.
 
 ## P2 — STRUCTURAL DEBT
-- `risk.combo-direct-notification-concurrency-can-duplicate-or-stale` — Notificações diretas de combo podem duplicar ou ficar stale sob concorrência
 - `risk.github-issue-create-replay` — Criação de issue não possui chave de idempotência
 - `risk.remote-database-controls-unvalidated` — Controles remotos de banco além do schema visível não foram validados
 - `risk.remote-webhook-registration-unvalidated` — Registro remoto dos dois webhooks não foi confirmado
@@ -67,4 +67,4 @@ Nenhum finding P1 operacionalmente aberto.
 - `debt.distributed-status-literals` (P4) — Estados e mensagens de negócio estão distribuídos em arquivos extensos
 
 ## RESOLVED STABILIZATION ITEMS
-- `gap.test-runner-depends-on-untracked-loader` — loader byte-identical permanece versionado; o runner corrente é reproduzível e a suíte passa 285/285.
+- `gap.test-runner-depends-on-untracked-loader` — loader byte-identical permanece versionado; o runner corrente é reproduzível e a suíte passa 291/291.

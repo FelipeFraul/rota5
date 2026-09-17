@@ -179,6 +179,25 @@ if ((objects.migrations||[]).length !== baselineCounts.migrations) add('CANONICA
 if ((objects.functions||[]).length !== baselineCounts.sql_functions) add('CANONICAL_COUNT_MISMATCH','sql functions');
 if ((objects.triggers||[]).length !== baselineCounts.triggers) add('CANONICAL_COUNT_MISMATCH','triggers');
 if (Number.isInteger(baselineCounts.sequences) && (objects.sequences||[]).length !== baselineCounts.sequences) add('CANONICAL_COUNT_MISMATCH','sequences');
+const migrationHistory = objects.remote?.migration_history;
+if (migrationHistory?.status === 'ALIGNED') {
+  const localCount = (objects.migrations || []).length;
+  if (migrationHistory.local_count !== localCount || migrationHistory.remote_ledger_count !== localCount || migrationHistory.pending !== 0) {
+    add('MIGRATION_LEDGER_COUNT_MISMATCH', `local=${localCount}, catalog=${migrationHistory.local_count}, remote=${migrationHistory.remote_ledger_count}, pending=${migrationHistory.pending}`);
+  }
+}
+for (const migration of objects.migrations || []) {
+  if (migration.historical_application_method === 'DIRECT_SQL_PG_CLIENT') {
+    if (migration.historical_ledger_at_application !== 'ABSENT' || !/^APPLIED_AFTER_REPAIR_/.test(migration.migration_ledger_validation || '') || migration.remote_status !== 'APPLIED_AND_VALIDATED') {
+      add('MIGRATION_PROVENANCE_CONTRADICTION', migration.id);
+    }
+  }
+  if (migration.historical_application_method === 'OFFICIAL_SUPABASE_DB_PUSH') {
+    if (migration.migration_ledger_validation !== 'APPLIED' || migration.remote_status !== 'APPLIED_AND_VALIDATED') {
+      add('MIGRATION_PROVENANCE_CONTRADICTION', migration.id);
+    }
+  }
+}
 const joinHumanList = (values) => values.length < 2 ? (values[0] || '') : `${values.slice(0, -1).join(', ')} e ${values.at(-1)}`;
 const priorityVocabulary = [...new Set(findings.map(finding => finding.priority).filter(Boolean))]
   .sort((left,right) => String(left).localeCompare(String(right),undefined,{numeric:true}));
@@ -600,7 +619,7 @@ if (typeof completenessTestJustification === 'string') {
   if (canonicalDefaultSuiteProjection && !completenessTestJustification.includes(canonicalDefaultSuiteProjection)) add('COMPLETENESS_TEST_SUITE_PROJECTION_STALE','completeness.dimensions.TESTS.justification');
   if (!completenessTestJustification.includes(`${expected.tests} test artifacts`)) add('COMPLETENESS_TEST_COUNT_PROJECTION_STALE','completeness.dimensions.TESTS.justification');
 }
-const canonicalQualityGateProjection = manifest?.baseline_2_8_0?.quality_gate_run;
+const canonicalQualityGateProjection = catalogs['baseline-v1']?.quality_gate?.quality_gate_run;
 for (const [owner,value] of [
   ['baseline-manifest.quality_gate.quality_gate_run',manifest?.quality_gate?.quality_gate_run],
   ['health.quality_gate.run',catalogs.health?.quality_gate?.run]
@@ -635,12 +654,14 @@ const visitCurrentEvidence = (value, owner, insideCurrent = false) => {
     return;
   }
   if (!value || typeof value !== 'object') return;
+  if (value.classification === 'HISTORICAL_SNAPSHOT' || value.temporal_semantics === 'HISTORICAL_SNAPSHOT') return;
   const objectIsCurrent = insideCurrent || value.evidence_state === 'CURRENT' || value.temporal_semantics === 'CURRENT_CANONICAL_SEMANTICS';
   if (Array.isArray(value)) {
     value.forEach((entry,index) => visitCurrentEvidence(entry,`${owner}[${index}]`,objectIsCurrent));
     return;
   }
   for (const [key,child] of Object.entries(value)) {
+    if (key === 'historical_snapshot' || key === 'historical_evidence' || key === 'previous_current_evidence' || key.startsWith('baseline_')) continue;
     const fieldIsCurrent = key === 'current_evidence' || key === 'current_state' || key.startsWith('current_') || key.startsWith('CURRENT_');
     visitCurrentEvidence(child,`${owner}.${key}`,objectIsCurrent || fieldIsCurrent);
   }

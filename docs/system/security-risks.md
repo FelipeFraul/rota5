@@ -1,4 +1,4 @@
-> **Current Baseline 2.8.1 (2026-09-16):** `PATCH_DOCUMENTARY_CORRECTION` on canonical functional source `c48405e41df3d1cd69eb3d383b7c6dd17257155e`. Fingerprint `ef5d175d8edf5c867131ac4e65f80555e0e5839640595b486ee79c9b99885f91`; 394 source files, 88 migrations, 45 tables, 63 SQL functions, 1 sequence, 59 test files and 47 findings. `risk.rate-limit-fails-open` is RESOLVED with explicit outage policy across 19 boundaries. Release blockers: 0; Product and Infrastructure remain DEGRADED.
+> **Current Baseline 2.9.0 (2026-09-17):** `MINOR_COMPATIBLE_FUNCTIONAL_CHANGE` on canonical functional source `c7ed2c31eb9c322ef489e71bb59631c39928a1e0`. Fingerprint `889e832d1499df9f968f1cdc820f8f2b138d6e3435a304abd5a50292faa44dd6`; 397 source files, 89 local and remote ledger migrations, 45 tables, 65 SQL functions, 1 sequence, 60 test files and 47 findings. Combo operational notification concurrency is RESOLVED; external ambiguous ACK remains separate. Release blockers: 0; Product and Infrastructure remain DEGRADED.
 
 ## Baseline 2.8.0 rate-limit resolution
 
@@ -17,7 +17,7 @@ Baseline V1 — Etapa 6 de 8. Gerado em 2026-09-12 sobre o commit a141c6004421fb
 - Tipo / severidade / prioridade: **SECURITY / MEDIUM / P2**.
 - Status / confiança: **RESOLVED / CONFIRMED**.
 - Contrato CURRENT: `allowed | rate_limited | unavailable`; 14 fail-closed 503, 5 explicit post-auth degradation boundaries, timeout cancelável de 2s, malformed → unavailable e unavailable nunca → 429.
-- Prova: focused 5/5, Node 285/285, PostgreSQL 4/4, Quality Gate 35049217326, reauditoria PASS e Production exato `dpl_2bitbdQynYB6QdMiEkB1em65HsAy` → `c48405e41df3d1cd69eb3d383b7c6dd17257155e`.
+- Prova: focused 5/5, Node 291/291, PostgreSQL 4/4, Quality Gate 35141969033, reauditoria PASS e Production exato `dpl_DmWaACtXLsGd7mPwsKKsk8s2n4gc` → `c7ed2c31eb9c322ef489e71bb59631c39928a1e0`.
 - A classificação e a descrição ACTIVE originais permanecem no histórico machine-readable.
 ### risk.remote-database-controls-unvalidated — Controles remotos de banco além do schema visível não foram validados
 
